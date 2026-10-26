@@ -38,7 +38,7 @@ class ProjectAssetListing(json: JsonProcessor) {
             val bound = document.typed(AssetMeta::class.java as Class<AssetMeta<Any>>) ?: return@runCatchingKeepingCancellation null
             // the name is the folder's, not a field of the file
             val additional: Any = if (bound.type == MetaType.UI) UiMeta(uiDecoder.decode(document.json)) else bound.additional
-            val parsedMeta = AssetMeta(dir.name, bound.formatVersion, bound.version, bound.lastModified, bound.type, additional, bound.uuid)
+            val parsedMeta = AssetMeta(bound.type, dir.name, bound.formatVersion, bound.version, bound.lastModified, additional, bound.uuid)
             val references = runCatchingKeepingCancellation { references(document.json) }.getOrDefault(emptyList())
             Asset(File(dir.path), parsedMeta, references)
         }.getOrNull() ?: Asset(File(dir.path), AssetMeta(name = dir.name, type = MetaType.UNKNOWN, additional = Any()))

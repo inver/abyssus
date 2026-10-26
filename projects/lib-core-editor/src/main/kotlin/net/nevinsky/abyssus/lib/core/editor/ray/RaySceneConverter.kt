@@ -8,10 +8,7 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
 import com.badlogic.gdx.math.Matrix4
-import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.*
 import net.nevinsky.abyssus.lib.raytracing.*
 
@@ -74,23 +71,17 @@ class RaySceneConverter(private val limits: RaySnapshotLimits = RaySnapshotLimit
 
         fun material(id: String?): Int =
             materialIds.getOrPut("$shared:$id") {
-                val source = requireNotNull(asset.materials.firstOrNull { it.id == id }) { "Missing material $id" }
+                val source = asset.requireMaterial(id)
                 materials.add(convertMaterial(source, textureIds))
                 materials.lastIndex
             }
 
         fun visit(node: RayModelNode, parent: Matrix4, path: String) {
-            val local = PlacementTransform(
-                Vector3(node.translation.x, node.translation.y, node.translation.z),
-                Quaternion(node.rotation.x, node.rotation.y, node.rotation.z, node.rotation.w),
-                Vector3(node.scale.x, node.scale.y, node.scale.z)
-            ).toMatrix()
+            val local = node.localMatrix()
             val global = Matrix4(parent).mul(local)
             for ((ordinal, part) in node.parts.withIndex()) {
                 val source =
-                    requireNotNull(asset.meshes.firstOrNull { mesh -> mesh.parts.any { it.id == part.meshPartId } }) {
-                        "Missing mesh part ${part.meshPartId}"
-                    }
+                    asset.requireMeshOfPart(part.meshPartId)
                 val meshPart = requireNotNull(source.parts.firstOrNull { it.id == part.meshPartId }) {
                     "Missing mesh part ${part.meshPartId}"
                 }

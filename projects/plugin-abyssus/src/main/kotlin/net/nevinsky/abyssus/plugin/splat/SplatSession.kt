@@ -11,6 +11,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetMetaEditor
 import net.nevinsky.abyssus.lib.core.editor.meta.FieldValue
 import net.nevinsky.abyssus.lib.core.editor.pick.BrushStroke
+import net.nevinsky.abyssus.lib.core.editor.terrain.splat.ImageIoSplatCodec
 import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SPLAT_FILE_NAME
 import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatAssetWriter
 import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatLayer

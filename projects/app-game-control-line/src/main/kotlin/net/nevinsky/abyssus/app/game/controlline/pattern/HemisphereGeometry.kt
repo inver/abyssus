@@ -42,6 +42,19 @@ class HemisphereGeometry(val radius: Float) {
     /** The azimuth of [u] in degrees, (-180, 180]; meaningless at the poles. */
     fun azimuth(u: Vector3): Float = azimuthOf(u.x, u.z)
 
+    /**
+     * Where the great circle through [a] and [b] crosses the base, as an azimuth (degrees) on the side of [a], or null
+     * when the two places are (anti)parallel or the circle is the base itself.
+     */
+    fun equatorCrossing(a: Vector3, b: Vector3): Float? {
+        val normal = Vector3(a).crs(b)
+        if (normal.len2() < 1e-8f) return null
+        val d = normal.crs(Vector3(0f, 1f, 0f))
+        if (d.len2() < 1e-8f) return null
+        if (d.dot(a) < 0f) d.scl(-1f)
+        return azimuth(d.nor())
+    }
+
     /** The azimuth of [u] in laps, (-0.5, 0.5]. */
     fun azimuthLaps(u: Vector3): Float = azimuth(u) / 360f
 

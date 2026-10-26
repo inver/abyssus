@@ -3,15 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.plugin.splat
+package net.nevinsky.abyssus.lib.core.editor.terrain.splat
 
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SPLAT_MAX_SIDE
-import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SPLAT_MIN_SIDE
-import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatImageCodec
-import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatImageException
-import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatImageProblem
-import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatPixels
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream

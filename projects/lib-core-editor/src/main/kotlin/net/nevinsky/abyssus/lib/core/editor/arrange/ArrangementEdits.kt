@@ -55,8 +55,10 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         heights: GroundHeight,
     ): ArrangementResult {
         val tree = SceneEntityTree(root)
-        if (!tree.canAdd()) return unreadable()
-        if (asset.type != "MODEL" || points.size < 2 || points.any { !it.x.isFinite() || !it.y.isFinite() || !it.z.isFinite() }) {
+        if (!tree.canAdd()) {
+            return unreadable()
+        }
+        if (asset.type != MetaType.MODEL || points.size < 2 || points.any { !it.x.isFinite() || !it.y.isFinite() || !it.z.isFinite() }) {
             return ArrangementResult.Rejected(messages.message("arrangementInvalid"))
         }
         val component = PathArrangementComponent()

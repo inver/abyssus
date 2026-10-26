@@ -15,8 +15,6 @@ import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialOverrides
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.graphics.Color
 
-import com.badlogic.gdx.math.Quaternion
-import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
 import com.badlogic.gdx.graphics.GL20
@@ -240,7 +238,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
 
             fun material(id: String?): Int =
                 materialIds.getOrPut("$prefix:$id" + if (optics?.values?.containsKey(id) == true) ":${placement.entityId}" else "") {
-                    val source = requireNotNull(asset.materials.firstOrNull { it.id == id }) { "Missing material $id" }
+                    val source = asset.requireMaterial(id)
                     val material = convertMaterial(source, textureIds)
                     val override = optics?.values?.get(id)
                     materials.add(
@@ -253,17 +251,13 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                 }
 
             fun visit(node: RayModelNode, parent: Matrix4, path: String) {
-                val local = PlacementTransform(
-                    Vector3(node.translation.x, node.translation.y, node.translation.z),
-                    Quaternion(node.rotation.x, node.rotation.y, node.rotation.z, node.rotation.w),
-                    Vector3(node.scale.x, node.scale.y, node.scale.z)
-                ).toMatrix()
+                val local = node.localMatrix()
                 val global = pose?.node(node.id)?.let(::Matrix4) ?: Matrix4(parent).mul(local)
                 for ((ordinal, part) in node.parts.withIndex()) {
                     val skin = pose?.bones(node.id, part.meshPartId)
                     require(part.boneBindTransforms.isEmpty() || (skin != null && deform != null)) { "Skinned model requires the displayed animation pose and deformation" }
                     val source =
-                        requireNotNull(asset.meshes.firstOrNull { mesh -> mesh.parts.any { it.id == part.meshPartId } }) { "Missing mesh part ${part.meshPartId}" }
+                        asset.requireMeshOfPart(part.meshPartId)
                     val indices = source.parts.first { it.id == part.meshPartId }
                     require(indices.primitiveType == GL20.GL_TRIANGLES) { "Only triangle mesh parts are supported" }
                     val key =

@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
@@ -118,7 +119,8 @@ class EntityView(val id: String, private val node: JsonNode, private val decoder
 fun BaseMetaOf(render: JsonNode?): BaseMeta? {
     if (render == null) return null
     val asset = if (render.has("assetName")) render else render.get("renderable")?.get("asset") ?: return null
-    val type = asset.get("type")?.takeIf { it.isTextual }?.textValue() ?: return null
+    val type = asset.get("type")?.takeIf { it.isTextual }?.textValue()
+        ?.let { text -> MetaType.entries.firstOrNull { it.name == text } } ?: return null
     val name = asset.get("assetName")?.takeIf { it.isTextual }?.textValue()?.takeIf { it.isNotEmpty() } ?: return null
     return BaseMeta(type, name)
 }

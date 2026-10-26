@@ -113,7 +113,7 @@ internal class EntityDetailsView @JvmOverloads constructor(
     /** Whether the entity renders a terrain asset, which can be sculpted. */
     private fun isTerrain(): Boolean {
         val root = SceneDocumentCache.of(project).read(target.file)?.root ?: return false
-        return SceneDocument(root).renderAsset(target.entityId)?.type == MetaType.TERRAIN.name
+        return SceneDocument(root).BaseMeta(target.entityId)?.type == MetaType.TERRAIN
     }
 
     /**

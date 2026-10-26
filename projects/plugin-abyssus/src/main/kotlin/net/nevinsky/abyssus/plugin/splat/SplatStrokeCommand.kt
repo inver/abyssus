@@ -12,6 +12,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
+import net.nevinsky.abyssus.lib.core.editor.terrain.splat.ImageIoSplatCodec
 import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatBrush
 import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatDraft
 import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatImageCodec

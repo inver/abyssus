@@ -32,7 +32,7 @@ class ArrangementPreview {
             val scale = id?.let { existing[it]?.transform?.scale } ?: Vector3(1f, 1f, 1f)
             AssetPlacement(
                 id ?: "preview-${draft.entityId}-$k",
-                along.asset.assetName,
+                along.asset.name,
                 PlacementTransform(slot.position(heights), slot.rotation(), scale),
             )
         }

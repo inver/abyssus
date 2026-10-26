@@ -48,7 +48,7 @@ class PathArrangementComponentTest {
         assertEquals(1.2f, component.points[0].y, 0f)
         assertEquals(40f, component.points[1].x, 0f)
         assertEquals(MetaType.MODEL, component.asset.type)
-        assertEquals("tree", component.asset.assetName)
+        assertEquals("tree", component.asset.name)
         assertEquals(listOf(12, 13, 14, 15, 16), component.slots)
     }
 

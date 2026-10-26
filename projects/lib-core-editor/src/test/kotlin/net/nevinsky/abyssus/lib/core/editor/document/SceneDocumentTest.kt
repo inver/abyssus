@@ -24,7 +24,7 @@ class SceneDocumentTest {
         assertEquals("Model 0", entity.name)
         assertEquals(-3.035308f, entity.component(PositionComponent::class.java)!!.localPosition.x, 0f)
         val content = sceneContentOf(parseScene(text))
-        assertEquals(content.models.first().assetName, document.renderAsset("0")!!.name)
+        assertEquals(content.models.first().assetName, document.BaseMeta("0")!!.name)
         assertEquals(content.skybox, document.skybox())
         assertEquals(listOf("ecs", "0", "components"), document.locate("0"))
         assertNotNull(document.lookAtTarget("4"))

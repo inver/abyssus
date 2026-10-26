@@ -18,6 +18,7 @@ import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
 import net.nevinsky.abyssus.lib.core.editor.pick.SPLAT_BRUSH
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
+import net.nevinsky.abyssus.lib.core.editor.terrain.splat.ImageIoSplatCodec
 import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatPixels
 import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatStateReader
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileStore

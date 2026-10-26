@@ -92,7 +92,7 @@ class ArrangementEditsTest {
         val c = component(root)
         assertEquals(2, c.points.size)
         assertFalse(c.closed)
-        assertEquals("tree", c.asset.assetName)
+        assertEquals("tree", c.asset.name)
         assertEquals(10f, c.spacing, 0f)
         assertEquals(listOf(12, 13, 14, 15, 16), c.slots)
         assertEquals(17, (root["ecs"].let { it["entities"] ?: it }).size())

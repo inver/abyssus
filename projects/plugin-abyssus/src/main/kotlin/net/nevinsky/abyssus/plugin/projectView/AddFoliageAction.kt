@@ -28,7 +28,7 @@ import net.nevinsky.abyssus.plugin.ui.showActionGroup
 internal fun foliageChoices(project: Project, file: VirtualFile, entityId: String, metas: MetaFiles): List<String> {
     val root = SceneDocumentCache.of(project).read(file)?.root ?: return emptyList()
     val terrain =
-        SceneDocument(root).renderAsset(entityId)?.takeIf { it.isTerrain() } ?: return emptyList()
+        SceneDocument(root).BaseMeta(entityId)?.takeIf { it.isTerrain() } ?: return emptyList()
     val abss = ProjectLayout.abssFor(file) ?: return emptyList()
     if (AssetReadCache.of(project).read(abss)?.obj !is ProjectDto) return emptyList()
     return ProjectLayout.assetFolders(abss).mapNotNull { folder ->
@@ -58,7 +58,7 @@ internal fun setFoliage(
 /** The same terrain-bound choices serve the tree and the Scene view toolbar; an empty group means none fit. */
 fun foliageGroup(project: Project, file: VirtualFile, entityId: String): DefaultActionGroup? {
     val root = SceneDocumentCache.of(project).read(file)?.root ?: return null
-    if (SceneDocument(root).renderAsset(entityId)?.isTerrain() != true) return null
+    if (SceneDocument(root).BaseMeta(entityId)?.isTerrain() != true) return null
     val metas = service<AbyssusPluginCtx>().assets.metaFiles
     val names = foliageChoices(project, file, entityId, metas)
     return DefaultActionGroup().apply {
@@ -86,7 +86,7 @@ open class AddFoliageAction : AbyssusTreeAction<ComponentTarget>() {
         val target = componentTargetOf(node)?.takeIf { it.kind == null } ?: return null
         return target.takeIf {
             net.nevinsky.abyssus.lib.core.editor.document.sceneEntityView(entry.name, json)
-                .renderAsset()?.isTerrain() == true
+                .BaseMeta()?.isTerrain() == true
         }
     }
 

@@ -31,7 +31,7 @@ class FoliageEditing(private val project: Project, private val scope: CoroutineS
     ) {
         val root = SceneDocumentCache.of(project).read(scene)?.root
         val document = root?.let(::SceneDocument)
-        val terrain = document?.renderAsset(entity)
+        val terrain = document?.BaseMeta(entity)
             ?.takeIf { it.isTerrain() }
         val name = document?.components(entity)?.get("FoliageComponent")?.get("assetName")?.textValue()
         val abss = ProjectLayout.abssFor(scene)

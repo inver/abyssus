@@ -89,6 +89,10 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
 
 ## Hard rules
 
+- **No manual JSON <-> DTO (de)serialization.** Don't hand-write parsing or serialization between JSON and DTOs (no field-by-field
+  reads from a tree, no string-built JSON). Bind to DTOs and write them back through the existing mapper (`JsonProcessor.bind`). `NativeJsonTree` is the only token-level reader (exact number text and key order); don't add another.
+  Use only `JsonProcessor`. To extend it or add methods, ask first.
+
 - **Native documents only:** `.abss`, `.scene` and asset `meta.json` require `format: "abyssus"` and integral
   `formatVersion: 1`. Validate with `AbyssusDocumentFormat` before binding, enumerating, editing or formatting.
   Reject legacy `ecs.componentIdentifiers` and renderable `class`; a component entry is keyed by the class name of a built-in or registered component (fully qualified, or its short name), assets use `kind: "asset"`.

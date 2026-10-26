@@ -55,7 +55,7 @@ class SculptEditing(private val project: Project) {
     ) {
         val root = SceneDocumentCache.of(project).read(scene)?.root
         val document = root?.let(::SceneDocument)
-        val terrain = document?.renderAsset(entity)?.takeIf { it.type == MetaType.TERRAIN.name }
+        val terrain = document?.BaseMeta(entity)?.takeIf { it.type == MetaType.TERRAIN }
         val abss = ProjectLayout.abssFor(scene)
         val assets = abss?.parent?.findChild("assets")
         val folder = assets?.findChild(terrain?.name ?: "")

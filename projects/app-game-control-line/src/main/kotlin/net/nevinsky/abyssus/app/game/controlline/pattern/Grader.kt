@@ -227,18 +227,7 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
     }
 
     /** Where the great circle of [straight] crosses the base, as an azimuth (degrees), or null. */
-    fun equatorAzimuth(straight: Straight, points: List<PathPoint>): Float? = equatorCrossing(straight.from, straight.to, points)
-
-    private fun equatorCrossing(from: Int, to: Int, points: List<PathPoint>): Float? {
-        val a = points[from].u
-        val b = points[to].u
-        val normal = Vector3(a).crs(b)
-        if (normal.len2() < 1e-8f) return null
-        val d = normal.crs(Vector3(0f, 1f, 0f))
-        if (d.len2() < 1e-8f) return null
-        if (d.dot(a) < 0f) d.scl(-1f)
-        return geometry.azimuth(d.nor())
-    }
+    fun equatorAzimuth(straight: Straight, points: List<PathPoint>): Float? = geometry.equatorCrossing(points[straight.from].u, points[straight.to].u)
 
     private fun superimposition(segment: List<PathPoint>, ideal: IdealTrack, match: IntArray): Deduction {
         val first = ArrayList<Vector3>()

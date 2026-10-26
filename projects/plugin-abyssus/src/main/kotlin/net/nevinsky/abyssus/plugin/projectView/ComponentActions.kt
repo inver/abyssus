@@ -67,11 +67,11 @@ fun addComponentGroup(
                 // asset folders have underscores, which the menu would take for mnemonics
                 sub.add(object : AnAction() {
                     init {
-                        templatePresentation.setText("${asset.type.lowercase()} ${asset.name}", false)
+                        templatePresentation.setText("${asset.type.name.lowercase()} ${asset.name}", false)
                     }
 
                     override fun actionPerformed(e: AnActionEvent) =
-                        add(name, mapOf("assetType" to asset.type, "assetName" to asset.name))
+                        add(name, mapOf("assetType" to asset.type.name, "assetName" to asset.name))
                 })
             }
             group.add(sub)

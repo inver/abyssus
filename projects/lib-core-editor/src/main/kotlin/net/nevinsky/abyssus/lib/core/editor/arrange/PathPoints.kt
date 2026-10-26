@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.arrange
 
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 
 /**
@@ -20,7 +21,7 @@ fun arrangementAlong(
     PathArrangementComponent().also {
         if (base != null) {
             it.closed = base.closed
-            it.asset = base.asset.copy()
+            it.asset = BaseMeta(base.asset.type, base.asset.name)
             it.spacing = base.spacing
             it.offset = base.offset
             it.sides = base.sides

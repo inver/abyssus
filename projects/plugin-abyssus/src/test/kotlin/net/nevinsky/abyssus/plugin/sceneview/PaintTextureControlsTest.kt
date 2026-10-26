@@ -21,10 +21,10 @@ import net.nevinsky.abyssus.lib.core.editor.pick.SPLAT_BRUSH
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneInteraction
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.editor.terrain.splat.ImageIoSplatCodec
 import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatPixels
 import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatStateReader
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
-import net.nevinsky.abyssus.plugin.splat.ImageIoSplatCodec
 import net.nevinsky.abyssus.plugin.splat.SplatBrushOptions
 import net.nevinsky.abyssus.plugin.splat.SplatDrafts
 import net.nevinsky.abyssus.plugin.splat.SplatMode

@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import com.badlogic.gdx.math.Vector3
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
@@ -121,9 +122,9 @@ class ComponentActionsTest : BasePlatformTestCase() {
             .filterIsInstance<com.intellij.openapi.actionSystem.ActionGroup>().single { it.templatePresentation.text == "Render" }
         val assets = SceneComponentEdits.renderAssets(scene(), testMetaFiles())
         assertTrue(assets.isNotEmpty())
-        assertTrue(assets.all { it.type == "MODEL" || it.type == "TERRAIN" })
+        assertTrue(assets.all { it.type == MetaType.MODEL || it.type == MetaType.TERRAIN })
         val items = render.getChildren(null)
-        assertEquals(assets.map { "${it.type.lowercase()} ${it.name}" }, items.map { it.templatePresentation.text })
+        assertEquals(assets.map { "${it.type.name.lowercase()} ${it.name}" }, items.map { it.templatePresentation.text })
         items.first().actionPerformed(TestActionEvent.createTestEvent(items.first()))
         val asset = components("6")["RenderComponent"]
         assertEquals(assets.first().name, asset["assetName"].asText())

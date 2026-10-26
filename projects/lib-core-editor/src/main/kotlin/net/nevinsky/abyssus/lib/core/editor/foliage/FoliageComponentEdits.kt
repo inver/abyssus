@@ -50,7 +50,5 @@ class FoliageComponentEdits {
     private val REFERENCES = listOf(
         "ParentComponent" to "parentEntityId",
         "PositionComponent" to "lookAtId",
-        "Point2PointPositionComponent" to "entity1Id",
-        "Point2PointPositionComponent" to "entity2Id",
     )
 }

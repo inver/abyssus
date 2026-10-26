@@ -5,8 +5,9 @@
 
 package net.nevinsky.abyssus.lib.core.editor.meta
 
-import net.nevinsky.abyssus.lib.core.editor.document.renderAssetOf
+import net.nevinsky.abyssus.lib.core.editor.document.BaseMetaOf
 import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor
 import net.nevinsky.abyssus.lib.core.editor.components.FieldKind
@@ -106,8 +107,8 @@ fun readEntitySections(
  * from [materials] (null when the model cannot be found; it may throw). Null for a Render component of anything else.
  */
 fun readRenderOptics(render: JsonNode, materials: (String) -> List<RayMaterialIdentity>?, messages: EditorMessages): RenderOptics? {
-    val asset = renderAssetOf(render) ?: return null
-    if (asset.type != "MODEL") return null
+    val asset = BaseMetaOf(render) ?: return null
+    if (asset.type != MetaType.MODEL) return null
     val assetName = asset.name
     val codec = RayMaterialOverrides()
     val stored = codec.read(render)

@@ -34,7 +34,7 @@ class AddAssetGroup(
     init {
         val assets = SceneComponentEdits.renderAssets(file, metaFiles)
         for ((type, title) in listOf(MetaType.MODEL to "addAssetModels", MetaType.TERRAIN to "addAssetTerrains")) {
-            val ofType = assets.filter { it.type == type.name }
+            val ofType = assets.filter { it.type == type }
             if (ofType.isEmpty()) continue
             add(Separator.create(AbyssusBundle.message(title)))
             for (asset in ofType) addChild(asset, asset.name, literalName = true)

@@ -15,7 +15,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentReader
 import net.nevinsky.abyssus.lib.core.editor.content.*
 import net.nevinsky.abyssus.lib.core.editor.document.EntityView
-import net.nevinsky.abyssus.lib.core.editor.document.renderAssetOf
+import net.nevinsky.abyssus.lib.core.editor.document.BaseMetaOf
 import net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs
 import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
 import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
@@ -91,7 +91,7 @@ private fun decode(entity: EntityView): DecodedEntity {
     }
     /** A component's node, or null when the entry is missing or disabled. */
     fun active(name: String): JsonNode? = components.opt(name)?.takeIf { isEnabled(it) }
-    val asset = renderAssetOf(active("RenderComponent"))
+    val asset = BaseMetaOf(active("RenderComponent"))
     val light = active("LightComponent")
     // a light entity whose light is disabled is not a light: without the component it would still shine with defaults
     val lightDisabled =
@@ -104,7 +104,7 @@ private fun decode(entity: EntityView): DecodedEntity {
         if (lightDisabled) null else type,
         active("CameraComponent")?.let { read<CameraComponent>(it) },
         light?.let { read<LightComponent>(it) },
-        asset?.let { DecodedAsset(it.type, it.name) },
+        asset?.let { DecodedAsset(it.type.name, it.name) },
         active("FoliageComponent")?.get("assetName")?.takeIf { it.isTextual }?.asText(),
         active("PathArrangementComponent")?.let { read<PathArrangementComponent>(it) },
     )
