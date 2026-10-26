@@ -5,16 +5,14 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
+import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
 import net.nevinsky.abyssus.lib.core.editor.arrange.PathSlot
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong
-import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.ecs.component.PathAsset
-import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.editor.content.ArrangementPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.pick.PathEdit
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -22,7 +20,7 @@ import org.junit.Test
 class ArrangementPreviewTest {
     private fun scene(): SceneContent {
         val path = arrangementAlong(listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f))).also {
-            it.asset = PathAsset(assetName = "post")
+            it.asset = BaseMeta(name = "post")
             it.spacing = 10f
             it.slots = mutableListOf(11, 12, 13)
         }

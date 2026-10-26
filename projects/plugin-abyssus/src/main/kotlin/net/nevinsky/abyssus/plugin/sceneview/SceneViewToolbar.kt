@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
+import com.badlogic.gdx.math.Vector3
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnAction
@@ -12,7 +13,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.util.ui.WrapLayout
-import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoSnap
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace
@@ -23,20 +24,14 @@ import net.nevinsky.abyssus.plugin.ui.showActionGroup
 import java.awt.Component
 import java.awt.Container
 import java.awt.FlowLayout
-import javax.swing.AbstractButton
-import javax.swing.JButton
-import javax.swing.JComboBox
-import javax.swing.JComponent
-import javax.swing.JLabel
-import javax.swing.JPanel
-import javax.swing.JToggleButton
+import javax.swing.*
 
 /** What [SceneViewToolbar] reads from its view that is not the interaction, the renderer or a control strip. */
 internal class SceneViewToolbarSources(
     val lightMenu: PlacementMenu<() -> Vector3>?,
     val assetMenu: PlacementMenu<() -> Vector3>?,
     val waterMenu: PlacementMenu<() -> Vector3>?,
-    val pathMenu: PlacementMenu<(net.nevinsky.abyssus.lib.core.editor.content.RenderAsset) -> Unit>?,
+    val pathMenu: PlacementMenu<(BaseMeta) -> Unit>?,
     val foliageActions: ((String) -> DefaultActionGroup?)?,
     val overlays: SceneOverlayHost?,
     val lightChoices: () -> DefaultActionGroup?,

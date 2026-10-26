@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
+import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
@@ -12,12 +13,12 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.terrainData
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
@@ -28,7 +29,7 @@ import java.io.File
 class ArrangementEditingTest : BasePlatformTestCase() {
     private lateinit var projectDir: File
     private lateinit var scene: VirtualFile
-    private val tree = RenderAsset("MODEL", "tree")
+    private val tree = BaseMeta(MetaType.MODEL, "tree")
     private val terrain = "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
 
     override fun setUp() {

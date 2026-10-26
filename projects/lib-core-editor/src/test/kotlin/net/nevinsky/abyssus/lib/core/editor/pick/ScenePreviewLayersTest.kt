@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.ecs.component.PathAsset
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong
 import net.nevinsky.abyssus.lib.core.editor.content.ArrangementPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
@@ -17,9 +17,7 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
 import net.nevinsky.abyssus.lib.core.water.WaterPreset
 import net.nevinsky.abyssus.lib.core.water.WaterPresets
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotSame
-import org.junit.Assert.assertSame
+import org.junit.Assert.*
 import org.junit.Test
 
 class ScenePreviewLayersTest {
@@ -27,7 +25,7 @@ class ScenePreviewLayersTest {
 
     private fun base(): SceneContent {
         val path = arrangementAlong(listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f))).also {
-            it.asset = PathAsset(assetName = "post")
+            it.asset = BaseMeta(name = "post")
             it.spacing = 10f
             it.slots = mutableListOf(11, 12, 13)
         }

@@ -15,6 +15,15 @@ uniform sampler2D u_splatB;
 uniform int u_has_splatA;
 uniform sampler2D u_splatA;
 
+// the output transform's functions are always compiled in; u_exposure above 0 switches the program onto them
+#define outputTransformFlag
+#pragma include "output_transform.glsl"
+
+uniform samplerCube u_irradiance; // a built sky's irradiance; replaces u_ambient when u_hasSky is 1
+uniform int u_hasSky;
+uniform samplerCube u_irradianceTo; // the sky light fading in; used while u_skyFade is above 0
+uniform float u_skyFade; // 0 to 1: how far u_irradianceTo has replaced u_irradiance
+
 uniform vec3 u_lightDirection; // toward the light
 uniform vec3 u_lightColor;
 uniform vec3 u_ambient;
@@ -59,18 +68,31 @@ float sunVisibility(float ndotl) {
     return visible * 0.25;
 }
 
+// a layer is authored as display colour: linear light needs it decoded, the old path uses it as it is
+vec3 layer(sampler2D s, vec2 uv) {
+    vec3 c = texture2D(s, uv).rgb;
+    return u_exposure > 0.0 ? outputSrgbToLinear(c) : c;
+}
+
 void main() {
     // the base layer, then each splat channel mixed over it in turn (neutral grey without a base)
-    vec3 color = u_has_splatBase == 1 ? texture2D(u_splatBase, v_uv).rgb : vec3(0.5);
+    vec3 color = u_has_splatBase == 1 ? layer(u_splatBase, v_uv) : (u_exposure > 0.0 ? outputSrgbToLinear(vec3(0.5)) : vec3(0.5));
     if (u_hasSplat == 1) {
         vec4 splat = texture2D(u_splat, v_splatUv);
-        if (u_has_splatR == 1) color = mix(color, texture2D(u_splatR, v_uv).rgb, splat.r);
-        if (u_has_splatG == 1) color = mix(color, texture2D(u_splatG, v_uv).rgb, splat.g);
-        if (u_has_splatB == 1) color = mix(color, texture2D(u_splatB, v_uv).rgb, splat.b);
-        if (u_has_splatA == 1) color = mix(color, texture2D(u_splatA, v_uv).rgb, splat.a);
+        if (u_has_splatR == 1) color = mix(color, layer(u_splatR, v_uv), splat.r);
+        if (u_has_splatG == 1) color = mix(color, layer(u_splatG, v_uv), splat.g);
+        if (u_has_splatB == 1) color = mix(color, layer(u_splatB, v_uv), splat.b);
+        if (u_has_splatA == 1) color = mix(color, layer(u_splatA, v_uv), splat.a);
     }
-    float ndotl = dot(normalize(v_normal), u_lightDirection);
+    vec3 normal = normalize(v_normal);
+    float ndotl = dot(normal, u_lightDirection);
     float diffuse = max(ndotl, 0.0) * sunVisibility(ndotl);
-    vec3 lit = color * (u_ambient + u_lightColor * diffuse);
-    gl_FragColor = vec4(mix(lit, u_fogColor, v_fog), 1.0);
+    vec3 ambient = u_hasSky == 1 ? textureCube(u_irradiance, normal).rgb : u_ambient;
+    if (u_hasSky == 1 && u_skyFade > 0.0) ambient = mix(ambient, textureCube(u_irradianceTo, normal).rgb, u_skyFade);
+    vec3 lit = color * (ambient + u_lightColor * diffuse);
+    if (u_exposure > 0.0) {
+        gl_FragColor = vec4(outputTransform(mix(lit, outputSrgbToLinear(u_fogColor), v_fog)), 1.0);
+    } else {
+        gl_FragColor = vec4(mix(lit, u_fogColor, v_fog), 1.0);
+    }
 }

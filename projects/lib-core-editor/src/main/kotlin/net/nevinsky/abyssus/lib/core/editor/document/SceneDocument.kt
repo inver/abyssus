@@ -6,13 +6,13 @@
 package net.nevinsky.abyssus.lib.core.editor.document
 
 import com.badlogic.ashley.core.Component
+import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 
@@ -81,7 +81,7 @@ class SceneDocument(private val root: JsonNode, private val decoder: SceneCompon
     fun entityKeys(): List<String> = paths.entityKeys(root)
     fun components(id: String): ObjectNode? = paths.components(root, id)
     fun locate(id: String): List<String>? = components(id)?.let { entityKeys() + id + COMPONENTS }
-    fun renderAsset(id: String): RenderAsset? = entity(id)?.renderAsset()
+    fun BaseMeta(id: String): BaseMeta? = entity(id)?.BaseMeta()
     fun skybox(): String? =
         root.get("skyboxName")?.takeIf { root.get("skyboxEnabled")?.booleanValue() == true && it.isTextual }
             ?.textValue()?.takeIf(String::isNotBlank)
@@ -108,19 +108,19 @@ class EntityView(val id: String, private val node: JsonNode, private val decoder
         runCatchingKeepingCancellation { reader.read(type, value) }.getOrNull()
     }
 
-    fun renderAsset(): RenderAsset? = renderAssetOf(componentNode("RenderComponent"))
+    fun BaseMeta(): BaseMeta? = BaseMetaOf(componentNode("RenderComponent"))
 }
 
 /**
  * The asset a `RenderComponent` entry names: its `type` and `assetName`. A scene saved before the render component
  * was flat nested them as `renderable.asset`, which is read too.
  */
-fun renderAssetOf(render: JsonNode?): RenderAsset? {
+fun BaseMetaOf(render: JsonNode?): BaseMeta? {
     if (render == null) return null
     val asset = if (render.has("assetName")) render else render.get("renderable")?.get("asset") ?: return null
     val type = asset.get("type")?.takeIf { it.isTextual }?.textValue() ?: return null
     val name = asset.get("assetName")?.takeIf { it.isTextual }?.textValue()?.takeIf { it.isNotEmpty() } ?: return null
-    return RenderAsset(type, name)
+    return BaseMeta(type, name)
 }
 
 /**

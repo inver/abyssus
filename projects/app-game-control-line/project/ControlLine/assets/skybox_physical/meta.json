@@ -15,6 +15,7 @@
     "heightMie": 1200.0,
     "mieG": 0.76,
     "sunIntensity": 20.0,
-    "clouds": "c3797a9e-e833-5bcb-adf6-39c34853496e"
+    "clouds": "c3797a9e-e833-5bcb-adf6-39c34853496e",
+    "lightsScene": true
   }
 }

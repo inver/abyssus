@@ -8,12 +8,12 @@ package net.nevinsky.abyssus.lib.core.editor.arrange
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.*
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
 import net.nevinsky.abyssus.lib.core.editor.ecs.floatNode
@@ -49,7 +49,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
      */
     fun create(
         root: JsonNode,
-        asset: RenderAsset,
+        asset: BaseMeta,
         points: List<Vector3>,
         closed: Boolean,
         heights: GroundHeight,
@@ -62,7 +62,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         val component = PathArrangementComponent()
         component.points = points.map { Vector3(it.x, it.y, it.z) }.toMutableList()
         component.closed = closed
-        component.asset = PathAsset(MetaType.MODEL, asset.name)
+        component.asset = BaseMeta(MetaType.MODEL, asset.name)
         val slots = layout.slots(component) ?: return tooMany()
 
         val arrangementId = tree.insert { id ->
@@ -214,7 +214,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         arrangementId: String,
         slotIndex: Int,
         slot: PathSlot,
-        asset: PathAsset,
+        asset: BaseMeta,
         heights: GroundHeight
     ): ObjectNode {
         val components = nodes.objectNode()
@@ -237,14 +237,14 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         components.set<JsonNode>("PositionComponent", writer.writeComponent(position))
         components.set<JsonNode>(
             "RenderComponent",
-            writer.writeComponent(RenderComponent("defaultShader", asset.type, asset.assetName)),
+            writer.writeComponent(RenderComponent("defaultShader", asset.type, asset.name)),
         )
         components.set<JsonNode>("ParentComponent", writer.writeComponent(ParentComponent(arrangementId.toInt())))
         return components
     }
 
     /** Writes the slot's position and rotation and the arrangement's model into the copy, touching only what differs. */
-    private fun place(tree: SceneEntityTree, copyId: String, slot: PathSlot, asset: PathAsset, heights: GroundHeight) {
+    private fun place(tree: SceneEntityTree, copyId: String, slot: PathSlot, asset: BaseMeta, heights: GroundHeight) {
         val components = tree.components(copyId) ?: return
         val placement = components.get("PositionComponent").let {
             if (it == null || it.isNull) components.putObject("PositionComponent") else it as? ObjectNode ?: return
@@ -258,9 +258,10 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
             listOf(Field("x", q.x, 0f), Field("y", q.y, 0f), Field("z", q.z, 0f), Field("w", q.w, 1f))
         )
         val render = components.get("RenderComponent") as? ObjectNode ?: return
-        val target =
-            if (render.has("assetName")) render else (render.get("renderable")?.get("asset") as? ObjectNode) ?: return
-        if (target.get("assetName")?.asText() != asset.assetName) target.put("assetName", asset.assetName)
+        val target = if (render.has("assetName")) {
+            render
+        } else (render.get("renderable")?.get("asset") as? ObjectNode) ?: return
+        if (target.get("assetName")?.asText() != asset.name) target.put("assetName", asset.name)
         if (target.get("type")?.asText() != asset.type.name) target.put("type", asset.type.name)
     }
 

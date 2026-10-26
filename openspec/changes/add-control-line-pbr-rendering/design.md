@@ -52,13 +52,15 @@ last line of each fragment shader the game draws with, behind a define that only
 `outputTransformFlag` in the program prefix, so programs with and without it are different shaders (a standard libGDX
 attribute-mask difference). A host that never sets it compiles the old program.
 
-- *Alternative:* a global uniform with a branch. Rejected: it changes every host's program and cannot meet "unchanged within
-  1/255" by construction.
+- *Alternative:* a global uniform with a branch. Rejected for model shaders: it changes every host's program and cannot meet
+  "unchanged within 1/255" by construction. The game terrain program is the exception: it belongs to a pass rather than to a
+  material mask, is a separate program per variant, and takes `u_exposure` (0 = off) with the old code on the other side of one
+  branch; `TerrainPassGlTest` pins that it still agrees with the editor program to 2/255 with the exposure off.
 
 ### 3. Colour linearisation is in the shader, not in the texture format
 
-Under the flag, `diffuse`, `emissive`, vertex colour and fog colour are decoded from sRGB in the shader (the piecewise
-sRGB function, not a bare 2.2). Data textures (normal, metallic-roughness, occlusion, splat weights) are not decoded.
+Under the flag, the diffuse and emissive *textures*, the terrain layer textures and the fog colour are decoded from sRGB in the shader (the piecewise
+sRGB function, not a bare 2.2). Material and vertex colour factors are glTF values (linear by convention) and stay as they are. Data textures (normal, metallic-roughness, occlusion, splat weights) are not decoded.
 Textures are not reloaded as `SRGB8_ALPHA8`.
 
 - *Why:* textures are shared with the editor and cached by the shared `AssetStorage`; a format change would change the editor
@@ -74,10 +76,15 @@ The game leases the field sky's `HdrEnvironment` from `ProceduralSky.acquireEnvi
 terrain as its irradiance ambient (diffuse only; sky specular on terrain is out of scope). The fog colour is the scene's fog
 colour as authored (decoded); the clear colour and the sky's horizon follow it as today.
 
-- Sky draw: each sky type is handled to write **linear** radiance when the transform is on and to be transformed once:
-  procedural/atmosphere skies (linear already inside), cube skies (decode), HDR EXR skies (skip their private tone map and
-  gamma). Task 4.1 lists which of the three the bundled `skybox_physical` and `weather_skybox_physical` assets are and checks
-  each of them against this table before code is written.
+- Sky draw: the field's sky (`skybox_physical`, `SKYBOX_PROCEDURAL`) runs a custom `sky.frag` that already tone maps and
+  gamma-encodes, i.e. writes display colour. It is therefore a **display-referred background**: it is drawn as it is today and
+  the output transform is never applied to it (task 1.2). Cube and HDR EXR skies are not used by Control Line and keep
+  writing what they write; the transform does not touch the sky pass at all, so `SkyFrame` is unchanged. Its clouds
+  (`weather_skybox_physical`, a `CLOUDS` asset) are part of the sky draw.
+- The field's sky does not set `additional.lightsScene`, so it gives no light today. Opting in is a one-key edit of
+  `skybox_physical/meta.json` (`"lightsScene": true`), part of this change. The lighting cube then comes from
+  `atmosphere_linear.frag`, not from the custom `sky.frag`; the two can differ (documented limitation of the existing
+  feature), so the exposure and sun values are tuned by eye against the drawn sky (task 7.1).
 - When the sky does not opt in (`lightsScene` false) or the first build is not finished, models and terrain use the flat
   ambient as today. The environment fades in over 1 s (existing behaviour of `LightingRefreshPolicy`); there is no visible
   pop.
@@ -125,8 +132,9 @@ within 1/255), and one frame of the field. What only a person can judge (does it
 
 ### 9. Performance budget
 
-Baseline first (task 1): steady GPU and CPU frame time of the pilot view on this machine at its default resolution, loading
-excluded. Budget proposed: not more than 20% above that baseline. The check is recorded in the game's README with hardware
+Baseline first (task 1): steady frame time of the pilot view as the repository's perf harness measures it (CPU time of
+`FieldRenderer.draw`; the harness has no GPU timer) on this machine at 1280 x 720, loading excluded: p50 6.16 ms, p95 9.21 ms.
+Budget proposed: not more than 20% above that baseline. The check is recorded in the game's README with hardware
 and resolution; an unmeasured speed-up is never claimed. The 4x MSAA setting is kept.
 
 ## Risks / Trade-offs
@@ -136,8 +144,10 @@ and resolution; an unmeasured speed-up is never claimed. The 4x MSAA setting is 
   distinguishable surfaces), not a fixed look.
 - [Editor view changes by accident] → flag-gated code, an equivalence GL test over PBR, default, terrain and foliage programs,
   and no edit to a shared default.
-- [Double transform where passes overlap, e.g. sky under terrain] → each pass writes final colours over its own pixels; a
-  test draws a frame and checks that a sky-only pixel equals one transform of the sky colour.
+- [Double transform where passes overlap, e.g. sky under terrain] → the sky pass is never transformed; a test draws a frame and
+  checks that a sky-only pixel equals the sky drawn without the transform.
+- [Sky light and the drawn sky disagree, since the lighting cube uses the stock atmosphere and the field has a custom `sky.frag`] →
+  tune by eye (task 7.1); if they differ too much, a follow-up can make the lighting cube use the asset's shader.
 - [MSAA resolve of tone mapped values darkens bright edges] → documented; HDR FBO is the later fix (decision 1).
 - [Ray mode diverges visually from raster] → by design, ray mode is unchanged and says so in the README.
 - [Sky lighting not ready at the first frame] → flat ambient fallback and the existing fade (decision 4).
@@ -151,5 +161,4 @@ the editor in any case. The ray and raster default launch paths are unchanged.
 
 ## Open Questions
 
-- The exact tone map curve (Narkowicz ACES fit or a neutral curve such as Khronos PBR Neutral) is chosen in task 2.2 by looking
-  at the sun-lit asphalt and sky; the spec only needs a monotonic, 0-preserving curve, so either fits.
+- (Resolved in task 2.2) Tone map: Khronos PBR Neutral. It leaves surface colours below about 0.76 unchanged apart from a small offset in the darks and rolls highlights off to 1, so albedo keeps its authored look under the sun; Narkowicz ACES brightens 0.18 to 0.27 and shifts hues. The spec allows 0.18 to land within 25% of 0.18 (Neutral gives 0.14).

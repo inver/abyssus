@@ -33,6 +33,9 @@ import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import com.badlogic.gdx.graphics.g3d.Environment
 import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
+import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.OutputTransformAttribute
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironment
 import net.nevinsky.abyssus.lib.render.frame.FrameInputs
 import net.nevinsky.abyssus.lib.render.frame.RenderFog
 import net.nevinsky.abyssus.lib.render.light.DirectionalInput
@@ -68,9 +71,15 @@ class LineSegment(val from: Vector3, val to: Vector3, val color: Color, val widt
 /** The game's field view: draw a frame, resize with the window, and release GL resources. Raster and ray modes both
  * present through this interface; `Main` picks the implementation at launch (design decision 7). */
 interface FieldView {
+    /**
+     * Whether this view draws the control lines as lit [Cable] geometry given in [draw]; one that does not (the ray view)
+     * is given them as [LineSegment]s in `lines` like the other overlays.
+     */
+    val drawsCables: Boolean get() = false
+
     fun draw(
         field: FieldScene, camera: Camera, lines: List<LineSegment> = emptyList(), hidden: Entity? = null,
-        clips: Map<Entity, String> = emptyMap(), seconds: Float = 0f
+        clips: Map<Entity, String> = emptyMap(), seconds: Float = 0f, cables: List<Cable> = emptyList(),
     )
 
     fun resize(width: Float, height: Float)
@@ -95,7 +104,13 @@ class FieldRenderer(
     private val ctx: BaseCtx,
     /** The cloud technique to draw the sky with; null: the sky's cloud asset's own. */
     clouds: CloudTechnique? = null,
+    requested: FieldRenderSettings = FieldRenderSettings(),
 ) : FieldView, Disposable {
+    /** What the field is drawn with: [requested], less the display transform on a context that cannot run it. */
+    val settings: FieldRenderSettings = requested.forContext(Gdx.graphics.isGL30Available).also {
+        if (it !== requested) ctx.log.warn("The display transform needs OpenGL 3.0; drawing the field without it")
+    }
+
     private val modelShaders = ModelShaderProvider()
     private val batch = ModelBatch(modelShaders)
     private val terrainPass = TerrainPass(ctx.shaderStorage, TerrainVariant.GAME_SINGLE_SUN)
@@ -128,6 +143,43 @@ class FieldRenderer(
     private val environment = Environment()
     private val sun = DirectionalLight()
     private val shadows = FieldShadows()
+    private val cableMesh = CableMesh()
+
+    /** The sky light the models and terrain are lit with this frame, and the one fading in over it. */
+    private class SkyLight(val environment: HdrEnvironment, val fadeTo: HdrEnvironment?, val weight: Float) {
+        val irradiance get() = environment.irradiance
+    }
+
+    /**
+     * Moves the field sky's light one frame and sets it on the environment in place of the flat ambient colour, or sets the
+     * flat ambient back when there is no light to give (the sky does not opt in with `lightsScene`, is not a procedural
+     * sky, its first build is not done, or [FieldRenderSettings.skyLight] is off). Null then.
+     */
+    private fun lightWithSky(field: FieldScene, sky: SkyRenderer?, seconds: Float): SkyLight? {
+        val procedural = sky as? ProceduralSky
+        if (settings.skyLight && procedural != null) {
+            procedural.updateLighting(field.sunDirection, skyTime, true, seconds.toDouble())
+            val current = procedural.lightingEnvironment
+            if (current != null) {
+                val lighting = procedural.lighting
+                val next = lighting?.next
+                val light = SkyLight(current, next, lighting?.fade ?: 0f)
+                environment.remove(ColorAttribute.AmbientLight)
+                environment.set(skyAttribute(current, next, light.weight))
+                return light
+            }
+        }
+        environment.remove(EnvironmentLightAttribute.Type)
+        if (!environment.has(ColorAttribute.AmbientLight)) {
+            environment.set(ColorAttribute(ColorAttribute.AmbientLight, field.ambient))
+        }
+        return null
+    }
+
+    private fun skyAttribute(current: HdrEnvironment, next: HdrEnvironment?, weight: Float) = EnvironmentLightAttribute(
+        current.specular, current.irradiance, current.levels, current.ambient,
+        next?.let { EnvironmentLightAttribute(it.specular, it.irradiance, it.levels, it.ambient) }, if (next != null) weight else 0f,
+    )
 
     /**
      * Whether the scene's assets are settled: its models and terrains are built, and its foliage is either built or
@@ -143,9 +195,11 @@ class FieldRenderer(
      * entity in [clips] plays that clip of its model once, from when it first appears there, and then holds its last
      * frame; [seconds] is the frame's time. A model without the clip is drawn as it is.
      */
+    override val drawsCables: Boolean get() = true
+
     override fun draw(
         field: FieldScene, camera: Camera, lines: List<LineSegment>, hidden: Entity?,
-        clips: Map<Entity, String>, seconds: Float,
+        clips: Map<Entity, String>, seconds: Float, cables: List<Cable>,
     ) {
         skyTime += seconds
         if (scene !== field) {
@@ -158,6 +212,7 @@ class FieldRenderer(
             field.fogColor?.let { environment.set(ColorAttribute(ColorAttribute.Fog, it)) }
             sun.set(field.sunColor, Vector3(field.sunDirection).scl(-1f))
             environment.add(sun)
+            settings.outputTransform?.let { environment.set(OutputTransformAttribute(it)) }
         }
         val wanted = buildSet {
             addAll(field.models.map { it.second }.toSet())
@@ -172,14 +227,16 @@ class FieldRenderer(
         Gdx.gl.glClearColor(fog.r, fog.g, fog.b, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
 
-        field.skyName?.let { ctx.assetStorage.getAs<SkyRenderer>(it) }?.let { sky ->
+        val sky = field.skyName?.let { ctx.assetStorage.getAs<SkyRenderer>(it) }
+        sky?.let {
             Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
             Gdx.gl.glDepthMask(false)
             Gdx.gl.glDisable(GL20.GL_CULL_FACE)
             sky.draw(camera, SkyFrame(field.sunDirection, skyTime, technique = clouds))
             Gdx.gl.glDepthMask(true)
-            stepDownClouds(sky, seconds)
+            stepDownClouds(it, seconds)
         }
+        val skyLight = lightWithSky(field, sky, seconds)
 
         val drawn = drawnModels(field)
         animate(drawn, clips, seconds)
@@ -212,11 +269,12 @@ class FieldRenderer(
         val frame = FrameInputs(
             camera.combined, camera.position, floatArrayOf(field.ambient.r, field.ambient.g, field.ambient.b),
             RenderFog(fog.r, fog.g, fog.b, if (field.fogColor != null) field.fogDensity else 0f, field.fogGradient),
-            RenderLights(listOf(sunInput)), TerrainVariant.GAME_SINGLE_SUN.profile,
+            RenderLights(listOf(sunInput)), TerrainVariant.GAME_SINGLE_SUN.profile, settings.outputTransform,
         )
         val sun = TerrainLighting.Sun(
             field.sunDirection, field.sunColor.r, field.sunColor.g, field.sunColor.b,
             SunShadowInput(shadows.texture, shadows.matrix, 1f / SHADOW_MAP_SIZE, shadows.bias),
+            skyLight?.irradiance, skyLight?.fadeTo?.irradiance, skyLight?.weight ?: 0f,
         )
         terrainPass.draw(frame, sun, terrains.map { (mesh, world) -> TerrainDraw(mesh, world) })
 
@@ -228,6 +286,8 @@ class FieldRenderer(
             batch.render(instance, environment)
         }
         for (placement in foliage.values) batch.render(placement.drawable, environment)
+        cableMesh.update(cables, camera, Gdx.graphics.backBufferHeight.toFloat().coerceAtLeast(1f))
+        batch.render(cableMesh, environment)
         batch.end()
 
         if (lines.isNotEmpty()) {
@@ -292,6 +352,9 @@ class FieldRenderer(
     /** The placement drawables of the last [draw], by entity: for tests. */
     internal fun placementDrawables(): Map<Entity, FoliageDrawable> = placements.mapValues { it.value.drawable }
 
+    /** The environment the models are drawn with: for tests. */
+    internal val modelEnvironment: Environment get() = environment
+
     /** The sun's shadow map: for tests. */
     internal val sunShadows: FieldShadows get() = shadows
 
@@ -333,6 +396,7 @@ class FieldRenderer(
         shadows.dispose()
         modelShaders.dispose()
         terrainPass.dispose()
+        cableMesh.dispose()
         shapes.dispose()
     }
 }

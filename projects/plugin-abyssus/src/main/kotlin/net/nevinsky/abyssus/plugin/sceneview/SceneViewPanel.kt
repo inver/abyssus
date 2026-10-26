@@ -5,25 +5,31 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
-
+import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.diagnostic.thisLogger
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.pick.*
+import net.nevinsky.abyssus.lib.core.editor.pick.FrameSelection
+import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.lib.core.editor.pick.SceneInteraction
+import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.lib.core.editor.ray.RayModeSnapshot
 import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudViewState
+import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import org.lwjgl.opengl.GL
 import java.awt.BorderLayout
-import java.awt.event.*
-import javax.swing.*
+import java.awt.event.HierarchyEvent
+import java.awt.event.KeyEvent
+import javax.swing.JComponent
+import javax.swing.JPanel
+import javax.swing.JToggleButton
+import javax.swing.SwingConstants
 
 /**
  * Swing panel hosting a core-profile GL canvas that renders a scene with libGDX. Orbit/pan/zoom with the mouse; click
@@ -52,14 +58,16 @@ class SceneViewPanel internal constructor(
     /** Opens the Paint Texture session of an entity (the mode is read by its stroke); null: no Paint Texture strip. */
     private val splatSession: ((String, () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?, (net.nevinsky.abyssus.plugin.splat.SplatSession?) -> Unit) -> Unit)? = null,
     /** The project's models to arrange along a path; the callback starts drawing. Null: no Add Path Arrangement button. */
-    private val pathMenu: PlacementMenu<(RenderAsset) -> Unit>? = null,
+    private val pathMenu: PlacementMenu<(BaseMeta) -> Unit>? = null,
     /** The project's `Show FPS`, read before every frame so a missed change event cannot leave the counter off; null: only [setFpsEnabled]. */
     private val showFps: (() -> Boolean)? = null,
     antialiasingLevel: AntialiasingLevel = AntialiasingLevel.DEFAULT,
 ) : JPanel(BorderLayout()), SceneView, RayControlProvider {
 
     internal val orbit = OrbitCamera(initial.camera)
-    private val interaction = SceneInteraction(renderer.state, renderer.queries, orbit).also { it.groundHeights = { renderer.groundHeights() } }
+    private val interaction = SceneInteraction(renderer.state, renderer.queries, orbit).also {
+        it.groundHeights = { renderer.groundHeights() }
+    }
 
     private var lastCamera = initial.camera
 
@@ -67,8 +75,10 @@ class SceneViewPanel internal constructor(
 
     /** Gizmo space, snapping, shading and layer toggles of this view; never saved. */
     internal val tools = SceneViewToolsModel()
+
     /** The tool, space and snap, such as `Move · Local · Snap 0.5`; the stats strip shows it. */
     internal val toolStatusText: String get() = toolbar.statusText
+
     /** This view's frame rate: sampled only while the project shows it, reset on every lifecycle break. */
     private val fps = FpsCounter()
     private var fpsEnabled = false
@@ -106,7 +116,8 @@ class SceneViewPanel internal constructor(
     private var orientationSprite: CornerSprite? = null
     private var statsSprite: CornerSprite? = null
     private val brushes = BrushKinds()
-    private val paint: FoliagePaintControls = FoliagePaintControls(renderer, interaction, play, brushes, paintSession, ::syncControls)
+    private val paint: FoliagePaintControls =
+        FoliagePaintControls(renderer, interaction, play, brushes, paintSession, ::syncControls)
     private val sculpt: SculptTerrainControls = SculptTerrainControls(
         renderer, interaction, play, brushes, sculptSession,
         net.nevinsky.abyssus.plugin.terrain.SculptToolFactory(net.nevinsky.abyssus.lib.core.editor.terrain.FastNoiseSamplerFactory()),
@@ -118,13 +129,16 @@ class SceneViewPanel internal constructor(
         ::syncControls, { onPaintTextureEnded?.invoke() },
         { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(reason, AbyssusBundle.message("splatTitle")) },
     )
+
     init {
         // toolbar order
         brushes.register(paint)
         brushes.register(sculpt)
         brushes.register(paintTexture)
     }
-    private val playStrip = PlayControlsStrip(play, renderer, simulationRequest, { endBrushes() }, { requestFocusInWindow() })
+
+    private val playStrip =
+        PlayControlsStrip(play, renderer, simulationRequest, { endBrushes() }, { requestFocusInWindow() })
     private val clouds = CloudControls(renderer) { experimenting }
 
     /** This view's Clouds choice and fallbacks; a reopened view gets a new panel, so it starts at Asset again. */
@@ -137,7 +151,17 @@ class SceneViewPanel internal constructor(
         JToggleButton(AbyssusBundle.message("sceneViewRayExperiment")) else null
     private val experiment = experimentButton?.let { RayFeasibilityPreview { message -> thisLogger().info(message) } }
     private val experimenting: Boolean get() = experimentButton?.isSelected == true
-    private val input = SceneInputForwarder(this, renderer, interaction, play, { experimenting }, { experiment?.orbit }, { shift -> brushes.strips.forEach { it.update(shift) } }, ::frameSelection, ::pressOnOrientationWidget)
+    private val input = SceneInputForwarder(
+        this,
+        renderer,
+        interaction,
+        play,
+        { experimenting },
+        { experiment?.orbit },
+        { shift -> brushes.strips.forEach { it.update(shift) } },
+        ::frameSelection,
+        ::pressOnOrientationWidget
+    )
 
     private val toolbar: SceneViewToolbar = SceneViewToolbar(
         this, renderer, interaction, tools, play, brushes, playStrip, clouds, experimentButton,
@@ -170,7 +194,12 @@ class SceneViewPanel internal constructor(
     private val antialiasing: CanvasAntialiasing = CanvasAntialiasing(
         antialiasingLevel,
         ::replaceCanvas,
-        { samples, error -> thisLogger().warn("Scene view refused $samples MSAA samples; trying lower sample counts", error) },
+        { samples, error ->
+            thisLogger().warn(
+                "Scene view refused $samples MSAA samples; trying lower sample counts",
+                error
+            )
+        },
         { error ->
             thisLogger().warn("Scene render failed, stopping the view", error)
             driver.stop()
@@ -238,6 +267,7 @@ class SceneViewPanel internal constructor(
             null
         }
     }
+
     private var canvasHost = newCanvasHost()
 
     /** Renders at the full frame rate while something moves or may change at once; an idle view (the sky still drifts) renders slowly. */
@@ -257,7 +287,10 @@ class SceneViewPanel internal constructor(
         unavailable = true
         remove(canvasHost)
         canvasHost.stop()
-        add(com.intellij.ui.components.JBLabel(message, SwingConstants.CENTER).apply { name = "scene-unavailable" }, BorderLayout.CENTER)
+        add(
+            com.intellij.ui.components.JBLabel(message, SwingConstants.CENTER).apply { name = "scene-unavailable" },
+            BorderLayout.CENTER
+        )
         syncControls()
         revalidate()
         repaint()
@@ -299,7 +332,8 @@ class SceneViewPanel internal constructor(
         spriteScale = scale
         val margin = Math.round(CORNER_MARGIN * scale).toInt()
         if (widgetChanged || rescaled || orientationSprite == null) {
-            orientationSprite = CornerSprite(orientation.corner, orientation.toImage(scale), orientation.version, margin)
+            orientationSprite =
+                CornerSprite(orientation.corner, orientation.toImage(scale), orientation.version, margin)
         }
         if (statsChanged || rescaled || statsSprite == null) {
             statsSprite = CornerSprite(statsStrip.corner, statsStrip.toImage(scale), statsStrip.version, margin)
@@ -308,8 +342,12 @@ class SceneViewPanel internal constructor(
     }
 
     internal fun statsText(): String = statsLine(
-        fps = if (fpsEnabled) fps.display?.let { AbyssusBundle.message("sceneViewFps", it) } ?: AbyssusBundle.message("sceneViewFps", "--") else null,
-        objectsText = AbyssusBundle.message("sceneViewObjects", renderer.drawnModels.size + renderer.drawnTerrains.size),
+        fps = if (fpsEnabled) fps.display?.let { AbyssusBundle.message("sceneViewFps", it) }
+            ?: AbyssusBundle.message("sceneViewFps", "--") else null,
+        objectsText = AbyssusBundle.message(
+            "sceneViewObjects",
+            renderer.drawnModels.size + renderer.drawnTerrains.size
+        ),
         status = toolStatusText,
     )
 
@@ -318,7 +356,14 @@ class SceneViewPanel internal constructor(
      * scene. On one of its axes it turns the orbit camera to look along that axis, from the axis's side.
      */
     internal fun pressOnOrientationWidget(x: Int, y: Int): Boolean {
-        val rect = cornerRect(Corner.UPPER_RIGHT, canvas.width, canvas.height, OrientationWidget.SIZE, OrientationWidget.SIZE, CORNER_MARGIN)
+        val rect = cornerRect(
+            Corner.UPPER_RIGHT,
+            canvas.width,
+            canvas.height,
+            OrientationWidget.SIZE,
+            OrientationWidget.SIZE,
+            CORNER_MARGIN
+        )
         if (!rect.contains(x, y)) return false
         val radius = OrientationWidget.SIZE / 2f
         val dx = x - rect.x - radius
@@ -343,7 +388,10 @@ class SceneViewPanel internal constructor(
         val aspect = (camera.viewportWidth / camera.viewportHeight).takeIf { it.isFinite() && it > 0f } ?: 1f
         orbit.frame(
             FrameSelection().frame(
-                Vector3(box.min.x, box.min.y, box.min.z), Vector3(box.max.x, box.max.y, box.max.z), camera.fieldOfView, aspect,
+                Vector3(box.min.x, box.min.y, box.min.z),
+                Vector3(box.max.x, box.max.y, box.max.z),
+                camera.fieldOfView,
+                aspect,
             ),
         )
     }
@@ -407,7 +455,7 @@ class SceneViewPanel internal constructor(
             interaction.onTransform = value
         }
 
-    override var onArrangementCreate: ((RenderAsset, List<Vector3>, Boolean) -> Boolean)?
+    override var onArrangementCreate: ((BaseMeta, List<Vector3>, Boolean) -> Boolean)?
         get() = interaction.onArrangementCreate
         set(value) {
             interaction.onArrangementCreate = value
@@ -481,7 +529,7 @@ class SceneViewPanel internal constructor(
             interaction.onPathEditEnded = value
         }
 
-    override fun startDrawing(asset: RenderAsset) {
+    override fun startDrawing(asset: BaseMeta) {
         endBrushes()
         interaction.startDrawing(asset)
         requestFocusInWindow()
@@ -507,6 +555,7 @@ class SceneViewPanel internal constructor(
         val selected = interaction.selectedId
         fun binding(content: net.nevinsky.abyssus.lib.core.editor.scene.SceneContent) =
             content.foliages.firstOrNull { it.entityId == selected }?.let { it.foliageName to it.terrainName }
+
         val bindingChanged = binding(renderer.params.content) != binding(params.content)
         renderer.params = params
         if (params.camera != lastCamera) {

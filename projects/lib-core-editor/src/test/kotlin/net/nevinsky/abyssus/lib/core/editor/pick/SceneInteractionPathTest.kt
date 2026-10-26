@@ -8,19 +8,17 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import com.badlogic.gdx.math.collision.BoundingBox
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong
 import net.nevinsky.abyssus.lib.core.editor.content.ArrangementPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Test
 
 private const val W = 800
@@ -32,7 +30,7 @@ class SceneInteractionPathTest {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
     }
 
-    private val tree = RenderAsset("MODEL", "tree")
+    private val tree = BaseMeta(MetaType.MODEL, "tree")
 
     private fun camera() = PerspectiveCamera(67f, W.toFloat(), H.toFloat()).also {
         it.position.set(50f, 60f, 110f)
@@ -48,7 +46,7 @@ class SceneInteractionPathTest {
         val interaction: SceneInteraction,
         val camera: PerspectiveCamera,
     ) {
-        val created = mutableListOf<Triple<RenderAsset, List<Vector3>, Boolean>>()
+        val created = mutableListOf<Triple<BaseMeta, List<Vector3>, Boolean>>()
         val edits = mutableListOf<Pair<String, List<Vector3>>>()
         var accept = true
 
@@ -66,16 +64,31 @@ class SceneInteractionPathTest {
         }
     }
 
-    private fun fixture(arrangement: Boolean = false, copy: Boolean = false, closed: Boolean = false, points: List<Vector3> = line()): Fixture {
+    private fun fixture(
+        arrangement: Boolean = false,
+        copy: Boolean = false,
+        closed: Boolean = false,
+        points: List<Vector3> = line()
+    ): Fixture {
         val state = SceneViewState()
         val content = SceneContent(
             terrains = listOf(AssetPlacement("1", "terrain", PlacementTransform.IDENTITY)),
             arrangements = if (arrangement) {
-                listOf(ArrangementPlacement("5", arrangementAlong(points, closed = closed).also { if (copy) it.slots = mutableListOf(12) }))
+                listOf(
+                    ArrangementPlacement(
+                        "5",
+                        arrangementAlong(points, closed = closed).also { if (copy) it.slots = mutableListOf(12) })
+                )
             } else emptyList(),
         )
         val boxes = if (copy) {
-            listOf(snapshotBoxOf("12", BoundingBox(Vector3(-2f, -2f, -2f), Vector3(2f, 2f, 2f)), Matrix4().setToTranslation(50f, 0f, 50f)))
+            listOf(
+                snapshotBoxOf(
+                    "12",
+                    BoundingBox(Vector3(-2f, -2f, -2f), Vector3(2f, 2f, 2f)),
+                    Matrix4().setToTranslation(50f, 0f, 50f)
+                )
+            )
         } else emptyList()
         val terrain = TerrainTarget("1", TerrainData(3, FloatArray(9), 100, 1f), Matrix4())
         val frame = FrameSnapshot(camera(), boxes, listOf(snapshotTerrainOf(terrain)), 7L)
@@ -84,7 +97,8 @@ class SceneInteractionPathTest {
             it.size = ViewSize(W, H, W, H)
         }
         return Fixture(state, queries, interaction, frame.camera).also { f ->
-            interaction.onArrangementCreate = { asset, p, closedLine -> f.created += Triple(asset, p, closedLine); f.accept }
+            interaction.onArrangementCreate =
+                { asset, p, closedLine -> f.created += Triple(asset, p, closedLine); f.accept }
             interaction.onArrangementEdit = { id, p -> f.edits += id to p; f.accept }
         }
     }
@@ -377,7 +391,10 @@ class SceneInteractionPathTest {
         val two = fixture(arrangement = true)
         assertFalse(two.interaction.canRemovePoint("5"))
         assertFalse(two.interaction.removePoint("5", 0))
-        val three = fixture(arrangement = true, points = listOf(Vector3(20f, 0f, 50f), Vector3(50f, 0f, 60f), Vector3(80f, 0f, 50f)))
+        val three = fixture(
+            arrangement = true,
+            points = listOf(Vector3(20f, 0f, 50f), Vector3(50f, 0f, 60f), Vector3(80f, 0f, 50f))
+        )
         assertTrue(three.interaction.canRemovePoint("5"))
         assertTrue(three.interaction.removePoint("5", 1))
         assertEquals(listOf(Vector3(20f, 0f, 50f), Vector3(80f, 0f, 50f)), three.edits.single().second)

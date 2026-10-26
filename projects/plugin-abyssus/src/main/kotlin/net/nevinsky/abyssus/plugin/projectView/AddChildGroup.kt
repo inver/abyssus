@@ -21,6 +21,7 @@ abstract class AddChildGroup<T>(title: String) : DefaultActionGroup(title, true)
             override fun update(e: AnActionEvent) {
                 e.presentation.isEnabled = canAdd(target)
             }
+
             override fun actionPerformed(e: AnActionEvent) = addTarget(target)
         }
         if (literalName) child.templatePresentation.setText(label, false)

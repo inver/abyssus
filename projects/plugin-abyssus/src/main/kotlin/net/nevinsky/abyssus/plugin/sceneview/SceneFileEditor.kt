@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
+import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.intellij.openapi.application.ApplicationManager
@@ -13,9 +14,6 @@ import com.intellij.openapi.command.undo.DocumentReference
 import com.intellij.openapi.command.undo.DocumentReferenceManager
 import com.intellij.openapi.command.undo.DocumentReferenceProvider
 import com.intellij.openapi.command.undo.UndoManager
-import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
-import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
-import net.nevinsky.abyssus.plugin.filetype.ProjectSettingsListener
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.EditorFactory
@@ -25,6 +23,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorLocation
 import com.intellij.openapi.fileEditor.FileEditorState
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.UserDataHolderBase
@@ -38,12 +37,15 @@ import com.intellij.util.Alarm
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.update.MergingUpdateQueue
 import com.intellij.util.ui.update.Update
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.editor.components.AddedEntity
+import net.nevinsky.abyssus.lib.core.editor.components.CopyResult
+import net.nevinsky.abyssus.lib.core.editor.components.EditResult
+import net.nevinsky.abyssus.lib.core.editor.components.EntityClipboard
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
@@ -56,20 +58,18 @@ import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.water.WaterField
 import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.SceneRayControls
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
 import net.nevinsky.abyssus.plugin.filetype.AbyssusSceneEdited
+import net.nevinsky.abyssus.plugin.filetype.ProjectSettingsListener
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
-import net.nevinsky.abyssus.plugin.water.WaterSceneEdits
-import com.intellij.openapi.ide.CopyPasteManager
-import net.nevinsky.abyssus.lib.core.editor.components.AddedEntity
-import net.nevinsky.abyssus.lib.core.editor.components.CopyResult
-import net.nevinsky.abyssus.lib.core.editor.components.EditResult
-import net.nevinsky.abyssus.lib.core.editor.components.EntityClipboard
-import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.ui.reportRejection
+import net.nevinsky.abyssus.plugin.water.WaterSceneEdits
 import net.nevinsky.abyssus.plugin.water.reportWaterRejection
 import java.awt.BorderLayout
 import java.awt.datatransfer.DataFlavor
@@ -377,7 +377,7 @@ class SceneFileEditor(
      * Writes a finished drawing as an arrangement and its copies (one undoable command) and selects the new arrangement.
      * False when nothing was written; a refusal is shown to the user.
      */
-    internal fun createArrangement(asset: RenderAsset, points: List<Vector3>, closed: Boolean): Boolean {
+    internal fun createArrangement(asset: BaseMeta, points: List<Vector3>, closed: Boolean): Boolean {
         val heights = ground() ?: return false
         val result = ArrangementEditing.create(project, file, asset, points, closed, heights)
         ArrangementEditing.report(project, result)

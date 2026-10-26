@@ -17,6 +17,7 @@ import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.math.collision.Ray
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -80,7 +81,7 @@ class SnapshotSceneQueriesTest {
     @Test
     fun theQueriesSeeThePathDraftCopies() {
         val path = net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong(listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f))).also {
-            it.asset = net.nevinsky.abyssus.lib.core.ecs.component.PathAsset(assetName = "post")
+            it.asset = BaseMeta(name = "post")
             it.spacing = 10f
             it.slots = mutableListOf(11, 12, 13)
         }

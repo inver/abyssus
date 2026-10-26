@@ -5,24 +5,21 @@
 
 package net.nevinsky.abyssus.lib.core.ecs
 
-import net.nevinsky.abyssus.lib.core.format.isEnabled
-import net.nevinsky.abyssus.lib.core.format.ENABLED_KEY
 import com.badlogic.ashley.core.Entity
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.ObjectReader
 import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.ecs.component.IdComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.ENABLED_KEY
+import net.nevinsky.abyssus.lib.core.format.isEnabled
 import net.nevinsky.abyssus.lib.core.io.EcsReadWarnings
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.io.SourceBackedComponent
-import net.nevinsky.abyssus.lib.core.ecs.EcsLoadingWarns
-import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
-import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.util.obj
 
 /**
@@ -133,10 +130,6 @@ class EcsLoader(
                 ?.let { it.lookAtId = check(engine, warnings, from, "look-at", it.lookAtId) }
             entity.getComponent(ParentComponent::class.java)
                 ?.let { it.parentEntityId = check(engine, warnings, from, "parent", it.parentEntityId) }
-            entity.getComponent(Point2PointPositionComponent::class.java)?.let {
-                it.entity1Id = check(engine, warnings, from, "point-to-point entity1", it.entity1Id)
-                it.entity2Id = check(engine, warnings, from, "point-to-point entity2", it.entity2Id)
-            }
         }
     }
 

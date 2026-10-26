@@ -5,8 +5,8 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
@@ -44,7 +44,7 @@ class ProjectSceneViewHost(
     override fun assetActions(file: VirtualFile, position: () -> Vector3) =
         AddAssetGroup(project, file, metaFiles, position)
 
-    override fun pathActions(file: VirtualFile, start: (RenderAsset) -> Unit) =
+    override fun pathActions(file: VirtualFile, start: (BaseMeta) -> Unit) =
         AddPathArrangementGroup(project, file, start)
 
     override fun canAddPath(file: VirtualFile) = canAddPathArrangement(file, project.service<SceneDocumentCache>())

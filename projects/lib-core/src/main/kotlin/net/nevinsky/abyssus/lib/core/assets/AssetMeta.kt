@@ -11,19 +11,22 @@ const val META_VERSION_DEFAULT = 1
  * is the typed block of [type] (see [AssetMetaLoader]); the other fields default so a sparse meta still loads, and [uuid] is null for an asset that declares none.
  */
 open class AssetMeta<T>(
-    @JsonIgnore
-    val name: String = "",
+    type: MetaType,
+    name: String = "",
     val formatVersion: Int = 1,
     val version: Int = 1,
     val lastModified: Long = 0,
-    val type: MetaType = MetaType.UNKNOWN,
     val additional: T,
     val uuid: UUID? = null
-) {
+) : BaseMeta(type, name) {
     @Suppress("UNCHECKED_CAST")
     fun <T> typedAdditional(): T {
         return additional as T
     }
+}
+
+open class BaseMeta(val type: MetaType = MetaType.UNKNOWN, @JsonIgnore val name: String = "") {
+    fun isTerrain(): Boolean = type == MetaType.TERRAIN
 }
 
 enum class MetaType {

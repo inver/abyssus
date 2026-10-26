@@ -7,8 +7,8 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import kotlin.math.abs
 
@@ -56,7 +56,7 @@ class SceneInteraction(
      * Called when a drawing is finished with the model, the points on the terrain and whether the line is closed;
      * returns whether the arrangement was written. A refused write keeps the drawing.
      */
-    var onArrangementCreate: ((RenderAsset, List<Vector3>, Boolean) -> Boolean)? = null
+    var onArrangementCreate: ((BaseMeta, List<Vector3>, Boolean) -> Boolean)? = null
 
     /** Called when a point drag, an insert or a removal ends with new points for the arrangement; returns whether it was written. */
     var onArrangementEdit: ((String, List<Vector3>) -> Boolean)? = null
@@ -300,7 +300,7 @@ class SceneInteraction(
     }
 
     /** Starts drawing a path arrangement of the model [asset]: each click on the terrain adds a point. */
-    fun startDrawing(asset: RenderAsset) = drawingSession.start(asset)
+    fun startDrawing(asset: BaseMeta) = drawingSession.start(asset)
 
     /** Enter: finishes the drawing as an open line; nothing happens, and drawing continues, with fewer than two points. */
     fun enter() = drawingSession.enter()

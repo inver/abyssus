@@ -8,11 +8,7 @@ package net.nevinsky.abyssus.lib.core.ecs.component
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
-import net.nevinsky.abyssus.lib.core.assets.MetaType
-
-/** The project model an arrangement places along its line. */
-data class PathAsset(var type: MetaType = MetaType.MODEL, var assetName: String = "")
-
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 
 /**
  * A line of [points] on the terrain and the settings that place copies of one model [asset] along it. Data only: the
@@ -25,7 +21,7 @@ data class PathAsset(var type: MetaType = MetaType.MODEL, var assetName: String 
 class PathArrangementComponent : Component {
     var points: MutableList<Vector3> = ArrayList()
     var closed: Boolean = false
-    var asset: PathAsset = PathAsset()
+    var asset: BaseMeta = BaseMeta()
     var spacing: Float = 10f
     var offset: Float = 0f
     var sides: PathSides = PathSides.CENTER

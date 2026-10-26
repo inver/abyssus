@@ -5,23 +5,22 @@
 
 package net.nevinsky.abyssus.lib.core.editor.headless
 
-import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
-import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
-import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
-import net.nevinsky.abyssus.lib.core.format.FormatProblem
-import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.meta.FieldValue
-import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.testProject
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
+import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
+import net.nevinsky.abyssus.lib.core.editor.meta.FieldValue
+import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
+import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.format.FormatProblem
+import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
 
@@ -88,7 +87,7 @@ class HeadlessEditingTest {
     @Test fun movingAnArrangedCopyWritesTheSameTextAsTheSceneViewDoes() {
         val root = SceneJson().parse(sceneText)
         val points = listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f))
-        ArrangementEdits(ResourceEditorMessages()).create(root, RenderAsset("MODEL", "tree"), points, false, LineHeights())
+        ArrangementEdits(ResourceEditorMessages()).create(root, BaseMeta(MetaType.MODEL, "tree"), points, false, LineHeights())
         val arranged = SceneJson().pretty(root)
         val edit = TransformEdit(position = Vector3(20f, 0f, 4f))
         val headless = (editing.transform(arranged, "14", edit) as HeadlessEdit.Edited).text

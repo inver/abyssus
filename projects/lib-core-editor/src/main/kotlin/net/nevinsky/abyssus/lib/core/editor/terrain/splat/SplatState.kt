@@ -46,7 +46,8 @@ sealed interface SplatState {
     }
 
     /** The map cannot be painted; [detail] adds what the reader found (the sides of the image, say). */
-    class Unusable(val problem: SplatProblem, val image: SplatImageProblem? = null, val detail: String = "") : SplatState
+    class Unusable(val problem: SplatProblem, val image: SplatImageProblem? = null, val detail: String = "") :
+        SplatState
 }
 
 /**
@@ -65,7 +66,8 @@ class SplatStateReader(private val json: JsonProcessor, private val codec: Splat
     fun read(assetsDir: File, terrainFolder: File, terrainMetaText: String? = null): SplatState {
         val terrain = (terrainMetaText?.let(::parseMeta) ?: readMeta(File(terrainFolder, META_FILE)))
             ?: return SplatState.Unusable(SplatProblem.TERRAIN_META)
-        val uuid = terrain.json.obj("additional")?.text(SPLAT_MAP)?.takeIf { it.isNotBlank() } ?: return SplatState.None()
+        val uuid =
+            terrain.json.obj("additional")?.text(SPLAT_MAP)?.takeIf { it.isNotBlank() } ?: return SplatState.None()
         val folder = textureFolder(assetsDir, uuid) ?: return SplatState.None(uuid)
         val meta = readMeta(File(folder, META_FILE)) ?: return SplatState.Unusable(SplatProblem.TEXTURE_META)
         val name = meta.json.obj("additional")?.text("file")
@@ -83,7 +85,16 @@ class SplatStateReader(private val json: JsonProcessor, private val codec: Splat
         } catch (e: SplatImageException) {
             return SplatState.Unusable(SplatProblem.IMAGE, e.problem, e.detail)
         }
-        return SplatState.Ready(uuid, folder, file, pixels, otherUsers(assetsDir, terrainFolder, uuid), bytes, length, modified)
+        return SplatState.Ready(
+            uuid,
+            folder,
+            file,
+            pixels,
+            otherUsers(assetsDir, terrainFolder, uuid),
+            bytes,
+            length,
+            modified
+        )
     }
 
     /** The folder of the texture asset with [uuid], or null when no readable one has it. */

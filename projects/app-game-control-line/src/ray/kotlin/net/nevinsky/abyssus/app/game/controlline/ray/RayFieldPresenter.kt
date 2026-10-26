@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Matrix4
+import net.nevinsky.abyssus.app.game.controlline.render.Cable
 import net.nevinsky.abyssus.app.game.controlline.render.FailableFieldView
 import net.nevinsky.abyssus.app.game.controlline.render.FieldScene
 import net.nevinsky.abyssus.app.game.controlline.render.LineSegment
@@ -48,8 +49,9 @@ class RayFieldPresenter(
 
     override fun draw(
         field: FieldScene, camera: Camera, lines: List<LineSegment>, hidden: Entity?,
-        clips: Map<Entity, String>, seconds: Float,
+        clips: Map<Entity, String>, seconds: Float, cables: List<Cable>,
     ) {
+        // `drawsCables` stays false: the game gives this view its control lines as `lines`, like the other overlays
         val fog = field.fogColor ?: Color(0.6f, 0.7f, 0.85f, 1f)
         Gdx.gl.glClearColor(fog.r, fog.g, fog.b, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)

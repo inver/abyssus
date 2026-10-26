@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
+import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -13,9 +14,9 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.plugin.sceneview.ArrangementEditing
@@ -32,7 +33,14 @@ class RegenerateArrangementActionTest : BasePlatformTestCase() {
         FileUtil.copyDir(File("src/test/testData/project/Untitled"), dir)
         scene = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(dir, "scenes/Main Scene.scene"))!!
         // drawn at height 0 over a terrain that is not flat: Regenerate has work to do
-        ArrangementEditing.create(project, scene, RenderAsset("MODEL", "tree"), listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)), false, LineHeights())
+        ArrangementEditing.create(
+            project,
+            scene,
+            BaseMeta(MetaType.MODEL, "tree"),
+            listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)),
+            false,
+            LineHeights()
+        )
     }
 
     private fun text() = FileDocumentManager.getInstance().getDocument(scene)!!.text
@@ -46,10 +54,13 @@ class RegenerateArrangementActionTest : BasePlatformTestCase() {
         override fun selected(e: AnActionEvent) = node
     }
 
-    private fun event(action: AnAction): AnActionEvent = TestActionEvent.createTestEvent(action).also { action.update(it) }
+    private fun event(action: AnAction): AnActionEvent =
+        TestActionEvent.createTestEvent(action).also { action.update(it) }
 
     fun testItIsOfferedOnAnArrangementRowOnly() {
-        assertTrue(ActionManager.getInstance().getAction("Abyssus.RegenerateArrangement") is RegenerateArrangementAction)
+        assertTrue(
+            ActionManager.getInstance().getAction("Abyssus.RegenerateArrangement") is RegenerateArrangementAction
+        )
         assertTrue(event(On(rowOf("11"))).presentation.isEnabledAndVisible)
         assertFalse(event(On(rowOf("12"))).presentation.isEnabledAndVisible)
         assertFalse(event(On(rowOf("0"))).presentation.isEnabledAndVisible)
@@ -62,7 +73,11 @@ class RegenerateArrangementActionTest : BasePlatformTestCase() {
         val after = text()
         assertTrue("the copies stood at the line's height, not on the terrain", before != after)
         val ecs = SceneJson().parse(after)["ecs"]
-        assertEquals(ArrangementHeights.of(project).forScene(scene)!!.heightAt(20f, 0f, -99f), ecs["14"]["components"]["PositionComponent"]["localPosition"].path("y").floatValue(), 1e-3f)
+        assertEquals(
+            ArrangementHeights.of(project).forScene(scene)!!.heightAt(20f, 0f, -99f),
+            ecs["14"]["components"]["PositionComponent"]["localPosition"].path("y").floatValue(),
+            1e-3f
+        )
         action.actionPerformed(event(action))
         assertEquals(after, text())
     }

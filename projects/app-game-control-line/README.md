@@ -130,6 +130,44 @@ starts the raster field and states the reason in the window title and the applic
 never silently ignores the request. If ray rendering fails after start (quality limit, stalled frame or lost device),
 the game falls back to the raster field and states the reason the same way.
 
+## Rendering
+
+The raster field is lit physically (OpenSpec `control-line-pbr-rendering`, `render-output-transform`):
+
+- **Linear light, one display transform.** Colour textures and the fog colour are decoded from sRGB, surfaces are lit in linear
+  space and written through exposure (`DEFAULT_EXPOSURE`, 1), the Khronos PBR Neutral tone map and the sRGB encode
+  (`FieldRenderSettings.outputTransform`; `FieldRenderSettings.LEGACY` draws the game as it was). The sky is drawn as it is: the
+  field's `sky.frag` already tone maps and encodes itself.
+- **Sky light.** `skybox_physical` has `lightsScene: true`, so its irradiance and reflection light the models and the terrain
+  instead of the flat ambient colour, and cross-fade as the sky's light rebuilds. A sky that does not opt in keeps the flat ambient.
+- **Control lines are lit cable** (`CableMesh`): a thin tube through the model pipeline, at least 0.75 px wide on screen,
+  depth-tested and shadowed, coloured by tension. Ray mode and the debrief tracks keep their 1 px overlay lines.
+- MSAA (4x on the default framebuffer) is kept, so the transform is applied per shader; the resolve averages tone mapped values.
+
+`FieldPipelineGlTest` (`-Dabyssus.glTests=true`) checks it and writes `build/pipeline-shots/*.png` for a person to look at.
+
+**Frame time** (Linux x64, NVIDIA GeForce RTX 3070 Ti, driver 3.3.0 NVIDIA 615.71.09, Temurin 21.0.9, default framebuffer of a
+1280 x 720 window, fixed 1/60 s step, 10 s warmup, five 30 s samples; `docs/perf/control-line-pbr/*-linux.json`). CPU time of
+`FieldRenderer.draw` (command submission; the harness has no GPU timer), with two cables in both runs:
+
+| pipeline | p50 | p95 | p99 | allocated per frame |
+|---|---|---|---|---|
+| `legacy` (flat ambient, no transform) | 6.93 ms | 9.90 ms | 11.46 ms | 2.24 MB |
+| `pbr` (default) | 7.03 ms | 9.51 ms | 11.50 ms | 2.24 MB |
+
+The change's budget is 20% over the `legacy` run; `pbr` is within it (p95 4% lower; the five samples' p95 spread 8.0 to 12.2 ms for
+`legacy` and 8.9 to 10.2 ms for `pbr`, so the two are the same within noise). This is a local measure: the committed
+`docs/perf/baseline` is from the maintainer's Mac and predates the harness re-base described in `docs/ai/testing.md`. The pictures
+are `docs/perf/control-line-pbr/legacy-field.png` and `pbr-field.png`. Commands:
+
+```
+./gradlew :app-game-control-line:test --tests '*render.PerfWorkloadsGlTest' -Dabyssus.glTests=true -Dabyssus.perf.pipeline=pbr -Dabyssus.perf.report=<file.json>
+./gradlew :app-game-control-line:test --tests '*render.PixelEvidenceGlTest' -Dabyssus.glTests=true -Dabyssus.perf.pixels=record -Dabyssus.perf.pixelsDir=<dir>
+```
+
+The GL test window asks for a 3.3 core context (the game's own minimum); a 3.2 request returned a context without
+`glVertexAttribDivisor` on Linux and aborted the JVM on the first instanced draw.
+
 ## Controls
 
 | Where | Keys and mouse |

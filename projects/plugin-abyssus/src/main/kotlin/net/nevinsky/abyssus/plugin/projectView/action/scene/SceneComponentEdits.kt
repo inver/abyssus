@@ -5,32 +5,25 @@
 
 package net.nevinsky.abyssus.plugin.projectView.scene
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.plugin.EditorBundle
-import net.nevinsky.abyssus.plugin.sceneview.ArrangementHeights
-import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-
+import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.dto.ProjectLayout
-import net.nevinsky.abyssus.plugin.schema.ComponentSchemas
-import net.nevinsky.abyssus.lib.core.editor.components.EditResult
-import net.nevinsky.abyssus.lib.core.editor.components.EntityRemoval
-import net.nevinsky.abyssus.lib.core.editor.components.AddedEntity
-import net.nevinsky.abyssus.lib.core.editor.components.AddedLight
-import net.nevinsky.abyssus.lib.core.editor.components.AssetEntities
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import net.nevinsky.abyssus.lib.core.editor.components.LightEntities
-import net.nevinsky.abyssus.lib.core.editor.components.LightPreset
-import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.components.*
+import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
+import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
+import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.sceneview.ArrangementHeights
+import net.nevinsky.abyssus.plugin.schema.ComponentSchemas
 
 /**
  * Adds, changes and removes components of a scene's entities as undoable commands on the scene file. The rules are
@@ -41,11 +34,13 @@ object SceneComponentEdits {
         runCatchingKeepingCancellation { metaFiles.inEditor(folder) }.getOrNull()
 
     /** The models and terrains of the project [sceneFile] belongs to; empty for a scene outside a project. */
-    fun renderAssets(sceneFile: VirtualFile, metaFiles: MetaFiles): List<RenderAsset> {
+    fun renderAssets(sceneFile: VirtualFile, metaFiles: MetaFiles): List<BaseMeta> {
         val abss = ProjectLayout.abssFor(sceneFile) ?: return emptyList()
         return ProjectLayout.assetFolders(abss).mapNotNull { folder ->
             val type = readMeta(folder, metaFiles)?.type
-            if (type == MetaType.MODEL || type == MetaType.TERRAIN) RenderAsset(type.name, folder.name) else null
+            if (type == MetaType.MODEL || type == MetaType.TERRAIN) {
+                BaseMeta(type, folder.name)
+            } else null
         }.sortedBy { it.name }
     }
 
@@ -97,12 +92,14 @@ object SceneComponentEdits {
     fun addAsset(
         project: Project,
         file: VirtualFile,
-        asset: RenderAsset,
+        asset: BaseMeta,
         position: Vector3,
         cache: SceneDocumentCache,
         metaFiles: MetaFiles
     ): AddedEntity {
-        val size = if (asset.type == MetaType.TERRAIN.name) terrainSize(file, asset.name, metaFiles) else null
+        val size = if (asset.isTerrain()) {
+            terrainSize(file, asset.name, metaFiles)
+        } else null
         var added = AddedEntity(EditResult.Rejected(EditorBundle.message("componentSceneUnreadable")))
         editSceneJson(project, file, AbyssusBundle.message("commandAddAsset")) { root ->
             if (cache.read(file) == null) return@editSceneJson false

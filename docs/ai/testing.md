@@ -220,8 +220,9 @@ GL and native backend tests retain their usual opt-in flags. Control Line's asse
   and native packaging. Metal and Vulkan device tests opt in separately with `-Dabyssus.metalTests=true` and
   `-Dabyssus.vulkanTests=true`; these are not enabled by `abyssus.glTests`. See `projects/lib-raytracing/README.md` for toolchains
   and dedicated timing gates. Plugin ray integration tests live under `projects/plugin-abyssus/src/test/kotlin/`.
-- Shared test helpers live in `testFixtures` source sets: `lib-gdx`'s `TestGl` (a GL 3.2 core context for one
-  block), `lib-core`'s `HdrFixtures` (Radiance files from a pixel function) and `lib-core-editor`'s `parseScene`,
+- Shared test helpers live in `testFixtures` source sets: `lib-gdx`'s `TestGl` (a GL 3.3 core context, the game's own minimum, for one
+  block, in a window of 320 x 240 or of the size given; its default framebuffer is what a test draws into and reads back, and the
+  stubbed back buffer reports that size, which libGDX's `FrameBuffer.end()` resets the viewport to), `lib-core`'s `HdrFixtures` (Radiance files from a pixel function) and `lib-core-editor`'s `parseScene`,
   `testProject`, `testAsset`, `terrainData` and `rayTestModel` (used by the plugin's tests too). Plugin GL tests build their renderer with
   `testRenderer()` (`sceneview/TestRendering.kt`), wired the way `AbyssusCore` wires it in the IDE.
 - Plugin tests use JUnit 4 (`junit:junit:4.13.2`) and the IntelliJ test framework.
@@ -304,7 +305,7 @@ advance identically in every run), a 10 s warmup and five samples of 30 s, over 
 | editor | `animated` | `Animated`, `Main` (skinned, animated models) |
 | editor | `foliage` | `Foliage`, `Main Scene` (the fixture holds no model binaries, so this measures the terrain and an empty scene) |
 | editor | `stress` | the generated stress scene: 1,000 placements of one model, the 1600 m `Untitled` terrain and 5,000 foliage copies, seed `20261016` (`StressScene`; its SHA-256 over scene and bake is in the report) |
-| game | `control-line-field` | Control Line's `Field.scene` through `FieldRenderer` |
+| game | `control-line-field` | Control Line's `Field.scene` through `FieldRenderer`, into the default framebuffer of a 1280 x 720 window (the game's own target), with two control-line cables; `-Dabyssus.perf.pipeline=legacy` (flat ambient, no display transform) or `pbr` (the default) |
 
 Per workload the report holds: commit and dirty state, OS, JDK, GPU and driver (GL_RENDERER / GL_VERSION), backend, scene
 hash, the settings above, CPU frame time p50 / p95 / p99 (the p95 of each sample too), steady-state allocation per frame and
@@ -323,6 +324,8 @@ time**; `gpuMs` stays empty unless a timer query measured it on its own. A repor
 | Pixel tolerances | `./gradlew :plugin-abyssus:test --tests '*perf.PixelEvidenceGlTest' -Dabyssus.glTests=true -Dabyssus.perf.pixels=record -Dabyssus.perf.pixelsDir=<dir>` (and the game's `*render.PixelEvidenceGlTest`) |
 | Check pixels against a recording | the same with `-Dabyssus.perf.pixels=compare -Dabyssus.perf.pixelsReference=<dir>` |
 | Compare two reports | `./gradlew :lib-core:comparePerf -Pbaseline=<file.json> -Pcandidate=<file.json>` |
+
+The game workload and its pixel case were re-based by `openspec/changes/add-control-line-pbr-rendering`: they used to draw inside a `FrameBuffer` that the renderer's sun shadow pass unbinds, so everything after the sky was drawn outside the target. `docs/perf/baseline/game.json` and `docs/perf/baseline/pixels/control-line-field.*` predate that and are not comparable with a run made now (`MISMATCHED` by the `pipeline`/`target` settings); take a new Mac baseline before comparing the game workload.
 
 A run lasts about 3 minutes per workload at the full protocol (the editor's four take about 13 minutes, plus a reload each).
 

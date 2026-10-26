@@ -8,13 +8,13 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.editor.arrange.PATH_CURVE_STEPS
 import net.nevinsky.abyssus.lib.core.editor.arrange.PathCurve
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import kotlin.math.hypot
 
 /** A path arrangement being drawn: the model [asset] to place and the [points] clicked so far. */
-class PathDrawing(val asset: RenderAsset) {
+class PathDrawing(val asset: BaseMeta) {
     val points: MutableList<Vector3> = mutableListOf()
 }
 

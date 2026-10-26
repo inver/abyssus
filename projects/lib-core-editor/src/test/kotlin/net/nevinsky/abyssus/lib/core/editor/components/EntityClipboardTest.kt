@@ -6,12 +6,11 @@ package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
 
@@ -23,13 +22,14 @@ class EntityClipboardTest {
 
     private fun sceneWithTree(): Pair<JsonNode, String> {
         val root = scene()
-        val id = AssetEntities(messages).add(root, RenderAsset("MODEL", "tree"), Vector3(1f, 2f, 3f)).entityId!!
+        val id = AssetEntities(messages).add(root, BaseMeta(MetaType.MODEL, "tree"), Vector3(1f, 2f, 3f)).entityId!!
         return root to id
     }
 
-    private fun position(root: JsonNode, id: String) = root["ecs"][id]["components"]["PositionComponent"]["localPosition"].let {
-        Vector3(it.path("x").floatValue(), it.path("y").floatValue(), it.path("z").floatValue())
-    }
+    private fun position(root: JsonNode, id: String) =
+        root["ecs"][id]["components"]["PositionComponent"]["localPosition"].let {
+            Vector3(it.path("x").floatValue(), it.path("y").floatValue(), it.path("z").floatValue())
+        }
 
     @Test
     fun aPasteIsANewEntityAtThePointInAnotherScene() {
@@ -68,7 +68,13 @@ class EntityClipboardTest {
         val before = root.toString()
         assertFalse(clipboard.holdsEntity("hello"))
         assertFalse(clipboard.holdsEntity(null))
-        assertTrue(clipboard.paste(root, "{\"abyssusEntity\":1,\"components\":{}}", Vector3()).result is EditResult.Rejected)
+        assertTrue(
+            clipboard.paste(
+                root,
+                "{\"abyssusEntity\":1,\"components\":{}}",
+                Vector3()
+            ).result is EditResult.Rejected
+        )
         assertEquals(before, root.toString())
     }
 }

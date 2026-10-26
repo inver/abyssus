@@ -4,15 +4,14 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.components
 
-import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-
+import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
 import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
-import net.nevinsky.abyssus.lib.core.editor.components.AssetEntities
-import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -21,11 +20,14 @@ import org.slf4j.helpers.NOPLogger
 import java.io.File
 
 class AssetEntitiesTest {
-    private val tree = RenderAsset("MODEL", "tree")
-    private val terrain = RenderAsset("TERRAIN", "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b")
+    private val tree = BaseMeta(MetaType.MODEL, "tree")
+    private val terrain = BaseMeta(MetaType.TERRAIN, "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b")
 
-    private fun mainScene() = SceneJson().parse(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText())
+    private fun mainScene() =
+        SceneJson().parse(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText())
+
     private fun empty() = SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{}}""")
+
     /** The entity's position; the writer leaves out zero coordinates. */
     private fun position(entity: JsonNode) = entity["components"]["PositionComponent"]["localPosition"].let {
         Vector3(it.path("x").floatValue(), it.path("y").floatValue(), it.path("z").floatValue())
@@ -66,7 +68,8 @@ class AssetEntitiesTest {
     @Test
     fun aTerrainOfUnknownSizePutsItsCornerAtThePoint() {
         val root = mainScene()
-        val entity = root["ecs"][AssetEntities(ResourceEditorMessages()).add(root, terrain, Vector3(3f, 1f, 2f), null).entityId]
+        val entity =
+            root["ecs"][AssetEntities(ResourceEditorMessages()).add(root, terrain, Vector3(3f, 1f, 2f), null).entityId]
         assertEquals(Vector3(3f, 1f, 2f), position(entity))
     }
 
@@ -78,10 +81,12 @@ class AssetEntitiesTest {
         val engine = SceneEngine()
         val wrapped = json.readObject("{}").let { it as com.fasterxml.jackson.databind.node.ObjectNode }
         wrapped.set<JsonNode>("entities", root["ecs"])
-        val document = EcsLoader(json, net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry()).loadToEngine(wrapped, engine)
+        val document =
+            EcsLoader(json, net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry()).loadToEngine(wrapped, engine)
         assertEquals(emptyList<String>(), document.warnings)
         assertEquals(1, engine.entities.size())
-        val render = engine.entities.first().getComponent(net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent::class.java)
+        val render = engine.entities.first()
+            .getComponent(net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent::class.java)
         assertEquals(net.nevinsky.abyssus.lib.core.assets.MetaType.MODEL, render.type)
         assertEquals("tree", render.assetName)
     }
@@ -103,8 +108,26 @@ class AssetEntitiesTest {
     @Test
     fun aNonNativeSceneOrAnotherAssetTypeIsRejected() {
         val legacy = SceneJson().parse("""{"ecs":{}}""")
-        assertFalse(AssetEntities(ResourceEditorMessages()).add(legacy, tree, Vector3(0f, 0f, 0f)).result == EditResult.Changed)
-        assertFalse(AssetEntities(ResourceEditorMessages()).add(empty(), RenderAsset("SKYBOX", "sky"), Vector3(0f, 0f, 0f)).result == EditResult.Changed)
-        assertFalse(AssetEntities(ResourceEditorMessages()).add(empty(), tree, Vector3(Float.NaN, 0f, 0f)).result == EditResult.Changed)
+        assertFalse(
+            AssetEntities(ResourceEditorMessages()).add(
+                legacy,
+                tree,
+                Vector3(0f, 0f, 0f)
+            ).result == EditResult.Changed
+        )
+        assertFalse(
+            AssetEntities(ResourceEditorMessages()).add(
+                empty(),
+                BaseMeta(MetaType.SKYBOX, "sky"),
+                Vector3(0f, 0f, 0f)
+            ).result == EditResult.Changed
+        )
+        assertFalse(
+            AssetEntities(ResourceEditorMessages()).add(
+                empty(),
+                tree,
+                Vector3(Float.NaN, 0f, 0f)
+            ).result == EditResult.Changed
+        )
     }
 }

@@ -5,15 +5,14 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
-
-import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
-import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.Disposable
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
 import javax.swing.JComponent
 
 /** A live view of a scene. The editor talks to this so the GL-backed [SceneViewPanel] can be replaced in tests. */
@@ -49,7 +48,7 @@ interface SceneView : Disposable {
      * Called on the AWT thread when a drawing is finished: the model, the points on the terrain and whether the line is
      * closed. Returns whether the arrangement was written.
      */
-    var onArrangementCreate: ((RenderAsset, List<Vector3>, Boolean) -> Boolean)?
+    var onArrangementCreate: ((BaseMeta, List<Vector3>, Boolean) -> Boolean)?
         get() = null
         set(_) {}
 
@@ -114,7 +113,7 @@ interface SceneView : Disposable {
         set(_) {}
 
     /** Puts the view in drawing mode for a new path arrangement of the model [asset]. */
-    fun startDrawing(asset: RenderAsset) {}
+    fun startDrawing(asset: BaseMeta) {}
 
     /** The ground under the scene as the view drew it, or null before the first frame or when the view has none. */
     fun groundHeights(): GroundHeight? = null

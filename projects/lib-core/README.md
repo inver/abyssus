@@ -287,6 +287,13 @@ to copy what the loader already holds (the editor's ray snapshots do); the loade
 `offer` disposes the prepared model. A game passes none. The ray-tracing CPU snapshots themselves live in `lib-core-editor`
 (`editor.ray.snapshot`), not here.
 
+## Skies write display colour
+
+A sky draws display-referred colour: the stock procedural atmosphere, a custom `sky.frag` such as Control Line's, cube and
+HDR skies all tone map or encode inside their own shaders. A host that lights its models in linear space and ends them in
+an `OutputTransform` (`lib-gdx`) therefore draws the sky first, untouched, and the transform applies only to what is drawn over
+it; `SkyFrame` carries no transform. The sky's *lighting* cube is separate: it is linear radiance (see below).
+
 ## Procedural sky light and the cloudy environment
 
 A `SKYBOX_PROCEDURAL` asset with the boolean `additional.lightsScene: true` (anything else does not opt in) gives the

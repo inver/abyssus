@@ -1,17 +1,8 @@
 package net.nevinsky.abyssus.lib.core.ecs
 
-import net.nevinsky.abyssus.lib.core.format.ENABLED_KEY
 import com.badlogic.ashley.core.Component
-import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.*
+import net.nevinsky.abyssus.lib.core.format.ENABLED_KEY
 
 class ComponentRegistry {
 
@@ -29,7 +20,6 @@ class ComponentRegistry {
         componentMap[LightComponent::class.qualifiedName!!] = LightComponent::class.java
         componentMap[NameComponent::class.qualifiedName!!] = NameComponent::class.java
         componentMap[ParentComponent::class.qualifiedName!!] = ParentComponent::class.java
-        componentMap[Point2PointPositionComponent::class.qualifiedName!!] = Point2PointPositionComponent::class.java
         componentMap[PositionComponent::class.qualifiedName!!] = PositionComponent::class.java
         componentMap[TypeComponent::class.qualifiedName!!] = TypeComponent::class.java
         componentMap[FoliageComponent::class.qualifiedName!!] = FoliageComponent::class.java

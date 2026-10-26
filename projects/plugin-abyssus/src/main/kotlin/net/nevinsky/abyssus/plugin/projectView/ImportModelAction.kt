@@ -20,11 +20,11 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.displayMessage
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.lib.core.editor.modelimport.*
 import net.nevinsky.abyssus.lib.core.editor.terrain.uniqueAssetUuid
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
@@ -179,7 +179,7 @@ fun importModel(
         if (placement != null) {
             val point = placement.point() ?: Vector3(0f, 0f, 0f)
             val added = SceneComponentEdits.addAsset(
-                project, placement.sceneFile, RenderAsset(MetaType.MODEL.name, staged.folder),
+                project, placement.sceneFile, BaseMeta(MetaType.MODEL, staged.folder),
                 point, cache, core.assets.metaFiles
             )
             val id = added.entityId

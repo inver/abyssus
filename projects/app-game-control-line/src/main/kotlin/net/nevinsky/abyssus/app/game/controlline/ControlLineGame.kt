@@ -113,6 +113,7 @@ class ControlLineGame(
 
         val scene = (screen as? Screen.Debrief)?.let { debriefSceneOf(it.model) } ?: flights.scene ?: parked
         var lines = emptyList<LineSegment>()
+        var cables = emptyList<Cable>()
         var hidden = if (s != null && screen !is Screen.PlaneSelect) s.rig.pilot else null
         when (screen) {
             is Screen.Debrief -> {
@@ -133,7 +134,12 @@ class ControlLineGame(
                 val pilot = scene.position(s.rig.pilot).localPosition
                 cameras.flying(pilot, scene.position(s.plane).localPosition)
                 val color = if (s.flight.tension >= CONTROL_TENSION) TAUT_LINE else SLACK_LINE
-                lines = s.lines().map { (a, b) -> LineSegment(a, b, color) }
+                if (renderer.drawsCables) {
+                    val diameter = s.rig.planeSettings.lineDiameter
+                    cables = s.lines().map { (a, b) -> Cable(listOf(a, b), diameter, color) }
+                } else {
+                    lines = s.lines().map { (a, b) -> LineSegment(a, b, color) }
+                }
                 if (screen is Screen.Flying || screen is Screen.Paused) guide?.let { lines = lines + it.segments().toLines(pilot) }
             } else {
                 cameras.menu(
@@ -149,6 +155,7 @@ class ControlLineGame(
             hidden = hidden,
             clips = if (screen is Screen.Debrief) emptyMap() else s?.flight?.crash?.let { mapOf(s.plane to it.clip) }.orEmpty(),
             seconds = seconds,
+            cables = cables,
         )
         (optIn as? FailableFieldView)?.failure?.let(::fallBackToRaster)
         ui.update(s, flights.judge, seconds)

@@ -103,4 +103,4 @@ pipeline the game SHALL draw as before and log the reason.
 #### Scenario: Frame time
 
 - **WHEN** the pilot view is drawn on the recorded reference machine and resolution
-- **THEN** the steady GPU frame time stays within the budget recorded in the design, measured apart from loading
+- **THEN** the steady frame time, measured by the repository's performance harness apart from loading, stays within the budget recorded in the design

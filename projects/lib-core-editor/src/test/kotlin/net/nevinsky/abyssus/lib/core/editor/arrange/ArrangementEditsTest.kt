@@ -6,13 +6,14 @@
 package net.nevinsky.abyssus.lib.core.editor.arrange
 
 import com.badlogic.gdx.math.Matrix4
+import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.pick.GroundHeights
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
@@ -26,7 +27,7 @@ import java.io.File
 class ArrangementEditsTest {
     private val edits = ArrangementEdits(ResourceEditorMessages())
     private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
-    private val tree = RenderAsset("MODEL", "tree")
+    private val tree = BaseMeta(MetaType.MODEL, "tree")
     private val project = testProject("Untitled")
     private val terrain = terrainData(project, "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b")
     private val heights =

@@ -26,8 +26,9 @@ channel. Turning it on for one host SHALL NOT change any other host.
 ### Requirement: Transform is applied once, in linear light
 
 The transform SHALL be the last step of a fragment that is written to the screen, after lighting, fog and emissive, and SHALL
-be applied exactly once to it. A pixel SHALL NOT be tone mapped or encoded twice by overlapping passes (sky, terrain, models,
-foliage, lines). The tone map SHALL map 0 to 0, be monotonic, and keep a mid-grey of 0.18 near 0.18 of display luminance at
+be applied exactly once to it. A pass that already writes display colour (a sky whose shader tone maps and encodes itself)
+SHALL be drawn as it is, without the transform. A pixel SHALL NOT be tone mapped or encoded twice by overlapping passes (sky,
+terrain, models, foliage, lines). The tone map SHALL map 0 to 0, be monotonic, and keep a mid-grey of 0.18 within 25% of 0.18 at
 exposure 1 before the encode. The encode SHALL be the sRGB transfer function.
 
 #### Scenario: Black and ordering
@@ -40,16 +41,17 @@ exposure 1 before the encode. The encode SHALL be the sRGB transfer function.
 - **WHEN** the exposure is doubled for a fixed linear value below the tone map's shoulder
 - **THEN** the linear value before the tone map doubles
 
-#### Scenario: Sky is not encoded twice
+#### Scenario: Display-referred sky is not transformed
 
-- **WHEN** the sky is drawn and then the terrain and models are drawn over it with the transform on
-- **THEN** a pixel of the sky that no later pass covers is encoded once
+- **WHEN** a sky that writes display colour is drawn and then the terrain and models are drawn over it with the transform on
+- **THEN** a pixel of the sky that no later pass covers equals the same pixel drawn with the transform off
 
 ### Requirement: Colour inputs are linearised under the transform
 
-When the transform is on, a colour that is authored as display colour (albedo and emissive textures and colours, vertex
-colours, fog colour) SHALL be converted from sRGB to linear before it is used in lighting; data textures (normal,
-metallic-roughness, occlusion, splat weights) SHALL NOT be converted. With the transform off nothing is converted.
+When the transform is on, a colour that is authored as display colour (albedo and emissive textures, terrain layer
+textures, and the scene's fog colour) SHALL be converted from sRGB to linear before it is used in lighting; material and
+vertex colour factors follow the glTF convention and are used as they are, and data textures (normal, metallic-roughness,
+occlusion, splat weights) SHALL NOT be converted. With the transform off nothing is converted.
 
 #### Scenario: Albedo of 0.5 stored
 

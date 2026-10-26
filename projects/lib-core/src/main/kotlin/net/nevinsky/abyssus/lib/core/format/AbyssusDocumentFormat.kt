@@ -27,14 +27,20 @@ class AbyssusDocumentFormat {
 
     /** Raw ECS helpers have no enclosing header; they must still refuse reserved legacy dispatch fields. */
     fun validateEcs(ecs: JsonNode): FormatRejection? {
-        if (ecs.has("componentIdentifiers"))
+        if (ecs.has("componentIdentifiers")) {
             return FormatRejection(FormatProblem.LEGACY_FIELD, "ecs.componentIdentifiers")
+        }
         val wrapped = ecs.get("entities")?.takeIf { it.isObject }
         val entities = wrapped ?: ecs
-        if (!entities.isObject) return null
+        if (!entities.isObject) {
+            return null
+        }
         for ((id, entity) in entities.properties()) {
             if (!isEnabledFlagValid(entity))
-                return FormatRejection(FormatProblem.ENABLED_FLAG, (if (wrapped != null) "ecs.entities.$id" else "ecs.$id") + ".enabled")
+                return FormatRejection(
+                    FormatProblem.ENABLED_FLAG,
+                    (if (wrapped != null) "ecs.entities.$id" else "ecs.$id") + ".enabled"
+                )
             val components = entity.get("components") ?: continue
             for ((name, component) in components.properties()) {
                 if (!isEnabledFlagValid(component))
@@ -53,12 +59,6 @@ class AbyssusDocumentFormat {
             }
         }
         return null
-    }
-
-    fun requireRenderable(renderable: JsonNode) {
-        if (renderable.has("class")) throw UnsupportedDocumentFormat(
-            DocumentKind.SCENE, FormatRejection(FormatProblem.LEGACY_FIELD, "RenderComponent.renderable.class"),
-        )
     }
 
     fun requireSupported(document: JsonNode, kind: DocumentKind) {
