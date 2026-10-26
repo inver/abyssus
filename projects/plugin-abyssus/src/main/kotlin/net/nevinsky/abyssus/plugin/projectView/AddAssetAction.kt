@@ -15,6 +15,7 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
+import net.nevinsky.abyssus.plugin.ui.reportRejection
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.plugin.ui.showActionGroup
 

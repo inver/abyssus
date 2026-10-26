@@ -98,13 +98,15 @@ through the runtime loaders (matching bake, no warnings, counts, formats, clear 
 scene is then edited through `HeadlessEditing`: the vegetation entities are removed and each terrain entity gets its
 `FoliageComponent`, and nothing else in the scene changes.
 
-A project whose vegetation, rest of the scene or inputs differ from the manifest is refused with nothing written. A
-migrated project is accepted too, and a run on it writes the same bytes as a run on the original: tests in
+A project whose vegetation, rest of the scene or inputs differ from the manifest is refused with nothing written; the rest
+of the scene is checked only while the scene still holds the recorded vegetation, that is while it is being migrated. A
+migrated project is accepted too: its scene belongs to the editor again, so what was authored in it after the migration
+(the ray settings, buildings, water) is left alone, and a run on it writes the same assets as a run on the original. Tests in
 `toolsTest/` (`./gradlew :app-game-control-line:testFieldFoliageTools`, part of `check`) start from the original scene
-kept in `toolsTest/fixtures/Field.original.scene` and check that the committed project is exactly what the tool makes
-of it, followed by the later authored ray settings recorded in the test harness. The original fixture stays unchanged
-so its full-scene hash still verifies the immutable manifest's provenance; the migration itself preserves those later
-settings when rerun on the committed project.
+kept in `toolsTest/fixtures/Field.original.scene` and check that the committed foliage assets and grass model are exactly
+what the tool makes of it, and that the committed scene has what the migration does to a scene (the `FoliageComponent` of
+each terrain, none of the recorded vegetation). The original fixture stays unchanged so its full-scene hash still verifies
+the immutable manifest's provenance.
 
 **Limits.** The copies are a statistical match, not the old positions: they follow the old weighting but can stand where
 the old placements did not (nothing keeps them off the facilities, only off the clear areas). Species totals hold on each

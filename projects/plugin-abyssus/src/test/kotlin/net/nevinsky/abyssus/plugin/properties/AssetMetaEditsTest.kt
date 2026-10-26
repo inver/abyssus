@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
+import net.nevinsky.abyssus.plugin.assetfiles.AssetEditResult
+import net.nevinsky.abyssus.plugin.assetfiles.AssetMetaEdits
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.TextEditor

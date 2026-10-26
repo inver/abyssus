@@ -340,7 +340,11 @@ class FieldFoliageTool {
         }
     }
 
-    /** Refuses a project whose vegetation, rest of scene or inputs differ from what the manifest recorded. */
+    /**
+     * Refuses a project whose vegetation, rest of scene or inputs differ from what the manifest recorded. The rest of
+     * the scene is checked only while the scene still holds the recorded vegetation, that is while it is being migrated:
+     * a migrated scene belongs to the editor again, so what is authored in it after the migration is left alone.
+     */
     private fun checkSource(project: File, manifest: FieldManifest, entities: Map<String, JsonNode>) {
         val ids = manifest.instances.map { it.id }
         val present = ids.filter { it.toString() in entities }
@@ -353,9 +357,9 @@ class FieldFoliageTool {
             if (vegetationHash(now) != manifest.vegetationSha256) {
                 throw MigrationConflict("the trees and bushes of the scene differ from the manifest: re-record it from the original scene")
             }
-        }
-        if (restHash(entities, ids.toSet()) != manifest.restSha256) {
-            throw MigrationConflict("the rest of the scene differs from the manifest: re-record it from the original scene")
+            if (restHash(entities, ids.toSet()) != manifest.restSha256) {
+                throw MigrationConflict("the rest of the scene differs from the manifest: re-record it from the original scene")
+            }
         }
         for ((path, hash) in manifest.inputs) {
             val file = File(project, path)

@@ -60,3 +60,5 @@ data class InitialUiLabel(
 )
 data class InitialUiLayout(val anchor: String = "center")
 data class InitialUiProperties(val text: String = "Hello")
+
+data class TextureAssetAdditional(val file: String)

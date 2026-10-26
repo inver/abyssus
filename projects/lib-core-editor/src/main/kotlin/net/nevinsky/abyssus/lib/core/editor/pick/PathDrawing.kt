@@ -55,6 +55,8 @@ const val PATH_LINE_PX = 8f
  * Hit tests for the line of an arrangement: the handle on each point and the segments themselves. Distances are in screen pixels, so a handle is as easy to grab far away as near.
  */
 class PathHandles(private val points: List<Vector3>, private val closed: Boolean) {
+    private val curve = PathCurve()
+
     /**
      * The handle under the pixel ([x], [y]); else the curve if it is within [PATH_LINE_PX] pixels; else null. A handle is
      * hit when an edge of its diamond is within [radius] pixels (an edge of the drawn control object is what a click has to meet).
@@ -76,10 +78,10 @@ class PathHandles(private val points: List<Vector3>, private val closed: Boolean
     private fun lineHit(projection: ScreenProjection, x: Float, y: Float): PathHit.Line? {
         var best: PathHit.Line? = null
         var bestDistance = PATH_LINE_PX
-        for (span in 0 until PathCurve.spanCount(points.size, closed)) {
-            var from = PathCurve.at(points, closed, span, 0f)
+        for (span in 0 until curve.spanCount(points.size, closed)) {
+            var from = curve.at(points, closed, span, 0f)
             for (step in 1..PATH_CURVE_STEPS) {
-                val to = PathCurve.at(points, closed, span, step.toFloat() / PATH_CURVE_STEPS)
+                val to = curve.at(points, closed, span, step.toFloat() / PATH_CURVE_STEPS)
                 val sa = projection.at(from)
                 val sb = projection.at(to)
                 if (sa != null && sb != null) {

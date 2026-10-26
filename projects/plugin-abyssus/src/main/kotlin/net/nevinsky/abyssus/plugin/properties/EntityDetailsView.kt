@@ -40,9 +40,11 @@ import net.nevinsky.abyssus.plugin.filetype.SceneRayEdits
 import net.nevinsky.abyssus.plugin.filetype.setEnabled
 import net.nevinsky.abyssus.plugin.panel.RowHooks
 import net.nevinsky.abyssus.plugin.projectView.addComponentGroup
-import net.nevinsky.abyssus.plugin.projectView.reportRejection
+import net.nevinsky.abyssus.plugin.ui.reportRejection
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.sceneview.PathEditListener
+import net.nevinsky.abyssus.plugin.sceneview.PaintTextureRequestListener
+import net.nevinsky.abyssus.plugin.sceneview.PaintTextureRequests
 import net.nevinsky.abyssus.plugin.sceneview.SculptRequestListener
 import net.nevinsky.abyssus.plugin.sceneview.SculptRequests
 import net.nevinsky.abyssus.plugin.sceneview.PathEditSession
@@ -114,20 +116,30 @@ internal class EntityDetailsView @JvmOverloads constructor(
         return SceneDocument(root).renderAsset(target.entityId)?.type == MetaType.TERRAIN.name
     }
 
-    /** The Sculpt Terrain toggle: it puts the brush on the terrain in the Scene view; the project's [SculptRequests] follow it. */
+    /**
+     * The Sculpt Terrain and Paint Texture toggles: each puts its brush on the terrain in the Scene view; the project's
+     * [SculptRequests] and [PaintTextureRequests] follow them. Turning one on ends the other (the view holds one brush).
+     */
     private fun sculptBar(): JComponent {
-        val requests = project.service<SculptRequests>()
-        val toggle = JToggleButton(AbyssusBundle.message("sculptTitle")).apply { name = "sculpt-terrain"; isFocusable = false }
-        fun on() = requests.current?.let { it.file == target.file && it.entityId == target.entityId } == true
+        val sculpt = project.service<SculptRequests>()
+        val paint = project.service<PaintTextureRequests>()
+        val sculptToggle = JToggleButton(AbyssusBundle.message("sculptTitle")).apply { name = "sculpt-terrain"; isFocusable = false }
+        val paintToggle = JToggleButton(AbyssusBundle.message("paintTextureToggle")).apply { name = "paint-texture"; isFocusable = false }
+        fun here(file: com.intellij.openapi.vfs.VirtualFile?, entity: String?) = file == target.file && entity == target.entityId
         var syncing = false
         fun sync() {
             syncing = true
-            toggle.isSelected = on()
+            sculptToggle.isSelected = sculpt.current?.let { here(it.file, it.entityId) } == true
+            paintToggle.isSelected = paint.current?.let { here(it.file, it.entityId) } == true
             syncing = false
         }
-        toggle.addActionListener {
+        sculptToggle.addActionListener {
             if (syncing) return@addActionListener
-            if (toggle.isSelected) requests.start(target.file, target.entityId) else requests.stop(target.file)
+            if (sculptToggle.isSelected) { paint.stop(target.file); sculpt.start(target.file, target.entityId) } else sculpt.stop(target.file)
+        }
+        paintToggle.addActionListener {
+            if (syncing) return@addActionListener
+            if (paintToggle.isSelected) { sculpt.stop(target.file); paint.start(target.file, target.entityId) } else paint.stop(target.file)
         }
         sync()
         return object : JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), JBUI.scale(4))) {
@@ -138,6 +150,7 @@ internal class EntityDetailsView @JvmOverloads constructor(
                 sync()
                 connection = project.messageBus.connect().also {
                     it.subscribe(SculptRequestListener.TOPIC, SculptRequestListener { sync() })
+                    it.subscribe(PaintTextureRequestListener.TOPIC, PaintTextureRequestListener { sync() })
                 }
             }
 
@@ -148,7 +161,8 @@ internal class EntityDetailsView @JvmOverloads constructor(
             }
         }.apply {
             isOpaque = false
-            add(toggle)
+            add(sculptToggle)
+            add(paintToggle)
         }
     }
 

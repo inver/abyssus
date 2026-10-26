@@ -70,6 +70,7 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
             val panel = SceneViewPanel(
                 params, SceneRenderer(
                     ViewAssets(assets.loading), assets.sceneShaders, project.service<FoliageDrafts>(), project.service<net.nevinsky.abyssus.plugin.terrain.SculptDrafts>(),
+                    project.service<net.nevinsky.abyssus.plugin.splat.SplatDrafts>(),
                     log = core.loggers.getLogger("sceneview"),
                 ),
                 lightMenu = PlacementMenu({ host.canAddLight(file) }) { position -> host.lightActions(file, position) },
@@ -85,6 +86,11 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
                 sculptSession = { entity, mode, tool, ready ->
                     project.service<net.nevinsky.abyssus.plugin.terrain.SculptEditing>().open(file, entity, mode, tool,
                         report = { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(project, reason, AbyssusBundle.message("sculptTitle")) },
+                        ready = ready)
+                },
+                splatSession = { entity, mode, ready ->
+                    project.service<net.nevinsky.abyssus.plugin.splat.SplatEditing>().open(file, entity, mode,
+                        report = { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(project, reason, AbyssusBundle.message("splatTitle")) },
                         ready = ready)
                 },
                 paintSession = { entity, mode, ready ->

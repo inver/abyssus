@@ -4,10 +4,7 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.tools
 
-import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
-import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import java.io.File
 import java.nio.file.Files
 import java.security.MessageDigest
@@ -37,20 +34,22 @@ fun checksums(project: File): Map<String, String> = project.walkTopDown().filter
 /** Historic source recorded by the immutable manifest; later scene edits are replayed separately. */
 fun originalScene(): File = File(committedProject().parentFile.parentFile, "toolsTest/fixtures/Field.original.scene")
 
-/** Replays the ray settings authored after migration (d49555f4) when reproducing the current committed project. */
-fun applyPostMigrationSceneEdits(project: File) {
-    val scene = File(project, "scenes/Field.scene")
-    val outcome = DocumentTextEditor().edit(scene.readText(), DocumentKind.SCENE) { root ->
-        (root as ObjectNode).putObject("rayTracing")
-            .put("maxRaysPerFrame", 268435456)
-            .put("targetSamplesPerPixel", 4096)
-            .put("maxReflectionBounces", 4)
-            .put("maxRefractionBounces", 1)
-        true
+/**
+ * What the migration owns of a scene, which the editor keeps changing everything else in: the `FoliageComponent` of each
+ * terrain entity, and how many of the recorded trees and bushes are still entities.
+ */
+fun migrationFootprint(project: File, manifest: FieldManifest): Map<String, String> {
+    val entities = SceneJson().parse(File(project, "scenes/Field.scene").readText())["ecs"]["entities"]
+    val out = sortedMapOf<String, String>()
+    for (t in manifest.terrains) {
+        out["FoliageComponent of ${t.entity}"] = entities[t.entity.toString()]?.get("components")?.get("FoliageComponent")?.toString() ?: "none"
     }
-    check(outcome is TextEditOutcome.Edited) { "could not replay post-migration ray settings: $outcome" }
-    scene.writeText(outcome.text)
+    out["recorded vegetation still in the scene"] = manifest.instances.count { entities.has(it.id.toString()) }.toString()
+    return out
 }
+
+/** [checksums] without the scene, which the editor keeps authoring after the migration. */
+fun assetChecksums(project: File): Map<String, String> = checksums(project).filterKeys { it != "scenes/Field.scene" }
 
 /**
  * A copy of the committed project with the original scene put back (the generated assets stay and are rewritten by a

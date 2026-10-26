@@ -94,6 +94,14 @@ interface SceneView : Disposable {
         get() = null
         set(_) {}
 
+    /** Puts the Paint Texture brush on the terrain with this id, or takes it off for null. */
+    fun setPaintingTexture(entityId: String?) {}
+
+    /** Called when the view ended the texture painting itself (the selection moved on, play started, or the terrain cannot be painted). */
+    var onPaintTextureEnded: (() -> Unit)?
+        get() = null
+        set(_) {}
+
     /** Writes the control point changes made since Edit (Apply); false when there was nothing to write or the write failed. */
     fun applyPathEdit(): Boolean = false
 

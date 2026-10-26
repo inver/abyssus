@@ -466,3 +466,7 @@ content type lets the contract stay independent of render code. `SceneRayControl
 content, selection and ray-mode queries, removes facts on editor disposal, and retains the separate ray commands.
 Pure ray settings, optical overrides and diagnostic records live in `editor.ray`; their localized wording lives
 in `ui.RayModeText`, and `filetype.SceneRayEdits` owns the IDE document-command adapter.
+
+## Paint Texture (the fourth brush kind)
+
+`PaintTextureControls` is a `BrushStrip<SplatSession>` registered after Sculpt in `BrushKinds`. Its stroke, `SplatStrokeCommand`, edits a `SplatDraft` (RGBA weights) kept in the project's `SplatDrafts` by splat texture folder; each view's `SplatViewSync` copies the changed tiles into its own splat `Texture` with `SplatTexture.updateRegion`, and reloads the texture when the draft is gone. Release encodes the PNG off the AWT thread and writes it as one `AssetTransaction` (`SplatTransactions`); Create splat map and Make unique copy are multi-file transactions.

@@ -656,3 +656,7 @@ Edits go through `editSceneJson` as one named undoable command and touch only th
 members. Unknown members, key order and number text elsewhere survive, and removing the last surface leaves an empty
 `waterSurfaces` object so unrelated `abyssus` members are undisturbed. Opening or reading a scene writes nothing, and a
 scene without the extension has no water. There is no migration: nothing adds, converts or rewrites the extension.
+
+## Splat map written by Abyssus
+
+Paint Texture reads and writes the splat map as an 8-bit RGBA PNG whose colour values are exactly the weights (never premultiplied by alpha), square, 64 to 2048 pixels. Create splat map makes a `TEXTURE` asset folder `texture_<terrain>_splat` with `additional.file: "splat.png"` and sets the terrain's `splatMap`.

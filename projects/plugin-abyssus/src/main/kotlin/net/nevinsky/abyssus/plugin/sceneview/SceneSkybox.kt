@@ -31,14 +31,15 @@ class SceneSkybox(private val assets: AssetView<SkyRenderer>) : Disposable {
     private val sunDirection = Vector3()
 
     /**
-     * Draws the skybox named [name] if it is loaded (and starts loading it); nothing for null. A procedural sky is lit
-     * by the sun toward [sun], and its clouds drift to [timeSeconds] and are drawn with [technique] (null: the asset's).
+     * Draws the skybox named [name] if it is loaded; nothing for null. It never touches the storage: [update] asks for the
+     * sky once per frame, and building a replacement here would dispose a terrain or model the frame already holds. A
+     * procedural sky is lit by the sun toward [sun], and its clouds drift to [timeSeconds] and are drawn with
+     * [technique] (null: the asset's).
      */
     fun draw(
-        camera: Camera, name: String?, projectDir: File?, sun: Vector3 = SunDirection.DEFAULT, timeSeconds: Double = 0.0,
+        camera: Camera, name: String?, sun: Vector3 = SunDirection.DEFAULT, timeSeconds: Double = 0.0,
         technique: CloudTechnique? = null,
     ) {
-        assets.update(projectDir, setOfNotNull(name))
         val sky = name?.let(assets::get) ?: return
 
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)

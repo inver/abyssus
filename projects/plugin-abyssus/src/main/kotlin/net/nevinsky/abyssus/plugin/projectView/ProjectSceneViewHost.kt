@@ -5,10 +5,12 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.lib.core.editor.components.EditResult
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.sceneview.SceneViewHost
 
 /** Shared pane implementation also usable before the platform has created its tree component. */
@@ -24,6 +26,9 @@ class ProjectSceneViewHost(
             componentTargetOf(node)?.takeIf { it.file == file }?.let { selected(it.entityId) }
         })
     }
+
+    override fun removeEntity(file: VirtualFile, entityId: String): EditResult =
+        SceneComponentEdits.removeEntity(project, file, entityId)
 
     override fun listenWater(file: VirtualFile, parent: Disposable, selected: (String) -> Unit) {
         project.messageBus.connect(parent).subscribe(AbyssusSelectionListener.TOPIC, AbyssusSelectionListener { node ->

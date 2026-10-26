@@ -35,6 +35,7 @@ import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.lib.render.shadow.cameraUp
 import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
+import net.nevinsky.abyssus.plugin.splat.SplatDrafts
 import net.nevinsky.abyssus.plugin.terrain.SculptDrafts
 import net.nevinsky.abyssus.plugin.sceneview.fog.FogShaderProvider
 import net.nevinsky.abyssus.plugin.sceneview.gizmo.GizmoDraw
@@ -59,6 +60,8 @@ class SceneRenderer(
     private val foliageDrafts: FoliageDrafts,
     /** The project's sculpting strokes in progress; every view follows them so a stroke shows in each (decision 8). */
     private val sculptDrafts: SculptDrafts = SculptDrafts(),
+    /** The project's splat painting strokes in progress; every view follows them like the sculpting ones. */
+    private val splatDrafts: SplatDrafts = SplatDrafts(),
     /** What the user selected, previews and looks through; the view panel changes it, this draws from it. */
     val state: SceneViewState = SceneViewState(),
     /** Where problems that leave the view working (for example, no cloud shadow map) are logged, once each. */
@@ -80,6 +83,8 @@ class SceneRenderer(
     private val models get() = contentPass.models
     private val terrains get() = contentPass.terrains
     private val sculptSync = SculptViewSync(sculptDrafts) { names -> assets.invalidate(names) }
+    private val splatSync = SplatViewSync(splatDrafts) { names -> assets.invalidate(names) }
+    private val splatTexture = net.nevinsky.abyssus.lib.core.assets.terrain.SplatTexture()
     private val foliage get() = contentPass.foliage
     private val environment get() = contentPass.environment
     private var batch: ModelBatch? = null
@@ -262,9 +267,13 @@ class SceneRenderer(
         models.update(c.models, p.projectDir, deltaSeconds)
         terrains.update(c.terrains, p.projectDir)
         sculptSync.apply(terrains.drawn.map { it.sculptTarget() })
+        splatSync.apply(terrains.drawn.map { it.splatTarget(splatTexture) })
         foliage.update(c.foliages, p.projectDir, camera)
         updateDrawnVersion()
         skybox?.update(c.skybox, p.projectDir)
+        // the foliage and sky updates share the storage and may have replaced a model or terrain built above
+        models.refresh()
+        terrains.refresh()
         skybox?.updateLighting(
             c.skybox,
             SunDirection.of(c.lights),

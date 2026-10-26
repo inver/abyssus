@@ -3,12 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.arrange
+package net.nevinsky.abyssus.lib.core.editor.pick
 
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.arrange.PathLayout
+import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.pick.PathEdit
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 
 /**

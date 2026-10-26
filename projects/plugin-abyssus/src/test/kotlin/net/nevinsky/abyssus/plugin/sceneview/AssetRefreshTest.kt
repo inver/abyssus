@@ -131,6 +131,20 @@ class AssetRefreshTest {
     }
 
     @Test
+    fun `a painted splat map image reloads the splat texture and the terrain using it but not the other terrain`() {
+        write("meadow/terrain.data", "1234", 1000)
+        write("meadow/meta.json", """{"format":"abyssus","formatVersion":1,"uuid":"t2","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":100,"uv":1.0,"splatMap":"u-splat"}}""")
+        write("splat/s.png", "weights-a", 1000)
+        write("splat/meta.json", """{"format":"abyssus","formatVersion":1,"uuid":"u-splat","type":"TEXTURE","additional":{"file":"s.png"}}""")
+        val r = started()
+        // same length, only the modification time moves: what a stroke of equal size looks like
+        write("splat/s.png", "weights-b", 6000)
+        r.changed()
+        settle()
+        assertEquals(setOf("splat", "meadow"), delivered.single().names)
+    }
+
+    @Test
     fun `external deletion and recreation of the heights are both changes`() {
         val r = started()
         File(assets, "hills/terrain.data").delete()

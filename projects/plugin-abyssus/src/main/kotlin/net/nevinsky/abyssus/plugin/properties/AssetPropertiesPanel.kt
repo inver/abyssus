@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
+import net.nevinsky.abyssus.plugin.assetfiles.AssetEditResult
+import net.nevinsky.abyssus.plugin.assetfiles.AssetMetaEdits
 import net.nevinsky.abyssus.lib.core.editor.panel.FieldRef
 import net.nevinsky.abyssus.lib.core.editor.panel.PanelBuilders
 import net.nevinsky.abyssus.plugin.projectView.assetUnusedOf

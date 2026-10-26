@@ -30,6 +30,19 @@ class TerrainEntity(override val placement: AssetPlacement, val terrain: Terrain
         bounds = null
     }
 
+    /** This entity as the splat sync sees it: the view's own splat texture, updated in place for a changed rectangle. */
+    internal fun splatTarget(updater: net.nevinsky.abyssus.lib.core.assets.terrain.SplatTexture): SplatTarget = object : SplatTarget {
+        override val key: Any get() = terrain
+        override val splatAsset: String? get() = terrain.splatAsset()
+        override val textureKey: Any? get() = terrain.splatTexture()
+        override fun upload(draft: net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatDraft, rect: net.nevinsky.abyssus.lib.core.editor.brush.GridRect): Boolean {
+            val texture = terrain.splatTexture() ?: return false
+            if (texture.width != draft.resolution || texture.height != draft.resolution) return false
+            updater.updateRegion(texture, draft.pixels, rect.minX, rect.minZ, rect.width, rect.height)
+            return true
+        }
+    }
+
     /** This entity as the sculpt sync sees it: its own mesh and data, sent again for a changed rectangle. */
     internal fun sculptTarget(): SculptTarget = object : SculptTarget {
         override val key: Any get() = terrain

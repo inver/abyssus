@@ -39,6 +39,8 @@ data class PathSlot(val x: Float, val z: Float, val fallbackY: Float, val yawDeg
  * with no terrain, JSON or GL. Distances are measured on the ground plane (X and Z).
  */
 class PathLayout {
+    private val curve = PathCurve()
+
     private data class Segment(val from: Vector3, val to: Vector3, val start: Double, val length: Double)
 
     /**
@@ -55,7 +57,7 @@ class PathLayout {
         if (!usable) return emptyList()
 
         // the copies follow the smooth line through the control points, so they are where the view draws it
-        val sampled = PathCurve.sample(pointsOf(arrangement), arrangement.closed)
+        val sampled = curve.sample(pointsOf(arrangement), arrangement.closed)
         // a closed line of two points goes there and back
         val line = if (arrangement.closed && points.size == 2) {
             sampled + sampled.first()

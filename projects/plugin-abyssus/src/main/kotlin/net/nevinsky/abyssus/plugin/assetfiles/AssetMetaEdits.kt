@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.plugin.properties
+package net.nevinsky.abyssus.plugin.assetfiles
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile

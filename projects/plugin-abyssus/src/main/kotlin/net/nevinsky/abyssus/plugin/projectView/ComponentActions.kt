@@ -22,14 +22,8 @@ import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.schema.ComponentSchemas
+import net.nevinsky.abyssus.plugin.ui.reportRejection
 import net.nevinsky.abyssus.plugin.ui.showActionGroup
-
-/** Tells the user why an edit was refused; anything else needs no word. */
-internal fun reportRejection(project: Project, result: EditResult) {
-    if (result is EditResult.Rejected) {
-        Messages.showErrorDialog(project, result.reason, AbyssusBundle.message("componentRejectedTitle"))
-    }
-}
 
 /**
  * The choices for adding a component to [entityId] of [file]: one action per modeled kind the entity lacks, a Render

@@ -22,6 +22,7 @@ open class PlacedAssets<A : Disposable, E : PlacedEntity<A>>(
     place: (AssetPlacement, A, E?) -> E,
 ) : Disposable {
     private val entities = PlacedEntities(place)
+    private var placed: List<AssetPlacement> = emptyList()
 
     /** Entities with a loaded asset, in scene order. Valid until the next [update]. */
     val drawn: Collection<E> get() = entities.drawn
@@ -31,12 +32,23 @@ open class PlacedAssets<A : Disposable, E : PlacedEntity<A>>(
     /** Brings the entities in line with [placements]: loads the assets they name, drops the rest. */
     fun update(placements: List<AssetPlacement>, projectDir: File?) {
         assets.update(projectDir, placements.mapTo(HashSet()) { it.assetName })
+        placed = placements
         entities.update(placements, assets::get)
+    }
+
+    /**
+     * Re-reads the built assets for the last [update]'s placements, without touching the storage. Another view's update
+     * shares the storage and can replace (and dispose) an asset after this one's update ran, so call this once the
+     * frame's asset updates are done and before drawing.
+     */
+    fun refresh() {
+        entities.update(placed, assets::get)
     }
 
     /** Forgets everything without GL calls; see [ViewAssets.abandon]. */
     fun abandon() {
         entities.clear()
+        placed = emptyList()
         assets.abandon()
     }
 

@@ -42,6 +42,22 @@ class BrushKindsTest : BasePlatformTestCase() {
         return panel
     }
 
+    fun testThePaintTextureStripComesLastAndTheOtherBrushControlsAreUnchanged() {
+        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer(),
+            sculptSession = { _, _, _, ready -> ready(null) },
+            paintSession = { _, _, ready -> ready(null) },
+            splatSession = { _, _, ready -> ready(null) })
+        try {
+            val brushNames = setOf("paint-foliage", "foliage-brush-strip", "sculpt-strip", "paint-texture-strip", "sculpt-terrain", "paint-texture")
+            val order = namesInOrder(panel).filter { it in brushNames }
+            assertEquals(listOf("paint-foliage", "foliage-brush-strip", "sculpt-strip", "paint-texture-strip"), order)
+            for (name in listOf("sculpt-tool", "paint-texture-slot-0", "paint-texture-mode", "paint-texture-exclusive")) {
+                assertNotNull("control $name", named(panel, name))
+            }
+            assertFalse("the strip is hidden until the brush is on", named(panel, "paint-texture-strip")!!.isVisible)
+        } finally { panel.dispose() }
+    }
+
     fun testToggleOrderIsPaintFoliageThenItsStripThenSculptStrip() {
         val panel = panel(testRenderer())
         try {

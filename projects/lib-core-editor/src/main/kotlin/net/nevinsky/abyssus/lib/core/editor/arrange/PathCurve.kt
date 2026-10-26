@@ -20,7 +20,7 @@ private const val KNOT_EPS = 1e-6
  * The smooth line of a path arrangement: a centripetal Catmull-Rom spline that passes through every control point.
  * Fewer than three points (and an open line's ends) give straight pieces. Pure geometry, no GL.
  */
-object PathCurve {
+class PathCurve {
     /** Number of spans: one fewer than the points, or as many when the line closes. */
     fun spanCount(pointCount: Int, closed: Boolean): Int =
         if (pointCount < 2) {

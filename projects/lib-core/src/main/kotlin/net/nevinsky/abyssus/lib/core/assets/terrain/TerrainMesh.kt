@@ -54,6 +54,12 @@ class TerrainMesh(prepared: PreparedTerrain, private val assets: BuiltAssets) : 
 
     private fun texture(field: String): Texture? = splats[field]?.let { assets.get(it) as? Texture }
 
+    /** The built splat map texture in the storage this mesh reads, or null while there is none or it is still loading. */
+    fun splatTexture(): Texture? = texture(SPLAT_MAP)
+
+    /** The asset folder name of the splat map texture, or null when the terrain has none. */
+    fun splatAsset(): String? = splats[SPLAT_MAP]
+
     fun draw(shader: ShaderProgram, blank: Texture) {
         val splat = texture(SPLAT_MAP)?.also {
             if (it !== configuredSplat) {

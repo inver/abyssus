@@ -19,6 +19,7 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
 import net.nevinsky.abyssus.lib.core.editor.water.WaterEdit
+import net.nevinsky.abyssus.plugin.water.reportWaterRejection
 import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
 import net.nevinsky.abyssus.lib.core.water.WaterPreset
 import net.nevinsky.abyssus.plugin.AbyssusBundle
@@ -43,14 +44,6 @@ fun waterTargetOf(node: Any?): WaterTarget? {
 /** Whether water can be added to [file]: a readable scene whose `abyssus` and `waterSurfaces` are objects when present. */
 internal fun canAddWater(file: VirtualFile, cache: SceneDocumentCache): Boolean =
     cache.read(file)?.let { !WaterCodec().read(it.root.get("abyssus")).incompatible } ?: false
-
-internal fun reportWaterRejection(project: Project, edit: WaterEdit) {
-    if (edit is WaterEdit.Rejected) Messages.showErrorDialog(
-        project,
-        waterErrorText(edit.error),
-        AbyssusBundle.message("waterRejectedTitle")
-    )
-}
 
 /** Select the new surface at once, then its row when the asynchronous tree refresh reaches it. */
 internal fun selectCreatedWater(project: Project, file: VirtualFile, id: String) {

@@ -55,9 +55,9 @@ class PathHandlesTest {
     @Test
     fun theCurveBetweenPointsIsHitWithItsSpanAndPoint() {
         val handles = PathHandles(points, closed = false)
-        val on = pixel(PathCurve.at(points, false, 0, 0.5f))
+        val on = pixel(PathCurve().at(points, false, 0, 0.5f))
         val hit = handles.hit(projection, on.x, on.y + 2) as PathHit.Line
         assertEquals(0, hit.span)
-        assertEquals(PathCurve.at(points, false, 0, 0.5f).x, hit.at.x, 1f)
+        assertEquals(PathCurve().at(points, false, 0, 0.5f).x, hit.at.x, 1f)
     }
 }

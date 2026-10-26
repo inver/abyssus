@@ -116,12 +116,12 @@ class PanelBuildersTest {
         val panel = builders.ecs(field, "ControlLine.abss")
         val entities = panel.sections.single()
         assertEquals("Entities", entities.title)
-        assertEquals("186", entities.row<ReadonlyRow>("entities").value)
+        assertEquals("209", entities.row<ReadonlyRow>("entities").value)
         assertTrue(entities.rows.last() is NoteRow)
         assertTrue((entities.rows.last() as NoteRow).text.startsWith("Types in this scene: OBJECT "))
         assertEquals(BadgeKind.READ_ONLY, panel.header.badges.single().kind)
         assertEquals(listOf("ControlLine.abss", "Field"), panel.header.breadcrumb)
-        assertTrue(panel.header.subtitle.startsWith("ecs · 186 entities, "))
+        assertTrue(panel.header.subtitle.startsWith("ecs · 209 entities, "))
     }
 
     // ---- entities and components ----

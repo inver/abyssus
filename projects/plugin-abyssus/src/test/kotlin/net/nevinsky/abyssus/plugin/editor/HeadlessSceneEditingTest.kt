@@ -20,8 +20,8 @@ import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
 import net.nevinsky.abyssus.plugin.projectView.ComponentTarget
-import net.nevinsky.abyssus.plugin.properties.AssetEditResult
-import net.nevinsky.abyssus.plugin.properties.AssetMetaEdits
+import net.nevinsky.abyssus.plugin.assetfiles.AssetEditResult
+import net.nevinsky.abyssus.plugin.assetfiles.AssetMetaEdits
 import net.nevinsky.abyssus.plugin.properties.PanelState
 import net.nevinsky.abyssus.plugin.properties.readEntityState
 import net.nevinsky.abyssus.plugin.testCore

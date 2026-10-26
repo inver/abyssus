@@ -3,6 +3,7 @@ package net.nevinsky.abyssus.plugin.sceneview
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.lib.core.editor.components.EditResult
 import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import com.badlogic.gdx.math.Vector3
 
@@ -23,4 +24,7 @@ interface SceneViewHost {
     fun canAddLight(file: VirtualFile): Boolean
     fun canAddPath(file: VirtualFile): Boolean = false
     fun canAddAsset(file: VirtualFile): Boolean
+
+    /** Removes entity [entityId] of [file] as one undoable command; refused (and rejected) while it is still referenced. */
+    fun removeEntity(file: VirtualFile, entityId: String): EditResult = EditResult.Unchanged
 }

@@ -69,9 +69,9 @@
           },
           "PositionComponent": {
             "localPosition": {
-              "x": -0.025635242,
-              "y": 0.023981094,
-              "z": 4.7683716E-7
+              "x": 0,
+              "y": 0,
+              "z": 0
             }
           },
           "RenderComponent": {

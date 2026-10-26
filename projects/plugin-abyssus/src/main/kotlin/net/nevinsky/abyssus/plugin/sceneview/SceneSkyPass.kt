@@ -78,7 +78,7 @@ internal class SceneSkyPass(
     }
 
     fun draw(view: Camera, p: SceneRenderParams) {
-        skybox?.draw(view, p.content.skybox, p.projectDir, SunDirection.of(p.content.lights), skyClock.seconds, state.cloudTechnique)
+        skybox?.draw(view, p.content.skybox, SunDirection.of(p.content.lights), skyClock.seconds, state.cloudTechnique)
     }
     private var lightsKey: Pair<List<LightPlacement>, Vector3>? = null
     var lights = NO_LIGHTS

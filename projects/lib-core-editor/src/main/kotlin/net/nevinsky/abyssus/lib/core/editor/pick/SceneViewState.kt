@@ -15,6 +15,9 @@ const val FOLIAGE_BRUSH = "foliage"
 /** The kind of the Sculpt Terrain brush in [BrushMode.kind]. */
 const val SCULPT_BRUSH = "sculpt"
 
+/** The kind of the Paint Texture brush in [BrushMode.kind]. */
+const val SPLAT_BRUSH = "splat"
+
 /** What a brush kind keeps beside the shared fields of its [BrushMode] (the foliage layer, say); nothing reads it but the kind itself. */
 interface BrushOptions
 

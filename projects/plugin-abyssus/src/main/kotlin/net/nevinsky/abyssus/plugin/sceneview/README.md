@@ -485,3 +485,6 @@ the uniform factor for beyond the square. `ModelShader`, `PbrModelShader` and `t
 light, on top of its atlas shadow. No usable sun, a sun outside the rendered light budget, no clouds, exhausted cloud
 techniques or a map that could not be made (logged once to the `sceneview` logger) leave the uniform dimming as before.
 
+## Paint Texture
+
+Paint Texture is the fourth brush kind (`PaintTextureControls`, toggle `paint-texture` in the Properties panel via `PaintTextureRequests`). `SplatSession` offers the stroke, a snapshot of the splat state and layers, Create splat map, Make unique copy and layer assignment. `SplatViewSync` follows a stroke in every view through the draft's changed tiles.

@@ -49,6 +49,8 @@ class SceneViewPanel internal constructor(
     private val paintSession: ((String, () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?, (net.nevinsky.abyssus.plugin.foliage.FoliagePaintSession?) -> Unit) -> Unit)? = null,
     /** Opens the Sculpt Terrain session of an entity (the mode and the tool are read by its stroke); null: no Sculpt Terrain button. */
     private val sculptSession: ((String, () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?, () -> net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptTool?, (net.nevinsky.abyssus.plugin.terrain.SculptSession?) -> Unit) -> Unit)? = null,
+    /** Opens the Paint Texture session of an entity (the mode is read by its stroke); null: no Paint Texture strip. */
+    private val splatSession: ((String, () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?, (net.nevinsky.abyssus.plugin.splat.SplatSession?) -> Unit) -> Unit)? = null,
     /** The project's models to arrange along a path; the callback starts drawing. Null: no Add Path Arrangement button. */
     private val pathMenu: PlacementMenu<(RenderAsset) -> Unit>? = null,
     /** The project's `Show FPS`, read before every frame so a missed change event cannot leave the counter off; null: only [setFpsEnabled]. */
@@ -111,10 +113,16 @@ class SceneViewPanel internal constructor(
         ::syncControls, { onSculptEnded?.invoke() },
         { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(reason, AbyssusBundle.message("sculptTitle")) },
     )
+    private val paintTexture: PaintTextureControls = PaintTextureControls(
+        renderer, interaction, play, brushes, splatSession,
+        ::syncControls, { onPaintTextureEnded?.invoke() },
+        { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(reason, AbyssusBundle.message("splatTitle")) },
+    )
     init {
         // toolbar order
         brushes.register(paint)
         brushes.register(sculpt)
+        brushes.register(paintTexture)
     }
     private val playStrip = PlayControlsStrip(play, renderer, simulationRequest, { endBrushes() }, { requestFocusInWindow() })
     private val clouds = CloudControls(renderer) { experimenting }
@@ -454,6 +462,12 @@ class SceneViewPanel internal constructor(
     }
 
     override var onSculptEnded: (() -> Unit)? = null
+
+    override fun setPaintingTexture(entityId: String?) {
+        if (entityId == null) paintTexture.end(notify = false) else paintTexture.begin(entityId)
+    }
+
+    override var onPaintTextureEnded: (() -> Unit)? = null
 
     override fun applyPathEdit(): Boolean = interaction.applyPathDraft()
 

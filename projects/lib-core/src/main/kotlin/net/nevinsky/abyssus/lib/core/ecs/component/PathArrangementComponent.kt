@@ -24,12 +24,11 @@ data class PathAsset(var type: MetaType = MetaType.MODEL, var assetName: String 
  */
 class PathArrangementComponent : Component {
     var points: MutableList<Vector3> = ArrayList()
-    var sides: PathSides = PathSides.CENTER
-
     var closed: Boolean = false
     var asset: PathAsset = PathAsset()
     var spacing: Float = 10f
     var offset: Float = 0f
+    var sides: PathSides = PathSides.CENTER
     var alignToPath: Boolean = true
     var yawOffset: Float = 0f
 

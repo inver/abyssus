@@ -17,6 +17,7 @@ import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
+import net.nevinsky.abyssus.plugin.ui.reportRejection
 import net.nevinsky.abyssus.plugin.ui.showActionGroup
 
 /** The same three choices in the tree and toolbar; placement is read when a choice is made. */

@@ -69,9 +69,8 @@ import net.nevinsky.abyssus.lib.core.editor.components.CopyResult
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
 import net.nevinsky.abyssus.lib.core.editor.components.EntityClipboard
 import net.nevinsky.abyssus.plugin.EditorBundle
-import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
-import net.nevinsky.abyssus.plugin.projectView.reportRejection
-import net.nevinsky.abyssus.plugin.projectView.reportWaterRejection
+import net.nevinsky.abyssus.plugin.ui.reportRejection
+import net.nevinsky.abyssus.plugin.water.reportWaterRejection
 import java.awt.BorderLayout
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
@@ -192,6 +191,9 @@ class SceneFileEditor(
         project.messageBus.connect(this).subscribe(SculptRequestListener.TOPIC, SculptRequestListener { target ->
             view?.setSculpting(target?.takeIf { it.file == file }?.entityId)
         })
+        project.messageBus.connect(this).subscribe(PaintTextureRequestListener.TOPIC, PaintTextureRequestListener { target ->
+            view?.setPaintingTexture(target?.takeIf { it.file == file }?.entityId)
+        })
         project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
                 if (events.any { it is VFileContentChangeEvent && isSource(it.file) && hasRenderChange(it.file) }) {
@@ -293,6 +295,7 @@ class SceneFileEditor(
         created.onRegenerate = ::regenerateArrangement
         created.onPathEditEnded = { project.service<PathEditSession>().stop(file) }
         created.onSculptEnded = { project.service<SculptRequests>().stop(file) }
+        created.onPaintTextureEnded = { project.service<PaintTextureRequests>().stop(file) }
         (created as? RayControlProvider)?.rayControl?.let { rayControls.register(file, it, created) }
         view = created
         project.service<PathEditSession>().current?.takeIf { it.file == file }?.let { created.setPathEditing(it.entityId) }
@@ -355,7 +358,7 @@ class SceneFileEditor(
 
     /** Removes entity [entityId] as one undoable command; refused, and shown to the user, while another entity refers to it. */
     internal fun deleteEntity(entityId: String): Boolean {
-        val result = SceneComponentEdits.removeEntity(project, file, entityId)
+        val result = host.removeEntity(file, entityId)
         reportRejection(project, result)
         return result == EditResult.Changed
     }

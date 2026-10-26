@@ -55,6 +55,8 @@ private val FRUSTUM_COLOR = Color(0.55f, 0.7f, 0.95f, 1f)
  * and lights (a small octahedron, with a direction line for directional and spot lights). No GL needed.
  */
 class SceneMarkers {
+    private val curve = PathCurve()
+
 
     fun cameraBounds(position: Vector3): BoundingBox = boundsAround(position, CAMERA_BOUNDS_HALF)
 
@@ -146,7 +148,7 @@ class SceneMarkers {
         selectedPoint: Int? = null,
     ) {
         val points = pointsOf(path)
-        val line = PathCurve.sample(points, path.closed)
+        val line = curve.sample(points, path.closed)
         for (i in 0 until line.size - 1) out.thickLine(line[i], line[i + 1], PATH_COLOR, PATH_WIDTH_PX)
         if (slots) for (slot in PathLayout().slots(path).orEmpty()) {
             val y = ground.heightAt(slot.x, slot.z, slot.fallbackY)

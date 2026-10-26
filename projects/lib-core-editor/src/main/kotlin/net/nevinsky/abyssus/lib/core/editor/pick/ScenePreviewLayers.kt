@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
-import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementPreview
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent

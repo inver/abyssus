@@ -3,8 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.editor.arrange
+package net.nevinsky.abyssus.lib.core.editor.pick
 
+import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
+import net.nevinsky.abyssus.lib.core.editor.arrange.PathSlot
+import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.ecs.component.PathAsset
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
