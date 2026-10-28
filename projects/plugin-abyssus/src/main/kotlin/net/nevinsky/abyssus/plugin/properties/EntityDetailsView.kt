@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.util.numberTextOrNull
+import net.nevinsky.abyssus.lib.core.util.numberOrNull
 import com.intellij.icons.AllIcons
 import com.intellij.ide.DataManager
 import com.intellij.openapi.components.service
@@ -43,13 +46,13 @@ import net.nevinsky.abyssus.plugin.projectView.addComponentGroup
 import net.nevinsky.abyssus.plugin.ui.reportRejection
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.sceneview.PathEditListener
-import net.nevinsky.abyssus.plugin.sceneview.PaintTextureRequestListener
+import net.nevinsky.abyssus.plugin.sceneview.BrushRequestListener
 import net.nevinsky.abyssus.plugin.sceneview.PaintTextureRequests
-import net.nevinsky.abyssus.plugin.sceneview.SculptRequestListener
 import net.nevinsky.abyssus.plugin.sceneview.SculptRequests
 import net.nevinsky.abyssus.plugin.sceneview.PathEditSession
 import net.nevinsky.abyssus.plugin.ui.CommitOutcome
 import net.nevinsky.abyssus.plugin.ui.showActionGroup
+import com.intellij.util.messages.MessageBusConnection
 import java.awt.*
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
@@ -142,16 +145,25 @@ internal class EntityDetailsView @JvmOverloads constructor(
             if (paintToggle.isSelected) { sculpt.stop(target.file); paint.start(target.file, target.entityId) } else paint.stop(target.file)
         }
         sync()
-        return object : JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), JBUI.scale(4))) {
-            private var connection: com.intellij.util.messages.MessageBusConnection? = null
+        return syncedBar(::sync) { connection ->
+            connection.subscribe(SculptRequests.TOPIC, BrushRequestListener { sync() })
+            connection.subscribe(PaintTextureRequests.TOPIC, BrushRequestListener { sync() })
+        }.apply {
+            isOpaque = false
+            add(sculptToggle)
+            add(paintToggle)
+        }
+    }
+
+    /** A button bar that runs [sync] and calls [subscribe] with a project bus connection while it is on screen. */
+    private fun syncedBar(sync: () -> Unit, subscribe: (MessageBusConnection) -> Unit): JPanel =
+        object : JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), JBUI.scale(4))) {
+            private var connection: MessageBusConnection? = null
 
             override fun addNotify() {
                 super.addNotify()
                 sync()
-                connection = project.messageBus.connect().also {
-                    it.subscribe(SculptRequestListener.TOPIC, SculptRequestListener { sync() })
-                    it.subscribe(PaintTextureRequestListener.TOPIC, PaintTextureRequestListener { sync() })
-                }
+                connection = project.messageBus.connect().also(subscribe)
             }
 
             override fun removeNotify() {
@@ -159,12 +171,7 @@ internal class EntityDetailsView @JvmOverloads constructor(
                 connection = null
                 super.removeNotify()
             }
-        }.apply {
-            isOpaque = false
-            add(sculptToggle)
-            add(paintToggle)
         }
-    }
 
     /**
      * Edit for the spline of a path arrangement shows the control points in the Scene view (a click on one gives it the
@@ -190,22 +197,8 @@ internal class EntityDetailsView @JvmOverloads constructor(
         close.addActionListener { session.stop(target.file) }
         apply.addActionListener { session.apply(target.file) }
         sync()
-        return object : JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), JBUI.scale(4))) {
-            private var connection: com.intellij.util.messages.MessageBusConnection? = null
-
-            override fun addNotify() {
-                super.addNotify()
-                sync()
-                connection = project.messageBus.connect().also {
-                    it.subscribe(PathEditListener.TOPIC, PathEditListener { sync() })
-                }
-            }
-
-            override fun removeNotify() {
-                connection?.disconnect()
-                connection = null
-                super.removeNotify()
-            }
+        return syncedBar(::sync) { connection ->
+            connection.subscribe(PathEditListener.TOPIC, PathEditListener { sync() })
         }.apply {
             isOpaque = false
             add(edit)
@@ -298,10 +291,10 @@ internal class EntityDetailsView @JvmOverloads constructor(
                 foreground = JBColor.RED; name = "optics-error-$id"
             }
         for (field in RayOpticalField.entries) {
-            val stored = row.stored[field]
-            val shown = stored?.takeIf { it.isNumber }?.doubleValue() ?: field.default
+            val stored = row.storedDocuments[field]
+            val shown = stored?.numberAt() ?: field.default
             val text =
-                if (field == RayOpticalField.TRANSMISSION) percent(shown) else stored?.takeIf { it.isNumber }?.asText()
+                if (field == RayOpticalField.TRANSMISSION) percent(shown) else stored?.numberText()
                     ?: number(shown)
             val editor = JBTextField(text).apply { name = "optics-${field.key}-$id"; columns = 6 }
             val save = {

@@ -112,15 +112,4 @@ class AddComponentOnEcsTest : BasePlatformTestCase() {
         WriteCommandAction.runWriteCommandAction(project) { document().setText("{ not json") }
         assertFalse(visible(AddOn(row)))
     }
-
-    fun testAWrappedSceneGetsAMatchingArchetype() {
-        copyProject("Lights/scenes/Creation Baseline.scene")
-        assertTrue(visible(AddOn(ecsRow())))
-        val camera = choices().first { it.templatePresentation.text == "Camera" }
-        camera.actionPerformed(TestActionEvent.createTestEvent(camera))
-        val ecs = root()["ecs"]
-        val entity = ecs["entities"]["7"]
-        val archetype = ecs["archetypes"][entity["archetype"].asText()].map { it.asText() }.toSet()
-        assertEquals(setOf("NameComponent", "CameraComponent"), archetype)
-    }
 }

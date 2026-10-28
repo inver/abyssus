@@ -81,7 +81,7 @@ class LightGestureUiTest : UiTestBase() {
         LifecycleHarness.awaitState("the turn was written", true) { ide.documentText(scene.toString()) != opened }
         val turned = ide.documentText(scene.toString())!!
         assertEquals("the light's own PositionComponent is unchanged", viewport.entity(original, 1).get("components").get("PositionComponent"), viewport.entity(turned, 1).get("components").get("PositionComponent"))
-        assertTrue("only handle 0's PositionComponent changed", LifecycleHarness.sameExcept(original, turned, "/ecs/entities/0/components/PositionComponent"))
+        assertTrue("only handle 0's PositionComponent changed", LifecycleHarness.sameExcept(original, turned, "/ecs/0/components/PositionComponent"))
         val handle = viewport.position(turned, 0)
         assertEquals("a turn about X keeps the handle's x", 0f, handle.first, 1e-3f)
         val length = Math.sqrt(((handle.second - light.second) * (handle.second - light.second) + handle.third * handle.third).toDouble())

@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.dto
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
@@ -21,16 +23,15 @@ data class ProjectSettings(
 class ProjectSettingsReader(private val format: AbyssusDocumentFormat = AbyssusDocumentFormat()) {
 
     fun read(abssText: String): ProjectSettings = runCatchingKeepingCancellation {
-        val root = SceneJson().parse(abssText)
-        format.requireSupported(root, DocumentKind.PROJECT)
-        val physicsEnabled = root.get("physicsEnabled")?.let { it.isBoolean && it.asBoolean() } ?: false
+        val root = parseSupportedDocument(abssText, DocumentKind.PROJECT)
+        val physicsEnabled = root.boolAt("physicsEnabled") ?: false
         val problems = mutableListOf<String>()
-        if (root.has("physicsEnabled") && !root.get("physicsEnabled")!!.isBoolean) {
+        if (root.hasMember("physicsEnabled") && root.boolAt("physicsEnabled") == null) {
             problems += "physicsEnabled"
         }
-        val raw = root.get("sceneViewAntialiasing")
-        val level = AntialiasingLevel.entries.firstOrNull { raw?.isTextual == true && it.name == raw.textValue() }
-        if (raw != null && level == null) problems += "sceneViewAntialiasing"
+        val raw = root.textAt("sceneViewAntialiasing")
+        val level = AntialiasingLevel.entries.firstOrNull { it.name == raw }
+        if (root.hasMember("sceneViewAntialiasing") && level == null) problems += "sceneViewAntialiasing"
         ProjectSettings(physicsEnabled, problems, antialiasing = level ?: AntialiasingLevel.DEFAULT)
     }.getOrElse { ProjectSettings(false, listOf(it.message ?: it.toString()), supported = false) }
 }

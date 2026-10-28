@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.terrain
 
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.plugin.assetfiles.strokeResultMessage
+import net.nevinsky.abyssus.plugin.assetfiles.assetFilesAffected
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
@@ -112,16 +115,9 @@ class SculptStrokeCommand(
         ) ?: return
         val result = AssetFileCommand(project, store).execute(
             txn,
-            affected = { listOfNotNull(folder.findChild("meta.json"), LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(folder.path, current.dataName))) },
+            affected = { assetFilesAffected(folder, File(folder.path, current.dataName)) },
         )
-        when (result) {
-            AssetCommandResult.Done -> Unit
-            is AssetCommandResult.Conflict -> report(AbyssusBundle.message("sculptStrokeConflict"))
-            is AssetCommandResult.Collision -> report(AbyssusBundle.message("sculptStrokeConflict"))
-            is AssetCommandResult.Blocked -> report(result.reason)
-            AssetCommandResult.Cancelled -> Unit
-            is AssetCommandResult.Failed -> report(AbyssusBundle.message("sculptStrokeFailed", result.cause.documentDisplayMessage()))
-        }
+        strokeResultMessage(result, "sculptStrokeConflict", "sculptStrokeFailed")?.let(report)
     }
 }
 
@@ -135,10 +131,10 @@ fun readTerrainFolder(
     recipes: net.nevinsky.abyssus.lib.core.editor.terrain.TerrainRecipeCodec,
     sculpt: SculptServices,
 ): TerrainSource {
-    val metaFile = folder.findChild("meta.json") ?: return TerrainSource.Unusable("meta.json")
+    val metaFile = folder.findChild(META_FILE) ?: return TerrainSource.Unusable("meta.json")
     val text = com.intellij.openapi.application.runReadAction { net.nevinsky.abyssus.plugin.dto.textOf(metaFile) }
     val meta = net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation {
-        net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(text)
+        net.nevinsky.abyssus.lib.core.editor.document.parseDocument(text)
     }.getOrElse { return TerrainSource.Unusable("meta.json") }
     return readTerrainSource(File(folder.path), text, meta, net.nevinsky.abyssus.lib.core.editor.meta.AssetReferenceChoices(json), recipes, sculpt.reader)
 }

@@ -15,6 +15,7 @@ import com.badlogic.gdx.graphics.Color
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.util.float
 import net.nevinsky.abyssus.lib.core.util.obj
@@ -58,8 +59,8 @@ data class SceneRenderParams(
     val camera: CameraParams,
     val content: SceneContent = SceneContent(),
     val projectDir: File? = null,
-    /** The scene's `ecs` block as read, for scene overlays that draw components the view does not model. */
-    val ecs: JsonNode? = null,
+    /** The scene's typed entities, for scene overlays that draw components the view does not model. */
+    val ecs: Map<Long, Entity> = emptyMap(),
     val rayTracing: SceneRaySettingsState = SceneRaySettingsCodec().read(SceneJson().mapper.createObjectNode()),
 ) {
     companion object {

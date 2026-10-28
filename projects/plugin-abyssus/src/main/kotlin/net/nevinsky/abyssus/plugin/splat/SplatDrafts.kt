@@ -6,8 +6,8 @@
 package net.nevinsky.abyssus.plugin.splat
 
 import com.intellij.openapi.components.Service
+import net.nevinsky.abyssus.plugin.brush.DraftRegistry
 import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatDraft
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The splat painting strokes in progress in one project, keyed by the **splat texture's asset folder** (not the
@@ -19,22 +19,7 @@ import java.util.concurrent.ConcurrentHashMap
  * The map is concurrent so a view on its render thread can read while the stroke on the AWT thread opens and discards.
  */
 @Service(Service.Level.PROJECT)
-class SplatDrafts {
-    private val drafts = ConcurrentHashMap<String, SplatDraft>()
-
-    /** The stroke in progress on the splat texture folder [splatFolder], or null. */
-    fun of(splatFolder: String): SplatDraft? = drafts[splatFolder]
-
+class SplatDrafts : DraftRegistry<SplatDraft>() {
     /** Starts a stroke on [splatFolder] with a draft made by [create], replacing any earlier one. */
-    fun open(splatFolder: String, create: () -> SplatDraft): SplatDraft = create().also { drafts[splatFolder] = it }
-
-    /** Ends the stroke on [splatFolder]: the views reload the texture from its file. */
-    fun discard(splatFolder: String) {
-        drafts.remove(splatFolder)
-    }
-
-    /** Ends every stroke: the project closed. */
-    fun discardAll() {
-        drafts.clear()
-    }
+    fun open(splatFolder: String, create: () -> SplatDraft): SplatDraft = replace(splatFolder, create)
 }

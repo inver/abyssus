@@ -68,7 +68,7 @@ class AddPathArrangementActionTest : BasePlatformTestCase() {
         assertTrue(names.none { it.startsWith("terrain_") || it.startsWith("skybox") })
         val tree = items.first { it.templatePresentation.text == "tree" }
         tree.actionPerformed(TestActionEvent.createTestEvent(tree))
-        assertEquals(listOf(BaseMeta(MetaType.MODEL, "tree")), chosen)
+        assertEquals(listOf(MetaType.MODEL to "tree"), chosen.map { it.type to it.name })
     }
 
     fun testItIsRegisteredBesideAddAssetAndOnlySceneRowsOfferIt() {

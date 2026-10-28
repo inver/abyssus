@@ -292,24 +292,6 @@ class ComponentLifecycleUiTest : UiTestBase() {
         awaitRemoved("RenderComponent")
         assertEquals("entity 7 is as before", entity7(before), entity7(Files.readString(scene)))
 
-        // Point2Point: two entity references, an unknown entity and text are refused with the document unchanged
-        val kind = "Point2PointPositionComponent"
-        addFromTree(tree, "Point")
-        awaitAdded(kind)
-        LifecycleHarness.awaitState("the section is shown", true) { frame.properties().hasRemove(kind) }
-        if (frame.properties().isCollapsed("7.$kind")) frame.properties().clickChevron("7.$kind")
-        val added = Files.readString(scene)
-        for (bad in listOf("999", "abc", "-1")) {
-            frame.properties().enter("field-$kind-entity1Id", bad)
-            LifecycleHarness.awaitState("'$bad' is explained", true) { frame.properties().errorText(kind, "entity1Id").isNotBlank() }
-            assertEquals("a refused reference writes nothing", added, Files.readString(scene))
-        }
-        frame.properties().enter("field-$kind-entity1Id", "1")
-        LifecycleHarness.awaitState("the first endpoint is saved", 1) { component(kind)?.get("entity1Id")?.asInt() }
-        frame.properties().enter("field-$kind-entity2Id", "0")
-        assertOnlyEntity7Changed(before, "Point2Point references")
-        frame.properties().clickRemove(kind)
-        awaitRemoved(kind)
         assertEquals("entity 7 is as before", entity7(before), entity7(Files.readString(scene)))
     }
 }

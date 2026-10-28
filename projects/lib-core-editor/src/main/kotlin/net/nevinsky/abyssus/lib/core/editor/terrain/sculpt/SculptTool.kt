@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.terrain.sculpt
 
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.editor.brush.BrushGrid
 import net.nevinsky.abyssus.lib.core.editor.brush.BrushStamp
 import net.nevinsky.abyssus.lib.core.editor.brush.BrushTarget
@@ -19,20 +20,15 @@ class SculptGrid(override val resolution: Int, override val size: Int, val heigh
     /** The distance between two grid points, in terrain-local units. */
     override val cell: Float = size.toFloat() / (resolution - 1)
 
+    // shares [heights]: the grid samples what the stroke changes
+    private val terrain = TerrainData(resolution, heights, size, 1f)
+
     fun at(x: Int, z: Int): Float = heights[z * resolution + x]
 
     override fun sampleAt(x: Float, z: Float): Float = heightAt(x, z)
 
     /** The height at terrain-local [x],[z], bilinear, with the position clamped onto the terrain. */
-    fun heightAt(x: Float, z: Float): Float {
-        val fx = (x / cell).coerceIn(0f, (resolution - 1).toFloat())
-        val fz = (z / cell).coerceIn(0f, (resolution - 1).toFloat())
-        val gx = minOf(fx.toInt(), resolution - 2)
-        val gz = minOf(fz.toInt(), resolution - 2)
-        val tx = fx - gx
-        val tz = fz - gz
-        return (at(gx, gz) * (1 - tx) + at(gx + 1, gz) * tx) * (1 - tz) + (at(gx, gz + 1) * (1 - tx) + at(gx + 1, gz + 1) * tx) * tz
-    }
+    fun heightAt(x: Float, z: Float): Float = terrain.clampedHeightAt(x, z)
 }
 
 /**

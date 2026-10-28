@@ -21,7 +21,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.dto.LightDto
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.dto.EntityType
 
 /** The asset a `RenderComponent` shows: `renderable.asset.type` and `assetName`. */
 class DecodedAsset(val type: String, val name: String)
@@ -35,7 +35,7 @@ class DecodedEntity(
     val name: String,
     val position: PositionComponent?,
     val hasLocalPosition: Boolean,
-    val type: TypeComponent.Type?,
+    val type: EntityType?,
     val camera: CameraComponent?,
     val light: LightComponent?,
     val asset: DecodedAsset?,
@@ -62,7 +62,7 @@ class PlacementMapper {
         for (entity in entities) {
             val transform = entity.position?.let(::transformOf) ?: PlacementTransform.IDENTITY
             if (entity.position != null) positions[entity.id] = transform.position
-            if (entity.type == TypeComponent.Type.HANDLE) handleIds += entity.id
+            if (entity.type == EntityType.HANDLE) handleIds += entity.id
             val asset = entity.asset
             entity.arrangement?.let { arrangements += ArrangementPlacement(entity.id, it) }
             when {
@@ -119,8 +119,8 @@ class PlacementMapper {
         val type = entity.type
         val kind = when {
             type == null || !type.name.startsWith("LIGHT") -> if (entity.light != null) LightKind.DIRECTIONAL else return null
-            type == TypeComponent.Type.LIGHT_POINT -> LightKind.POINT
-            type == TypeComponent.Type.LIGHT_SPOT -> LightKind.SPOT
+            type == EntityType.LIGHT_POINT -> LightKind.POINT
+            type == EntityType.LIGHT_SPOT -> LightKind.SPOT
             else -> LightKind.DIRECTIONAL
         }
         val light: LightDto = entity.light?.light ?: LightDto()

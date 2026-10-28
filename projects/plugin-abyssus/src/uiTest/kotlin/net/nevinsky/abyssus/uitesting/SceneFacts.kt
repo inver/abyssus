@@ -21,7 +21,7 @@ class SceneFacts(val text: String) {
     fun entityName(id: Int): String? {
         val ecs = root.get("ecs") ?: return null
         // a scene with archetypes keeps its entities under `ecs.entities`
-        val entity = (ecs.get("entities") ?: ecs).get(id.toString())
+        val entity = ecs.get(id.toString())
         return entity?.get("components")?.get("NameComponent")?.get("name")?.asText()
     }
 

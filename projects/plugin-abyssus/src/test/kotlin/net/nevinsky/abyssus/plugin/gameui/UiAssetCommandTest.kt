@@ -27,7 +27,7 @@ class UiAssetCommandTest : BasePlatformTestCase() {
     private lateinit var dir: File
     private lateinit var abss: VirtualFile
     private val projectText = """{"format":"abyssus","formatVersion":1,"name":"P"}"""
-    private val sceneText = """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{}}}"""
+    private val sceneText = """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{}}"""
     private val json = SceneJson()
 
     override fun setUp() {

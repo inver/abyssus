@@ -436,7 +436,7 @@ class SceneRenderGlTest {
     fun lightEntitiesChangeTheShading() {
         val fixture = params("Untitled", "Main Scene.scene") { edit(it, ::noFog) }
         val base = fixture.copy(content = fixture.content.copy(lights = emptyList()))
-        val light = """{"archetype":1,"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{"light":{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1.0}},"PositionComponent":{"localRotation":{"x":-0.7071,"w":0.7071}}}}"""
+        val light = """{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{"light":{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1.0}},"PositionComponent":{"localRotation":{"x":-0.7071,"w":0.7071}}}}"""
         val lit = params("Untitled", "Main Scene.scene") {
             edit(it) { root ->
                 noFog(root)

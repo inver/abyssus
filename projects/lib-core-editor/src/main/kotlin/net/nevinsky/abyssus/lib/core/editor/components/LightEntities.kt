@@ -12,7 +12,7 @@ import net.nevinsky.abyssus.lib.core.dto.LightDto
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.dto.EntityType
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
@@ -23,7 +23,7 @@ import org.slf4j.helpers.NOPLogger
 enum class LightPreset(
     val labelKey: String,
     val nameKey: String,
-    val type: TypeComponent.Type,
+    val type: EntityType,
     val color: Color,
     val intensity: Float,
     val rotationDegrees: Float,
@@ -32,7 +32,7 @@ enum class LightPreset(
     DIRECTIONAL(
         "lightDirectional",
         "lightDirectionalName",
-        TypeComponent.Type.LIGHT_DIRECTIONAL,
+        EntityType.LIGHT_DIRECTIONAL,
         Color(1f, 1f, 1f, 1f),
         1f,
         -45f,
@@ -41,13 +41,13 @@ enum class LightPreset(
     SUN(
         "lightSun",
         "lightSunName",
-        TypeComponent.Type.LIGHT_DIRECTIONAL,
+        EntityType.LIGHT_DIRECTIONAL,
         Color(1f, 0.96f, 0.84f, 1f),
         1.2f,
         -30f,
         0f
     ),
-    SPOT("lightSpot", "lightSpotName", TypeComponent.Type.LIGHT_SPOT, Color(1f, 1f, 1f, 1f), 1f, -90f, 5f),
+    SPOT("lightSpot", "lightSpotName", EntityType.LIGHT_SPOT, Color(1f, 1f, 1f, 1f), 1f, -90f, 5f),
 }
 
 data class AddedLight(val result: EditResult, val entityId: String? = null)
@@ -67,7 +67,7 @@ class LightEntities(private val messages: EditorMessages) {
                 position.z
             ).any { !it.isFinite() }
         ) return rejected()
-        val id = SceneEntityTree(root).insert { id ->
+        val id = SceneEntityTree(root).insert(preset.type.name) { id ->
             val transform = PositionComponent(position.x, position.y + preset.height, position.z)
             transform.localRotation.set(Vector3.X, preset.rotationDegrees)
             nodes.objectNode().apply {
@@ -75,7 +75,6 @@ class LightEntities(private val messages: EditorMessages) {
                     "NameComponent",
                     writer.writeComponent(NameComponent(messages.message(preset.nameKey, id)))
                 )
-                set<JsonNode>("TypeComponent", writer.writeComponent(TypeComponent(preset.type)))
                 set<JsonNode>("PositionComponent", writer.writeComponent(transform))
                 set<JsonNode>(
                     "LightComponent",

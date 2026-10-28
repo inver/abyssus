@@ -54,9 +54,8 @@ class ScenePreviewTest {
 
     @Test
     fun aLightWithoutTargetUsesTheDraggedDirection() {
-        val noTarget = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-            "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
-                "PositionComponent":{"localPosition":{"y":10}}}}}}}"""))
+        val noTarget = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{
+            "1":{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{},"PositionComponent":{"localPosition":{"y":10}}}}}}"""))
         val turned = DragResult(
             PlacementTransform(Vector3(0f, 10f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
             Vector3(0f, 0f, -1f),
@@ -79,11 +78,10 @@ class ScenePreviewTest {
 
     @Test
     fun aimedTargetIsANullWhenTheLightLooksAtANonHandle() {
-        val aimedAtModel = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-            "0":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"a"}}},
+        val aimedAtModel = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{
+            "0":{"components":{"RenderComponent":{"type":"MODEL","assetName":"a"},
                 "PositionComponent":{"localPosition":{"x":1}}}},
-            "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
-                "PositionComponent":{"lookAtId":0,"localPosition":{"x":5}}}}}}}"""))
+            "1":{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{},"PositionComponent":{"lookAtId":0,"localPosition":{"x":5}}}}}}"""))
         val turned = DragResult(
             PlacementTransform(Vector3(5f, 0f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
             Vector3(-1f, 0f, 0f),
@@ -93,10 +91,9 @@ class ScenePreviewTest {
 
     @Test
     fun aimedTargetUsesADistanceOfOneWhenTheHandleIsAtTheLight() {
-        val atLight = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-            "2":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"x":5}}}},
-            "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
-                "PositionComponent":{"lookAtId":2,"localPosition":{"x":5}}}}}}}"""))
+        val atLight = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{
+            "2":{"type":"HANDLE","components":{"PositionComponent":{"localPosition":{"x":5}}}},
+            "1":{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{},"PositionComponent":{"lookAtId":2,"localPosition":{"x":5}}}}}}"""))
         val turned = DragResult(
             PlacementTransform(Vector3(5f, 0f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
             Vector3(0f, 0f, -1f),
@@ -108,10 +105,9 @@ class ScenePreviewTest {
 
     @Test
     fun movingAPointLightDoesNotReAimIt() {
-        val point = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-            "1":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{},
-                "PositionComponent":{"lookAtId":2,"localPosition":{"y":10}}}},
-            "2":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{}}}}}}"""))
+        val point = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{
+            "1":{"type":"LIGHT_POINT","components":{"LightComponent":{},"PositionComponent":{"lookAtId":2,"localPosition":{"y":10}}}},
+            "2":{"type":"HANDLE","components":{"PositionComponent":{}}}}}"""))
         val moved = DragResult(PlacementTransform(Vector3(5f, 10f, 0f), Quaternion(), Vector3(1f, 1f, 1f)), null)
         val before = point.lights.single().direction
         assertEquals(before, ScenePreview().apply(point, "1", moved).lights.single().direction)

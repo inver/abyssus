@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.terrain.splat
 
 import net.nevinsky.abyssus.lib.core.editor.brush.ByteGrid
+import net.nevinsky.abyssus.lib.core.editor.brush.ChangeTracker
 import net.nevinsky.abyssus.lib.core.editor.brush.GridRect
 import net.nevinsky.abyssus.lib.core.editor.brush.emptyGridRect
 
@@ -31,8 +32,9 @@ class SplatDraft(val resolution: Int, val size: Int, val pixels: ByteArray = Byt
     /** The weights as the brush engine reads them: four channels per texel. */
     val grid = ByteGrid(resolution, size, 4, pixels)
 
-    var revision: Int = 0
-        private set
+    private val tracker = ChangeTracker()
+
+    val revision: Int get() = tracker.revision
 
     private val tilesPerSide = (resolution + SPLAT_TILE - 1) / SPLAT_TILE
 
@@ -40,13 +42,11 @@ class SplatDraft(val resolution: Int, val size: Int, val pixels: ByteArray = Byt
     private val tileRevision = IntArray(tilesPerSide * tilesPerSide)
 
     /** Everything changed since the draft was made; a commit writes files only when the bytes differ from the file. */
-    var changed: GridRect = emptyGridRect()
-        private set
+    val changed: GridRect get() = tracker.changed
 
     /** Records that the texel [gx],[gz] changed. */
     fun touch(gx: Int, gz: Int) {
-        changed = changed.union(GridRect(gx, gz, gx, gz))
-        tileRevision[(gz / SPLAT_TILE) * tilesPerSide + gx / SPLAT_TILE] = ++revision
+        tileRevision[(gz / SPLAT_TILE) * tilesPerSide + gx / SPLAT_TILE] = tracker.mark(GridRect(gx, gz, gx, gz))
     }
 
     /**
@@ -79,8 +79,7 @@ class SplatDraft(val resolution: Int, val size: Int, val pixels: ByteArray = Byt
             }
         }
         if (any) {
-            changed = GridRect(0, 0, resolution - 1, resolution - 1)
-            tileRevision.fill(++revision)
+            tileRevision.fill(tracker.mark(GridRect(0, 0, resolution - 1, resolution - 1)))
         }
         return any
     }

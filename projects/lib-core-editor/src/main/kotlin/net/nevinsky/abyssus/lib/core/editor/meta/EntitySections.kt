@@ -42,7 +42,11 @@ data class OpticalMaterialRow(
     val error: RayDataError?,
     val stored: Map<RayOpticalField, JsonNode?>,
     val errors: Map<RayOpticalField, RayDataError>,
-)
+) {
+    /** The stored values as read-only [Document]s, for hosts that do not name the tree type. */
+    val storedDocuments: Map<RayOpticalField, net.nevinsky.abyssus.lib.core.editor.document.Document?>
+        get() = stored.mapValues { (_, node) -> node?.let { net.nevinsky.abyssus.lib.core.editor.document.Document(it) } }
+}
 
 /** One component of an entity: its [fields] when the plugin edits it, else the file's JSON as [raw] text, read only. */
 data class ComponentSection(val kind: String, val label: String, val fields: List<FieldValue>, val raw: String?)

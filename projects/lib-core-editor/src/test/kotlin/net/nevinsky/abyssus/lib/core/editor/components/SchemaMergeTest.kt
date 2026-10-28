@@ -13,7 +13,7 @@ import org.junit.Test
 class SchemaMergeTest {
     @Test fun gameComponentsAreNeverOfferedByTheBuiltInEditor() {
         val editor = ComponentEditor(ResourceEditorMessages())
-        val root = SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":{"components":{"MarkerComponent":{"size":1.000}}}}}}""")
+        val root = SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{"0":{"components":{"MarkerComponent":{"size":1.000}}}}}""")
         assertNull(editor.kindOf("MarkerComponent"))
         assertFalse(editor.missingKinds(root, "0").any { it.name == "MarkerComponent" })
         assertNull(editor.read(root, "0", "MarkerComponent"))

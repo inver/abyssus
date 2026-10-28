@@ -17,7 +17,6 @@ import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PathSides
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentField
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentKind
@@ -58,16 +57,6 @@ internal class BuiltInComponentKinds(private val reader: ComponentReader, privat
                 )
             ),
         ) { NameComponent() },
-        kind<TypeComponent>(
-            "TypeComponent",
-            listOf(
-                ComponentField(
-                    "type", FieldKind.CHOICE, { it.type?.name.orEmpty() },
-                    { c, t -> c.type = TypeComponent.Type.entries.firstOrNull { e -> e.name == t } },
-                    choices = TypeComponent.Type.entries.map { it.name }, optional = true,
-                ),
-            ),
-        ) { TypeComponent() },
         kind<ParentComponent>("ParentComponent", listOf(refField("parentEntityId", { it.parentEntityId }, { c, v -> c.parentEntityId = v }))) { ParentComponent() },
         kind<PositionComponent>(
             "PositionComponent",

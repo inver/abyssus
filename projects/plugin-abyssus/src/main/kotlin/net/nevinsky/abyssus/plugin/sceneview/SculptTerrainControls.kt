@@ -45,10 +45,10 @@ internal class SculptTerrainControls(
     private val sculptSession: ((String, () -> BrushMode?, () -> SculptTool?, (SculptSession?) -> Unit) -> Unit)?,
     private val tools: SculptToolFactory,
     private val onChanged: () -> Unit,
-    private val onEnded: () -> Unit,
+    onEnded: () -> Unit,
     private val report: (String) -> Unit,
-) : BrushStrip<SculptSession>(
-    renderer, interaction, play, kinds, SCULPT_BRUSH, onChanged, "sculpt-radius", "sculpt-strength", "sculpt-strip",
+) : RequestedBrushStrip<SculptSession>(
+    renderer, interaction, play, kinds, SCULPT_BRUSH, onChanged, "sculpt-radius", "sculpt-strength", "sculpt-strip", onEnded,
 ) {
     private val toolBox = ComboBox(DefaultComboBoxModel(SculptToolKind.entries.toTypedArray())).apply {
         name = "sculpt-tool"
@@ -79,7 +79,6 @@ internal class SculptTerrainControls(
     private val stampChoice = ComboBox<StampImageChoice>().apply { name = "sculpt-stamp-image" }
     private val stampNote = JLabel("").apply { name = "sculpt-stamp-note" }
     private val options = JPanel(CardLayout()).apply { name = "sculpt-options" }
-    private var requested = false
     private var opened = false
     private var stampImage: StampImage? = null
     private var stampDecode = 0
@@ -87,8 +86,6 @@ internal class SculptTerrainControls(
 
     /** Whether a sculpt brush is on the view now. */
     val sculpting: Boolean get() = active
-
-    override val wanted: Boolean get() = requested
 
     init {
         toolBox.addActionListener { showOptions(); update() }
@@ -187,14 +184,6 @@ internal class SculptTerrainControls(
 
     override fun modeFor(selected: String, shift: Boolean): BrushMode =
         BrushMode(SCULPT_BRUSH, selected, num(radius), num(strength).coerceIn(0f, 1f), shift)
-
-    /** Takes the brush off the view; [notify] tells the host the sculpting is over (not when the session is only reloaded). */
-    override fun end(notify: Boolean) {
-        val was = requested
-        super.end(notify)
-        requested = false
-        if (notify && was) onEnded()
-    }
 
     /** Releases the session when the view is disposed. */
     override fun close() {

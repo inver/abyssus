@@ -12,7 +12,6 @@ import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
@@ -48,14 +47,10 @@ class AssetEntities(private val messages: EditorMessages) {
         ) return rejected
         val half =
             if (asset.isTerrain() && terrainSize != null && terrainSize.isFinite() && terrainSize > 0f) terrainSize / 2f else 0f
-        val id = SceneEntityTree(root).insert { id ->
+        val id = SceneEntityTree(root).insert(if (asset.isTerrain()) "TERRAIN" else "OBJECT") { id ->
             val components = nodes.objectNode()
             val name = messages.message(if (asset.isTerrain()) "assetEntityTerrainName" else "assetEntityModelName", id)
             components.set<JsonNode>("NameComponent", writer.writeComponent(NameComponent(name)))
-            components.set<JsonNode>(
-                "TypeComponent",
-                writer.writeComponent(TypeComponent(if (asset.isTerrain()) TypeComponent.Type.TERRAIN else TypeComponent.Type.OBJECT))
-            )
             components.set<JsonNode>(
                 "PositionComponent",
                 writer.writeComponent(PositionComponent(point.x - half, point.y, point.z - half))

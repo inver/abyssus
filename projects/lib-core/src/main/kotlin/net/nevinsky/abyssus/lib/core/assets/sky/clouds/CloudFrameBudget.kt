@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.plugin.sceneview.skybox
+package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
 /** A frame slower than this, in seconds, is over budget. */
 const val CLOUD_FRAME_BUDGET = 0.033f

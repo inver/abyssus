@@ -87,8 +87,7 @@ internal object WaterGlScenes {
             factory.objectNode().also { c ->
                 c.putObject("NameComponent").put("name", "Blended")
                 c.putObject("PositionComponent").putObject("localPosition").put("x", x).put("y", y).put("z", z)
-                c.putObject("RenderComponent").putObject("renderable").put("kind", "asset").put("shaderKey", "pbr")
-                    .putObject("asset").put("type", "MODEL").put("assetName", BLENDED)
+                c.putObject("RenderComponent").put("shaderKey", "pbr").put("type", "MODEL").put("assetName", BLENDED)
                 c.putObject("TypeComponent").put("type", "OBJECT")
             }
         }!!

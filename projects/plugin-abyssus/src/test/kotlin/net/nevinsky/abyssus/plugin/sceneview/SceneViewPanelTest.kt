@@ -32,7 +32,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
     fun testToolbarPlacesLightAtOrbitTargetAndDisablesForUnreadableScene() {
         val file = myFixture.addFileToProject(
             "Lights.scene",
-            """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}"""
+            """{"format":"abyssus","formatVersion":1,"ecs":{}}"""
         ).virtualFile
         val params = SceneRenderParams.DEFAULT.copy(
             camera = CameraParams.DEFAULT.copy(

@@ -39,7 +39,7 @@ import java.nio.file.Files
 class NewTerrainActionTest : BasePlatformTestCase() {
     private lateinit var projectDir: File
     private lateinit var abss: VirtualFile
-    private val sceneText = """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{}}}"""
+    private val sceneText = """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{}}"""
 
     override fun setUp() {
         super.setUp()

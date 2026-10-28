@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.terrain.sculpt
 
+import net.nevinsky.abyssus.lib.core.editor.brush.ChangeTracker
 import net.nevinsky.abyssus.lib.core.editor.brush.GridRect
-import net.nevinsky.abyssus.lib.core.editor.brush.emptyGridRect
 
 /** The heights of a sculpted terrain: each [base] height plus its [delta], one float add per vertex. */
 fun composeSculpt(base: FloatArray, delta: FloatArray): FloatArray {
@@ -34,12 +34,12 @@ class SculptDraft(
         require(base.size == count && composed.size == count && delta.size == count) { "grids must hold $resolution squared heights" }
     }
 
-    var revision: Int = 0
-        private set
+    private val tracker = ChangeTracker()
+
+    val revision: Int get() = tracker.revision
 
     /** Everything changed since the draft was made; a commit writes files only when this is not empty. */
-    var changed: GridRect = emptyGridRect()
-        private set
+    val changed: GridRect get() = tracker.changed
 
     /** Moves the vertex at [x],[z] by [change]; a zero change is ignored. */
     fun add(x: Int, z: Int, change: Float) {
@@ -47,8 +47,7 @@ class SculptDraft(
         val i = z * resolution + x
         delta[i] += change
         composed[i] += change
-        changed = changed.union(GridRect(x, z, x, z))
-        revision++
+        tracker.mark(GridRect(x, z, x, z))
     }
 
     /** Makes [composed] exactly [base] plus [delta] over the whole grid, as a commit and Regenerate compute it. */

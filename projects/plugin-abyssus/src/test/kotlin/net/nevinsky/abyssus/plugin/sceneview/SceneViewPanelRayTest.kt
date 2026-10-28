@@ -77,7 +77,7 @@ class SceneViewPanelRayTest : BasePlatformTestCase() {
     }
 
     fun testRayTracingIsOffByDefaultAndSwitchingItOnWritesNothing() {
-        val file = myFixture.addFileToProject("Ray.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""").virtualFile
+        val file = myFixture.addFileToProject("Ray.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""").virtualFile
         val before = file.contentsToByteArray()
         val device = RayFakeDevice()
         val panel = panel(testRenderer(), service("metal" to device))

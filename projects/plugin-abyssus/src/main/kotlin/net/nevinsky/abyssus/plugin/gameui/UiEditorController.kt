@@ -4,7 +4,9 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
-import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.editor.ui.UiTreeEdit
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
@@ -117,7 +119,6 @@ class UiEditorController(
     private val preferences: UiPreferences = MemoryUiPreferences(),
     private val previews: UiPreviewState.Factory = UiPreviewState.Factory(),
 ) : Disposable, UiCanvasModel {
-    private val json = SceneJson()
     private var revision = 0L
     private var disposed = false
 
@@ -197,7 +198,7 @@ class UiEditorController(
     }
 
     private fun parse(text: String): UiEditorState {
-        val tree = runCatchingKeepingCancellation { json.parse(text) }.getOrElse { return UiEditorState.Unreadable(it.message.orEmpty(), text) }
+        val tree = runCatchingKeepingCancellation { parseDocument(text) }.getOrElse { return UiEditorState.Unreadable(it.message.orEmpty(), text) }
         return when (val admission = decoder.decode(tree)) {
             is UiAdmission.Admitted -> UiEditorState.Editable(admission, text)
             is UiAdmission.Refused -> UiEditorState.Refused(admission.issues, text)
@@ -277,7 +278,7 @@ class UiEditorController(
 
     // ---- edits ----
 
-    private fun perform(name: String, baseText: String? = null, op: (UiDocumentEdits, JsonNode) -> UiEditResult): UiEditOutcome {
+    private fun perform(name: String, baseText: String? = null, op: UiTreeEdit): UiEditOutcome {
         val outcome = editUiMeta(project, file, name, baseText, textEditor, op)
         lastError = when (outcome) {
             is UiEditOutcome.Rejected -> outcome.error
@@ -380,7 +381,7 @@ class UiEditorController(
     fun deleteScreen(id: String) = perform(AbyssusBundle.message("uiCommandDeleteScreen")) { e, m -> e.deleteScreen(m, id) } is UiEditOutcome.Edited
 
     /** A generic property-panel edit; see `UiDocumentEdits`. */
-    fun edit(name: String, op: (UiDocumentEdits, JsonNode) -> UiEditResult): Boolean = perform(name, null, op) is UiEditOutcome.Edited
+    fun edit(name: String, op: UiTreeEdit): Boolean = perform(name, null, op) is UiEditOutcome.Edited
 
     // ---- canvas gestures ----
 

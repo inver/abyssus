@@ -9,7 +9,6 @@ import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.editor.brush.GridRect
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptDraft
 import net.nevinsky.abyssus.plugin.terrain.SculptDrafts
-import java.util.IdentityHashMap
 
 /** One terrain a Scene view shows, as the sculpt sync sees it: [key] tells instances apart, [refresh] re-sends [rect]. */
 internal interface SculptTarget {
@@ -25,39 +24,22 @@ internal interface SculptTarget {
  * [SculptTarget.data] in place and the target sends those vertices again; when a draft the view had been following is
  * gone, the stroke ended, so the view loads the terrain again through [reload]. GL thread only.
  */
-internal class SculptViewSync(private val drafts: SculptDrafts, private val reload: (Set<String>) -> Unit) {
-    private class Seen(val draft: SculptDraft, val revision: Int)
+internal class SculptViewSync(private val drafts: SculptDrafts, reload: (Set<String>) -> Unit) :
+    DraftFollower<SculptTarget, SculptDraft, SculptViewSync.Seen>(reload) {
+    class Seen(val draft: SculptDraft, val revision: Int, val asset: String)
 
-    private val seen = IdentityHashMap<Any, Seen>()
+    override fun keyOf(target: SculptTarget) = target.key
+    override fun draftAsset(target: SculptTarget) = target.assetName
+    override fun draftOf(asset: String) = drafts.of(asset)
+    override fun assetOf(state: Seen) = state.asset
 
-    fun apply(targets: Collection<SculptTarget>) {
-        val live = IdentityHashMap<Any, Boolean>()
-        var reloads: MutableSet<String>? = null
-        for (target in targets) {
-            val mesh = target.key
-            live[mesh] = true
-            val name = target.assetName
-            val draft = drafts.of(name)
-            val prior = seen[mesh]
-            when {
-                draft != null -> if (prior == null || prior.draft !== draft || prior.revision != draft.revision) {
-                    follow(target, draft)
-                    seen[mesh] = Seen(draft, draft.revision)
-                }
-                prior != null -> {
-                    seen.remove(mesh)
-                    (reloads ?: HashSet<String>().also { reloads = it }) += name
-                }
-            }
-        }
-        seen.keys.retainAll(live.keys)
-        reloads?.let(reload)
-    }
-
-    private fun follow(target: SculptTarget, draft: SculptDraft) {
+    override fun follow(target: SculptTarget, asset: String, draft: SculptDraft, prior: Seen?): Seen? {
+        if (prior != null && prior.draft === draft && prior.revision == draft.revision) return null
         val rect = draft.changed
-        if (rect.isEmpty || target.data.resolution != draft.resolution) return
-        target.data.copyHeights(draft.composed, rect.minX, rect.minZ, rect.maxX, rect.maxZ)
-        target.refresh(rect)
+        if (!rect.isEmpty && target.data.resolution == draft.resolution) {
+            target.data.copyHeights(draft.composed, rect.minX, rect.minZ, rect.maxX, rect.maxZ)
+            target.refresh(rect)
+        }
+        return Seen(draft, draft.revision, asset)
     }
 }

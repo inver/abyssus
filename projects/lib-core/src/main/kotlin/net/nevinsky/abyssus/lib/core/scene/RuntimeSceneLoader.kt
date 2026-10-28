@@ -9,6 +9,7 @@ import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import net.nevinsky.abyssus.lib.core.ecs.EcsLoadingWarns
 import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.core.ecs.component.RawComponent
 import net.nevinsky.abyssus.lib.core.ecs.system.LookAtSystem
 import net.nevinsky.abyssus.lib.core.ecs.system.SynchronizeCameraComponentSystem
 import org.slf4j.Logger
@@ -43,11 +44,19 @@ class RuntimeSceneLoader(
             it.addSystem(LookAtSystem(it.ids, 0))
             it.addSystem(SynchronizeCameraComponentSystem(it.ids, 2))
         }
-        if (scene.ecs == null) {
+        if (scene.ecs.isEmpty()) {
             return SceneContext(engine, scene)
         }
-        val warnings = ecsLoader.loadToEngine(scene.ecs, engine)
-        return SceneContext(engine, scene, warnings)
+        logWarnings(ecsLoader.loadToEngine(scene.ecs, engine))
+        return SceneContext(engine, scene)
+    }
+
+    /** Logs each distinct warning once: a kept component by its reason alone, a bad reference as the loader words it. */
+    private fun logWarnings(loaded: EcsLoadingWarns) {
+        val perEntity = loaded.carried.flatMap { (id, raws) ->
+            raws.values.map { "entity $id: ${it.reason}" to it.reason }
+        }.toMap()
+        loaded.warnings.map { perEntity[it] ?: it }.distinct().forEach(log::warn)
     }
 
     private fun <T> reported(source: String, read: () -> T?): T? = runCatchingKeepingCancellation(read)

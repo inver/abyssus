@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.terrain
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.utils.GdxNativesLoader
@@ -31,12 +33,9 @@ data class StampImageChoice(val name: String, val file: File) {
 class StampImages(private val json: JsonProcessor) {
     fun list(assetsDir: File): List<StampImageChoice> =
         assetsDir.listFiles { f -> f.isDirectory }?.sortedBy { it.name }.orEmpty().mapNotNull { folder ->
-            val meta = runCatchingKeepingCancellation {
-                File(folder, META_FILE).takeIf { it.isFile }?.let { AssetMetaReader(json).read(it.readText()).json }
-            }.getOrNull() ?: return@mapNotNull null
-            val type = meta.text("type")
-            if (type != MetaType.TEXTURE.name && type != MetaType.PIXMAP_TEXTURE.name) return@mapNotNull null
-            val file = meta.obj("additional")?.text("file")?.let { File(folder, it) }?.takeIf { it.isFile } ?: return@mapNotNull null
+            val meta = File(folder, META_FILE).takeIf { it.isFile }?.let { assetFileRef(it.readText()) } ?: return@mapNotNull null
+            if (meta.type != MetaType.TEXTURE.name && meta.type != MetaType.PIXMAP_TEXTURE.name) return@mapNotNull null
+            val file = meta.file?.let { File(folder, it) }?.takeIf { it.isFile } ?: return@mapNotNull null
             StampImageChoice(folder.name, file)
         }
 

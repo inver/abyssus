@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.ecs
 
+import net.nevinsky.abyssus.lib.core.testing.loadEcs
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PathSides
@@ -19,12 +20,10 @@ import org.slf4j.helpers.NOPLogger
 class PathArrangementComponentTest {
     private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
     private val registry = ComponentRegistry()
-    private val loader = EcsLoader(json, registry)
 
     private fun load(body: String): Pair<PathArrangementComponent, EcsLoadingWarns> {
-        val ecs = NativeJsonTree().parse("""{"entities":{"11":{"components":{"PathArrangementComponent":$body}}}}""")
         val engine = SceneEngine()
-        val warns = loader.loadToEngine(ecs, engine)
+        val warns = loadEcs("""{"11":{"components":{"PathArrangementComponent":$body}}}""", engine, registry, json)
         return engine.entities.single().getComponent(PathArrangementComponent::class.java) to warns
     }
 

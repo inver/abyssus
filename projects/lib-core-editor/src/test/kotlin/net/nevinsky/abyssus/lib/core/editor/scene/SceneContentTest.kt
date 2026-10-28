@@ -24,8 +24,13 @@ import java.io.File
 class SceneContentTest {
     private fun content(json: String) = sceneContentOf(parseScene(json))
 
-    private fun entity(components: String) =
-        """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"7":{"archetype":1,"components":$components}}}}"""
+    /** A scene with one entity 7; a `"TypeComponent":{"type":...}` in [components] is the entity's `type`. */
+    private fun entity(components: String): String {
+        val typed = Regex(""""TypeComponent"\s*:\s*\{\s*"type"\s*:\s*"(\w+)"\s*\},?""")
+        val type = typed.find(components)?.groupValues?.get(1)
+        val header = if (type != null) """"type":"$type",""" else ""
+        return """{"format":"abyssus","formatVersion":1,"ecs":{"7":{$header"components":${typed.replace(components, "")}}}}"""
+    }
 
     @Test
     fun mainSceneHasThreeModelsAndOneTerrain() {
@@ -48,9 +53,9 @@ class SceneContentTest {
     @Test
     fun aFlatRenderComponentPlacesItsModelAndItsTerrain() {
         val c = content(
-            """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
+            """{"format":"abyssus","formatVersion":1,"ecs":{
               "1":{"components":{"RenderComponent":{"shaderKey":"defaultShader","type":"MODEL","assetName":"model_pilot"}}},
-              "2":{"components":{"RenderComponent":{"shaderKey":"terrain","type":"TERRAIN","assetName":"terrain_site"}}}}}}""",
+              "2":{"components":{"RenderComponent":{"shaderKey":"terrain","type":"TERRAIN","assetName":"terrain_site"}}}}}""",
         )
         assertEquals(listOf("model_pilot"), c.models.map { it.assetName })
         assertEquals(listOf("terrain_site"), c.terrains.map { it.assetName })
@@ -61,7 +66,7 @@ class SceneContentTest {
         val c = content(
             entity(
                 """{"PositionComponent":{"localRotation":{"w":0.5,"x":-0.5},"localPosition":{"y":2}},
-            "RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"m"}}}}"""
+            "RenderComponent":{"type":"MODEL","assetName":"m"}}"""
             )
         )
         val t = c.models.single().transform
@@ -72,18 +77,17 @@ class SceneContentTest {
 
     @Test
     fun missingPositionComponentIsIdentity() {
-        val c = content(entity("""{"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"m"}}}}"""))
+        val c = content(entity("""{"RenderComponent":{"type":"MODEL","assetName":"m"}}"""))
         assertEquals(PlacementTransform.IDENTITY, c.models.single().transform)
     }
 
     @Test
     fun unknownAndMalformedEntitiesAreIgnored() {
-        val json = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-            "1":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"SPRITE","assetName":"s"}}}}},
-            "2":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"MODEL"}}}}},
+        val json = """{"format":"abyssus","formatVersion":1,"ecs":{
+            "1":{"components":{"RenderComponent":{"type":"SPRITE","assetName":"s"}}},
+            "2":{"components":{"RenderComponent":{"type":"MODEL"}}},
             "3":{"components":{"RenderComponent":"nope"}},
-            "4":"nope",
-            "5":{"components":{"PositionComponent":{"localPosition":{"x":"a"}},"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"ok"}}}}}}}}"""
+            "5":{"components":{"PositionComponent":{"localPosition":{"x":"a"}},"RenderComponent":{"type":"MODEL","assetName":"ok"}}}}}"""
         val c = content(json)
         assertEquals(listOf("ok"), c.models.map { it.assetName })
         assertEquals(0f, c.models.single().transform.position.x, 0f)
@@ -153,10 +157,9 @@ class SceneContentTest {
     @Test
     fun aNumericStringLookAtTargetIsKept() {
         val c = content(
-            """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-            "0":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"y":-5}}}},
-            "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
-                "PositionComponent":{"lookAtId":"0","localPosition":{"y":5}}}}}}}"""
+            """{"format":"abyssus","formatVersion":1,"ecs":{
+            "0":{"type":"HANDLE","components":{"PositionComponent":{"localPosition":{"y":-5}}}},
+            "1":{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{},"PositionComponent":{"lookAtId":"0","localPosition":{"y":5}}}}}}"""
         )
         val l = c.lights.single()
         assertEquals("0", l.lookAtId)
@@ -189,7 +192,7 @@ class SceneContentTest {
 
     @Test
     fun noEcsIsEmpty() {
-        assertEquals(SceneContent(), content("{}"))
+        assertEquals(SceneContent(), content("""{"format":"abyssus","formatVersion":1}"""))
     }
 
     @Test
@@ -246,11 +249,9 @@ class SceneContentTest {
     @Test
     fun aLightAtItsTargetFacesAlongItsRotation() {
         val c = content(
-            """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-            "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
-                "PositionComponent":{"localPosition":{"x":3}}}},
-            "2":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
-                "PositionComponent":{"lookAtId":1,"localPosition":{"x":3}}}}}}}"""
+            """{"format":"abyssus","formatVersion":1,"ecs":{
+            "1":{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{},"PositionComponent":{"localPosition":{"x":3}}}},
+            "2":{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{},"PositionComponent":{"lookAtId":1,"localPosition":{"x":3}}}}}}"""
         )
         assertEquals(Vector3(0f, 0f, -1f), c.lights.single { it.entityId == "2" }.direction)
     }
@@ -258,10 +259,9 @@ class SceneContentTest {
     @Test
     fun aPointLightIgnoresItsLookAtTarget() {
         val c = content(
-            """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-            "0":{"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{}}},
-            "1":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{},
-                "PositionComponent":{"lookAtId":0,"localPosition":{"y":10}}}}}}}"""
+            """{"format":"abyssus","formatVersion":1,"ecs":{
+            "0":{"type":"HANDLE","components":{"PositionComponent":{}}},
+            "1":{"type":"LIGHT_POINT","components":{"LightComponent":{},"PositionComponent":{"lookAtId":0,"localPosition":{"y":10}}}}}}"""
         )
         assertEquals(Vector3(0f, 0f, -1f), c.lights.single().direction)
     }
@@ -303,7 +303,7 @@ class SceneContentTest {
         val c = content(
             entity(
                 """{"TypeComponent":{"type":"CAMERA"},"CameraComponent":{"camera":{}},
-            "RenderComponent":{"renderable":{"kind":"debug-marker"}}}"""
+            "RenderComponent":{}}"""
             )
         )
         assertEquals(1, c.cameras.size)
@@ -355,9 +355,9 @@ class SceneContentTest {
     @Test
     fun aDisabledEntityIsNeitherPlacedNorPickedButItsPositionStays() {
         val c = content(
-            """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-              "1":{"enabled":false,"components":{$pilot,"LightComponent":{"light":{}}}},
-              "2":{"components":{$pilot}}}}}""",
+            """{"format":"abyssus","formatVersion":1,"ecs":{
+              "1":{"flags":1,"components":{$pilot,"LightComponent":{"light":{}}}},
+              "2":{"components":{$pilot}}}}""",
         )
         assertEquals(listOf("2"), c.models.map { it.entityId })
         assertTrue(c.lights.isEmpty())
@@ -367,8 +367,8 @@ class SceneContentTest {
     @Test
     fun aDisabledRenderComponentLeavesTheEntityWithoutAModel() {
         val c = content(
-            """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-              "1":{"components":{"PositionComponent":{},"RenderComponent":{"type":"MODEL","assetName":"model_pilot","enabled":false}}}}}}""",
+            """{"format":"abyssus","formatVersion":1,"ecs":{
+              "1":{"disabledComponents":["RenderComponent"],"components":{"PositionComponent":{},"RenderComponent":{"type":"MODEL","assetName":"model_pilot"}}}}}""",
         )
         assertTrue(c.models.isEmpty())
         assertTrue("1" in c.entityPositions)
@@ -377,9 +377,9 @@ class SceneContentTest {
     @Test
     fun aDisabledLightComponentIsNotALight() {
         val c = content(
-            """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-              "1":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{"light":{},"enabled":false}}},
-              "2":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{"light":{}}}}}}}""",
+            """{"format":"abyssus","formatVersion":1,"ecs":{
+              "1":{"type":"LIGHT_POINT","disabledComponents":["LightComponent"],"components":{"LightComponent":{"light":{}}}},
+              "2":{"type":"LIGHT_POINT","components":{"LightComponent":{"light":{}}}}}}""",
         )
         assertEquals(listOf("2"), c.lights.map { it.entityId })
     }
@@ -387,9 +387,9 @@ class SceneContentTest {
     @Test
     fun aDisabledCameraAndFoliageAreNotPlaced() {
         val c = content(
-            """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-              "1":{"components":{"CameraComponent":{"camera":{}, "enabled":false}}},
-              "2":{"components":{"RenderComponent":{"type":"TERRAIN","assetName":"t"},"FoliageComponent":{"assetName":"f","enabled":false}}}}}}""",
+            """{"format":"abyssus","formatVersion":1,"ecs":{
+              "1":{"disabledComponents":["CameraComponent"],"components":{"CameraComponent":{"camera":{}}}},
+              "2":{"disabledComponents":["FoliageComponent"],"components":{"RenderComponent":{"type":"TERRAIN","assetName":"t"},"FoliageComponent":{"assetName":"f"}}}}}""",
         )
         assertTrue(c.cameras.isEmpty())
         assertEquals(listOf("2"), c.terrains.map { it.entityId })

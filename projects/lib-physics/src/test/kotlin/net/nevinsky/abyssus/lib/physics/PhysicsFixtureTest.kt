@@ -18,8 +18,9 @@ class PhysicsFixtureTest {
         assertEquals(setOf(
             "component PickableComponent is not modeled and is kept unchanged",
             "component DependenciesComponent is not modeled and is kept unchanged",
+            "component Point2PointPositionComponent is not modeled and is kept unchanged",
         ), messages.toSet())
-        assertEquals(2, messages.size)
+        assertEquals(3, messages.size)
         assertTrue(messages.none { "RigidBody" in it || "Collider" in it || "Constraint" in it })
 
         val model0 = scene.named("Model 0")

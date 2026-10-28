@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.plugin.assetfiles.assetResultMessage
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -108,14 +109,7 @@ fun createTerrain(project: Project, abss: VirtualFile, request: NewTerrainReques
             )
         }, ModalityState.nonModal()) },
     )
-    val problem = when (result) {
-        AssetCommandResult.Done -> null
-        is AssetCommandResult.Collision -> AbyssusBundle.message("newTerrainNameError.EXISTS")
-        is AssetCommandResult.Conflict -> result.path
-        is AssetCommandResult.Blocked -> result.reason
-        AssetCommandResult.Cancelled -> AbyssusBundle.message("terrainApplyCancelled")
-        is AssetCommandResult.Failed -> result.cause.documentDisplayMessage()
-    }
+    val problem = assetResultMessage(result, "terrainApplyCancelled")
     if (problem != null) report(AbyssusBundle.message("newTerrainFailed", problem))
     return result
 }

@@ -10,8 +10,6 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.editor.document.SceneDocument
 import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
 import net.nevinsky.abyssus.lib.core.editor.pick.BrushStroke
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptState
@@ -19,8 +17,7 @@ import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptTool
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
-import net.nevinsky.abyssus.plugin.dto.ProjectLayout
-import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
+import net.nevinsky.abyssus.plugin.brush.resolveTerrainEntity
 import java.io.File
 
 /**
@@ -53,16 +50,14 @@ class SculptEditing(private val project: Project) {
         report: (String) -> Unit,
         ready: (SculptSession?) -> Unit,
     ) {
-        val root = SceneDocumentCache.of(project).read(scene)?.root
-        val document = root?.let(::SceneDocument)
-        val terrain = document?.BaseMeta(entity)?.takeIf { it.type == MetaType.TERRAIN }
-        val abss = ProjectLayout.abssFor(scene)
-        val assets = abss?.parent?.findChild("assets")
-        val folder = assets?.findChild(terrain?.name ?: "")
-        if (terrain == null || abss == null || assets == null || folder == null) {
+        val found = resolveTerrainEntity(project, scene, entity)
+        val folder = found?.assetFolder(found.terrain.name)
+        if (found == null || folder == null) {
             ready(null)
             return
         }
+        val abss = found.abss
+        val assets = found.assets
         val core = service<AbyssusPluginCtx>()
         val projectDir = File(abss.parent.path)
         // a pooled thread, not a coroutine: the resume of a coroutine fails under the IDE's own debug probes in the sandbox

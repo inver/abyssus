@@ -24,7 +24,7 @@ class PhysicsKindsUiTest : UiTestBase() {
         runCatching { if (frame.propertiesWindow() != null) frame.closeProperties() }
     }
 
-    private fun components(id: Int) = mapper.readTree(Files.readString(scene))["ecs"]["entities"]?.get(id.toString())?.get("components")
+    private fun components(id: Int) = mapper.readTree(Files.readString(scene))["ecs"]?.get(id.toString())?.get("components")
         ?: mapper.readTree(Files.readString(scene))["ecs"][id.toString()]["components"]
 
     @Test

@@ -25,12 +25,11 @@ IntelliJ/Swing/AWT imports; lib-core-editor likewise has no platform imports. Sc
 
 ## Decisions
 
-**1. `meshId` lives on the render component, next to `assetName` (JSON: `renderable.asset.meshId`, or `meshId` in the flat shape).**
+**1. `meshId` lives on the render component, next to `assetName` (JSON: `meshId` in the flat render component).**
 It is an optional non-empty string naming a `ModelMesh.id` of the model asset (unique per model; `ModelData.addMesh`
-rejects duplicates). `RenderComponent` (lib-core) gains `var meshId: String? = null`. `docs/ai/file-formats.md` places asset
-fields under `renderable.asset` (`type`, `assetName`), and new placements write that nested shape; but fixtures (e.g. `Physics`) and
-`renderAssetOf` also use the flat shape (`type`, `assetName` on the component). `meshId` is read and written on the same node as
-`assetName`, whichever shape the entity uses, and an edit never changes the entity's shape. Absent means the whole model, unchanged.
+rejects duplicates). `RenderComponent` (lib-core) gains `var meshId: String? = null`. The render component is flat
+(`type`, `assetName`, `shaderKey`; the nested `renderable.asset` shape was removed by `typed-scene-ecs`), so `meshId` is read and
+written on the same node as `assetName`. Absent means the whole model, unchanged.
 `meshId` applies only to `MODEL` renders; on a `TERRAIN` it is ignored and preserved.
 - Alternative: a separate component. Rejected: mesh selection is part of how a renderable is shown.
 
@@ -122,5 +121,5 @@ the whole model). `docs/ai/file-formats.md` documents the field.
 
 ## Open Questions
 
-- Where the nested `renderable.asset` shape is decoded into the flat `RenderComponent` (task 1.1 locates it first); `meshId` must follow the same path.
+- (Resolved by `typed-scene-ecs`: the render component is flat, so `meshId` sits beside `assetName`.)
 - The `AssetStorage` call sites that reach `resolveBase` are recorded in this design before archive.

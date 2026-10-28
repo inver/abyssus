@@ -6,8 +6,8 @@
 package net.nevinsky.abyssus.lib.core.editor.ecs
 
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
-import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
-import net.nevinsky.abyssus.lib.core.ecs.EnabledState
+import net.nevinsky.abyssus.lib.core.testing.loadEcs
+import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
 import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
@@ -21,36 +21,42 @@ class EnabledFlagRoundTripTest {
     private val registry = ComponentRegistry()
 
     private fun roundTrip(entity: String, edit: (SceneEngine) -> Unit = {}): String {
-        val ecs = SceneJson().parse("""{"entities":{"1":$entity}}""")
+        val ecs = """{"1":$entity}"""
         val engine = SceneEngine()
-        val warns = EcsLoader(json, registry).loadToEngine(ecs, engine)
+        val warns = loadEcs(ecs, engine, registry, json)
         edit(engine)
-        return SceneJson().compact(EcsWriter(json, registry).write(engine, warns)["entities"]["1"])
+        return SceneJson().compact(EcsWriter(json, registry).write(engine, warns)["1"])
     }
 
     @Test
-    fun aDisabledComponentKeepsItsFlagAsTheLastKey() {
-        val entity = """{"components":{"NameComponent":{"name":"a","enabled":false}}}"""
+    fun aDisabledComponentStaysListedInTheEntityHeader() {
+        val entity = """{"disabledComponents":["NameComponent"],"components":{"NameComponent":{"name":"a"}}}"""
         assertEquals(entity, roundTrip(entity))
     }
 
     @Test
-    fun aDisabledEntityKeepsItsFlagAfterTheComponents() {
-        val entity = """{"components":{"NameComponent":{"name":"a"}},"enabled":false}"""
+    fun aDisabledEntityKeepsItsFlagBeforeTheComponents() {
+        val entity = """{"flags":1,"components":{"NameComponent":{"name":"a"}}}"""
         assertEquals(entity, roundTrip(entity))
     }
 
     @Test
     fun aSourceBackedComponentKeepsTheFlagOutOfItsSource() {
-        val entity = """{"components":{"FoliageComponent":{"assetName":"m","extra":{"w":2.50},"enabled":false}}}"""
+        val entity = """{"disabledComponents":["FoliageComponent"],"components":{"FoliageComponent":{"assetName":"m","extra":{"w":2.5}}}}"""
         assertEquals(entity, roundTrip(entity))
     }
 
     @Test
     fun enablingInTheEngineDropsTheFlag() {
-        val entity = """{"components":{"NameComponent":{"name":"a","enabled":false}}}"""
-        val out = roundTrip(entity) { it.entities.single().getComponent(EnabledState::class.java).disabledComponents.clear() }
+        val entity = """{"disabledComponents":["NameComponent"],"components":{"NameComponent":{"name":"a"}}}"""
+        val out = roundTrip(entity) { it.entities.single().getComponent(HeaderComponent::class.java).disabledComponents.clear() }
         assertEquals("""{"components":{"NameComponent":{"name":"a"}}}""", out)
+    }
+
+    @Test
+    fun theHeaderIsWrittenAsTypeFlagsAndDisabledComponents() {
+        val entity = """{"type":"LIGHT_SPOT","flags":5,"disabledComponents":["NameComponent","Mystery"],"components":{"NameComponent":{"name":"a"},"Mystery":{"w":2.50}}}"""
+        assertEquals(entity, roundTrip(entity))
     }
 
     @Test

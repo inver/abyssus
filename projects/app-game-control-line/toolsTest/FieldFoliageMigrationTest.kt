@@ -15,7 +15,7 @@ import java.io.File
 
 /** Reruns, conflicts and what a migration leaves of the scene. */
 class FieldFoliageMigrationTest {
-    private fun entities(project: File) = SceneJson().parse(File(project, "scenes/Field.scene").readText())["ecs"]["entities"]
+    private fun entities(project: File) = SceneJson().parse(File(project, "scenes/Field.scene").readText())["ecs"]
 
     private fun vegetation(project: File): Boolean = File(project, "scenes/Field.scene").readText().let {
         listOf("tree_broadleaf", "tree_young", "tree_acacia", "bush_tall", "bush_low").any { s -> it.contains("model_airfield_$s") }

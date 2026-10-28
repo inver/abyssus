@@ -32,7 +32,7 @@ class TreeActionVisibilityTest : BasePlatformTestCase() {
     override fun setUp() {
         super.setUp()
         myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""")
-        myFixture.addFileToProject("p/scenes/Main.scene", """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{}}}""")
+        myFixture.addFileToProject("p/scenes/Main.scene", """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{}}""")
         myFixture.addFileToProject("p/assets/tree/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"u","type":"MODEL","additional":{}}""")
         projectRow = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
         sceneRow = children(children(projectRow).single { label(it) == "scenes" }).single()

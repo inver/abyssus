@@ -42,7 +42,7 @@ class AssetReferenceChoices(private val json: JsonProcessor) {
     }
 
     /** The `uuid` of the texture asset in [folder], or null when it is not a texture, has no `uuid` or no readable image. */
-    private fun textureUuid(folder: File): String? {
+    internal fun textureUuid(folder: File): String? {
         val meta = runCatchingKeepingCancellation {
             File(folder, META_FILE).takeIf { it.isFile }?.let { AssetMetaReader(json).read(it.readText()).json }
         }.getOrNull() ?: return null

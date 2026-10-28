@@ -6,27 +6,27 @@
 package net.nevinsky.abyssus.plugin.filetype
 
 import com.intellij.openapi.util.IconLoader
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent.Type
+import net.nevinsky.abyssus.lib.core.dto.EntityType
 import javax.swing.Icon
 
-/** Entity silhouettes selected by TypeComponent; untyped entities retain the ECS icon. */
+/** Entity silhouettes selected by the entity type; untyped entities retain the ECS icon. */
 object EntityIcons {
-    private val redesigned = setOf(Type.GROUP, Type.LIGHT_DIRECTIONAL, Type.OBJECT, Type.TERRAIN)
+    private val redesigned = setOf(EntityType.GROUP, EntityType.LIGHT_DIRECTIONAL, EntityType.OBJECT, EntityType.TERRAIN)
 
-    private val icons = Type.entries.associateWith { type ->
+    private val icons = EntityType.entries.associateWith { type ->
         val name = when (type) {
-            Type.GROUP -> "group"
-            Type.LIGHT_DIRECTIONAL -> "light_directional"
-            Type.LIGHT_POINT -> "light_point"
-            Type.LIGHT_SPOT -> "light_spot"
-            Type.OBJECT -> "object"
-            Type.TERRAIN -> "terrain"
-            Type.CAMERA -> "camera"
-            Type.HANDLE -> "handle"
+            EntityType.GROUP -> "group"
+            EntityType.LIGHT_DIRECTIONAL -> "light_directional"
+            EntityType.LIGHT_POINT -> "light_point"
+            EntityType.LIGHT_SPOT -> "light_spot"
+            EntityType.OBJECT -> "object"
+            EntityType.TERRAIN -> "terrain"
+            EntityType.CAMERA -> "camera"
+            EntityType.HANDLE -> "handle"
         }
         if (type in redesigned) TreeIcons.load("entity_$name")
         else IconLoader.getIcon("/icons/entity_${name}_icon.svg", EntityIcons::class.java)
     }
 
-    fun forType(type: Type?): Icon = icons[type] ?: PropertyIcons.ECS
+    fun forType(type: EntityType?): Icon = icons[type] ?: PropertyIcons.ECS
 }

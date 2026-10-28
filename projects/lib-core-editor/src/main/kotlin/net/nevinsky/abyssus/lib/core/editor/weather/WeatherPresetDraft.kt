@@ -13,6 +13,7 @@ import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.newAssetMetaTree
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import java.util.UUID
 
@@ -44,13 +45,7 @@ class WeatherPresetDraft(
             additional.set<JsonNode>(band.level.key, bandJson(band, original?.get(band.level.key)))
         }
         copyExtensions(original, additional, setOf("technique", "low", "mid", "high"))
-        val root = json.parseObject("{}")
-        root.put("format", "abyssus")
-        root.put("formatVersion", 1)
-        root.put("version", 1)
-        root.put("lastModified", lastModified)
-        root.put("uuid", uuid.toString())
-        root.put("type", "CLOUDS")
+        val root = newAssetMetaTree(json, MetaType.CLOUDS, uuid.toString(), lastModified)
         root.set<JsonNode>("additional", additional)
         copyExtensions(
             source.json,

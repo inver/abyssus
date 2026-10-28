@@ -20,10 +20,10 @@ import javax.swing.JToggleButton
 class PaintTextureToggleTest : BasePlatformTestCase() {
     private fun scene(): VirtualFile {
         myFixture.addFileToProject("p/p.abss", """{"format":"abyssus","formatVersion":1,"name":"p"}""")
-        val terrain = """{"renderable":{"kind":"asset","shaderKey":"terrain","asset":{"type":"TERRAIN","assetName":"hills"}}}"""
-        return myFixture.addFileToProject("p/scenes/s.scene", SceneJson().pretty(SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
+        val terrain = """{"shaderKey":"terrain","type":"TERRAIN","assetName":"hills"}"""
+        return myFixture.addFileToProject("p/scenes/s.scene", SceneJson().pretty(SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{
             "0":{"components":{"RenderComponent":$terrain}},
-            "1":{"components":{"RenderComponent":$terrain}}}}}"""))).virtualFile
+            "1":{"components":{"RenderComponent":$terrain}}}}"""))).virtualFile
     }
 
     /** Built and then notified, as when the Properties panel shows it: the toggles follow the project's requests from then on. */

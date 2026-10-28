@@ -5,7 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.terrain
 
-import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.util.wholeNumberAt
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.assets.terrain.MAX_TERRAIN_RESOLUTION
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetReferenceChoices
@@ -59,13 +61,12 @@ sealed interface TerrainSource {
 fun readTerrainSource(
     folder: File,
     metaText: String,
-    meta: JsonNode,
+    meta: Document,
     choices: AssetReferenceChoices,
     recipes: TerrainRecipeCodec,
     sculpt: SculptStateReader,
 ): TerrainSource {
-    net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat()
-        .validate(meta, net.nevinsky.abyssus.lib.core.format.DocumentKind.ASSET)?.let {
+    meta.rejection(net.nevinsky.abyssus.lib.core.format.DocumentKind.ASSET)?.let {
         return TerrainSource.Unusable(
             net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat(
                 net.nevinsky.abyssus.lib.core.format.DocumentKind.ASSET,
@@ -73,14 +74,9 @@ fun readTerrainSource(
             ).documentDisplayMessage()
         )
     }
-    val additional = meta.obj("additional") ?: return unusable("terrainNoAdditional")
-    val size =
-        additional.get("size")?.takeIf { it.isIntegralNumber && it.canConvertToInt() }?.intValue()?.takeIf { it > 0 }
-            ?: additional.get("size")
-                ?.takeIf { it.isNumber && it.doubleValue() == it.intValue().toDouble() && it.intValue() > 0 }
-                ?.intValue()
-            ?: return unusable("terrainBadSize")
-    val dataName = additional.text("terrainFile")?.takeIf { it.isNotBlank() } ?: return unusable("terrainNoDataFile")
+    if (!meta.isObjectAt("additional")) return unusable("terrainNoAdditional")
+    val size = meta.wholeNumberAt("additional", "size")?.takeIf { it > 0 } ?: return unusable("terrainBadSize")
+    val dataName = meta.textAt("additional", "terrainFile")?.takeIf { it.isNotBlank() } ?: return unusable("terrainNoDataFile")
     val dataFile =
         choices.inside(folder, dataName)?.takeIf { it.isFile } ?: return unusable("terrainDataMissing", dataName)
     val heights = runCatchingKeepingCancellation { dataFile.readBytes() }.getOrElse {

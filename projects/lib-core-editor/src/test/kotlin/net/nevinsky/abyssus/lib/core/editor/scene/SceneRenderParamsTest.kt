@@ -27,7 +27,7 @@ class SceneRenderParamsTest {
         for (fields in listOf("", "\"coneAngle\":60,\"edgeSoftness\":0.25,")) {
             val values = """{$fields"future":1.23400}"""
             val light = """{"light":$values}"""
-            val text = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"4":{"components":{"TypeComponent":{"type":"LIGHT_SPOT"},"LightComponent":$light}}}}}"""
+            val text = """{"format":"abyssus","formatVersion":1,"ecs":{"4":{"type":"LIGHT_SPOT","components":{"LightComponent":$light}}}}"""
             val p = renderParamsOf(scene(text), CameraParams.DEFAULT).content.lights.single()
             assertEquals(LightKind.SPOT, p.kind)
             assertEquals(if (fields.isEmpty()) 45f else 60f, p.coneAngle, 0f)
@@ -163,8 +163,8 @@ class SceneRenderParamsTest {
 
     @Test
     fun contentAndProjectDirFlowThrough() {
-        val json = """{"format":"abyssus","formatVersion":1,"skyboxEnabled":true,"skyboxName":"sky","ecs":{"entities":{"1":{"components":
-            {"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"m"}}}}}}}}"""
+        val json = """{"format":"abyssus","formatVersion":1,"skyboxEnabled":true,"skyboxName":"sky","ecs":{"1":{"components":
+            {"RenderComponent":{"type":"MODEL","assetName":"m"}}}}}"""
         val dir = java.io.File("proj")
         val p = renderParamsOf(scene(json), CameraParams.DEFAULT, dir)
         assertEquals(listOf("m"), p.content.models.map { it.assetName })

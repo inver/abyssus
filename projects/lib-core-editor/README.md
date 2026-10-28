@@ -26,7 +26,7 @@ namespace, including extension providers that use editor value types, must updat
 | (root) | `EditorMessages`, `ResourceEditorMessages` |
 | `document` | `SceneJson` (key order and number text kept, reading through `lib-core`'s `NativeJsonTree`), `JsonFormat`, `DocumentParsing`, `AssetMetaReader`, the format aliases, `SceneDocument` / `EntityView` / `SceneEntityTree` (the only code that knows `ecs[.entities].<id>.components`), `DocumentTextEditor` (parse, admit, mutate, admit, print in style), `SceneRaySettings` and `RayMaterialOverrides` (the `rayTracing` blocks) |
 | `components` | `ComponentEditor` (add, update, remove a modeled component), `ComponentCodec`, `BuiltInComponentKinds`, `ComponentReader`, `LightEntities`, `AssetEntities` |
-| `ecs` | `EcsWriter` (Jackson serialization of components and engines; a `SourceBackedComponent` such as `FoliageComponent` is written from its source object) |
+| `ecs` | `EcsWriter` (Jackson serialization of components and engines; `FoliageComponent` keeps its unmodeled members in an extras map) |
 | `content` | Leaf value types: `Vector3`, `Quaternion`, `Pose`, the placements, `RenderAsset`, `PlacementTransform.toMatrix` |
 | `scene` | The read model: `SceneContent` / `sceneContentOf`, `FoliagePlacement`, `SceneRenderParams` / `renderParamsOf`, `PlacementMapper`, `CameraFrustum`, `LightSet`, `ModelEntity`, `AssetRevisions` |
 | `pick` | `ScenePicker`, `ScenePreviewLayers`, `SnapshotSceneQueries` (incl. `terrainOf` / `terrainHit` for painting), `TerrainRestHeight`, `OrbitCamera`, gizmo math (`GizmoDrag`, `GizmoHit`, `GizmoHandles`), `SceneInteraction` (with `GestureDriver` for the press-drag-release gestures, incl. the one `Gesture.Brushing` stroke that calls the `BrushStroke` registered for the mode's kind (`SceneInteraction.setBrushStroke`), and `DrawingSession` for path drawing; both plain JVM), `BrushMode` (kind, entity, radius, strength, the resolved `reversed` flag and the kind's `BrushOptions`) in `SceneViewState.brush`, the one terrain brush a view holds, `ScenePreview`, `SceneTransformWriter`, `SceneMarkers` / `LineSink` |
@@ -133,13 +133,13 @@ remains for removing several entities at once.
 
 ## Enabled flag
 
-`SetEnabledAction` (with `EnabledTarget`) writes or removes the optional `enabled: false` on one entity entry or one
-component entry of a scene tree: disabling adds the key, enabling removes it, and no other value, key order or number text
-changes. A `GROUP` entity and the Name, Parent and Position components are not togglable. `HeadlessEditing.setEnabled` runs it
+`SetEnabledAction` (with `EnabledTarget`) sets or clears the disabled bit of an entity's `flags`, or lists or unlists a component in the entity's
+`disabledComponents` (the key is added for the first entry and removed with the last), and no other value, key order or
+number text changes. A `GROUP` entity and the Name, Parent and Position components are not togglable. `HeadlessEditing.setEnabled` runs it
 as text, and the plugin runs it through `editSceneJson` as one undoable command. `sceneContentOf` reads the flag: a disabled
 entity has no placements (so it is not drawn, shadowed, picked, gizmoed or put in a ray snapshot, while its position still
 answers a look-at), and a disabled `RenderComponent`, `LightComponent`, `CameraComponent`, `FoliageComponent` or
-`PathArrangementComponent` leaves out only its own placement. `EcsWriter` writes the flag back from `EnabledState`.
+`PathArrangementComponent` leaves out only its own placement. `EcsWriter` writes `type`, `flags` and `disabledComponents` back from the entity's `HeaderComponent`.
 
 ## UI documents
 

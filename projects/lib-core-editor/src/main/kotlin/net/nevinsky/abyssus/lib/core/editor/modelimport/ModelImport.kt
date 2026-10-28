@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.modelimport
 
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.editor.document.ModelImportRecord
 import net.nevinsky.abyssus.lib.core.editor.document.ImportFrameRecord
 import net.nevinsky.abyssus.lib.core.editor.document.ImportItemRecord
@@ -88,7 +89,7 @@ class ModelImport(
             additional = ModelAssetAdditional(file = MODEL_FILE),
         )
         validateAssetDocument(meta, format)?.let { throw IllegalStateException("the staged meta.json is not native: $it") }
-        files["meta.json"] = SceneJson().pretty(meta).toByteArray()
+        files[META_FILE] = SceneJson().pretty(meta).toByteArray()
         files[MODEL_FILE] = glb
         files.putAll(gathered.files)
 

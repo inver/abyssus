@@ -40,7 +40,7 @@ class ArrangementEditingTest : BasePlatformTestCase() {
     }
 
     private fun text() = FileDocumentManager.getInstance().getDocument(scene)!!.text
-    private fun ecs() = SceneJson().parse(text())["ecs"].let { it["entities"] ?: it }
+    private fun ecs() = SceneJson().parse(text())["ecs"]
     private fun slots() = ecs()["11"]["components"]["PathArrangementComponent"]["slots"].map { it.asInt() }
     private fun y(id: Int) = ecs()["$id"]["components"]["PositionComponent"]["localPosition"].path("y").floatValue()
 
@@ -98,7 +98,7 @@ class ArrangementEditingTest : BasePlatformTestCase() {
         for (id in 12..16) {
             assertEquals(7f, y(id), 0f)
             fun withoutY(root: com.fasterxml.jackson.databind.JsonNode): com.fasterxml.jackson.databind.JsonNode {
-                val entity = (root["ecs"].let { it["entities"] ?: it }["$id"]).deepCopy<com.fasterxml.jackson.databind.JsonNode>()
+                val entity = (root["ecs"]["$id"]).deepCopy<com.fasterxml.jackson.databind.JsonNode>()
                 (entity["components"]["PositionComponent"]["localPosition"] as? com.fasterxml.jackson.databind.node.ObjectNode)?.remove("y")
                 return entity
             }

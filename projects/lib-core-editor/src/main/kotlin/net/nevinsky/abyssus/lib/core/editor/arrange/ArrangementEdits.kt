@@ -67,18 +67,17 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         component.asset = BaseMeta(MetaType.MODEL, asset.name)
         val slots = layout.slots(component) ?: return tooMany()
 
-        val arrangementId = tree.insert { id ->
+        val arrangementId = tree.insert("GROUP") { id ->
             val components = nodes.objectNode()
             components.set<JsonNode>(
                 "NameComponent",
                 writer.writeComponent(NameComponent(messages.message("arrangementName", id)))
             )
-            components.set<JsonNode>("TypeComponent", writer.writeComponent(TypeComponent(TypeComponent.Type.GROUP)))
             components.set<JsonNode>(PathArrangementComponent::class.simpleName, writer.writeComponent(component))
             components
         } ?: return unreadable()
         for ((k, slot) in slots.withIndex()) {
-            val copy = tree.insert { id -> copyComponents(arrangementId, k, slot, component.asset, heights) }
+            val copy = tree.insert("OBJECT") { id -> copyComponents(arrangementId, k, slot, component.asset, heights) }
                 ?: return unreadable()
             component.slots.add(copy.toInt())
         }
@@ -127,7 +126,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
             written += when {
                 filled -> oldId.also { place(tree, it.toString(), slot, component.asset, heights) }
                 k < oldSlots.size && !refill -> NO_ENTITY
-                else -> tree.insert { id -> copyComponents(arrangementId, k, slot, component.asset, heights) }?.toInt()
+                else -> tree.insert("OBJECT") { id -> copyComponents(arrangementId, k, slot, component.asset, heights) }?.toInt()
                     ?: return unreadable()
             }
         }
@@ -201,7 +200,6 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         if (at < 0) return false
         slots.set(at, IntNode.valueOf(NO_ENTITY))
         components.remove("ParentComponent")
-        tree.matchArchetype(copyId)
         return true
     }
 
@@ -232,7 +230,6 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
                 )
             ),
         )
-        components.set<JsonNode>("TypeComponent", writer.writeComponent(TypeComponent(TypeComponent.Type.OBJECT)))
         val at = slot.position(heights)
         val position = PositionComponent(at.x, at.y, at.z)
         position.localRotation.set(slot.rotation())
@@ -260,11 +257,8 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
             listOf(Field("x", q.x, 0f), Field("y", q.y, 0f), Field("z", q.z, 0f), Field("w", q.w, 1f))
         )
         val render = components.get("RenderComponent") as? ObjectNode ?: return
-        val target = if (render.has("assetName")) {
-            render
-        } else (render.get("renderable")?.get("asset") as? ObjectNode) ?: return
-        if (target.get("assetName")?.asText() != asset.name) target.put("assetName", asset.name)
-        if (target.get("type")?.asText() != asset.type.name) target.put("type", asset.type.name)
+        if (render.get("assetName")?.asText() != asset.name) render.put("assetName", asset.name)
+        if (render.get("type")?.asText() != asset.type.name) render.put("type", asset.type.name)
     }
 
     private class Field(val key: String, val value: Float, val default: Float)

@@ -5,12 +5,13 @@
 
 package net.nevinsky.abyssus.lib.core.editor.brush
 
+import net.nevinsky.abyssus.lib.core.util.smooth01
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import kotlin.math.*
 
 /** The smoothstep of a brush falloff `1 - d / radius`: 0 at the radius, 1 at the centre, flat at both ends. */
-fun smoothFalloff(falloff: Float): Float = falloff * falloff * (3f - 2f * falloff)
+fun smoothFalloff(falloff: Float): Float = smooth01(falloff)
 
 /**
  * The walk and footprint every terrain brush shares (Paint Foliage and Sculpt Terrain): stamps along the world-space

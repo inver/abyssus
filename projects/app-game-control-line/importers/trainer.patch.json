@@ -12,11 +12,11 @@
    "target": "../project/ControlLine/scenes/Field.scene",
    "expectedSha256": "c6451f654df9b9b3e97605a858825ed8d629656cb15c5ee4a9cc8762d372780b",
    "operations": [
-    {"op": "set", "path": ["ecs", "entities", "5", "components", "PositionComponent", "localPosition", "y"], "value": 0.136},
-    {"op": "set", "path": ["ecs", "entities", "5", "components", "PositionComponent", "localRotation", "x"], "value": 0},
-    {"op": "set", "path": ["ecs", "entities", "5", "components", "PositionComponent", "localRotation", "y"], "value": -0.7071068},
-    {"op": "set", "path": ["ecs", "entities", "5", "components", "PositionComponent", "localRotation", "z"], "value": 0},
-    {"op": "set", "path": ["ecs", "entities", "5", "components", "PositionComponent", "localRotation", "w"], "value": 0.7071068}
+    {"op": "set", "path": ["ecs", "5", "components", "PositionComponent", "localPosition", "y"], "value": 0.136},
+    {"op": "set", "path": ["ecs", "5", "components", "PositionComponent", "localRotation", "x"], "value": 0},
+    {"op": "set", "path": ["ecs", "5", "components", "PositionComponent", "localRotation", "y"], "value": -0.7071068},
+    {"op": "set", "path": ["ecs", "5", "components", "PositionComponent", "localRotation", "z"], "value": 0},
+    {"op": "set", "path": ["ecs", "5", "components", "PositionComponent", "localRotation", "w"], "value": 0.7071068}
    ]
   }
  ]

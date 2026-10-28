@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
@@ -34,8 +36,8 @@ class NewWeatherPresetFactory(
 
     private fun texts(abss: VirtualFile, sky: VirtualFile): Pair<String, String> {
         parsing.requireSupported(textOf(abss), DocumentKind.PROJECT)
-        val assets = abss.parent.findChild("assets")
-        require(assets != null && sky.name == "meta.json" && sky.parent.parent == assets) {
+        val assets = abss.parent.findChild(ASSETS_DIR)
+        require(assets != null && sky.name == META_FILE && sky.parent.parent == assets) {
             AbyssusBundle.message("weatherSourceUnavailable")
         }
         val skyText = textOf(sky)
@@ -48,7 +50,7 @@ class NewWeatherPresetFactory(
             EditorBundle.message("weatherSourceReference")
         }
         val matches = ProjectLayout.assetFolders(abss).mapNotNull { folder ->
-            val file = folder.findChild("meta.json") ?: return@mapNotNull null
+            val file = folder.findChild(META_FILE) ?: return@mapNotNull null
             runCatchingKeepingCancellation {
                 val text = textOf(file)
                 val meta = parsing.assetFields(text)
@@ -67,12 +69,12 @@ class NewWeatherPresetFactory(
     fun stage(abss: VirtualFile, sky: VirtualFile, rawName: String): StagedWeatherPreset = ReadAction.compute<StagedWeatherPreset, RuntimeException> {
         val (skyText, sourceText) = texts(abss, sky)
         val projectDir = File(abss.parent.path)
-        val assetsDir = File(projectDir, "assets")
+        val assetsDir = File(projectDir, ASSETS_DIR)
         val name = rawName.trim()
         checkFolderName(assetsDir, name)?.let { throw IllegalArgumentException(AbyssusBundle.message("newTerrainNameError.$it")) }
         val used = ProjectLayout.assetFolders(abss).mapNotNull { folder ->
             runCatchingKeepingCancellation {
-                folder.findChild("meta.json")?.let { parsing.assetFields(textOf(it)).uuidText }
+                folder.findChild(META_FILE)?.let { parsing.assetFields(textOf(it)).uuidText }
             }.getOrNull()
         }.toSet()
         var uuid = uniqueAssetUuid(processor, assetsDir, randomUuid)

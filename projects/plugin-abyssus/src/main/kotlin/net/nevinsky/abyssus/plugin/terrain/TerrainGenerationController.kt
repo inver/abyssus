@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.terrain
 
+import net.nevinsky.abyssus.plugin.assetfiles.assetResultMessage
+import net.nevinsky.abyssus.plugin.assetfiles.assetFilesAffected
 import net.nevinsky.abyssus.lib.core.editor.terrain.HeightmapImage
 import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainHeightEncoder
 import net.nevinsky.abyssus.lib.core.editor.terrain.heightmapImage
@@ -238,18 +240,18 @@ class TerrainGenerationController(
         val runner = command ?: AssetFileCommand(project, store)
         val result = runner.execute(
             txn,
-            affected = { listOfNotNull(folder.findChild("meta.json"), LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(folder.path, current.dataName))) },
+            affected = { assetFilesAffected(folder, File(folder.path, current.dataName)) },
             onDone = onDone,
         )
-        message = when (result) {
-            AssetCommandResult.Done -> null
-            is AssetCommandResult.Conflict -> AbyssusBundle.message("terrainApplyConflict", result.path.substringAfterLast('/'))
-            is AssetCommandResult.Collision -> AbyssusBundle.message("terrainApplyConflict", result.path.substringAfterLast('/'))
-            is AssetCommandResult.Blocked -> result.reason
-            AssetCommandResult.Cancelled -> AbyssusBundle.message("terrainApplyCancelled")
-            is AssetCommandResult.Failed -> AbyssusBundle.message("terrainApplyFailed", result.cause.documentDisplayMessage()) +
-                if (result.leftover.isEmpty()) "" else " " + AbyssusBundle.message("terrainApplyLeftover", result.leftover.joinToString())
-        }
+        message = assetResultMessage(
+            result, "terrainApplyCancelled",
+            conflict = { AbyssusBundle.message("terrainApplyConflict", it.substringAfterLast('/')) },
+            collision = { AbyssusBundle.message("terrainApplyConflict", it.substringAfterLast('/')) },
+            failed = {
+                AbyssusBundle.message("terrainApplyFailed", it.cause.documentDisplayMessage()) +
+                    if (it.leftover.isEmpty()) "" else " " + AbyssusBundle.message("terrainApplyLeftover", it.leftover.joinToString())
+            },
+        )
         if (result != AssetCommandResult.Done) {
             if (result is AssetCommandResult.Conflict || result is AssetCommandResult.Collision) draft.sourceChanged()
             onChange()

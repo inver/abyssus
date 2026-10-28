@@ -43,7 +43,7 @@ class SceneAssetRefreshEditorTest : BasePlatformTestCase() {
         root = FileUtil.createTempDirectory("abyssus-refresh", null)
         File(root, "Refresh.abss").writeText("""{"format":"abyssus","formatVersion":1}""")
         File(root, "scenes").mkdirs()
-        File(root, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"id":0,"name":"Main","ecs":{"entities":{}}}""")
+        File(root, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"id":0,"name":"Main","ecs":{}}""")
         File(root, "assets/hills").mkdirs()
         File(root, "assets/hills/terrain.data").writeBytes(ByteArray(16))
         File(root, "assets/hills/meta.json").writeText(

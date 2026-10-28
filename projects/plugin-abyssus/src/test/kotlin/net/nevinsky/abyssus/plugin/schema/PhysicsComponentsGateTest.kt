@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
 class PhysicsComponentsGateTest : BasePlatformTestCase() {
     fun testPhysicsKindsFollowUnsavedSettingsAndProjectsRemainIndependent() {
         val abss = myFixture.addFileToProject("p/p.abss", """{"format":"abyssus","formatVersion":1}""").virtualFile
-        val scene = myFixture.addFileToProject("p/scenes/Main.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":{"components":{"RigidBodyComponent":{}}}}}}""").virtualFile
+        val scene = myFixture.addFileToProject("p/scenes/Main.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"0":{"components":{"RigidBodyComponent":{}}}}}""").virtualFile
         val other = myFixture.addFileToProject("other/scenes/Other.scene", "{}").virtualFile
         myFixture.addFileToProject("other/other.abss", """{"format":"abyssus","formatVersion":1}""")
         val root = SceneJson().parse(FileDocumentManager.getInstance().getDocument(scene)!!.text)

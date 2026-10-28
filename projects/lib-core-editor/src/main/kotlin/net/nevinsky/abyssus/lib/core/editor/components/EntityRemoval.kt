@@ -18,7 +18,6 @@ import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
  * detached or retargeted. Removal is refused, leaving the tree as it was, when a remaining entity still names the target
  * (built-in references, a path arrangement's slots, or an entity-reference field of one of [kinds]) or when the target
  * is an arrangement that still owns copies. Unknown components are opaque: no reference is guessed from their numbers.
- * A wrapped scene keeps its archetypes and metadata.
  */
 class EntityRemoval(
     private val messages: EditorMessages,
@@ -95,5 +94,4 @@ class EntityRemoval(
 private val BUILT_IN = mapOf(
     "ParentComponent" to listOf("parentEntityId"),
     "PositionComponent" to listOf("lookAtId"),
-    "Point2PointPositionComponent" to listOf("entity1Id", "entity2Id"),
 )

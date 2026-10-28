@@ -2,7 +2,7 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
-package net.nevinsky.abyssus.plugin.gameui
+package net.nevinsky.abyssus.lib.core.editor.ui
 
 import net.nevinsky.abyssus.lib.core.editor.util.numberText
 import net.nevinsky.abyssus.lib.core.editor.util.NumberTextStyle
@@ -35,16 +35,15 @@ data class BindingForm(
     val min: String = "", val max: String = "", val step: String = "", val maxLength: String = "",
     /** For a list: the record as `name:type, name:type`; [sample] is then a JSON array of rows. */
     val fields: String = "",
-) {
-    companion object {
-        fun of(b: UiBinding) = BindingForm(b.name, b.type.json, b.access.json,
-            b.sample?.let { if (b.type == UiBindingType.LIST) it.toString() else it.asText() }.orEmpty(),
-            b.min?.let(::trim).orEmpty(), b.max?.let(::trim).orEmpty(), b.step?.let(::trim).orEmpty(), b.maxLength?.toString().orEmpty(),
-            b.fields.joinToString(", ") { "${it.name}:${it.type.json}" })
+)
 
-        private fun trim(v: Double) = numberText(v, NumberTextStyle.UI)
-    }
-}
+/** The form that shows the binding [b]. */
+fun bindingFormOf(b: UiBinding) = BindingForm(b.name, b.type.json, b.access.json,
+    b.sample?.let { if (b.type == UiBindingType.LIST) it.toString() else it.asText() }.orEmpty(),
+    trimmed(b.min), trimmed(b.max), trimmed(b.step), b.maxLength?.toString().orEmpty(),
+    b.fields.joinToString(", ") { "${it.name}:${it.type.json}" })
+
+private fun trimmed(v: Double?) = v?.let { numberText(it, NumberTextStyle.UI) }.orEmpty()
 
 /** Validates a [BindingForm] and builds the member object (`access`, `sample`, `min`, ...) for `upsertBinding`. */
 fun bindingMembers(form: BindingForm): FormResult<ObjectNode> {

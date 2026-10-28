@@ -30,7 +30,7 @@ class PhysicsPlayLifecycleUiTest : UiTestBase() {
 
     private fun physicsEnabled(): Boolean? = mapper.readTree(Files.readString(projectFile))["physicsEnabled"]?.asBoolean()
 
-    private fun components(id: Int) = mapper.readTree(Files.readString(scene))["ecs"]["entities"][id.toString()]["components"]
+    private fun components(id: Int) = mapper.readTree(Files.readString(scene))["ecs"][id.toString()]["components"]
 
     private fun openProject(): AbyssusTree {
         val tree = frame.selectAbyssusView()

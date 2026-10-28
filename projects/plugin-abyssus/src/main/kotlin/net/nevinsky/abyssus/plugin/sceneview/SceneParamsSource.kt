@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
 import net.nevinsky.abyssus.lib.core.editor.scene.MainCamera
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams

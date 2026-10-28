@@ -50,6 +50,10 @@ interface ComponentCodec<C : Component> {
 /** A component decimal as the scene file spells it (`22`, not `22.0`). */
 internal fun decimalText(v: Float) = floatNode(v).asText()
 
+/** The codec of the component [type], bound by the runtime's own reader and writer, for kinds a host supplies. */
+fun <C : Component> runtimeCodec(name: String, type: Class<C>, reader: ComponentReader, writer: EcsWriter): ComponentCodec<C> =
+    RuntimeCodec(name, type, reader, writer)
+
 /** A built-in component bound by the runtime's own loader and writer, so defaults and number text match a scene load. */
 internal class RuntimeCodec<C : Component>(
     override val name: String,

@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.projectView.action.asset
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -39,10 +41,7 @@ fun assetsNodeProjectFile(node: Any?): VirtualFile? {
     return entry.source?.takeIf {
         it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION &&
                 runCatchingKeepingCancellation {
-                    AbyssusDocumentFormat().validate(
-                        SceneJson().parse(textOf(it)),
-                        DocumentKind.PROJECT,
-                    ) == null
+                    parseDocument(textOf(it)).rejection(DocumentKind.PROJECT) == null
                 }.getOrDefault(false)
     }
 }

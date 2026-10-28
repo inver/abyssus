@@ -31,21 +31,21 @@ class EditorReadBaselineTest : BasePlatformTestCase() {
         assertEquals(Vector3(-3.035308f, .9123962f, -3.2570944f), content.models.first().transform.position)
         val params = renderParamsOf(scene, CameraParams.DEFAULT, root = SceneJson().parse(text))
         assertEquals(content, params.content)
-        assertEquals(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(text).get("ecs"), params.ecs)
+        assertEquals(scene.ecs, params.ecs)
         assertEquals(CameraParams.DEFAULT, params.camera)
         assertNotNull(params.rayTracing.settings)
     }
 
     fun testTreeRowsAndPanelState() {
-        val root = SceneJson().parse(text)
-        assertEquals((0..10).map(Int::toString), ecsRows(root.get("ecs")).map { it.name })
-        assertEquals(listOf("NameComponent", "PickableComponent", "PositionComponent", "RenderComponent", "TypeComponent"),
-            entityRows(root.get("ecs").get("0")).map { it.name })
+        val root = net.nevinsky.abyssus.lib.core.editor.document.parseDocument(text)
+        assertEquals((0..10).map(Int::toString), ecsRows(root.at("ecs")!!).map { it.name })
+        assertEquals(listOf("NameComponent", "PickableComponent", "PositionComponent", "RenderComponent"),
+            entityRows(root.at("ecs", "0")!!).map { it.name })
         val file = myFixture.addFileToProject("baseline/Main.scene", text).virtualFile
         val state = readEntityState(ComponentTarget(file, "0", null), testPanelServices(project)) as PanelState.EntityDetails
         assertEquals("Model 0", state.name)
-        assertEquals(listOf("NameComponent", "PickableComponent", "PositionComponent", "RenderComponent", "TypeComponent"), state.sections.map { it.kind })
-        assertEquals(listOf("ParentComponent", "CameraComponent", "LightComponent", "Point2PointPositionComponent"), state.addable)
+        assertEquals(listOf("NameComponent", "PickableComponent", "PositionComponent", "RenderComponent"), state.sections.map { it.kind })
+        assertEquals(listOf("ParentComponent", "CameraComponent", "LightComponent"), state.addable)
         assertNotNull(state.sections.single { it.kind == "PickableComponent" }.raw)
     }
 }

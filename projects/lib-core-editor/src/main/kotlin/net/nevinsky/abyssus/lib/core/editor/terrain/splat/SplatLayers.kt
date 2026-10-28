@@ -39,7 +39,7 @@ class SplatLayers(private val json: JsonProcessor) {
         val textures = assetsDir.listFiles { f -> f.isDirectory }?.sortedBy { it.name }.orEmpty()
         return SPLAT_LAYERS.mapIndexed { slot, field ->
             val uuid = additional.text(field)?.takeIf { it.isNotBlank() }
-            val folder = uuid?.let { id -> textures.firstOrNull { textureUuid(it) == id } }
+            val folder = uuid?.let { id -> textures.firstOrNull { choices.textureUuid(it) == id } }
             when {
                 uuid == null -> SplatLayer(slot, field, null, null, true, null)
                 folder == null -> SplatLayer(slot, field, uuid, uuid, false, null)
@@ -50,20 +50,6 @@ class SplatLayers(private val json: JsonProcessor) {
 
     /** The texture assets that can be chosen for a slot currently holding [current], as [AssetReferenceChoices.textures]. */
     fun choices(assetsDir: File, current: String?) = choices.textures(assetsDir, current)
-
-    private fun textureUuid(folder: File): String? {
-        val file = File(folder, META_FILE).takeIf { it.isFile } ?: return null
-        val meta = try {
-            metas.read(file.readText())
-        } catch (e: IllegalArgumentException) {
-            return null
-        } catch (e: java.io.IOException) {
-            return null
-        } catch (e: com.fasterxml.jackson.core.JsonProcessingException) {
-            return null
-        }
-        return meta.json.text("uuid")?.takeIf { choices.isImage(folder, meta.json.obj("additional")?.text("file")) }
-    }
 
     private fun imageOf(folder: File): File? {
         val file = try {

@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.water
 
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentEdit
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.editor.water.WaterEdit
@@ -52,7 +53,7 @@ class WaterSceneEdits(private val project: Project, private val edits: WaterEdit
         run(file, "commandRemoveWater", global = true) { edits.remove(it, id) }
 
     /** [global]: the edit starts from the Abyssus tree, so Undo and Redo must reach it with the tree focused, not only from the scene's editor. */
-    private fun run(file: VirtualFile, command: String, global: Boolean = false, edit: (com.fasterxml.jackson.databind.JsonNode) -> WaterEdit): WaterEdit {
+    private fun run(file: VirtualFile, command: String, global: Boolean = false, edit: DocumentEdit<WaterEdit>): WaterEdit {
         var result: WaterEdit = WaterEdit.Unchanged
         val written = editSceneJson(project, file, AbyssusBundle.message(command), global) { root ->
             result = edit(root)

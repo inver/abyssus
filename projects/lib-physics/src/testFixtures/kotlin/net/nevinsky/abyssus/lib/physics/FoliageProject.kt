@@ -81,12 +81,12 @@ class FoliageProject : AutoCloseable {
          * and a 100 m box `Floor` far below it, plus [extra] entities.
          */
         fun scene(name: String = "foliage_meadow", terrainExtra: String = "", extra: String = ""): String =
-            """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
+            """{"format":"abyssus","formatVersion":1,"ecs":{
               "0":{"components":{"NameComponent":{"name":"Ground"},"PositionComponent":{},
                 "RenderComponent":{"shaderKey":"terrain","type":"TERRAIN","assetName":"terr"},
                 "FoliageComponent":{"assetName":"$name"}$terrainExtra}},
               "1":{"components":{"NameComponent":{"name":"Floor"},"PositionComponent":{"localPosition":{"y":-20}},
-                "ColliderComponent":{"shape":"BOX","halfExtents":{"x":200,"y":1,"z":200}}}}$extra}}}"""
+                "ColliderComponent":{"shape":"BOX","halfExtents":{"x":200,"y":1,"z":200}}}}$extra}}"""
 
         /** A 1 m dynamic box named `Box` above the point (x, z) at height [y]. */
         fun box(x: Float, y: Float, z: Float, id: Int = 2) =

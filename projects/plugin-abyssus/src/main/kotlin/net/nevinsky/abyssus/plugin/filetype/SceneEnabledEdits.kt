@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.filetype
 
+import net.nevinsky.abyssus.lib.core.editor.document.setBooleanMember
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.editor.components.EnabledTarget
@@ -29,8 +30,5 @@ fun setEnabled(project: Project, scene: VirtualFile, target: EnabledTarget, enab
  */
 fun setSceneToggle(project: Project, scene: VirtualFile, key: String, on: Boolean): Boolean =
     editSceneJson(project, scene, AbyssusBundle.message("commandToggleEnabled")) { root ->
-        val obj = root as? com.fasterxml.jackson.databind.node.ObjectNode ?: return@editSceneJson false
-        if (obj.get(key)?.let { it.isBoolean && it.booleanValue() == on } == true) return@editSceneJson false
-        obj.put(key, on)
-        true
+        setBooleanMember(root, key, on)
     }

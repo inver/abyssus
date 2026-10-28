@@ -25,7 +25,7 @@ class GameComponentUiTest : UiTestBase() {
         runCatching { if (frame.propertiesWindow() != null) frame.closeProperties() }
     }
 
-    private fun plane() = mapper.readTree(Files.readString(scene))["ecs"]["entities"]["0"]["components"]["PlaneComponent"]
+    private fun plane() = mapper.readTree(Files.readString(scene))["ecs"]["0"]["components"]["PlaneComponent"]
 
     @Test
     fun aGameComponentIsShownReadOnlyAndSurvivesEditsToItsEntity() {
@@ -48,7 +48,7 @@ class GameComponentUiTest : UiTestBase() {
         tree.rightClickRow(row)
         frame.clickMenuItem("Add Component...")
         frame.choosePopupItem("Camera")
-        LifecycleHarness.awaitState("Camera is added", true) { mapper.readTree(Files.readString(scene))["ecs"]["entities"]["0"]["components"].has("CameraComponent") }
+        LifecycleHarness.awaitState("Camera is added", true) { mapper.readTree(Files.readString(scene))["ecs"]["0"]["components"].has("CameraComponent") }
         assertEquals("the game component is untouched by the addition", stored, plane())
         undoThroughSceneDocument(scene, before)
         assertEquals("Undo restores the exact text", before, Files.readString(scene))

@@ -54,9 +54,9 @@ Entity removal SHALL use the latest document text, require supported native mark
 - **WHEN** the scene has unsupported native markers, or the selected entity was removed from the latest document before the action executes
 - **THEN** no removal is written and no undo step is created
 
-#### Scenario: Wrapped native scene
-- **WHEN** an unreferenced entity is removed from an admitted native scene using `ecs.entities`
-- **THEN** only its entity entry is removed, `ecs.archetypes` and metadata retain their text, and Undo restores the original document
+#### Scenario: Native scene
+- **WHEN** an unreferenced entity is removed from an admitted native scene
+- **THEN** only its entity entry under `ecs` is removed, the rest of the file keeps its text, and Undo restores the original document
 
 #### Scenario: Unknown payload and unsaved edits
 - **WHEN** unrelated unsaved document edits include extension data and number text `1.000`, and an unreferenced entity is removed
@@ -74,7 +74,7 @@ offer the project's models and terrains as it does on an entity row. Choosing a 
 - it SHALL hold the chosen component, from its defaults or the chosen asset, by the same rules as adding to an existing
   entity.
 
-In a wrapped scene, its `archetype` SHALL name an archetype listing exactly its components, reusing a matching one.
+The new entity SHALL have `components` and no `flags`.
 The addition SHALL be one undoable edit, nothing else in the file SHALL change, and the new entity's row SHALL be
 selected. It SHALL be unavailable when the scene cannot be read as a native scene.
 

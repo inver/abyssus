@@ -283,10 +283,10 @@ cache. See `docs/ai/conventions.md` for conflicts, mask patches and cache cleanu
 
 `core.ecs.ComponentRegistry` maps built-in and explicitly registered names to Ashley component classes. Keys may be
 short or fully qualified; scene data never triggers arbitrary class loading. `EcsLoader` binds the wrapped
-`ecs.entities` map through `JsonProcessor.ecsReader()` and Jackson. Unregistered or unbindable component entries
-are carried as raw JSON in `EcsLoadingWarns`, with warnings. Entity ids are numeric; invalid references become
-`NO_ENTITY`. `FoliageComponent` is built in and carries its source object (`SourceBackedComponent`), so a write keeps
-unknown members and number text. `SceneFoliageListing` lists a loaded engine's terrain-bound foliage without files or GL.
+`ecs` map in `SceneLoader` through `JsonProcessor.binderWith(EntityDtoModule(registry))` and Jackson; `EcsLoader` turns the
+typed entities into engine entities. Unregistered or unbindable component entries are bound as a `RawComponent`, carried as raw
+JSON in `EcsLoadingWarns`, with warnings. Entity ids are numeric; invalid references become
+`NO_ENTITY`. `FoliageComponent` is built in and keeps unmodeled members in an extras map (any-setter/any-getter), so a typed write keeps them. `SceneFoliageListing` lists a loaded engine's terrain-bound foliage without files or GL.
 `NativeJsonTree` in `core.io` is the one lossless JSON reader, used by `SceneJson` and by `SceneLoader`.
 `SceneEngine` and `SceneEntityIds` live in `core.ecs`; the look-at and camera synchronization systems
 are in `projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/ecs/system`.
@@ -300,9 +300,9 @@ It is a serialization API, not an IDE file writer; plugin document edits still g
 
 The editor keeps the parsed JSON tree as its model (unknown keys, key order and number text stay the file's);
 games and Play keep an Ashley `SceneEngine`. Both use Jackson binding to `lib-core`'s component classes. In the editor,
-readers use `SceneDocument` / `EntityView`; writers use `SceneEntityTree`, supporting both a flat entity map and
-`ecs.entities`. The current runtime loader only enumerates `ecs.entities`; see the current-source review for
-compatibility gaps.
+document readers use `SceneDocument` / `EntityView` and writers use `SceneEntityTree`, both over the id-keyed `ecs` map.
+The read model (`SceneContent`, `SceneRenderParams`, ray snapshots, the physics overlay) takes the typed
+`SceneDto.ecs: Map<Long, EntityDto>` that `SceneLoader` and `DocumentParsing` bind; the runtime loader reads the same map.
 
 **Foliage in games.** `lib-core`'s `FoliageComponent` and `SceneFoliageListing` name a loaded scene's foliage without
 files or GL; `FoliageRuntimeLoad` reads each asset as written (shared by games and `lib-physics`, so both see one

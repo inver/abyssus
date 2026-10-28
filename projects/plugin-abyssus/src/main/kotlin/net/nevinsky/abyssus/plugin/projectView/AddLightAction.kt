@@ -4,14 +4,15 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.util.isObjectAt
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.components.LightPreset
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
@@ -42,10 +43,10 @@ class AddLightGroup(
 
 /** Publish a new entity immediately, then select its row when the asynchronous tree refresh reaches it. */
 internal fun selectCreatedEntity(project: Project, file: VirtualFile, entityId: String) {
-    val tree = runCatchingKeepingCancellation { SceneEntityTree(SceneJson().parse(textOf(file))) }.getOrNull()
-    val entity = tree?.entities()?.get(entityId)
-    if (entity?.isObject == true) {
-        val node = DtoEntryNode(project, file.path, DtoRow(entityId, entity), file, tree.entityKeys())
+    val root = runCatchingKeepingCancellation { parseDocument(textOf(file)) }.getOrNull()
+    val entity = root?.at("ecs", entityId)
+    if (entity?.isObjectAt() == true) {
+        val node = DtoEntryNode(project, file.path, DtoRow(entityId, entity), file, SceneEntityTree(root).entityKeys())
         AbyssusSelection.of(project).select(node)
     }
     selectEntityInAbyssusView(project, file, entityId)

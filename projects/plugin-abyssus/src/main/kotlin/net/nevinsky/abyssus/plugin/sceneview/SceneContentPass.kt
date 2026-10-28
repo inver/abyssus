@@ -26,6 +26,7 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.gdx.g3d.FilteredRenderables
 import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
+import net.nevinsky.abyssus.lib.render.light.setSkyLight
 import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
@@ -110,9 +111,7 @@ internal class SceneContentPass(
         val sky = if (unlit) null else (ambient as? SceneAmbient.Sky)?.environment
         val to = if (sky != null) skybox?.fadingTo(c.skybox) else null
         if (sky != null) {
-            environment.remove(ColorAttribute.AmbientLight)
-            val target = to?.environment?.let { EnvironmentLightAttribute(it.specular, it.irradiance, it.levels, it.ambient) }
-            environment.set(EnvironmentLightAttribute(sky.specular, sky.irradiance, sky.levels, sky.ambient, target, to?.weight ?: 0f))
+            environment.setSkyLight(sky, to?.environment, to?.weight ?: 0f)
         }
         if (atlas != null) environment.set(atlas)
         if (!unlit) sunVisibility?.let { environment.set(it) }

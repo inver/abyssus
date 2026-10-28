@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.components.service
@@ -171,7 +172,7 @@ class ImportModelTest : BasePlatformTestCase() {
         assertEquals(id, outcome.entityId)
         val components = SceneEntityTree(sceneRoot()).components(id)!!
         assertEquals("Model $id", components["NameComponent"]["name"].asText())
-        assertEquals("OBJECT", components["TypeComponent"]["type"].asText())
+        assertEquals("OBJECT", sceneRoot()["ecs"][id]["type"].asText())
         val position = components["PositionComponent"]["localPosition"]
         assertEquals(listOf(10.0, 0.0, -4.0), listOf("x", "y", "z").map { position[it]?.asDouble() ?: 0.0 })
         val asset = components["RenderComponent"]

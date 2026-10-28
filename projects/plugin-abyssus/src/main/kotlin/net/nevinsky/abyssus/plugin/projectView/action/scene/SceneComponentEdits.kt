@@ -5,9 +5,10 @@
 
 package net.nevinsky.abyssus.plugin.projectView.scene
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.util.numberTextAt
 import com.badlogic.gdx.math.Vector3
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
@@ -15,7 +16,6 @@ import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.components.*
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
@@ -59,7 +59,7 @@ object SceneComponentEdits {
 
     private fun run(
         project: Project, file: VirtualFile, command: String, global: Boolean = false,
-        edit: (JsonNode) -> EditResult,
+        edit: DocumentEdit<EditResult>,
     ): EditResult {
         var result: EditResult = EditResult.Rejected(EditorBundle.message("componentSceneUnreadable"))
         editSceneJson(project, file, command, global) { root ->
@@ -113,13 +113,13 @@ object SceneComponentEdits {
     private fun terrainSize(sceneFile: VirtualFile, name: String, metaFiles: MetaFiles): Float? {
         val abss = ProjectLayout.abssFor(sceneFile) ?: return null
         val folder = ProjectLayout.assetFolders(abss).firstOrNull { it.name == name } ?: return null
-        val size = readMeta(folder, metaFiles)?.json?.path("additional")?.path("size") ?: return null
-        return size.takeIf { it.isNumber }?.floatValue()
+        val size = readMeta(folder, metaFiles)?.document?.numberTextAt("additional", "size") ?: return null
+        return size.toFloatOrNull()
     }
 
     /**
      * Creates a new entity (`Entity <id>`) holding a [kindName] component started from [initial], as one undoable command;
-     * nothing is written when the component is refused. In an older wrapped scene its archetype follows its components.
+     * nothing is written when the component is refused.
      */
     fun addAsNewEntity(
         project: Project,
@@ -131,10 +131,7 @@ object SceneComponentEdits {
         var added = AddedEntity(EditResult.Rejected(EditorBundle.message("componentSceneUnreadable")))
         editSceneJson(project, file, AbyssusBundle.message("commandAddComponent")) { root ->
             val id = SceneEntityTree(root).insert { id ->
-                JsonNodeFactory.instance.objectNode().set(
-                    "NameComponent",
-                    JsonNodeFactory.instance.objectNode().put("name", AbyssusBundle.message("newEntityName", id)),
-                )
+                nameOnlyComponents(AbyssusBundle.message("newEntityName", id))
             } ?: return@editSceneJson false
             val result = editor(project, file).add(
                 root,
@@ -145,7 +142,7 @@ object SceneComponentEdits {
                 assetsByType(file, metaFiles)
             )
             added = AddedEntity(result, id.takeIf { result == EditResult.Changed })
-            result == EditResult.Changed && SceneEntityTree(root).matchArchetype(id)
+            result == EditResult.Changed
         }
         return added
     }

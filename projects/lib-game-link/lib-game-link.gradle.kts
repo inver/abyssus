@@ -29,6 +29,7 @@ dependencies {
     implementation(kotlin("stdlib"))
     api(project(":lib-physics"))
     api(project(":lib-core"))
+    implementation(project(":lib-core-editor"))
     joltPlatforms.forEach { playHost("com.github.stephengold:jolt-jni-$it:$joltVersion:ReleaseSp") }
     testRuntimeOnly("com.github.stephengold:jolt-jni-$joltJniBuildPlatform:$joltVersion:DebugSp")
     testImplementation(libs.junit4)
@@ -37,3 +38,6 @@ dependencies {
 }
 
 extra["abyssusSingletonExcludes"] = listOf<String>()
+
+// No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in lib-core-editor (see gradle/checks.gradle.kts).
+extra["abyssusJacksonTreeAllowed"] = emptyList<String>()

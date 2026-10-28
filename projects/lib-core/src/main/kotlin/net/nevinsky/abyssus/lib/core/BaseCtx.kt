@@ -46,7 +46,7 @@ class BaseCtx(val projectDir: String, shadersPath: String?, shadersAnchor: Class
             it.registerAll(StandardAssetLoaders(fileLoader, metaLoader, shaderStorage, log = log).byType)
         }
         componentRegistry = ComponentRegistry()
-        sceneLoader = SceneLoader(jsonProcessor, fileLoader)
-        ecsLoader = EcsLoader(jsonProcessor, componentRegistry)
+        sceneLoader = SceneLoader(jsonProcessor, fileLoader, componentRegistry)
+        ecsLoader = EcsLoader()
     }
 }

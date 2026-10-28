@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.foliage
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.command.undo.UndoManager
@@ -55,7 +57,7 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
     }
     private fun source(): FoliageSource.Ready {
         val text = File(folder.path, "meta.json").readText()
-        return readFoliageSource(folder.name, disk, json, text, net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parseObject(text)["additional"]) as FoliageSource.Ready
+        return readFoliageSource(folder.name, disk, json, text, net.nevinsky.abyssus.lib.core.editor.document.parseDocumentObject(text).at("additional")) as FoliageSource.Ready
     }
     private fun command(background: (Runnable) -> Unit = { it.run() }, ui: (Runnable) -> Unit = { it.run() }) = FoliageStrokeCommand(
         project, scene, folder, source(), drafts, net.nevinsky.abyssus.plugin.testCore.documents, project.service<FoliageUndoCache>(), { mode }, background, ui, reports::add,

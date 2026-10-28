@@ -249,17 +249,5 @@ class EntityLifecycleUiTest : UiTestBase() {
         awaitRefusal("entity 4 is a parent", "entity 3", "parentEntityId")
         frame.closeStrayDialogs()
         assertEquals(original, Files.readString(scene))
-
-        // clear the look-at through Properties; entity 3 is still the endpoint of entity 5
-        tree.clickRow("Camera 4")
-        LifecycleHarness.awaitState("Properties show Camera 4", "Camera 4") { frame.properties().headerTitle() }
-        frame.properties().enter("field-PositionComponent-lookAtId", "-1")
-        LifecycleHarness.awaitState("the look-at is cleared", true) { entity(4)?.get("components")?.get("PositionComponent")?.get("lookAtId")?.asInt(-1) != 3 }
-        val cleared = Files.readString(scene)
-        tree.rightClickRow("'Direction' handle")
-        frame.clickMenuItem("Remove Entity")
-        awaitRefusal("entity 3 is an endpoint", "entity 5", "Point2PointPositionComponent")
-        frame.closeStrayDialogs()
-        assertEquals("nothing else was deleted, detached or retargeted", cleared, Files.readString(scene))
     }
 }

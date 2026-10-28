@@ -39,7 +39,7 @@ fun originalScene(): File = File(committedProject().parentFile.parentFile, "tool
  * terrain entity, and how many of the recorded trees and bushes are still entities.
  */
 fun migrationFootprint(project: File, manifest: FieldManifest): Map<String, String> {
-    val entities = SceneJson().parse(File(project, "scenes/Field.scene").readText())["ecs"]["entities"]
+    val entities = SceneJson().parse(File(project, "scenes/Field.scene").readText())["ecs"]
     val out = sortedMapOf<String, String>()
     for (t in manifest.terrains) {
         out["FoliageComponent of ${t.entity}"] = entities[t.entity.toString()]?.get("components")?.get("FoliageComponent")?.toString() ?: "none"

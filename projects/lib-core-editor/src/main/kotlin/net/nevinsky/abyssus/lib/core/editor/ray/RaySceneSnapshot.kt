@@ -144,9 +144,8 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         if (missing.isNotEmpty()) return RaySceneConversion.Preparing(missing.distinct())
         val result = runCatchingKeepingCancellation {
             val builder = Builder(limits.copy(maxInstances = minOf(limits.maxInstances, settings.maxInstances)), environmentTextures, deform) { shared.getOrPut(it) { HashMap() } }
-            val document = net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs(params.ecs)
             for (placement in content.models) {
-                val render = document.entity(placement.entityId)?.componentNode("RenderComponent")
+                val render = rayRenderNode(placement.entityId.toLongOrNull()?.let(params.ecs::get))
                 builder.model(placement, assets.models.getValue(placement.assetName), poses[placement.entityId], render)
             }
             for (placement in content.terrains) builder.terrain(

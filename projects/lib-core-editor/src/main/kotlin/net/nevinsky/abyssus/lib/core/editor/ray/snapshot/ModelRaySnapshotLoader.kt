@@ -19,7 +19,7 @@ data class RayModelSource(val data: ModelData, val images: Map<String, Pixmap>)
 class ModelRaySnapshotLoader(
     private val fileLoader: FileLoader,
     private val assimp: AssimpModelLoader,
-    private val maxBytes: Long = 128L * 1024 * 1024
+    private val maxBytes: Long = RAY_SNAPSHOT_MAX_BYTES
 ) : RaySnapshotLoader<RayModelSnapshot, RayModelSource> {
     override fun load(meta: AssetMeta<Any>): RayModelSnapshot {
         val file = FileHandle(fileLoader.loadAssetFile(meta.name, meta.typedAdditional<ModelMeta>().file))
@@ -38,7 +38,7 @@ class ModelRaySnapshotLoader(
         val bytes = data.meshes.sumOf { mesh ->
             mesh.vertices.size.toLong() * 4 + mesh.parts.sumOf { it.indices.size.toLong() * 4 }
         } + images.values.sumOf { it.width.toLong() * it.height * 4 }
-        require(bytes <= maxBytes) { "CPU model snapshot exceeds its $maxBytes byte limit" }
+        requireSnapshotSize("model", bytes, maxBytes)
         val meshes = data.meshes.map { mesh ->
             var offset = 0
             val attributes = mesh.attributes.map { attribute ->

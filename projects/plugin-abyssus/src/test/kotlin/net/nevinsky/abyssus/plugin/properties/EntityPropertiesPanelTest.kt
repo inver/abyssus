@@ -100,7 +100,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         p.show(entity("0"))
         val state = p.state as PanelState.EntityDetails
         assertEquals("Model 0", state.name)
-        assertEquals(listOf("NameComponent", "PickableComponent", "PositionComponent", "RenderComponent", "TypeComponent"), state.sections.map { it.kind })
+        assertEquals(listOf("NameComponent", "PickableComponent", "PositionComponent", "RenderComponent"), state.sections.map { it.kind })
         assertEquals("Model 0", all(p, JBLabel::class.java).first { it.name == "entity-name" }.text)
         assertEquals("-3.035308", (named(p, "field-PositionComponent-localPosition.x") as JBTextField).text)
         assertTrue("LightComponent" in state.addable)
@@ -208,15 +208,6 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         assertEquals(before, text(sceneFile()))
     }
 
-    fun testChoiceFieldEdits() {
-        copyProject()
-        val p = panel()
-        p.show(component("0", "TypeComponent"))
-        val combo = named(p, "field-TypeComponent-type") as JComboBox<*>
-        combo.selectedItem = "GROUP"
-        assertEquals("GROUP", components(sceneFile(), "0")["TypeComponent"]["type"].asText())
-    }
-
     fun testAddFromThePanelShowsTheNewSection() {
         copyProject()
         val p = panel()
@@ -271,6 +262,13 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         assertEquals(30, components(sceneFile(), "0")["LightComponent"]["light"]["range"].asInt())
     }
 
+    private fun setEntityType(type: String) {
+        val doc = FileDocumentManager.getInstance().getDocument(sceneFile())!!
+        val root = SceneJson().parse(doc.text)
+        (root["ecs"]["0"] as com.fasterxml.jackson.databind.node.ObjectNode).put("type", type)
+        WriteCommandAction.runWriteCommandAction(project) { doc.setText(SceneJson().inStyleOf(doc.text, root)) }
+    }
+
     fun testBeamEditorsAreSpotlightOnlyAndUsePercent() {
         copyProject()
         val f = sceneFile()
@@ -278,7 +276,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         edits.add(project, f, "0", "LightComponent", testMetaFiles())
         val p = panel()
         for (type in listOf("LIGHT_POINT", "LIGHT_DIRECTIONAL", "LIGHT_SPOT")) {
-            edits.update(project, f, "0", "TypeComponent", "type", type, testMetaFiles())
+            setEntityType(type)
             p.show(component("0", "LightComponent"))
             if (type != "LIGHT_SPOT") {
                 assertNull(named(p, "field-LightComponent-coneAngle"))
@@ -331,10 +329,10 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
     fun testDeletedComponentShowsAMessage() {
         copyProject()
         val p = panel()
-        p.show(component("0", "TypeComponent"))
+        p.show(component("0", "NameComponent"))
         val doc = FileDocumentManager.getInstance().getDocument(sceneFile())!!
         val root = SceneJson().parse(doc.text)
-        net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree(root).components("0")!!.remove("TypeComponent")
+        net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree(root).components("0")!!.remove("NameComponent")
         WriteCommandAction.runWriteCommandAction(project) { doc.setText(SceneJson().inStyleOf(doc.text, root)) }
         val state = p.state as PanelState.Empty
         assertTrue(state.message, state.message.contains("no longer has"))

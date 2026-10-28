@@ -151,7 +151,7 @@ class SceneInteractionTest {
     }
     @Test fun aLightDropsUsingItsMarkerBottom() {
         val s = setup(ground = { 2f })
-        val light = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"9":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{"light":{}},"PositionComponent":{"localPosition":{"x":1,"y":8,"z":3}}}}}}}"""))
+        val light = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"9":{"type":"LIGHT_POINT","components":{"LightComponent":{"light":{}},"PositionComponent":{"localPosition":{"x":1,"y":8,"z":3}}}}}}"""))
         s.renderer.params = mainParams.copy(content = light); s.renderer.state.selectedId = "9"
         assertTrue(s.interaction.canDrop)
         s.interaction.drop()
@@ -259,7 +259,7 @@ class SceneInteractionTest {
     fun theSelectorListsFreeCameraAndTheSceneCamerasByName() {
         assertEquals(listOf("Free camera", "Camera 4"), cameraChoices(mainParams.content, "Free camera").map { it.label })
         assertEquals(listOf(null, "4"), cameraChoices(mainParams.content, "Free camera").map { it.id })
-        val unnamed = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"8":{"components":{"CameraComponent":{"camera":{}}}}}}}"""))
+        val unnamed = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"8":{"components":{"CameraComponent":{"camera":{}}}}}}"""))
         assertEquals("8", cameraChoices(unnamed, "Free camera")[1].label)
     }
 

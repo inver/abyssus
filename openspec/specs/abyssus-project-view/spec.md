@@ -241,7 +241,7 @@ expanding, refreshing, and reopening the view do not lose or duplicate nodes.
 
 #### Scenario: Entity icons follow their type
 
-- **WHEN** an entity under `ecs` has a `TypeComponent` using its short or fully qualified class name
+- **WHEN** an entity under `ecs` has a `type`
 - **THEN** its row uses a distinct SVG icon for each of GROUP, LIGHT_DIRECTIONAL, LIGHT_POINT, LIGHT_SPOT, OBJECT,
   TERRAIN, CAMERA and HANDLE, and a type change updates the icon on refresh even when its label and component count stay the same
 - **AND** an absent, null or unknown type uses the generic ECS icon

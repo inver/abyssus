@@ -14,9 +14,10 @@ import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.ecs.SceneFoliage
 import net.nevinsky.abyssus.lib.core.ecs.SceneFoliageListing
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.core.ecs.isActive
+import net.nevinsky.abyssus.lib.core.ecs.component.isActive
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
+import net.nevinsky.abyssus.lib.core.dto.EntityType
 import net.nevinsky.abyssus.lib.core.ecs.component.assetName
 import net.nevinsky.abyssus.lib.core.scene.SceneContext
 
@@ -56,11 +57,11 @@ class FieldScene(val loaded: SceneContext) {
 
     /** The unit vector toward the sun: against the first directional light's direction, 45° up without one. */
     val sunDirection: Vector3 =
-        entities.values.firstOrNull { it.getComponent(TypeComponent::class.java)?.type == TypeComponent.Type.LIGHT_DIRECTIONAL && it.isActive(LightComponent::class.java) }
+        entities.values.firstOrNull { it.getComponent(HeaderComponent::class.java)?.type == EntityType.LIGHT_DIRECTIONAL && it.isActive(LightComponent::class.java) }
             ?.let(::lightDirection)?.scl(-1f) ?: Vector3(0f, 1f, 1f).nor()
 
     val sunColor: Color =
-        entities.values.firstOrNull { it.getComponent(TypeComponent::class.java)?.type == TypeComponent.Type.LIGHT_DIRECTIONAL && it.isActive(LightComponent::class.java) }
+        entities.values.firstOrNull { it.getComponent(HeaderComponent::class.java)?.type == EntityType.LIGHT_DIRECTIONAL && it.isActive(LightComponent::class.java) }
             ?.getComponent(LightComponent::class.java)?.light?.let { color(it.color, it.intensity) } ?: Color(
             1f,
             1f,

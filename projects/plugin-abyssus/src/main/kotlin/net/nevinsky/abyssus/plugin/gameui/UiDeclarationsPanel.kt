@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.lib.core.ui.model.displayAt
+import net.nevinsky.abyssus.lib.core.editor.ui.*
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
@@ -134,7 +136,7 @@ class UiDeclarationsPanel(private val project: Project?, private val controller:
 
     private fun editBinding(name: String?) {
         val existing = name?.let { controller.collection?.binding(it) }
-        val start = existing?.let(BindingForm::of) ?: BindingForm()
+        val start = existing?.let(::bindingFormOf) ?: BindingForm()
         val dialog = UiFormDialog(project, "uiBindingDialog", listOf(
             FormInput("name", "uiFormName", start.name),
             FormInput("type", "uiFormType", start.type, UiBindingType.entries.map { it.json }),
@@ -156,7 +158,7 @@ class UiDeclarationsPanel(private val project: Project?, private val controller:
 
     private fun editStyle(name: String?) {
         val existing: UiStyle? = name?.let { n -> controller.collection?.styles?.firstOrNull { it.name == n } }
-        fun at(vararg path: String): String { var n = existing?.values; for (p in path) n = n?.get(p); return n?.takeIf { !it.isMissingNode && !it.isNull }?.asText().orEmpty() }
+        fun at(vararg path: String): String = existing?.displayAt(*path).orEmpty()
         val fonts = listOf("") + controller.collection?.resources?.filter { it.kind == UiResourceKind.BITMAP_FONT }?.map { it.id }.orEmpty()
         val dialog = UiFormDialog(project, "uiStyleDialog", listOf(
             FormInput("name", "uiFormName", existing?.name.orEmpty()), FormInput("fontSize", "uiFormFontSize", at("fontSize")),

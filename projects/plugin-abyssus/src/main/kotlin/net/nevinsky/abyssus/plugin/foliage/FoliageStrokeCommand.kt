@@ -4,6 +4,9 @@
  */
 package net.nevinsky.abyssus.plugin.foliage
 
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -47,7 +50,7 @@ class FoliageStrokeCommand(
     @Volatile
     private var generation = 0
     private val stagedBackups = HashSet<FoliageUndoCache.Handle>()
-    private val meta get() = folder.findChild("meta.json")
+    private val meta get() = folder.findChild(META_FILE)
     private val projectDir = File(folder.path).parentFile.parentFile
 
     override fun begin(terrain: TerrainTarget, at: Vector3, mode: BrushMode): Stroke? {
@@ -110,7 +113,7 @@ class FoliageStrokeCommand(
                 // Capture terrain dependencies before the fresh read. A change during or after it is rejected
                 // by the transaction, including the gap between worker publication and the UI write command.
                 val terrainFolder = File(projectDir, "assets/${settings.terrain}")
-                val terrainMeta = File(terrainFolder, "meta.json").readBytes()
+                val terrainMeta = File(terrainFolder, META_FILE).readBytes()
                 expected["assets/${settings.terrain}/meta.json"] = FileSnapshot.Bytes(terrainMeta)
                 val terrainFile = parsing.assetFields(terrainMeta.toString(Charsets.UTF_8)).terrainFile
                 expected["assets/${settings.terrain}/$terrainFile"] =
@@ -238,26 +241,12 @@ class FoliageStrokeCommand(
             source.read, terrain, masks, staged.sha256, false, staged.fingerprint
         )
         else report(
-            when (result) {
-                is AssetCommandResult.Conflict -> AbyssusBundle.message(
-                    "foliageApplyConflict",
-                    result.path.substringAfterLast('/')
-                )
-
-                is AssetCommandResult.Collision -> AbyssusBundle.message(
-                    "foliageApplyConflict",
-                    result.path.substringAfterLast('/')
-                )
-
-                is AssetCommandResult.Blocked -> result.reason
-                is AssetCommandResult.Failed -> AbyssusBundle.message(
-                    "foliageApplyFailed",
-                    result.cause.documentDisplayMessage()
-                )
-
-                AssetCommandResult.Cancelled -> AbyssusBundle.message("foliageApplyCancelled")
-                AssetCommandResult.Done -> ""
-            }
+            assetResultMessage(
+                result, "foliageApplyCancelled",
+                conflict = { AbyssusBundle.message("foliageApplyConflict", it.substringAfterLast('/')) },
+                collision = { AbyssusBundle.message("foliageApplyConflict", it.substringAfterLast('/')) },
+                failure = { AbyssusBundle.message("foliageApplyFailed", it.documentDisplayMessage()) },
+            ).orEmpty()
         )
         discard(stroke)
     }

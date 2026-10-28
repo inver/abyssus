@@ -142,7 +142,7 @@ class ViewportDriver(private val frame: IdeFrame, private val ide: IdeQueries) {
     /** Entity [id] of [sceneText]; a scene may hold its entities directly under `ecs` or under `ecs.entities`. */
     fun entity(sceneText: String, id: Int): com.fasterxml.jackson.databind.JsonNode {
         val ecs = SceneJson().parseObject(sceneText).get("ecs")
-        return (ecs.get("entities") ?: ecs).get(id.toString())
+        return ecs.get(id.toString())
     }
 
     fun screenOf(world: Triple<Float, Float, Float>): ViewPoint =

@@ -8,9 +8,9 @@
   },
   "source": {
     "scene": "scenes/Field.scene",
-    "sceneSha256": "8c73229f4f39d9782a1c4d290798290132e23317bc93741d5e8fbb7d86711d14",
+    "sceneSha256": "d5b9655e4911831f6548b70da0cdf78843be79b02046547b3d9e3bfd23de1955",
     "vegetationSha256": "09c525b8891c764d10904725a639c6247833085c68ac043e7278e22137394838",
-    "restSha256": "ce1bb511501a01e804746b67e50659d0c02ec1ccaf065dfdc4c6756711b959b6"
+    "restSha256": "3c47922b28cef692c210905f7ede2d9aa132dcad20a04b523c15ca581aadbc67"
   },
   "pilot": {
     "x": 0.0,

@@ -4,6 +4,9 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.util.memberTextsAt
 import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.command.UndoConfirmationPolicy
 import com.intellij.openapi.command.undo.UndoManager
@@ -86,8 +89,7 @@ class UiResourceImporter {
         require(!FileDocumentManager.getInstance().isFileModified(meta)) { AbyssusBundle.message("uiImportMetaUnsaved") }
         val text = textOf(meta)
         val ids = runCatchingKeepingCancellation {
-            net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(text)["additional"]["ui"]["resources"]
-                .mapNotNull { it["id"]?.textValue() }.toSet()
+            net.nevinsky.abyssus.lib.core.editor.document.parseDocument(text).memberTextsAt("id", "additional", "ui", "resources").toSet()
         }.getOrDefault(emptySet())
         return Context(File(meta.parent.path), ids, text)
     }

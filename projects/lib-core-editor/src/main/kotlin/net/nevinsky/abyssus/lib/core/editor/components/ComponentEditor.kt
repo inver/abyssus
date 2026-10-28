@@ -70,7 +70,7 @@ class ComponentEditor(
         val kind = byName[kindName] ?: return null
         val node = componentsOf(root, entityId)?.get(kindName) ?: return null
         val fields = readFields(kind, node)
-        val spotlight = componentsOf(root, entityId)?.get("TypeComponent")?.get("type")?.asText() == "LIGHT_SPOT"
+        val spotlight = SceneEntityTree(root).entities()?.get(entityId)?.let { net.nevinsky.abyssus.lib.core.format.entityTypeOf(it) } == "LIGHT_SPOT"
         return if (kindName == "LightComponent" && !spotlight) fields.filterNot {
             it.field in listOf(
                 "coneAngle",
@@ -288,7 +288,7 @@ class ComponentEditor(
         return EditResult.Changed
     }
 
-    /** An entity other than [entityId] that looks at it, has it as parent or ends a point-to-point at it. */
+    /** An entity other than [entityId] that looks at it, or has it as parent. */
     private fun referrer(root: JsonNode, entityId: String): String? {
         val wanted = entityId.toIntOrNull() ?: return null
         for ((id, c) in SceneEntityTree(root).componentsById()) {
@@ -296,8 +296,6 @@ class ComponentEditor(
             val refs = listOf(
                 c.get("PositionComponent")?.get("lookAtId"),
                 c.get("ParentComponent")?.get("parentEntityId"),
-                c.get("Point2PointPositionComponent")?.get("entity1Id"),
-                c.get("Point2PointPositionComponent")?.get("entity2Id"),
             )
             if (refs.any { it?.asInt(NO_ENTITY) == wanted }) return id
         }

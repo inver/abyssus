@@ -5,6 +5,9 @@
 package net.nevinsky.abyssus.app.game.controlline.ai
 
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.app.game.controlline.track.arcLength
+import net.nevinsky.abyssus.app.game.controlline.track.dropEnd
+import net.nevinsky.abyssus.app.game.controlline.track.dropStart
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.cos
@@ -35,7 +38,7 @@ fun filleted(edges: List<List<Vector3>>, corners: List<Float>, radius: Float): L
         val theta = turn(tIn, tOut, vertex)
         if (abs(theta) < 0.02f) continue
         val r = corners[j]
-        val d = min(r * tan(abs(theta) / 2f), 0.45f * min(lengthOf(a), lengthOf(b)) * radius) / radius
+        val d = min(r * tan(abs(theta) / 2f), 0.45f * min(arcLength(a), arcLength(b)) * radius) / radius
         val trimmedA = dropEnd(a, d)
         val trimmedB = dropStart(b, d)
         val start = trimmedA.last()
@@ -72,25 +75,3 @@ private fun arc(start: Vector3, heading: Vector3, curvature: Float, length: Floa
     }
     return out
 }
-
-private fun lengthOf(points: List<Vector3>): Float {
-    var sum = 0f
-    for (i in 1 until points.size) sum += angle(points[i - 1], points[i])
-    return sum
-}
-
-/** [points] without their first [length] radians of arc, the cut put in as the first point. */
-private fun dropStart(points: List<Vector3>, length: Float): List<Vector3> {
-    var travelled = 0f
-    for (i in 1 until points.size) {
-        val step = angle(points[i - 1], points[i])
-        if (travelled + step >= length) {
-            val t = if (step > 0f) (length - travelled) / step else 0f
-            return listOf(Vector3(points[i - 1]).lerp(points[i], t).nor()) + points.subList(i, points.size)
-        }
-        travelled += step
-    }
-    return listOf(points.last())
-}
-
-private fun dropEnd(points: List<Vector3>, length: Float): List<Vector3> = dropStart(points.asReversed(), length).asReversed()

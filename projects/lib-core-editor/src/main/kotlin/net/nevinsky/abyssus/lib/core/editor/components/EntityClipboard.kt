@@ -32,7 +32,7 @@ class EntityClipboard(private val messages: EditorMessages) {
         val components = SceneEntityTree(root).components(entityId)
         val refusal = CopyResult.Refused(messages.message("entityClipboardNotCopyable", entityId))
         if (components == null || !components.has(RENDER) || KEEP_OUT.any(components::has)) return refusal
-        if (components.get("TypeComponent")?.get("type")?.asText() == "TERRAIN") return refusal
+        if (net.nevinsky.abyssus.lib.core.format.entityTypeOf(SceneEntityTree(root).entities()?.get(entityId)) == "TERRAIN") return refusal
         val envelope = mapper.createObjectNode().put(MARKER, VERSION).set<JsonNode>("components", components.deepCopy())
         return CopyResult.Copied(mapper.writeValueAsString(envelope))
     }

@@ -16,7 +16,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import net.nevinsky.abyssus.lib.core.ecs.EnabledState
+import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -71,7 +71,7 @@ class PhysicsWorldTest {
     fun aDisabledColliderCreatesNoBodyAndNoWarning() {
         val messages = mutableListOf<String>()
         val scene = loadPhysicsScene()
-        scene.named("Model 0").add(EnabledState(disabledComponents = linkedSetOf(ColliderComponent::class.java)))
+        scene.named("Model 0").getComponent(HeaderComponent::class.java).disabledComponents.add(ColliderComponent::class.java)
         world(scene, messages).use { world ->
             // only Model 2's constraint to the now body-less Model 0 is reported; Model 0 itself is silent
             assertTrue(messages.toString(), messages.none { it.startsWith("Physics: Model 0") })
@@ -84,7 +84,7 @@ class PhysicsWorldTest {
     @Test
     fun aDisabledRigidBodyLeavesAStaticBody() {
         val scene = loadPhysicsScene()
-        scene.named("Model 0").add(EnabledState(disabledComponents = linkedSetOf(RigidBodyComponent::class.java)))
+        scene.named("Model 0").getComponent(HeaderComponent::class.java).disabledComponents.add(RigidBodyComponent::class.java)
         world(scene, mutableListOf()).use { world ->
             assertEquals(MotionType.STATIC, world.bodyOf(scene.named("Model 0"))!!.motionType)
         }
@@ -94,7 +94,7 @@ class PhysicsWorldTest {
     fun aDisabledEntityHoldsNoBody() {
         val messages = mutableListOf<String>()
         val scene = loadPhysicsScene()
-        scene.named("Model 0").add(EnabledState(entityEnabled = false))
+        scene.named("Model 0").getComponent(HeaderComponent::class.java).entityEnabled = false
         world(scene, messages).use { world ->
             assertTrue(messages.toString(), messages.none { it.startsWith("Physics: Model 0") })
             assertNull(world.bodyOf(scene.named("Model 0")))
@@ -109,11 +109,11 @@ class PhysicsWorldTest {
             writeFlatModel(File(project, "assets/flat"))
             val messages = mutableListOf<String>()
             val scene = requireNotNull(physicsLoader(project, warningsTo(messages)).loadFromText(
-                """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
+                """{"format":"abyssus","formatVersion":1,"ecs":{
                   "0":{"components":{"NameComponent":{"name":"Flat"},"ColliderComponent":{"shape":"CONVEX_HULL"},
                     "RenderComponent":{"shaderKey":"defaultShader","type":"MODEL","assetName":"flat"}}},
                   "1":{"components":{"NameComponent":{"name":"Ball"},"PositionComponent":{"localPosition":{"y":5}},
-                    "RigidBodyComponent":{},"ColliderComponent":{"shape":"SPHERE"}}}}}}""",
+                    "RigidBodyComponent":{},"ColliderComponent":{"shape":"SPHERE"}}}}}""",
             ))
             assertEquals(emptyList<String>(), messages)
             world(scene, messages, project).use { world ->
@@ -239,7 +239,7 @@ class PhysicsWorldTest {
     /** A scene of [entities] (`"<id>": {components}` pairs) in a project with no assets. */
     private fun sceneOf(entities: String): SceneContext = requireNotNull(
         physicsLoader(testProject("Physics"), failOnWarnings())
-            .loadFromText("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{$entities}}}"""),
+            .loadFromText("""{"format":"abyssus","formatVersion":1,"ecs":{$entities}}"""),
     )
 
     @Test

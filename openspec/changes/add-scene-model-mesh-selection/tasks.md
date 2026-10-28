@@ -1,6 +1,6 @@
 ## 1. lib-core: scene field and model key
 
-- [ ] 1.1 Add `var meshId: String? = null` to `RenderComponent` (`projects/lib-core/.../ecs/component/RenderComponent.kt`) and first locate where the nested `renderable.asset` shape is decoded into `RenderComponent`, then read/write `meshId` there (nested and flat shapes); test that load and write keep it, omit it when null, and ignore it on a `TERRAIN`.
+- [ ] 1.1 Add `var meshId: String? = null` to `RenderComponent` (`projects/lib-core/.../ecs/component/RenderComponent.kt`) (the component is flat after `typed-scene-ecs`, so it binds beside `assetName`); test that load and write keep it, omit it when null, and ignore it on a `TERRAIN`.
 - [ ] 1.2 Add `ModelKey(name, meshId?)` with `encode()`/`decode()` in lib-core (no `object`/`companion`); test the round trip for ids containing `#`, `/` and spaces and that `meshId = null` encodes to the bare name.
 
 ## 2. lib-core: filtered model build
@@ -37,6 +37,6 @@
 
 ## 6. Docs and verification
 
-- [ ] 6.1 Update `docs/ai/file-formats.md` (`renderable.asset.meshId`), `docs/ai/glossary.md` (model variant, mesh id) and the READMEs of `lib-core`, `lib-core-editor` and the sceneview package where they describe model loading; run `scripts/check-docs.sh`.
+- [ ] 6.1 Update `docs/ai/file-formats.md` (`RenderComponent.meshId`), `docs/ai/glossary.md` (model variant, mesh id) and the READMEs of `lib-core`, `lib-core-editor` and the sceneview package where they describe model loading; run `scripts/check-docs.sh`.
 - [ ] 6.2 Run `./gradlew :lib-core:check :lib-core-editor:check :plugin-abyssus:test :app-game-control-line:check checkPackageCycles` and fix failures.
 - [ ] 6.3 Run `openspec validate add-scene-model-mesh-selection --strict`.

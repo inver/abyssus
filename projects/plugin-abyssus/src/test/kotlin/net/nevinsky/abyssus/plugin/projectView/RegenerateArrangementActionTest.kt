@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.lib.core.editor.document.parseDocument
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnAction
@@ -47,7 +49,7 @@ class RegenerateArrangementActionTest : BasePlatformTestCase() {
 
     private fun rowOf(id: String): DtoEntryNode {
         val tree = SceneEntityTree(SceneJson().parse(text()))
-        return DtoEntryNode(project, scene.path, DtoRow(id, tree.entities()!![id]), scene, tree.entityKeys())
+        return DtoEntryNode(project, scene.path, DtoRow(id, parseDocument(text()).at("ecs", id)), scene, tree.entityKeys())
     }
 
     private class On(val node: Any?) : RegenerateArrangementAction() {

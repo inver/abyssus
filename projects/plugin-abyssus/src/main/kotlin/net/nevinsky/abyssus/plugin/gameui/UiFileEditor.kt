@@ -4,6 +4,9 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.util.textAt
 import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
 import net.nevinsky.abyssus.plugin.dto.SceneReader
 import com.intellij.openapi.components.service
@@ -20,7 +23,6 @@ import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.*
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -34,12 +36,12 @@ import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DI
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.ui.model.UiIssue
 import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.ui.AbyssusFileEditorBase
 import net.nevinsky.abyssus.plugin.dto.NativeFileChanges
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.projectView.UiScreenOpener
 import java.awt.BorderLayout
-import java.beans.PropertyChangeListener
 import java.util.concurrent.Executor
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -58,7 +60,7 @@ private const val MAX_SNIFF_BYTES = 8L * 1024 * 1024
 fun isUiAsset(file: VirtualFile): Boolean {
     if (uiAssetOwner(file) == null || file.length > MAX_SNIFF_BYTES) return false
     return runCatchingKeepingCancellation {
-        SceneJson().parse(textOf(file))["type"]?.takeIf { it.isTextual }?.textValue() == "UI"
+        parseDocument(textOf(file)).textAt("type") == "UI"
     }.getOrDefault(false)
 }
 
@@ -87,7 +89,7 @@ class UiFileEditor(
     private val file: VirtualFile,
     background: Executor = Executor { AppExecutorUtil.getAppExecutorService().execute(it) },
     private val panelFactory: (UiEditorController) -> JComponent = { defaultPanel(project, file, it) },
-) : UserDataHolderBase(), FileEditor, DocumentReferenceProvider {
+) : AbyssusFileEditorBase(), DocumentReferenceProvider {
     private val content = JPanel(BorderLayout())
     internal val controller = UiEditorController(
         project, file, background, { ApplicationManager.getApplication().invokeLater(it, ModalityState.any()) },
@@ -202,12 +204,6 @@ class UiFileEditor(
     override fun getPreferredFocusedComponent(): JComponent = panel ?: content
     override fun getName() = AbyssusBundle.message("uiEditorName")
     override fun getFile(): VirtualFile = file
-    override fun setState(state: FileEditorState) {}
-    override fun isModified() = false
-    override fun isValid() = file.isValid
-    override fun addPropertyChangeListener(listener: PropertyChangeListener) {}
-    override fun removePropertyChangeListener(listener: PropertyChangeListener) {}
-    override fun getCurrentLocation(): FileEditorLocation? = null
 
     override fun dispose() {
         disposed = true

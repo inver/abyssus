@@ -59,11 +59,11 @@ internal class PaintTextureControls(
     kinds: BrushKinds,
     private val splatSession: ((String, () -> BrushMode?, (SplatSession?) -> Unit) -> Unit)?,
     private val onChanged: () -> Unit,
-    private val onEnded: () -> Unit,
+    onEnded: () -> Unit,
     private val report: (String) -> Unit,
     private val thumbnails: SplatThumbnails = SplatThumbnails(),
-) : BrushStrip<SplatSession>(
-    renderer, interaction, play, kinds, SPLAT_BRUSH, onChanged, "paint-texture-radius", "paint-texture-strength", "paint-texture-strip",
+) : RequestedBrushStrip<SplatSession>(
+    renderer, interaction, play, kinds, SPLAT_BRUSH, onChanged, "paint-texture-radius", "paint-texture-strength", "paint-texture-strip", onEnded,
 ) {
     private val slotButtons = (0 until 5).map { slot ->
         JToggleButton(slotText(slot, null)).apply { name = "paint-texture-slot-$slot"; isFocusable = false }
@@ -96,7 +96,6 @@ internal class PaintTextureControls(
     private val shared = JLabel("").apply { name = "paint-texture-shared"; isVisible = false }
     private val makeUnique = JButton(AbyssusBundle.message("splatMakeUnique")).apply { name = "paint-texture-make-unique"; isFocusable = false; isVisible = false }
 
-    private var requested = false
     private var opened = false
     private var snapshot: SplatSnapshot? = null
     private var reading = 0
@@ -105,8 +104,6 @@ internal class PaintTextureControls(
 
     /** Whether a Paint Texture brush is on the view now. */
     val painting: Boolean get() = active
-
-    override val wanted: Boolean get() = requested
 
     /** The strip panel, for tests that look its controls up by name. */
     internal fun stripForTest(): JPanel = strip
@@ -203,14 +200,6 @@ internal class PaintTextureControls(
             reversed = shift && chosen == SplatMode.PAINT,
             options = SplatBrushOptions(slot, chosen, exclusive.isSelected),
         )
-    }
-
-    /** Takes the brush off the view; [notify] tells the host the painting is over (not when the session is only reloaded). */
-    override fun end(notify: Boolean) {
-        val was = requested
-        super.end(notify)
-        requested = false
-        if (notify && was) onEnded()
     }
 
     override fun close() {

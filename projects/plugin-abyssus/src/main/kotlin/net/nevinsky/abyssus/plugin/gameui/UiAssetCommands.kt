@@ -4,7 +4,9 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
-import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.editor.ui.UiTreeEdit
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
@@ -67,7 +69,7 @@ sealed interface UiEditOutcome {
 fun editUiMeta(
     project: Project, file: VirtualFile, commandName: String = AbyssusBundle.message("commandEditUiAsset"),
     baseText: String? = null, editor: UiTextEditor = UiTextEditor(),
-    op: (UiDocumentEdits, JsonNode) -> UiEditResult,
+    op: UiTreeEdit,
 ): UiEditOutcome {
     val document = FileDocumentManager.getInstance().getDocument(file) ?: return UiEditOutcome.Unavailable
     if (!file.isWritable) return UiEditOutcome.ReadOnly
@@ -143,7 +145,7 @@ fun uiNavigationBlocker(projectDir: File, name: String): String? {
         val file = File(dir, META_FILE)
         val unsaved = LocalFileSystem.getInstance().findFileByIoFile(file)?.let { FileDocumentManager.getInstance().getCachedDocument(it)?.text }
         val text = unsaved ?: runCatchingKeepingCancellation { file.takeIf { it.isFile }?.readText() }.getOrNull() ?: continue
-        val tree = runCatchingKeepingCancellation { SceneJson().parse(text) }.getOrNull() ?: continue
+        val tree = runCatchingKeepingCancellation { parseDocument(text) }.getOrNull() ?: continue
         val collection = (decoder.decode(tree) as? UiAdmission.Admitted)?.collection ?: continue
         val navigates = collection.screens.any { screen ->
             val stack = ArrayDeque(listOf(screen.root))

@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.splat
 
+import net.nevinsky.abyssus.plugin.assetfiles.assetResultMessage
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -90,14 +91,11 @@ class SplatSession(
         }
         val txn = transactions.create(AbyssusBundle.message(command), terrainFolder.name, files, before, SPLAT_FILE_NAME)
         val result = AssetFileCommand(project, store).execute(txn, affected = { emptyList() })
-        when (result) {
-            AssetCommandResult.Done -> Unit
-            AssetCommandResult.Cancelled -> report(AbyssusBundle.message("splatCreateCancelled"))
-            is AssetCommandResult.Conflict, is AssetCommandResult.Collision ->
-                report(AbyssusBundle.message("splatCreateFailed", AbyssusBundle.message("splatStrokeConflict")))
-            is AssetCommandResult.Blocked -> report(result.reason)
-            is AssetCommandResult.Failed -> report(AbyssusBundle.message("splatCreateFailed", result.cause.message.orEmpty()))
-        }
+        val conflict = { _: String -> AbyssusBundle.message("splatCreateFailed", AbyssusBundle.message("splatStrokeConflict")) }
+        assetResultMessage(
+            result, "splatCreateCancelled", conflict = conflict, collision = conflict,
+            failure = { AbyssusBundle.message("splatCreateFailed", it.message.orEmpty()) },
+        )?.let(report)
         cache.invalidate()
         return result
     }

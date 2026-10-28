@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.document
 
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
+import net.nevinsky.abyssus.lib.core.ecs.EntityDtoModule
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaBinder
 import net.nevinsky.abyssus.lib.core.assets.MetaType
@@ -25,7 +27,11 @@ class DocumentParsing(
     private val json: JsonProcessor,
     private val log: Logger,
     private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
+    registry: ComponentRegistry = ComponentRegistry(),
 ) {
+    /** Binds a scene with its components resolved through [registry]; what it does not know is kept raw. */
+    private val scenes = json.binderWith(EntityDtoModule(registry))
+
     fun requireSupported(text: String, kind: DocumentKind) {
         supported(text, kind)
     }
@@ -76,7 +82,7 @@ class DocumentParsing(
     fun parse(text: String): SceneDto {
         val root = json.readObject(text)
         format.requireSupported(root, DocumentKind.SCENE)
-        return json.bind(root, SceneDto::class.java)
+        return scenes.bind(root, SceneDto::class.java)
     }
 
     fun scene(text: String): SceneDto = parse(text)

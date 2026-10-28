@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentEdit
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
@@ -22,7 +23,7 @@ import net.nevinsky.abyssus.plugin.filetype.editSceneJson
  * [ArrangementEdits]'. [Changed][ArrangementResult.Changed] means the file was written.
  */
 object ArrangementEditing {
-    private fun run(project: Project, file: VirtualFile, command: String, edit: (com.fasterxml.jackson.databind.JsonNode) -> ArrangementResult): ArrangementResult {
+    private fun run(project: Project, file: VirtualFile, command: String, edit: DocumentEdit<ArrangementResult>): ArrangementResult {
         var result: ArrangementResult = ArrangementResult.Rejected(EditorBundle.message("componentSceneUnreadable"))
         val written = editSceneJson(project, file, command) { root ->
             result = edit(root)

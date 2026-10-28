@@ -17,7 +17,7 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.*
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import net.nevinsky.abyssus.lib.core.ecs.SceneFoliageListing
-import net.nevinsky.abyssus.lib.core.ecs.activeComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.activeComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.physics.*

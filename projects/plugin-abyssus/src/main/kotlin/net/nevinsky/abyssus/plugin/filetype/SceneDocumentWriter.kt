@@ -5,10 +5,10 @@
 
 package net.nevinsky.abyssus.plugin.filetype
 
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentEdit
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
 
-import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
@@ -33,14 +33,14 @@ fun interface AbyssusSceneEdited {
  *
  * The command is undone from the scene's own editor.
  */
-fun editSceneJson(project: Project, file: VirtualFile, commandName: String, mutate: (JsonNode) -> Boolean): Boolean =
+fun editSceneJson(project: Project, file: VirtualFile, commandName: String, mutate: DocumentEdit<Boolean>): Boolean =
     editSceneJson(project, file, commandName, false, mutate)
 
 /**
  * [editSceneJson] that, with [global], is also a project-level command: Undo and Redo reach it from any focus, such as
  * the Abyssus tree that started it, not only from the scene's editor.
  */
-fun editSceneJson(project: Project, file: VirtualFile, commandName: String, global: Boolean, mutate: (JsonNode) -> Boolean): Boolean {
+fun editSceneJson(project: Project, file: VirtualFile, commandName: String, global: Boolean, mutate: DocumentEdit<Boolean>): Boolean {
     val document = FileDocumentManager.getInstance().getDocument(file) ?: return false
     val kind = documentKind(file) ?: return false
     val original = document.text

@@ -5,20 +5,18 @@
 
 package net.nevinsky.abyssus.plugin.splat
 
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.editor.document.SceneDocument
 import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
 import net.nevinsky.abyssus.lib.core.editor.terrain.splat.ImageIoSplatCodec
 import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatStateReader
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
-import net.nevinsky.abyssus.plugin.dto.ProjectLayout
-import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
+import net.nevinsky.abyssus.plugin.brush.resolveTerrainEntity
 import java.io.File
 
 /** Project-owned entry point that opens the Paint Texture session of a terrain entity for a view. */
@@ -29,15 +27,14 @@ class SplatEditing(private val project: Project) {
      * entity is not a terrain. [mode] is read by the stroke on every press and drag.
      */
     fun open(scene: VirtualFile, entity: String, mode: () -> BrushMode?, report: (String) -> Unit, ready: (SplatSession?) -> Unit) {
-        val root = SceneDocumentCache.of(project).read(scene)?.root
-        val terrain = root?.let(::SceneDocument)?.BaseMeta(entity)?.takeIf { it.type == MetaType.TERRAIN }
-        val abss = ProjectLayout.abssFor(scene)
-        val assets = abss?.parent?.findChild("assets")
-        val folder = assets?.findChild(terrain?.name ?: "")
-        if (terrain == null || abss == null || folder == null) {
+        val found = resolveTerrainEntity(project, scene, entity)
+        val folder = found?.assetFolder(found.terrain.name)
+        if (found == null || folder == null) {
             ready(null)
             return
         }
+        val abss = found.abss
+        val assets = found.assets
         val core = service<AbyssusPluginCtx>()
         val projectDir = File(abss.parent.path)
         val store = LocalAssetFileStore(projectDir)

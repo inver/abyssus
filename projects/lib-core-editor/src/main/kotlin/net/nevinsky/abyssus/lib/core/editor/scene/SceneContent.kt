@@ -8,21 +8,12 @@ package net.nevinsky.abyssus.lib.core.editor.scene
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
-import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.*
-import net.nevinsky.abyssus.lib.core.editor.components.ComponentReader
 import net.nevinsky.abyssus.lib.core.editor.content.*
-import net.nevinsky.abyssus.lib.core.editor.document.EntityView
-import net.nevinsky.abyssus.lib.core.editor.document.BaseMetaOf
-import net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs
 import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
 import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
-import net.nevinsky.abyssus.lib.core.format.isEnabled
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.util.opt
-import org.slf4j.helpers.NOPLogger
 
 /**
  * A terrain entity's foliage: [foliageName] is the foliage asset folder its `FoliageComponent.assetName` holds as a
@@ -47,7 +38,7 @@ data class SceneContent(
     val cameras: List<CameraPlacement> = emptyList(),
     /** `localPosition` of every entity with a `PositionComponent` (entity id to position), for look-at targets. */
     val entityPositions: Map<String, Vector3> = emptyMap(),
-    /** The ids of entities whose `TypeComponent.type` is `HANDLE` (the direction handles of look-at lights). */
+    /** The ids of entities whose `type` is `HANDLE` (the direction handles of look-at lights). */
     val handleIds: Set<String> = emptySet(),
     /** The path arrangements: the lines the view shows handles on when one is selected. */
     val arrangements: List<ArrangementPlacement> = emptyList(),
@@ -58,64 +49,43 @@ data class SceneContent(
     fun aimHandleOf(light: LightPlacement): String? = light.lookAtId?.takeIf { it in handleIds }
 }
 
-/** What [scene] places, read through the runtime component codecs. */
+/** What [scene] places, read from its typed entities. */
 fun sceneContentOf(scene: SceneDto): SceneContent {
-    val entities = sceneDocumentFromEcs(scene.ecs, components).entities().mapNotNull { entity ->
-        if (entity.components == null) return@mapNotNull null
-        runCatchingKeepingCancellation { decode(entity) }.getOrNull()
-    }
+    val entities = scene.ecs.map { (id, entity) -> decode(id.toString(), entity) }
     val skybox = scene.skyboxName?.takeIf { scene.skyboxEnabled && it.isNotBlank() }
     return PlacementMapper().map(entities, skybox).copy(water = WaterCodec().read(scene.water).surfaces)
 }
 
 /**
- * Reads the entity's components through the runtime loader the Properties panel uses, so both show the same values,
- * defaults included. The render asset is read as the file names it, whichever delegate class holds it.
+ * Reads the entity's typed components, so the view and the Properties panel show the same values, defaults included.
+ * A disabled entity is present as data (its position still answers a look-at) and absent as behavior; a component
+ * disabled on its own is skipped.
  */
-private fun decode(entity: EntityView): DecodedEntity {
-    val components = entity.components!!
-    val position = components.opt("PositionComponent")
-    val type = components.opt("TypeComponent")?.let { read<TypeComponent>(it)?.type }
-    // a disabled entity is present as data (its position still answers a look-at) and absent as behavior
-    if (!entity.enabled) {
-        return DecodedEntity(
-            entity.id,
-            entity.name,
-            position?.let { read<PositionComponent>(it) },
-            position?.opt("localPosition") != null,
-            null,
-            null,
-            null,
-            null,
-        )
-    }
-    /** A component's node, or null when the entry is missing or disabled. */
-    fun active(name: String): JsonNode? = components.opt(name)?.takeIf { isEnabled(it) }
-    val asset = BaseMetaOf(active("RenderComponent"))
-    val light = active("LightComponent")
-    // a light entity whose light is disabled is not a light: without the component it would still shine with defaults
-    val lightDisabled =
-        type?.name?.startsWith("LIGHT") == true && components.opt("LightComponent")?.let { !isEnabled(it) } == true
+private fun decode(id: String, entity: Entity): DecodedEntity {
+    val header = entity.getComponent(HeaderComponent::class.java)
+    val disabled = header?.disabledComponents.orEmpty()
+    fun <C : Component> any(type: Class<C>): C? = entity.getComponent(type)
+    fun <C : Component> active(type: Class<C>): C? = any(type)?.takeIf { type !in disabled }
+    val name = any(NameComponent::class.java)?.name?.takeIf { it.isNotBlank() } ?: id
+    val position = any(PositionComponent::class.java)
+    if (header?.entityEnabled == false) return DecodedEntity(id, name, position, position != null, null, null, null, null)
+    val type = header?.type
+    val lightDisabled = type?.name?.startsWith("LIGHT") == true && LightComponent::class.java in disabled
+    val render = active(RenderComponent::class.java)
+    val asset = render?.takeIf { it.type != null && it.assetName.isNotEmpty() }?.let { DecodedAsset(it.type!!.name, it.assetName) }
     return DecodedEntity(
-        entity.id,
-        entity.name,
-        position?.let { read<PositionComponent>(it) },
-        position?.opt("localPosition") != null,
+        id,
+        name,
+        position,
+        position != null,
         if (lightDisabled) null else type,
-        active("CameraComponent")?.let { read<CameraComponent>(it) },
-        light?.let { read<LightComponent>(it) },
-        asset?.let { DecodedAsset(it.type.name, it.name) },
-        active("FoliageComponent")?.get("assetName")?.takeIf { it.isTextual }?.asText(),
-        active("PathArrangementComponent")?.let { read<PathArrangementComponent>(it) },
+        active(CameraComponent::class.java),
+        active(LightComponent::class.java),
+        asset,
+        active(FoliageComponent::class.java)?.assetName,
+        active(PathArrangementComponent::class.java),
     )
 }
-
-/** Binds components the way a scene load does, so the view and the Properties panel show the same values. */
-private val components = ComponentReader(JsonProcessor(NOPLogger.NOP_LOGGER))
-
-/** A component that cannot be bound is left out, so one bad value does not hide the entity. */
-private inline fun <reified C : Component> read(node: JsonNode): C? =
-    runCatchingKeepingCancellation { components.read(C::class.java, node) }.getOrNull()
 
 /** The libGDX forward axis (-Z) rotated by [q]. */
 fun forwardOf(q: Quaternion): Vector3 {

@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.lib.core.editor.terrain.splat
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_MAP
-import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaDocument
+import net.nevinsky.abyssus.lib.core.editor.document.newAssetMetaText
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
@@ -86,12 +86,7 @@ class SplatAssetWriter(
         val assetsDir = File(projectDir, ASSETS_DIR)
         val uuid = uniqueAssetUuid(json, assetsDir, randomUuid)
         val linked = link(terrainMetaText, uuid.toString()) ?: return SplatPlan.Refused(SplatPlanProblem.TERRAIN_META)
-        val meta = SceneJson().compact(
-            AssetMetaDocument(
-                lastModified = clock(), uuid = uuid.toString(), type = MetaType.TEXTURE,
-                additional = TextureAssetAdditional(SPLAT_FILE_NAME),
-            ),
-        )
+        val meta = newAssetMetaText(MetaType.TEXTURE, TextureAssetAdditional(SPLAT_FILE_NAME), uuid.toString(), clock())
         return SplatPlan.Planned(NewSplatFiles(freeFolder(assetsDir, terrainFolder), uuid.toString(), meta, codec.encode(pixels), linked))
     }
 

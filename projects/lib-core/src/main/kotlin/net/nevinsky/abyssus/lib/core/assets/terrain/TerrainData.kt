@@ -121,6 +121,9 @@ class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, v
         (h00 * (1 - fx) + h10 * fx) * (1 - fz) + (h01 * (1 - fx) + h11 * fx) * fz
     }
 
+    /** Height at terrain-local [x],[z] like [heightAt], with the position clamped onto the terrain instead of refused. */
+    fun clampedHeightAt(x: Float, z: Float): Float = heightAt(x.coerceIn(0f, size.toFloat()), z.coerceIn(0f, size.toFloat()))!!
+
     /**
      * The unit surface normal at terrain-local [x],[z] in [out], from the exact gradient of the bilinear patch:
      * `normalize(-dh/dx, 1, -dh/dz)`; null outside the terrain. The mesh's own normals come from central differences

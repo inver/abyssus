@@ -71,7 +71,7 @@ class GizmoHandles(val origin: Vector3, val mode: GizmoMode, val worldPerPixel: 
 /**
  * Whether the entity [entityId] gets rotate handles. A camera that looks at an existing entity takes its direction
  * from it, and a point light has none, so they only move. A light that looks at something other than a direction
- * handle (an entity whose `TypeComponent.type` is `HANDLE`) only moves too; turning it would mean moving an
+ * handle (an entity whose `type` is `HANDLE`) only moves too; turning it would mean moving an
  * unrelated object. A light aimed at a handle, and one with no resolving `lookAtId`, keep their rings.
  */
 fun canRotate(content: SceneContent, entityId: String): Boolean {

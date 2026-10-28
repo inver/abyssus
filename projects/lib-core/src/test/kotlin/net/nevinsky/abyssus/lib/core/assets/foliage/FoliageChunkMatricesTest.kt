@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.assets.foliage
 
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.testFileLoader
@@ -42,11 +44,10 @@ class FoliageChunkMatricesTest {
 
     /** The terrain entity of `Main Scene`: a translation, no rotation and no scale. */
     private fun terrainEntity(): Matrix4 {
-        val scene = SceneLoader(JsonProcessor(NOPLogger.NOP_LOGGER), files).load("Main Scene.scene")
-        val position = checkNotNull(scene.ecs) { "the scene's ecs" }
-            .get("1").get("components").get("PositionComponent").get("localPosition")
-        fun x(name: String) = position.get(name).asDouble().toFloat()
-        return Matrix4().setToTranslation(x("x"), x("y"), x("z"))
+        val scene = SceneLoader(JsonProcessor(NOPLogger.NOP_LOGGER), files, ComponentRegistry()).load("Main Scene.scene")
+        val position = checkNotNull(scene.ecs[1L]) { "entity 1 of the scene" }
+            .components.filterIsInstance<PositionComponent>().single().localPosition
+        return Matrix4().setToTranslation(position.x, position.y, position.z)
     }
 
     @Test

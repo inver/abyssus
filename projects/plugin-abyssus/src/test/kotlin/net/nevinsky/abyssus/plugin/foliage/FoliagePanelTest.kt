@@ -1,5 +1,7 @@
 package net.nevinsky.abyssus.plugin.foliage
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.components.service
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
@@ -43,7 +45,7 @@ class FoliagePanelTest : BasePlatformTestCase() {
     }
     private fun source(): FoliageSource.Ready {
         val text = File(folder.path, "meta.json").readText()
-        return readFoliageSource(folder.name, disk, json, text, net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parseObject(text)["additional"]) as FoliageSource.Ready
+        return readFoliageSource(folder.name, disk, json, text, net.nevinsky.abyssus.lib.core.editor.document.parseDocumentObject(text).at("additional")) as FoliageSource.Ready
     }
     private fun controller() = FoliageController(project, folder, source(), drafts, json, project.service<FoliageUndoCache>(),
         background = { it.run() }, ui = { it.run() }, readCurrent = { source() })

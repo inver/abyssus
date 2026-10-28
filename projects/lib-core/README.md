@@ -20,7 +20,7 @@ code is in `net.nevinsky.abyssus.lib.core.assets`.
 
 | Package | What |
 |---|---|
-| `core.io`, `core.util` | `FileLoader` (an asset folder's files, refusing names that leave the assets folder), `AbyssusProjectLayout` (folder and file name constants), `JsonProcessor` (binds native JSON), `NativeJsonTree` (the lossless reader: key order, nulls and number text such as `2.50` and `1.0E-4` kept; `SceneJson` and `SceneLoader` both read through it), `SourceBackedComponent` (a component written back from the object it was read from), `createFullscreenTriangle` (GL-thread mesh factory), shared digest/angle helpers and GL constants |
+| `core.io`, `core.util` | `FileLoader` (an asset folder's files, refusing names that leave the assets folder), `AbyssusProjectLayout` (folder and file name constants), `JsonProcessor` (binds native JSON), `NativeJsonTree` (the lossless reader: key order, nulls and number text such as `2.50` and `1.0E-4` kept; `SceneJson` and `SceneLoader` both read through it), `createFullscreenTriangle` (GL-thread mesh factory), shared digest/angle helpers and GL constants |
 | `core.defaults` | Top-level `NO_ENTITY` reference sentinel |
 | `core.dto` | `ProjectDto`, `SceneDto`, camera, light and fog DTOs |
 | `project`, `scene` (under `lib-core`) | `ProjectLoader`, `SceneLoader`, `RuntimeSceneLoader`, `SceneContext` |
@@ -94,7 +94,7 @@ entity that renders no terrain is reported once.
 `slots`) is built in and data only: no system reads it. Its points and the copies it lists in `slots` are in world
 coordinates. Defaults are omitted when it is written.
 
-`EcsLoader(json, registry).loadToEngine(ecs, SceneEngine())` reads `ecs.entities` and returns `EcsLoadingWarns`,
+`EcsLoader().loadToEngine(scene.ecs, SceneEngine())` loads the typed `Map<Long, EntityDto>` that `SceneLoader(json, files, registry)` bound, and returns `EcsLoadingWarns`,
 including raw components that could not bind. `RuntimeSceneLoader(sceneLoader, ecsLoader, log)` combines native
 scene admission, an independent engine per load, and look-at/camera systems. `load(sceneName)` reads a file from
 `scenes/`; `loadFromText(text)` reads supplied text without writing it.

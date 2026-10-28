@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.util.textAt
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -35,8 +37,8 @@ internal fun foliageChoices(project: Project, file: VirtualFile, entityId: Strin
         runCatchingKeepingCancellation {
             val meta = metas.inEditor(folder) ?: return@runCatchingKeepingCancellation null
             folder.name.takeIf {
-                meta.json["type"]?.textValue() == MetaType.FOLIAGE.name &&
-                        meta.json["additional"]?.get("terrain")?.textValue() == terrain.name
+                meta.json.textAt("type") == MetaType.FOLIAGE.name &&
+                        meta.json.textAt("additional", "terrain") == terrain.name
             }
         }.getOrNull()
     }
@@ -80,14 +82,8 @@ open class AddFoliageAction : AbyssusTreeAction<ComponentTarget>() {
         templatePresentation.text = AbyssusBundle.message("addFoliageTitle")
     }
 
-    override fun targetOf(node: Any?): ComponentTarget? {
-        val entry = (node as? DtoEntryNode)?.value ?: return null
-        val json = entry.value as? com.fasterxml.jackson.databind.JsonNode ?: return null
-        val target = componentTargetOf(node)?.takeIf { it.kind == null } ?: return null
-        return target.takeIf {
-            net.nevinsky.abyssus.lib.core.editor.document.sceneEntityView(entry.name, json)
-                .BaseMeta()?.isTerrain() == true
-        }
+    override fun targetOf(node: Any?): ComponentTarget? = entityTargetOf(node) { name, json ->
+        net.nevinsky.abyssus.lib.core.editor.host.sceneEntityView(name, json).BaseMeta()?.isTerrain() == true
     }
 
     override fun isEnabled(e: AnActionEvent, target: ComponentTarget): Boolean {

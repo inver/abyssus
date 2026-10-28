@@ -5,7 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.filetype
 
-import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.core.editor.document.setOrRemoveText
+import net.nevinsky.abyssus.lib.core.editor.document.setBooleanMember
 import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -88,9 +89,7 @@ class AbyssusProjectSettings(private val project: Project) : Disposable {
         if (!getSettings(abss).supported) return false
         val commandName = if (on) AbyssusBundle.message("commandTurnPhysicsOn") else AbyssusBundle.message("commandTurnPhysicsOff")
         return editSceneJson(project, abss, commandName) { root ->
-            if (root !is ObjectNode || root.get("physicsEnabled")?.let { it.isBoolean && it.booleanValue() == on } == true) return@editSceneJson false
-            root.put("physicsEnabled", on)
-            true
+            setBooleanMember(root, "physicsEnabled", on)
         }
     }
 
@@ -98,15 +97,7 @@ class AbyssusProjectSettings(private val project: Project) : Disposable {
     fun setAntialiasing(abss: VirtualFile, level: AntialiasingLevel): Boolean {
         if (!getSettings(abss).supported) return false
         return editSceneJson(project, abss, AbyssusBundle.message("commandSetProjectAntialiasing")) { root ->
-            if (root !is ObjectNode) return@editSceneJson false
-            val current = root.get("sceneViewAntialiasing")
-            if (current == null && level == AntialiasingLevel.DEFAULT) return@editSceneJson false
-            if (level == AntialiasingLevel.DEFAULT) root.remove("sceneViewAntialiasing")
-            else {
-                if (current?.isTextual == true && current.textValue() == level.name) return@editSceneJson false
-                root.put("sceneViewAntialiasing", level.name)
-            }
-            true
+            setOrRemoveText(root, "sceneViewAntialiasing", level.name.takeUnless { level == AntialiasingLevel.DEFAULT })
         }
     }
 

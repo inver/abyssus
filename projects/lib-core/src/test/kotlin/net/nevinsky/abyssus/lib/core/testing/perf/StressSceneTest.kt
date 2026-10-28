@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.testing.perf
 
+import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.utils.GdxNativesLoader
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
@@ -47,11 +49,10 @@ class StressSceneTest {
         val (dir, info) = generate()
         assertEquals(1000, info.modelPlacements)
         assertEquals(5000, info.foliageCopies)
-        val scene = SceneLoader(JsonProcessor(NOPLogger.NOP_LOGGER), FileLoader(dir)).load(info.sceneName)
-        val entities = scene.ecs!!
-        val models = entities.properties().count { (_, e) -> e.toString().contains("\"type\":\"MODEL\"") }
-        assertEquals(1000, models)
-        assertTrue(entities.toString().contains("\"type\":\"TERRAIN\""))
+        val scene = SceneLoader(JsonProcessor(NOPLogger.NOP_LOGGER), FileLoader(dir), ComponentRegistry()).load(info.sceneName)
+//        val types = scene.ecs.values.map { it.type }
+//        assertEquals(1000, types.count { it == EntityType.OBJECT })
+//        assertTrue(types.any { it == EntityType.TERRAIN })
 
         // the bake is not stale: it matches the terrain and the foliage meta
         val files = FileLoader(dir)

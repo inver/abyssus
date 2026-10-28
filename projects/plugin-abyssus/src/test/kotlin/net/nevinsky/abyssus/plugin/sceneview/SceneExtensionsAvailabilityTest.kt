@@ -69,7 +69,7 @@ class SceneExtensionsAvailabilityTest : BasePlatformTestCase() {
                 val listener = object : SimulationListener { override fun started() {} override fun failed(message: String) {} }
                 assertEquals(2f,(simulation as SceneSimulationProvider).start(request,listener).poses()!!.getValue("0").position.y)
                 val content = net.nevinsky.abyssus.lib.core.editor.scene.SceneContent()
-                val view = OverlayView(content, net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse("{}"),
+                val view = OverlayView(content, emptyMap(),
                     null,null,com.badlogic.gdx.graphics.PerspectiveCamera(),600,false,false)
                 var lines = 0
                 overlay.create(project,file).draw(view, object : net.nevinsky.abyssus.lib.core.editor.pick.LineSink {

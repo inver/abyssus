@@ -23,11 +23,17 @@ class ComponentEditorTest {
     private val editor = ComponentEditor(ResourceEditorMessages())
 
     private fun scene(vararg entities: String) =
-        SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{${entities.joinToString(",")}},"archetypes":{"1":{"a":1}},"metadata":{"m":2}}}""")
+        SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{${entities.joinToString(",")}}}""")
 
-    private fun entity(id: Int, components: String) = """"$id":{"archetype":1,"components":{$components}}"""
+    /** Entity [id]; a `"TypeComponent":{"type":...}` in [components] is the entity's `type`. */
+    private fun entity(id: Int, components: String): String {
+        val typed = Regex(""""TypeComponent"\s*:\s*\{\s*"type"\s*:\s*"(\w+)"\s*\},?""")
+        val type = typed.find(components)?.groupValues?.get(1)
+        val header = if (type != null) """"type":"$type",""" else ""
+        return """"$id":{$header"components":{${typed.replace(components, "").trimEnd(',')}}}"""
+    }
 
-    private fun components(root: JsonNode, id: Int) = root["ecs"]["entities"]["$id"]["components"]
+    private fun components(root: JsonNode, id: Int) = root["ecs"]["$id"]["components"]
 
     private fun assertRejected(result: EditResult) =
         assertTrue("expected Rejected, was $result", result is EditResult.Rejected)
@@ -52,9 +58,8 @@ class ComponentEditorTest {
     @Test
     fun everyKindHasFields() {
         val names = editor.kinds.associate { it.name to it.fields.map { f -> f.name } }
-        assertEquals(9, names.size)
+        assertEquals(7, names.size)
         assertEquals(listOf("name"), names["NameComponent"])
-        assertEquals(listOf("type"), names["TypeComponent"])
         assertEquals(listOf("parentEntityId"), names["ParentComponent"])
         assertEquals(11, names["PositionComponent"]!!.size)
         assertTrue("camera.fieldOfView" in names["CameraComponent"]!!)
@@ -70,7 +75,6 @@ class ComponentEditorTest {
                 "edgeSoftness"
             ), names["LightComponent"]
         )
-        assertEquals(listOf("entity1Id", "entity2Id"), names["Point2PointPositionComponent"])
         assertEquals(listOf("assetType", "assetName", "shaderKey"), names["RenderComponent"])
         assertEquals(
             listOf("asset.assetName", "spacing", "offset", "sides", "alignToPath", "yawOffset"),
@@ -195,7 +199,7 @@ class ComponentEditorTest {
         assertFalse("PositionComponent" in missing)
         assertFalse("PickableComponent" in missing)
         assertTrue("LightComponent" in missing)
-        assertEquals(7, missing.size)
+        assertEquals(5, missing.size)
     }
 
     @Test
@@ -236,13 +240,11 @@ class ComponentEditorTest {
     }
 
     @Test
-    fun updateNameAndType() {
-        val root = scene(entity(0, """"NameComponent":{"name":"a"},"TypeComponent":{"type":"OBJECT"}"""))
+    fun updateName() {
+        val root = scene(entity(0, """"NameComponent":{"name":"a"}"""))
         assertEquals(EditResult.Changed, editor.update(root, "0", "NameComponent", "name", "b"))
-        assertEquals(EditResult.Changed, editor.update(root, "0", "TypeComponent", "type", "GROUP"))
-        assertRejected(editor.update(root, "0", "TypeComponent", "type", "NOPE"))
+        assertRejected(editor.update(root, "0", "TypeComponent", "type", "GROUP"))
         assertEquals("b", components(root, 0)["NameComponent"]["name"].asText())
-        assertEquals("GROUP", components(root, 0)["TypeComponent"]["type"].asText())
     }
 
     @Test
@@ -271,9 +273,9 @@ class ComponentEditorTest {
 
     @Test
     fun removeKeepsTheOtherComponentsInOrder() {
-        val root = scene(entity(0, """"NameComponent":{},"LightComponent":{"light":{}},"TypeComponent":{}"""))
+        val root = scene(entity(0, """"NameComponent":{},"LightComponent":{"light":{}},"PickableComponent":{}"""))
         assertEquals(EditResult.Changed, editor.remove(root, "0", "LightComponent"))
-        assertEquals(listOf("NameComponent", "TypeComponent"), components(root, 0).fieldNames().asSequence().toList())
+        assertEquals(listOf("NameComponent", "PickableComponent"), components(root, 0).fieldNames().asSequence().toList())
         assertRejected(editor.remove(root, "0", "LightComponent"))
     }
 
@@ -333,14 +335,10 @@ class ComponentEditorTest {
         editor.add(root, "0", "LightComponent")
         editor.update(root, "4", "CameraComponent", "camera.near", "0.25")
         editor.update(root, "0", "PositionComponent", "localPosition.y", "2.5")
-        val loader = net.nevinsky.abyssus.lib.core.ecs.EcsLoader(
-            JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER),
-            net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry(),
-        )
         val before = net.nevinsky.abyssus.lib.core.ecs.SceneEngine()
         val after = net.nevinsky.abyssus.lib.core.ecs.SceneEngine()
-        val beforeWarnings = loader.loadToEngine(original["ecs"], before)
-        val afterWarnings = loader.loadToEngine(root["ecs"], after)
+        val beforeWarnings = net.nevinsky.abyssus.lib.core.testing.loadEcs(SceneJson().compact(original["ecs"]), before)
+        val afterWarnings = net.nevinsky.abyssus.lib.core.testing.loadEcs(SceneJson().compact(root["ecs"]), after)
         assertEquals(beforeWarnings.warnings, afterWarnings.warnings)
         assertEquals(before.entities.size(), after.entities.size())
     }

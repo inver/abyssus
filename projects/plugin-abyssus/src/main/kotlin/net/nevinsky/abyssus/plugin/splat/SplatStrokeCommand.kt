@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.splat
 
+import net.nevinsky.abyssus.plugin.assetfiles.strokeResultMessage
+import net.nevinsky.abyssus.plugin.assetfiles.assetFilesAffected
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
@@ -148,13 +150,8 @@ class SplatStrokeCommand(
         ) ?: return
         val result = AssetFileCommand(project, store).execute(
             txn,
-            affected = { listOfNotNull(terrainFolder.findChild(META_FILE), LocalFileSystem.getInstance().refreshAndFindFileByIoFile(state.file)) },
+            affected = { assetFilesAffected(terrainFolder, state.file) },
         )
-        when (result) {
-            AssetCommandResult.Done, AssetCommandResult.Cancelled -> Unit
-            is AssetCommandResult.Conflict, is AssetCommandResult.Collision -> report(AbyssusBundle.message("splatStrokeConflict"))
-            is AssetCommandResult.Blocked -> report(result.reason)
-            is AssetCommandResult.Failed -> report(AbyssusBundle.message("splatStrokeFailed", result.cause.documentDisplayMessage()))
-        }
+        strokeResultMessage(result, "splatStrokeConflict", "splatStrokeFailed")?.let(report)
     }
 }

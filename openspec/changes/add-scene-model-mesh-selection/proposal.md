@@ -7,7 +7,7 @@ and forces authors to split content into many asset folders to show different pa
 
 ## What Changes
 
-- Add an optional `meshId` field to a model entity's `RenderComponent` in the scene JSON (beside `assetName`: `renderable.asset.meshId` in the nested shape, `meshId` in the flat shape), naming
+- Add an optional `meshId` field to a model entity's `RenderComponent` in the scene JSON (beside `assetName`, in the flat render component), naming
   the concrete mesh (with its materials) of the model asset to use; when absent the whole model is drawn as before.
 - Filter a model's `ModelData` at build time (mesh, its materials, node parts, textures) so the built `Model` contains
   only the selected mesh; identify and cache each variant by a typed `ModelKey(asset, meshId)`.

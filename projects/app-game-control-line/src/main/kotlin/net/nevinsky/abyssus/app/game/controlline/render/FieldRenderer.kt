@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.render
 
+import net.nevinsky.abyssus.lib.render.light.setSkyLight
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
@@ -164,8 +165,7 @@ class FieldRenderer(
                 val lighting = procedural.lighting
                 val next = lighting?.next
                 val light = SkyLight(current, next, lighting?.fade ?: 0f)
-                environment.remove(ColorAttribute.AmbientLight)
-                environment.set(skyAttribute(current, next, light.weight))
+                environment.setSkyLight(current, next, light.weight)
                 return light
             }
         }
@@ -175,11 +175,6 @@ class FieldRenderer(
         }
         return null
     }
-
-    private fun skyAttribute(current: HdrEnvironment, next: HdrEnvironment?, weight: Float) = EnvironmentLightAttribute(
-        current.specular, current.irradiance, current.levels, current.ambient,
-        next?.let { EnvironmentLightAttribute(it.specular, it.irradiance, it.levels, it.ambient) }, if (next != null) weight else 0f,
-    )
 
     /**
      * Whether the scene's assets are settled: its models and terrains are built, and its foliage is either built or

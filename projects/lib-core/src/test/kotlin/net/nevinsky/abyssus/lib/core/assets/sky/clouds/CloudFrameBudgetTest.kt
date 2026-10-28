@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.plugin.sceneview.skybox
+package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

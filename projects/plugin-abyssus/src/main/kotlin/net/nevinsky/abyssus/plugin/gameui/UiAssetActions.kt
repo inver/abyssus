@@ -4,6 +4,11 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.util.textsAt
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.InputValidator
@@ -23,8 +28,7 @@ import java.io.File
 
 /** The names in the project file's `uiAssetNames`, from its current text; empty when it is missing or malformed. */
 fun registeredUiAssets(abss: VirtualFile): List<String> = runCatchingKeepingCancellation {
-    SceneJson().parse(textOf(abss))["uiAssetNames"]?.takeIf { it.isArray }
-        ?.mapNotNull { it.takeIf { n -> n.isTextual }?.textValue() }
+    parseDocument(textOf(abss)).textsAt("uiAssetNames")
 }.getOrNull().orEmpty()
 
 /** Right-click on the Assets node: create a UI asset in this project. */
@@ -37,7 +41,7 @@ open class NewUiAssetAction : AbyssusTreeAction<VirtualFile>() {
 
     override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
         val abss = target
-        val assets = File(abss.parent.path, "assets")
+        val assets = File(abss.parent.path, ASSETS_DIR)
         val name = Messages.showInputDialog(
             project,
             AbyssusBundle.message("uiNewAssetPrompt"),
@@ -97,8 +101,8 @@ class ProjectUiSource(
     override fun collection(assetName: String): net.nevinsky.abyssus.lib.core.ui.model.UiCollection? {
         val project = abss ?: return null
         if (assetName !in registeredUiAssets(project)) return null
-        val meta = project.parent?.findChild("assets")?.findChild(assetName)?.findChild("meta.json") ?: return null
-        val tree = runCatchingKeepingCancellation { SceneJson().parse(textOf(meta)) }.getOrNull() ?: return null
+        val meta = project.parent?.findChild(ASSETS_DIR)?.findChild(assetName)?.findChild(META_FILE) ?: return null
+        val tree = runCatchingKeepingCancellation { parseDocument(textOf(meta)) }.getOrNull() ?: return null
         return (decoder.decode(tree) as? net.nevinsky.abyssus.lib.core.ui.model.UiAdmission.Admitted)?.collection
     }
 }

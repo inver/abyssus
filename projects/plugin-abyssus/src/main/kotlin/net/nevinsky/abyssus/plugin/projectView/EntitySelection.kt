@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.util.rawAt
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -67,7 +70,7 @@ private fun isSceneRoot(node: Any, sceneFile: VirtualFile): Boolean = when (node
 fun selectEntityInAbyssusView(project: Project, sceneFile: VirtualFile, entityId: String) {
     try {
         // a linked copy of a path arrangement has no row of its own: its arrangement's row stands for it
-        val rowId = SceneDocumentCache.of(project).read(sceneFile)?.root?.get("ecs")
+        val rowId = SceneDocumentCache.of(project).read(sceneFile)?.root?.at("ecs")
             ?.let { arrangementOwnerOf(it, entityId) } ?: entityId
         val visitor = TreeVisitor { path -> entityVisitAction(sceneFile, rowId, path.path.map(TreeUtil::getUserObject)) }
         selectInAbyssusView(project, visitor)

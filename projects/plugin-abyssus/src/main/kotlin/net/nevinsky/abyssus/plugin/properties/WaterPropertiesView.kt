@@ -83,7 +83,7 @@ internal class WaterPropertiesView @JvmOverloads constructor(
         val enabled = state.enabled
         val subtitle = state.preset?.let { AbyssusBundle.message("waterPropertiesSubtitle", waterPresetLabel(it)) }
             ?: AbyssusBundle.message("waterPropertiesSubtitleUnknown")
-        val sceneName = ProjectLayout.abssFor(target.file)?.let { net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(textOf(target.file)).get("name")?.asText() }
+        val sceneName = ProjectLayout.abssFor(target.file)?.let { net.nevinsky.abyssus.lib.core.editor.document.parseDocument(textOf(target.file)).textAt("name") }
         val top = HeaderPanel(
             Header(
                 listOfNotNull(ProjectLayout.abssFor(target.file)?.name, sceneName ?: target.file.nameWithoutExtension),

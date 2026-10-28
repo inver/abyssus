@@ -5,8 +5,13 @@
 
 package net.nevinsky.abyssus.plugin.assetfiles
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.core.editor.document.metaReferencesUuid
+import net.nevinsky.abyssus.lib.core.editor.document.sceneNamedAssets
+import net.nevinsky.abyssus.lib.core.editor.document.removeEntityNode
+import net.nevinsky.abyssus.lib.core.util.textAt
+import net.nevinsky.abyssus.lib.core.util.textValuesOf
+import net.nevinsky.abyssus.lib.core.util.containsText
+import net.nevinsky.abyssus.lib.core.util.rawAt
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
@@ -38,30 +43,17 @@ class AssetReferenceGuard(private val projectDir: File) {
         val sceneFiles = (scenes.map { it.absoluteFile } + unsaved.keys.filter { it.extension == ProjectLayout.SCENE_EXTENSION && it.parentFile?.name == ProjectLayout.SCENES_DIR })
             .distinct().sortedBy { it.name }
         for (scene in sceneFiles) {
-            val root = text(scene)?.let { runCatchingKeepingCancellation { SceneJson().parse(it).also { root -> net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat().requireSupported(root, net.nevinsky.abyssus.lib.core.format.DocumentKind.SCENE) } }.getOrNull() } ?: continue
-            if (ignoring != null && ignoring.scene.absoluteFile == scene) (SceneEntityTree(root).entities() as? ObjectNode)?.remove(ignoring.entityId)
-            if (names(root).contains(name)) return "${scene.name} uses $name"
+            val ignored = ignoring?.entityId?.takeIf { ignoring.scene.absoluteFile == scene }
+            val names = text(scene)?.let { sceneNamedAssets(it, ignored) } ?: continue
+            if (name in names) return "${scene.name} uses $name"
         }
         val assets = File(projectDir, ASSETS_DIR)
         val metas = assets.listFiles { f -> f.isDirectory && f.name != name }.orEmpty().map { File(it, META_FILE).absoluteFile }
         for (meta in (metas + unsaved.keys.filter { it.name == META_FILE && it.parentFile?.parentFile?.absoluteFile == assets.absoluteFile && it.parentFile.name != name }).distinct().sortedBy { it.path }) {
-            val root = text(meta)?.let { runCatchingKeepingCancellation { SceneJson().parse(it).also { root -> net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat().requireSupported(root, net.nevinsky.abyssus.lib.core.format.DocumentKind.ASSET) } }.getOrNull() } ?: continue
-            if (holds(root.get("additional"), uuid)) return "${meta.parentFile.name} uses $name"
+            val holds = text(meta)?.let { metaReferencesUuid(it, uuid) } ?: continue
+            if (holds) return "${meta.parentFile.name} uses $name"
         }
         return null
-    }
-
-    /** The asset and sky names a scene's JSON holds. */
-    private fun names(root: JsonNode): Set<String> = buildSet {
-        for (field in listOf("assetName", "shaderKey")) root.findValues(field).forEach { if (it.isTextual) add(it.asText()) }
-        root.get("skyboxName")?.takeIf { it.isTextual }?.let { add(it.asText()) }
-    }
-
-    private fun holds(node: JsonNode?, uuid: String): Boolean = when {
-        node == null -> false
-        node.isTextual -> node.asText() == uuid
-        node.isContainerNode -> node.any { holds(it, uuid) }
-        else -> false
     }
 
     private fun unsavedTexts(): Map<File, String> {

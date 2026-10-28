@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.lib.core.ecs
 
+import net.nevinsky.abyssus.lib.core.ecs.component.isActive
+import net.nevinsky.abyssus.lib.core.ecs.component.activeComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
+import net.nevinsky.abyssus.lib.core.testing.loadEcs
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
@@ -17,22 +21,21 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.slf4j.helpers.NOPLogger
 
-class EnabledStateTest {
+class HeaderComponentTest {
     private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
     private val registry = ComponentRegistry()
-    private val loader = EcsLoader(json, registry)
 
     private fun load(entity: String, reg: ComponentRegistry = registry): Pair<SceneEngine, EcsLoadingWarns> {
         val engine = SceneEngine()
-        val warns = EcsLoader(json, reg).loadToEngine(NativeJsonTree().parse("""{"entities":{"1":$entity}}"""), engine)
+        val warns = loadEcs("""{"1":$entity}""", engine, reg, json)
         return engine to warns
     }
 
     @Test
-    fun aSceneWithoutTheFlagHasNoState() {
+    fun aSceneWithoutTheFlagHasAnEnabledHeader() {
         val (engine, _) = load("""{"components":{"NameComponent":{"name":"a"}}}""")
         val entity = engine.entities.single()
-        assertNull(entity.getComponent(EnabledState::class.java))
+        assertTrue(entity.getComponent(HeaderComponent::class.java).entityEnabled)
         assertTrue(entity.isActive())
         assertTrue(entity.isActive(NameComponent::class.java))
     }
@@ -40,7 +43,7 @@ class EnabledStateTest {
     @Test
     fun aDisabledComponentLoadsAsDataWithoutBehavior() {
         val (engine, warns) = load(
-            """{"components":{"NameComponent":{"name":"a","enabled":false},"PositionComponent":{"position":{"x":1,"y":2,"z":3}}}}"""
+            """{"disabledComponents":["NameComponent"],"components":{"NameComponent":{"name":"a"},"PositionComponent":{"position":{"x":1,"y":2,"z":3}}}}"""
         )
         assertTrue(warns.warnings.toString(), warns.warnings.isEmpty())
         val entity = engine.entities.single()
@@ -53,7 +56,7 @@ class EnabledStateTest {
 
     @Test
     fun aDisabledEntityContributesNothing() {
-        val (engine, _) = load("""{"enabled":false,"components":{"PositionComponent":{}}}""")
+        val (engine, _) = load("""{"flags":1,"components":{"PositionComponent":{}}}""")
         val entity = engine.entities.single()
         assertFalse(entity.isActive())
         assertFalse(entity.isActive(PositionComponent::class.java))
@@ -62,26 +65,30 @@ class EnabledStateTest {
 
     @Test
     fun theFlagIsReadAgainWhenTheStateChanges() {
-        val (engine, _) = load("""{"enabled":false,"components":{"PositionComponent":{}}}""")
+        val (engine, _) = load("""{"flags":1,"components":{"PositionComponent":{}}}""")
         val entity = engine.entities.single()
-        entity.getComponent(EnabledState::class.java).entityEnabled = true
+        entity.getComponent(HeaderComponent::class.java).entityEnabled = true
         assertTrue(entity.isActive(PositionComponent::class.java))
     }
 
     class ClashComponent : Component {
-        var enabled: Boolean = true
+        var enabled: Boolean = false
     }
 
     @Test
-    fun aComponentThatDeclaresEnabledIsReservedAndKeptRaw() {
+    fun aComponentThatDeclaresEnabledIsAnOrdinaryComponent() {
         val reg = ComponentRegistry()
         reg.register("ClashComponent", ClashComponent::class.java)
-        assertTrue(reg.isReserved(ClashComponent::class.java))
-        assertEquals(listOf(ClashComponent::class.java), reg.reservedClashes)
-        assertFalse(reg.isReserved(NameComponent::class.java))
-        val (engine, warns) = load("""{"components":{"ClashComponent":{"enabled":false}}}""", reg)
-        assertNull(engine.entities.single().getComponent(ClashComponent::class.java))
-        assertEquals(1, warns.carried.size)
-        assertTrue(warns.warnings.single().contains("reserves"))
+        val (engine, warns) = load("""{"components":{"ClashComponent":{"enabled":true}}}""", reg)
+        assertTrue(engine.entities.single().getComponent(ClashComponent::class.java).enabled)
+        assertTrue(warns.warnings.isEmpty())
+    }
+
+    @Test
+    fun theHeaderCarriesTheTypeAndTheDisabledComponents() {
+        val (engine, _) = load("""{"type":"LIGHT_SPOT","disabledComponents":["NameComponent","Mystery"],"components":{"NameComponent":{"name":"a"},"Mystery":{"w":2.50}}}""")
+        val header = engine.entities.single().getComponent(HeaderComponent::class.java)
+        assertEquals(net.nevinsky.abyssus.lib.core.dto.EntityType.LIGHT_SPOT, header.type)
+        assertEquals(setOf(NameComponent::class.java), header.disabledComponents)
     }
 }

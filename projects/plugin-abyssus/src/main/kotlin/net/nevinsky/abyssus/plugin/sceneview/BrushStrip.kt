@@ -148,6 +148,35 @@ internal abstract class BrushStrip<S : Any>(
 }
 
 /**
+ * A [BrushStrip] whose brush the user asks for with a toggle: [requested] is that ask, and [onEnded] tells the host when
+ * the brush ends because the user left it (not when the session is only reloaded). AWT thread.
+ */
+internal abstract class RequestedBrushStrip<S : Any>(
+    renderer: SceneRenderer,
+    interaction: SceneInteraction,
+    play: PlayState,
+    kinds: BrushKinds,
+    kind: String,
+    onChanged: () -> Unit,
+    radiusName: String,
+    strengthName: String,
+    stripName: String,
+    private val onEnded: () -> Unit,
+) : BrushStrip<S>(renderer, interaction, play, kinds, kind, onChanged, radiusName, strengthName, stripName) {
+    protected var requested = false
+
+    override val wanted: Boolean get() = requested
+
+    /** Takes the brush off the view; [notify] tells the host the brush is over (not when the session is only reloaded). */
+    override fun end(notify: Boolean) {
+        val was = requested
+        super.end(notify)
+        requested = false
+        if (notify && was) onEnded()
+    }
+}
+
+/**
  * The terrain brushes of one Scene view, in toolbar order. Starting one ends the others, since the view holds one brush
  * mode at a time; a brush added later registers here and is built into the toolbar, synced and closed with the rest.
  */

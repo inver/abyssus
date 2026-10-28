@@ -3,7 +3,7 @@
 ### Requirement: A model render component may name one mesh
 
 A native render component of asset type `MODEL` MAY carry an optional non-empty `meshId` beside `assetName`
-(`renderable.asset.meshId`, or `meshId` in the flat shape), naming one mesh of the model asset. Loading SHALL parse it
+(`meshId`, beside `assetName` in the flat render component), naming one mesh of the model asset. Loading SHALL parse it
 without consulting the model asset; a `meshId` the model does not contain is handled when the model is built (see
 `scene-model-rendering`) and does not stop other entities from loading. An absent `meshId` SHALL mean the whole model. A `meshId` on a `TERRAIN` render
 component SHALL be ignored and preserved. Writers SHALL omit `meshId` when it is absent or cleared and SHALL keep its

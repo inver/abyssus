@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.ecs
 
+import net.nevinsky.abyssus.lib.core.testing.loadEcs
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.io.NativeJsonTree
 import org.junit.Assert.assertEquals
@@ -24,9 +25,8 @@ class SceneFoliageListingTest {
         }}"""
 
     private fun list(vararg entities: String): List<SceneFoliage> {
-        val ecs = NativeJsonTree().parse("""{"entities":{${entities.joinToString(",")}}}""")
         val engine = SceneEngine()
-        EcsLoader(JsonProcessor(NOPLogger.NOP_LOGGER), ComponentRegistry()).loadToEngine(ecs, engine)
+        loadEcs("""{${entities.joinToString(",")}}""", engine)
         return SceneFoliageListing { warnings += it }.list(engine)
     }
 

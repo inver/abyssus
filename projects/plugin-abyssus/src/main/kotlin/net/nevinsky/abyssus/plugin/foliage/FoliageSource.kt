@@ -5,7 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.foliage
 
-import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDataFile
@@ -74,7 +75,7 @@ fun readFoliageSource(
     projectDir: File,
     json: JsonProcessor,
     metaText: String,
-    additional: JsonNode?,
+    additional: Document?,
 ): FoliageSource {
     return readFoliageSource(folderName, projectDir, json, metaText,
         additional?.let { net.nevinsky.abyssus.lib.core.editor.document.FoliageSettingsBinding().read(it) } ?: FoliageMeta())

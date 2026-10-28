@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.lib.core.editor.document.SceneRayField
 import net.nevinsky.abyssus.lib.core.editor.document.RayDataEdit
 import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialIdentity
@@ -17,7 +19,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 
 class SceneRaySettingsEditTest : BasePlatformTestCase() {
-    private val original=SceneJson().pretty(SceneJson().parse("""{"format":"abyssus","formatVersion":1,"rayTracing":{"maxReflectionBounces":3},"other":2.500,"ecs":{"entities":{"0":{"components":{"RenderComponent":{}}}}}}"""))
+    private val original=SceneJson().pretty(SceneJson().parse("""{"format":"abyssus","formatVersion":1,"rayTracing":{"maxReflectionBounces":3},"other":2.500,"ecs":{"0":{"components":{"RenderComponent":{}}}}}"""))
     fun testSceneEditsAreOneCommandWithExactUndoRedoAndNoOtherWrites() {
         val file=myFixture.addFileToProject("p/scenes/main.scene",original).virtualFile
         val projectFile=myFixture.addFileToProject("p/p.abss","untouched project").virtualFile
@@ -25,7 +27,7 @@ class SceneRaySettingsEditTest : BasePlatformTestCase() {
         val model=myFixture.addFileToProject("p/assets/model/model.gltf","untouched model").virtualFile
         myFixture.openFileInEditor(file)
         val editor=TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
-        val expected=SceneJson().parse(original)["rayTracing"]["maxReflectionBounces"]
+        val expected=parseDocument(original).at("rayTracing", "maxReflectionBounces")
         assertEquals(RayDataEdit.Changed,SceneRayEdits.setting(project,file,SceneRayField.REFLECTIONS,expected,"2"))
         val document=FileDocumentManager.getInstance().getDocument(file)!!
         val changed=original.replace("Bounces\": 3","Bounces\": 2")
@@ -38,7 +40,7 @@ class SceneRaySettingsEditTest : BasePlatformTestCase() {
     }
     fun testStaleInvalidEqualAndUnsupportedEditsWriteNothing() {
         val file=myFixture.addFileToProject("s.scene",original).virtualFile
-        val expected=SceneJson().parse(original)["rayTracing"]["maxReflectionBounces"]
+        val expected=parseDocument(original).at("rayTracing", "maxReflectionBounces")
         assertEquals(RayDataEdit.Conflict,SceneRayEdits.setting(project,file,SceneRayField.REFLECTIONS,null,"4"))
         assertEquals(RayDataEdit.Unchanged,SceneRayEdits.setting(project,file,SceneRayField.REFLECTIONS,expected,"3"))
         assertTrue(SceneRayEdits.setting(project,file,SceneRayField.REFLECTIONS,expected,"17") is RayDataEdit.Rejected)

@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin.foliage
 
-import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.core.editor.document.replaceDocument
 import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.command.UndoConfirmationPolicy
 import com.intellij.openapi.command.undo.UndoManager
@@ -26,7 +26,6 @@ internal fun applyFoliageFiles(
     after: String,
 ): AssetCommandResult {
     if (before == after) return command.execute(txn, affected = { listOf(meta) })
-    val target = SceneJson().parse(after) as ObjectNode
     var result: AssetCommandResult = AssetCommandResult.Cancelled
     CommandProcessor.getInstance().executeCommand(project, {
         if (textOf(meta) != before) {
@@ -40,7 +39,7 @@ internal fun applyFoliageFiles(
         // Undo runs actions in reverse: this saves the document after its native text Undo has finished.
         manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = true))
         val edited = editSceneJson(project, meta, txn.name) { root ->
-            (root as ObjectNode).removeAll().setAll<ObjectNode>(target)
+            replaceDocument(root, after)
             true
         }
         if (!edited) {
@@ -63,14 +62,13 @@ internal fun applyFoliageFiles(
  * any more or the edit could not be made; then nothing was written.
  */
 internal fun applyFoliageMetadata(project: Project, meta: VirtualFile, name: String, before: String, after: String): Boolean {
-    val target = SceneJson().parse(after) as ObjectNode
     var done = false
     CommandProcessor.getInstance().executeCommand(project, {
         if (textOf(meta) != before) return@executeCommand
         val manager = UndoManager.getInstance(project)
         manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = true))
         done = editSceneJson(project, meta, name) { root ->
-            (root as ObjectNode).removeAll().setAll<ObjectNode>(target)
+            replaceDocument(root, after)
             true
         }
         if (done) manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = false))

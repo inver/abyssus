@@ -92,7 +92,7 @@ class ComponentActionsTest : BasePlatformTestCase() {
     fun testAddIsOfferedOnEntityRowsOnly() {
         copyProject()
         assertTrue(visible(AddOn(entity("0"))))
-        assertFalse(visible(AddOn(component("0", "TypeComponent"))))
+        assertFalse(visible(AddOn(component("0", "PositionComponent"))))
         assertFalse(visible(AddOn(abss())))
         assertFalse(visible(AddOn(descend(abss(), "scenes"))))
         assertFalse(visible(AddOn(descend(abss(), "assets"))))
@@ -128,12 +128,12 @@ class ComponentActionsTest : BasePlatformTestCase() {
         items.first().actionPerformed(TestActionEvent.createTestEvent(items.first()))
         val asset = components("6")["RenderComponent"]
         assertEquals(assets.first().name, asset["assetName"].asText())
-        assertEquals(assets.first().type, asset["type"].asText())
+        assertEquals(assets.first().type.name, asset["type"].asText())
     }
 
     fun testRemoveIsOfferedOnModeledComponentsOnly() {
         copyProject()
-        assertTrue(visible(RemoveOn(component("0", "TypeComponent"))))
+        assertTrue(visible(RemoveOn(component("0", "NameComponent"))))
         assertFalse(visible(RemoveOn(component("0", "PickableComponent"))))
         assertFalse(visible(RemoveOn(entity("0"))))
         assertFalse(visible(RemoveOn(abss())))
@@ -141,9 +141,9 @@ class ComponentActionsTest : BasePlatformTestCase() {
 
     fun testRemoveWritesTheFile() {
         copyProject()
-        val remove = RemoveOn(component("0", "TypeComponent"))
+        val remove = RemoveOn(component("0", "NameComponent"))
         remove.actionPerformed(TestActionEvent.createTestEvent(remove))
-        assertFalse(components("0").has("TypeComponent"))
+        assertFalse(components("0").has("NameComponent"))
         assertTrue(components("0").has("PickableComponent"))
     }
 
@@ -154,6 +154,6 @@ class ComponentActionsTest : BasePlatformTestCase() {
         light.actionPerformed(TestActionEvent.createTestEvent(light))
         val node = entity("0") as DtoEntryNode
         assertTrue(children(node).any { label(it) == "LightComponent" })
-        assertEquals(6, children(node).size)
+        assertEquals(5, children(node).size)
     }
 }

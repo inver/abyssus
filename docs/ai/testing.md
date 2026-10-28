@@ -116,7 +116,7 @@ every test), checks disk bytes, and where it edits, presses Undo and checks the 
 | `UiStartupTest` | robot connection and project loaded; the header of a selected entity is readable (`PropertiesPanel.subtitle` / `breadcrumb`); Abyssus installed, no scene editor open; Properties window opens and closes; Abyssus tree, entity 0 and the Camera component of entity 4 are found; fixture reset restores the IDE document and the tree |
 | `AbyssusTreeUiTest` | Project, Scenes, type groups under Assets and ECS expand; the fog eye toggles only `fogEnabled` and Undo restores the bytes; switching views does not duplicate nodes |
 | `PropertiesLayoutUiTest` | the redesigned panel in the real IDE: label column 150 px, one field height (the look and feel's), section header 34 px, dim defaults in the secondary colour, collapse, breadcrumb / subtitle / badges for an entity, a folder, `ecs`, the project and a read-only unused asset (the `game` badge and the 26 px Browse are covered by plugin tests: the fixture has no game component). Scenarios `props-entity-design`, `props-folder`, `props-ecs`, `props-project` |
-| `PropertiesEnabledUiTest` | the section `Enabled` box writes `enabled: false` on one entry and one Undo restores the bytes; the tree eye on an entity writes and removes the flag. That a disabled entity is not picked needs the Scene view, which cannot draw in the container, so `SceneViewPanelTest` and the `lib-core-editor` content tests cover it |
+| `PropertiesEnabledUiTest` | the section `Enabled` box lists the component in the entity's `disabledComponents` and one Undo restores the bytes; the tree eye on an entity writes and removes the flag. That a disabled entity is not picked needs the Scene view, which cannot draw in the container, so `SceneViewPanelTest` and the `lib-core-editor` content tests cover it |
 | `PropertiesUiTest` | a scene row offers the skybox field with its Browse button; the Assets folder layout; model and terrain assets; cube (editable, previews loaded), procedural (editable) and HDR (read-only, preview loaded) skyboxes; entity 0 and Camera fields; entity name edit and Undo; an invalid Camera number shows a field error and leaves the scene unedited |
 | `TreeStructureUiTest` | Scenes, UI, Assets in that order under the project row and no `name` row; type groups with counts under Assets and every asset once; scene, ECS and entity rows; switching views does not duplicate rows (captures `tree-collapsed`, `tree-assets-groups`) |
 | `TreeIconsUiTest` | the icon resource of the project, folder, group, scene, ECS, skybox and asset rows, and that distinct kinds do not share an icon |
@@ -629,7 +629,6 @@ Modeled component kinds (`ComponentSchemas`: built-in, plus the physics kinds wh
 | Kind | Scenarios | Status |
 |---|---|---|
 | `NameComponent` | CMP-06 | shown in Properties as the entity name; read by every scenario (`SceneFacts`) |
-| `TypeComponent` | CMP-07 | kept by every edit (`assertOnlyEntity7Changed`) |
 | `ParentComponent` | CMP-04, CMP-05 | add, edit, Properties remove and Undo passed (`ComponentLifecycleUiTest`); references and cycles: task 4.2 |
 | `PositionComponent` | CMP-04, GES-03, GES-04 | unverified |
 | `CameraComponent` | ENT-01, GES-04 | add, edit, remove and Undo passed (`ComponentLifecycleUiTest`) |

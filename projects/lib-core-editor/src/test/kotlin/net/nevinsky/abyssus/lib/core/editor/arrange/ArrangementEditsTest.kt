@@ -35,7 +35,7 @@ class ArrangementEditsTest {
 
     private fun mainScene() = SceneJson().parse(File(project, "scenes/Main Scene.scene").readText())
 
-    private fun entity(root: JsonNode, id: Int) = root["ecs"].let { (it["entities"] ?: it)[id.toString()] }
+    private fun entity(root: JsonNode, id: Int) = root["ecs"][id.toString()]
     private fun components(root: JsonNode, id: Int) = entity(root, id)?.get("components") as ObjectNode?
     private fun arrangement(root: JsonNode, id: Int = 11) =
         components(root, id)!![PathArrangementComponent::class.simpleName] as ObjectNode
@@ -88,14 +88,14 @@ class ArrangementEditsTest {
         for (id in 0..10) assertEquals(entity(before, id).toString(), entity(root, id).toString())
         val path = components(root, 11)!!
         assertEquals("Path 11", path["NameComponent"]["name"].asText())
-        assertEquals("GROUP", path["TypeComponent"]["type"].asText())
+        assertEquals("GROUP", root["ecs"]["11"]["type"].asText())
         val c = component(root)
         assertEquals(2, c.points.size)
         assertFalse(c.closed)
         assertEquals("tree", c.asset.name)
         assertEquals(10f, c.spacing, 0f)
         assertEquals(listOf(12, 13, 14, 15, 16), c.slots)
-        assertEquals(17, (root["ecs"].let { it["entities"] ?: it }).size())
+        assertEquals(17, (root["ecs"]).size())
     }
 
     @Test
@@ -103,7 +103,7 @@ class ArrangementEditsTest {
         val root = drawn()
         val copy = components(root, 12)!!
         assertEquals("Path 11 #0", copy["NameComponent"]["name"].asText())
-        assertEquals("OBJECT", copy["TypeComponent"]["type"].asText())
+        assertEquals("OBJECT", root["ecs"]["12"]["type"].asText())
         assertEquals("tree", copy["RenderComponent"]["assetName"].asText())
         assertEquals("MODEL", copy["RenderComponent"]["type"].asText())
         assertEquals("defaultShader", copy["RenderComponent"]["shaderKey"].asText())
@@ -187,7 +187,7 @@ class ArrangementEditsTest {
     @Test
     fun aDeletedCopyStaysEmpty() {
         val root = drawn()
-        (root["ecs"].let { it["entities"] ?: it } as ObjectNode).remove("15")
+        (root["ecs"] as ObjectNode).remove("15")
         edit(root) { _, node -> setPoints(node, point(0f, 0f), point(60f, 0f)) }
         assertEquals(listOf(12, 13, 14, -1, 16, 17, 18), slots(root))
         assertNull(entity(root, 15))
@@ -208,7 +208,7 @@ class ArrangementEditsTest {
     @Test
     fun movingTheLastPointKeepsAnEmptyFirstSlotEmpty() {
         val root = drawn()
-        (root["ecs"].let { it["entities"] ?: it } as ObjectNode).remove("12")
+        (root["ecs"] as ObjectNode).remove("12")
         edit(root) { _, node -> setPoints(node, point(0f, 0f), point(60f, 0f)) }
         assertEquals(-1, slots(root)[0])
         assertEquals(7, slots(root).size)
@@ -217,7 +217,7 @@ class ArrangementEditsTest {
     @Test
     fun movingTheFirstPointRefillsEmptySlots() {
         val root = drawn()
-        (root["ecs"].let { it["entities"] ?: it } as ObjectNode).remove("12")
+        (root["ecs"] as ObjectNode).remove("12")
         edit(root) { _, node -> setPoints(node, point(2f, 0f), point(40f, 0f)) }
         assertTrue(slots(root).none { it == -1 })
     }

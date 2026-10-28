@@ -5,7 +5,8 @@
 package net.nevinsky.abyssus.lib.gamelink.play
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.core.editor.json.JsonObjectWriter
+import net.nevinsky.abyssus.lib.core.io.JsonObjectReader
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -81,7 +82,10 @@ data class PlayInput(val kind: Kind, val key: String = "", val button: Int = 0, 
 class PlayProtocolException(message: String, cause: Throwable? = null) : IOException(message, cause)
 
 /** Reads and writes [PlayFrame]s. Not thread-safe: use one instance per direction. */
-class PlayProtocol(private val json: ObjectMapper = ObjectMapper()) {
+class PlayProtocol(json: ObjectMapper = ObjectMapper()) {
+    private val reader = JsonObjectReader(json)
+    private val writer = JsonObjectWriter(json)
+
     fun write(out: DataOutputStream, frame: PlayFrame) {
         val payload = ByteArrayOutputStream()
         val data = DataOutputStream(payload)
@@ -105,12 +109,11 @@ class PlayProtocol(private val json: ObjectMapper = ObjectMapper()) {
                 }
             }
             is PlayFrame.Telemetry -> FrameType.TELEMETRY.also {
-                data.write(json.writeValueAsBytes(json.createObjectNode().also { o -> frame.values.forEach { (k, v) -> o.put(k, v) } }))
+                data.write(writer.bytes(frame.values))
             }
-            is PlayFrame.Error -> FrameType.ERROR.also { data.write(json.writeValueAsBytes(json.createObjectNode().put("message", frame.message))) }
+            is PlayFrame.Error -> FrameType.ERROR.also { data.write(writer.bytes(mapOf("message" to frame.message))) }
             is PlayFrame.Load -> FrameType.LOAD.also {
-                data.write(json.writeValueAsBytes(json.createObjectNode()
-                    .put("sceneText", frame.sceneText).put("projectDir", frame.projectDir).put("selection", frame.selection)))
+                data.write(writer.bytes(mapOf("sceneText" to frame.sceneText, "projectDir" to frame.projectDir, "selection" to frame.selection)))
             }
             PlayFrame.Play -> FrameType.PLAY
             PlayFrame.Pause -> FrameType.PAUSE
@@ -118,8 +121,7 @@ class PlayProtocol(private val json: ObjectMapper = ObjectMapper()) {
             PlayFrame.Stop -> FrameType.STOP
             is PlayFrame.Input -> FrameType.INPUT.also {
                 val e = frame.event
-                data.write(json.writeValueAsBytes(json.createObjectNode().put("kind", e.kind.name).put("key", e.key)
-                    .put("button", e.button).put("x", e.x).put("y", e.y)))
+                data.write(writer.bytes(mapOf("kind" to e.kind.name, "key" to e.key, "button" to e.button, "x" to e.x, "y" to e.y)))
             }
             PlayFrame.Bye -> FrameType.BYE
         }
@@ -150,7 +152,7 @@ class PlayProtocol(private val json: ObjectMapper = ObjectMapper()) {
         val data = DataInputStream(payload.inputStream())
         val frameType = FrameType.entries.firstOrNull { it.id == type } ?: throw PlayProtocolException("unknown frame type $type")
         return when (frameType) {
-            FrameType.HELLO -> obj(payload).let { PlayFrame.Hello(it.get("protocol").asInt(), it.get("token").asText(), it.get("module").asText()) }
+            FrameType.HELLO -> obj(payload).let { PlayFrame.Hello(it.requireInt("protocol"), it.requireText("token"), it.requireText("module")) }
             FrameType.READY -> PlayFrame.Ready
             FrameType.POSES -> {
                 val frame = data.readLong()
@@ -169,16 +171,16 @@ class PlayProtocol(private val json: ObjectMapper = ObjectMapper()) {
                     DebugLine(data.readFloat(), data.readFloat(), data.readFloat(), data.readFloat(), data.readFloat(), data.readFloat(), data.readInt())
                 })
             }
-            FrameType.TELEMETRY -> PlayFrame.Telemetry(obj(payload).properties().associate { (k, v) -> k to v.asText() })
-            FrameType.ERROR -> PlayFrame.Error(obj(payload).get("message").asText())
-            FrameType.LOAD -> obj(payload).let { PlayFrame.Load(it.get("sceneText").asText(), it.get("projectDir").asText(), it.get("selection").asInt()) }
+            FrameType.TELEMETRY -> PlayFrame.Telemetry(obj(payload).entries())
+            FrameType.ERROR -> PlayFrame.Error(obj(payload).requireText("message"))
+            FrameType.LOAD -> obj(payload).let { PlayFrame.Load(it.requireText("sceneText"), it.requireText("projectDir"), it.requireInt("selection")) }
             FrameType.PLAY -> PlayFrame.Play
             FrameType.PAUSE -> PlayFrame.Pause
             FrameType.STEP -> PlayFrame.Step
             FrameType.STOP -> PlayFrame.Stop
             FrameType.INPUT -> obj(payload).let {
-                PlayFrame.Input(PlayInput(PlayInput.Kind.valueOf(it.get("kind").asText()), it.get("key")?.asText().orEmpty(),
-                    it.get("button")?.asInt() ?: 0, it.get("x")?.asInt() ?: 0, it.get("y")?.asInt() ?: 0))
+                PlayFrame.Input(PlayInput(PlayInput.Kind.valueOf(it.requireText("kind")), it.asText("key").orEmpty(),
+                    it.intOr("button", 0), it.intOr("x", 0), it.intOr("y", 0)))
             }
             FrameType.BYE -> PlayFrame.Bye
         }
@@ -200,8 +202,8 @@ class PlayProtocol(private val json: ObjectMapper = ObjectMapper()) {
     }
 
     private fun json(protocol: Int, token: String, module: String): ByteArray =
-        json.writeValueAsBytes(json.createObjectNode().put("protocol", protocol).put("token", token).put("module", module))
+        writer.bytes(mapOf("protocol" to protocol, "token" to token, "module" to module))
 
-    private fun obj(payload: ByteArray): ObjectNode =
-        json.readTree(payload) as? ObjectNode ?: throw PlayProtocolException("payload is not a JSON object")
+    private fun obj(payload: ByteArray): net.nevinsky.abyssus.lib.core.io.JsonObjectView =
+        reader.parse(payload) ?: throw PlayProtocolException("payload is not a JSON object")
 }

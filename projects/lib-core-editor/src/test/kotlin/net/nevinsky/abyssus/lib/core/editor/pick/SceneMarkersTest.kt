@@ -31,10 +31,10 @@ class SceneMarkersTest {
 
     private fun main() = sceneContentOf(parseScene(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText()))
 
-    private fun content(entities: String) = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{$entities}}}"""))
+    private fun content(entities: String) = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{$entities}}"""))
 
     private fun light(id: String, type: String, x: Float = 0f) =
-        """"$id":{"components":{"TypeComponent":{"type":"$type"},"LightComponent":{"light":{}},"PositionComponent":{"localPosition":{"x":$x}}}}"""
+        """"$id":{"type":"$type","components":{"LightComponent":{"light":{}},"PositionComponent":{"localPosition":{"x":$x}}}}"""
 
     private fun ray(from: Vector3, to: Vector3) = Ray(from, Vector3(to).sub(from).nor())
 

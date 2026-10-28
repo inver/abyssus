@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.util.rawAt
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -16,7 +19,6 @@ import net.nevinsky.abyssus.plugin.ui.showActionGroup
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
 import net.nevinsky.abyssus.lib.core.editor.water.WaterEdit
 import net.nevinsky.abyssus.plugin.water.reportWaterRejection
@@ -43,11 +45,11 @@ fun waterTargetOf(node: Any?): WaterTarget? {
 
 /** Whether water can be added to [file]: a readable scene whose `abyssus` and `waterSurfaces` are objects when present. */
 internal fun canAddWater(file: VirtualFile, cache: SceneDocumentCache): Boolean =
-    cache.read(file)?.let { !WaterCodec().read(it.root.get("abyssus")).incompatible } ?: false
+    cache.read(file)?.let { !WaterCodec().read(it.root.at("abyssus")).incompatible } ?: false
 
 /** Select the new surface at once, then its row when the asynchronous tree refresh reaches it. */
 internal fun selectCreatedWater(project: Project, file: VirtualFile, id: String) {
-    val surface = runCatchingKeepingCancellation { WaterCodec().read(SceneJson().parse(textOf(file)).get("abyssus")) }
+    val surface = runCatchingKeepingCancellation { WaterCodec().read(parseDocument(textOf(file)).at("abyssus")) }
         .getOrNull()?.surfaces?.firstOrNull { it.id == id }
     if (surface != null) {
         val node = DtoEntryNode(

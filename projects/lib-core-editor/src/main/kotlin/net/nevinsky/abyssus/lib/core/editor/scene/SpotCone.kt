@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
+import net.nevinsky.abyssus.lib.core.util.smooth01
 import com.badlogic.gdx.math.Vector3
 
 import kotlin.math.cos
@@ -33,5 +34,5 @@ data class SpotCone(val angle: Float, val softness: Float) {
         return 1f - smooth((distance - 0.75f * range) / (0.25f * range))
     }
 
-    private fun smooth(value: Float): Float = value.coerceIn(0f, 1f).let { it * it * (3f - 2f * it) }
+    private fun smooth(value: Float): Float = smooth01(value.coerceIn(0f, 1f))
 }

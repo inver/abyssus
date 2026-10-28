@@ -8,7 +8,6 @@ package net.nevinsky.abyssus.plugin.sceneview
 import net.nevinsky.abyssus.lib.core.editor.brush.GridRect
 import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatDraft
 import net.nevinsky.abyssus.plugin.splat.SplatDrafts
-import java.util.IdentityHashMap
 
 /** One terrain a Scene view shows, as the splat sync sees it. */
 internal interface SplatTarget {
@@ -32,38 +31,23 @@ internal interface SplatTarget {
  * map once; when a draft the view had been following is gone, the stroke ended, so the view loads the texture again
  * through [reload]. GL thread only.
  */
-internal class SplatViewSync(private val drafts: SplatDrafts, private val reload: (Set<String>) -> Unit) {
-    private class Seen(val draft: SplatDraft, val revision: Int, val texture: Any?, val asset: String)
+internal class SplatViewSync(private val drafts: SplatDrafts, reload: (Set<String>) -> Unit) :
+    DraftFollower<SplatTarget, SplatDraft, SplatViewSync.Seen>(reload) {
+    class Seen(val draft: SplatDraft, val revision: Int, val texture: Any?, val asset: String)
 
-    private val seen = IdentityHashMap<Any, Seen>()
+    override fun keyOf(target: SplatTarget) = target.key
+    override fun draftAsset(target: SplatTarget) = target.splatAsset
+    override fun draftOf(asset: String) = drafts.of(asset)
+    override fun assetOf(state: Seen) = state.asset
 
-    fun apply(targets: Collection<SplatTarget>) {
-        val live = IdentityHashMap<Any, Boolean>()
-        var reloads: MutableSet<String>? = null
-        for (target in targets) {
-            val key = target.key
-            live[key] = true
-            val asset = target.splatAsset
-            val draft = asset?.let(drafts::of)
-            val prior = seen[key]
-            when {
-                draft != null && asset != null -> {
-                    val texture = target.textureKey
-                    val same = prior != null && prior.draft === draft && prior.texture === texture
-                    if (same && prior!!.revision == draft.revision) continue
-                    if (texture == null) continue
-                    val revision = draft.revision
-                    val rect = if (same) draft.changedSince(prior!!.revision) else wholeMap(draft)
-                    if (rect.isEmpty || target.upload(draft, rect)) seen[key] = Seen(draft, revision, texture, asset)
-                }
-                prior != null -> {
-                    seen.remove(key)
-                    (reloads ?: HashSet<String>().also { reloads = it }) += prior.asset
-                }
-            }
-        }
-        seen.keys.retainAll(live.keys)
-        reloads?.let(reload)
+    override fun follow(target: SplatTarget, asset: String, draft: SplatDraft, prior: Seen?): Seen? {
+        val texture = target.textureKey
+        val same = prior != null && prior.draft === draft && prior.texture === texture
+        if (same && prior!!.revision == draft.revision) return null
+        if (texture == null) return null
+        val revision = draft.revision
+        val rect = if (same) draft.changedSince(prior!!.revision) else wholeMap(draft)
+        return if (rect.isEmpty || target.upload(draft, rect)) Seen(draft, revision, texture, asset) else null
     }
 
     private fun wholeMap(draft: SplatDraft) = GridRect(0, 0, draft.resolution - 1, draft.resolution - 1)

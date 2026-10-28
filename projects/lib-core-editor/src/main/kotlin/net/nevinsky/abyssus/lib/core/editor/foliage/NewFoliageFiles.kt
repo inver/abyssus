@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.foliage
 
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaDocument
+import net.nevinsky.abyssus.lib.core.editor.document.newAssetMetaText
 import net.nevinsky.abyssus.lib.core.editor.document.FoliageAssetAdditional
 
 import net.nevinsky.abyssus.lib.core.assets.MetaType
@@ -71,9 +71,8 @@ class FoliageAssetWriter(
     }
 
     private fun metaText(terrainFolder: String, maskResolution: Int, uuid: UUID, lastModified: Long): String {
-        return SceneJson().compact(AssetMetaDocument(
-            lastModified = lastModified, uuid = uuid.toString(), type = MetaType.FOLIAGE,
-            additional = FoliageAssetAdditional(terrainFolder, maskResolution),
-        ))
+        return newAssetMetaText(
+            MetaType.FOLIAGE, FoliageAssetAdditional(terrainFolder, maskResolution), uuid.toString(), lastModified,
+        )
     }
 }
