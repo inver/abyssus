@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.flightgear
 
+import net.nevinsky.abyssus.lib.core.editor.modelimport.MODEL_FILE
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriter
@@ -14,7 +15,7 @@ import java.util.UUID
 const val MAX_MODEL_DEPTH = 8
 
 /** The model file an import writes into its asset folder. */
-const val IMPORTED_MODEL_FILE = "model.glb"
+const val IMPORTED_MODEL_FILE = MODEL_FILE
 
 /** How big the imported model is. */
 sealed interface ImportSize {

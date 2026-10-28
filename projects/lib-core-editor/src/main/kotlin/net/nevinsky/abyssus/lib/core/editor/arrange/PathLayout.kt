@@ -51,10 +51,7 @@ class PathLayout {
     fun slots(arrangement: PathArrangementComponent): List<PathSlot>? {
         val points = arrangement.points
         val spacing = arrangement.spacing.toDouble()
-        val usable = points.size >= 2 && spacing.isFinite() && spacing > 0.0 && arrangement.offset.isFinite() &&
-                arrangement.offset >= 0f && arrangement.yawOffset.isFinite() &&
-                points.all { it.x.isFinite() && it.y.isFinite() && it.z.isFinite() }
-        if (!usable) return emptyList()
+        if (!arrangement.isUsable()) return emptyList()
 
         // the copies follow the smooth line through the control points, so they are where the view draws it
         val sampled = curve.sample(pointsOf(arrangement), arrangement.closed)
@@ -141,4 +138,14 @@ class PathLayout {
         }
     }
 
+}
+
+/**
+ * Whether the arrangement can make copies: a line of at least two finite points, a finite spacing above 0, a finite
+ * offset of at least 0 and a finite yaw offset. Every entry point that creates or changes an arrangement checks this.
+ */
+fun PathArrangementComponent.isUsable(): Boolean {
+    val spacing = spacing.toDouble()
+    return points.size >= 2 && spacing.isFinite() && spacing > 0.0 && offset.isFinite() && offset >= 0f &&
+            yawOffset.isFinite() && points.all { it.x.isFinite() && it.y.isFinite() && it.z.isFinite() }
 }

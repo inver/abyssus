@@ -78,6 +78,20 @@ class UiStyleResolver(json: JsonProcessor) {
     /** The bundled default for a widget type name (`button`, ...); empty for a type the theme does not style. */
     fun bundledValue(type: String, key: String): JsonNode? = bundled[type]?.base?.get(key)
 
+    // The named styles of the collection last resolved against, built once per collection instance (a republish is a new one).
+    private var layersFor: UiCollection? = null
+    private var layers: Map<String, StyleLayer> = emptyMap()
+
+    private fun namedLayers(collection: UiCollection): Map<String, StyleLayer> {
+        if (layersFor !== collection) {
+            val built = LinkedHashMap<String, StyleLayer>()
+            for (style in collection.styles) if (style.name !in built) built[style.name] = layerOf(style.values)
+            layers = built
+            layersFor = collection
+        }
+        return layers
+    }
+
     /** [styleName] is the named style to use; a widget with a bound `style` passes the bound name, else its own. */
     fun resolve(
         collection: UiCollection,
@@ -88,7 +102,7 @@ class UiStyleResolver(json: JsonProcessor) {
         val diagnostics = mutableListOf<UiStyleDiagnostic>()
         val default = widget.type?.let { bundled[it.json] } ?: StyleLayer(emptyMap(), emptyMap())
         val named = styleName?.let { name ->
-            collection.styles.firstOrNull { it.name == name }?.let { layerOf(it.values) }
+            namedLayers(collection)[name]
                 ?: run { diagnostics += UiStyleDiagnostic(UiStyleIssue.MISSING_STYLE, widget.id, name); null }
         } ?: StyleLayer(emptyMap(), emptyMap())
         val own = layerOf(widget.properties["styleOverrides"])

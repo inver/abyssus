@@ -10,19 +10,7 @@ data class CloudMeta(
     val visible: Boolean get() = low != null || mid != null || high != null
 
     /** The bands from the highest down, the order they are drawn in (lower bands hide higher ones). */
-    fun bandsFarToNear(): List<CloudBand> {
-        val res = ArrayList<CloudBand>().toMutableList()
-        addIfNotNull(res, high)
-        addIfNotNull(res, mid)
-        addIfNotNull(res, low)
-        return res
-    }
-
-    private fun addIfNotNull(list: MutableList<CloudBand>, obj: CloudBand?) {
-        if (obj != null) {
-            list.add(obj)
-        }
-    }
+    fun bandsFarToNear(): List<CloudBand> = listOfNotNull(high, mid, low)
 
     /**
      * One band of clouds: [type] between [base] and [top] metres, covering [coverage] (0 to 1) of the sky with [density]
@@ -39,6 +27,7 @@ data class CloudMeta(
         var windZ: Float = type.windZ,
     ) {
         val thickness: Float get() = top - base
+        /** Jackson's `wind: [x, z]` setter. */
         fun setWind(arr: Array<Float>?) {
             if (arr == null || arr.size != 2) {
                 return

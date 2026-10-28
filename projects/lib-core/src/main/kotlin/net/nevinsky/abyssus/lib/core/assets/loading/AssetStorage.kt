@@ -340,8 +340,7 @@ class AssetStorage(
                 builtMap.clear()
                 versions.clear()
                 all.forEach { cancelledIds.add(it.id) }
-                val queued = ArrayList<Inbound>()
-                while (true) queued += inbound.poll() ?: break
+                val queued = drainInbound()
                 // A worker that has not published yet removes its own id; for the rest we own it.
                 val queuedIds = queued.mapTo(HashSet()) { it.id }
                 all.filter { it.phase != Phase.Preparing || it.id in queuedIds }.forEach { cancelledIds.remove(it.id) }
@@ -353,9 +352,7 @@ class AssetStorage(
                 live.staged?.let { errors += discardStagedQuiet(live.registration, it) }
                 live.staged = null
             }
-            for (message in queued) {
-                if (message is Inbound.Staged) errors += discardStagedQuiet(message.registration, message.staged)
-            }
+            errors += discardQueued(queued)
             errors.forEach { log.warn("Abandoning assets: a discard failed", it) }
         }
     }
@@ -372,17 +369,13 @@ class AssetStorage(
                     revisions.clear()
                     builtMap.clear()
                     snapshot.forEach { cancelledIds.add(it.id) }
-                    val queued = ArrayList<Inbound>()
-                    while (true) queued += inbound.poll() ?: break
-                    snapshot to queued
+                    snapshot to drainInbound()
                 }
             }
             val errors = ArrayList<Throwable>()
             if (work != null) {
                 for (live in work.first) errors += releaseLive(live, notifyDiscarded = live.asset != null)
-                for (message in work.second) {
-                    if (message is Inbound.Staged) errors += discardStagedQuiet(message.registration, message.staged)
-                }
+                errors += discardQueued(work.second)
                 ownedExecutor?.shutdown()
             }
             errors += strayErrors.toList()
@@ -422,7 +415,21 @@ class AssetStorage(
         }
         val errors = ArrayList<Throwable>()
         errors += releaseLive(live, notifyDiscarded)
-        for (message in dropped) {
+        errors += discardQueued(dropped)
+        return errors
+    }
+
+    /** Takes every queued message off [inbound]; the caller holds [publishLock]. */
+    private fun drainInbound(): List<Inbound> {
+        val drained = ArrayList<Inbound>()
+        while (true) drained += inbound.poll() ?: break
+        return drained
+    }
+
+    /** Discards what the staged messages among [messages] hold; returns what that threw. */
+    private fun discardQueued(messages: List<Inbound>): List<Throwable> {
+        val errors = ArrayList<Throwable>()
+        for (message in messages) {
             if (message is Inbound.Staged) errors += discardStagedQuiet(message.registration, message.staged)
         }
         return errors

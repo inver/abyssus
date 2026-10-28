@@ -6,11 +6,13 @@ package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
+import net.nevinsky.abyssus.lib.core.editor.document.PlacementWrites
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 
 /** A copied entity as clipboard text, or the reason it cannot be copied. */
 sealed interface CopyResult {
@@ -25,7 +27,10 @@ sealed interface CopyResult {
  * entities would not hold in a copy. Edits only the JSON tree, as [AssetEntities] does.
  */
 class EntityClipboard(private val messages: EditorMessages) {
-    private val mapper = ObjectMapper()
+    // the scene parser keeps number text, so a pasted entity's numbers read as they were copied
+    private val json = SceneJson()
+    private val nodes = JsonNodeFactory.instance
+    private val placements = PlacementWrites()
 
     /** The clipboard text for entity [entityId] of [root]. */
     fun copy(root: JsonNode, entityId: String): CopyResult {
@@ -33,8 +38,8 @@ class EntityClipboard(private val messages: EditorMessages) {
         val refusal = CopyResult.Refused(messages.message("entityClipboardNotCopyable", entityId))
         if (components == null || !components.has(RENDER) || KEEP_OUT.any(components::has)) return refusal
         if (net.nevinsky.abyssus.lib.core.format.entityTypeOf(SceneEntityTree(root).entities()?.get(entityId)) == "TERRAIN") return refusal
-        val envelope = mapper.createObjectNode().put(MARKER, VERSION).set<JsonNode>("components", components.deepCopy())
-        return CopyResult.Copied(mapper.writeValueAsString(envelope))
+        val envelope = nodes.objectNode().put(MARKER, VERSION).set<JsonNode>("components", components.deepCopy())
+        return CopyResult.Copied(json.compact(envelope))
     }
 
     /** Whether [text] is what [copy] makes. */
@@ -54,12 +59,12 @@ class EntityClipboard(private val messages: EditorMessages) {
 
     /** Sets `PositionComponent.localPosition` of [components] to [point], keeping the component's other members. */
     private fun place(components: ObjectNode, point: Vector3) {
-        val position = components.get("PositionComponent") as? ObjectNode ?: mapper.createObjectNode().also { components.set<JsonNode>("PositionComponent", it) }
-        position.set<JsonNode>("localPosition", mapper.createObjectNode().put("x", point.x).put("y", point.y).put("z", point.z))
+        val position = placements.placementOf(components) ?: return
+        placements.setVector(position, "localPosition", point)
     }
 
     private fun parse(text: String?): ObjectNode? {
-        val envelope = runCatchingKeepingCancellation { mapper.readTree(text ?: return null) }.getOrNull() as? ObjectNode ?: return null
+        val envelope = runCatchingKeepingCancellation { json.parse(text ?: return null) }.getOrNull() as? ObjectNode ?: return null
         if (envelope.get(MARKER)?.asInt() != VERSION) return null
         val components = envelope.get("components") as? ObjectNode ?: return null
         return components.takeIf { it.has(RENDER) && KEEP_OUT.none(it::has) }

@@ -38,6 +38,8 @@ class SceneInteraction(
     private val queries: SceneQueries,
     private val orbit: OrbitCamera,
 ) {
+    private val gizmoMath = GizmoMath()
+
     var size = ViewSize(0, 0, 0, 0)
 
     /** Called with the entity id of a click that selected something. */
@@ -328,13 +330,8 @@ class SceneInteraction(
 
     /** Where [ray] meets the plane `y = 0`, or null when it runs parallel to it or away from it. */
     private fun planeHit(ray: Ray): Vector3? {
-        if (abs(ray.direction.y) < 1e-6f) {
-            return null
-        }
-        val t = -ray.origin.y / ray.direction.y
-        return if (t > 0f) {
-            Vector3(ray.origin).mulAdd(ray.direction, t)
-        } else null
+        val t = gizmoMath.rayPlane(ray, Vector3.Zero, Vector3.Y) ?: return null
+        return if (t > 0f) Vector3(ray.origin).mulAdd(ray.direction, t) else null
     }
 
     /**

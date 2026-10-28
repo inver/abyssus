@@ -14,6 +14,7 @@ import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
+import net.nevinsky.abyssus.lib.core.editor.document.PlacementWrites
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
 import net.nevinsky.abyssus.lib.core.editor.ecs.floatNode
@@ -42,6 +43,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
     private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
     private val writer = EcsWriter(json)
     private val layout = PathLayout()
+    private val placements = PlacementWrites(omitDefaults = true)
 
     /**
      * Adds an arrangement of the model [asset] along [points] (and back to the first when [closed]), and a copy for each
@@ -58,13 +60,13 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         if (!tree.canAdd()) {
             return unreadable()
         }
-        if (asset.type != MetaType.MODEL || points.size < 2 || points.any { !it.x.isFinite() || !it.y.isFinite() || !it.z.isFinite() }) {
-            return ArrangementResult.Rejected(messages.message("arrangementInvalid"))
-        }
         val component = PathArrangementComponent()
         component.points = points.map { Vector3(it.x, it.y, it.z) }.toMutableList()
         component.closed = closed
         component.asset = BaseMeta(MetaType.MODEL, asset.name)
+        if (asset.type != MetaType.MODEL || !component.isUsable()) {
+            return ArrangementResult.Rejected(messages.message("arrangementInvalid"))
+        }
         val slots = layout.slots(component) ?: return tooMany()
 
         val arrangementId = tree.insert("GROUP") { id ->
@@ -108,7 +110,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         val component =
             runCatchingKeepingCancellation { json.bindComponent(node, PathArrangementComponent::class.java) }
                 .getOrElse { return ArrangementResult.Rejected(messages.message("arrangementMissing", arrangementId)) }
-        if (component.points.size < 2 || !(component.spacing > 0f) || !(component.offset >= 0f)) {
+        if (!component.isUsable()) {
             return ArrangementResult.Rejected(messages.message("arrangementInvalid"))
         }
         val slots = layout.slots(component) ?: return tooMany()
@@ -160,6 +162,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         val before = runCatchingKeepingCancellation { json.bindComponent(node, PathArrangementComponent::class.java) }
             .getOrElse { return ArrangementResult.Rejected(messages.message("arrangementMissing", arrangementId)) }
         val after = arrangementAlong(points, before)
+        if (!after.isUsable()) return ArrangementResult.Rejected(messages.message("arrangementInvalid"))
         if (layout.slots(after) == null) return tooMany()
         val previous = node.get("points")
         node.set<JsonNode>("points", nodes.arrayNode().also { array ->
@@ -248,33 +251,11 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         val placement = components.get("PositionComponent").let {
             if (it == null || it.isNull) components.putObject("PositionComponent") else it as? ObjectNode ?: return
         }
-        val at = slot.position(heights)
-        setFields(placement, "localPosition", listOf(Field("x", at.x, 0f), Field("y", at.y, 0f), Field("z", at.z, 0f)))
-        val q = slot.rotation()
-        setFields(
-            placement,
-            "localRotation",
-            listOf(Field("x", q.x, 0f), Field("y", q.y, 0f), Field("z", q.z, 0f), Field("w", q.w, 1f))
-        )
+        placements.setVector(placement, "localPosition", slot.position(heights))
+        placements.setQuaternion(placement, "localRotation", slot.rotation())
         val render = components.get("RenderComponent") as? ObjectNode ?: return
         if (render.get("assetName")?.asText() != asset.name) render.put("assetName", asset.name)
         if (render.get("type")?.asText() != asset.type.name) render.put("type", asset.type.name)
-    }
-
-    private class Field(val key: String, val value: Float, val default: Float)
-
-    /** Writes [fields] into the object [name] of [parent]: a missing object gets every field, an existing one those that differ. */
-    private fun setFields(parent: ObjectNode, name: String, fields: List<Field>) {
-        val existing = parent.get(name)
-        if (existing != null && !existing.isNull && existing !is ObjectNode) return
-        val target = existing as? ObjectNode
-        val differing =
-            fields.filter { f -> (target?.get(f.key)?.takeIf { it.isNumber }?.floatValue() ?: f.default) != f.value }
-        if (differing.isEmpty()) return
-        val written = target ?: parent.putObject(name)
-        for (f in if (target == null) fields.filter { it.value != it.default } else differing) {
-            written.set<JsonNode>(f.key, FloatNode.valueOf(f.value))
-        }
     }
 
     private fun setSlots(node: ObjectNode, slots: List<Int>) {

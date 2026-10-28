@@ -185,27 +185,21 @@ class SnapshotSceneQueries(
         snapshot()?.terrains?.firstOrNull { it.entityId == entityId }
 
     override fun terrainHit(entityId: String, ray: Ray): Vector3? {
-        val frame = snapshot() ?: return null
-        val picker = ScenePicker()
-        var nearest: TerrainTarget? = null
-        var nearestDistance = Float.POSITIVE_INFINITY
-        for (terrain in frame.terrains) {
-            val distance = picker.terrainDistance(ray, terrain, frame.camera.far) ?: continue
-            if (distance < nearestDistance) {
-                nearest = terrain
-                nearestDistance = distance
-            }
-        }
-        if (nearest?.entityId != entityId) return null
-        return Vector3(ray.origin).mulAdd(ray.direction, nearestDistance)
+        val (nearest, distance) = nearestTerrain(ray) ?: return null
+        return if (nearest.entityId == entityId) Vector3(ray.origin).mulAdd(ray.direction, distance) else null
     }
 
     override fun groundHit(ray: Ray): Vector3? {
+        val (_, distance) = nearestTerrain(ray) ?: return null
+        return Vector3(ray.origin).mulAdd(ray.direction, distance)
+    }
+
+    /** The terrain [ray] meets first and how far along the ray that is; null when it meets none. */
+    private fun nearestTerrain(ray: Ray): Pair<TerrainTarget, Float>? {
         val frame = snapshot() ?: return null
         val picker = ScenePicker()
-        val nearest =
-            frame.terrains.mapNotNull { picker.terrainDistance(ray, it, frame.camera.far) }.minOrNull() ?: return null
-        return Vector3(ray.origin).mulAdd(ray.direction, nearest)
+        return frame.terrains.mapNotNull { terrain -> picker.terrainDistance(ray, terrain, frame.camera.far)?.let { terrain to it } }
+            .minByOrNull { it.second }
     }
 
     override fun pathPoints(entityId: String): List<Vector3>? {

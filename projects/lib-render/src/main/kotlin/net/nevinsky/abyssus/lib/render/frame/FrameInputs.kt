@@ -10,7 +10,7 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.gdx.shader.OutputTransform
 import net.nevinsky.abyssus.lib.render.light.LightProfile
 import net.nevinsky.abyssus.lib.render.light.RenderLights
-import kotlin.math.exp
+import net.nevinsky.abyssus.lib.core.util.quadraticFogCoefficient
 
 /**
  * Native fog: the share at distance `d` is `1 - exp(-(d * density)^gradient)`. [color] is linear RGB.
@@ -20,7 +20,7 @@ class RenderFog(val r: Float, val g: Float, val b: Float, val density: Float, va
      * Multiplier for a `dot(d, d) * k` fog term that reaches the exponential share at `1 / density` for any gradient (the
      * editor's model shaders fog with such a quadratic ramp).
      */
-    val quadraticCoefficient: Float get() = ((1.0 - exp(-1.0)) * density.toDouble() * density).toFloat()
+    val quadraticCoefficient: Float get() = quadraticFogCoefficient(density)
 }
 
 /**

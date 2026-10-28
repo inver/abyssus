@@ -41,7 +41,6 @@ class AssetMetaBinder(
             } catch (e: Exception) {
                 return@let it.kotlin.primaryConstructor?.callBy(mapOf())
             }
-//            if (it == CloudMeta::class.java) CloudSettingsReader(json.log).read(block) else json.bind(block, it)
         } ?: json.bind(block, Map::class.java)
         return AssetMeta(
             name = name,

@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.terrain.splat
 
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_LAYERS
 import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetReferenceChoices
@@ -52,11 +53,9 @@ class SplatLayers(private val json: JsonProcessor) {
     fun choices(assetsDir: File, current: String?) = choices.textures(assetsDir, current)
 
     private fun imageOf(folder: File): File? {
-        val file = try {
+        val file = runCatchingKeepingCancellation {
             metas.read(File(folder, META_FILE).readText()).json.obj("additional")?.text("file")
-        } catch (e: Exception) {
-            return null
-        }
+        }.getOrElse { return null }
         return file?.let { choices.inside(folder, it) }
     }
 }

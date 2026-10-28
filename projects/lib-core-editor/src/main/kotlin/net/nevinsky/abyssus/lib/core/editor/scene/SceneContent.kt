@@ -45,6 +45,24 @@ data class SceneContent(
     /** The saved water surfaces in file order, invalid ones included (they are rows, not drawn). */
     val water: List<WaterSurface> = emptyList(),
 ) {
+    // Built on first use: the lists never change, and every lookup of the selected entity would scan them otherwise.
+    private val modelsById by lazy(LazyThreadSafetyMode.NONE) { models.associateBy { it.entityId } }
+    private val terrainsById by lazy(LazyThreadSafetyMode.NONE) { terrains.associateBy { it.entityId } }
+    private val lightsById by lazy(LazyThreadSafetyMode.NONE) { lights.associateBy { it.entityId } }
+    private val camerasById by lazy(LazyThreadSafetyMode.NONE) { cameras.associateBy { it.entityId } }
+
+    /** The model placed as entity [id], or null. */
+    fun model(id: String): AssetPlacement? = modelsById[id]
+
+    /** The terrain placed as entity [id], or null. */
+    fun terrain(id: String): AssetPlacement? = terrainsById[id]
+
+    /** The light placed as entity [id], or null. */
+    fun light(id: String): LightPlacement? = lightsById[id]
+
+    /** The camera placed as entity [id], or null. */
+    fun camera(id: String): CameraPlacement? = camerasById[id]
+
     /** The id of the direction handle (a `HANDLE` entity) [light] looks at, or null when it looks at none. */
     fun aimHandleOf(light: LightPlacement): String? = light.lookAtId?.takeIf { it in handleIds }
 }

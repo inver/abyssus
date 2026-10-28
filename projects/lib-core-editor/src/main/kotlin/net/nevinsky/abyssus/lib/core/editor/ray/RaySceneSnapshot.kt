@@ -203,7 +203,6 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         private val deform: ((RayModelMesh, List<FloatArray>) -> FloatArray)?,
         private val cacheFor: (Any) -> MutableMap<String, Any>,
     ) {
-        private class CachedMesh(val mesh: RayMesh, val bytes: Long)
 
         private var cache: MutableMap<String, Any> = HashMap()
         val meshes = mutableListOf<RayMesh>();
@@ -264,15 +263,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                     val mesh = geometry.getOrPut(key) {
                         fun build(): CachedMesh {
                             val values = if (skin != null) requireNotNull(deform)(source, skin) else source.vertices()
-                            val stride = source.vertexSizeBytes / 4
-                            val position = channel(source, values, stride, VertexAttributes.Usage.Position, 3)
-                            val normal = channelOrNull(source, values, stride, VertexAttributes.Usage.Normal, 3)
-                            val uv = channelOrNull(source, values, stride, VertexAttributes.Usage.TextureCoordinates, 2)
-                            val tangent = tangent(source, values, stride, normal)
-                            val copiedIndices = indices.indices()
-                            val size = (position.size.toLong() + (normal?.size ?: 0) + (uv?.size ?: 0) + (tangent?.size
-                                ?: 0) + copiedIndices.size) * 4
-                            return CachedMesh(RayMesh(key, position, copiedIndices, normal, uv, tangent), size)
+                            return rayMeshOf(source, values, indices.indices(), key)
                         }
                         // skinned geometry depends on the instance's pose; static geometry is converted once per asset
                         val built = if (skin != null) build() else cache.getOrPut("mesh:$key") { build() } as CachedMesh
@@ -296,18 +287,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
             val key = "terrain:${placement.assetName}"
             cache = cacheFor(asset)
             val mesh = geometry.getOrPut(key) {
-                val built = cache.getOrPut("mesh:$key") {
-                    val values = asset.vertices();
-                    val count = values.size / 8
-                    val positions = FloatArray(count * 3) { values[it / 3 * 8 + it % 3] }
-                    val normals = FloatArray(count * 3) { values[it / 3 * 8 + 3 + it % 3] }
-                    val uvs = FloatArray(count * 2) { values[it / 2 * 8 + 6 + it % 2] }
-                    val indices = asset.indices()
-                    CachedMesh(
-                        RayMesh(key, positions, indices, normals, uvs),
-                        (positions.size.toLong() + normals.size + uvs.size + indices.size) * 4
-                    )
-                } as CachedMesh
+                val built = cache.getOrPut("mesh:$key") { rayTerrainMeshOf(asset, key) } as CachedMesh
                 triangles += built.mesh.indexCount / 3; bytes += built.bytes
                 meshes.add(built.mesh); meshes.lastIndex
             }
@@ -390,7 +370,8 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
     }
 }
 
-private class RaySceneLimitException(message: String) : IllegalArgumentException(message)
+/** A scene bound the ray view cannot exceed; the message says which and by how much. */
+internal class RaySceneLimitException(message: String) : IllegalArgumentException(message)
 
 private fun Vector3.ray() = Vector3(x, y, z)
 private fun Color.ray(scale: Float = 1f) = RayColor(r * scale, g * scale, b * scale, a)

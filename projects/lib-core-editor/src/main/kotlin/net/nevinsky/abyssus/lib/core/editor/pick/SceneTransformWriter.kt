@@ -9,9 +9,9 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.Quaternion
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.FloatNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
+import net.nevinsky.abyssus.lib.core.editor.document.PlacementWrites
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 
 /**
@@ -30,6 +30,8 @@ data class TargetMove(val entityId: String, val position: Vector3)
 
 /** Writes a [TransformEdit] into a scene's JSON tree, touching only the values that change. */
 class SceneTransformWriter(private val arrangements: ArrangementEdits = ArrangementEdits()) {
+    private val placements = PlacementWrites()
+
     /**
      * Sets `PositionComponent.localPosition` / `localRotation` of the entity [entityId] under `ecs.entities`, adding
      * missing objects and fields. For an entity with a `CameraComponent.camera` object it also sets that object's
@@ -71,26 +73,7 @@ class SceneTransformWriter(private val arrangements: ArrangementEdits = Arrangem
     private fun placementOf(components: ObjectNode): ObjectNode =
         components.get("PositionComponent") as? ObjectNode ?: components.putObject("PositionComponent")
 
-    private fun setVec(parent: ObjectNode, name: String, v: Vector3) =
-        setFields(parent, name, listOf(Field("x", v.x, 0f), Field("y", v.y, 0f), Field("z", v.z, 0f)))
+    private fun setVec(parent: ObjectNode, name: String, v: Vector3) = placements.setVector(parent, name, v)
 
-    private fun setQuat(parent: ObjectNode, name: String, q: Quaternion) =
-        setFields(parent, name, listOf(Field("x", q.x, 0f), Field("y", q.y, 0f), Field("z", q.z, 0f), Field("w", q.w, 1f)))
-
-    private class Field(val key: String, val value: Float, val default: Float)
-
-    /**
-     * Writes [fields] into the object [name] of [parent] as floats. A missing object is created with every field; an
-     * existing one only gets the fields that differ (an absent field holds its default). False when none differs.
-     */
-    private fun setFields(parent: ObjectNode, name: String, fields: List<Field>): Boolean {
-        val existing = parent.get(name)
-        if (existing != null && !existing.isNull && existing !is ObjectNode) return false
-        val target = existing as? ObjectNode
-        val differing = fields.filter { f -> (target?.get(f.key)?.takeIf { it.isNumber }?.floatValue() ?: f.default) != f.value }
-        if (differing.isEmpty()) return false
-        val written = target ?: parent.putObject(name)
-        for (f in if (target == null) fields else differing) written.set<JsonNode>(f.key, FloatNode.valueOf(f.value))
-        return true
-    }
+    private fun setQuat(parent: ObjectNode, name: String, q: Quaternion) = placements.setQuaternion(parent, name, q)
 }

@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelColor
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelMaterial
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelMesh
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayTerrainSnapshot
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayTextureWrap
 import net.nevinsky.abyssus.lib.raytracing.*
 
@@ -105,4 +106,32 @@ internal fun tangent(mesh: RayModelMesh, values: FloatArray, stride: Int, normal
             if (handed < 0f) -1f else 1f
         }
     }
+}
+
+/** A converted mesh and the bytes it holds, kept so an unchanged asset keeps its [RayMesh] identity. */
+internal class CachedMesh(val mesh: RayMesh, val bytes: Long)
+
+/**
+ * The [RayMesh] [key] for one part of [source], with [values] as its vertices (the bind pose, or a deformed copy) and
+ * [indices] as the part's triangles: position, normal, uv and tangent channels copied out of the interleaved buffer.
+ */
+internal fun rayMeshOf(source: RayModelMesh, values: FloatArray, indices: IntArray, key: String): CachedMesh {
+    val stride = source.vertexSizeBytes / 4
+    val position = channel(source, values, stride, VertexAttributes.Usage.Position, 3)
+    val normal = channelOrNull(source, values, stride, VertexAttributes.Usage.Normal, 3)
+    val uv = channelOrNull(source, values, stride, VertexAttributes.Usage.TextureCoordinates, 2)
+    val tangent = tangent(source, values, stride, normal)
+    val size = (position.size.toLong() + (normal?.size ?: 0) + (uv?.size ?: 0) + (tangent?.size ?: 0) + indices.size) * 4
+    return CachedMesh(RayMesh(key, position, indices, normal, uv, tangent), size)
+}
+
+/** The [RayMesh] [key] of a terrain: its interleaved position, normal and uv vertices split into channels. */
+internal fun rayTerrainMeshOf(asset: RayTerrainSnapshot, key: String): CachedMesh {
+    val values = asset.vertices()
+    val count = values.size / 8
+    val positions = FloatArray(count * 3) { values[it / 3 * 8 + it % 3] }
+    val normals = FloatArray(count * 3) { values[it / 3 * 8 + 3 + it % 3] }
+    val uvs = FloatArray(count * 2) { values[it / 2 * 8 + 6 + it % 2] }
+    val indices = asset.indices()
+    return CachedMesh(RayMesh(key, positions, indices, normals, uvs), (positions.size.toLong() + normals.size + uvs.size + indices.size) * 4)
 }

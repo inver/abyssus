@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_MAP
 import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetCatalog
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetReferenceChoices
 import net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
@@ -58,6 +59,7 @@ sealed interface SplatState {
 class SplatStateReader(private val json: JsonProcessor, private val codec: SplatImageCodec) {
     private val metas = AssetMetaReader(json)
     private val choices = AssetReferenceChoices(json)
+    private val catalog = AssetCatalog(json)
 
     /**
      * The state for the terrain asset in [terrainFolder] under [assetsDir]. [terrainMetaText] is the terrain's
@@ -99,20 +101,10 @@ class SplatStateReader(private val json: JsonProcessor, private val codec: Splat
 
     /** The folder of the texture asset with [uuid], or null when no readable one has it. */
     fun textureFolder(assetsDir: File, uuid: String): File? =
-        assetFolders(assetsDir).firstOrNull { dir ->
-            readMeta(File(dir, META_FILE)).let {
-                it != null && (it.type == MetaType.TEXTURE || it.type == MetaType.PIXMAP_TEXTURE) && it.json.text("uuid") == uuid
-            }
-        }
+        catalog.folderOf(assetsDir, uuid, setOf(MetaType.TEXTURE, MetaType.PIXMAP_TEXTURE))
 
     private fun otherUsers(assetsDir: File, terrainFolder: File, uuid: String): List<String> =
-        assetFolders(assetsDir).filter { it.name != terrainFolder.name }.filter { dir ->
-            readMeta(File(dir, META_FILE))?.takeIf { it.type == MetaType.TERRAIN }
-                ?.json?.obj("additional")?.text(SPLAT_MAP) == uuid
-        }.map { it.name }
-
-    private fun assetFolders(assetsDir: File): List<File> =
-        assetsDir.listFiles { f -> f.isDirectory }?.sortedBy { it.name }.orEmpty()
+        catalog.users(assetsDir, MetaType.TERRAIN, SPLAT_MAP, uuid, except = terrainFolder.name)
 
     private class Meta(val type: MetaType, val json: JsonNode)
 

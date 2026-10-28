@@ -34,7 +34,7 @@ code is in `net.nevinsky.abyssus.lib.core.assets`.
 | `core.assets.texture` | `TextureLoader` (`TEXTURE` and `PIXMAP_TEXTURE` assets: image decoded off the GL thread, uploaded as a mipmapped repeating texture), `PreparedTexture` (the decoded image; `release()` hands the `Pixmap` to a caller that uploads it itself) and `TextureMeta` |
 | `core.assets.sky` | `SkyRenderer` (a drawable background); `cube/` six-face skyboxes, `procedural/` skies drawn by the asset's own GLSL, `hdr/` OpenEXR skies and their lighting environment. Each has a `*Loader` |
 | `core.water` | Realistic water viewed from above, as plain constructor-wired classes with no IDE or editor imports: `WaterSettings` / `WaterPresets` / `WaterValidation` (the saved scalars, the Lake and Sea defaults and their range rules), the pure math the renderer and its tests share (`WaterWaves` and `WaterMeshPlanner` for the bounded wave grid, `WaterReflectionCamera`, `WaterDepthMath` for the packed linear depth, `WaterScreenArea`, `WaterPassPlanner` for the per-frame reflection budget), and `WaterDrawable` with its GLSL under `resources/shader/water` (`ShaderStorage.withWaterShaders()`). The scene view owns the offscreen targets and the pass order; see `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md` |
-| `core.assets.sky.clouds` | The clouds of a procedural sky: `CloudMeta`, nested `CloudMeta.CloudBand`, `CloudType` (level and defaults), `CloudLevel` with its `CloudBandLimits`, `CloudTechnique`; settings decode through `AssetMetaBinder` / `CloudSettingsReader`; `CloudsLoader` and `Clouds` (the `CLOUDS` asset: bands, technique and the volumetric 3D noise from `CloudNoiseGenerator`, built on FastNoiseLite), which a procedural sky names by `uuid` and loads as a dependency; `CloudField`, the cloud techniques and `SunOcclusion` |
+| `core.assets.sky.clouds` | The clouds of a procedural sky: `CloudMeta`, nested `CloudMeta.CloudBand`, `CloudType` (level and defaults), `CloudLevel` with its `CloudBandLimits`, `CloudTechnique`; settings decode through `AssetMetaBinder`; `CloudsLoader` and `Clouds` (the `CLOUDS` asset: bands, technique and the volumetric 3D noise from `CloudNoiseGenerator`, built on FastNoiseLite), which a procedural sky names by `uuid` and loads as a dependency; `CloudField`, the cloud techniques and `SunOcclusion` |
 
 `ExrLoader.dimensions` and `HdrPreview.dimensions` read the EXR data-window dimensions without decoding pixels.
 Header parsing is shared with decoding; native headers and images each have explicit cleanup. Chooser and panel
@@ -62,18 +62,20 @@ and a tap toward the sun that brightens the sun-facing side and greys the base; 
 **Sky lighting and the cloudy-sky environment.** A procedural sky with `additional.lightsScene: true` owns a
 `ProceduralSkyLighting` (a linear 64²-per-face cube from `atmosphere_linear.frag` and the shell clouds, turned into specular
 and irradiance cubes by `HdrEnvironmentBuild` over a borrowed `CubeSource`, rebuilt as `LightingRefreshPolicy` says and faded
-in); the host advances it with `ProceduralSky.updateLighting` every frame and lights with `ProceduralSky.lightingState`.
+in); the host advances it with `ProceduralSky.updateLighting` every frame and lights with `ProceduralSky.lightingEnvironment`.
 Any other feature that needs to *see* the sky from a surface (water reflection fallbacks, ray tracing misses) can ask for the
 same cube without `lightsScene`:
 
-- Call `ProceduralSky.updateEnvironment(sun, timeSeconds)` once per frame while the feature needs it, on the GL thread. The
-  first call builds the cube; nothing is built for a sky nobody asks of, and the scene's ambient color is not replaced.
-- The returned `SkyEnvironment` holds the linear `RGBA16F` cube (mips filled, display tone mapping not applied: not a
-  picture of the sky) and a `revision` that grows with every rebuild. Rebuilds happen when the sun moves over a degree, every
+- Call `ProceduralSky.acquireEnvironment()` once when the feature needs the cube, on the GL thread, and keep the returned
+  `EnvironmentLease` open while it does; the host's per-frame `updateLighting` then keeps it current. Nothing is built for a
+  sky nobody leases, and the scene's ambient color is not replaced.
+- The lease's `environment` holds the linear `RGBA16F` cube (mips filled, display tone mapping not applied: not a
+  picture of the sky), or null until the first build is done, and its `revision` grows with every rebuild. Rebuilds happen when the sun moves over a degree, every
   two seconds of cloud time while a band has wind, and when the cloud asset is reloaded, replaced or removed. Compare
   revisions to know when to refresh whatever was taken from it (a CPU snapshot, an accumulation).
-- The cube belongs to the sky: do not dispose it, and do not keep it past the next update or `releaseEnvironment()`. It is
-  disposed with the sky and abandoned with the GL context.
+- The cube belongs to the sky: do not dispose it, and do not keep it past the next update. Close the lease before the sky is
+  disposed; closing the last lease releases the cube unless the asset opts in with `lightsScene`. It is disposed with the sky
+  and abandoned with the GL context.
 
 Terrain generation and `AssetMetaEditor` live in `lib-core-editor`; their dialogs and document commands live in the
 plugin. `BaseCtx` is the standalone composition root; the IDE builds its own graph through `AssetLoading`.
@@ -337,6 +339,6 @@ upstream implementation; see [model source provenance](../../docs/third-party/gd
 evidence, not a compatibility guarantee.
 
 Cloud metadata uses lowercase technique/type keys, container-inferred band levels and `wind: [x, z]`.
-`CloudSettingsReader` also accepts the existing enum-name and `windX`/`windZ` representation without rewriting it.
-It resolves type defaults, checks finite values and band limits, and logs/skips invalid bands independently.
+`AssetMetaBinder` also accepts the existing enum-name and `windX`/`windZ` representation without rewriting it.
+It resolves type defaults and logs/skips invalid bands independently; `CloudBandLimits` bound the built-in type defaults.
 The snapshot editor and runtime share this decoder; metadata reading generates no noise or GL resources.

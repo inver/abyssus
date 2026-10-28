@@ -135,4 +135,18 @@ class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, v
         val slopeZ = ((h01 - h00) * (1 - fx) + (h11 - h10) * fx) / cell
         out.set(-slopeX, 1f, -slopeZ).nor()
     }
+
+    /**
+     * The slope in degrees at terrain-local [x],[z], clamped onto the terrain: the angle between [normalAt]'s gradient
+     * and straight up. Zero for a terrain with no size.
+     */
+    fun slopeDegreesAt(x: Float, z: Float): Float {
+        if (size <= 0) return 0f
+        val limit = size.toFloat()
+        return patch(x.coerceIn(0f, limit), z.coerceIn(0f, limit)) { h00, h10, h01, h11, fx, fz, cell ->
+            val slopeX = ((h10 - h00) * (1 - fz) + (h11 - h01) * fz) / cell
+            val slopeZ = ((h01 - h00) * (1 - fx) + (h11 - h10) * fx) / cell
+            kotlin.math.atan(kotlin.math.sqrt(slopeX * slopeX + slopeZ * slopeZ)) * (180f / kotlin.math.PI.toFloat())
+        }!!
+    }
 }

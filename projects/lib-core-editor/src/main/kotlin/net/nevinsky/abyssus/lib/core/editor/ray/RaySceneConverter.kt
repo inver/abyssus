@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_LAYERS
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.*
 import net.nevinsky.abyssus.lib.raytracing.*
 
@@ -19,7 +20,8 @@ import net.nevinsky.abyssus.lib.raytracing.*
  * `RayMesh`/`RayMaterial`/`RayTexture` values a `RaySceneSnapshot` is built from, reusing a mesh cache so unchanged
  * assets keep their identity across conversions. No editor scene types (`ScenePreview`, `AssetPlacement`, `LightSet`,
  * optics overrides, pose/deform) appear in this API: instances are placed by id and world matrix, and models are drawn
- * in bind pose. Usable by both the editor and the game.
+ * in bind pose. It lives in `lib-core-editor`, so a shipped game cannot use it. `RaySceneSnapshots`' private builder still
+ * holds its own copy of this conversion plus the posing and optics it adds; the two share the limit exception.
  */
 class RaySceneConverter(private val limits: RaySnapshotLimits = RaySnapshotLimits()) {
     /** Meshes built so far, keyed by mesh id; unchanged assets return the same `RayMesh` instance. */
@@ -119,7 +121,7 @@ class RaySceneConverter(private val limits: RaySnapshotLimits = RaySnapshotLimit
         }
         val materialIndex = materialIds.getOrPut(key) {
             val splat = asset.splatMap?.let { RayTextureBinding(texture("$key:splat", it.image, it.sampler)) }
-            val layers = listOf("layer0", "layer1", "layer2", "layer3", "layer4").map { name ->
+            val layers = SPLAT_LAYERS.map { name ->
                 asset.layers[name]?.let {
                     RayTextureBinding(texture("$key:$name", it.image, it.sampler))
                 }
@@ -138,35 +140,15 @@ class RaySceneConverter(private val limits: RaySnapshotLimits = RaySnapshotLimit
 
     /** Says which bound was exceeded and by how much. */
     fun checkBounds() {
-        if (instances.size > limits.maxInstances) throw IllegalArgumentException("The scene needs ${instances.size} model parts and terrain; the limit is ${limits.maxInstances}")
-        if (triangles > limits.maxTriangles) throw IllegalArgumentException("The scene has $triangles triangles; the limit is ${limits.maxTriangles}")
-        if (bytes > limits.maxBytes) throw IllegalArgumentException("The scene needs ${bytes / (1024 * 1024)} MB of geometry and textures; the limit is ${limits.maxBytes / (1024 * 1024)} MB")
+        if (instances.size > limits.maxInstances) throw RaySceneLimitException("The scene needs ${instances.size} model parts and terrain; the limit is ${limits.maxInstances}")
+        if (triangles > limits.maxTriangles) throw RaySceneLimitException("The scene has $triangles triangles; the limit is ${limits.maxTriangles}")
+        if (bytes > limits.maxBytes) throw RaySceneLimitException("The scene needs ${bytes / (1024 * 1024)} MB of geometry and textures; the limit is ${limits.maxBytes / (1024 * 1024)} MB")
     }
 
-    private fun buildMesh(source: RayModelMesh): CachedMesh {
-        val values = source.vertices()
-        val stride = source.vertexSizeBytes / 4
-        val position = channel(source, values, stride, VertexAttributes.Usage.Position, 3)
-        val normal = channelOrNull(source, values, stride, VertexAttributes.Usage.Normal, 3)
-        val uv = channelOrNull(source, values, stride, VertexAttributes.Usage.TextureCoordinates, 2)
-        val tangent = tangent(source, values, stride, normal)
-        val copiedIndices = source.parts.flatMap { it.indices().toList() }
-        val size = (position.size.toLong() + (normal?.size ?: 0) + (uv?.size ?: 0) + (tangent?.size
-            ?: 0) + copiedIndices.size) * 4
-        return CachedMesh(RayMesh("mesh", position, copiedIndices.toIntArray(), normal, uv, tangent), size)
-    }
+    private fun buildMesh(source: RayModelMesh): CachedMesh =
+        rayMeshOf(source, source.vertices(), source.parts.flatMap { it.indices().toList() }.toIntArray(), "mesh")
 
-    private fun buildTerrainMesh(asset: RayTerrainSnapshot): CachedMesh {
-        val values = asset.vertices()
-        val count = values.size / 8
-        val positions = FloatArray(count * 3) { values[it / 3 * 8 + it % 3] }
-        val normals = FloatArray(count * 3) { values[it / 3 * 8 + 3 + it % 3] }
-        val uvs = FloatArray(count * 2) { values[it / 2 * 8 + 6 + it % 2] }
-        return CachedMesh(
-            RayMesh("terrain", positions, asset.indices(), normals, uvs),
-            (positions.size.toLong() + normals.size + uvs.size + asset.indices().size) * 4
-        )
-    }
+    private fun buildTerrainMesh(asset: RayTerrainSnapshot): CachedMesh = rayTerrainMeshOf(asset, "terrain")
 
     private fun texture(id: String, image: RayModelImage, sampler: RayTextureSampler): Int {
         val existing = textures.indexOfFirst { it.id == id }
@@ -188,5 +170,4 @@ class RaySceneConverter(private val limits: RaySnapshotLimits = RaySnapshotLimit
         checkBounds()
     }
 
-    private class CachedMesh(val mesh: RayMesh, val bytes: Long)
 }

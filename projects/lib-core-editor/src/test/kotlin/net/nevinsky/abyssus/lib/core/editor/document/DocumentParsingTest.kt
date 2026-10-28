@@ -33,7 +33,7 @@ class DocumentParsingTest {
             assertEquals("$kind $text", expected, runCatchingKeepingCancellation { parsing.requireSupported(text, kind) }.isSuccess)
         }
         for (text in listOf("{", "[]", """{"format":"abyssus","formatVersion":1,"ecs":{"componentIdentifiers":{}}}""")) {
-            assertNull(runCatchingKeepingCancellation { parsing.scene(text) }.getOrNull())
+            assertNull(runCatchingKeepingCancellation { parsing.parse(text) }.getOrNull())
         }
     }
 

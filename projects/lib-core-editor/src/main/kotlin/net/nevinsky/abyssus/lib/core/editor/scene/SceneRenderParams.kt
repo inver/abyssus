@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
+import net.nevinsky.abyssus.lib.core.dto.CameraDto
 import net.nevinsky.abyssus.lib.core.editor.content.unclampedColor
 import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsState
 import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsCodec
@@ -20,6 +21,7 @@ import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.util.float
 import net.nevinsky.abyssus.lib.core.util.obj
 import java.io.File
+import net.nevinsky.abyssus.lib.core.util.quadraticFogCoefficient
 import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -48,7 +50,7 @@ data class FogParams(val color: Color, val density: Float, val gradient: Float) 
             .coerceIn(0f, 1f)
 
     /** Multiplier for g3d's `dot(d, d) * k` fog term that reaches [amount] at `1 / density` for any gradient. */
-    val shaderCoefficient: Float get() = ((1.0 - exp(-1.0)) * density.toDouble() * density).toFloat()
+    val shaderCoefficient: Float get() = quadraticFogCoefficient(density)
 }
 
 /** [content] is what the scene places; [projectDir] is the folder of its `.abss`, whose `assets` folder holds the files. */
@@ -119,24 +121,19 @@ class MainCamera {
         if (net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat()
                 .validate(root, net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT) != null
         ) return null
-        val cam = root.obj("mainCamera") ?: return null
-        val position = cam.vec("position") ?: return null
-        val direction = normalized(cam.vec("viewPointPosition") ?: return null) ?: return null
+        val cam = SceneJson().bind(root.obj("mainCamera") ?: return null, CameraDto::class.java)
+        val position = cam.position ?: return null
+        val direction = normalized(cam.viewPointPosition ?: return null) ?: return null
         val defaults = CameraParams.DEFAULT
-        val near = cam.float("near")?.takeIf { it > 0f && it.isFinite() }
-        val far = cam.float("far")?.takeIf { it > 0f && it.isFinite() }
+        val near = cam.near?.takeIf { it > 0f && it.isFinite() }
+        val far = cam.far?.takeIf { it > 0f && it.isFinite() }
         val invertedClip = near != null && far != null && near >= far
         CameraParams(
             position,
             direction,
             if (invertedClip) defaults.near else near ?: defaults.near,
             if (invertedClip) defaults.far else far ?: defaults.far,
-            cam.float("fieldOfView")?.takeIf { it > 0f && it < 180f } ?: defaults.fieldOfView,
+            cam.fieldOfView?.takeIf { it > 0f && it < 180f } ?: defaults.fieldOfView,
         )
     }.getOrNull()
-
-    private fun JsonNode.vec(name: String): Vector3? {
-        val o = obj(name) ?: return null
-        return Vector3(o.float("x") ?: 0f, o.float("y") ?: 0f, o.float("z") ?: 0f)
-    }
 }

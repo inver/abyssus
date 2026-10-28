@@ -28,10 +28,11 @@ class JsonObjectView internal constructor(private val node: ObjectNode) {
     fun requireText(name: String): String = asText(name) ?: throw IllegalArgumentException("missing $name")
 
     /** The member [name] as a whole number; an [IllegalArgumentException] when missing. */
-    fun requireInt(name: String): Int = node.get(name)?.asInt() ?: throw IllegalArgumentException("missing $name")
+    fun requireInt(name: String): Int =
+        node.get(name)?.takeIf { it.isNumber }?.asInt() ?: throw IllegalArgumentException("missing $name")
 
     /** The member [name] as a whole number, or [default] when missing. */
-    fun intOr(name: String, default: Int): Int = node.get(name)?.asInt() ?: default
+    fun intOr(name: String, default: Int): Int = node.get(name)?.takeIf { it.isNumber }?.asInt() ?: default
 
     /** The list member [name] of text entries; null when it is not a list, and an [IllegalArgumentException] for a non-text entry. */
     fun strings(name: String): List<String>? = (node.get(name) as? ArrayNode)?.map {
