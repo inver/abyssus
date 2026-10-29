@@ -39,7 +39,7 @@ class AssimpModelLoader {
                 if (name == null || result.containsKey(name)) {
                     continue
                 }
-                val source = if (name.startsWith("/")) FileHandle(name) else file.parent().child(name)
+                val source = if (name.startsWith("/") || java.io.File(name).isAbsolute) FileHandle(name) else file.parent().child(name)
                 try {
                     result[name] = Pixmaps.load(source)
                 } catch (e: RuntimeException) {
