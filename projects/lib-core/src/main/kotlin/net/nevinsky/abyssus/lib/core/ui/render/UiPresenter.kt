@@ -7,6 +7,8 @@ package net.nevinsky.abyssus.lib.core.ui.render
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.glutils.HdpiUtils
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.utils.viewport.FitViewport
@@ -225,10 +227,47 @@ class UiPresenter(
         for (layer in navigator.layers().asReversed()) {
             val stage = stages[layer.ref] ?: continue
             stage.viewport.update(width, height, true)
+            fillBars(layer.ref, stage)
             stage.act(delta)
             stage.draw()
             overlay?.let { drawOverlay(it, layer.ref, stage) }
         }
+    }
+
+    /**
+     * Extends a full-screen root's background over the letterbox bars the fit leaves, so a backdrop or scrim covers the
+     * whole window rather than only the reference rectangle. Leaves the stage's viewport applied.
+     */
+    private fun fillBars(ref: UiScreenRef, stage: Stage) {
+        val root = widgets[ref]?.values ?: return
+        val layout = layouts[ref] ?: return
+        val fit = layout.fit ?: return
+        // the first widget, parent first, that covers the whole reference rectangle and paints a background
+        val rgba = root.firstNotNullOfOrNull { widget ->
+            val bounds = layout.nodes[widget.id]?.bounds ?: return@firstNotNullOfOrNull null
+            val covers = bounds.x <= 0f && bounds.y <= 0f && bounds.right >= fit.referenceWidth && bounds.bottom >= fit.referenceHeight
+            if (covers && widget.type != UiWidgetType.SLIDER && widget.type != UiWidgetType.PROGRESS_BAR) style(widget).color("background")?.takeIf { it and 0xff != 0 } else null
+        } ?: return
+        val barX = stage.viewport.screenX.toFloat()
+        val barY = stage.viewport.screenY.toFloat()
+        val fittedW = stage.viewport.screenWidth.toFloat()
+        val fittedH = stage.viewport.screenHeight.toFloat()
+        if (barX <= 0f && barY <= 0f) return
+        HdpiUtils.glViewport(0, 0, width, height)
+        batch.projectionMatrix = Matrix4().setToOrtho2D(0f, 0f, width.toFloat(), height.toFloat())
+        val color = Color(); Color.rgba8888ToColor(color, rgba); batch.setColor(color)
+        batch.begin()
+        if (barX > 0f) {
+            batch.draw(pixel, 0f, 0f, barX, height.toFloat())
+            batch.draw(pixel, barX + fittedW, 0f, width - barX - fittedW, height.toFloat())
+        }
+        if (barY > 0f) {
+            batch.draw(pixel, 0f, 0f, width.toFloat(), barY)
+            batch.draw(pixel, 0f, barY + fittedH, width.toFloat(), height - barY - fittedH)
+        }
+        batch.end()
+        batch.setColor(Color.WHITE)
+        stage.viewport.apply(true)
     }
 
     private fun drawOverlay(overlay: UiEditOverlay, ref: UiScreenRef, stage: Stage) {

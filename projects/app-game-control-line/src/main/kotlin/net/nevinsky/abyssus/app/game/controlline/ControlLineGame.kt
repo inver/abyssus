@@ -6,6 +6,7 @@ package net.nevinsky.abyssus.app.game.controlline
 
 import com.badlogic.gdx.*
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.glutils.HdpiUtils
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.components.GAME_COMPONENTS
@@ -142,6 +143,8 @@ class ControlLineGame(
                 )
             }
         }
+        // the UI of the last frame left the GL viewport on its letterboxed rectangle; the field uses the whole window
+        HdpiUtils.glViewport(0, 0, Gdx.graphics.width, Gdx.graphics.height)
         renderer.draw(
             scene,
             cameras.camera,
