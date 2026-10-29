@@ -10,7 +10,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.lib.core.editor.meta.EditError
 import net.nevinsky.abyssus.lib.core.editor.meta.EditOutcome
-import net.nevinsky.abyssus.lib.core.editor.meta.FieldValue
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetMetaEditor
@@ -25,7 +25,7 @@ sealed interface AssetEditResult {
     data class Rejected(val error: EditError) : AssetEditResult
 
     /** The stored value is no longer the one the editor showed; [actual] is what the file holds now. */
-    data class Conflict(val actual: FieldValue) : AssetEditResult
+    data class Conflict(val actual: AssetFieldValue) : AssetEditResult
 
     /** The `meta.json` is missing or is not a JSON object: nothing was written. */
     data object Unreadable : AssetEditResult
@@ -37,7 +37,7 @@ sealed interface AssetEditResult {
  * `AssetMetaEditor`'s; the document text (saved or not) is what is compared with the value the editor was filled from.
  */
 object AssetMetaEdits {
-    fun update(project: Project, assetFolder: VirtualFile, key: String, expected: FieldValue, value: FieldValue, editor: AssetMetaEditor): AssetEditResult {
+    fun update(project: Project, assetFolder: VirtualFile, key: String, expected: AssetFieldValue, value: AssetFieldValue, editor: AssetMetaEditor): AssetEditResult {
         val file = assetFolder.takeIf { it.isValid }?.findChild(META_FILE) ?: return AssetEditResult.Unreadable
         var result: AssetEditResult = AssetEditResult.Unreadable
         editSceneJson(project, file, AbyssusBundle.message("commandEditAssetMeta")) { root ->

@@ -15,7 +15,7 @@ import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
-import net.nevinsky.abyssus.lib.core.editor.meta.FieldValue
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
@@ -67,12 +67,12 @@ class HeadlessEditingTest {
     @Test fun anAssetPropertyEditChangesOnlyThatKey() {
         // an unknown extension key, written as the file's own printer writes it
         val withExtension = terrainMeta.replaceFirst("\"type\": \"TERRAIN\",", "\"type\": \"TERRAIN\",\n  \"x-tool\": {\n    \"kept\": 1.50\n  },")
-        val edited = editing.setAssetProperty(withExtension, "size", FieldValue.Int(1600), FieldValue.Int(2048)) as HeadlessEdit.Edited
+        val edited = editing.setAssetProperty(withExtension, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(2048)) as HeadlessEdit.Edited
         assertEquals(listOf("\"size\": 2048,"), changedLines(withExtension, edited.text))
         assertTrue(edited.text.contains("\"kept\": 1.50"))
-        val refused = editing.setAssetProperty(withExtension, "size", FieldValue.Int(1600), FieldValue.Int(0)) as HeadlessEdit.Refused
+        val refused = editing.setAssetProperty(withExtension, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(0)) as HeadlessEdit.Refused
         assertEquals(ResourceEditorMessages().message("assetEditError.NOT_POSITIVE"), refused.refusal.message)
-        val conflict = editing.setAssetProperty(withExtension, "size", FieldValue.Int(999), FieldValue.Int(2048)) as HeadlessEdit.Refused
+        val conflict = editing.setAssetProperty(withExtension, "size", AssetFieldValue.Int(999), AssetFieldValue.Int(2048)) as HeadlessEdit.Refused
         assertEquals(ResourceEditorMessages().message("assetFieldConflict"), conflict.refusal.message)
     }
 

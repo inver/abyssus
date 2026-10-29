@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
 import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.plugin.assetfiles.AssetEditResult
 import net.nevinsky.abyssus.plugin.assetfiles.AssetMetaEdits
@@ -43,7 +42,6 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.panels.VerticalLayout
 import com.intellij.util.concurrency.AppExecutorUtil
-import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.lib.core.assets.Asset
@@ -522,12 +520,12 @@ class AssetPropertiesPanel(
     }
 
     private fun fieldEditor(state: AssetFieldState, error: JBLabel): JComponent {
-        if (state.field.kind == FieldKind.ASSET_REFERENCE || state.field.kind == FieldKind.LOCAL_FILE) {
-            val selected = state.choices.firstOrNull { it.value == (state.value as? FieldValue.Text)?.value }
+        if (state.field.kind == AssetFieldKind.ASSET_REFERENCE || state.field.kind == AssetFieldKind.LOCAL_FILE) {
+            val selected = state.choices.firstOrNull { it.value == (state.value as? AssetFieldValue.Text)?.value }
             return choiceEditor(
                 state.choices, selected, error, SimpleListCellRenderer.create("") { choiceLabel(it) },
             ) { chosen ->
-                commitField(state, chosen.value?.let { FieldValue.Text(it) } ?: FieldValue.None)
+                commitField(state, chosen.value?.let { AssetFieldValue.Text(it) } ?: AssetFieldValue.None)
             }
         }
         val field = textEditor(state.text, error) { text ->
@@ -541,7 +539,7 @@ class AssetPropertiesPanel(
     }
 
     /** Writes [value] for [state]'s property; the editor shows a refusal and puts the stored value back. */
-    private fun commitField(state: AssetFieldState, value: FieldValue): CommitOutcome {
+    private fun commitField(state: AssetFieldState, value: AssetFieldValue): CommitOutcome {
         val folder = this.folder ?: return CommitOutcome.Unchanged
         if (value == state.value) return CommitOutcome.Unchanged
         return when (val result =

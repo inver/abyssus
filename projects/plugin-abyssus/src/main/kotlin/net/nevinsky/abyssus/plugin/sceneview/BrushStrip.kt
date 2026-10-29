@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
+import net.nevinsky.abyssus.lib.core.editor.pick.BrushKind
 import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
 import net.nevinsky.abyssus.lib.core.editor.pick.BrushStroke
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneInteraction
@@ -27,7 +28,7 @@ internal abstract class BrushStrip<S : Any>(
     protected val interaction: SceneInteraction,
     protected val play: PlayState,
     protected val kinds: BrushKinds,
-    private val kind: String,
+    private val kind: BrushKind,
     private val onChanged: () -> Unit,
     radiusName: String,
     strengthName: String,
@@ -156,7 +157,7 @@ internal abstract class RequestedBrushStrip<S : Any>(
     interaction: SceneInteraction,
     play: PlayState,
     kinds: BrushKinds,
-    kind: String,
+    kind: BrushKind,
     onChanged: () -> Unit,
     radiusName: String,
     strengthName: String,

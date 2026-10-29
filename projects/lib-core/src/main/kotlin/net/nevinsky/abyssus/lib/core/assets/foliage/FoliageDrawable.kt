@@ -108,9 +108,9 @@ class FoliageDrawable(
     private val meshes = HashMap<MeshKey, ModelMeshes>()
     private val instance = Matrix4()
     private val nearest = Vector3()
-    private val lastEntity = FloatArray(16)
+    private val cameraPass = EntityMemo()
+    private val casterPass = EntityMemo()
     private val lastCamera = Vector3()
-    private var hasLastEntity = false
     private var hasLastCamera = false
     private var dirty = true
 
@@ -120,8 +120,6 @@ class FoliageDrawable(
 
     /** True until [rebuildMeshes] has fitted the meshes to the current bake. */
     private var meshesStale = true
-    private val lastCasterEntity = FloatArray(16)
-    private var hasLastCasterEntity = false
 
     /** How many OBJECT copies the last [updateCasters] kept for the light. */
     var casterCopies: Int = 0
@@ -148,7 +146,7 @@ class FoliageDrawable(
             if (layer.cull(camera, entity)) changed = true
             if (layer.kind == FoliageLayerKind.DETAIL) detail = true
         }
-        val entityMoved = !hasLastEntity || !same(lastEntity, entity.`val`)
+        val entityMoved = cameraPass.moved(entity)
         // OBJECT copies are drawn to the far plane, so only a DETAIL layer cares where the camera stands
         // a metre and a half of drift moves the draw-distance edge too little to see, and a refill walks every copy
         val cameraMoved = detail && (!hasLastCamera || lastCamera.dst2(camera.position) > CAMERA_REFILL_DISTANCE2)
@@ -159,8 +157,7 @@ class FoliageDrawable(
             lastCamera.set(camera.position)
             hasLastCamera = true
         }
-        entity.`val`.copyInto(lastEntity)
-        hasLastEntity = true
+        cameraPass.remember(entity)
     }
 
     /** Hands over a freshly generated bake: the next [update] draws its copies. */
@@ -200,14 +197,13 @@ class FoliageDrawable(
         }
         var changed = false
         for (layer in layers) if (layer.castCull(light, entity)) changed = true
-        val moved = !hasLastCasterEntity || !same(lastCasterEntity, entity.`val`)
+        val moved = casterPass.moved(entity)
         if (casterDirty || changed || moved) {
             rebuildMeshes()
             fillCasters(entity)
             casterDirty = false
         }
-        entity.`val`.copyInto(lastCasterEntity)
-        hasLastCasterEntity = true
+        casterPass.remember(entity)
     }
 
     /** The instanced parts of the copies [updateCasters] kept: OBJECT layers only. */
@@ -459,12 +455,6 @@ class FoliageDrawable(
         }
     }
 
-    /** Whether two matrices hold the same sixteen floats; `Matrix4` has no `equals` to ask. */
-    private fun same(a: FloatArray, b: FloatArray): Boolean {
-        for (i in a.indices) if (a[i] != b[i]) return false
-        return true
-    }
-
     /** How far the layer's boxes reach past their own heights: [chunkPad]. */
     private fun computeChunkPad(): Float {
         val scale = staged.meta.layers.maxOfOrNull { it.scale.max } ?: 1f
@@ -655,3 +645,22 @@ class FoliageDrawable(
 
 /** The squared distance the camera must drift before a DETAIL layer refills its buffers. */
 private const val CAMERA_REFILL_DISTANCE2 = 2.25f
+
+/** The entity matrix a pass last drew with, to tell whether the entity has moved since. */
+private class EntityMemo {
+    private val last = FloatArray(16)
+    private var known = false
+
+    fun moved(entity: Matrix4): Boolean = !known || !same(last, entity.`val`)
+
+    /** Whether two matrices hold the same sixteen floats; `Matrix4` has no `equals` to ask. */
+    private fun same(a: FloatArray, b: FloatArray): Boolean {
+        for (i in a.indices) if (a[i] != b[i]) return false
+        return true
+    }
+
+    fun remember(entity: Matrix4) {
+        entity.`val`.copyInto(last)
+        known = true
+    }
+}

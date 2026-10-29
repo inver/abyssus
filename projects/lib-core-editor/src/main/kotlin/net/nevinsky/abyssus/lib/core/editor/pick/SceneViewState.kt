@@ -9,14 +9,17 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.editor.content.Pose
 
+/** Which terrain brush a [BrushMode] holds; each kind has its own [BrushStroke]. */
+enum class BrushKind { FOLIAGE, SCULPT, SPLAT }
+
 /** The kind of the Paint Foliage brush in [BrushMode.kind]. */
-const val FOLIAGE_BRUSH = "foliage"
+val FOLIAGE_BRUSH = BrushKind.FOLIAGE
 
 /** The kind of the Sculpt Terrain brush in [BrushMode.kind]. */
-const val SCULPT_BRUSH = "sculpt"
+val SCULPT_BRUSH = BrushKind.SCULPT
 
 /** The kind of the Paint Texture brush in [BrushMode.kind]. */
-const val SPLAT_BRUSH = "splat"
+val SPLAT_BRUSH = BrushKind.SPLAT
 
 /** What a brush kind keeps beside the shared fields of its [BrushMode] (the foliage layer, say); nothing reads it but the kind itself. */
 interface BrushOptions
@@ -27,7 +30,7 @@ interface BrushOptions
  * brush is [reversed] (erasing, or an inverted tool; the strip resolves it, Shift included). One mode holds at a time.
  */
 data class BrushMode(
-    val kind: String,
+    val kind: BrushKind,
     val entityId: String,
     val radius: Float,
     val strength: Float,
@@ -40,6 +43,20 @@ sealed interface SceneTarget {
     data class Entity(val id: String) : SceneTarget
 
     data class Water(val id: String) : SceneTarget
+}
+
+/**
+ * What the left button does in the view, read from the fields that hold the modes. The precedence lives here and
+ * nowhere else: drawing beats editing a path's points, which beats a terrain brush, which beats plain selection.
+ */
+sealed interface ViewMode {
+    data object Select : ViewMode
+
+    data class Brush(val brush: BrushMode) : ViewMode
+
+    data class PathEditing(val entityId: String, val point: Int?) : ViewMode
+
+    data class Drawing(val drawing: PathDrawing) : ViewMode
 }
 
 /**
@@ -125,4 +142,13 @@ class SceneViewState {
 
     /** The control point of [pathEditing] that wears the move gizmo, or null. */
     var selectedPathPoint: Int? = null
+
+    /** The mode the view is in; see [ViewMode] for which of the independent fields wins. */
+    val mode: ViewMode
+        get() {
+            drawing?.let { return ViewMode.Drawing(it) }
+            pathEditing?.let { return ViewMode.PathEditing(it, selectedPathPoint) }
+            brush?.let { return ViewMode.Brush(it) }
+            return ViewMode.Select
+        }
 }

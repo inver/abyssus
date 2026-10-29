@@ -10,7 +10,7 @@ import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetMetaEditor
-import net.nevinsky.abyssus.lib.core.editor.meta.FieldValue
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
 import net.nevinsky.abyssus.lib.core.editor.pick.BrushStroke
 import net.nevinsky.abyssus.lib.core.editor.terrain.splat.ImageIoSplatCodec
 import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SPLAT_FILE_NAME
@@ -105,8 +105,8 @@ class SplatSession(
      * Properties panel's pickers: one undoable step on the terrain's `meta.json`. [expected] is the value the strip showed.
      */
     fun assign(layer: SplatLayer, uuid: String?): AssetEditResult {
-        val expected = layer.uuid?.let { FieldValue.Text(it) } ?: FieldValue.None
-        val value = uuid?.let { FieldValue.Text(it) } ?: FieldValue.None
+        val expected = layer.uuid?.let { AssetFieldValue.Text(it) } ?: AssetFieldValue.None
+        val value = uuid?.let { AssetFieldValue.Text(it) } ?: AssetFieldValue.None
         return AssetMetaEdits.update(project, terrainFolder, layer.field, expected, value, assetEditor)
     }
 

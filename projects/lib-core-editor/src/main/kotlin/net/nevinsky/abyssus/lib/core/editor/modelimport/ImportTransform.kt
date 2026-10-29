@@ -14,6 +14,7 @@ import com.badlogic.gdx.math.collision.BoundingBox
 import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import net.nevinsky.abyssus.lib.gdx.model.ModelMesh
+import net.nevinsky.abyssus.lib.gdx.model.VertexLayout
 import net.nevinsky.abyssus.lib.gdx.model.ModelMeshPart
 
 /** The id of the node an import wraps the source roots in. */
@@ -95,8 +96,8 @@ class ImportTransform {
             for (nodePart in node.parts.orEmpty()) {
                 val (mesh, part) = parts[nodePart.meshPartId] ?: continue
                 val stride = mesh.attributes.sumOf { it.numComponents }
-                val position = offsetOf(mesh, VertexAttributes.Usage.Position) ?: continue
-                val weights = weightOffsets(mesh)
+                val position = VertexLayout(mesh).offsetOf(VertexAttributes.Usage.Position) ?: continue
+                val weights = VertexLayout(mesh).offsetsOf(VertexAttributes.Usage.BoneWeight)
                 val bones = nodePart.bones?.takeIf { weights.isNotEmpty() && it.size > 0 }
                 val boneWorld = bones?.let { b -> (0 until b.size).map { i -> Matrix4(world[b.getKeyAt(i)] ?: Matrix4()).mul(b.getValueAt(i)) } }
                 for (index in part.indices) {
@@ -142,23 +143,4 @@ class ImportTransform {
 
     private fun local(node: ModelNode): Matrix4 =
         Matrix4().set(node.translation ?: Vector3(), node.rotation ?: Quaternion(), node.scale ?: Vector3(1f, 1f, 1f))
-
-    private fun offsetOf(mesh: ModelMesh, usage: Int): Int? {
-        var offset = 0
-        for (a in mesh.attributes) {
-            if (a.usage == usage) return offset
-            offset += a.numComponents
-        }
-        return null
-    }
-
-    private fun weightOffsets(mesh: ModelMesh): List<Int> {
-        val result = ArrayList<Int>()
-        var offset = 0
-        for (a in mesh.attributes) {
-            if (a.usage == VertexAttributes.Usage.BoneWeight) result += offset
-            offset += a.numComponents
-        }
-        return result
-    }
 }

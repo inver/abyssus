@@ -403,7 +403,7 @@ class UiCollectionDecoder(private val format: AbyssusDocumentFormat = AbyssusDoc
         }
 
         private fun references(collection: UiCollection, bindingNames: Set<String>, base: String) {
-            fun walk(widget: UiWidget, path: String, item: Map<String, UiBindingType>?) {
+            for ((i, screen) in collection.screens.withIndex()) collection.walkScoped(screen.root, "$base.screens[$i].root") { widget, path, item ->
                 for ((property, name) in widget.bindings) {
                     when {
                         name.startsWith(UI_ITEM_PREFIX) -> when {
@@ -432,17 +432,7 @@ class UiCollectionDecoder(private val format: AbyssusDocumentFormat = AbyssusDoc
                     )
                         warnings += UiIssue(UiIssueCode.UNRESOLVED_SCREEN, "$path.actions.$event")
                 }
-                widget.children.forEachIndexed { c, child -> walk(child, "$path.children[$c]", item) }
-                if (widget.type == UiWidgetType.LIST) {
-                    // rows see the record of the list's items binding; the empty state is not a row and sees no item
-                    val record =
-                        widget.bindings["items"]?.let(collection::binding)?.takeIf { it.type == UiBindingType.LIST }
-                            ?.fields?.associate { it.name to it.type }.orEmpty()
-                    widget.template?.let { walk(it, "$path.template", record) }
-                    widget.empty?.let { walk(it, "$path.empty", null) }
-                }
             }
-            for ((i, screen) in collection.screens.withIndex()) walk(screen.root, "$base.screens[$i].root", null)
         }
     }
 }

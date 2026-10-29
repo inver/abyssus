@@ -34,6 +34,15 @@ fun numberText(value: Number, style: NumberTextStyle = NumberTextStyle.PLAIN): S
     }
 }
 
+/** Whole numbers below this are written without a fraction; larger ones keep the double spelling. */
+const val WHOLE_NUMBER_LIMIT = 1e15
+
+/** Whether [value] is a whole number small enough to be written as a long. */
+fun isWholeNumber(value: Double): Boolean = value == Math.rint(value) && abs(value) < WHOLE_NUMBER_LIMIT
+
+/** [value] as short as it reads: `3` for 3.0, the double spelling otherwise. */
+fun shortNumberText(value: Double): String = if (isWholeNumber(value)) value.toLong().toString() else value.toString()
+
 /** UI documents retain their existing integer-node threshold and double precision outside it. */
 fun uiNumberNode(value: Double): JsonNode {
     val integer = numberText(value, NumberTextStyle.UI_DOCUMENT).toIntOrNull()

@@ -19,5 +19,5 @@ class ToneCurve(val exposure: Float = 1.0f) {
     fun display(radiance: Float): Float = aces(maxOf(radiance, 0f) * exposure).pow(1f / 2.2f)
 
     /** Display value 0..255 of [radiance], rounded. */
-    fun byte(radiance: Float): Int = (display(radiance) * 255f).roundToInt()
+    fun byte(radiance: Float): Int = (display(radiance) * 255f).roundToInt().coerceIn(0, 255)
 }

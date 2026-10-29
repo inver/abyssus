@@ -30,10 +30,7 @@ class ScenePreview {
         val handleId = content.aimHandleOf(light) ?: return null
         val handle = content.entityPositions[handleId] ?: return null
         val direction = result.direction ?: return null
-        val dx = handle.x - light.position.x
-        val dy = handle.y - light.position.y
-        val dz = handle.z - light.position.z
-        val distance = kotlin.math.sqrt(dx * dx + dy * dy + dz * dz).takeIf { it > 1e-6f } ?: 1f
+        val distance = handle.dst(light.position).takeIf { it > 1e-6f } ?: 1f
         val p = result.transform.position
         return Vector3(p.x + direction.x * distance, p.y + direction.y * distance, p.z + direction.z * distance)
     }
@@ -49,9 +46,9 @@ class ScenePreview {
         val moved = content.entityPositions + (entityId to t.position)
         val positions = if (handleId != null && handleAt != null) moved + (handleId to handleAt) else moved
         return content.copy(
-            models = content.models.map { if (it.entityId == entityId) it.copy(transform = t) else it },
-            terrains = content.terrains.map { if (it.entityId == entityId) it.copy(transform = t) else it },
-            lights = content.lights.map {
+            models = if (content.model(entityId) == null) content.models else content.models.map { if (it.entityId == entityId) it.copy(transform = t) else it },
+            terrains = if (content.terrain(entityId) == null) content.terrains else content.terrains.map { if (it.entityId == entityId) it.copy(transform = t) else it },
+            lights = if (light == null) content.lights else content.lights.map {
                 if (it.entityId != entityId) {
                     it
                 } else {
@@ -68,7 +65,7 @@ class ScenePreview {
                     it.copy(position = t.position, rotation = t.rotation, direction = direction)
                 }
             },
-            cameras = content.cameras.map {
+            cameras = if (content.camera(entityId) == null) content.cameras else content.cameras.map {
                 if (it.entityId != entityId) it
                 else it.copy(position = t.position, rotation = t.rotation, direction = result.direction ?: it.direction)
             },

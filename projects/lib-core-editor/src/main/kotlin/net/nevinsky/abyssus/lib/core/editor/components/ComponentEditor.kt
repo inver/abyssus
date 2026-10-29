@@ -45,6 +45,7 @@ class ComponentEditor(
             this(json, EcsWriter(json), messages, contributions)
 
     private val reader = ComponentReader(jsonProcessor)
+    private val references = EntityReferences(contributions)
     private val arrangements = ArrangementEdits(messages)
     val kinds: List<ComponentKind<*>> = BuiltInComponentKinds(reader, ecsWriter).kinds + contributions
 
@@ -288,16 +289,13 @@ class ComponentEditor(
         return EditResult.Changed
     }
 
-    /** An entity other than [entityId] that looks at it, or has it as parent. */
+    /** An entity other than [entityId] that has a reference field naming it, or null. */
     private fun referrer(root: JsonNode, entityId: String): String? {
-        val wanted = entityId.toIntOrNull() ?: return null
-        for ((id, c) in SceneEntityTree(root).componentsById()) {
+        for ((id, components) in SceneEntityTree(root).componentsById()) {
             if (id == entityId) continue
-            val refs = listOf(
-                c.get("PositionComponent")?.get("lookAtId"),
-                c.get("ParentComponent")?.get("parentEntityId"),
-            )
-            if (refs.any { it?.asInt(NO_ENTITY) == wanted }) return id
+            for ((key, node) in components.properties()) {
+                if (references.fieldNaming(key.substringAfterLast('.'), node, entityId) != null) return id
+            }
         }
         return null
     }

@@ -26,7 +26,7 @@ import net.nevinsky.abyssus.lib.core.editor.document.documentDisplayMessage
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldDescriptions
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetMetaEditor
 import net.nevinsky.abyssus.lib.core.editor.meta.EditOutcome
-import net.nevinsky.abyssus.lib.core.editor.meta.FieldValue
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
 import net.nevinsky.abyssus.lib.core.editor.meta.message
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
@@ -97,8 +97,8 @@ class HeadlessEditing(
     }
 
     /**
-     * Disables or enables an entity or one of its components in [sceneText]: `enabled: false` is written on that entry
-     * only, and enabling removes the key, as the Properties check box and the tree eye do. Unchanged when the target is
+     * Disables or enables an entity or one of its components in [sceneText]: the disabled state is written on that entry
+     * only (the entity `flags` or its `disabledComponents`), and enabling removes it, as the Properties check box and the tree eye do. Unchanged when the target is
      * missing, cannot be switched, or already has that state.
      */
     fun setEnabled(sceneText: String, target: EnabledTarget, enabled: Boolean): HeadlessEdit =
@@ -142,7 +142,7 @@ class HeadlessEditing(
      * Sets property [key] of the asset `meta.json` [metaText] to [value]; [expected] is the value the caller last read
      * (an edit made elsewhere since is refused as a conflict), as the Properties panel does.
      */
-    fun setAssetProperty(metaText: String, key: String, expected: FieldValue, value: FieldValue): HeadlessEdit {
+    fun setAssetProperty(metaText: String, key: String, expected: AssetFieldValue, value: AssetFieldValue): HeadlessEdit {
         var refusal: Refusal? = null
         val outcome = edit(metaText, DocumentKind.ASSET) { root ->
             when (val result = assetMeta.edit(root, key, expected, value)) {

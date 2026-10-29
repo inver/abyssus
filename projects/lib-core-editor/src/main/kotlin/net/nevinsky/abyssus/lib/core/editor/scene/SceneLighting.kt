@@ -175,10 +175,5 @@ private fun usable(l: LightPlacement) =
 private fun scaled(l: LightPlacement) =
     unclampedColor(l.color.r * l.intensity, l.color.g * l.intensity, l.color.b * l.intensity, 1f)
 
-private fun distance(a: Vector3, b: Vector3): Float {
-    val dx = a.x - b.x
-    val dy = a.y - b.y
-    val dz = a.z - b.z
-    return sqrt(dx * dx + dy * dy + dz * dz)
-}
+private fun distance(a: Vector3, b: Vector3): Float = a.dst(b)
 

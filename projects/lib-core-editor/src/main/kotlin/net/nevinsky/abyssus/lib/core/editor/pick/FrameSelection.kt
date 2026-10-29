@@ -33,10 +33,7 @@ class FrameSelection {
      */
     fun frame(min: Vector3, max: Vector3, fovDegrees: Float, aspect: Float): Framing {
         val center = Vector3((min.x + max.x) / 2f, (min.y + max.y) / 2f, (min.z + max.z) / 2f)
-        val dx = max.x - min.x
-        val dy = max.y - min.y
-        val dz = max.z - min.z
-        val radius = max(sqrt(dx * dx + dy * dy + dz * dz) / 2f, MIN_RADIUS)
+        val radius = max(max.dst(min) / 2f, MIN_RADIUS)
         val vertical = Math.toRadians(fovDegrees.toDouble() / 2.0)
         val horizontal = atan(tan(vertical) * aspect.coerceAtLeast(MIN_ASPECT))
         val half = min(vertical, horizontal)

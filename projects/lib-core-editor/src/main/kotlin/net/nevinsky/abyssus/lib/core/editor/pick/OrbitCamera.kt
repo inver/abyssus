@@ -80,7 +80,7 @@ class OrbitCamera(var target: Vector3, var distance: Float, var yaw: Float, var 
      * A direction that is straight up or down settles at the highest pitch the camera allows (89 degrees), keeping the yaw.
      */
     fun lookAlong(direction: Vector3) {
-        val length = kotlin.math.sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z)
+        val length = direction.len()
         if (length < 1e-6f) return
         // the eye sits opposite to where the camera looks
         val ux = -direction.x / length

@@ -7,27 +7,25 @@ package net.nevinsky.abyssus.lib.core.editor.meta
 
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.editor.meta.PropertyRow
-import net.nevinsky.abyssus.lib.core.editor.meta.RowKind
 import java.io.File
 
 /**
  * One editable property of the shown asset: its [field], the [value] the file holds (or the default of an omitted key),
  * and for a texture or image property the [choices] it can take.
  */
-data class AssetFieldState(val field: AssetField, val value: FieldValue, val choices: List<AssetChoice> = emptyList()) {
+data class AssetFieldState(val field: AssetField, val value: AssetFieldValue, val choices: List<AssetChoice> = emptyList()) {
     val key: String get() = this.field.key
     val text: String get() = formatFieldValue(value)
 }
 
 /** [value] as an editor shows it; numbers keep Kotlin's shortest float text, a list is comma separated. */
-fun formatFieldValue(value: FieldValue): String = when (value) {
-    is FieldValue.Int -> value.value.toString()
-    is FieldValue.Real -> value.value.toString()
-    is FieldValue.Reals -> value.values.joinToString(", ")
-    is FieldValue.Text -> value.value
-    FieldValue.None -> ""
-    is FieldValue.Invalid -> value.text
+fun formatFieldValue(value: AssetFieldValue): String = when (value) {
+    is AssetFieldValue.Int -> value.value.toString()
+    is AssetFieldValue.Real -> value.value.toString()
+    is AssetFieldValue.Reals -> value.values.joinToString(", ")
+    is AssetFieldValue.Text -> value.value
+    AssetFieldValue.None -> ""
+    is AssetFieldValue.Invalid -> value.text
 }
 
 /**
@@ -47,10 +45,10 @@ fun assetFieldStates(
     val assetsDir = folder.parentFile
     return fields.map { field ->
         val value = editor.current(json, field)
-        val current = (value as? FieldValue.Text)?.value
+        val current = (value as? AssetFieldValue.Text)?.value
         val offered = when (field.kind) {
-            FieldKind.ASSET_REFERENCE -> assetsDir?.let { choices.textures(it, current) } ?: emptyList()
-            FieldKind.LOCAL_FILE -> choices.faces(folder, current)
+            AssetFieldKind.ASSET_REFERENCE -> assetsDir?.let { choices.textures(it, current) } ?: emptyList()
+            AssetFieldKind.LOCAL_FILE -> choices.faces(folder, current)
             else -> emptyList()
         }
         AssetFieldState(field, value, offered)

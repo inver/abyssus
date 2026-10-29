@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.water
 
+import net.nevinsky.abyssus.lib.core.editor.util.shortNumberText
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.water.WaterField
 import net.nevinsky.abyssus.lib.core.water.WaterPresets
@@ -35,7 +36,7 @@ class WaterText(private val presets: WaterPresets = WaterPresets()) {
 
     /** [value] as short as it reads: `3` for 3.0. */
     fun format(value: Double): String =
-        if (value == Math.rint(value) && kotlin.math.abs(value) < 1e15) value.toLong().toString() else value.toString()
+        shortNumberText(value)
 
     /**
      * What each field of the saved [surface] reads: the number as the file spells it, else (when it is absent) the

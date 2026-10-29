@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.panel
 
+import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_FIELDS
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FAR
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
@@ -492,7 +493,7 @@ class PanelBuilders(
         }
         val reference = ASSET_REFERENCES[type to key]
         return when {
-            reference != null -> AssetRow(
+            reference != null && (!value.isNull || key in editable) -> AssetRow(
                 key,
                 text,
                 assetIconKey(reference),
@@ -596,8 +597,8 @@ private val CAMEL = Regex("(?<=[a-z])(?=[A-Z])")
 private val EMPTY_OBJECT = Regex("\\s*\\{\\s*}\\s*")
 
 /** The `additional` keys that name another asset, with the type of asset they name. */
-private val ASSET_REFERENCES = mapOf(
-    ("TERRAIN" to "splatBase") to "TEXTURE",
-    ("FOLIAGE" to "terrain") to "TERRAIN",
-    ("SKYBOX_PROCEDURAL" to "clouds") to "CLOUDS",
-)
+private val ASSET_REFERENCES: Map<Pair<String, String>, String> =
+    (SPLAT_FIELDS + "splatBase").distinct().associate { ("TERRAIN" to it) to "TEXTURE" } + mapOf(
+        ("FOLIAGE" to "terrain") to "TERRAIN",
+        ("SKYBOX_PROCEDURAL" to "clouds") to "CLOUDS",
+    )

@@ -110,8 +110,8 @@ private fun fogOf(scene: SceneDto): FogParams? {
 }
 
 internal fun normalized(v: Vector3): Vector3? {
-    val len = sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
-    return if (len > 1e-6f && len.isFinite()) Vector3(v.x / len, v.y / len, v.z / len) else null
+    val len = v.len()
+    return if (len > 1e-6f && len.isFinite()) Vector3(v).scl(1f / len) else null
 }
 
 /** The `mainCamera` of the `.abss` project a scene belongs to. */

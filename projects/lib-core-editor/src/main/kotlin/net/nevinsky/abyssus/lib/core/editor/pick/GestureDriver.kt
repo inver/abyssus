@@ -20,7 +20,7 @@ internal interface GestureHost {
     val size: ViewSize
 
     /** The stroke of the brush [kind], or null when nothing implements it. */
-    fun brushStroke(kind: String): BrushStroke?
+    fun brushStroke(kind: BrushKind): BrushStroke?
 
     val onTransform: ((String, TransformEdit) -> Boolean)?
     val onWaterMove: ((String, Vector3) -> Boolean)?
@@ -59,7 +59,7 @@ internal sealed interface Gesture {
     }
 
     /** A terrain brush stroke of [kind] on the terrain of [entityId]; the caller's [BrushStroke] of that kind does the work. */
-    class Brushing(val entityId: String, val kind: String) : Gesture
+    class Brushing(val entityId: String, val kind: BrushKind) : Gesture
 }
 
 /**

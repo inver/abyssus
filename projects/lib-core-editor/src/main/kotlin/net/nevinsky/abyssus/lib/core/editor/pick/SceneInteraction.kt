@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
+import java.util.EnumMap
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
@@ -81,13 +82,13 @@ class SceneInteraction(
     /** Called on Delete with the selected water surface's id; returns whether it was removed. */
     var onWaterDelete: ((String) -> Boolean)? = null
 
-    private val brushStrokes = HashMap<String, BrushStroke>()
+    private val brushStrokes = EnumMap<BrushKind, BrushStroke>(BrushKind::class.java)
 
     /** What strokes the terrain while the brush mode of [kind] in [state] is on, or null when nothing implements it. */
-    fun brushStroke(kind: String): BrushStroke? = brushStrokes[kind]
+    fun brushStroke(kind: BrushKind): BrushStroke? = brushStrokes[kind]
 
     /** Sets what strokes the terrain for the brush [kind]; null removes it. */
-    fun setBrushStroke(kind: String, stroke: BrushStroke?) {
+    fun setBrushStroke(kind: BrushKind, stroke: BrushStroke?) {
         if (stroke == null) brushStrokes.remove(kind) else brushStrokes[kind] = stroke
     }
 
@@ -128,7 +129,7 @@ class SceneInteraction(
 
     private val host = object : GestureHost {
         override val size: ViewSize get() = this@SceneInteraction.size
-        override fun brushStroke(kind: String): BrushStroke? = this@SceneInteraction.brushStroke(kind)
+        override fun brushStroke(kind: BrushKind): BrushStroke? = this@SceneInteraction.brushStroke(kind)
         override val onTransform: ((String, TransformEdit) -> Boolean)? get() = this@SceneInteraction.onTransform
         override val onWaterMove: ((String, Vector3) -> Boolean)? get() = this@SceneInteraction.onWaterMove
         override val onArrangementEdit: ((String, List<Vector3>) -> Boolean)? get() = this@SceneInteraction.stagedEdit
@@ -339,26 +340,26 @@ class SceneInteraction(
      * being edited, or otherwise removes the selected entity through [onDelete], or the selected water surface through [onWaterDelete].
      */
     fun backspace() {
-        val id = state.pathEditing
-        val index = state.selectedPathPoint
-        if (state.drawing == null && id != null && index != null) {
-            if (drawingSession.removePoint(id, index)) {
-                state.selectedPathPoint = null
-                stateChanged()
+        when (val mode = state.mode) {
+            is ViewMode.Drawing -> drawingSession.backspace()
+            is ViewMode.PathEditing -> {
+                val index = mode.point ?: return
+                if (drawingSession.removePoint(mode.entityId, index)) {
+                    state.selectedPathPoint = null
+                    stateChanged()
+                }
             }
-            return
-        }
-        if (state.drawing == null) {
-            val water = state.selectedWater
-            if (water != null) {
-                if (state.pathEditing == null && !isDragging) onWaterDelete?.invoke(water)
-                return
+            is ViewMode.Brush, ViewMode.Select -> {
+                if (isDragging) return
+                val water = state.selectedWater
+                if (water != null) {
+                    onWaterDelete?.invoke(water)
+                    return
+                }
+                val id = selectedId
+                if (id != null && id != state.viewCamera) onDelete?.invoke(id)
             }
-            val id = selectedId
-            if (id != null && id != state.viewCamera && state.pathEditing == null && !isDragging) onDelete?.invoke(id)
-            return
         }
-        drawingSession.backspace()
     }
 
     /** Whether point [index] of the arrangement [entityId] can be removed: at least two points must remain. */
@@ -400,7 +401,7 @@ class SceneInteraction(
 
     /** Esc: puts the dragged object back, or discards the paint stroke; neither writes anything. */
     fun escape() {
-        if (state.drawing != null && gestures.isIdle) {
+        if (state.mode is ViewMode.Drawing && gestures.isIdle) {
             drawingSession.cancel()
             return
         }

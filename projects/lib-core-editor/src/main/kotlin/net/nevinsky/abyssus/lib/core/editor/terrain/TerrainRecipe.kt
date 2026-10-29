@@ -5,8 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.terrain
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.assets.displayMessage
@@ -58,32 +57,21 @@ enum class MismatchReason { SIZE, RESOLUTION, HEIGHTS }
 /** Reads and writes [TerrainRecipe] text and compares a recipe with the terrain it sits next to. */
 class TerrainRecipeCodec(private val json: JsonProcessor) {
     fun encode(recipe: TerrainRecipe): String {
-        val nodes = JsonNodeFactory.instance
         val s = recipe.settings
-        val root = nodes.objectNode().apply {
-            put("schemaVersion", recipe.schemaVersion)
-            putObject("generator").apply {
-                put("id", recipe.generator)
-                put("sourceRevision", recipe.sourceRevision)
-            }
-            putObject("settings").apply {
-                put("seed", s.seed)
-                put("featureSize", s.featureSize)
-                put("minHeight", s.minHeight)
-                put("maxHeight", s.maxHeight)
-                put("octaves", s.octaves)
-                put("persistence", s.persistence)
-                put("lacunarity", s.lacunarity)
-            }
-            put("size", recipe.size)
-            put("resolution", recipe.resolution)
-            put("heightsSha256", recipe.heightsSha256)
-        }
-        return json.pretty(root)
+        return json.pretty(
+            RecipeFile(
+                schemaVersion = recipe.schemaVersion,
+                generator = GeneratorFile(recipe.generator, recipe.sourceRevision),
+                settings = SettingsFile(s.seed, s.featureSize, s.minHeight, s.maxHeight, s.octaves, s.persistence, s.lacunarity),
+                size = recipe.size,
+                resolution = recipe.resolution,
+                heightsSha256 = recipe.heightsSha256,
+            ),
+        )
     }
 
     /** The recipe in [text], or why it is not usable ([RecipeStatus.Malformed] or [RecipeStatus.Unsupported]). */
-    fun decode(text: String): Decoded = runCatchingKeepingCancellation { read(json.readObject(text)) }
+    fun decode(text: String): Decoded = runCatchingKeepingCancellation { read(text) }
         .getOrElse { Decoded.Failed(RecipeStatus.Malformed(it.displayMessage())) }
 
     sealed interface Decoded {
@@ -91,46 +79,42 @@ class TerrainRecipeCodec(private val json: JsonProcessor) {
         data class Failed(val status: RecipeStatus) : Decoded
     }
 
-    private fun read(root: JsonNode): Decoded {
-        val version = int(root, "schemaVersion")
-        if (version != RECIPE_SCHEMA_VERSION) return Decoded.Failed(RecipeStatus.Unsupported("schemaVersion $version"))
-        val generator = root.get("generator")?.takeIf { it.isObject } ?: error("generator is missing")
-        val id = string(generator, "id")
+    private fun read(text: String): Decoded {
+        val header = json.parse(text, RecipeHeader::class.java)
+        if (header.schemaVersion != RECIPE_SCHEMA_VERSION) {
+            return Decoded.Failed(RecipeStatus.Unsupported("schemaVersion ${header.schemaVersion}"))
+        }
+        val id = header.generator.id
         if (id != OPENSIMPLEX2_FBM_V1) return Decoded.Failed(RecipeStatus.Unsupported("generator $id"))
-        val s = root.get("settings")?.takeIf { it.isObject } ?: error("settings are missing")
+        val file = json.parse(text, RecipeFile::class.java)
+        val s = file.settings
+        check(s.floats().all { it.isFinite() }) { "settings are not finite" }
         val settings = TerrainGenerationSettings(
-            seed = int(s, "seed"),
-            featureSize = float(s, "featureSize"),
-            minHeight = float(s, "minHeight"),
-            maxHeight = float(s, "maxHeight"),
-            octaves = int(s, "octaves"),
-            persistence = float(s, "persistence"),
-            lacunarity = float(s, "lacunarity"),
+            seed = s.seed,
+            featureSize = s.featureSize,
+            minHeight = s.minHeight,
+            maxHeight = s.maxHeight,
+            octaves = s.octaves,
+            persistence = s.persistence,
+            lacunarity = s.lacunarity,
         )
         check(settings.valid) { "settings are not valid: ${settings.errors()}" }
-        val sha = string(root, "heightsSha256")
+        val sha = file.heightsSha256
         check(sha.length == SHA_HEX_LENGTH && sha.all { it in "0123456789abcdef" }) { "heightsSha256 is not a SHA-256" }
+        check(file.size > 0) { "size must be positive" }
+        check(file.resolution in MIN_TERRAIN_RESOLUTION..MAX_RESOLUTION) { "resolution is out of range" }
         return Decoded.Recipe(
             TerrainRecipe(
                 settings = settings,
-                size = int(root, "size").also { check(it > 0) { "size must be positive" } },
-                resolution = int(root, "resolution").also { check(it in MIN_TERRAIN_RESOLUTION..MAX_RESOLUTION) { "resolution is out of range" } },
+                size = file.size,
+                resolution = file.resolution,
                 heightsSha256 = sha,
                 generator = id,
-                sourceRevision = string(generator, "sourceRevision"),
-                schemaVersion = version,
+                sourceRevision = file.generator.sourceRevision,
+                schemaVersion = file.schemaVersion,
             ),
         )
     }
-
-    private fun int(node: JsonNode, key: String): Int =
-        node.get(key)?.takeIf { it.isIntegralNumber && it.canConvertToInt() }?.intValue() ?: error("$key is missing or not an integer")
-
-    private fun float(node: JsonNode, key: String): Float =
-        node.get(key)?.takeIf { it.isNumber }?.floatValue()?.takeIf { it.isFinite() } ?: error("$key is missing or not a number")
-
-    private fun string(node: JsonNode, key: String): String =
-        node.get(key)?.takeIf { it.isTextual }?.asText() ?: error("$key is missing or not text")
 
     /**
      * The status of [recipeText] (null when there is no file) for a terrain that is [size] world units wide, has
@@ -153,4 +137,34 @@ class TerrainRecipeCodec(private val json: JsonProcessor) {
     /** The settings a draft starts from: the recipe's when it matches the terrain, else the defaults. */
     fun draftSettings(status: RecipeStatus): TerrainGenerationSettings =
         (status as? RecipeStatus.Matching)?.recipe?.settings ?: TerrainGenerationSettings()
+}
+
+/** Just enough of a recipe file to tell whether this code can read the rest. */
+@JsonIgnoreProperties(ignoreUnknown = true)
+private data class RecipeHeader(val schemaVersion: Int, val generator: GeneratorHeader)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+private data class GeneratorHeader(val id: String)
+
+private data class RecipeFile(
+    val schemaVersion: Int,
+    val generator: GeneratorFile,
+    val settings: SettingsFile,
+    val size: Int,
+    val resolution: Int,
+    val heightsSha256: String,
+)
+
+private data class GeneratorFile(val id: String, val sourceRevision: String)
+
+private data class SettingsFile(
+    val seed: Int,
+    val featureSize: Float,
+    val minHeight: Float,
+    val maxHeight: Float,
+    val octaves: Int,
+    val persistence: Float,
+    val lacunarity: Float,
+) {
+    fun floats(): List<Float> = listOf(featureSize, minHeight, maxHeight, persistence, lacunarity)
 }

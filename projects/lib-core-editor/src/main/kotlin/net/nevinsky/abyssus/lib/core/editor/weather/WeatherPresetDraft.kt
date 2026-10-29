@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.weather
 
+import net.nevinsky.abyssus.lib.core.editor.util.isWholeNumber
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaBinder
@@ -66,7 +67,7 @@ class WeatherPresetDraft(
         )) {
             root.set<JsonNode>(key, source?.get(key) ?: number(value))
         }
-        val wind = json.parse("[]") as com.fasterxml.jackson.databind.node.ArrayNode
+        val wind = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.arrayNode()
         wind.add(source?.get("wind")?.get(0) ?: source?.get("windX") ?: number(band.windX))
         wind.add(source?.get("wind")?.get(1) ?: source?.get("windZ") ?: number(band.windZ))
         root.set<JsonNode>("wind", wind)
@@ -79,7 +80,7 @@ class WeatherPresetDraft(
     }
 
     private fun number(value: Float): JsonNode = json.parse(
-        if (value.toDouble() == Math.rint(value.toDouble())) value.toLong().toString() else value.toString()
+        if (isWholeNumber(value.toDouble())) value.toLong().toString() else value.toString()
     )
 
     private fun copyExtensions(source: JsonNode?, target: ObjectNode, known: Set<String>) {

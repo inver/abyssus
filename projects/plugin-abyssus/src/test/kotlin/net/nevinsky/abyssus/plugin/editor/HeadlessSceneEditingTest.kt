@@ -15,7 +15,7 @@ import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEdit
 import net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEditing
-import net.nevinsky.abyssus.lib.core.editor.meta.FieldValue
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.plugin.filetype.editSceneJson
@@ -66,11 +66,11 @@ class HeadlessSceneEditingTest : BasePlatformTestCase() {
         val meta = myFixture.addFileToProject("p/assets/terrain/meta.json", terrainMeta).virtualFile
         assertEquals(
             AssetEditResult.Changed,
-            AssetMetaEdits.update(project, meta.parent, "size", FieldValue.Int(1600), FieldValue.Int(2048), testCore.assetEditor),
+            AssetMetaEdits.update(project, meta.parent, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(2048), testCore.assetEditor),
         )
         assertEquals(
             HeadlessEdit.Edited(textOf(meta)),
-            headless.setAssetProperty(terrainMeta, "size", FieldValue.Int(1600), FieldValue.Int(2048)),
+            headless.setAssetProperty(terrainMeta, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(2048)),
         )
         val written = SceneJson().parse(textOf(meta))
         val original = SceneJson().parse(terrainMeta)

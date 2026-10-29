@@ -107,14 +107,8 @@ private fun decode(id: String, entity: Entity): DecodedEntity {
 
 /** The libGDX forward axis (-Z) rotated by [q]. */
 fun forwardOf(q: Quaternion): Vector3 {
-    val len = kotlin.math.sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w)
-    if (len < 1e-6f) return Vector3(0f, 0f, -1f)
-    val x = q.x / len
-    val y = q.y / len
-    val z = q.z / len
-    val w = q.w / len
-    // q * (0, 0, -1) * q^-1
-    return Vector3(0f - 2f * (x * z + w * y), 0f - 2f * (y * z - w * x), 0f - (1f - 2f * (x * x + y * y)))
+    if (q.len2() < 1e-12f) return Vector3(0f, 0f, -1f)
+    return Quaternion(q).nor().transform(Vector3(0f, 0f, -1f))
 }
 
 /**
@@ -122,11 +116,8 @@ fun forwardOf(q: Quaternion): Vector3 {
  * look-at lights and look-at cameras so the two can't drift apart.
  */
 fun aimDirection(from: Vector3, to: Vector3): Vector3? {
-    val dx = to.x - from.x
-    val dy = to.y - from.y
-    val dz = to.z - from.z
-    val len2 = dx * dx + dy * dy + dz * dz
+    val direction = Vector3(to).sub(from)
+    val len2 = direction.len2()
     if (len2 < 1e-12f || !len2.isFinite()) return null
-    val len = kotlin.math.sqrt(len2)
-    return Vector3(dx / len, dy / len, dz / len)
+    return direction.nor()
 }

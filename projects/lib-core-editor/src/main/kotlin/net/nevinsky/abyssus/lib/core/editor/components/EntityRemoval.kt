@@ -23,8 +23,7 @@ class EntityRemoval(
     private val messages: EditorMessages,
     kinds: List<ComponentKind<*>> = emptyList(),
 ) {
-    private val byName: Map<String, ComponentKind<*>> =
-        kinds.flatMap { listOf(it.name to it, it.codec.type.simpleName to it) }.toMap()
+    private val references = EntityReferences(kinds)
 
     /** Removes [entityId] from [root]; the tree is only touched for [EditResult.Changed]. */
     fun remove(root: JsonNode, entityId: String): EditResult {
@@ -47,32 +46,12 @@ class EntityRemoval(
                 if (kindName == PathArrangementComponent::class.simpleName && slotIds(node).any { it.toString() == entityId }) {
                     return messages.message("entityRemovalInSlot", entityId, id)
                 }
-                field(kindName, node, entityId)?.let {
+                references.fieldNaming(kindName, node, entityId)?.let {
                     return messages.message("entityRemovalReferenced", entityId, id, "$kindName.$it")
                 }
             }
         }
         return null
-    }
-
-    /** The first field of the component [kindName] ([node]) that names [entityId], or null. */
-    private fun field(kindName: String, node: JsonNode, entityId: String): String? {
-        BUILT_IN[kindName]?.firstOrNull {
-            node[it]?.takeIf(JsonNode::isIntegralNumber)?.asInt()?.toString() == entityId
-        }
-            ?.let { return it }
-        val kind = byName[kindName] ?: return null
-        val fields = kind.fields.filter { it.kind == FieldKind.ENTITY_REF && it.name !in BUILT_IN[kindName].orEmpty() }
-        if (fields.isEmpty()) return null
-        return namedBy(kind, fields, node, entityId)
-    }
-
-    private fun <C : com.badlogic.ashley.core.Component> namedBy(
-        kind: ComponentKind<C>, fields: List<ComponentField<*>>, node: JsonNode, entityId: String,
-    ): String? {
-        val component = runCatchingKeepingCancellation { kind.codec.read(node) }.getOrNull() ?: return null
-        @Suppress("UNCHECKED_CAST")
-        return fields.firstOrNull { (it as ComponentField<C>).get(component).trim() == entityId }?.name
     }
 
     /** The ids of the copies [entityId] owns as an arrangement, joined for the message, or null. */
@@ -89,9 +68,3 @@ class EntityRemoval(
 
     private fun reject(key: String, vararg params: Any) = EditResult.Rejected(messages.message(key, *params))
 }
-
-/** Built-in components and the integer members that name another entity. */
-private val BUILT_IN = mapOf(
-    "ParentComponent" to listOf("parentEntityId"),
-    "PositionComponent" to listOf("lookAtId"),
-)

@@ -640,7 +640,7 @@ Modeled component kinds (`ComponentSchemas`: built-in, plus the physics kinds wh
 | `ColliderComponent` | PHY-02 | unverified |
 | `ConstraintComponent` | PHY-02, CMP-04 | unverified |
 
-Field editor types (`FieldKind`); one case per type, with per-kind tables covering the catalog.
+Field editor types (`AssetFieldKind`); one case per type, with per-kind tables covering the catalog.
 
 | Type | Scenarios | Status |
 |---|---|---|
