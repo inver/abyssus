@@ -1,0 +1,30 @@
+{
+  "photo7": {
+    "held_out_default": 0.15709455641394482,
+    "held_out_fitted": 0.15683531350522878,
+    "improved": true,
+    "train_default": 0.14786626030698324,
+    "train_fitted": 0.1442801187012116
+  },
+  "photo8": {
+    "held_out_default": 0.19760931697274703,
+    "held_out_fitted": 0.2084358685660767,
+    "improved": false,
+    "train_default": 0.13436134012071585,
+    "train_fitted": 0.12471657855897518
+  },
+  "img_4": {
+    "held_out_default": 0.11682263218726119,
+    "held_out_fitted": 0.11131671893297126,
+    "improved": true,
+    "train_default": 0.16129023504921114,
+    "train_fitted": 0.15767088033354126
+  },
+  "img_6": {
+    "held_out_default": 0.12916683176094154,
+    "held_out_fitted": 0.1281526141133078,
+    "improved": true,
+    "train_default": 0.15717550185798435,
+    "train_fitted": 0.15187179615883584
+  }
+}

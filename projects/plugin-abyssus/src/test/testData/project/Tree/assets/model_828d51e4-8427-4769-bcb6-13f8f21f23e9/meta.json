@@ -1,0 +1,14 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "version": 1,
+  "lastModified": 1699293251319,
+  "uuid": "828d51e4-8427-4769-bcb6-13f8f21f23e9",
+  "type": "MODEL",
+  "additional": {
+    "file": "model.gltf",
+    "format": "GLTF",
+    "binary": true,
+    "materials": []
+  }
+}

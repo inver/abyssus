@@ -2,20 +2,60 @@
 
 ![Build](https://github.com/inver/abyssus/workflows/Build/badge.svg)
 
-An IntelliJ Platform plugin for working on [Mundus](https://github.com/mbrlabs/Mundus) game projects from the IDE:
-browse a project's scenes and assets, inspect asset metadata, and view and lay out a scene in a 3D view.
+Abyssus is an independent libGDX scene editor plugin for IntelliJ-based IDEs.
+
+- **Projects and assets:** browse native Abyssus projects, scenes and assets, and edit asset properties.
+- **3D scene editing:** select and arrange objects with undoable move and rotate gizmos.
+- **Model import:** import models and FlightGear aircraft.
+- **Terrain and foliage:** generate terrain and paint trees, rocks and grass.
+- **Environments:** build scenes with water, procedural skies, lighting and cloud shadows.
+- **Game UI:** author menus and HUDs in a visual editor with interactive previews.
+- **Physics and Play:** test physics and game logic in a separate process.
+- **GPU ray tracing:** preview scenes with optional ray tracing.
+
 Contributors and coding agents: start at [AGENTS.md](AGENTS.md).
 
 <!-- Plugin description -->
-Work on [Mundus](https://github.com/mbrlabs/Mundus) game projects in the IDE.
+Edit native Abyssus projects and libGDX scenes in the IDE.
+
+Abyssus format version 1 requires `"format":"abyssus"` and `"formatVersion":1` in every `.abss`, `.scene` and
+asset `meta.json`. This breaks compatibility with earlier unmarked files and projects from other editors. Unsupported files
+remain readable in the text editor; plugin editing and loading are refused. No importer or automatic migration is included.
 
 - **Abyssus view**: a project tree of `.abss` projects, their scenes, entities and assets, with unused assets marked.
   Toggle scene options, rename scenes and choose a scene's skybox from the tree.
 - **Abyssus Properties**: the `meta.json` of the selected asset, with skybox face previews; terrain size, texture
   repetition and textures, cube skybox faces and procedural sky parameters can be edited, terrain heights can be generated
-  from seeded noise, and **New Terrain** on the Assets node creates a terrain asset.
+  from seeded noise, **New Terrain** on the Assets node creates a terrain asset, **Import Model** turns an OBJ, FBX,
+  3DS, DAE, glTF or GLB file into a model asset with a live preview, and **Import FlightGear Aircraft** turns an
+  aircraft from a FlightGear `.zip` into a model asset.
 - **Scene view**: a 3D view of a `.scene` with its models, animations, terrain, skybox, lights and cameras, with an optional GPU Ray Tracing mode. Select
-  objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera.
+  objects, move and rotate them with gizmos (saved to the scene file, undoable), and look through a scene camera. The toolbar's shading
+  dropdown offers Lit, Unlit and Wireframe (per view, never saved); Wireframe draws every content drawable as edges only.
+  Edges and lines use 4× antialiasing by default; select the project in the Abyssus tree and use
+  **Abyssus Properties | Scene view antialiasing** to choose Off, 2×, 4× or 8×. The choice is saved in its `.abss`
+  and applies to that project's open views, with automatic fallback for unsupported GPUs.
+- **Water**: **Add Water** (a Lake or a Sea, from the Scene view toolbar or a scene's right-click menu) adds a finite
+  horizontal surface that is drawn from above with animated waves, reflections of the sky and the scene, wave-distorted
+  refraction that fades to a tint with depth and animated foam where terrain meets it. Terrain above the level defines
+  the shoreline and islands. Select a surface in the view or the tree to move it with the Move gizmo and edit its level,
+  size, tint, clarity, waves and foam in Properties; hide, rename, remove and undo like anything else. Water is saved in
+  the scene's `abyssus.waterSurfaces` and is Abyssus-only data; there is no underwater look, and water is not a drop target.
+- **Terrain foliage**: **New Foliage...** creates layered scatter settings for trees, rocks and grass;
+  **Add Foliage...** attaches them to a terrain entity, and **Paint Foliage** paints or erases their density, with Undo.
+- **Sky light and cloud shadows**: a procedural sky with `"lightsScene": true` lights models and terrain with its own colour
+  (blue from a clear noon sky, grey under overcast, warm at sunset), changing smoothly with the sun and the clouds, and
+  clouds cast drifting shadows on the sun's light. Both follow the sky's atmosphere parameters, not a custom `sky.frag`
+  that departs from them; Ray Tracing sees the same clouds and cloud shade.
+- **Game UI**: author menus, HUDs and pause screens as `UI` assets in a visual editor (screens and overlays, a widget
+  tree, a canvas, properties, bindings and styles), try them in an interactive preview with sample data, and run the same
+  layout and styling in a game.
+- **Built-in Physics**: select a project’s `.abss` file and enable **Physics** in Properties for editable physics
+  components, collider/constraint overlays and Play in a separate process.
+- **Ray Tracing settings**: a selected scene's Properties switch turns Ray Tracing on for its open views (not saved), and
+  its target samples, ray budget and reflection and refraction depths are saved in the scene and undoable. A model
+  entity's PBR materials can be given Transmission and IOR to render as glass; these overrides apply to that entity only.
+  Glass must be a closed solid, and anything Ray Tracing cannot draw falls back to the normal renderer with the reason.
 <!-- Plugin description end -->
 
 ## Abyssus view
@@ -30,15 +70,16 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
   to it, listed by file name and expandable inline (display only, no navigation).
 - A property gated by an `xxxEnabled` option (e.g. `fog`, `skybox`) shows an eye at the right of
   its row; click it to flip the option in the file (undoable). The scene's `skyboxName` is shown as `skybox`.
-- A project scene's `skybox` row has a **Choose** button. It opens **Choose a skybox**: the project's `SKYBOX` assets
-  with their face count and format, how many scenes use each (or `unused`), a name filter and a **None** entry.
+- A project scene's `skybox` row has a **Choose** button. It opens **Choose a skybox**: the project's cube, procedural and HDR sky assets
+  with their format and preview information, how many scenes use each (or `unused`), a name filter and a **None** entry.
   **Assign** writes the chosen folder name to the scene's `skyboxName` (undoable); **Cancel** writes nothing.
 - A scene under a project is labelled `Name (id)`; right-click it and choose **Rename Scene...** to change its name.
 - A project also lists its `assets`: one entry per sub-folder of the `assets` folder next to the `.abss`
   file, with the `type` and `uuid` from the folder's `meta.json`. An asset no scene reaches is grayed and
   marked `unused`. A scene reaches an asset by folder name through `assetName` and `shaderKey` values in its
   `ecs` and through `skyboxName`; a reached asset in turn reaches the assets its `meta.json` references by
-  `uuid` (terrain `splatMap`/`splatBase`/`splatR`/`splatG`/`splatB`/`splatA`, model `materials`).
+  `uuid` (terrain `splatMap`/`splatBase`/`splatR`/`splatG`/`splatB`/`splatA`, model `materials`), and a reached
+  procedural sky reaches the cloud asset (`CLOUDS`) its `clouds` names. A reached foliage asset reaches its terrain and its layers' models by folder name. Cloud and foliage assets have their own icons.
   A `shaderKey` with no matching folder is a bundled editor shader and is ignored. Files named inside a
   `meta.json` (textures of a material, shader sources) are not followed.
 - A project's `scenes` and `assets` rows are labelled `Scenes` and `Assets` with their count. In a scene, `ecs` shows its
@@ -49,18 +90,21 @@ sensitive (`.SCENE` and `.scene.bak` are ignored).
   shown and unaffected by that filter.
 - Unreadable files stay in the tree with a placeholder. Right-click an entity and choose **Add Component...** to add a
   component it lacks (Name, Type, Parent, Position, Camera, Light, Point2Point or Render; a Render component asks for a
-  model or terrain of the project), or right-click a component and choose **Remove Component**. Components the plugin
+  model or terrain of the project), or right-click a component and choose **Remove Component**. **Add Component...** on
+  a scene's **ecs** row starts a new entity instead: the chosen component goes into a new entity named `Entity <id>`,
+  which is then selected. Components the plugin
   does not model (`Pickable`, `Dependencies`, ...) cannot be removed. The eye, **Rename Scene...**, **Choose**, and
-  these component actions and **Add Light** on a scene row write the file as undoable edits.
+  these component actions, **Add Light** and **Add Asset** on a scene row write the file as undoable edits.
 
 ## Abyssus Properties panel
 
 The **Abyssus Properties** tool window (right side) shows the Meta of the asset selected in the Abyssus view: a header
-with the asset's type icon, name and `<type> asset`, then a Name / Value table of its `meta.json` (`version`,
+with the asset's type icon, name and `<type> asset`, then a Name / Value table of its `meta.json` (`format`, `formatVersion`, `version`,
 `lastModified` as a date-time, `uuid`, `type`, then the fields of `additional` under an `additional` heading). Every
 field in the file is listed, whatever the asset type; a list shows its item count. A skybox also shows its six faces
-under **Face previews**. Selecting anything that is neither an asset, an entity nor a component (a scene, the project
-file) shows a "Nothing to show" message. The panel refreshes when the asset's `meta.json` or a face image changes, and
+under **Face previews**; an HDR sky shows a tone-mapped OpenEXR preview and image information. Selecting a scene
+shows its Rendering section with the Ray Tracing switch and saved quality settings. Selecting a project or an
+unhandled property shows a "Nothing to show" message. The panel refreshes when the asset's `meta.json` or a face image changes, and
 selecting an asset never writes a file.
 
 Some properties are editable, and the header then says that an edit changes every instance that uses the asset:
@@ -74,7 +118,7 @@ Some properties are editable, and the header then says that an edit changes ever
   change it. The atmosphere radius must exceed the planet radius, `mieG` lies between -1 and 1.
 
 Type a value and press Enter (or leave the field), or pick from the list. A value that does not fit goes back to the old
-value with the reason beside the field, and the file is not touched. Identity fields (`uuid`, `type`, `version`,
+value with the reason beside the field, and the file is not touched. Identity fields (`format`, `formatVersion`, `uuid`, `type`, `version`,
 `lastModified`), file names and every other asset type (models, HDR skies, and so on) stay read only. Each change is one
 undoable edit of that asset's `meta.json` that keeps its formatting and every other value; the **Undo** and **Redo**
 buttons in the header (or Ctrl+Z / Ctrl+Shift+Z with the panel focused) apply it.
@@ -93,19 +137,104 @@ height may need Drop. **Cancel**, selecting something else or closing the panel 
 The preview refuses to be applied if the terrain's files or unsaved metadata changed meanwhile: generate a new one.
 
 The same seed and settings always give the same heights, at any resolution. The settings are saved as a recipe,
-`abyssus-terrain.recipe.json`, in the terrain's folder: only Abyssus reads it, Mundus ignores it, and a terrain loads
+`abyssus-terrain.recipe.json`, in the terrain's folder: a terrain loads
 without it. The panel restores the settings from a recipe that still matches the heights, and shows why when it does not
 (missing, malformed, an unknown version, or heights, size or resolution that changed) and offers the defaults instead.
 Heights that are not a square grid of 2 to 255 per side cannot be regenerated.
+
+### Light the scene from a procedural sky
+
+Add `"lightsScene": true` to a procedural sky's `additional` block (by hand, there is no toggle) and the sky lights the scene
+as an HDR sky does: models and terrain take its colour instead of the scene's ambient colour, PBR models reflect it, and the
+light follows the sun and the clouds. A clear noon gives cool blue light from above, an overcast sky flat grey light, a
+sunset warm light, and changes fade in over about a second. Only the boolean `true` turns it on; without it, or with
+`false`, the scene keeps its ambient colour. The light comes from Abyssus's own atmosphere model with the sky's parameters
+and clouds, so a custom `sky.frag` that departs from them looks different from the light it gives.
+
+Clouds also cast moving shadows from the sun onto terrain and models while the sky draws them: dark patches drift with the
+wind within about 4 km of the view's target (scene units are taken as metres), and beyond that the sun is dimmed evenly by the
+clouds over the target. Only the sun is shaded; nothing is written to your files.
+
+### Keep weather from a sky
+
+Right-click a procedural sky asset that references clouds and choose **New Weather Preset from Sky...**.
+Choose a new folder name (suggested: `weather_<sky>`). Abyssus creates a reusable `CLOUDS` asset with a fresh UUID,
+its stored drawing technique and its cloud bands with all defaults resolved. Unsaved metadata edits are copied;
+the view's Clouds override is not. The new asset is selected and starts unused. Assign its UUID to another sky's
+`additional.clouds` to use it.
+
+Creation leaves the source clouds, sky, scenes and project unchanged. Undo removes an unchanged, unreferenced
+new folder; Redo restores the same snapshot. Missing or unreadable clouds and invalid folder names are refused.
 
 ### New Terrain
 
 Right-click an **Assets** node and choose **New Terrain...**: pick a folder name (it must be new and stay inside
 `assets`), the world size, a resolution from 2 to 255 and the noise settings, generate a preview and **Create**. The
-terrain is written as a Mundus terrain asset (`meta.json` with a fresh `uuid`, `terrain.data`, and the recipe), the view
+terrain is written as a native Abyssus terrain asset (`meta.json` with a fresh `uuid`, `terrain.data`, and the recipe), the view
 refreshes and the new asset is selected. Nothing is placed in a scene and no scene or project file is changed, so the asset
 is marked unused until you add it to a scene. Undo removes the asset again, and Redo brings back the same files and
 `uuid`; Undo refuses while a scene or another asset uses it, or something was added to its folder.
+
+### New Foliage
+
+Right-click a project's **Assets** node and choose **New Foliage...**. The project needs a readable terrain asset.
+Choose the terrain, a new folder name (suggested: `foliage_<terrain folder>`) and a mask resolution from 16 to 2048
+(default 512). **Create** makes an empty foliage asset and selects it; add layers in its Properties panel.
+
+Each layer scatters one or more model assets, chosen with positive weights. Use **OBJECT** for trees and rocks that
+cast shadows, or **DETAIL** for grass and flowers that receive shadows and disappear beyond their draw distance.
+Set density (copies per square unit), scale range, alignment to the terrain normal, seed, and optional height and
+slope limits. Add, remove or reorder layers; the panel shows each layer's copy count and the total.
+
+Valid settings preview in every open Scene view using the foliage. **Apply** saves the settings and matching bake
+as one undoable operation; **Cancel**, selecting another asset or closing the panel discards the preview. The total
+limit is 1,000,000 copies: Apply, Re-bake and painting refuse results above it. After terrain regeneration or another
+change makes the bake out of date, the view regenerates the copies and the panel offers **Re-bake** to save them.
+Copies stand on the current terrain surface.
+
+An **OBJECT** layer can also have a **Collider** for physics worlds: None (the default), Box, Sphere or Capsule, with
+the sizes of the chosen shape and an offset in model units. Sizes must be above zero and finite. A collider change
+alone is applied as one undoable edit of `meta.json`: **Apply** needs no preview, rewrites neither the bake nor the
+masks, and also works while the bake is out of date or missing (it stays so). Undo and Redo restore exactly the
+previous and the new metadata. **Detail** layers have no collider controls; one that came with imported data is
+kept, ignored by physics, and must be removed before an Object layer that has one can become a Detail layer.
+Creation adds no scene entity; Undo removes the new asset unless it
+is used or its files changed, and Redo restores the same files.
+
+### Import Model
+
+Right-click an **Assets** node and choose **Import Model...**, then pick an `.obj`, `.fbx`, `.3ds`, `.dae`, `.gltf` or
+`.glb` file. Blender files are not read: export the model from Blender as glTF (File > Export > glTF 2.0) and import the
+`.glb`. The dialog shows a live preview of the model as it will be written, over a ground grid with a 1 m post (drag to
+orbit, wheel to zoom), and plays the animation chosen in its list. Choose:
+
+- the folder name (`model_` plus the file name by default);
+- the source unit (m, cm, mm, in, ft) and up axis (Y or Z), pre-filled from the file where it says (an FBX header, a
+  DAE `<asset>`; glTF is metres and Y up, 3DS is Z up) and marked as read from the file;
+- the size: the unit only, or scaled so the largest extent or the height is a number of metres;
+- **Add to scene**, on when a scene view is selected: Create also places the model at the point that view orbits
+  around and selects it. It is off, with the reason, when no scene view is open, the scene is playing, or its file
+  cannot be edited.
+
+The model always stands on y = 0 and is centred on X and Z. Create writes one model asset: `model.glb` with the node
+hierarchy, materials and, for animated files, the skeleton and every animation; textures as PNG files in `textures/`;
+and a `source.json` with the source path, checksum, frame and settings. Phong materials are approximated as
+metallic-roughness (the specular colour is lost), and cameras, lights, points and lines, missing textures, morph targets
+and unsupported glTF extensions are left out; the dialog lists each before Create. Nothing is written next to the
+source. Undo removes the folder, and the placed entity with it; Redo brings both back with the same files and `uuid`.
+Undo refuses once a scene uses the asset through another edit.
+
+### Import FlightGear Aircraft
+
+Right-click an **Assets** node and choose **Import FlightGear Aircraft...**, then pick a FlightGear aircraft `.zip`. The
+dialog shows the aircraft (choose one when the archive has several), its authors and licence (with a warning when the
+archive states none), a folder name, the size (original metres or a wingspan in metres) and its named parts. Parts the
+aircraft hides at rest, such as a spinning propeller disc, start unticked. It also lists what is not imported:
+instrument panels, line surfaces, missing or unsupported textures. **Create** writes one model asset: `model.glb` with
+the parts as named nodes, nose toward +Z, up +Y, left wing toward +X, standing on y = 0; SGI textures converted to PNG
+in `textures/`; any licence files from the archive; and a `source.json` with the archive, its checksum, the licence
+and the settings. No scene or project file changes, so the asset is unused until you place it. Undo removes the folder
+and Redo restores the same files. Animations, flight models, sounds, panels and effects are not imported.
 
 Select an **entity** to see all its components, or one **component** to see only that one. Each component the plugin
 models lists its fields with an editor: type a value and press Enter (or leave the field) to save it, or pick from the
@@ -123,8 +252,13 @@ project's `assets` folder beside the `.abss`:
 - the scene's **models** (`RenderComponent` entities of type `MODEL`), textured, at each entity's position,
   rotation and scale; a model that has animations plays its first one on a loop;
 - the scene's **terrain** (height data and splat textures of a `TERRAIN` asset);
-- the **skybox** named by `skyboxName` when `skyboxEnabled`;
-- the **light entities** (directional and point; a spot light is drawn as a point light) on top of the scene's
+- **foliage** attached to a terrain entity: scattered model copies that follow its position, rotation and scale;
+  animated models stay in their rest pose, and a click passes through a copy to the terrain behind it;
+- the **skybox** named by `skyboxName` when `skyboxEnabled`; a procedural sky's **clouds** (the `CLOUDS` asset its `meta.json`
+  `additional.clouds` names by `uuid`: low, mid and high bands and a technique, shared by every sky naming it) drift with their wind and dim the sun light when they cover it. The toolbar's
+  **Clouds** choice (*Asset*, *Layered*, *Shells*, *Volumetric*) overrides the sky's technique in that view only and
+  writes nothing; volumetric clouds that keep the view slower than 30 frames per second switch to shells with a note;
+- the **light entities** (directional, point and spot, with cone and edge softness) on top of the scene's
   ambient light and fog, each with a small marker (and a direction line for directional and spot lights);
 - the **camera entities**, each as a small body with its view frustum (near, far, field of view), pointing at its
   `lookAtId` entity when it has one.
@@ -147,28 +281,136 @@ shows the status, the reason it is unavailable or failed, and **Retry**. It need
 silicon with Metal on macOS, or a Vulkan 1.2 device with ray queries on Windows and Linux. Where it is unavailable the switch
 is disabled and says why; if it fails, the view returns to the normal renderer. Selecting, moving and rotating objects, the
 camera and the gizmos work as usual, and the scene file is never written by switching it on or off.
-`-Dabyssus.raytracing.backend=off` disables it for the IDE session.
+`-Dabyssus.raytracing.backend=off` disables it for the IDE session. See [ray tracing](projects/lib-raytracing/README.md) for
+backend requirements, rendering limits and native toolchains.
+
+Select a terrain entity and choose **Add Foliage...** in its tree context menu or the Scene view toolbar. Choose
+one of the foliage assets made for that terrain; this adds or replaces its foliage as one undoable scene edit.
+If none is available, create one from the project's **Assets** node first.
+
+With a terrain entity that has readable foliage and at least one layer selected, turn on **Paint Foliage** in the
+Scene view toolbar. Choose the layer, radius in world units, strength from 0 to 1, and **Paint** or **Erase** in
+the brush strip. Drag the left button inside the circle on that terrain to change its density mask; hold Shift to
+erase while Paint is chosen. Layers without a saved mask start at full density, so erase to clear space first.
+Copies update during the stroke in all views. Right-drag and the wheel still navigate; gizmos return when you leave
+paint mode or select another entity. Esc before release cancels the stroke. Release saves the mask and matching bake
+as one undoable operation; Ctrl+Z in the Scene view or Undo in the foliage panel restores it. A stroke above the copy
+limit is discarded with a reason. Foliage is omitted from the ray-traced preview, and Properties shows a note.
 
 **Add Light** in the toolbar creates a Directional light, Sun or Spot at the current orbit target and selects it.
 The same menu on a scene row places it at the origin; Spot sits 5 units above that point. A Sun starts warm and
 brighter, with a low direction. Its light component's **Range** field sets a positive reach (default 100).
+
+**Add Asset** in the toolbar, and on a scene row, lists the project's models and terrains (by folder name, under
+Models and Terrains) and adds the chosen one as a new entity named `Model <id>` or `Terrain <id>`. It has a type,
+a position and a render component that names the asset. From the toolbar it is placed at the orbit target, from the
+tree at the origin; a terrain is centred on that point using its size. The new entity is selected, and Undo removes it.
 Each creation is one undoable scene edit. These new light entities use the plugin's own component structure.
 
 For a spotlight, Properties also offers **Cone angle (degrees)** for its full beam width and **Edge softness (%)**
 for the inward edge fade. Defaults are 45 degrees and 20 percent. Each accepted edit is saved in the scene and can
-be undone; resetting a default omits its saved field. These beam fields are Abyssus extensions. Mundus support and
-preservation are unverified, so saving the scene in another editor may lose them.
+be undone; resetting a default omits its saved field. These beam fields are part of the native scene contract.
 
 The toolbar's camera selector (**Free camera** and the scene's cameras by name) renders the view through a camera
 entity; orbit, pan and zoom pause until **Free camera** is chosen again.
 
-The model runtime (Assimp import, the model/mesh/shader classes with 32-bit indices) is the `gdx-model` module, a
-trimmed fork of Mundus' `lib-core` and `lib-assets` with no IntelliJ dependency, reusable in other libGDX projects;
-see `gdx-model/README.md` for its origin and license. The plugin does not depend on Mundus at build or run time. The GL
-render tests are opt-in: `./gradlew test -Dabyssus.glTests=true` (opens a window).
+### Show FPS
 
-To support another format, implement `net.nevinsky.abyssus.dto.AssetReader` and return it from
-`AssetReader.forExtension`.
+Select the project's `.abss` file in the Abyssus tree and tick **Show FPS** in **Abyssus Properties** to show each scene
+view's frame rate (`60 fps`, `-- fps` until a first measurement) at the start of the stats strip in its lower-left
+corner. It is off by default, applies to every scene view of the IDE project and is remembered with it. It is an IDE view setting:
+no `.abss`, `.scene` or asset file changes. The number counts frames the view actually presented over about a second (an
+idle view redraws less often, and a hidden view starts over when it is shown again).
+
+### Physics
+
+Physics is built into Abyssus. Select the project's `.abss` file in the Abyssus tree and tick **Physics** in
+**Abyssus Properties**. This saves the optional `physicsEnabled` boolean as one undoable edit; missing means off.
+The checkbox and scene controls follow unsaved text edits and Undo/Redo. Unsupported project documents stay read-only.
+The separate Abyssus Physics plugin must be uninstalled; the IDE marks it incompatible with this build.
+
+- Enabling Physics makes rigid bodies, colliders and constraints editable and offers them in **Add Component**.
+  **Show Physics** draws collider wireframes and constraint anchors, including selected and simulated objects.
+  Disabling Physics restores read-only raw physics data and removes built-in physics overlay/Play actions.
+- **Play**, **Pause**, **Step** and **Stop** run the scene's physics in a separate process. Play uses the scene as
+  the editor holds it, unsaved text included. Simulated poses are shown but never written: Stop, Esc, editing the
+  scene or closing the tab returns the view to the scene as the document holds it. While playing, gizmos are off,
+  and keys and mouse buttons go to the game. If the process dies, one notification shows its last output and the IDE
+  keeps running.
+- A game makes Play run its own code by exporting `<project>/abyssus/play.json` (see `projects/lib-physics/README.md`). Without that file,
+  Play runs physics alone.
+
+Disabling Physics during Play stops that session and restores authored poses without changing scene files or Undo history.
+Jolt, the physics engine, is loaded only by the play process, never by the IDE.
+
+The model runtime (Assimp import, 32-bit meshes and the model shaders on stock libGDX g3d) is the `lib-gdx` module, a
+plain JVM library reusable in other libGDX projects; see [source provenance](docs/third-party/gdx-model-origin.md)
+for its origin and license. The GL
+render tests are opt-in: `./gradlew check -Dabyssus.glTests=true` (opens a window).
+
+To add a project or scene file format, implement `ConfigFileReader` and wire it into `AssetReadCache` and
+`ProjectLayout.ASSET_EXTENSIONS`. Asset loading uses `core`'s `AssetLoader` implementations; see
+[architecture and extension points](docs/ai/architecture.md).
+
+## Game UI
+
+A **UI asset** holds named screens (menus) and overlays (a HUD, a pause menu) as a tree of widgets: panels, rows,
+columns, labels, images, buttons, progress bars, sliders, checkboxes and text fields. Its `meta.json` has `type` `UI` and the
+screens under `additional.ui` ([format](docs/ai/file-formats.md#ui-assets)).
+
+**Create and register.** Right-click the project's **Assets** node and choose **New UI Asset...**. The asset folder and the
+project file's `uiAssetNames` entry are created in one undoable step. **Register UI Asset** and **Unregister UI Asset** on an
+asset row change only that list. Registered assets count as used even when no scene mentions them, and so do the UI assets
+they navigate to.
+
+**Edit.** Open the asset's `meta.json`: the **Abyssus UI** tab sits beside the text editor.
+
+| Area | What it does |
+|---|---|
+| Screens menu (canvas toolbar) | Switch screens; Add Screen, Add Overlay, rename, delete and the Up / Down focus switch; the entry screen is marked |
+| Widget tree | **Add** opens a menu of widget kinds that adds to the selected container (the menu names it); duplicate, delete, move up or down, or drag a row onto another row (beside it, or into a container) |
+| Canvas | The toolbar has the preview resolution and the fit zoom. Click to select, drag a panel child to move it, drag a row or column child to reorder it, release over another container to move it there. One drag is one undo step; a drag started on older text is refused |
+| Properties | Layout (anchor and offsets inside a panel; `grow` in a row or column; padding, spacing, alignment), text, style, bindings and the button's click action. A binding that cannot work is flagged: undeclared, the wrong type, or read-only on a control that writes back |
+| Declarations | Bindings (typed, read-only or writable, with a sample and limits), styles (font size, colours, a font, hover / pressed / disabled backgrounds) and resources: **Import Image...** (PNG or JPEG, at most 8192 pixels a side) and **Import Font...** (a text BMFont `.fnt` with its PNG pages) copy the files into the asset folder without overwriting anything |
+
+Every change is written to the document through one undoable command that keeps your formatting, key order and number text;
+an asset that Abyssus cannot edit (a newer UI version, errors) shows why and is never rewritten. Text you have not saved yet
+is what the editor shows and edits. **Use a copy** of a sample project when you try it: the committed `Untitled` project is test data.
+
+**Lists.** The **List** widget repeats one row template for every item of a *list* binding, which you declare in
+**Declarations** with a record of typed fields (`rank:number, name:string`) and sample rows. Inside the row, bind a widget
+to `item.<field>`; bind a widget's **Style** to a string field to colour a row from data; add an **empty state** for when
+there are no rows. The canvas shows the sample rows, and a click on any row selects the template. Tick **Up / Down move
+focus** on a screen to give a keyboard menu. In Preview, add, edit and remove sample rows.
+
+**Preview.** Switch the editor from **Edit** to **Preview** to use the UI as a player would: click buttons, drag sliders,
+tick checkboxes, type into fields, Tab / Shift-Tab between controls, Enter or Space to press, Escape to close an overlay or go
+back. The preview runs on the text in the editor, saved or not, and shows why it stopped if that text is not valid.
+
+- **Sample values.** The **Preview** tab lists every binding with an editable sample. A control that writes back changes the
+  sample, and a value you type is checked against the binding's type, minimum, maximum and length (a value it rejects is
+  explained and not applied). **Reset** restores the authored samples, empties the action log and returns to the screen the
+  preview started on.
+- **Actions are only logged.** A button's `emitAction` appears in the action log; no game starts, no setting is saved, no
+  game code runs, and neither the document nor its undo history changes. Editing the definition starts a fresh preview.
+- **Resolution.** Pick a size or enter one (1 to 4096 per side). The UI is laid out for exactly that size, however large the
+  panel is, and the result is shown scaled to fit. The screen's reference size is fitted into the preview uniformly and centred,
+  so a different aspect ratio leaves bars at the sides or at the top and bottom. The size and backdrop you choose are remembered
+  for you only; they are not stored in the project.
+- **Scene backdrop.** Choose one of the project's scenes to show behind the UI (an overlay over its game world). It is the
+  Scene view's own renderer on the scene's current text, looking through the scene's main camera: nothing moves, there is no
+  Play and no physics, and the scene is never changed. A scene that cannot be read or rendered is reported and the preview carries on without it.
+  Limits: no animation of the camera, and models and terrain load as they do in the Scene view, so a large scene may take a moment.
+
+The canvas draws through the same renderer a game uses, so layout, text size and styling match. Games load a registered
+asset by name; see [lib-core](projects/lib-core/README.md#ui-host-contract) for how a host supplies values, accepts
+changes and receives actions, and Control Line's [screens](projects/app-game-control-line/README.md#screens) for a complete example.
+
+## Development
+
+See [AGENTS.md](AGENTS.md) for build, test and sandbox commands, and [the documentation map](docs/README.md)
+for architecture, native formats and module guides. The [Control Line game](projects/app-game-control-line/README.md) demonstrates
+registered game components and a Play module for the separate physics host. Use a copy of its native project in the IDE.
 
 ## Installation
 
@@ -187,7 +429,7 @@ To support another format, implement `net.nevinsky.abyssus.dto.AssetReader` and 
 
 Licensed under [Apache-2.0](LICENSE) (SPDX-License-Identifier: Apache-2.0).
 
-Files under `gdx-model` derived from [libGDX](https://github.com/libgdx/libgdx) retain their original
+Files under `projects/lib-gdx` derived from [libGDX](https://github.com/libgdx/libgdx) retain their original
 Apache 2.0 headers.
 
 ---

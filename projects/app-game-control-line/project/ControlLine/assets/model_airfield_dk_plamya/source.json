@@ -1,0 +1,26 @@
+{
+  "generator": "games/control-line/project/environment/build_environment.py",
+  "license": "CC0-1.0",
+  "description": "Approximation of the DK \"Plamya\" house of culture: beige two-storey hall with a brown hipped roof and a columned portico facing the street.",
+  "materials": {
+    "walls": "https://ambientcg.com/view?id=Concrete048",
+    "trim": "https://ambientcg.com/view?id=Plaster002",
+    "plinth": "https://ambientcg.com/view?id=Concrete036",
+    "roof": "https://ambientcg.com/view?id=RoofingTiles006"
+  },
+  "identity": "Intended representation of DK \"Plamya\" from the brief; not an architectural replica.",
+  "triangles": 302,
+  "bounds": {
+    "min": [
+      -18.600000381469727,
+      -0.5,
+      -12.600000381469727
+    ],
+    "max": [
+      18.600000381469727,
+      16.0,
+      16.5
+    ]
+  },
+  "sha256": "30ad993599711a86a2a64109196849c08f0c5a85e5824a2d3e6d716d5b4ea7b4"
+}

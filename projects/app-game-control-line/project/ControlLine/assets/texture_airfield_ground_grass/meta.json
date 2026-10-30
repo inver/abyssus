@@ -1,0 +1,11 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "version": 1,
+  "lastModified": 1791238934040,
+  "uuid": "70f69e76-47a4-5272-a11d-16cd6e49a664",
+  "type": "TEXTURE",
+  "additional": {
+    "file": "texture_airfield_ground_grass.jpg"
+  }
+}

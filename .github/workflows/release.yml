@@ -24,12 +24,12 @@ jobs:
         with:
           ref: ${{ github.event.release.tag_name }}
 
-      # Setup Java 11 environment for the next steps
+      # Setup Java 21 environment for the next steps
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: zulu
-          java-version: 11
+          java-version: 21
 
       # Compiles the Vulkan compute shaders to SPIR-V (raytracing module)
       - name: Install glslang
@@ -55,7 +55,7 @@ jobs:
         env:
           CHANGELOG: ${{ steps.properties.outputs.changelog }}
         run: |
-          ./gradlew patchChangelog --release-note="$CHANGELOG"
+          ./gradlew :plugin-abyssus:patchChangelog --release-note="$CHANGELOG"
 
       # Publish the plugin to the Marketplace
       - name: Publish Plugin
@@ -64,13 +64,13 @@ jobs:
           CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
-        run: ./gradlew publishPlugin -Pabyssus.requireShaders=true
+        run: ./gradlew :plugin-abyssus:publishPlugin -Pabyssus.requireShaders=true
 
       # Upload artifact as a release asset
       - name: Upload Release Asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload ${{ github.event.release.tag_name }} ./build/distributions/*
+        run: gh release upload ${{ github.event.release.tag_name }} ./projects/plugin-abyssus/build/distributions/*
 
       # Create pull request
       - name: Create Pull Request

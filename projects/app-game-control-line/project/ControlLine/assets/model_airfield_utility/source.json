@@ -1,0 +1,27 @@
+{
+  "generator": "games/control-line/project/environment/build_environment.py",
+  "license": "CC0-1.0",
+  "description": "Small single-storey utility building east of the circle: WC and staff room (light plaster walls, grey corrugated roof, two doors and a window facing the pad).",
+  "materials": {
+    "walls": "https://ambientcg.com/view?id=Plaster002",
+    "plinth": "https://ambientcg.com/view?id=Concrete036",
+    "roof": "https://ambientcg.com/view?id=CorrugatedSteel005",
+    "doors": "https://ambientcg.com/view?id=Planks037A"
+  },
+  "use": "WC and staff room",
+  "estimate": "Footprint 4 x 8 m, height 3 m: estimates.",
+  "triangles": 66,
+  "bounds": {
+    "min": [
+      -2.3499999046325684,
+      -0.30000001192092896,
+      -4.349999904632568
+    ],
+    "max": [
+      2.3499999046325684,
+      4.0,
+      4.349999904632568
+    ]
+  },
+  "sha256": "8f2fa2499e0fece7c8b912c4a2ab0183793ab86a027d25861359966dbcdb95ea"
+}

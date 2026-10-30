@@ -32,17 +32,17 @@
       `decodesTheFixture`, `runLengthAndFlatDecodeTheSame`, `ignoresExposure`, `rejectsAPositiveYOrientation`,
       `rejectsXyze`, `rejectsANonTwoToOneImage`, `rejectsAnOversizedHeaderWithoutAllocating`,
       `halvesAnImageWiderThan4096`, `aTruncatedFileFails`, `textIsNotAnImage` — passes with
-      `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.skybox.RadianceDecoderTest'`
+      `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.skybox.RadianceDecoderTest'`
 - [x] 2.2 Add `HdrSkyFiles.choose` (the spec's lookup order, with the warning for several files), `Equirect`
       (direction to `(u, v)` and back) and `HdrToneMap` (exposure 1.0, Narkowicz ACES, gamma 1/2.2). Verify:
       `HdrSkyFilesTest` (`usesANamedFile`, `findsTheOnlyHdr`, `picksTheFirstOfSeveralAndWarns`, `noHdrIsNone`),
       `EquirectTest` (`minusZIsTheCentre`, `upIsTheTopRow`, `roundTripsDirections`) and `HdrToneMapTest`
       (`midGreyIs140`, `oneTwoFourAreDistinctAndIncreasing`, `clampsAtWhite`) pass with
-      `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.skybox.*'`
+      `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.skybox.*'`
 - [x] 2.3 Add `HdrSkyLoader.prepare` and the third `PreparedSky` branch in `SkyLoader`, so `SKYBOX_HDR` no longer falls
       through to the six-face loader. Verify: `HdrSkyLoaderTest` — `preparesTheFixture`, `missingFolderIsNull`,
       `noHdrFailsWithAReason`, `truncatedFailsWithAReason` (the asset cache logs the reason once) — and the existing `ProceduralSkyLoaderTest` pass with
-      `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.skybox.*'`
+      `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.skybox.*'`
 - [x] 2.4 Document `SKYBOX_HDR` in `docs/ai/file-formats.md` (folder, `meta.json`, the supported Radiance subset and
       limits) and the new pieces in `sceneview/README.md`. Verify: `scripts/check-docs.sh` passes
 
@@ -52,12 +52,12 @@
       equirect upload, cube projection, five prefilter steps, irradiance, six-color read-back; enable
       `GL_TEXTURE_CUBE_MAP_SEAMLESS`; dispose the intermediates. Verify: `HdrEnvironmentGlTest` — `aUniformSkyGivesUniformCubes`,
       `orientationPutsTheCentreAtMinusZ`, `buildsInNineSteps`, `aMissingGl30FailsTheSky` — passes with
-      `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.skybox.HdrEnvironmentGlTest' -Dabyssus.glTests=true` on
+      `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.skybox.HdrEnvironmentGlTest' -Dabyssus.glTests=true` on
       a machine with a display; if none is available, record that and leave runIde checks 6.1 (1)-(2) to cover it
 - [ ] 3.2 Add the HDR background program (fullscreen triangle, equirect sampling, `HdrToneMap` (now `ToneCurve` in `core`) in GLSL with the shared
       direction include) and draw it from `SceneSkybox` for a built HDR sky. Verify: in `SceneRenderGlTest`,
       `hdrMidGreyDrawsAt140`, `hdrHighlightsAreDistinct`, `hdrSkyStaysBehindModels` and the existing skybox cases pass
-      with `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneRenderGlTest' -Dabyssus.glTests=true`, same
+      with `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneRenderGlTest' -Dabyssus.glTests=true`, same
       no-display rule
 
 ## 4. Lighting the scene
@@ -74,7 +74,7 @@
       decision in a pure function of the scene params and the sky's state. Verify: `SceneEnvironmentTest` —
       `aBuiltHdrSkyReplacesTheAmbient`, `aDisabledSkyboxKeepsTheAmbient`, `anLdrSkyKeepsTheAmbient`,
       `aBuildingSkyKeepsTheAmbient`, `aFailedSkyRestoresTheAmbient`, `skyLightsWithAmbientDisabled` — passes with
-      `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneEnvironmentTest'`
+      `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneEnvironmentTest'`
 - [ ] 4.3 Give `TerrainShader` and `terrain.frag` the optional irradiance cube (`u_irradiance`, `u_hasSky`). Verify:
       in `SceneRenderGlTest`, `aBlueSkyTintsTheTerrain`, `aRedSkyReplacesTheAmbientOnAModel`,
       `pbrSphereIsBrightOnTopUnderAnUpperSky` and `mainSceneIsUnchangedWithoutASky` (pixel comparison with the frame

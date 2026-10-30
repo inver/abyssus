@@ -1,0 +1,24 @@
+{
+  "generator": "games/control-line/project/environment/build_environment.py",
+  "license": "CC0-1.0",
+  "description": "Paved flying circle decal: 50 m dark asphalt disc with a darker raised 0.3 m border, white rings at the 15, 18 and 21 m line radii and a 1.5 m pilot circle. Lies 1 cm above the level terrain.",
+  "materials": {
+    "asphalt": "https://ambientcg.com/view?id=Road012A",
+    "paint": "https://ambientcg.com/view?id=Plaster002"
+  },
+  "estimate": "Diameter is an estimate (image: 48-55 m).",
+  "triangles": 2974,
+  "bounds": {
+    "min": [
+      -25.0,
+      -0.05000000074505806,
+      -25.0
+    ],
+    "max": [
+      25.0,
+      0.029999999329447746,
+      25.0
+    ]
+  },
+  "sha256": "c1b106c8bacac32de6c2c5faa50e643098777764398881d6fe1ea6b3357d8c47"
+}

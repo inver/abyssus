@@ -1,0 +1,11 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "version": 1,
+  "lastModified": 1767225600000,
+  "uuid": "a2e998de-61cc-3d43-a134-287df25e6981",
+  "type": "TEXTURE",
+  "additional": {
+    "file": "grass.png"
+  }
+}

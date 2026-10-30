@@ -1,0 +1,27 @@
+package net.nevinsky.abyssus.plugin.sceneview
+
+import net.nevinsky.abyssus.plugin.AssetLoading
+import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
+import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
+import org.slf4j.Logger
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import java.util.concurrent.Executor
+
+/** Problems written to stderr, the way the IDE logger prints them in tests. */
+val printingLog: Logger = RecordingLogger(echo = true)
+
+/**
+ * A renderer wired by hand, with no IntelliJ application: the same graph `AbyssusCore` builds in the IDE, with `prepare`
+ * on [executor] (the calling thread by default) and problems to [log].
+ */
+fun testRenderer(
+    executor: Executor = Executor(Runnable::run),
+    log: Logger = printingLog,
+    sceneShaders: ShaderStorage = ShaderStorage().withResources("/shader/scene", SceneRenderer::class.java),
+): SceneRenderer = SceneRenderer(
+    ViewAssets(AssetLoading(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), log, executor, ShaderStorage())),
+    sceneShaders,
+    FoliageDrafts(),
+    log = log,
+)

@@ -1,0 +1,492 @@
+[
+  {
+    "check": "Wing inboard | 740 mm span",
+    "measured": 740.0,
+    "blueprint": 740,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing inboard | 740 mm root chord",
+    "measured": 340.0,
+    "blueprint": 340,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing inboard | 740 mm root thickness",
+    "measured": 61.99848,
+    "blueprint": 62,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing inboard | 740 mm outer chord",
+    "measured": 275.0,
+    "blueprint": 275,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing inboard | 740 mm outer thickness",
+    "measured": 51.99872,
+    "blueprint": 52,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing outboard | 710 mm span",
+    "measured": 710.0,
+    "blueprint": 710,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing outboard | 710 mm root chord",
+    "measured": 340.0,
+    "blueprint": 340,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing outboard | 710 mm root thickness",
+    "measured": 61.99848,
+    "blueprint": 62,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing outboard | 710 mm outer chord",
+    "measured": 275.0,
+    "blueprint": 275,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Wing outboard | 710 mm outer thickness",
+    "measured": 51.99872,
+    "blueprint": 52,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Flap hinge seam span",
+    "measured": 600.0,
+    "blueprint": 600,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Flap hinge seam sweep",
+    "measured": 0.0,
+    "blueprint": 0,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Flap hinge seam x",
+    "measured": 514.0,
+    "blueprint": 514,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Flap hinge seam.001 span",
+    "measured": 570.0,
+    "blueprint": 570,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Flap hinge seam.001 sweep",
+    "measured": 0.0,
+    "blueprint": 0,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Flap hinge seam.001 x",
+    "measured": 514.0,
+    "blueprint": 514,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Elevator hinge seam sweep",
+    "measured": 0.0,
+    "blueprint": 0,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Elevator hinge seam x",
+    "measured": 971.0,
+    "blueprint": 971,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Elevator hinge seam.001 sweep",
+    "measured": 0.0,
+    "blueprint": 0,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Elevator hinge seam.001 x",
+    "measured": 971.0,
+    "blueprint": 971,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer left span",
+    "measured": 345.0,
+    "blueprint": 345,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer left root chord",
+    "measured": 161.0,
+    "blueprint": 161,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer left outer chord",
+    "measured": 115.0,
+    "blueprint": 115,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer left outer fixed chord",
+    "measured": 50.0,
+    "blueprint": 50,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer left outer elevator chord",
+    "measured": 65.0,
+    "blueprint": 65,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer right span",
+    "measured": 345.0,
+    "blueprint": 345,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer right root chord",
+    "measured": 161.0,
+    "blueprint": 161,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer right outer chord",
+    "measured": 115.0,
+    "blueprint": 115,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer right outer fixed chord",
+    "measured": 50.0,
+    "blueprint": 50,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer right outer elevator chord",
+    "measured": 65.0,
+    "blueprint": 65,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Aft fuselage depth at 895",
+    "measured": 95.0,
+    "blueprint": 95,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Aft fuselage depth at 1000",
+    "measured": 95.0,
+    "blueprint": 95,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Canopy length",
+    "measured": 240.00002,
+    "blueprint": 240,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Canopy rise above fuselage deck",
+    "measured": 65.00005,
+    "blueprint": 65,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Canopy sill recess (traced estimate)",
+    "measured": 15.99995,
+    "blueprint": 16,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Canopy crest x (traced estimate)",
+    "measured": 310.79996,
+    "blueprint": 310.8,
+    "tolerance": 0.2,
+    "passed": true
+  },
+  {
+    "check": "Fin height above aft deck",
+    "measured": 125.00014,
+    "blueprint": 125,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Fin top aft corner x (photo triangulated)",
+    "measured": 1064.0,
+    "blueprint": 1066,
+    "tolerance": 2,
+    "passed": true
+  },
+  {
+    "check": "Fin crown x (photo triangulated, traced estimate)",
+    "measured": 1010.0,
+    "blueprint": 1000,
+    "tolerance": 15,
+    "passed": true
+  },
+  {
+    "check": "Fuselage width at wing leading edge",
+    "measured": 75.0,
+    "blueprint": 75,
+    "tolerance": 0.05,
+    "passed": true
+  },
+  {
+    "check": "Engine yaw magnitude",
+    "measured": 3.00001,
+    "blueprint": 3,
+    "tolerance": 0.01,
+    "passed": true
+  },
+  {
+    "check": "Gear track (photo triangulated; plan 370)",
+    "measured": 450.00003,
+    "blueprint": 450,
+    "tolerance": 0.5,
+    "passed": true
+  },
+  {
+    "check": "Wheel spat -1 length (plan side view)",
+    "measured": 160.0,
+    "blueprint": 160,
+    "tolerance": 0.5,
+    "passed": true
+  },
+  {
+    "check": "Wheel spat -1 nose x (photo triangulated)",
+    "measured": 170.00003,
+    "blueprint": 170,
+    "tolerance": 0.5,
+    "passed": true
+  },
+  {
+    "check": "Wheel spat -1 widest at 35% (teardrop)",
+    "measured": 225.27867,
+    "blueprint": 226,
+    "tolerance": 3,
+    "passed": true
+  },
+  {
+    "check": "Wheel spat 1 length (plan side view)",
+    "measured": 160.0,
+    "blueprint": 160,
+    "tolerance": 0.5,
+    "passed": true
+  },
+  {
+    "check": "Wheel spat 1 nose x (photo triangulated)",
+    "measured": 170.00003,
+    "blueprint": 170,
+    "tolerance": 0.5,
+    "passed": true
+  },
+  {
+    "check": "Wheel spat 1 widest at 35% (teardrop)",
+    "measured": 225.27867,
+    "blueprint": 226,
+    "tolerance": 3,
+    "passed": true
+  },
+  {
+    "check": "Gear leg mean |y|",
+    "measured": 192.50002,
+    "blueprint": 192,
+    "tolerance": 25,
+    "passed": true
+  },
+  {
+    "check": "Gear leg wing exit x (photo triangulated)",
+    "measured": 263.96158,
+    "blueprint": 264,
+    "tolerance": 3,
+    "passed": true
+  },
+  {
+    "check": "Tyre x (axle) -1",
+    "measured": 240.00002,
+    "blueprint": 240,
+    "tolerance": 1,
+    "passed": true
+  },
+  {
+    "check": "Gear leg mean |y|",
+    "measured": 192.50002,
+    "blueprint": 192,
+    "tolerance": 25,
+    "passed": true
+  },
+  {
+    "check": "Gear leg wing exit x (photo triangulated)",
+    "measured": 263.96158,
+    "blueprint": 264,
+    "tolerance": 3,
+    "passed": true
+  },
+  {
+    "check": "Tyre x (axle) 1",
+    "measured": 240.00002,
+    "blueprint": 240,
+    "tolerance": 1,
+    "passed": true
+  },
+  {
+    "check": "Tail wheel x",
+    "measured": 919.00003,
+    "blueprint": 919,
+    "tolerance": 1,
+    "passed": true
+  },
+  {
+    "check": "Fuselage | moulded outer envelope nonmanifold edges",
+    "measured": 0,
+    "blueprint": 0,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Wing inboard | 740 mm nonmanifold edges",
+    "measured": 0,
+    "blueprint": 0,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Wing outboard | 710 mm nonmanifold edges",
+    "measured": 0,
+    "blueprint": 0,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer left nonmanifold edges",
+    "measured": 0,
+    "blueprint": 0,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Stabilizer right nonmanifold edges",
+    "measured": 0,
+    "blueprint": 0,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Vertical fin and rudder nonmanifold edges",
+    "measured": 0,
+    "blueprint": 0,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Packed primary photo",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Packed reference classic-opposite.jpg",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Packed reference cockpit-reference.jpg",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Packed reference img.png",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Packed reference img_1.png",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Packed reference img_2.png",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Packed reference img_3.png",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Cockpit centre deck removed",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  },
+  {
+    "check": "Seat vertices beneath canopy",
+    "measured": 1,
+    "blueprint": 1,
+    "tolerance": 0,
+    "passed": true
+  }
+]

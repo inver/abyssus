@@ -1,0 +1,11 @@
+# Bundled UI resources
+
+What the UI runtime ships or relies on without a project providing it.
+
+| Resource                                        | Origin                                                                                                                                                  | Use                                                                       | License                                                                                                                                                                                                  |
+|-------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `src/main/resources/ui/default-theme.json`      | Written for Abyssus                                                                                                                                     | Default colors, sizes and state overrides per widget type                 | Apache-2.0, like the rest of the module                                                                                                                                                                  |
+| Default UI font `lsans-15.fnt` / `lsans-15.png` | Shipped inside libGDX 1.14.2's `gdx` jar (`com/badlogic/gdx/utils/`), loaded by `BitmapFont()` through `UiBundledFont`; not copied into this repository | Text when a style names no `font` resource, or its font failed to prepare | Distributed with libGDX (Apache-2.0); the glyphs are Liberation Sans, whose own font license is **not independently audited here**. Re-check before shipping this font outside libGDX's own distribution |
+
+No image, icon or sound is bundled: widgets without an image draw flat colors from the theme. A project's own font and
+image resources live in its UI asset folder and carry the project's own licenses.

@@ -10,7 +10,7 @@ Users can inspect local project assets but cannot discover reusable assets from 
 - Define a new anonymous, read-only HTTP API in `openapi.yml`, covering catalog listing, details and immutable versioned package descriptors. The service itself is developed separately.
 - Download self-contained ZIP packages containing a selected asset and its complete dependency closure, verify checksums and native metadata, and import into an explicitly selected Abyssus project as one undoable operation.
 - Refuse conflicting folder names or UUIDs before writing; support cancellation and retry without partial imports. Refresh the local asset tree after success; do not automatically place objects in scenes.
-- Target the native document format planned in `decouple-from-mundus`; breaking legacy compatibility remains acceptable. This change adds a package manifest, not a new scene/project format.
+- Target the native document format from `decouple-from-mundus`; imported asset `meta.json` files must carry the native markers and legacy documents are refused. This change adds a package manifest, not a new scene/project format.
 - Out of scope: server implementation/deployment, authentication, payments, publishing/upload, ratings, automatic updates, asset conversion, collision merging, offline catalog browsing and automatic scene placement.
 
 ## Capabilities

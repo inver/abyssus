@@ -1,0 +1,410 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package net.nevinsky.abyssus.lib.core.editor.components
+
+import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
+import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
+import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
+import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
+import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
+
+import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import java.io.File
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class ComponentEditorTest {
+    private val editor = ComponentEditor(ResourceEditorMessages())
+
+    private fun scene(vararg entities: String) =
+        SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{${entities.joinToString(",")}},"archetypes":{"1":{"a":1}},"metadata":{"m":2}}}""")
+
+    private fun entity(id: Int, components: String) = """"$id":{"archetype":1,"components":{$components}}"""
+
+    private fun components(root: JsonNode, id: Int) = root["ecs"]["entities"]["$id"]["components"]
+
+    private fun assertRejected(result: EditResult) = assertTrue("expected Rejected, was $result", result is EditResult.Rejected)
+
+    @Test
+    fun spotLightFieldsCarryTheirLabelsAndTheRangeTooltip() {
+        val scene = SceneJson().parse(File(net.nevinsky.abyssus.lib.core.assets.testProject("Untitled"), "scenes/Main Scene.scene").readText())
+        val fields = editor.read(scene, "8", "LightComponent")!!.associateBy { it.field }
+        assertEquals("Range", fields.getValue("range").label)
+        assertEquals("Distance a point or spot light reaches.", fields.getValue("range").tooltip)
+        assertEquals("Cone angle (degrees)", fields.getValue("coneAngle").label)
+        assertEquals("Edge softness (%)", fields.getValue("edgeSoftness").label)
+        assertEquals("a field without a message key keeps its name", "intensity", fields.getValue("intensity").label)
+        assertEquals(null, fields.getValue("intensity").tooltip)
+    }
+
+    @Test
+    fun everyKindHasFields() {
+        val names = editor.kinds.associate { it.name to it.fields.map { f -> f.name } }
+        assertEquals(9, names.size)
+        assertEquals(listOf("name"), names["NameComponent"])
+        assertEquals(listOf("type"), names["TypeComponent"])
+        assertEquals(listOf("parentEntityId"), names["ParentComponent"])
+        assertEquals(11, names["PositionComponent"]!!.size)
+        assertTrue("camera.fieldOfView" in names["CameraComponent"]!!)
+        assertEquals(listOf("color.r", "color.g", "color.b", "color.a", "intensity", "range", "coneAngle", "edgeSoftness"), names["LightComponent"])
+        assertEquals(listOf("entity1Id", "entity2Id"), names["Point2PointPositionComponent"])
+        assertEquals(listOf("assetType", "assetName", "shaderKey"), names["RenderComponent"])
+        assertEquals(listOf("asset.assetName", "spacing", "offset", "sides", "alignToPath", "yawOffset"), names["PathArrangementComponent"])
+    }
+
+    @Test
+    fun lightRangeChangesOnlyRangeAndWritesTheDefaultExplicitly() {
+        val root = scene(entity(0, """"LightComponent":{"light":{"color":{"r":1.00,"g":1,"b":1,"a":1},"intensity":1.0}}"""))
+        val before = root.toString()
+        assertEquals(EditResult.Unchanged, editor.update(root, "0", "LightComponent", "range", "100"))
+        assertEquals(before, root.toString())
+        assertEquals(EditResult.Changed, editor.update(root, "0", "LightComponent", "range", "30"))
+        assertEquals(30, components(root, 0)["LightComponent"]["light"]["range"].asInt())
+        assertEquals(EditResult.Changed, editor.update(root, "0", "LightComponent", "range", "100"))
+        val expected = SceneJson().parse(before)
+        (components(expected, 0)["LightComponent"]["light"] as com.fasterxml.jackson.databind.node.ObjectNode).put("range", 100)
+        assertEquals(expected.toString(), root.toString())
+        for (invalid in listOf("0", "-1", "abc", "NaN", "Infinity")) {
+            val result = editor.update(root, "0", "LightComponent", "range", invalid)
+            assertRejected(result)
+            assertTrue((result as EditResult.Rejected).reason.contains("range"))
+            assertEquals(expected.toString(), root.toString())
+        }
+    }
+
+    @Test
+    fun spotlightEditsValidateBoundariesPreserveTextAndWriteDefaults() {
+        val values = """{"intensity":1.000,"future":2.3400}"""
+        val light = """{"light":$values,"outer":7.00}"""
+        val root = scene(entity(0, """"TypeComponent":{"type":"LIGHT_SPOT"},"LightComponent":$light"""))
+        val before = root.toString()
+        for ((field, default) in listOf("coneAngle" to "45", "edgeSoftness" to "20")) {
+            assertEquals(EditResult.Unchanged, editor.update(root, "0", "LightComponent", field, default))
+        }
+        for ((field, invalid) in listOf("coneAngle" to listOf("0", "180", "-1", "181", "NaN", "Infinity", "abc"),
+            "edgeSoftness" to listOf("-1", "101", "NaN", "Infinity", "abc"))) {
+            for (value in invalid) {
+                val result = editor.update(root, "0", "LightComponent", field, value)
+                assertRejected(result)
+                assertTrue((result as EditResult.Rejected).reason.contains(field))
+                assertEquals(before, root.toString())
+            }
+        }
+        assertEquals(EditResult.Changed, editor.update(root, "0", "LightComponent", "coneAngle", "60"))
+        assertEquals(EditResult.Changed, editor.update(root, "0", "LightComponent", "edgeSoftness", "25"))
+        val c = components(root, 0)["LightComponent"]
+        val saved = c["light"] ?: c
+        assertEquals(60f, saved["coneAngle"].floatValue(), 0f)
+        assertEquals(0.25f, saved["edgeSoftness"].floatValue(), 0f)
+        assertEquals("1.000", saved["intensity"].toString())
+        assertEquals("2.3400", saved["future"].toString())
+        for (softness in listOf("0", "100")) {
+            assertEquals(EditResult.Changed, editor.update(root, "0", "LightComponent", "edgeSoftness", softness))
+        }
+        assertEquals(EditResult.Changed, editor.update(root, "0", "LightComponent", "coneAngle", "45"))
+        assertEquals(EditResult.Changed, editor.update(root, "0", "LightComponent", "edgeSoftness", "20"))
+        val expected = SceneJson().parse(before)
+        (components(expected, 0)["LightComponent"]["light"] as com.fasterxml.jackson.databind.node.ObjectNode).apply {
+            put("coneAngle", 45)
+            put("edgeSoftness", 0.2)
+        }
+        assertEquals(expected.toString(), root.toString())
+    }
+
+    @Test
+    fun aLightWithoutItsRequiredWrapperIsRejectedWithoutAnEdit() {
+        val root = scene(entity(0, """"LightComponent":{"range":30,"other":1.00}"""))
+        val before = root.toString()
+        org.junit.Assert.assertThrows(com.fasterxml.jackson.databind.JsonMappingException::class.java) {
+            editor.update(root, "0", "LightComponent", "range", "40")
+        }
+        assertEquals(before, root.toString())
+    }
+
+    @Test
+    fun addLightUsesDefaults() {
+        val root = scene(entity(0, """"NameComponent":{"name":"a"}"""))
+        assertEquals(EditResult.Changed, editor.add(root, "0", "LightComponent"))
+        val c = components(root, 0)
+        assertEquals(listOf("NameComponent", "LightComponent"), c.fieldNames().asSequence().toList())
+        val light = c["LightComponent"]["light"]
+        assertEquals(1, light["intensity"].asInt())
+        assertEquals(listOf(1, 1, 1, 1), listOf("r", "g", "b", "a").map { light["color"][it].asInt() })
+        assertEquals("a", c["NameComponent"]["name"].asText())
+    }
+
+    @Test
+    fun addRenderNeedsAnAsset() {
+        val root = scene(entity(0, """"NameComponent":{}"""))
+        assertRejected(editor.add(root, "0", "RenderComponent"))
+        assertFalse(components(root, 0).has("RenderComponent"))
+        assertRejected(editor.add(root, "0", "RenderComponent", mapOf("assetName" to "tree"), assets = setOf("rock")))
+        assertEquals(EditResult.Changed, editor.add(root, "0", "RenderComponent", mapOf("assetName" to "tree"), setOf("tree")))
+        val asset = components(root, 0)["RenderComponent"]
+        assertEquals("MODEL", asset["type"].asText())
+        assertEquals("tree", asset["assetName"].asText())
+    }
+
+    @Test
+    fun addTwiceIsRejected() {
+        val root = scene(entity(0, """"PositionComponent":{}"""))
+        val before = root.toString()
+        assertRejected(editor.add(root, "0", "PositionComponent"))
+        assertEquals(before, root.toString())
+    }
+
+    @Test
+    fun missingKindsListsOnlyModeledOnes() {
+        val root = scene(entity(0, """"PositionComponent":{},"PickableComponent":{}"""))
+        val missing = editor.missingKinds(root, "0").map { it.name }
+        assertFalse("PositionComponent" in missing)
+        assertFalse("PickableComponent" in missing)
+        assertTrue("LightComponent" in missing)
+        assertEquals(7, missing.size)
+    }
+
+    @Test
+    fun updateCameraFieldTouchesOnlyThatValue() {
+        val camera = """"CameraComponent":{"camera":{"position":{"x":1.50,"y":2},"far":200,"near":0.5,"fieldOfView":67}}"""
+        val root = scene(entity(0, camera))
+        assertEquals(EditResult.Changed, editor.update(root, "0", "CameraComponent", "camera.fieldOfView", "60"))
+        val cam = components(root, 0)["CameraComponent"]["camera"]
+        assertEquals(60, cam["fieldOfView"].asInt())
+        assertEquals("""{"x":1.50,"y":2}""", cam["position"].toString())
+        assertEquals(200, cam["far"].asInt())
+    }
+
+    @Test
+    fun updateRejectsNonNumbers() {
+        val root = scene(entity(0, """"LightComponent":{"light":{"intensity":1}}"""))
+        val before = root.toString()
+        val result = editor.update(root, "0", "LightComponent", "intensity", "abc")
+        assertRejected(result)
+        assertTrue((result as EditResult.Rejected).reason.contains("intensity"))
+        assertEquals(before, root.toString())
+    }
+
+    @Test
+    fun updateToDefaultDropsTheKey() {
+        val root = scene(entity(0, """"PositionComponent":{"localScale":{"x":1,"y":2,"z":1}}"""))
+        assertEquals(EditResult.Changed, editor.update(root, "0", "PositionComponent", "localScale.y", "1"))
+        assertFalse(components(root, 0)["PositionComponent"].has("localScale"))
+    }
+
+    @Test
+    fun updateToSameValueIsUnchanged() {
+        val root = scene(entity(0, """"CameraComponent":{"camera":{"far":200,"near":0.5,"fieldOfView":60}}"""))
+        val before = root.toString()
+        assertEquals(EditResult.Unchanged, editor.update(root, "0", "CameraComponent", "camera.fieldOfView", "60"))
+        assertEquals(before, root.toString())
+    }
+
+    @Test
+    fun updateNameAndType() {
+        val root = scene(entity(0, """"NameComponent":{"name":"a"},"TypeComponent":{"type":"OBJECT"}"""))
+        assertEquals(EditResult.Changed, editor.update(root, "0", "NameComponent", "name", "b"))
+        assertEquals(EditResult.Changed, editor.update(root, "0", "TypeComponent", "type", "GROUP"))
+        assertRejected(editor.update(root, "0", "TypeComponent", "type", "NOPE"))
+        assertEquals("b", components(root, 0)["NameComponent"]["name"].asText())
+        assertEquals("GROUP", components(root, 0)["TypeComponent"]["type"].asText())
+    }
+
+    @Test
+    fun lookAtMustNameAnEntityOrNone() {
+        val root = scene(entity(0, """"PositionComponent":{"lookAtId":1}"""), entity(1, """"PositionComponent":{}"""))
+        val before = root.toString()
+        assertRejected(editor.update(root, "0", "PositionComponent", "lookAtId", "99"))
+        assertRejected(editor.update(root, "0", "PositionComponent", "lookAtId", "x"))
+        assertEquals(before, root.toString())
+        assertEquals(EditResult.Changed, editor.update(root, "0", "PositionComponent", "lookAtId", "-1"))
+        assertFalse(components(root, 0)["PositionComponent"].has("lookAtId"))
+    }
+
+    @Test
+    fun parentCyclesAreRejected() {
+        val root = scene(
+            entity(1, """"ParentComponent":{"parentEntityId":2}"""),
+            entity(2, """"ParentComponent":{}"""),
+            entity(3, """"ParentComponent":{"parentEntityId":2}"""),
+        )
+        assertRejected(editor.update(root, "2", "ParentComponent", "parentEntityId", "1"))
+        assertRejected(editor.update(root, "2", "ParentComponent", "parentEntityId", "2"))
+        assertEquals(EditResult.Changed, editor.update(root, "1", "ParentComponent", "parentEntityId", "3"))
+        assertRejected(editor.update(root, "2", "ParentComponent", "parentEntityId", "1"))
+    }
+
+    @Test
+    fun removeKeepsTheOtherComponentsInOrder() {
+        val root = scene(entity(0, """"NameComponent":{},"LightComponent":{"light":{}},"TypeComponent":{}"""))
+        assertEquals(EditResult.Changed, editor.remove(root, "0", "LightComponent"))
+        assertEquals(listOf("NameComponent", "TypeComponent"), components(root, 0).fieldNames().asSequence().toList())
+        assertRejected(editor.remove(root, "0", "LightComponent"))
+    }
+
+    @Test
+    fun removeRefusedWhileReferenced() {
+        val root = scene(
+            entity(3, """"PositionComponent":{}"""),
+            entity(5, """"PositionComponent":{"lookAtId":3}"""),
+        )
+        val before = root.toString()
+        val result = editor.remove(root, "3", "PositionComponent")
+        assertRejected(result)
+        assertTrue((result as EditResult.Rejected).reason.contains("5"))
+        assertEquals(before, root.toString())
+        assertEquals(EditResult.Changed, editor.remove(root, "5", "PositionComponent"))
+        assertEquals(EditResult.Changed, editor.remove(root, "3", "PositionComponent"))
+    }
+
+    @Test
+    fun unmodeledComponentsAreNotEditable() {
+        val root = scene(entity(0, """"PickableComponent":{"x":1}"""))
+        assertRejected(editor.remove(root, "0", "PickableComponent"))
+        assertRejected(editor.update(root, "0", "PickableComponent", "x", "2"))
+        assertEquals(null, editor.read(root, "0", "PickableComponent"))
+    }
+
+    @Test
+    fun readListsFieldValues() {
+        val root = scene(entity(0, """"LightComponent":{"light":{"color":{"r":0.5,"g":1,"b":1,"a":1},"intensity":2}}"""))
+        val values = editor.read(root, "0", "LightComponent")!!.associate { it.field to it.value }
+        assertEquals("0.5", values["color.r"])
+        assertEquals("2", values["intensity"])
+    }
+
+    @Test
+    fun mainSceneEditsKeepEverythingElse() {
+        val file = File("src/test/testData/project/Untitled/scenes/Main Scene.scene")
+        val original = SceneJson().parse(file.readText())
+        val root = original.deepCopy<JsonNode>()
+        assertEquals(EditResult.Changed, editor.add(root, "0", "LightComponent"))
+        assertEquals(EditResult.Changed, editor.update(root, "4", "CameraComponent", "camera.fieldOfView", "50"))
+        assertEquals(EditResult.Changed, editor.remove(root, "0", "LightComponent"))
+        // camera field changed; everything else equals the original
+        (root["ecs"]["4"]["components"]["CameraComponent"]["camera"] as com.fasterxml.jackson.databind.node.ObjectNode)
+            .set<JsonNode>("fieldOfView", original["ecs"]["4"]["components"]["CameraComponent"]["camera"]["fieldOfView"])
+        assertEquals(original.toString(), root.toString())
+    }
+
+    @Test
+    fun editedMainSceneLoadsWithoutNewWarnings() {
+        val original = SceneJson().parse(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
+        val root = original.deepCopy<JsonNode>()
+        editor.add(root, "0", "LightComponent")
+        editor.update(root, "4", "CameraComponent", "camera.near", "0.25")
+        editor.update(root, "0", "PositionComponent", "localPosition.y", "2.5")
+        val loader = net.nevinsky.abyssus.lib.core.ecs.EcsLoader(
+            JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER),
+            net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry(),
+        )
+        val before = net.nevinsky.abyssus.lib.core.ecs.SceneEngine()
+        val after = net.nevinsky.abyssus.lib.core.ecs.SceneEngine()
+        val beforeWarnings = loader.loadToEngine(original["ecs"], before)
+        val afterWarnings = loader.loadToEngine(root["ecs"], after)
+        assertEquals(beforeWarnings.warnings, afterWarnings.warnings)
+        assertEquals(before.entities.size(), after.entities.size())
+    }
+
+    @Test
+    fun anUnrelatedPositionEditKeepsTheOriginalLookAtNode() {
+        for (node in listOf("3", "\"3\"", "\"-1\"")) {
+            val root = scene(entity(0, """"PositionComponent":{"lookAtId":$node,"localPosition":{"x":1}}"""))
+            assertEquals(EditResult.Changed, editor.update(root, "0", "PositionComponent", "localPosition.x", "5"))
+            assertEquals(node, SceneJson().parse(node), components(root, 0)["PositionComponent"]["lookAtId"])
+            assertEquals(5, components(root, 0)["PositionComponent"]["localPosition"]["x"].asInt())
+        }
+    }
+
+    @Test
+    fun anInvalidLookAtReferenceRejectsAnEditWithoutChangingTheDocument() {
+        val root = scene(entity(0, """"PositionComponent":{"lookAtId":"h","localPosition":{"x":1.00}}"""))
+        val before = root.toString()
+        org.junit.Assert.assertThrows(com.fasterxml.jackson.databind.exc.InvalidFormatException::class.java) {
+            editor.update(root, "0", "PositionComponent", "localPosition.x", "5")
+        }
+        assertEquals(before, root.toString())
+    }
+
+    @Test
+    fun customComponentsStayReadOnlyAndSurviveBuiltInEdits() {
+        val root = SceneJson().parse(File("src/test/testData/project/Custom/scenes/Field.scene").readText())
+        val plane = components(root, 0)["PlaneComponent"].toString()
+        val before = root.toString()
+        assertEquals(null, editor.kindOf("PlaneComponent"))
+        assertRejected(editor.add(root, "1", "PlaneComponent"))
+        assertRejected(editor.update(root, "0", "PlaneComponent", "lineLength", "25"))
+        assertRejected(editor.remove(root, "0", "PlaneComponent"))
+        assertEquals(before, root.toString())
+        assertEquals(EditResult.Changed, editor.update(root, "0", "NameComponent", "name", "Renamed"))
+        assertEquals(plane, components(root, 0)["PlaneComponent"].toString())
+    }
+
+
+    /** Main Scene with a line of trees: arrangement 11 and copies 12 to 16. */
+    private fun arranged(): JsonNode {
+        val root = SceneJson().parse(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
+        val points = listOf(Vec3(0f, 0f, 0f), Vec3(40f, 0f, 0f))
+        ArrangementEdits(ResourceEditorMessages()).create(root, RenderAsset("MODEL", "tree"), points, false, LineHeights())
+        return root
+    }
+
+    private fun slotsOf(root: JsonNode) = SceneEntityTree(root).components("11")!!["PathArrangementComponent"]["slots"].map { it.asInt() }
+
+    @Test
+    fun editAnArrangedCopysPosition() {
+        val root = arranged()
+        assertEquals(EditResult.Changed, editor.update(root, "14", "PositionComponent", "localPosition.z", "3"))
+        assertEquals(null, SceneEntityTree(root).components("14")!!["ParentComponent"])
+        assertEquals(listOf(12, 13, -1, 15, 16), slotsOf(root))
+    }
+
+    @Test
+    fun aRenameDoesNotDetach() {
+        val root = arranged()
+        assertEquals(EditResult.Changed, editor.update(root, "13", "NameComponent", "name", "Lamp"))
+        assertEquals(11, SceneEntityTree(root).components("13")!!["ParentComponent"]["parentEntityId"].asInt())
+        assertEquals(listOf(12, 13, 14, 15, 16), slotsOf(root))
+    }
+
+    @Test
+    fun changeAnArrangementsSpacing() {
+        val root = arranged()
+        assertEquals(EditResult.Changed, editor.update(root, "11", "PathArrangementComponent", "spacing", "20"))
+        assertEquals(listOf(12, 13, 14), slotsOf(root))
+        assertEquals(20, SceneEntityTree(root).components("11")!!["PathArrangementComponent"]["spacing"].asInt())
+        assertEquals(null, SceneEntityTree(root).entities()!!["15"])
+        assertEquals(EditResult.Unchanged, editor.update(root, "11", "PathArrangementComponent", "spacing", "20"))
+    }
+
+    @Test
+    fun aSpacingOfZeroIsRefused() {
+        val root = arranged()
+        val before = root.toString()
+        assertRejected(editor.update(root, "11", "PathArrangementComponent", "spacing", "0"))
+        assertRejected(editor.update(root, "11", "PathArrangementComponent", "offset", "-1"))
+        assertEquals(before, root.toString())
+    }
+
+    @Test
+    fun settingsThatMakeTooManyCopiesAreRefused() {
+        val root = arranged()
+        SceneEntityTree(root).components("11")!!["PathArrangementComponent"]["points"][1].let { (it as com.fasterxml.jackson.databind.node.ObjectNode).put("x", 2000) }
+        val before = root.toString()
+        assertRejected(editor.update(root, "11", "PathArrangementComponent", "spacing", "1"))
+        assertEquals(before, root.toString())
+    }
+
+    @Test
+    fun anArrangementIsNotOfferedAsANewComponent() {
+        val root = arranged()
+        assertFalse(editor.missingKinds(root, "0").any { it.name == "PathArrangementComponent" })
+    }
+}

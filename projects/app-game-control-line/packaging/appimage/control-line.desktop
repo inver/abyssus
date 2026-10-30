@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Control Line
+Comment=Control Line, a model aircraft flying game
+Exec=AppRun
+Icon=control-line
+Categories=Game;Simulation;
+Terminal=false

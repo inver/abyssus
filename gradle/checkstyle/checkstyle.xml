@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+        "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+        "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!-- Applied to Kotlin sources. Gradle's Java checkstyle plugin only feeds .java files to Checker,
+     so Java AST checks cannot parse .kt sources. Only file-level (Checker) modules are effective here. -->
+<module name="Checker">
+
+    <!-- Files must not contain tab characters. -->
+    <module name="FileTabCharacter"/>
+
+    <!-- Files must not contain lines longer than 120 characters. -->
+    <module name="LineLength">
+        <property name="max" value="120"/>
+    </module>
+
+    <!-- Files must not contain trailing whitespace on any line. -->
+    <module name="RegexpSingleline">
+        <property name="format" value="\s+$"/>
+        <property name="message" value="Line has trailing whitespace."/>
+    </module>
+
+    <!-- Files must end with a newline. -->
+    <module name="NewlineAtEndOfFile">
+        <property name="lineSeparator" value="lf"/>
+    </module>
+
+    <!-- Avoid mixed line endings (carriage returns) on any single line. -->
+    <module name="RegexpSingleline">
+        <property name="format" value="\r"/>
+        <property name="message" value="Line contains a carriage return; use LF line endings only."/>
+    </module>
+</module>

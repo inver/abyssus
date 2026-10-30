@@ -1,0 +1,23 @@
+{
+  "generator": "games/control-line/project/environment/build_environment.py",
+  "license": "CC0-1.0",
+  "description": "Concrete street lighting pole with a cantilever luminaire (arm along +Y, toward the street when placed).",
+  "materials": {
+    "pole": "https://ambientcg.com/view?id=Concrete034"
+  },
+  "candidates": "The supplied Sketchfab lamppost needs a login; a generated pole is used instead.",
+  "triangles": 62,
+  "bounds": {
+    "min": [
+      -0.14000000059604645,
+      -0.30000001192092896,
+      -2.1500000953674316
+    ],
+    "max": [
+      0.14000000059604645,
+      9.0,
+      0.12363734841346741
+    ]
+  },
+  "sha256": "3f402b3f75fa7fd218b47294806f9c60937d9eaff59fcc7129f73de21bbd1ba9"
+}

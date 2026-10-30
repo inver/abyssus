@@ -1,0 +1,22 @@
+{
+  "generator": "games/control-line/project/environment/build_environment.py",
+  "license": "CC0-1.0",
+  "description": "Wooden model stand (two padded cradles) for preparing control-line models.",
+  "materials": {
+    "wood": "https://ambientcg.com/view?id=Planks037A"
+  },
+  "triangles": 100,
+  "bounds": {
+    "min": [
+      -0.6100000143051147,
+      0.0,
+      -0.25999999046325684
+    ],
+    "max": [
+      0.6100000143051147,
+      0.8399999737739563,
+      0.25999999046325684
+    ]
+  },
+  "sha256": "9d5070949b4c4f9b6f74a519a47bb2847c2ceea15f7d5058e1f3c2cd78d3e7d5"
+}

@@ -10,15 +10,19 @@ panel, so they can be read without opening `meta.json`.
 ### Requirement: Properties tool window
 
 The plugin SHALL provide an `Abyssus Properties` tool window, available without configuration,
-that shows a Name / Value table for the selected asset.
+that shows the selected node's header and sections of labelled fields. Its title bar SHALL offer Options and Hide.
 
 #### Scenario: Tool window is available
 - **WHEN** a user opens a project where the plugin is installed
 - **THEN** an `Abyssus Properties` tool window can be opened from the tool window bar
 
+#### Scenario: Title bar actions
+- **WHEN** the tool window is shown
+- **THEN** its title bar offers Options and Hide, in that order
+
 ### Requirement: Panel follows the asset selection
 
-The panel SHALL show the Meta of the asset selected in the Abyssus view and SHALL update when the selection changes. For a selected entity or one of its components it SHALL show that entity's components or that component's fields instead (see "Entity and component properties").
+The panel SHALL show the Meta of the asset selected in the Abyssus view and SHALL update when the selection changes. For a selected entity or one of its components it SHALL show that entity's components or that component's fields instead (see "Entity and component properties"). For a selected project file it SHALL show the project's properties instead (see "Project properties"). A selected water surface SHALL show editable water properties (see "Water properties").
 
 #### Scenario: Select an asset
 - **WHEN** the user selects an asset row in the Abyssus view
@@ -29,24 +33,32 @@ The panel SHALL show the Meta of the asset selected in the Abyssus view and SHAL
 - **THEN** the panel shows `Nothing selected.` and a hint to select a skybox, model or terrain under Assets to see its `meta.json`
 
 #### Scenario: Selection is not an asset
-- **WHEN** the selected node is not an asset, an entity or a component (a scene, the project file or a setting)
+- **WHEN** the selected node is not an asset, an entity, a component, a project file or a water surface (for example, a setting)
 - **THEN** the panel shows `Nothing to show: <name> is <what it is>.` and the same hint
+
+#### Scenario: Scene selection retains its properties
+- **WHEN** the user selects a scene node in the Abyssus view
+- **THEN** the panel keeps showing the scene's existing properties, including its ray tracing preferences
 
 ### Requirement: Asset header
 
-Above the table the panel SHALL show an icon for the asset's type (skybox, HDR skybox, model, terrain, or a generic icon for any other type), the asset's name and the line `<type> asset`. Assets without supported editors SHALL retain the `read-only` suffix. Assets with supported editors SHALL show a note that asset edits affect every instance using the asset.
+Above the sections the panel SHALL show an icon for the asset's type, the asset's name and the line `<type> asset`. Assets without supported editors SHALL show a `read-only` badge. Assets with supported editors SHALL show a note that asset edits affect every instance using the asset. An asset that no scene uses SHALL also show a `no scene uses this` badge.
 
 #### Scenario: Skybox header
 - **WHEN** the skybox asset `nebula` is selected
-- **THEN** the header shows the skybox icon, `nebula`, `skybox asset` and the shared-asset note
+- **THEN** the header shows the skybox icon, `nebula`, `SKYBOX asset` and the shared-asset note
 
 #### Scenario: HDR skybox header
 - **WHEN** the asset `skybox_hdr` is selected
-- **THEN** the header shows the HDR skybox icon, `skybox_hdr` and `skybox_hdr asset · read-only`
+- **THEN** the header shows the HDR skybox icon, `skybox_hdr`, `SKYBOX_HDR asset` and a `read-only` badge
 
 #### Scenario: Unknown type
 - **WHEN** the selected asset's type has no dedicated icon
-- **THEN** the header shows a generic asset icon and the type text from `meta.json` with the read-only suffix
+- **THEN** the header shows a generic asset icon, the type text from `meta.json` and a `read-only` badge
+
+#### Scenario: Unused asset
+- **WHEN** an asset that no scene of the project uses is selected
+- **THEN** the header shows the badge `no scene uses this` beside the title
 
 ### Requirement: Meta property rows
 
@@ -117,7 +129,7 @@ The panel SHALL refresh when the selected asset's `meta.json` changes in the edi
 
 ### Requirement: Entity and component properties
 
-When an entity of a scene is selected the panel SHALL show a header with its name and id and one section per component it has; when a component is selected it SHALL show only that component's section. A modeled component SHALL list its fields with editors suited to the value (number, text, choice, color, entity reference, asset reference); an unmodeled component SHALL be shown as read-only JSON text with a note saying the plugin does not edit it.
+When an entity of a scene is selected the panel SHALL show a header with its name and id and one section per component it has; when a component is selected it SHALL show only that component's section. A modeled component SHALL list its fields with editors suited to the value (number, text, choice, color, entity reference, asset reference); a schema-declared component SHALL list its fields the same way, also with editors for true/false and 3D vectors, under the field labels and in the groups its schema declares; an unmodeled component, including one whose schema is unknown, SHALL be shown as read-only JSON text with a note saying the plugin does not edit it.
 
 #### Scenario: Entity selected
 
@@ -134,9 +146,15 @@ When an entity of a scene is selected the panel SHALL show a header with its nam
 - **WHEN** a `PickableComponent` is selected
 - **THEN** its JSON is shown without editors and with a note that it is not edited by the plugin
 
+#### Scenario: Schema-declared component selected
+
+- **WHEN** the `PlaneComponent` row of entity `0` of the `Custom` scene is selected
+- **THEN** the panel shows its fields under their declared labels, grouped as declared (`lineLength` under `Lines`),
+  with a choice editor for `kind`, a checkbox for `hasTipWeight` and x / y / z editors for `leadout`
+
 ### Requirement: Edit components in the panel
 
-Changing a field in the panel SHALL update that component in the scene file as the `scene-component-editing` capability defines; a rejected value SHALL leave the previous value shown with the reason beside the field. The panel SHALL offer an "Add component" choice listing the modeled kinds the entity lacks and a "Remove" action on each modeled component's section.
+Changing a field in the panel SHALL update that component in the scene file as the `scene-component-editing` capability defines; a rejected value SHALL leave the previous value shown with the reason beside the field. The panel SHALL offer an "Add component" choice listing the modeled and schema-declared kinds the entity lacks and a "Remove" action on each modeled or schema-declared component's section.
 
 #### Scenario: Change a value
 
@@ -157,6 +175,11 @@ Changing a field in the panel SHALL update that component in the scene file as t
 
 - **WHEN** the user chooses Remove on the Light section
 - **THEN** the section disappears and the component is gone from the file
+
+#### Scenario: Add a schema-declared component from the panel
+
+- **WHEN** the user chooses Add component > Plane on entity `1` of the `Custom` scene
+- **THEN** a Plane section with the declared defaults appears and the file holds `"PlaneComponent": {}` for entity `1`
 
 ### Requirement: Entity panel follows the file
 
@@ -250,3 +273,243 @@ Each accepted asset property edit SHALL be one undoable command preserving unrel
 #### Scenario: Concurrent metadata change
 - **WHEN** a field changes externally after its editor was populated and the user commits the old editor's value
 - **THEN** the newer value remains saved and the panel explains and refreshes the conflict
+
+### Requirement: Project properties
+
+Selecting a project's `.abss` node in the Abyssus view SHALL show the project's name and a Physics checkbox reflecting
+`physicsEnabled`. Toggling the checkbox SHALL write the switch to the `.abss` file as one undoable edit. The panel SHALL
+follow edits made to the `.abss` elsewhere, and SHALL show the switch read-only for an `.abss` file it does not support.
+
+#### Scenario: Physics off by default
+- **WHEN** the user selects `Untitled.abss` in the Abyssus view
+- **THEN** the panel shows project `Untitled` with the Physics checkbox cleared
+
+#### Scenario: Turn physics on and undo
+- **WHEN** the user ticks Physics for a copy of `Untitled` and then uses Undo
+- **THEN** `Untitled.abss` first gains `"physicsEnabled": true`, then is restored to its original text, and the
+  checkbox follows both changes
+
+#### Scenario: Physics fixture
+- **WHEN** the user selects `Physics.abss`
+- **THEN** the Physics checkbox is ticked
+
+#### Scenario: Edit the project text
+- **WHEN** `"physicsEnabled": true` is typed into the `.abss` in the text editor while the project is selected
+- **THEN** the checkbox becomes ticked without reselecting
+
+#### Scenario: Unsupported project
+- **WHEN** the selected `.abss` has unsupported or missing native format markers and `physicsEnabled: true`
+- **THEN** physics remains off, the panel explains the unsupported format and the checkbox cannot write the file
+
+### Requirement: Asset and component fields edit the same way
+An editable field in the Abyssus Properties panel SHALL behave the same whether it belongs to an asset's `meta.json` or
+to an entity's component. A text field SHALL save when the user presses Enter or moves focus away. A choice field
+SHALL save when the user picks a value. A value equal to the current one SHALL write nothing. A refused value SHALL put
+the previous value back in the field and show the reason beside it, with nothing written. An accepted value SHALL clear
+any reason shown beside that field.
+
+#### Scenario: Confirm an asset field by leaving it
+- **WHEN** the user selects the `terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b` asset of the `Untitled` project, types
+  `30` into `uv` and moves focus to another field
+- **THEN** the `meta.json` holds `30.0` for `uv` and the field shows `30.0`
+
+#### Scenario: Confirm a component field by leaving it
+- **WHEN** the user selects `Spot Light 8` in `Main Scene` of the `Untitled` project, types `2` into the light's
+  `intensity` and moves focus to another field
+- **THEN** the scene file holds `2` for that light's `intensity` and the field shows `2`
+
+#### Scenario: Refused values look the same in both panels
+- **WHEN** the user enters `abc` into `uv` of that terrain, and then into `intensity` of `Spot Light 8`, pressing Enter
+  each time
+- **THEN** each field shows its previous value again (`60.0` and `1`), a reason appears beside each, and neither file
+  changes
+
+#### Scenario: Equal value writes nothing
+- **WHEN** the user presses Enter in `intensity` of `Spot Light 8` without changing `1`
+- **THEN** the scene file is not written and no Undo entry is added
+
+#### Scenario: Light field labels are unchanged
+- **WHEN** the user selects `Spot Light 8`
+- **THEN** its range, cone angle and edge softness fields show the same labels as before this change, and the range
+  field shows the same tooltip
+
+### Requirement: Project view settings
+
+The project properties view (see "Project properties") SHALL also show a `Show FPS` checkbox reflecting the saved preference defined by `scene-fps-display`. The checkbox SHALL be usable with no scene open. The view SHALL explain that these are IDE view settings, and changing the checkbox SHALL leave `.abss`, `.scene` and asset files unchanged.
+
+#### Scenario: New project preference
+- **WHEN** `Untitled.abss` is selected in an IDE project with no saved FPS preference
+- **THEN** `Show FPS` is unchecked
+
+#### Scenario: Toggle before opening a scene
+- **WHEN** the user checks `Show FPS` with no scene view open and then opens `Main Scene`
+- **THEN** the scene view shows the FPS value and the project, scene and asset files are unchanged
+
+#### Scenario: Reselect the project
+- **WHEN** the user checks `Show FPS`, selects an asset and then reselects `Untitled.abss`
+- **THEN** `Show FPS` remains checked
+
+### Requirement: Water properties
+
+Selecting a water surface SHALL show its name and Abyssus-only status, position including water level, width, length, tint, clarity, wave amplitude, wavelength and speed, and foam amount and width. Confirmed valid edits SHALL refresh the scene; invalid edits SHALL restore the previous value with a reason and leave the file unchanged.
+
+#### Scenario: Change water level
+- **WHEN** a user sets a selected Lake's water level to 3
+- **THEN** only its `position.y` changes to 3 and the shoreline and rendering refresh
+
+#### Scenario: Invalid extent
+- **WHEN** the user sets width to zero or enters a non-finite number
+- **THEN** the edit is rejected, the previous width remains and a reason appears beside the field
+
+#### Scenario: Text edits refresh properties
+- **WHEN** a selected surface's clarity changes in the scene text
+- **THEN** its property editor shows the new clarity without reselecting
+#### Scenario: Removed surface
+
+- **WHEN** the selected surface is deleted elsewhere
+- **THEN** the panel shows that it no longer exists rather than editing a different surface
+
+### Requirement: Scene skybox field
+
+For a selected scene that belongs to a `.abss` project, Abyssus Properties SHALL show its skybox as a field holding the
+current `skyboxName` (or `none` when null) with a Browse button at its right edge. The Browse button SHALL carry a tooltip
+and an accessible name, and SHALL open the skybox chooser of the `abyssus-scene-skybox` capability. Assigning from the
+chooser SHALL update the field and the tree's `skybox` row. A scene outside any project SHALL show the field without a
+Browse button.
+
+#### Scenario: Browse opens the chooser
+
+- **WHEN** the user selects `Main Scene` of a copy of `Untitled` and presses Browse on the skybox field
+- **THEN** the "Choose a skybox" dialog opens with the scene's current skybox preselected
+
+#### Scenario: Assignment is reflected
+
+- **WHEN** the user assigns `skybox_default` from that dialog
+- **THEN** the field reads `skybox_default`, the tree row reads `skybox: skybox_default`, and Undo restores the previous value in both
+
+#### Scenario: Standalone scene
+
+- **WHEN** the user selects a `.scene` file outside a project
+- **THEN** the skybox field is shown without a Browse button
+
+## ADDED Requirements
+
+### Requirement: Breadcrumb and subtitle
+
+The header SHALL show, above the title, the path of the selected node from the project down to its parent, each step as text, and a subtitle that names the kind of node: `Project`, `Folder`, `Scene`, `Scene setting`, `ecs`, `Entity <id> · <type>`, `Component` or `Game component` with the class name and the entity, `UI screen`, or `<type> asset`.
+
+#### Scenario: Entity header
+- **WHEN** entity 3 of type `OBJECT` named `Racer` in scene `Field` is selected
+- **THEN** the breadcrumb reads the project file, `Field`, `ecs`; the title is `Racer`; the subtitle is `Entity 3 · OBJECT`
+
+#### Scenario: Game component header
+- **WHEN** the `Plane` component of `Racer`, registered by the game project, is selected
+- **THEN** the subtitle is `Game component · PlaneComponent on Racer`
+
+#### Scenario: Project header
+- **WHEN** the project file is selected
+- **THEN** the breadcrumb is empty and the subtitle reads `Project · <file name>`
+
+### Requirement: Section frame
+
+Each section SHALL have a collapse chevron, a colored icon of its kind, a title and a hairline. A component registered by the game project SHALL show a `game` badge, and a component section SHALL show its class name as a hint. A section SHALL start expanded, and its collapsed state SHALL persist while the selection stays on the same node and SHALL reset when the selection changes to another node.
+
+#### Scenario: Collapse a section
+- **WHEN** the user clicks a section's chevron
+- **THEN** its fields hide and the chevron turns; a second click shows them again
+
+#### Scenario: Collapse survives a refresh
+- **WHEN** a section is collapsed and the scene file changes
+- **THEN** the section stays collapsed
+
+#### Scenario: Game component section
+- **WHEN** an entity with `PlaneComponent` from the game project is selected
+- **THEN** its section shows the `game` badge and the hint `PlaneComponent`; a built-in component shows no badge
+
+### Requirement: Enabled check box
+
+A section of a togglable component, and the section of a scene setting that has an `<x>Enabled` flag, SHALL show an `Enabled` check box that reflects the flag. Unchecking it SHALL write the flag as one undoable edit, dim the section's icon, title and fields, and keep the fields editable. A component or setting with no flag SHALL show no check box.
+
+#### Scenario: Disable a component
+- **WHEN** the user unchecks `Enabled` on the Collider section
+- **THEN** the component entry gets `enabled: false` in one undoable edit and the section is drawn dim
+
+#### Scenario: Undo
+- **WHEN** the user undoes that edit
+- **THEN** the flag is removed, the check box is checked and the section is drawn normally
+
+#### Scenario: Scene setting
+- **WHEN** the user unchecks `Enabled` on the Fog section
+- **THEN** `fogEnabled` becomes `false` and the other fog fields are unchanged
+
+#### Scenario: Name component
+- **WHEN** an entity's Name section is shown
+- **THEN** it has no `Enabled` check box
+
+### Requirement: Field row kinds
+
+Fields SHALL be drawn as rows with a 150 px label column and a 24 px control. The kinds SHALL be: text, number with an optional unit, vector with one labelled box per axis (`x y z`, or `x y z w` for a rotation), choice, check box, color with a swatch, asset reference with a Browse button, read-only monospace text, link, note, sub-heading and read-only table. Editing a field SHALL behave as `Asset and component fields edit the same way` defines; a rejected value SHALL keep the previous value and show the reason beside the field.
+
+#### Scenario: Number with unit
+- **WHEN** a rigid body is shown
+- **THEN** its mass is a number field followed by the unit `kg`
+
+#### Scenario: Vector axes
+- **WHEN** a position is shown
+- **THEN** its value is three boxes labelled `x`, `y` and `z`; a rotation has a fourth `w`
+
+#### Scenario: Asset reference
+- **WHEN** a render component's `assetName` is shown
+- **THEN** the field shows the asset's icon and name and a Browse button that opens the asset chooser
+
+#### Scenario: Table
+- **WHEN** a FOLIAGE asset with six layers is shown
+- **THEN** the layers appear as a read-only table with a header row and one row per layer, and the section states the count
+
+### Requirement: Defaults are shown dim
+
+A field whose value is not written in the file, so that its default applies, SHALL be drawn dim, and the panel footer SHALL say that dim values are defaults and are not written. Editing a dim field to a value SHALL write it; reverting to the default SHALL follow the component's existing default-omission rule. Showing a panel SHALL NOT write any default.
+
+#### Scenario: Missing mass
+- **WHEN** a rigid body has no `mass`
+- **THEN** the mass field shows the default `1` dim and the file is unchanged
+
+#### Scenario: Written value
+- **WHEN** a rigid body has `mass: 0.5`
+- **THEN** the mass field shows `0.5` in the normal color
+
+#### Scenario: Edit a default
+- **WHEN** the user enters `2` in the dim mass field
+- **THEN** `mass: 2` is written as one undoable edit and the field is no longer dim
+
+### Requirement: Layouts per selection
+
+The panel SHALL lay out each kind of selection with its own sections: the project (project settings, main camera), a folder (read-only name and item count), a scene (scene, ambient light, fog, skybox), one scene setting (its section only), `ecs` (entity and archetype counts with the type counts as a note, read-only), an entity (one section per component), one component (that section), a UI screen (name, owning asset and a link `Open in Screen Editor`), and an asset (a `meta.json` section with `version`, `lastModified`, `uuid` and `type`, then its `additional` section). A footer note SHALL state that asset `meta.json` identity fields are read-only, or that dim values are defaults and edits save as one undoable edit.
+
+#### Scenario: Folder
+- **WHEN** the `Assets` folder row is selected
+- **THEN** the panel shows the subtitle `Folder · <n> items`, a read-only Folder section and the `read-only` badge, and no editor
+
+#### Scenario: ecs row
+- **WHEN** the `ecs` row of a scene with 127 entities is selected
+- **THEN** a read-only Entities section shows the entity and archetype counts and a note with the count of each entity type
+
+#### Scenario: UI screen
+- **WHEN** a screen row under a UI asset is selected
+- **THEN** the panel shows the screen's name, its asset and a link that opens the Screen Editor on that screen
+
+#### Scenario: Asset with meta and additional
+- **WHEN** a TERRAIN asset is selected
+- **THEN** the panel shows the `meta.json` section and an `additional` section whose supported fields remain editable
+
+### Requirement: Empty state
+
+When nothing that the panel can show is selected, the panel SHALL show an icon, the line `Nothing is selected.` and a hint to select a scene, an entity, a component or an asset in the Abyssus tree. A selected node that has no properties SHALL keep the message of `Panel follows the asset selection`.
+
+#### Scenario: Nothing selected
+- **WHEN** no node is selected
+- **THEN** the panel shows the icon, `Nothing is selected.` and the hint
+
+#### Scenario: Selection disappears
+- **WHEN** the selected entity is deleted from the scene file
+- **THEN** the panel shows the existing message that the entity no longer exists

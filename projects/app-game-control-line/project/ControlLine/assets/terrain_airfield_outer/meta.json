@@ -1,0 +1,19 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "version": 1,
+  "lastModified": 1791238941739,
+  "uuid": "7103eb6e-a96e-5ea9-a49f-9173c11c451d",
+  "type": "TERRAIN",
+  "additional": {
+    "terrainFile": "terrain.data",
+    "size": 600,
+    "uv": 200.0,
+    "splatMap": null,
+    "splatBase": "70f69e76-47a4-5272-a11d-16cd6e49a664",
+    "splatR": null,
+    "splatG": null,
+    "splatB": null,
+    "splatA": null
+  }
+}

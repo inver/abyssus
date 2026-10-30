@@ -1,0 +1,25 @@
+{
+  "author": {
+    "Rico Cilliers": "All"
+  },
+  "license": "CC0-1.0",
+  "sourcePage": "https://polyhaven.com/a/tree_small_02",
+  "sourceFile": "tree_small_02_1k.gltf",
+  "sha256Source": "3062a709614c05b80fdc1e56583998bc3cb1027b0d52f956c8ecfb882ff8ca6d",
+  "use": "young slender broadleaf",
+  "note": "Reduced for the game: 10.0% of the leaf clusters kept and enlarged x2.5, the 150 largest branch pieces kept, then collapsed (leaves x0.12, branches x0.25, trunk x0.1); scaled to 7.5 m; textures resized, ARM map dropped, leaves opaque and two-sided.",
+  "triangles": 35431,
+  "bounds": {
+    "min": [
+      -2.1820266246795654,
+      -0.0014515871880576015,
+      -2.3205490112304688
+    ],
+    "max": [
+      2.7060747146606445,
+      7.58161735534668,
+      4.825645923614502
+    ]
+  },
+  "sha256": "7b93329f03190211b403c7720ca5ab9052daf63a131e7132b767891755d74351"
+}

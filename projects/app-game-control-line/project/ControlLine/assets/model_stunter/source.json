@@ -1,0 +1,4 @@
+{
+  "generator": "models/classic-f2b/export_game_glb.py",
+  "description": "Yuriy Yatsenko's Classic F2B stunt plane, exported from models/classic-f2b/Classic_F2B.blend (see models/classic-f2b/README.md). Mirrored so its control-line (inboard) wing is on +X; nose +Z, up +Y, origin at the estimated centre of gravity."
+}

@@ -9,7 +9,7 @@ it back unchanged in meaning, so later features work with scene content rather t
 
 ### Requirement: Scene ecs block loads into entities
 
-The plugin SHALL load the `ecs` block of a scene file into an engine whose entities carry the
+The plugin SHALL load the `ecs` block of a supported native Abyssus scene file into an engine whose entities carry the
 components named in the file, each addressable by the entity id it has in the file. References
 between entities (look-at target, parent, point-to-point endpoints) SHALL resolve to the entities
 with those ids. Component fields that are
@@ -19,7 +19,7 @@ no look-at target and no parent (`-1`).
 #### Scenario: Entities of Main Scene
 
 - **WHEN** `Main Scene` of the `Untitled` test project is loaded
-- **THEN** the engine contains its 7 entities with their name, type, position and render
+- **THEN** the engine contains the entities present in the native fixture with their name, type, position and render
   components, and entity `0` is named `Model 0` with type `OBJECT`
 
 #### Scenario: Missing transform fields
@@ -29,15 +29,14 @@ no look-at target and no parent (`-1`).
 
 #### Scenario: Component unknown to the plugin
 
-- **WHEN** an entity carries a component the plugin does not define (`PickableComponent` and
-  `DependenciesComponent` in `Main Scene`)
+- **WHEN** an entity carries a native component the plugin does not define (`PickableComponent` and
+  `DependenciesComponent` in the native `Main Scene`)
 - **THEN** loading still succeeds, the other components of that entity are loaded, the unknown
   component is kept unchanged with the entity, and the scene file on disk is not modified
 
 #### Scenario: Editor-only renderable
 
-- **WHEN** a render component's renderable names a class that only exists in the Mundus editor
-  (`CameraBodyRenderDelegate`, `DirectionHandleRenderDelegate`, `DirectionLineRenderDelegate`)
+- **WHEN** a native render component names an unknown kind such as `debug-marker`
 - **THEN** the entity loads without a renderable, and the rest of the scene loads normally
 
 #### Scenario: Reference to a missing entity
@@ -53,7 +52,7 @@ no look-at target and no parent (`-1`).
 
 ### Requirement: Render components resolve assets through the project
 
-A render component SHALL name its asset by type (`MODEL` or `TERRAIN`) and asset folder name, and
+A native render component SHALL use `renderable.kind` equal to `asset`, omit `renderable.class`, and name its asset by type (`MODEL` or `TERRAIN`) and asset folder name, and
 loading SHALL resolve it through the project's assets rather than embedding the asset data.
 
 #### Scenario: Model asset reference
@@ -67,27 +66,59 @@ loading SHALL resolve it through the project's assets rather than embedding the 
 - **THEN** the entity is loaded without a renderable, the problem is logged once, and the remaining
   entities load normally
 
-### Requirement: Engine writes back in the Mundus format
+### Requirement: Engine writes native ECS data
 
-An engine SHALL be writable as an `ecs` block that Mundus can read, including camera (`position`,
-`viewPointPosition`, `far`, `near`, `fieldOfView`) and light (`color`, `intensity`) data. Anything
-loaded but not modeled (unknown components, editor-only renderables, entity `archetype` ids, and the
-block's `archetypes`, `componentIdentifiers` and `metadata`) SHALL be written back unchanged.
+An engine SHALL write a native `ecs` block with stable short component identifiers and native renderable kinds. Unknown native components, renderable kinds, optional entity archetype ids and block archetypes/metadata SHALL round-trip unchanged. It SHALL NOT emit serialized Java class identifiers or `componentIdentifiers`. Derived state SHALL NOT be written.
 
-#### Scenario: Round trip
+#### Scenario: Native round trip
+- **WHEN** a native scene is loaded and written back
+- **THEN** reloading gives the same entities, components and field values
 
-- **WHEN** a scene's `ecs` block is loaded and written back
-- **THEN** reloading the result yields the same entities, components and field values
-
-#### Scenario: Mundus data the plugin does not model survives
-
-- **WHEN** `Main Scene`'s `ecs` block is loaded and written back
-- **THEN** the output equals the original block apart from key order, including
-  `PickableComponent`, `DependenciesComponent`, the editor-only renderables, `archetypes`,
-  `componentIdentifiers` and `metadata`
+#### Scenario: Unknown data survives
+- **WHEN** native `Main Scene` is loaded and written back
+- **THEN** its unknown components, unknown native renderable kinds, archetypes and metadata survive unchanged
 
 #### Scenario: Transient state is not written
-
 - **WHEN** an engine is written
-- **THEN** derived state (the combined transform matrix, a light's runtime instance) does not
-  appear in the output
+- **THEN** runtime transforms and light instances do not appear in the output
+
+### Requirement: Foliage component is built in
+
+A native foliage component SHALL load as a built-in component with an optional asset name. Loading and writing it
+SHALL preserve unknown members, key order, numeric spelling and omitted defaults. Unresolved asset names SHALL be
+retained and reported once during reference validation without rewriting the document. Malformed modeled values
+SHALL remain raw with a warning rather than discarding extension data.
+
+#### Scenario: Round trip
+- **WHEN** entity `1` holds `"FoliageComponent": {"assetName": "foliage_meadow", "note": "x", "extra": {"weight": 2.50, "epsilon": 1.0E-4}}` and the supported scene is loaded and written
+- **THEN** the bound asset is `foliage_meadow` and the component's unknown values, key order and number text are unchanged
+
+#### Scenario: Unknown folder
+- **WHEN** an asset name has no supported project foliage asset
+- **THEN** validation warns once, other scene content remains available, and the original name round-trips unchanged
+
+#### Scenario: Missing asset name
+- **WHEN** a foliage component omits its asset name
+- **THEN** it binds as none, produces no foliage entry and does not gain a default member on write
+#### Scenario: Malformed asset name
+
+- **WHEN** the component's asset name is a number
+- **THEN** the unbound component remains raw with one warning and preserves that number on write
+
+## ADDED Requirements
+
+### Requirement: Disabled entities and components load but do not act
+
+A disabled entity SHALL load with its components and contribute nothing to the scene. A disabled component SHALL load as data without its behavior, while the entity's other components stay active. The flag SHALL round-trip: a scene loaded and written by the engine SHALL keep `enabled: false` where it was.
+
+#### Scenario: Disabled render component
+- **WHEN** an entity has `RenderComponent` with `enabled: false` and an active `PositionComponent`
+- **THEN** the entity exists and is positioned, and nothing is rendered for it
+
+#### Scenario: Disabled entity
+- **WHEN** an entity has `enabled: false`
+- **THEN** none of its components renders, lights, collides or moves
+
+#### Scenario: Round trip
+- **WHEN** a scene with a disabled component is loaded and written back
+- **THEN** the component keeps `enabled: false`
