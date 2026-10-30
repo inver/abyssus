@@ -66,7 +66,7 @@ void main() {
     float t1 = cloudSphere(d, u_bandTop);
     if (t0 <= 0.0 || t1 <= t0 || cloudBehindGround(d, t0)) discard;
     t1 = min(t1, t0 + CLOUD_MAX_MARCH);
-    float step = (t1 - t0) / float(CLOUD_STEPS);
+    float span = t1 - t0;
     float jitter = cloudJitter(gl_FragCoord.xy);
     float thickness = u_bandTop - u_bandBase;
     vec3 up0 = cloudUp(d, t0);
@@ -76,12 +76,18 @@ void main() {
     vec3 color = vec3(0.0);
     float transmittance = 1.0;
     for (int i = 0; i < CLOUD_STEPS; i++) {
-        float t = t0 + (float(i) + jitter) * step;
+        // steps grow with distance along the band (t = u^1.5): fine where the cloud is near and resolved, coarse where
+        // grazing rays cross kilometres and the distance fade hides the detail
+        float u = (float(i) + jitter) / float(CLOUD_STEPS);
+        float t = t0 + span * u * sqrt(u);
+        float step = span * 1.5 * sqrt(u) / float(CLOUD_STEPS);
         vec3 p = d * t;
         float coverage = cloudBandCoverageLod(p.xz, footprint);
         if (coverage <= 0.0) continue;
         float density = cloudVolumeDensity(p, coverage, true);
-        if (density <= 0.0) continue;
+        float alpha = (1.0 - exp(-CLOUD_EXTINCTION * density * step)) * cloudDistanceFade(t) * keep;
+        // a sample this thin changes nothing visible; skip its seven light samples
+        if (alpha < 0.002) continue;
         // the light-march offsets are dithered per pixel and frame (at most half a light step), so the sun shafts
         // resolve through the temporal filter instead of banding
         float lightJitter = cloudDither(gl_FragCoord.xy + u_frame * 7.13) - 0.5;
@@ -98,14 +104,13 @@ void main() {
         sunTau += 1.5 * cloudVolumeDensity(p + sun * (lightStep * 12.0), coverage, false);
         sunTau *= CLOUD_EXTINCTION * lightStep;
         float h = clamp((cloudAltitude(p) - u_bandBase) / thickness, 0.0, 1.0);
-        float alpha = (1.0 - exp(-CLOUD_EXTINCTION * density * step)) * cloudDistanceFade(t) * keep;
         float skyTau = CLOUD_EXTINCTION * u_bandDensity * coverage * (1.0 - h) * thickness;
         vec3 radiance = cloudAerial(cloudRadianceRelief(d, sunTau, skyTau, 1.0 - h, density, cloudUp(d, t), relief), t, d);
         color += transmittance * alpha * cloudToneMap(radiance);
         transmittance *= 1.0 - alpha;
         if (transmittance < 0.01) break;
     }
-    float alpha = 1.0 - transmittance;
-    if (alpha <= 0.0) discard;
-    gl_FragColor = vec4(color, alpha);
+    float coverageAlpha = 1.0 - transmittance;
+    if (coverageAlpha <= 0.0) discard;
+    gl_FragColor = vec4(color, coverageAlpha);
 }

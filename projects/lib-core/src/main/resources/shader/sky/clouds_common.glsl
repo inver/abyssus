@@ -135,7 +135,7 @@ float cloudCentre(int profile) {
     return profile == CLOUD_PROFILE_HEAPED ? 0.4 : 0.5;
 }
 
-// The band's shape averaged over its height: how dense a column of it is where the coverage is \`coverage\`.
+// The band's shape averaged over its height: how dense a column of it is where the coverage is `coverage`.
 float cloudColumn(int profile, float coverage) {
     return 0.25 * (cloudShape(profile, coverage, 0.125) + cloudShape(profile, coverage, 0.375) +
         cloudShape(profile, coverage, 0.625) + cloudShape(profile, coverage, 0.875));
