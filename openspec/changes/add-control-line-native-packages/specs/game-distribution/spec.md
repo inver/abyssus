@@ -64,25 +64,28 @@ a launch option. On macOS the game's window SHALL be created on the process's fi
 
 ### Requirement: Native packages hold no editor code
 
-A native package SHALL contain the same shipped code as the Gradle distribution and none of the editor-only libraries,
-asset importers, the Play bridge, ray-tracing modules or the scene writer. The build SHALL fail when a built package
+A native package SHALL contain the same shipped code as the Gradle distribution, plus the launcher and updater libraries
+that start it (`app-game-control-line-launcher`, `lib-updater` and their dependencies), and none of the editor-only
+libraries, asset importers, the Play bridge, ray-tracing modules or the scene writer. The build SHALL fail when a built package
 holds one, naming the library, and this check SHALL run on every package type.
 
 #### Scenario: Clean package
 
 - **WHEN** the package check runs on a package built from the shipped classpath
-- **THEN** it passes, and the package's libraries list matches the Gradle distribution's
+- **THEN** it passes, and the package's game libraries match the Gradle distribution's and its launcher libraries match the
+  launcher's runtime classpath
 
 #### Scenario: Editor library in a package
 
 - **WHEN** a package is built with an editor-only library in its libraries and the package check runs
 - **THEN** the check fails and names that library
 
-### Requirement: Packages carry the game's icon and are unsigned
+### Requirement: Packages carry the game's icon and are unsigned unless built by a release
 
-Every package SHALL show the Control Line icon as the application icon where the platform shows one. The packages are
-not code-signed or notarized; the game's documentation SHALL state this and how to open an unsigned package on macOS and
-Windows.
+Every package SHALL show the Control Line icon as the application icon where the platform shows one. Packages built by
+a pull request or the canary are not code-signed or notarized, and the game's documentation SHALL state this and how to
+open an unsigned package on macOS and Windows. Packages built by a tagged release are signed (see the `release-signing`
+capability of `add-control-line-autoupdate`).
 
 #### Scenario: Icon shown
 
@@ -92,7 +95,8 @@ Windows.
 #### Scenario: Unsigned notice
 
 - **WHEN** a player reads the game's README before installing
-- **THEN** it says the packages are unsigned and how to start them past the macOS and Windows first-launch warnings
+- **THEN** it says the pull-request and canary packages are unsigned, how to start them past the macOS and Windows
+  first-launch warnings, and that release packages are signed
 
 ### Requirement: Packages are built per platform and published with the canary
 

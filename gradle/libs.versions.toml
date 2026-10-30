@@ -1,4 +1,5 @@
 [versions]
+bouncycastle = "1.80"
 lwjgl = "3.4.3"
 lwjgl-awt = "0.2.5"
 gdx = "1.14.2"
@@ -42,6 +43,7 @@ swagger-annotations-jakarta = "2.2.25"
 spring-data-commons = "3.3.6"
 
 [libraries]
+bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncycastle" }
 lwjgl-bom = { module = "org.lwjgl:lwjgl-bom", version.ref = "lwjgl" }
 lwjgl-tinyexr = { module = "org.lwjgl:lwjgl-tinyexr" }
 lwjgl-assimp = { module = "org.lwjgl:lwjgl-assimp" }

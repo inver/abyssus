@@ -8,6 +8,7 @@
 | `projects/lib-core-editor/` | Plain JVM editing engine: scene documents and the write transform, component editing, the scene read model, picking and gizmo math, terrain generation, asset meta editing, the ray tracing bridge with its CPU snapshots (`RaySnapshotStore`), `HeadlessEditing` | `:lib-core`, `:lib-raytracing`, `:lib-gdx` |
 | `projects/lib-render/` | Plain JVM shared rendering mechanics: `TerrainPass` (editor and game terrain variants), shadow depth submission, host-neutral frame inputs and light profiles, the sun shadow camera | `:lib-core`, `:lib-gdx` |
 | `projects/lib-game-link/` | Plain JVM: the play host and protocol, `PlayModule`, the play launch file and its export, which a game links only for Abyssus (its `play` source set, never its main code) | `:lib-physics`, `:lib-core` |
+| `projects/lib-updater/` | Plain JVM auto-update for an installed game: the release manifest and its check against GitHub's signed release attestation, the GitHub release lookup, the download-verify-switch sync and the version store | Jackson, BouncyCastle |
 | `projects/lib-physics/` | Plain JVM physics: the physics components and `PhysicsWorld` (Jolt through jolt-jni), run in a game or the play host, never in the IDE | `:lib-core`, jolt-jni |
 | `projects/app-game-control-line/` | **Control Line**, a libGDX desktop game (LWJGL3): flight on Jolt lines, scoring, an F2B demonstration bot (Watch AI), screens (an authored UI asset drawn by `lib-core`'s `UiPresenter`), its bundled native project and its `PlayModule` for Play in Abyssus | `:lib-physics`, libGDX LWJGL3 backend, jolt-jni natives of the build machine |
 | `projects/lib-core/` | Plain JVM library: asset folders and `meta.json`, the asset loading pipeline (`AssetStorage`), the models, terrains and skies it builds, native DTOs, Ashley components and scene loading | `:lib-gdx`, Jackson, libGDX |
@@ -26,7 +27,7 @@ lib-physics <- lib-game-link
 lib-game-link <- plugin-abyssus (non-transitive, bundled)
 ```
 
-A shipped game holds only the left of this graph: `lib-gdx`, `lib-core`, `lib-render` and `lib-physics`. The editor side is
+A shipped game holds only the left of this graph: `lib-gdx`, `lib-core`, `lib-render` and `lib-physics`, plus `lib-updater` (which depends on none of them) through its launcher. The editor side is
 `lib-core-editor`, `lib-raytracing`, `lib-game-link` (Play, linked only by a game's separate `play` source set) and the
 plugin. Two checks keep it that way: `checkNoEditorCode` (no editor import or ray snapshot type in the shipped libraries'
 main sources) and `:app-game-control-line:checkShippedClasspath` (no editor module on the game's main runtime classpath).

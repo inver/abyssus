@@ -22,7 +22,7 @@ third-party packager is needed.
   (unsigned) on pull requests as a smoke test.
 - The universal zip stays unchanged.
 
-Out of scope: code signing and notarization (the packages are unsigned, so Gatekeeper and SmartScreen warn on first
+Out of scope here (signing of releases and auto-update are the change `add-control-line-autoupdate`): code signing and notarization (the packages are unsigned, so Gatekeeper and SmartScreen warn on first
 launch; the README says how to open them), Linux arm64, Windows arm64, auto-update, store listings, a ray-traced
 distribution. No native Abyssus file (`.scene`, `.abss`, asset `meta.json`) is read, written or changed, and the
 document format and its validation are untouched.

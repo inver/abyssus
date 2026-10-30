@@ -46,8 +46,10 @@ release tag prefix. The rolling canary and any other release SHALL NOT be offere
 
 ### Requirement: An update is verified before it is ever run
 
-A downloaded update SHALL be run only after its signed manifest verifies against a public key the installed game
-carries, and after every downloaded file matches the size and checksum that manifest states. Anything that fails SHALL
+A downloaded update SHALL be run only after its manifest is authenticated, and after every downloaded file matches the size
+and checksum that manifest states. The manifest is authenticated when GitHub's signed release attestation for the release's
+tag, which verifies against the trusted root the installed game carries, lists `manifest.json` with the SHA-256 of the
+downloaded bytes. Anything that fails SHALL
 be discarded, SHALL NOT be run, and SHALL leave the current version unchanged.
 
 #### Scenario: Tampered file
@@ -56,24 +58,25 @@ be discarded, SHALL NOT be run, and SHALL leave the current version unchanged.
 - **THEN** the part is deleted, the update is not applied, the game starts on its current version and the log names the
   failed file
 
-#### Scenario: Manifest signed by an unknown key
+#### Scenario: Manifest not covered by GitHub's attestation
 
-- **WHEN** the manifest's signature does not verify against any key the installed game carries
-- **THEN** the manifest is ignored, nothing is downloaded and the game starts on its current version
+- **WHEN** GitHub's release attestation for the tag does not verify, or does not list this `manifest.json` with this SHA-256
+- **THEN** the manifest is ignored, nothing is downloaded, the game starts on its current version and the status file names
+  the failure
 
-#### Scenario: Manifest without a signature
+#### Scenario: Attestation not published yet
 
-- **WHEN** a release has a manifest but no signature file
-- **THEN** it is treated as unverified and ignored exactly as a bad signature
+- **WHEN** a release was published moments ago and GitHub has not issued its attestation
+- **THEN** the release is not applied, the game starts on its current version and the next start checks again
 
 ### Requirement: A game never moves to an older version
 
-The game SHALL NOT apply an update whose version is lower than the version it runs, even when the manifest is correctly
-signed.
+The game SHALL NOT apply an update whose version is lower than the version it runs, even when the release is correctly
+attested.
 
 #### Scenario: Old release re-published
 
-- **WHEN** a correctly signed manifest for version 1.0.4 is offered to a game running 1.0.9
+- **WHEN** a correctly attested manifest for version 1.0.4 is offered to a game running 1.0.9
 - **THEN** it is ignored and the game stays on 1.0.9
 
 ### Requirement: An update applies at the next start and never half-applies

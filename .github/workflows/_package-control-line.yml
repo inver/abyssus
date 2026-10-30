@@ -1,0 +1,150 @@
+name: Package Control Line (reusable)
+
+# The package steps shared by the unsigned build (build-control-line.yml: pull requests and the canary) and the signed release
+# (release-control-line.yml). Each platform needs a runner of its own OS and architecture, because jpackage cannot cross-build.
+#
+# release=false: unsigned, no environment, no secret is read.
+# release=true:  the jobs run in the protected `release` environment, sign what they package and fail when a signing input is
+#                missing. They are separate jobs (not one job with a conditional environment) so the unsigned path can never
+#                be handed a credential.
+on:
+  workflow_call:
+    inputs:
+      release:
+        description: Build and sign a release.
+        type: boolean
+        required: true
+      version:
+        description: The package version, numeric x.y.z.
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  matrix:
+    name: Platforms
+    runs-on: ubuntu-latest
+    outputs:
+      include: ${{ steps.platforms.outputs.include }}
+    steps:
+      - name: List platforms
+        id: platforms
+        shell: bash
+        run: |
+          cat > platforms.json <<'JSON'
+          [
+            {"name": "Linux x64 (deb, rpm, AppImage)", "os": "ubuntu-22.04", "artifact": "linux-x64",
+             "tasks": ":app-game-control-line:packageDeb :app-game-control-line:packageRpm :app-game-control-line:packageAppImage",
+             "paths": "projects/app-game-control-line/build/packaging/deb/*.deb\nprojects/app-game-control-line/build/packaging/rpm/*.rpm\nprojects/app-game-control-line/build/packaging/appimage/*.AppImage"},
+            {"name": "Windows x64 (msi)", "os": "windows-latest", "artifact": "windows-x64",
+             "tasks": ":app-game-control-line:packageMsi",
+             "paths": "projects/app-game-control-line/build/packaging/msi/*.msi"},
+            {"name": "macOS arm64 (dmg)", "os": "macos-latest", "artifact": "macos-arm64",
+             "tasks": ":app-game-control-line:packageDmg",
+             "paths": "projects/app-game-control-line/build/packaging/dmg/*.dmg"},
+            {"name": "macOS Intel x64 (dmg)", "os": "macos-15-intel", "artifact": "macos-x64",
+             "tasks": ":app-game-control-line:packageDmg",
+             "paths": "projects/app-game-control-line/build/packaging/dmg/*.dmg"}
+          ]
+          JSON
+          echo "include=$(jq -c . platforms.json)" >> "$GITHUB_OUTPUT"
+
+  # Pull requests and the canary: unsigned, no environment
+  build:
+    name: Build ${{ matrix.name }}
+    if: ${{ !inputs.release }}
+    needs: matrix
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.matrix.outputs.include) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # the local action of the same checkout (a tag builds its own copy, never main's)
+      - name: Package
+        uses: ./.github/actions/package-control-line
+        with:
+          version: ${{ inputs.version }}
+          tasks: ${{ matrix.tasks }}
+          artifact: ${{ matrix.artifact }}
+          paths: ${{ matrix.paths }}
+
+  # A tagged release: signs and notarizes. The job reads secrets only from the `release` environment.
+  build-release:
+    name: Build and sign ${{ matrix.name }}
+    if: ${{ inputs.release }}
+    needs: matrix
+    runs-on: ${{ matrix.os }}
+    environment: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.matrix.outputs.include) }}
+    env:
+      MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+      WINDOWS_SIGN_COMMAND: ${{ secrets.WINDOWS_SIGN_COMMAND }}
+    steps:
+      # The certificate lives in a throwaway keychain that is deleted at the end; jpackage finds the identity there.
+      - name: Import macOS signing certificate
+        if: runner.os == 'macOS'
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          : "${MACOS_CERTIFICATE:?MACOS_CERTIFICATE is not set}" "${MACOS_CERTIFICATE_PASSWORD:?MACOS_CERTIFICATE_PASSWORD is not set}"
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          password="$(uuidgen)"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          echo "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$password" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" login.keychain
+          rm -f "$RUNNER_TEMP/certificate.p12"
+          echo "MACOS_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+
+      # Every OS's seed holds the same jars (Jolt natives of all platforms), so one manifest fits all installers
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Package and sign
+        uses: ./.github/actions/package-control-line
+        with:
+          version: ${{ inputs.version }}
+          tasks: ${{ matrix.tasks }}${{ matrix.artifact == 'linux-x64' && ' :app-game-control-line:buildUpdateParts' || '' }}
+          gradle-args: -PreleaseBuild=true -Pabyssus.universalDist=true
+          artifact: ${{ matrix.artifact }}
+          paths: ${{ matrix.paths }}
+
+      # The Linux job builds the update parts and the unsigned manifest; every job reports its installer.digest
+      - name: Upload update parts
+        if: matrix.artifact == 'linux-x64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: control-line-update
+          path: projects/app-game-control-line/build/packaging/update/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload installer digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.artifact }}
+          path: projects/app-game-control-line/build/packaging/installer.digest
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Delete the signing keychain
+        if: always() && runner.os == 'macOS'
+        run: |
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true
+          rm -f "$RUNNER_TEMP/certificate.p12"

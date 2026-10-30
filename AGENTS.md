@@ -17,6 +17,7 @@ This file is a map. Detail lives in `docs/ai/`; start at `docs/README.md`.
 | `lib-render` tests only | `./gradlew :lib-render:test` (add `-Dabyssus.glTests=true` for the terrain pass GL test) |
 | `lib-physics` tests only | `./gradlew :lib-physics:test` |
 | `lib-game-link` tests only (play host, protocol) | `./gradlew :lib-game-link:test` |
+| `lib-updater` tests only (manifest, signature, release lookup, sync) | `./gradlew :lib-updater:test` |
 | `lib-core` tests only | `./gradlew :lib-core:test` (one class: `./gradlew :lib-core:test --tests 'net.nevinsky.abyssus.lib.core.assets.loading.AssetStorageTest'`) |
 | `lib-core-editor` tests only | `./gradlew :lib-core-editor:test` (one class: `./gradlew :lib-core-editor:test --tests 'net.nevinsky.abyssus.lib.core.editor.pick.OrbitCameraTest'`) |
 | One plugin test class | `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneViewPanelTest'` |
@@ -24,6 +25,8 @@ This file is a map. Detail lives in `docs/ai/`; start at `docs/README.md`.
 | Sandbox IDE | `./gradlew :plugin-abyssus:runIde` (open a project with `-PideProject=/path/to/project`) |
 | Control Line game: play / tests | `./gradlew :app-game-control-line:run` / `./gradlew :app-game-control-line:test` |
 | Control Line native package payload (per OS; installers come in later tasks) | `./gradlew :app-game-control-line:packageApplication` / `:app-game-control-line:packageDmg` (see the game's README, "Packages") |
+| Control Line update parts and unsigned manifest (`build/packaging/update`) | `./gradlew :app-game-control-line:buildUpdateParts -PcontrolLineVersion=<x.y.z>` |
+| Packaging tests (payload check, manifest writer, platform signing hooks) | `./gradlew :build-logic:test` |
 | Control Line launch file for Play (use a copy of the project) | `./gradlew :app-game-control-line:exportPlay -PplayProject=<folder>` |
 | Plugin zip | `./gradlew :plugin-abyssus:buildPlugin` (to `projects/plugin-abyssus/build/distributions/`) |
 | UI tests (real IDE, Remote Robot), canonical Linux container | `scripts/run-ui-tests-docker.sh` (see `docs/ai/testing.md`) |
@@ -75,13 +78,20 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
 - `projects/lib-game-link/`: a plain JVM library on `lib-physics` and `lib-core`, root package `net.nevinsky.abyssus.lib.gamelink`:
   what a game links only for Abyssus (the play host and protocol, `PlayModule`, the play launch file and its export). A shipped game never
   depends on it from its main code. See `projects/lib-game-link/README.md`.
+- `projects/lib-updater/`: a plain JVM library (Jackson and BouncyCastle), root package `net.nevinsky.abyssus.lib.updater`: what an installed game
+  uses to update itself (the release manifest and its check against GitHub's signed release attestation, the GitHub release lookup, the
+  download-verify-switch sync and the version store). Shipped with a game through its launcher, so it holds no editor code. See `projects/lib-updater/README.md`.
+- `projects/app-game-control-line-launcher/`: the installed Control Line's entry point (depends on `lib-updater` and the Kotlin stdlib only): picks
+  the game folder, checks for an update on a daemon thread and runs the game from its own class loader. `:app-game-control-line-launcher:test`
+  and `:app-game-control-line-launcher:checkShippedClasspath` (part of `check`). See the game's README, "Launcher and updates".
 - `projects/app-game-control-line/`: **Control Line**, a libGDX desktop game (LWJGL3) on `lib-core` and `lib-physics` that proves the
   editor-for-games chain: its native project `projects/app-game-control-line/project/ControlLine` is authored in Abyssus, its
   `PlaneComponent` / `PilotComponent` are game components, and its `PlayModule` flies a plane in Play. Open a copy of
   that project in the IDE, never the committed folder (its tests assert on the scene). See `projects/app-game-control-line/README.md`.
 - `projects/plugin-abyssus/src/main/java/`: only the grammar sources `Gltf.bnf` / `Gltf.flex`; `projects/plugin-abyssus/src/main/gen` is generated from them.
 - `projects/plugin-abyssus/src/test/kotlin/`, `projects/lib-core-editor/src/test/kotlin/`, `projects/lib-gdx`, `projects/lib-core/src/test/kotlin/`,
-  `projects/lib-render/src/test/kotlin/`, `projects/lib-physics/src/test/kotlin/`, `projects/lib-game-link/src/test/kotlin/`,
+  `projects/lib-render/src/test/kotlin/`, `projects/lib-physics/src/test/kotlin/`, `projects/lib-game-link/src/test/kotlin/`, `projects/lib-updater/src/test/kotlin/`,
+  `projects/app-game-control-line-launcher/src/test/kotlin/`,
   `projects/lib-raytracing/src/test/kotlin/`, `projects/app-game-control-line/src/test/kotlin/`: tests. Fixtures in `projects/plugin-abyssus/src/test/testData/project/`
   (shared with `lib-core`'s and `lib-core-editor`'s tests). Test helpers shared across modules live in `testFixtures` source
   sets (`lib-gdx`: `TestGl`; `lib-core`: `HdrFixtures`; `lib-core-editor`: `parseScene`, `testProject`, `rayTestModel`).
@@ -94,7 +104,7 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
   Reject legacy `ecs.componentIdentifiers` and renderable `class`; a component entry is keyed by the class name of a built-in or registered component (fully qualified, or its short name), assets use `kind: "asset"`.
   Keep unknown native extension data, unrelated numbers/key order and default omission. No importer or implicit migration.
 
-- **A shipped game carries no editor code.** `lib-gdx`, `lib-core`, `lib-render` and `lib-physics` hold no import of `lib-core-editor`,
+- **A shipped game carries no editor code.** `lib-gdx`, `lib-core`, `lib-render`, `lib-physics` and `lib-updater` hold no import of `lib-core-editor`,
   `lib-game-link`, `lib-raytracing` or the plugin, and no ray-tracing snapshot type (`./gradlew checkNoEditorCode`, part of
   `check`). Control Line's main runtime classpath reaches none of those modules, nor any `plugin-*` module
   (`./gradlew :app-game-control-line:checkShippedClasspath`, part of `check`). Editor-only scene keys such as `rayTracing`

@@ -51,6 +51,11 @@ dependencies {
     testImplementation(testFixtures(project(":lib-gdx")))
 }
 
+// The installed game's entry point (the jpackage main jar) with lib-updater; kept out of the game's own classpath
+dependencies {
+    "launcherPackage"(project(":app-game-control-line-launcher"))
+}
+
 // Play in Abyssus (src/play): the game's PlayModule, on the play bridge. A source set of its own, so the game's main
 // classpath and its distribution never see `lib-game-link`; `exportPlay` writes a play.json whose classpath includes both.
 val play by sourceSets.creating {

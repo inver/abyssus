@@ -15,10 +15,13 @@ this project before it runs.
 - What an update replaces is the game's own code and its bundled project. The bundled Java runtime, the native
   libraries and the launcher stay with the installer; when a release changes any of them, the game keeps running on
   the version it has and says a new installer is needed.
-- Every release publishes a manifest signed with an Ed25519 key. The launcher carries the public key(s) and refuses
-  any manifest or file that does not verify, and refuses a version older than the one it runs.
+- Releases are immutable GitHub releases, and GitHub signs them: an immutable release carries a release attestation
+  (signed by GitHub, with an RFC 3161 time-stamp) that lists the tag, the commit and the SHA-256 of every asset. The project
+  holds no update signing key. The launcher carries GitHub's trusted root and accepts a manifest only when that attestation
+  verifies and lists the manifest; it refuses any file that does not match the manifest, and a version older than the one it
+  runs.
 - Release builds sign the installers: the Windows `.msi` (Authenticode), the macOS `.dmg` (Developer ID, notarized and
-  stapled), and the Linux packages through a signed `SHA256SUMS`. Pull-request and canary builds stay unsigned and need
+  stapled), and the Linux packages through `SHA256SUMS` covered by GitHub's release attestation. Pull-request and canary builds stay unsigned and need
   no secrets.
 - A tag `control-line-vX.Y.Z` runs a release workflow that builds the packages, signs everything in a protected
   environment, and publishes the release with the update parts and the manifest.
@@ -28,8 +31,8 @@ this project before it runs.
 
 Out of scope: an update notice or progress inside the game's screens (the status goes to the log and a status file),
 delta patches inside a part, updating the Java runtime or native libraries in place, an update channel for the canary
-or other pre-releases, Linux package repositories, Linux or Windows arm64, key escrow tooling beyond a documented
-rotation. No native Abyssus file (`.scene`, `.abss`, asset `meta.json`) is read, written or changed; the update manifest
+or other pre-releases, Linux package repositories, Linux or Windows arm64, a TUF client for GitHub's trusted root
+(the root is bundled and refreshed by hand with an installer). No native Abyssus file (`.scene`, `.abss`, asset `meta.json`) is read, written or changed; the update manifest
 is a separate document (`schemaVersion` 1) that is not an Abyssus document and does not go through the Abyssus document
 validation. The game's saved scores under `~/.abyssus-control-line/` are not touched.
 
@@ -59,8 +62,9 @@ amends. Archive this change after that one.)
   `build-control-line.yml` stays unsigned.
 - `openspec/changes/add-control-line-native-packages/specs/game-distribution/spec.md` is amended (not unsigned any more
   on release builds; the package library list is the distribution's plus the launcher and updater).
-- Secrets and certificates: an update-signing key, a Windows signing route, an Apple Developer ID and notarization
-  credentials, all in the protected environment only.
+- Secrets and certificates: a Windows signing route, an Apple Developer ID and notarization
+  credentials, all in the protected environment only. No update signing key exists. The repository setting "Immutable
+  releases" must be on.
 - `projects/app-game-control-line/README.md`, `AGENTS.md` (layout, commands, hard rules), `docs/ai/architecture.md` and
   a new `projects/lib-updater/README.md`.
 - The repository is public, so players need no token to read its releases (checked against the anonymous GitHub API).

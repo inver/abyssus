@@ -31,9 +31,9 @@ Facts that shape the approach (read from the repository):
 ## Goals / Non-Goals
 
 **Goals:**
-- A verified, atomic, never-blocking update path whose trust anchor is one Ed25519 key pair the project controls.
+- A verified, atomic, never-blocking update path whose trust anchor is GitHub's signature over an immutable release; the project holds no update signing key.
 - Signed installers on all three desktop systems from the same release run, and a release that cannot publish unsigned.
-- All decision logic (version order, signature check, diff planning, safe extraction, version store, release lookup)
+- All decision logic (version order, attestation check, diff planning, safe extraction, version store, release lookup)
   testable headless, with no GL, no AWT and no network except a loopback test server.
 
 **Non-Goals:**
@@ -101,10 +101,29 @@ means a new installer is needed. An unknown manifest `schemaVersion` means the s
 - Only asset **names** are taken from that JSON. The manifest and its signature are downloaded first; the manifest is
   verified over its exact bytes before it is parsed; part URLs are the release's own asset URLs for the names the signed
   manifest lists. Downloads must be HTTPS to `github.com` or `*.githubusercontent.com`.
-- **Signature:** Ed25519 through the JDK's `Signature`. The launcher resource `update-keys.json` holds one or two
-  `{id, publicKey}` entries; the manifest names `keyId`. A manifest naming an unknown key id is rejected, which is also the
-  rotation story: ship the next public key in a release signed by the old one, then sign with the new key, and an
-  installed game that has only the old key reports that a new installer is needed.
+- **Authentication: GitHub's release attestation.** There is no key of ours. A repository with "Immutable releases" on gets,
+  for every release it publishes, a release attestation signed by GitHub: a Sigstore bundle whose DSSE envelope holds an in-toto
+  statement (`https://in-toto.io/attestation/release/v0.2`) with the repository, the tag, a subject for the commit
+  (`pkg:github/<repo>@<tag>`, SHA-1) and one subject per asset (name, SHA-256). The envelope is signed with a short-lived
+  certificate (SAN `https://dotcom.releases.github.com`, code-signing usage) from GitHub's own Sigstore CA and dated by an
+  RFC 3161 time-stamp from GitHub's time-stamping authority. `ReleaseAttestationVerifier` (lib-updater, package `attest`)
+  accepts a bundle only when: a time-stamp token verifies with a TSA of the bundled trusted root and its message imprint is the
+  SHA-256 of the envelope signature; the signing certificate chains to a CA of that root, valid at the time-stamp's time, and
+  names GitHub's release signer; the envelope's ECDSA P-256 signature over its PAE verifies; and the statement is a release
+  statement for this repository and the expected tag. `ReleaseManifestAuthenticator` then requires `manifest.json` in the
+  statement's subjects with the SHA-256 of the exact downloaded bytes.
+- **Where the bundle comes from:** `GET /repos/<repo>/attestations/sha256:<digest of manifest.json>` (anonymous). The answer
+  holds the bundle inline or a `bundle_url` (Snappy-compressed `.sn`), fetched from an allowed host and untrusted until it
+  verifies. GitHub issues the attestation shortly after publishing, so a very new release is simply not applied yet; the next
+  start asks again.
+- **Trusted root:** `github-trusted-root.json` (the `trusted_root.json` of GitHub's TUF repository `tuf-repo.github.com`,
+  SHA-256 `484cdfe1a7c65479c5ba2a22193d1be90f0020db1997de696ab207434c62fbb7` when taken) is bundled in lib-updater and
+  changes only with a new installer (no TUF client; a later change can add one). A release attested under a CA the installed
+  root lacks is refused with the failure in `status.json`. The maintainer refreshes the file from GitHub's TUF repository
+  when GitHub rotates it.
+- **Why not a key of ours or Actions attestations:** a key generated during the build and published beside the artifacts proves
+  nothing (whoever can edit the release replaces both), and a stored key is a secret to protect and rotate. GitHub's own
+  signature over an immutable release needs neither.
 - **Bind, do not hand-parse:** the manifest and `state.json` are bound to DTOs with Jackson (the library the game already
   ships), not read token by token.
 - **No downgrade:** a manifest whose version is below the running one is ignored. Numeric dotted order only (`1.10.0` >
@@ -141,7 +160,7 @@ waiting version, reason). A new-installer notice gives the release page address.
 
 - `projects/lib-updater`: plain JVM library, root package `net.nevinsky.abyssus.lib.updater`, wired by constructors, no
   `object` or `companion object` with behavior, no editor, IntelliJ, AWT or libGDX import. Packages: `manifest` (DTOs,
-  `ManifestVerifier`, `VersionOrder`), `release` (`ReleaseSource`, the GitHub implementation, a fake for tests), `sync`
+  `VersionOrder`), `attest` (`ReleaseAttestationVerifier`, `ReleaseManifestAuthenticator`, `GitHubAttestations`, the trusted root), `release` (`ReleaseSource`, the GitHub implementation, a fake for tests), `sync`
   (`UpdatePlanner`, `SafeUnzip`, `UpdateSync`), `store` (`VersionStore`, `UpdateState`, `UpdateStatus`, `UpdateSettings`).
   Time, HTTP and file roots are constructor arguments, so tests use a temporary folder and a loopback server.
 - `projects/app-game-control-line-launcher`: the `jpackage` main jar: `Launcher` (picks the folder, starts the check,
@@ -150,8 +169,9 @@ waiting version, reason). A new-installer notice gives the release page address.
   the same shipped-classpath check as the game. `CheckPackagePayload` now treats `launcher/` and `game/` as two sets: `game/`
   equals the distribution's `lib/` as before, `launcher/` holds only the launcher, `lib-updater` and their dependencies, and
   both reject editor-only code.
-- `modules.txt` gains `java.net.http` and `jdk.crypto.ec` (HTTPS needs the EC key exchange and Ed25519 lives there in JDK 21;
-  `jdeps` cannot see either, because they load through providers), each with its reason in the file.
+- `modules.txt` gains `java.net.http` and `jdk.crypto.ec` (HTTPS needs the EC key exchange and ECDSA lives there in JDK 21;
+  `jdeps` cannot see either, because they load through providers), each with its reason in the file; the attestation check
+  adds `java.naming` (BouncyCastle), which `jdeps` does see.
 
 ### 8. Release pipeline
 
@@ -163,8 +183,8 @@ waiting version, reason). A new-installer notice gives the release page address.
    |      upload packages
    +--> publish (ubuntu)                                                 environment: release
           download all -> game parts + installer.digest from the Linux job -> manifest.json
-          -> sign manifest.json and SHA256SUMS with the update key -> verify with lib-updater
-          -> gh release create control-line-v1.2.0 (not a pre-release)
+          -> SHA256SUMS -> check the folder -> draft release with every asset -> publish (immutable: GitHub signs it)
+          -> wait for GitHub's release attestation and compare it with the uploaded files
 ```
 
 - The packaging steps move into a reusable workflow `_package-control-line.yml` with a `release` input. `build-control-line.yml`
@@ -175,11 +195,12 @@ waiting version, reason). A new-installer notice gives the release page address.
   is not `X.Y.Z`, and `.dmg` needs a major version above 0.
 - The `release` environment requires reviewer approval and is reachable only from tags matching `control-line-v*`
   (a tag protection rule, set in the repository settings by the maintainer). Fork pull requests never see it.
-- **Update key:** an Ed25519 key pair made once by `scripts/generate-update-key.sh` (`openssl genpkey`); the public half is
-  committed in the launcher's `update-keys.json`, the private half is the secret `UPDATE_SIGNING_KEY` in the `release`
-  environment only. `SignManifest` (a task in `build-logic`, plain JDK `Signature`) reads it from the environment, signs in
-  memory, and never writes it to disk or the log. `SHA256SUMS` is signed by the same key in the same step; the README
-  documents `openssl pkeyutl -verify -rawin` for it.
+- **No update key.** The release is published as an immutable release: created as a draft with every asset, then published,
+  which locks the tag and the assets and makes GitHub issue the attestation. The publish job refuses to start when the
+  repository's immutable-releases setting is off (best effort: `GET /repos/<repo>/immutable-releases`), and after publishing
+  `:lib-updater:verifyPublishedRelease` waits for the attestation, verifies it with the same code the game runs and checks it
+  lists every uploaded file with the uploaded SHA-256. `SHA256SUMS` is written as a convenience and is covered by the
+  attestation like every other asset; players check a download with `gh release verify-asset` (README).
 - `release.yml` gets a job-level `if: ${{ !startsWith(github.event.release.tag_name, 'control-line-v') }}` so a Control Line
   release never starts the Marketplace publication; the new workflow does not trigger on `release` events at all.
 - **macOS:** `jpackage --mac-sign --mac-signing-keychain <temp keychain> --mac-signing-key-user-name "<Developer ID
@@ -188,28 +209,57 @@ waiting version, reason). A new-installer notice gives the release page address.
   throwaway keychain that the job deletes. The entitlements file allows JIT and unsigned executable memory for the JVM and
   disables library validation, which LWJGL and Jolt natives (extracted at run time) need. The exact flag names are checked
   against `jpackage --help` of the pinned JDK in the first signing task before anything depends on them.
+  **Checked (task 1.4)** against the help text of Temurin 21.0.9 and 25.0.4 (read from `jdk.jpackage`'s `HelpResources.properties`,
+  because a Linux `jpackage --help` hides the macOS options): `--mac-sign`, `--mac-signing-keychain <keychain name>`,
+  `--mac-signing-key-user-name <team name>` and `--mac-entitlements <file path>` exist unchanged in both. JDK 25 adds
+  `--mac-app-image-sign-identity` and `--mac-installer-sign-identity` (exact `codesign` identity; they cannot be combined with
+  `--mac-signing-key-user-name`). `--mac-sign` also signs a predefined app-image (`--type app-image --app-image <dir> --mac-sign`),
+  where only the signing options are permitted. The pinned JDK 21 route therefore uses `--mac-signing-key-user-name`.
 - **Windows:** `jpackage` has no signing option. A `signWindows` hook runs a configured command template
   (`{file}` placeholder) over the app-image's launcher and DLLs after `packageApplication`, then over the `.msi` after
   `packageMsi`, with a timestamp server. The command is set by the workflow, so the route is a CI choice
   (open question below). A route that signs a finished artifact remotely signs the `.msi` in a CI step and leaves the
   launcher inside it unsigned.
 - **Linux:** `SHA256SUMS` plus its signature; no per-package signing.
+- **Release builds use the universal distribution** (`-Pabyssus.universalDist=true`): every OS's seed `game/` then holds the same
+  jar set (Jolt natives of all platforms), so one manifest, built once on the Linux job, lists every installer-only jar and every
+  OS's installed copy can supply them, and `installer.digest` is the same on every OS. The digest uses the JDK's `java.version`
+  (`21.0.9`); the publish job compares the digest each build job reports and fails the release when they differ, so a runner on
+  another JDK patch cannot strand one OS's players on "a new installer is needed".
 - A release job fails, publishing nothing, when any signing input is missing or a signature does not verify (spec
   "Release builds fail rather than publish unsigned"). The previous release stays the latest because `gh release create` runs
   last, after every platform and every verification passed.
 
 ### 9. Where tests live
 
-Headless, in `lib-updater/src/test`: `ManifestVerifier` (good, unknown key, tampered bytes, missing signature, both keys),
+Headless, in `lib-updater/src/test`: `ReleaseAttestationVerifier` (a real GitHub release attestation: good, other repository or tag, changed statement or signature,
+missing time-stamp, unknown authority),
 `VersionOrder`, `UpdatePlanner` (which parts are needed), `SafeUnzip` (traversal, absolute path, unlisted entry, size
 mismatch), `VersionStore` (atomic switch, interrupted staging, previous-version fallback, bad-version marking),
 `ReleaseSource` against a loopback `HttpServer` serving GitHub-shaped JSON (pre-release and prefix filtering, 304,
 timeouts, redirects to an allowed and to a disallowed host), `UpdateSync` end to end against that server including a
 corrupted part. In `app-game-control-line-launcher/src/test`: the class-loader runner against a tiny fake game main (sets
-the property, runs on the calling thread, reports an exception as an unclean start). In `build-logic`: `SignManifest` and
-the manifest writer produce what `ManifestVerifier` accepts (a fixture signed by the task, verified in `lib-updater`'s
-test through a committed sample). GL, signing providers and notarization can only be seen on real machines and in CI;
+the property, runs on the calling thread, reports an exception as an unclean start). In `build-logic`: the manifest writer, the
+installer digest and the payload check; a trimmed manifest the writer produced is bound by `lib-updater`'s DTOs in its test.
+`ReleaseAttestationTest` runs the verifier on a real GitHub release attestation (`cli/cli` v2.103.3) with the bundled root and
+on tampered copies of it. GL, signing providers and notarization can only be seen on real machines and in CI;
 those are the numbered manual checks in `tasks.md`.
+
+## Spike results
+
+- **Modules (task 1.3, Temurin 21.0.9, Linux):** a `jlink` image with `java.base` only has no HTTP client; with `java.net.http` but
+  without `jdk.crypto.ec` the HTTPS call to `api.github.com` fails with `handshake_failure` and `Ed25519` is not available
+  (`NoSuchAlgorithmException`); with `java.base,java.net.http,jdk.crypto.ec` the call answers 200 and an Ed25519 signature
+  verifies. Both entries of `modules.txt` are justified.
+
+- **Class-loader runner on Linux (tasks 1.1 and 1.2, Temurin 21.0.9, Ubuntu, Xvfb with Mesa):** the packaged app-image
+  (`packageApplication`: launcher as `mainJar`, `launcher/` and `game/` under `--input`) starts, loads LWJGL, libGDX and
+  Jolt from the `URLClassLoader` over `game/` and opens the main menu from the seed; Free flight starts and a round runs
+  (physics stepping, fuel counting down). Layout: `$APPDIR` is `<app>/lib/app` and holds `launcher/`, `game/` and
+  `installer.digest`, so `-DcontrolLine.installDir=$APPDIR` is enough. `jpackage` writes **every** jar under `--input`,
+  `game/` included, into `app.classpath` of `Control Line.cfg`; this is harmless because the game's loader has the platform
+  loader as parent and never delegates to the system one. **Not yet run:** Windows and macOS (`app/` and `Contents/app` per
+  the task text), and a Mac/Windows round with the class-loader runner. If one fails, use `ChildProcessRunner` there.
 
 ## Risks / Trade-offs
 
@@ -223,10 +273,15 @@ those are the numbered manual checks in `tasks.md`.
 - [SmartScreen still warns for a new, correctly signed `.msi` until reputation builds] → documented in the README; the
   signature is still required (publisher shown, not "unknown").
 - [Notarization is slow or flaky] → `--wait` with a timeout and a retry, failing the release (never publishing unsigned).
-- [The private update key leaks or is lost] → it exists only as a protected secret; rotation is built in (two public
-  keys); a leak needs a new release signed by the new key and, for games that only know the old key, a new installer.
-- [An attacker with release-write access replaces assets] → part and file hashes are inside the signed manifest, so
-  replaced assets fail verification; only the private key can forge an update.
+- [GitHub rotates its Sigstore CA or time-stamping authority] → the installed trusted root does not know the new one and a
+  release attested under it is refused ("a new installer is needed" in practice); ship the refreshed root with the next
+  installer and, if rotation is announced, before it takes effect. A TUF client is the later fix.
+- [The verifier is our own code over BouncyCastle and the JDK] → it is small, runs on a real GitHub bundle in the tests with
+  every tampering case, and is also run in CI against each published release (`verifyPublishedRelease`).
+- [Immutable releases are switched off or the attestation format changes] → the release job refuses to publish when the setting
+  is off, and verifies the attestation after publishing; the game ignores a release it cannot verify and keeps running.
+- [An attacker with release-write access replaces assets] → an immutable release cannot be edited after publishing; before
+  that, the attestation lists the SHA-256 of every asset, so a replaced asset fails; only GitHub can forge an attestation.
 - [An attacker withholds new releases (freeze)] → accepted and listed as a non-goal.
 - [The API rate limit (60 an hour per address) or a blocked GitHub] → ETag requests, one check per start, and a silent
   skip on failure.

@@ -6,3 +6,9 @@ java.base
 java.desktop
 java.sql
 jdk.unsupported
+# the launcher's update check: HTTPS to GitHub (java.net.http) and, in JDK 21, Ed25519 and the TLS key exchange it needs
+# (jdk.crypto.ec); jdeps cannot see the latter because it loads through providers. Both verified by a throwaway jlink image.
+java.net.http
+jdk.crypto.ec
+# BouncyCastle (the launcher's check of GitHub's time-stamp tokens) uses javax.naming for X.500 names
+java.naming

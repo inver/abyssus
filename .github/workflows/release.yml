@@ -12,6 +12,8 @@ jobs:
   # Prepare and publish the plugin to the Marketplace repository
   release:
     name: Publish Plugin
+    # a Control Line release (control-line-vX.Y.Z, release-control-line.yml) never publishes the plugin
+    if: ${{ !startsWith(github.event.release.tag_name, 'control-line-v') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

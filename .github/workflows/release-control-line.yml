@@ -1,0 +1,120 @@
+name: Release Control Line
+
+# A tag control-line-vX.Y.Z builds the packages on every platform, signs them in the protected `release` environment and
+# publishes an immutable release with the installers, the update parts, manifest.json and SHA256SUMS. There is no key of ours:
+# GitHub signs an immutable release itself (a release attestation that lists the tag, the commit and the SHA-256 of every asset),
+# and the game accepts a manifest only when that attestation lists it. The release is made last, after every platform and every
+# check passed, so a failure leaves the previous release the latest.
+#
+# Maintainer setup (repository settings, not code): enable "Immutable releases" for the repository; the `release` environment with
+# required reviewers; a tag protection rule for control-line-v*; the secrets MACOS_CERTIFICATE (base64 .p12),
+# MACOS_CERTIFICATE_PASSWORD, MACOS_SIGNING_IDENTITY, APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD and WINDOWS_SIGN_COMMAND in that
+# environment only.
+on:
+  push:
+    tags: ['control-line-v*']
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Check the tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Check the tag is control-line-vX.Y.Z
+        id: check
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ! [[ "$TAG" =~ ^control-line-v([1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::The tag '$TAG' is not control-line-vX.Y.Z (numeric, major version above 0: a .dmg needs it)"
+            exit 1
+          fi
+          echo "version=${TAG#control-line-v}" >> "$GITHUB_OUTPUT"
+
+  package:
+    name: Package
+    needs: version
+    uses: ./.github/workflows/_package-control-line.yml
+    secrets: inherit
+    with:
+      release: true
+      version: ${{ needs.version.outputs.version }}
+
+  publish:
+    name: Sign and publish
+    needs: [version, package]
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Download all packages
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      # Every platform's installer.digest must equal the one in the manifest: a runner on another JDK patch would otherwise
+      # tell that OS's players "a new installer is needed" forever
+      - name: Check the installer digests agree
+        run: |
+          mapfile -t digests < <(find dist -name installer.digest | sort)
+          [ "${#digests[@]}" -eq 4 ] || { echo "::error::expected 4 installer.digest files, found ${#digests[@]}"; exit 1; }
+          [ "$(cat "${digests[@]}" | sort -u | wc -l)" -eq 1 ] || { echo "::error::the platforms disagree on installer.digest"; head -v "${digests[@]}"; exit 1; }
+
+      - name: Gather the release folder
+        run: |
+          mkdir release
+          find dist -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.msi' -o -name '*.dmg' \
+            -o -name 'game-code-*.zip' -o -name 'game-project-*.zip' -o -name manifest.json \) -exec cp {} release/ \;
+          ls -l release
+
+      # SHA256SUMS over the installers (GitHub's release attestation covers it like every other asset)
+      - name: Write SHA256SUMS and check the folder
+        run: |
+          ./gradlew :app-game-control-line:writeChecksums -PreleaseDir="$PWD/release" --no-daemon
+          ./gradlew :lib-updater:verifyReleaseManifest -PreleaseDir="$PWD/release" -PrequireChecksums=true --no-daemon
+
+      # GitHub signs only an immutable release. Refuse to publish when the setting is off (best effort: a token that may not read
+      # the setting continues, and the check after publishing is the ground truth)
+      - name: Check immutable releases are enabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if state="$(gh api "repos/$GH_REPO/immutable-releases" --jq .enabled 2>/dev/null)"; then
+            [ "$state" = "true" ] || { echo "::error::Immutable releases are not enabled for $GH_REPO: GitHub would not sign the release. Nothing is published."; exit 1; }
+          else
+            echo "::warning::Could not read the immutable-releases setting; the attestation check after publishing decides"
+          fi
+
+      # A draft first, then published: an immutable release is locked when it is published, so every asset must be there by then
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" release/* \
+            --draft --verify-tag \
+            --title "Control Line ${TAG#control-line-v}" \
+            --notes "Control Line ${TAG#control-line-v}: .deb, .rpm and .AppImage (Linux x64), .msi (Windows x64), .dmg (macOS arm64 and Intel). This is an immutable release signed by GitHub: check a download with \`gh release verify-asset $TAG <file>\` (see the game's README). Installed games update themselves from manifest.json."
+          gh release edit "$TAG" --draft=false
+
+      # GitHub issues the attestation a moment after publishing; the game accepts the release only once it exists and lists the
+      # manifest, so wait for it and compare it with the files that were uploaded
+      - name: Verify GitHub's release attestation
+        run: ./gradlew :lib-updater:verifyPublishedRelease -Prepository="$GITHUB_REPOSITORY" -Ptag="$GITHUB_REF_NAME" -PreleaseDir="$PWD/release" --no-daemon

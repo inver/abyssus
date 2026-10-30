@@ -48,9 +48,10 @@ abstract class JlinkRuntime @Inject constructor(private val exec: ExecOperations
         val listed = modules.get().asFile.readLines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("#") }
         val home = jdkHome.get()
         // the natives jars hold no code, and jolt-jni ships demo packages jdeps cannot resolve
-        val jars = payload.get().asFile
-            .listFiles { f -> f.extension == "jar" && !f.name.contains("natives") && !f.name.startsWith("jolt-jni") }!!
-            .sortedBy { it.name }.map { it.path }
+        // (the payload holds launcher/ and game/, each with jars; the launcher's libraries count too)
+        val jars = payload.get().asFile.walkTopDown()
+            .filter { f -> f.isFile && f.extension == "jar" && !f.name.contains("natives") && !f.name.startsWith("jolt-jni") }
+            .sortedBy { it.path }.map { it.path }.toList()
         val found = ByteArrayOutputStream()
         exec.exec {
             commandLine(listOf(jdkTool(home, "jdeps"), "--print-module-deps", "--ignore-missing-deps", "--multi-release", "21") + jars)

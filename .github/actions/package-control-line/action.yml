@@ -1,0 +1,76 @@
+name: Package Control Line
+description: >-
+  Builds the native packages of one platform from the checked-out source (the caller checks out first), smoke-tests the Linux ones and uploads them.
+  Shared by the unsigned build (pull requests, canary) and the signed release build; signing is switched on by the
+  caller's gradle-args (-PreleaseBuild=true) and its environment, never here.
+
+inputs:
+  version:
+    description: The package version, numeric x.y.z.
+    required: true
+  tasks:
+    description: Gradle tasks that build this platform's packages.
+    required: true
+  gradle-args:
+    description: Extra Gradle arguments (a release adds -PreleaseBuild=true and the universal distribution).
+    required: false
+    default: ""
+  artifact:
+    description: Platform part of the artifact name.
+    required: true
+  paths:
+    description: Files to upload, one glob per line.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: 21
+        cache: gradle
+
+    - name: Install Linux packaging tools
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends fakeroot rpm desktop-file-utils xvfb libgl1-mesa-dri libgl1 libasound2
+
+    # jpackage 21 builds an .msi with WiX 3.x; the runner image may already ship a 3.14.1 build
+    - name: Install WiX Toolset
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        if command -v candle.exe >/dev/null 2>&1 || ls -d "/c/Program Files (x86)"/WiX*3*/bin/candle.exe >/dev/null 2>&1; then
+          echo "WiX 3.x already installed"
+          for d in "/c/Program Files (x86)"/WiX*3*/bin; do
+            [ -d "$d" ] && cygpath -w "$d" >> "$GITHUB_PATH"
+          done
+        else
+          choco install wixtoolset --version=3.14.1 --no-progress -y
+        fi
+
+    # The package version must be numeric (.msi) and a newer canary must upgrade an installed one: 1.0.<run number>
+    - name: Build packages
+      shell: bash
+      env:
+        PACKAGE_VERSION: ${{ inputs.version }}
+        PACKAGE_TASKS: ${{ inputs.tasks }}
+        GRADLE_ARGS: ${{ inputs.gradle-args }}
+      run: ./gradlew $PACKAGE_TASKS -PcontrolLineVersion="$PACKAGE_VERSION" $GRADLE_ARGS --no-daemon
+
+    - name: Smoke test Linux packages
+      if: runner.os == 'Linux'
+      shell: bash
+      run: scripts/smoke-control-line-linux.sh
+
+    - name: Upload packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: control-line-${{ inputs.artifact }}
+        path: ${{ inputs.paths }}
+        if-no-files-found: error
+        retention-days: 30
