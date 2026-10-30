@@ -15,7 +15,8 @@
 // Volumetric clouds: one band ray-marched in 3D between its base and top spheres, CLOUD_STEPS steps with a per-pixel
 // jitter, each lit by CLOUD_LIGHT_STEPS steps toward the sun. The coverage field decides where the band has clouds;
 // the 3D noise only erodes density inside it, never adds any outside. Drawn at half resolution into an offscreen
-// target. Needs clouds_common.glsl and clouds_light.glsl before it.
+// target. The direct sun follows the density gradient toward it (the relief term, after iq's Rainforest clouds). Needs
+// clouds_common.glsl and clouds_light.glsl before it.
 uniform sampler3D u_baseNoise;
 uniform sampler3D u_detailNoise;
 uniform float u_frame;          // frame counter, moves the jitter
@@ -85,16 +86,21 @@ void main() {
         // resolve through the temporal filter instead of banding
         float lightJitter = cloudDither(gl_FragCoord.xy + u_frame * 7.13) - 0.5;
         float sunTau = 0.0;
+        float nearSun = 0.0;
         for (int j = 1; j <= CLOUD_LIGHT_STEPS; j++) {
-            sunTau += cloudVolumeDensity(p + sun * (lightStep * (float(j) + lightJitter)), coverage, false);
+            float lightDensity = cloudVolumeDensity(p + sun * (lightStep * (float(j) + lightJitter)), coverage, false);
+            if (j == 1) nearSun = lightDensity;
+            sunTau += lightDensity;
         }
+        // the density falling away toward the sun marks a surface that faces it: lit billows, self-shaded hollows
+        float relief = clamp(1.0 + 0.8 * (density - nearSun) / max(density, 0.05), 0.5, 1.4);
         // one far sample, four light steps out, so a cloud shades what lies behind its neighbours as well
         sunTau += 1.5 * cloudVolumeDensity(p + sun * (lightStep * 12.0), coverage, false);
         sunTau *= CLOUD_EXTINCTION * lightStep;
         float h = clamp((cloudAltitude(p) - u_bandBase) / thickness, 0.0, 1.0);
         float alpha = (1.0 - exp(-CLOUD_EXTINCTION * density * step)) * cloudDistanceFade(t) * keep;
         float skyTau = CLOUD_EXTINCTION * u_bandDensity * coverage * (1.0 - h) * thickness;
-        vec3 radiance = cloudAerial(cloudRadiance(d, sunTau, skyTau, 1.0 - h, density, cloudUp(d, t)), t, d);
+        vec3 radiance = cloudAerial(cloudRadianceRelief(d, sunTau, skyTau, 1.0 - h, density, cloudUp(d, t), relief), t, d);
         color += transmittance * alpha * cloudToneMap(radiance);
         transmittance *= 1.0 - alpha;
         if (transmittance < 0.01) break;

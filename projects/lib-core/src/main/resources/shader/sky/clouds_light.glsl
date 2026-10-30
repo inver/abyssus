@@ -122,13 +122,20 @@ float cloudPowder(float density) {
 
 // Linear radiance of a cloud point: the sun scattered toward the viewer through sunTau, powdered by the local
 // density, and the sky's light from above through skyTau (the cloud over the point), dimmed further by `underside`
-// (0 at the top of a cloud, 1 at its base).
-vec3 cloudRadiance(vec3 d, float sunTau, float skyTau, float underside, float density, vec3 up) {
+// (0 at the top of a cloud, 1 at its base). `relief` scales the direct sun by how the density falls away toward the
+// sun (the cloud surface facing it is lit, one facing away shades itself): 1 for a point with no such gradient. A tight
+// glare lobe around the sun shows through thin cloud, the way a bright disc glows through haze.
+vec3 cloudRadianceRelief(vec3 d, float sunTau, float skyTau, float underside, float density, vec3 up, float relief) {
     float mu = dot(d, normalize(u_sunDir));
     vec3 sky = mix(u_horizon, u_zenith, clamp(up.y * 0.5 + 0.5, 0.0, 1.0)) * 2.0;
     float skyLight = max(exp(-skyTau * 0.25), 0.12) * (1.0 - 0.5 * underside);
-    float sun = cloudPhase(mu) * cloudSunTransmittance(sunTau) * cloudPowder(density);
+    float sun = (cloudPhase(mu) + 0.25 * pow(max(mu, 0.0), 32.0) * exp(-sunTau)) * cloudSunTransmittance(sunTau) *
+        cloudPowder(density) * relief;
     return u_sunlight * sun + sky * skyLight;
+}
+
+vec3 cloudRadiance(vec3 d, float sunTau, float skyTau, float underside, float density, vec3 up) {
+    return cloudRadianceRelief(d, sunTau, skyTau, underside, density, up, 1.0);
 }
 
 // How much of a cloud at distance t is kept: far clouds thin out instead of aliasing at the horizon.
@@ -141,10 +148,11 @@ float cloudDither(vec2 pixel) {
     return fract(52.9829189 * fract(dot(pixel, vec2(0.06711056, 0.00583715))));
 }
 
-// Far clouds fade toward the horizon light, as the atmosphere between hides them; toward a low sun the haze takes the
-// sun's color, so the clouds around it glow warm at sunset.
+// Far clouds fade toward the horizon light, as the atmosphere between hides them; the blue goes first, so distant
+// cloud turns warm before it vanishes. Toward a low sun the haze takes the sun's color, so the clouds around it glow
+// warm at sunset.
 vec3 cloudAerial(vec3 radiance, float t, vec3 d) {
-    float fog = 1.0 - exp(-t / CLOUD_FADE_DISTANCE);
+    vec3 fog = 1.0 - exp2(-t / CLOUD_FADE_DISTANCE * 1.4427 * vec3(0.8, 1.0, 1.4));
     vec3 haze = u_horizon * 1.5 + u_sunlight * pow(max(dot(d, normalize(u_sunDir)), 0.0), 6.0);
     return mix(radiance, haze, fog * 0.7);
 }
