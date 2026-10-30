@@ -46,10 +46,16 @@ float cloudVolumeDensity(vec3 p, float coverage, bool detail) {
     float shape = cloudShape(u_bandProfile, coverage, h);
     if (shape <= 0.0) return 0.0;
     vec3 q = cloudNoiseCoord(p, altitude);
-    float base = texture(u_baseNoise, q * 0.25).r;
-    float eroded = shape * (0.55 + 0.45 * base);
-    if (detail) eroded -= (1.0 - texture(u_detailNoise, q * 1.7).r) * 0.2 * (1.0 - shape);
-    return u_bandDensity * max(eroded, 0.0);
+    float base = texture(u_baseNoise, q * 0.5).r;
+    float eroded = shape * (0.3 + 0.7 * base);
+    if (detail) {
+        // two octaves of inverted cellular noise bite into the edges: the cauliflower billows, then their fray
+        float billow = 1.0 - texture(u_detailNoise, q * 3.0).r;
+        float fray = 1.0 - texture(u_detailNoise, q * 7.0).r;
+        eroded -= (billow * 0.4 + fray * 0.18) * (1.0 - shape * 0.6);
+    }
+    // the gain keeps what survives the erosion opaque: dense cores, ragged edges
+    return u_bandDensity * 1.8 * max(eroded, 0.0);
 }
 
 void main() {
@@ -82,6 +88,8 @@ void main() {
         for (int j = 1; j <= CLOUD_LIGHT_STEPS; j++) {
             sunTau += cloudVolumeDensity(p + sun * (lightStep * (float(j) + lightJitter)), coverage, false);
         }
+        // one far sample, four light steps out, so a cloud shades what lies behind its neighbours as well
+        sunTau += 1.5 * cloudVolumeDensity(p + sun * (lightStep * 12.0), coverage, false);
         sunTau *= CLOUD_EXTINCTION * lightStep;
         float h = clamp((cloudAltitude(p) - u_bandBase) / thickness, 0.0, 1.0);
         float alpha = (1.0 - exp(-CLOUD_EXTINCTION * density * step)) * cloudDistanceFade(t) * keep;
