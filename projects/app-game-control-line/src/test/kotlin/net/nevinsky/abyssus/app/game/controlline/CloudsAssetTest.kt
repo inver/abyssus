@@ -2,6 +2,7 @@ package net.nevinsky.abyssus.app.game.controlline
 
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudsLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
@@ -27,5 +28,12 @@ class CloudsAssetTest {
 
         val sky = checkNotNull(ProceduralSkyLoader(files, metas).prepare("skybox_physical")).staged
         assertEquals("the sky draws the clouds asset", "clouds_fair", sky.clouds)
+    }
+
+    @Test
+    fun theVolumetricCloudsAssetAsksForTheDesktopMarch() {
+        val clouds = checkNotNull(CloudsLoader(metas).prepare("clouds_volumetric")).staged
+        assertEquals(CloudTechnique.VOLUMETRIC, clouds.meta.technique)
+        assertTrue("the clouds have a band to draw", clouds.meta.visible)
     }
 }

@@ -50,6 +50,7 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
     private var resolve: ShaderProgram? = null
     private var composite: ShaderProgram? = null
     private var mesh: Mesh? = null
+    private var coverageMaps: CloudCoverageMaps? = null
     private var framebuffer = 0
 
     /** The half-resolution targets: this frame's march, and the history written by the previous and this frame. */
@@ -75,6 +76,7 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
             march = shaders.program("clouds.vert", "clouds_common.glsl", "clouds_light.glsl", "clouds_volumetric.frag")
             resolve = shaders.program("clouds.vert", "clouds_resolve.frag")
             composite = shaders.program("clouds.vert", "clouds_composite.frag")
+            coverageMaps = CloudCoverageMaps(shaders)
             mesh = createFullscreenTriangle()
             framebuffer = Gdx.gl.glGenFramebuffer()
         } catch (e: Exception) {
@@ -100,6 +102,7 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
 
         val blendWasOn = gl.glIsEnabled(GL20.GL_BLEND)
         try {
+            bakeCoverage(scene)
             gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, framebuffer)
             gl.glViewport(0, 0, width, height)
             if (scene.bake) prevViewProj.set(viewProj) // same view for every sample: the history lines up exactly
@@ -133,6 +136,13 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
         historyResets++
     }
 
+    /** Bakes the coverage map of every band type not baked yet (see [CloudCoverageMaps]). */
+    private fun bakeCoverage(scene: CloudScene) {
+        val maps = checkNotNull(coverageMaps)
+        val mesh = checkNotNull(mesh)
+        for (band in scene.clouds.settings.bandsFarToNear()) maps.map(band.type, framebuffer, mesh)
+    }
+
     private fun marchBands(scene: CloudScene, jitterFrame: Int) {
         val gl = Gdx.gl
         attach(current)
@@ -147,9 +157,13 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
             bindTexture(1, GL_TEXTURE_3D, scene.clouds.detailNoise)
             march.setUniformi("u_baseNoise", 0)
             march.setUniformi("u_detailNoise", 1)
+            march.setUniformi("u_coverageMap", 2)
             march.setUniformf("u_frame", jitterFrame.toFloat())
             for (band in scene.clouds.settings.bandsFarToNear()) {
                 setCloudBand(march, band, field, scene.timeSeconds)
+                val map = checkNotNull(coverageMaps).map(band.type, framebuffer, mesh)
+                bindTexture(2, GL20.GL_TEXTURE_2D, map.texture)
+                march.setUniformf("u_coverageTexelsPerCell", map.texelsPerCell)
                 mesh.render(march, GL20.GL_TRIANGLES)
             }
         }
@@ -222,6 +236,8 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
 
     private fun unbindTextures() {
         val gl = Gdx.gl
+        gl.glActiveTexture(GL20.GL_TEXTURE2)
+        gl.glBindTexture(GL20.GL_TEXTURE_2D, 0)
         gl.glActiveTexture(GL20.GL_TEXTURE1)
         gl.glBindTexture(GL20.GL_TEXTURE_2D, 0)
         gl.glBindTexture(GL_TEXTURE_3D, 0)
@@ -247,6 +263,8 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
 
     override fun dispose() {
         deleteTargets()
+        coverageMaps?.dispose()
+        coverageMaps = null
         val gl = Gdx.gl
         if (framebuffer != 0) gl.glDeleteFramebuffer(framebuffer)
         framebuffer = 0

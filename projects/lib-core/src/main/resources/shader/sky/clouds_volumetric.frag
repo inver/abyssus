@@ -15,10 +15,13 @@
 // Volumetric clouds: one band ray-marched in 3D between its base and top spheres, CLOUD_STEPS steps with a per-pixel
 // jitter, each lit by CLOUD_LIGHT_STEPS steps toward the sun. The coverage field decides where the band has clouds;
 // the 3D noise only erodes density inside it, never adds any outside. Drawn at half resolution into an offscreen
-// target. The direct sun follows the density gradient toward it (the relief term, after iq's Rainforest clouds). Needs
+// target. The coverage comes from a baked map (CloudCoverageMaps), not summed per step. The direct sun follows the
+// density gradient toward it (the relief term, after iq's Rainforest clouds). Needs
 // clouds_common.glsl and clouds_light.glsl before it.
 uniform sampler3D u_baseNoise;
 uniform sampler3D u_detailNoise;
+uniform sampler2D u_coverageMap; // one period of the band type's coverage noise, baked by clouds_coverage_bake.frag
+uniform float u_coverageTexelsPerCell; // texels of u_coverageMap per first-octave noise cell
 uniform float u_frame;          // frame counter, moves the jitter
 varying vec3 v_dir;
 
@@ -29,6 +32,14 @@ const float CLOUD_MAX_MARCH = 30000.0; // metres of band a ray marches at most (
 // the per-pixel dither, shifted every frame for the temporal filter
 float cloudJitter(vec2 pixel) {
     return cloudDither(pixel + u_frame * 5.588238);
+}
+
+// The band's coverage at xz from the baked noise: a mipmapped lookup whose level drops the detail finer than the
+// pixel's [footprint] (in first-octave cells), as cloudBandCoverageLod does by summing octaves.
+float cloudBakedCoverage(vec2 xz, float footprint) {
+    vec2 cell = vec2(xz.x / u_bandScale.x + u_bandOffset.x, xz.y / u_bandScale.y + u_bandOffset.y);
+    float lod = max(log2(max(footprint * u_coverageTexelsPerCell, 1.0)), 0.0);
+    return cloudRemap(textureLod(u_coverageMap, cell / CLOUD_NOISE_PERIOD, lod).r, u_bandCoverage);
 }
 
 // metres above the ground of the point p (relative to the viewer); curvature to first order
@@ -82,7 +93,7 @@ void main() {
         float t = t0 + span * u * sqrt(u);
         float step = span * 1.5 * sqrt(u) / float(CLOUD_STEPS);
         vec3 p = d * t;
-        float coverage = cloudBandCoverageLod(p.xz, footprint);
+        float coverage = cloudBakedCoverage(p.xz, footprint);
         if (coverage <= 0.0) continue;
         float density = cloudVolumeDensity(p, coverage, true);
         float alpha = (1.0 - exp(-CLOUD_EXTINCTION * density * step)) * cloudDistanceFade(t) * keep;

@@ -1,0 +1,35 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "version": 1,
+  "lastModified": 1761850000000,
+  "uuid": "a8b6c777-df7c-4399-af3a-bdbfb23f7073",
+  "type": "CLOUDS",
+  "additional": {
+    "technique": "VOLUMETRIC",
+    "low": {
+      "level": "LOW",
+      "type": "CUMULUS",
+      "coverage": 0.55,
+      "density": 0.9,
+      "windX": 4.0,
+      "windZ": 1.0
+    },
+    "mid": {
+      "level": "MID",
+      "type": "ALTOCUMULUS",
+      "coverage": 0.45,
+      "density": 0.5,
+      "windX": 10.0,
+      "windZ": 2.0
+    },
+    "high": {
+      "level": "HIGH",
+      "type": "CIRRUS",
+      "coverage": 0.4,
+      "density": 0.15,
+      "windX": 20.0,
+      "windZ": 4.0
+    }
+  }
+}

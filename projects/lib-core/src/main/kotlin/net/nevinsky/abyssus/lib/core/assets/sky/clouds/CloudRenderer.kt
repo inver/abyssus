@@ -78,8 +78,13 @@ abstract class CloudRenderer : Disposable {
         val offset = field.windOffset(band, timeSeconds)
         program.setUniformf("u_bandScale", type.scale * type.stretch, type.scale)
         program.setUniformf("u_bandOffset", offset[0], offset[1])
-        program.setUniformi("u_bandSeed", type.ordinal)
-        program.setUniformi("u_bandOctaves", type.octaves)
+        // a technique that reads a baked coverage map has no use for the noise's seed and octaves
+        if (program.hasUniform("u_bandSeed")) {
+            program.setUniformi("u_bandSeed", type.ordinal)
+        }
+        if (program.hasUniform("u_bandOctaves")) {
+            program.setUniformi("u_bandOctaves", type.octaves)
+        }
         program.setUniformi("u_bandProfile", type.profile.ordinal)
         program.setUniformf("u_bandCoverage", band.coverage)
         program.setUniformf("u_bandDensity", band.density)
