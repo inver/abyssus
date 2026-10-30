@@ -4,7 +4,7 @@
 
 See proposal.md for motivation. The plugin currently registers only the right-side Properties tool window. `ProjectLayout` locates `.abss` siblings and asset folders; `AssetFileCommand` stages file snapshots, checks conflicts, rolls back write failures and registers Undo. Its current implementation is intended for small terrain operations and holds file bytes in memory. No remote catalog client or service contract exists.
 
-The native format validator is planned by `decouple-from-mundus`, not yet implemented. This design depends on that change, superseding the older compatibility wording still present in project context. Catalog UI can be developed independently, but native imports must not ship before the validator. Existing local inventory specs remain unchanged.
+The native format validator is `AbyssusDocumentFormat` from `decouple-from-mundus`; this design depends on that change and its native-only contract. Catalog UI can be developed independently, but native imports must not ship before the validator. Existing local inventory specs remain unchanged.
 
 ## Goals / Non-Goals
 

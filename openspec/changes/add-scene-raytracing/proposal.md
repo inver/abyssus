@@ -1,5 +1,7 @@
 # Proposal
 
+The fixed single-reflection depth and explicit dielectric-refraction exclusion below describe the original baseline. They are superseded by `add-scene-raytracing-settings`, which adds saved transport limits and per-instance transmission/IOR on both Metal and Vulkan. Alpha-blended reflection exclusions and unrelated platform, lifecycle and transparency requirements remain in force. Existing task completion evidence is unchanged.
+
 ## Why
 
 The Scene view cannot show geometry reflected in other surfaces, and its raster lighting cannot provide ray-traced shadows. Users need to judge both effects while moving the camera, objects and lights, on macOS, Windows and Linux.

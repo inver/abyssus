@@ -1,5 +1,7 @@
 # Design
 
+The fixed single-reflection depth and explicit dielectric-refraction exclusion below describe the original baseline. They are superseded by `add-scene-raytracing-settings`, which adds saved transport limits and per-instance transmission/IOR on both Metal and Vulkan. Alpha-blended reflection exclusions and unrelated platform, lifecycle and transparency requirements remain in force. Existing task completion evidence is unchanged.
+
 ## Context
 
 See proposal.md for motivation and the delta specs for the behavior contract. SceneViewPanel owns an OpenGL 3.2 core AWT canvas driven by a Swing timer. SceneRenderer renders sky, grid, terrain, models and overlays. ScenePreview supplies in-progress transforms; SceneModels advances each entity's animation. Picking and gizmo calculations already use CPU data independently of rendering.
@@ -47,6 +49,8 @@ Use shared per-asset bottom-level acceleration structures for static meshes and 
 The native renderer traces camera rays through the displayed geometry and evaluates default materials, PBR materials and terrain splats using existing textures and lighting parameters. Use the existing deterministic LightSet limits/order initially, so switching modes does not silently pick different lights. Cast visibility rays for selected directional, point and spot contributions, honoring range/cone attenuation. Exclude editor decorations entirely from acceleration structures. Alpha-test intersection rejection must use the same UV/alpha threshold as raster rendering.
 
 For PBR primary hits, sample one reflection direction using roughness, apply the existing metallic/roughness energy weighting, and shade the secondary hit with direct lights, emission and existing ambient/HDR diffuse lighting. Secondary surfaces do not recursively trace scene reflections; their existing environment specular is the terminal approximation. Sample the appropriate current sky/background on misses, including HDR exposure and procedural-sky direction. Default materials and terrain retain their existing diffuse lighting behavior and do not gain new reflective properties. Replace the primary PBR environment specular with the ray result to avoid double counting; preserve existing diffuse HDR replacement of ambient color.
+
+Cloud-aware sky (coordinated with `add-cloud-scene-lighting`): the baked procedural-sky sample used for misses must include the clouds at the view's sky time and cloud asset revision, and the diffuse sky light it carries is the linear lighting environment, not the display-ready sample. The sun's visibility also carries the cloud shadow map as an immutable CPU snapshot (map, world-to-map transform, sun entity identity and outside-area fallback) rather than a GL texture; it replaces the uniform cloud dimming inside the map and applies to the sun only. Published snapshots are revisioned, bounded in frequency and invalidate ray accumulation when they change.
 
 Alpha-blended geometry remains visible to primary camera rays with ordered alpha compositing and shadowed direct shading, but is excluded from shadow/reflection intersection masks. This preserves current shadow rules without promising refraction or reflected transparent objects. Bound transparent layers and other resource counts; if limits cannot represent a displayed scene correctly, use explicit whole-view raster fallback. Define tolerance-based image tests for both backends rather than bitwise image equality.
 
@@ -170,3 +174,13 @@ appear on more devices. The pipeline path remains a later option behind the same
 ## Migration Plan
 
 No scene/project/asset migration. Add the packaged optional backends with the mode off by default. Verify ordinary plugin startup and raster use without loading ray libraries. Ship only after the three-platform gate and manual matrix pass. Rolling back removes the mode and native resources without changing project data.
+
+## Cloudy skies (coordinated with `add-cloud-scene-lighting`)
+
+A procedural sky is baked by `RaySkyBaker` today without clouds and keyed by sky name, project and sun. With clouds, ray misses
+must show the clouds and the sun's visibility must include the cloud shadows. The cloud-aware snapshot is captured on the render
+thread from the sky's cloudy environment and cloud shadow map, converted to immutable CPU data carrying the sky and cloud
+revision, time, map transform, sun identity and outside-area fallback, and published only when complete and on a bounded
+schedule. Display-ready samples stay distinct from linear lighting radiance. Ray accumulation resets when a published
+environment or visibility snapshot changes. `lib-raytracing` contracts and the fake, Metal and Vulkan backends take the new
+data through the existing conformance kit; there is no cloud-shadow GL texture contract to reuse.

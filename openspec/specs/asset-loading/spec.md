@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Lets the scene view, its tests and any other libGDX tool turn a Mundus project's asset folders into drawable models,
+Lets the scene view, its tests and any other libGDX tool turn a native Abyssus project's asset folders into drawable models,
 terrains and skies the same way, without needing a running IDE.
 
 ## Requirements
@@ -85,3 +85,50 @@ An older load finishing after a newer edit SHALL NOT replace the latest requeste
 #### Scenario: Repair a terrain
 - **WHEN** a previously unreadable terrain data file is replaced with valid data
 - **THEN** that terrain loads without reopening the view and the other scene assets remain visible
+
+### Requirement: Saved and unsaved metadata read the same
+
+An asset's `meta.json` SHALL be read by one rule whether its text comes from the saved file or from an unsaved editor
+buffer. The same text SHALL give the same asset type, the same typed settings and the same identifier, so editing
+a `meta.json` in the text editor and saving it does not change what the asset loads as.
+
+#### Scenario: Unsaved text matches the saved file
+
+- **WHEN** the text of a model asset's `meta.json` in the Untitled fixture is open unsaved with no change, and the
+  scene view loads the asset
+- **THEN** the asset loads with the same type and settings as it does from the saved file
+
+#### Scenario: A new asset kind needs one registration
+
+- **WHEN** a developer adds an asset kind with its own settings block
+- **THEN** one registration makes both saved and unsaved `meta.json` of that kind bind to the new settings
+
+#### Scenario: Unreadable identifier
+
+- **WHEN** a `meta.json` holds a `uuid` that is not a valid identifier
+- **THEN** the asset still loads, with no identifier, as it does today, and nothing is written to the file
+
+### Requirement: Every host loads the same asset kinds
+
+The scene view and any game built on the Abyssus libraries SHALL load each asset kind the same way, from one list of
+supported kinds. When an asset kind is added, the scene view and the game SHALL both load it once it is added to that
+list. A host that needs only some kinds (colliders read only models and terrains) SHALL pick them from the same list,
+not keep its own.
+
+#### Scenario: Same sky in the editor and the game
+
+- **WHEN** the scene view and a game loader each load `skybox_hdr`, `skybox_physical` and `skybox_default` of the
+  `Untitled` project
+- **THEN** both load an HDR sky, a procedural sky and a six-face cube respectively, and neither reports a missing loader
+
+#### Scenario: Same terrain in the editor and the game
+
+- **WHEN** the scene view and a game loader each load `terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b` of the `Untitled`
+  project
+- **THEN** both load a terrain of size `1600` with texture repetition `60.0`, as its `meta.json` holds
+
+#### Scenario: A new asset kind needs one registration
+
+- **WHEN** a developer adds an asset kind with its own loader to the list of supported kinds
+- **THEN** the scene view and a game built on the libraries both load assets of that kind, with no other change to
+  either

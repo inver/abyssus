@@ -93,15 +93,19 @@ folder beside the `.abss` file. Reading SHALL NOT modify the file on disk.
 
 ### Requirement: Asset node structure
 
-Each asset file SHALL appear as a single node that expands into a child node per model
-property, showing the property name and its value. Properties whose value is a nested object
-or a list of models SHALL be represented by a node that expands further into that value's own
-properties, one child per list element. The `scenes` and `assets` lists SHALL be labelled `Scenes` and `Assets` with their element count as value, and an entity of the `ecs` tree SHALL be listed directly under `ecs`, labelled with its name and component count. A boolean `<x>Enabled` property SHALL NOT be a separate node: the property it gates (`<x>` or
-`<x>Name`) SHALL show a clickable eye icon at the right edge of its row, shown as visible when enabled and
-as hidden (with grayed text) when disabled. Clicking the eye SHALL set the `<x>Enabled` value in
-the file the property was read from to the opposite value, changing nothing else in that file,
-and the view SHALL refresh. A scene listed under a project SHALL be labeled `<name> (<id>)` (for example `Main Scene (6275127)`) and SHALL NOT repeat `id` and `name` as child rows; its name SHALL instead be changed through a right-click "Rename Scene..." action, which sets only `name` in that scene's file. A project scene's skybox row SHALL also offer a skybox chooser (see the `abyssus-scene-skybox` capability), which sets only `skyboxName` in that scene's file. These three actions are the only ones that write to an asset file. An asset node SHALL remain a single node even when its model is expanded
-- expanding a file SHALL NOT add extra entries to the view root.
+Each asset file SHALL appear as a single node that expands into a child node per model property, showing the property name
+and its value. Properties whose value is a nested object or a list of models SHALL be represented by a node that expands
+further into that value's own properties, one child per list element. An entity of the `ecs` tree SHALL be listed directly
+under `ecs`, labelled with its name and component count. A boolean `<x>Enabled` property SHALL NOT be a separate node: the
+property it gates (`<x>` or `<x>Name`) SHALL show a clickable eye icon at the right edge of its row, shown as visible when
+enabled and as hidden (with grayed text) when disabled. Clicking the eye SHALL set the `<x>Enabled` value in the file the
+property was read from to the opposite value, changing nothing else in that file, and the view SHALL refresh. A scene
+listed under a project SHALL be labeled `<name> (<id>)` (for example `Main Scene (6275127)`) and SHALL NOT repeat `id` and
+`name` as child rows; its name SHALL instead be changed through a right-click "Rename Scene..." action, which sets only
+`name` in that scene's file. The eye toggle, "Rename Scene...", the skybox assignment of `abyssus-scene-skybox` and the
+water actions of `scene-water` (Add Water, and the eye, rename and removal of a water row, which write only that scene's
+`abyssus.waterSurfaces` extension) are the only actions that write to an asset file from the tree. An asset node SHALL remain a single node even when its model is
+expanded; expanding a file SHALL NOT add extra entries to the view root.
 
 #### Scenario: File expands into its properties
 
@@ -159,21 +163,29 @@ and the view SHALL refresh. A scene listed under a project SHALL be labeled `<na
 
 ### Requirement: Project file expansion
 
-A `.abss` node SHALL expand into its project model: the project `name`, and a `scenes`
-property whose expansion lists the scenes found in the `scenes` folder beside the `.abss`
-file, ordered by file name. Each listed scene SHALL be presented as a scene model, expandable
-into its scene properties. The system SHALL NOT navigate, open, or link to those `.scene`
-files from the project node.
+A `.abss` node SHALL expand into exactly three folder rows, in this order: `Scenes`, `UI` and `Assets`, each showing its
+element count as secondary text. The project's `name` SHALL NOT be a row. `Scenes` SHALL list the scenes found in the
+`scenes` folder beside the `.abss` file, ordered by file name, each presented as a scene model expandable into its scene
+properties. `UI` SHALL list the project's assets whose type is `UI`, each expandable into its screens. `Assets` SHALL group
+the project's other assets under one folder row per asset type present (for example `Models`, `Terrains`, `Foliage`,
+`Textures`, `Skyboxes`, `Clouds`), ordered by type and then by asset folder name, each group showing its count. Every scene,
+asset and screen SHALL be listed; no list is truncated. The system SHALL NOT navigate, open, or link to the `.scene` files
+from the project node. A folder row exists only in the view: it SHALL NOT write anything and SHALL NOT change the file it
+groups.
+
+#### Scenario: Project node lists its folders in order
+
+- **WHEN** a user expands `Untitled.abss`
+- **THEN** its children are `Scenes`, `UI` and `Assets` in that order and no row reads `name`
 
 #### Scenario: Project node lists its scenes
 
 - **WHEN** a user expands a `.abss` node whose `scenes` folder holds three `.scene` files
-- **THEN** the expansion shows the project `name` and a `scenes` node listing the three scenes
-  ordered by file name
+- **THEN** the `Scenes` folder reads `3` and lists the three scenes ordered by file name
 
 #### Scenario: Project scenes expand inline
 
-- **WHEN** a user expands a scene listed under a `.abss` node
+- **WHEN** a user expands a scene listed under `Scenes`
 - **THEN** its scene properties are shown from that scene's content
 
 #### Scenario: Project scenes do not navigate to scene files
@@ -181,9 +193,29 @@ files from the project node.
 - **WHEN** a user selects a scene listed under a `.abss` node
 - **THEN** no `.scene` file is opened or navigated to as a result
 
+#### Scenario: Assets are grouped by type
+
+- **WHEN** a project holds three MODEL, one TERRAIN and one SKYBOX_PROCEDURAL asset and the user expands `Assets`
+- **THEN** it holds the group rows `Models 3`, `Terrains 1` and `Skyboxes 1`, and each asset appears once, inside its group
+
+#### Scenario: UI assets are listed under UI
+
+- **WHEN** a project holds a UI asset with ten screens
+- **THEN** the asset is listed under `UI`, not under `Assets`, and expands into ten screen rows
+
+#### Scenario: Nothing is truncated
+
+- **WHEN** a scene has 127 entities or a project has 41 assets
+- **THEN** every entity and asset has a row
+
+#### Scenario: Project without a scenes folder
+
+- **WHEN** the view reads a `.abss` file with no `scenes` folder beside it
+- **THEN** `Scenes` reads `0`, has no children, and the node still expands
+
 ### Requirement: Presentation of asset nodes
 
-Asset nodes SHALL be displayed with the name derived from their file name. Each kind of node (project, scene, ambient light, fog, skybox, ecs, folder, entity, component, and model, terrain and skybox assets) SHALL have its own icon, and secondary text (values, counts) SHALL use the gray text style. The view SHALL keep a stable identity per asset file so that
+Asset nodes SHALL be displayed with the name derived from their file name. Each kind of node (project, scene, ambient light, fog, skybox, ecs, folder, entity, component, and model, terrain, foliage and skybox assets) SHALL have its own icon, and secondary text (values, counts) SHALL use the gray text style. The view SHALL keep a stable identity per asset file so that
 expanding, refreshing, and reopening the view do not lose or duplicate nodes.
 
 #### Scenario: Node label uses the file name
@@ -201,6 +233,18 @@ expanding, refreshing, and reopening the view do not lose or duplicate nodes.
 - **WHEN** a `.scene` or `.abss` file is added to or deleted from the project and the view
   refreshes
 - **THEN** the view reflects the new set of asset files
+
+#### Scenario: Foliage asset has its own icon
+
+- **WHEN** a project's `assets` list holds a FOLIAGE asset next to a TERRAIN and a MODEL asset
+- **THEN** the foliage entry uses the foliage icon, which differs from the terrain and model icons
+
+#### Scenario: Entity icons follow their type
+
+- **WHEN** an entity under `ecs` has a `TypeComponent` using its short or fully qualified class name
+- **THEN** its row uses a distinct SVG icon for each of GROUP, LIGHT_DIRECTIONAL, LIGHT_POINT, LIGHT_SPOT, OBJECT,
+  TERRAIN, CAMERA and HANDLE, and a type change updates the icon on refresh even when its label and component count stay the same
+- **AND** an absent, null or unknown type uses the generic ECS icon
 
 ### Requirement: Asset file recognition
 
@@ -269,3 +313,171 @@ In addition to the write actions already listed for asset nodes, an entity row o
 
 - **WHEN** the user right-clicks a scene, an asset or a scalar property
 - **THEN** the menu has no Add Component or Remove Component action
+
+### Requirement: Arrangement copies are squashed into their arrangement
+
+Under a scene's `ecs` node the tree SHALL NOT list an entity that a path arrangement lists in its `slots` and that has a
+`ParentComponent` pointing to that arrangement. The row of the arrangement SHALL read `N components, M copies`, where M
+is the number of its slots that name an entity. An entity without such a `ParentComponent` SHALL be listed like any other.
+
+#### Scenario: Railway copies
+
+- **WHEN** a user expands the `ecs` node of a scene with an arrangement `Railway` whose slots list 12 linked copies
+- **THEN** the 12 copies are not listed and the `Railway` row reads `3 components, 12 copies`
+
+#### Scenario: A detached copy
+
+- **WHEN** a copy has been detached, so it has no `ParentComponent` and its slot is `-1`
+- **THEN** it is listed under `ecs` as an ordinary entity
+
+### Requirement: Water rows in a scene
+
+A scene containing `abyssus.waterSurfaces` SHALL show a Water group with one row per surface in saved order, labelled by name, with a visibility eye and an Abyssus-only indication. Water rows SHALL be distinct from ECS entities and assets and support selection, rename and removal.
+
+#### Scenario: Water in Main Scene
+- **WHEN** a user adds a Lake to a copy of `Untitled/scenes/Main Scene.scene`
+- **THEN** a Lake row appears under Water and `Model 0`, `Terrain` (entity 1) and `Camera 4` remain in the ECS tree
+
+#### Scenario: Hide one surface
+- **WHEN** the user clicks a visible Lake's eye
+- **THEN** only that surface's `enabled` changes, the surface disappears from the Scene view and its row remains with a hidden eye
+
+#### Scenario: Existing scene
+- **WHEN** a scene has no water extension
+- **THEN** reading it creates no extension and the Add Water action remains available
+
+### Requirement: Tree follows document and filesystem changes
+
+The Abyssus tree SHALL refresh automatically after edits, Undo/Redo, and detected filesystem changes to its projects, scenes and asset metadata. Open unsaved document text SHALL take precedence over saved text. Refresh SHALL display the latest state without reopening the view, rewriting files or creating undo entries.
+
+#### Scenario: Undo and redo a scene rename
+- **WHEN** the user renames `Main Scene` in a copy of Untitled, undoes that edit, and redoes it
+- **THEN** the scene label follows each resulting name without manually refreshing the tree
+- **AND** refresh itself creates no additional edit or undo entry
+
+#### Scenario: Unsaved fog edit
+- **WHEN** the user changes `fogEnabled` in the open text document of Untitled's `Main Scene.scene` without saving
+- **THEN** the tree's fog eye reflects the unsaved value
+- **AND** undoing the edit restores the eye without saving the document
+
+#### Scenario: External scene replacement
+- **WHEN** a saved scene is replaced externally and the IDE detects the change, with no conflicting unsaved document
+- **THEN** its displayed values reflect the replacement without reopening the view
+
+#### Scenario: Files and metadata change
+- **WHEN** a scene or asset folder is added, removed or renamed, or asset metadata changes, and the IDE detects it
+- **THEN** the tree's membership, labels, applicable counts and unused markings reflect the resulting project
+
+#### Scenario: Unsupported replacement remains unchanged
+- **WHEN** a displayed native scene is replaced with malformed text or an unsupported format version
+- **THEN** the tree displays its existing unreadable-file presentation and keeps other files usable
+- **AND** refresh does not repair or rewrite the replacement
+
+### Requirement: Refresh preserves surviving navigation
+
+Automatic refresh SHALL preserve selection and expansion for entries that still exist. Removed entries SHALL disappear without duplicate nodes or stale details. Updates to a closed project SHALL not reopen its view.
+
+#### Scenario: Selected entity survives an unrelated edit
+- **WHEN** entity `0` of Untitled's Main Scene is selected and expanded while another entity's name changes
+- **THEN** entity `0` remains selected and expanded after refresh
+
+#### Scenario: Selected entry is removed
+- **WHEN** the selected entity is removed from the scene and the tree refreshes
+- **THEN** that entity no longer appears and its old details are no longer presented as the current selection
+
+#### Scenario: Close with pending changes
+- **WHEN** the project is closed while a refresh is pending
+- **THEN** the pending change does not reopen the project or display a tree for it
+
+### Requirement: Grouped right-click menus on Assets and Scene rows
+
+The right-click menu of the project's **Assets** row SHALL show two grouped sub-menus, in this order, each shown as a menu with a header:
+- **Import Model**, containing Import FlightGear Aircraft and Import Model;
+- **New**, containing New UI Asset, New Terrain and New Foliage.
+
+The right-click menu of a **Scene** row (a standalone `.scene` or a scene listed under a project) SHALL show Rename Scene first and then one grouped sub-menu:
+- **Add**, containing Add Asset, Add Path Arrangement, Add Light and Add Water.
+
+Within each sub-menu the actions appear in the order listed. Each action keeps the row it is offered on and the conditions it is enabled under: an action whose row does not apply is hidden, and one that cannot run for the current state is shown disabled. A sub-menu is shown only while it has an enabled and visible action; when it has none, it is not shown at all.
+
+#### Scenario: Assets row shows the two groups in order
+
+- **WHEN** the user right-clicks the Assets row of a project
+- **THEN** Import Model and New are shown as two sub-menus in that order, and Import FlightGear Aircraft, Import Model, New UI Asset, New Terrain and New Foliage are reachable through them
+
+#### Scenario: Scene row shows Rename Scene then Add
+
+- **WHEN** the user right-clicks a Scene row
+- **THEN** Rename Scene is offered first, then Add as a sub-menu reaching Add Asset, Add Path Arrangement, Add Light and Add Water
+
+#### Scenario: An action that cannot run stays listed but disabled
+
+- **WHEN** a project whose assets contain no model or terrain has its Scene row opened
+- **THEN** Add Asset and Add Path Arrangement are shown disabled, while Add Light and Add Water remain enabled
+
+#### Scenario: A sub-menu with no enabled and visible action is not shown
+
+- **WHEN** every action of a sub-menu is disabled or hidden for the selected row (for example, the Add actions on a scene whose text cannot be read as a native scene)
+- **THEN** the sub-menu is not shown at all — neither as an empty nor as a disabled header
+
+#### Scenario: Other rows are unaffected
+
+- **WHEN** the user right-clicks an entity, a component, a UI asset, a foliage-bound terrain, a water surface or a path arrangement row
+- **THEN** their menus are unchanged by this change
+
+### Requirement: Rename Scene on a standalone scene
+
+Rename Scene SHALL be offered on any row that stands for a scene, whether the scene is listed under a project or is a standalone `.scene` file at the top level of the view. It SHALL start from that scene's current `name` and change only that `name`, as one undoable command.
+
+#### Scenario: Rename on a standalone scene
+
+- **WHEN** the user right-clicks a standalone `.scene` row
+- **THEN** Rename Scene is offered, the dialog starts with that scene's current `name`, and choosing a new name edits that scene's `name` as one undoable command
+
+#### Scenario: Rename on a scene listed under a project
+
+- **WHEN** the user right-clicks a scene listed under a project
+- **THEN** Rename Scene is offered, and choosing it edits that scene's `name` as one undoable command
+
+#### Scenario: Rename is not offered on other rows
+
+- **WHEN** the user right-clicks the Assets row, a project row, an `.abss` asset row or an entity row
+- **THEN** Rename Scene is not offered
+
+### Requirement: Tree header toolbar
+
+The Abyssus view's header SHALL keep the platform's own buttons with their platform glyphs, with Collapse All, Options and
+Hide in that order, each with a tooltip and accessible name. Its Options menu SHALL offer the unused filter as its first
+item, and the view SHALL NOT add buttons to the header by hand.
+
+#### Scenario: Header buttons
+
+- **WHEN** the Abyssus view is shown
+- **THEN** its header holds buttons named Collapse All, Options and Hide in that order, and the Options menu lists Show Only Unused Assets first
+
+#### Scenario: Collapse all
+
+- **WHEN** the user presses Collapse All with a scene expanded
+- **THEN** the tree shows only the project row's children, collapsed
+
+## ADDED Requirements
+
+### Requirement: Enabled eye on entities and components
+
+An entity row that is not a `GROUP` and a component row of a togglable component SHALL show the eye used for scene settings, on when the `enabled` flag is absent or true and off when it is false. Clicking it SHALL write the flag as one undoable edit through the document writer. A disabled entity, its component rows and their children SHALL be drawn dimmed with gray icons.
+
+#### Scenario: Disable an entity
+- **WHEN** the user clicks the eye on the entity `Racer`
+- **THEN** `Racer` gets `enabled: false`, its row and component rows are dimmed and the Properties panel shows it disabled
+
+#### Scenario: Disable a component
+- **WHEN** the user clicks the eye on `Collider`
+- **THEN** only that component entry gets `enabled: false`
+
+#### Scenario: Group and Name rows
+- **WHEN** a `GROUP` entity and a `Name` component are listed
+- **THEN** neither shows an eye
+
+#### Scenario: Re-enable removes the flag
+- **WHEN** the user turns an off eye on
+- **THEN** the `enabled` key is removed and the rest of the entry is unchanged

@@ -1,0 +1,11 @@
+{
+  "generator": "games/control-line/project/environment/build_environment.py",
+  "license": "CC0-1.0",
+  "placement": {
+    "x": -150.0,
+    "y": 0,
+    "z": -150.0
+  },
+  "note": "Level (y = 0) within 30 m of the pilot; gentle southern descent and railway embankment (site_plan.height).",
+  "resolution": 255
+}

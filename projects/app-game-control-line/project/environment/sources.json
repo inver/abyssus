@@ -1,0 +1,34 @@
+{
+  "note": "CC0 sources of the airfield environment. fetch_sources.py downloads them into the cache and records checksums in sources.lock.json.",
+  "polyhaven": {
+    "license": "CC0-1.0",
+    "resolution": "1k",
+    "models": {
+      "island_tree_01": "broadleaf tree (elm/oak stand-in)",
+      "jacaranda_tree": "wide-crowned tree (white acacia stand-in)",
+      "tree_small_02": "young slender broadleaf",
+      "island_tree_02": "low gnarled bush-tree",
+      "island_tree_03": "low windswept steppe bush",
+      "wooden_picnic_table": "worktable with benches",
+      "painted_wooden_table": "worktable"
+    }
+  },
+  "ambientcg": {
+    "license": "CC0-1.0",
+    "materials": {
+      "Ground003": {"resolution": "2K", "use": "terrain base: dry, patchy grass"},
+      "Ground079S": {"resolution": "2K", "use": "terrain R: compacted light-brown soil"},
+      "Road012A": {"resolution": "2K", "use": "terrain G: street asphalt; pad asphalt"},
+      "Gravel040": {"resolution": "2K", "use": "terrain B: railway ballast"},
+      "Concrete034": {"resolution": "1K", "use": "terrain A: sidewalks; apartment panels; poles"},
+      "Plaster002": {"resolution": "1K", "use": "utility building and house walls"},
+      "Concrete048": {"resolution": "1K", "use": "DK Plamya walls"},
+      "Concrete036": {"resolution": "1K", "use": "long building walls; sleepers; catenary poles"},
+      "CorrugatedSteel005": {"resolution": "1K", "use": "grey roofs"},
+      "CorrugatedSteel007A": {"resolution": "1K", "use": "warehouse roof (tinted blue)"},
+      "RoofingTiles006": {"resolution": "1K", "use": "DK Plamya brown roof; house roofs"},
+      "Metal041B": {"resolution": "1K", "use": "rails"},
+      "Planks037A": {"resolution": "1K", "use": "model stands"}
+    }
+  }
+}

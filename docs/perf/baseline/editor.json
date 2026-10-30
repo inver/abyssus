@@ -1,0 +1,142 @@
+{
+  "schema" : 1,
+  "host" : "editor",
+  "environment" : {
+    "commit" : "1887442e6b613c5352bf7bfc8d29c6e54868b157",
+    "dirty" : true,
+    "os" : "Mac OS X 27.0.1 aarch64",
+    "jdk" : "JetBrains s.r.o. 21.0.8",
+    "gpu" : "Apple M1 Pro",
+    "driver" : "4.1 Metal - 91.7",
+    "backend" : "OpenGL"
+  },
+  "workloads" : [ {
+    "name" : "untitled",
+    "status" : "MEASURED",
+    "reason" : null,
+    "sceneHash" : "173d4d2506b1d6a896b83a040203048106552de937c5a93347d6e49827ae3098",
+    "settings" : {
+      "resolution" : "1280x720",
+      "warmupSeconds" : "10.0",
+      "sampleSeconds" : "30.0",
+      "samples" : "5",
+      "fixedDeltaSeconds" : "0.016666668",
+      "frameTime" : "CPU time of SceneRenderer.render (submission), not GPU time"
+    },
+    "stats" : {
+      "frames" : 6605,
+      "p50Ms" : 5.492036529295989,
+      "p95Ms" : 6.1174743012869035,
+      "p99Ms" : 6.72978908009084,
+      "samplesP95Ms" : [ 5.967583, 6.038666, 6.20975, 6.1995, 6.17275 ],
+      "allocatedBytesPerFrame" : 1058407.1715367145,
+      "gcCount" : 93,
+      "gcMillis" : 154
+    },
+    "uploadWork" : 35,
+    "assetCounts" : {
+      "models" : 3,
+      "terrains" : 1
+    },
+    "coldLoadMs" : 1838.345823732559,
+    "reloadMs" : 119.81353173255923,
+    "gpuMs" : null
+  }, {
+    "name" : "animated",
+    "status" : "MEASURED",
+    "reason" : null,
+    "sceneHash" : "c3b454b74c981ddda4e697c6c003b12bc6a90635704848b44a1337f8ea2f4ea4",
+    "settings" : {
+      "resolution" : "1280x720",
+      "warmupSeconds" : "10.0",
+      "sampleSeconds" : "30.0",
+      "samples" : "5",
+      "fixedDeltaSeconds" : "0.016666668",
+      "frameTime" : "CPU time of SceneRenderer.render (submission), not GPU time"
+    },
+    "stats" : {
+      "frames" : 6637,
+      "p50Ms" : 0.06825552222389633,
+      "p95Ms" : 0.19233305394003314,
+      "p99Ms" : 0.2572815032394154,
+      "samplesP95Ms" : [ 0.216458, 0.20225, 0.164583, 0.153666, 0.22475 ],
+      "allocatedBytesPerFrame" : 18898.075636582795,
+      "gcCount" : 3,
+      "gcMillis" : 3
+    },
+    "uploadWork" : 1,
+    "assetCounts" : {
+      "models" : 2,
+      "terrains" : 0
+    },
+    "coldLoadMs" : 159.6116987325592,
+    "reloadMs" : 108.39232373255919,
+    "gpuMs" : null
+  }, {
+    "name" : "foliage",
+    "status" : "MEASURED",
+    "reason" : null,
+    "sceneHash" : "e9107920308c6952e08b387f4060d53838e4d3070f8ace1d526a6997fa6f2883",
+    "settings" : {
+      "resolution" : "1280x720",
+      "warmupSeconds" : "10.0",
+      "sampleSeconds" : "30.0",
+      "samples" : "5",
+      "fixedDeltaSeconds" : "0.016666668",
+      "frameTime" : "CPU time of SceneRenderer.render (submission), not GPU time"
+    },
+    "stats" : {
+      "frames" : 6638,
+      "p50Ms" : 0.10365754489304006,
+      "p95Ms" : 0.2104891679722808,
+      "p99Ms" : 0.28900113618559803,
+      "samplesP95Ms" : [ 0.219584, 0.204375, 0.216083, 0.194708, 0.217708 ],
+      "allocatedBytesPerFrame" : 23135.039469719795,
+      "gcCount" : 1,
+      "gcMillis" : 2
+    },
+    "uploadWork" : 1,
+    "assetCounts" : {
+      "models" : 0,
+      "terrains" : 1
+    },
+    "coldLoadMs" : 197.02682373255925,
+    "reloadMs" : 126.38607373255923,
+    "gpuMs" : null
+  }, {
+    "name" : "stress",
+    "status" : "MEASURED",
+    "reason" : null,
+    "sceneHash" : "9cc85ea05de426dc529ccd8aeac66168049f1f0b164628c363ca902b74c2c011",
+    "settings" : {
+      "resolution" : "1280x720",
+      "warmupSeconds" : "10.0",
+      "sampleSeconds" : "30.0",
+      "samples" : "5",
+      "fixedDeltaSeconds" : "0.016666668",
+      "seed" : "20261016",
+      "placements" : "1000",
+      "frameTime" : "CPU time of SceneRenderer.render (submission), not GPU time",
+      "modelTriangles" : "23006000",
+      "foliageCopies" : "5000"
+    },
+    "stats" : {
+      "frames" : 654,
+      "p50Ms" : 218.51540101223242,
+      "p95Ms" : 224.77461862538223,
+      "p99Ms" : 232.39492360550463,
+      "samplesP95Ms" : [ 223.86425, 222.208125, 223.908583, 223.658833, 230.275292 ],
+      "allocatedBytesPerFrame" : 1.2351250385321101E7,
+      "gcCount" : 116,
+      "gcMillis" : 187
+    },
+    "uploadWork" : 3,
+    "assetCounts" : {
+      "models" : 1000,
+      "terrains" : 1
+    },
+    "coldLoadMs" : 5882.526739732559,
+    "reloadMs" : 4320.755323732559,
+    "gpuMs" : null
+  } ]
+}

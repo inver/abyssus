@@ -1,0 +1,62 @@
+{
+  "Fuselage | moulded outer envelope": {
+    "vertices": 9489,
+    "faces": 9390,
+    "non_manifold_edges": 0,
+    "bounds_mm": [
+      1065.0,
+      75.0,
+      118.073
+    ]
+  },
+  "Wing inboard | 740 mm": {
+    "vertices": 12672,
+    "faces": 12482,
+    "non_manifold_edges": 0,
+    "bounds_mm": [
+      340.0,
+      740.0,
+      61.998
+    ]
+  },
+  "Wing outboard | 710 mm": {
+    "vertices": 12672,
+    "faces": 12482,
+    "non_manifold_edges": 0,
+    "bounds_mm": [
+      340.0,
+      710.0,
+      61.998
+    ]
+  },
+  "Stabilizer left": {
+    "vertices": 12672,
+    "faces": 12482,
+    "non_manifold_edges": 0,
+    "bounds_mm": [
+      161.0,
+      345.0,
+      18.0
+    ]
+  },
+  "Stabilizer right": {
+    "vertices": 12672,
+    "faces": 12482,
+    "non_manifold_edges": 0,
+    "bounds_mm": [
+      161.0,
+      345.0,
+      18.0
+    ]
+  },
+  "Vertical fin and rudder": {
+    "vertices": 146,
+    "faces": 75,
+    "non_manifold_edges": 0,
+    "bounds_mm": [
+      201.086,
+      7.0,
+      220.0
+    ]
+  }
+}

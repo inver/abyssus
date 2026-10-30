@@ -1,0 +1,28 @@
+{
+  "importer": "model",
+  "source": "Sketchfab_2023_02_26_14_04_43.glb",
+  "sourcePath": "/Users/inv3r/Downloads/psx-style-chain-fence/source/Sketchfab_2023_02_26_14_04_43.glb",
+  "sourceSha256": "0494d8ff3063539c516fb760a8280069dea6dc38f3499334e67fd6d99ca24b10",
+  "sourceFormat": "GLB",
+  "stated": {
+    "unit": "m",
+    "upAxis": "Y"
+  },
+  "chosen": {
+    "unit": "m",
+    "upAxis": "Y"
+  },
+  "size": "original",
+  "animations": [],
+  "skipped": [
+    {
+      "item": "KHR_materials_ior",
+      "reason": "glTF extension"
+    },
+    {
+      "item": "KHR_materials_specular",
+      "reason": "glTF extension"
+    }
+  ],
+  "approximated": []
+}

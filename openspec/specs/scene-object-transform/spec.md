@@ -35,15 +35,20 @@ entities SHALL be drawn as small markers, with a direction line for directional 
 
 ### Requirement: Move and rotate modes
 
-The scene view SHALL have a Move and a Rotate mode, switched by a toolbar toggle or by W (Move) and E (Rotate) while
+The scene view SHALL have a Select, a Move and a Rotate mode, switched by a toolbar toggle or by Q (Select), W (Move) and E (Rotate) while
 the view has focus; Move SHALL be the initial mode. In Move mode the selected object SHALL show X, Y and Z arrows along
-the world axes; in Rotate mode, X, Y and Z rings around them. Handles SHALL keep a constant size on screen and be drawn
-on top of the scene.
+the world axes, or along the object's own axes when the view's space is Local; in Rotate mode, X, Y and Z rings around them. In Select mode the selected object SHALL show no handles.
+Handles SHALL keep a constant size on screen and be drawn on top of the scene.
 
 #### Scenario: Switch with keys
 
 - **WHEN** an object is selected and the user presses E, then W
 - **THEN** the rotate rings are shown, then the move arrows
+
+#### Scenario: Select shows no handles
+
+- **WHEN** an object is selected and the user presses Q
+- **THEN** the object stays highlighted and neither arrows nor rings are shown
 
 #### Scenario: Handles stay visible
 
@@ -69,7 +74,7 @@ Move mode. A directional or spot light that looks at a direction handle SHALL sh
 
 #### Scenario: Light aimed at its handle in Rotate mode
 
-- **WHEN** directional light `1` of `Lights/scenes/Mundus Lights.scene` (look-at handle `0`) is selected in Rotate mode
+- **WHEN** directional light `1` of `Lights/scenes/Abyssus Lights.scene` (look-at handle `0`) is selected in Rotate mode
 - **THEN** the X, Y and Z rings are shown
 
 ### Requirement: Dragging a move arrow
@@ -111,7 +116,8 @@ Releasing the mouse after a drag that changed the object SHALL write the new tra
 `PositionComponent.localPosition`; a rotation SHALL write `PositionComponent.localRotation`. For a camera, a move SHALL
 also write `CameraComponent.camera.position`, and a rotation `CameraComponent.camera.viewPointPosition`. For a light that
 looks at a direction handle, a rotation SHALL instead write the handle's `PositionComponent.localPosition`, in the same
-undoable edit, and leave the light's own `localRotation` unchanged.
+undoable edit, and leave the light's own `localRotation` unchanged. When the object is a copy placed by a path arrangement, the same
+undoable edit SHALL also detach it, as the `scene-path-arrangements` capability describes.
 
 #### Scenario: Move is written
 
@@ -131,7 +137,7 @@ undoable edit, and leave the light's own `localRotation` unchanged.
 
 #### Scenario: Turning a light aimed at its handle moves the handle
 
-- **WHEN** in `Lights/scenes/Mundus Lights.scene` the user turns directional light `1` (at (0, 10, 0), facing down at
+- **WHEN** in `Lights/scenes/Abyssus Lights.scene` the user turns directional light `1` (at (0, 10, 0), facing down at
   handle `0` at (0, 0, 0)) about X until it faces along -Z, and releases
 - **THEN** handle `0`'s `PositionComponent` gets a `localPosition` of about (0, 10, -10), light `1`'s
   `PositionComponent` is unchanged, and every other entity is unchanged
@@ -156,6 +162,12 @@ undoable edit, and leave the light's own `localRotation` unchanged.
 
 - **WHEN** the user presses on a handle and releases without moving the cursor
 - **THEN** nothing is written
+
+#### Scenario: Moving an arranged copy detaches it
+
+- **WHEN** the user moves copy `14`, slot `2` of path arrangement `Path 11`, along Z and releases
+- **THEN** in one undoable edit copy `14` gets its new `localPosition`, loses its `ParentComponent`, and slot `2` of
+  `Path 11` becomes `-1`; no other entity changes
 
 ### Requirement: Cancelling a drag
 
@@ -314,7 +326,8 @@ count as equal, so an object already resting on its surface SHALL NOT move and n
 
 A drop that moves an object SHALL write the new position to that entity in the scene's own `.scene` file as one
 undoable edit, keep the file's formatting, and change nothing else. It SHALL write `PositionComponent.localPosition.y`
-and, for a camera entity, `CameraComponent.camera.position`, exactly as a move along Y does.
+and, for a camera entity, `CameraComponent.camera.position`, exactly as a move along Y does. A drop of a copy placed by a path arrangement SHALL also detach it in the same
+undoable edit, exactly as a move does.
 
 #### Scenario: Only the height changes
 
@@ -333,6 +346,11 @@ and, for a camera entity, `CameraComponent.camera.position`, exactly as a move a
 - **WHEN** the user presses Undo in the scene view after a drop
 - **THEN** the file returns to its content before the drop and the object is drawn at its old place
 
+#### Scenario: Dropping an arranged copy detaches it
+
+- **WHEN** the user drops copy `13` of path arrangement `Path 11`
+- **THEN** copy `13`'s `localPosition.y` changes, it loses its `ParentComponent`, and its slot in `Path 11` becomes `-1`
+
 ### Requirement: Turning a light aimed at a direction handle
 
 Dragging a rotate ring of a directional or spot light that looks at a direction handle SHALL turn the light's direction
@@ -342,12 +360,12 @@ release, the light SHALL keep facing the turned direction, both in the scene vie
 
 #### Scenario: The turn is shown while dragging
 
-- **WHEN** the user drags the X ring of spot light `4` in `Lights/scenes/Mundus Lights.scene`
+- **WHEN** the user drags the X ring of spot light `4` in `Lights/scenes/Abyssus Lights.scene`
 - **THEN** its cone and direction line turn with the cursor during the drag
 
 #### Scenario: The turn stays after release
 
-- **WHEN** the user turns directional light `1` in `Lights/scenes/Mundus Lights.scene` and releases
+- **WHEN** the user turns directional light `1` in `Lights/scenes/Abyssus Lights.scene` and releases
 - **THEN** the light keeps facing the turned direction and doesn't jump back to its old one
 
 #### Scenario: Esc puts the handle back

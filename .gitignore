@@ -5,8 +5,13 @@ build
 .intellijPlatform
 idea-flex.skeleton
 jflex-1.7.0-2.jar
-src/main/gen
+projects/plugin-abyssus/src/main/gen
 .kotlin
 
 .kilo/worktrees
 .kilo/jetbrains.json
+
+.DS_Store
+__pycache__
+# machine-local launch file written by exportPlay (absolute classpath)
+projects/app-game-control-line/project/ControlLine/abyssus/play.json

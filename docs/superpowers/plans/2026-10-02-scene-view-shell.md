@@ -34,7 +34,7 @@
 
 ## File Structure
 
-New package `net.nevinsky.abyssus.sceneview` (`src/main/kotlin/net/nevinsky/abyssus/sceneview/`):
+New package `net.nevinsky.abyssus.plugin.sceneview` (`src/main/kotlin/net/nevinsky/abyssus/sceneview/`):
 
 | File | Responsibility |
 |---|---|
@@ -79,7 +79,7 @@ In `build.gradle.kts`, inside `dependencies { ... }` after the lwjgl block add:
 - [ ] **Step 2: Write the failing test**
 
 ```kotlin
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.plugin.sceneview
 
 import com.badlogic.gdx.Files
 import com.badlogic.gdx.Gdx
@@ -151,13 +151,13 @@ class GdxRuntimeTest {
 
 - [ ] **Step 3: Run test to verify it fails**
 
-Run: `./gradlew test --tests 'net.nevinsky.abyssus.sceneview.GdxRuntimeTest'`
+Run: `./gradlew test --tests 'net.nevinsky.abyssus.plugin.sceneview.GdxRuntimeTest'`
 Expected: FAIL to compile (`GdxRuntime`, `stubOf`, `GdxFrame` unresolved). If instead dependency resolution fails, fix the version/coordinates first (this also validates that `gdx-backend-lwjgl3` and `natives-desktop` resolve).
 
 - [ ] **Step 4: Write the implementation**
 
 ```kotlin
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.plugin.sceneview
 
 import com.badlogic.gdx.Application
 import com.badlogic.gdx.Files
@@ -306,16 +306,16 @@ object GdxRuntime {
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `./gradlew test --tests 'net.nevinsky.abyssus.sceneview.GdxRuntimeTest'`
+Run: `./gradlew test --tests 'net.nevinsky.abyssus.plugin.sceneview.GdxRuntimeTest'`
 Expected: PASS (5 tests). If `GdxNativesLoader.load()` fails, check `natives-desktop` is on the test runtime classpath.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add build.gradle.kts src/main/kotlin/net/nevinsky/abyssus/sceneview/GdxRuntime.kt src/test/kotlin/net/nevinsky/abyssus/sceneview/GdxRuntimeTest.kt
+git add app-game-control-line.gradle.kts src/main/kotlin/net/nevinsky/abyssus/sceneview/GdxRuntime.kt src/test/kotlin/net/nevinsky/abyssus/sceneview/GdxRuntimeTest.kt
 git commit -m "Add libGDX dependencies and GdxRuntime shim
 
-Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -- build.gradle.kts src/main/kotlin/net/nevinsky/abyssus/sceneview/GdxRuntime.kt src/test/kotlin/net/nevinsky/abyssus/sceneview/GdxRuntimeTest.kt
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -- app-game-control-line.gradle.kts src/main/kotlin/net/nevinsky/abyssus/sceneview/GdxRuntime.kt src/test/kotlin/net/nevinsky/abyssus/sceneview/GdxRuntimeTest.kt
 ```
 
 ---
@@ -327,7 +327,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -- build.gradle.kts s
 - Test: `src/test/kotlin/net/nevinsky/abyssus/sceneview/SceneRenderParamsTest.kt`
 
 **Interfaces:**
-- Consumes: `SceneDto`, `BaseLightDto`, `FogDto`, `ColorDto` (package `net.nevinsky.abyssus.scene`), `SceneReader.parse(text)` (package `net.nevinsky.abyssus.dto`).
+- Consumes: `SceneDto`, `BaseLightDto`, `FogDto`, `ColorDto` (package `net.nevinsky.abyssus.scene`), `SceneReader.parse(text)` (package `net.nevinsky.abyssus.plugin.dto`).
 - Produces:
   - `data class Vec3(val x: Float, val y: Float, val z: Float)`
   - `data class Rgba(val r: Float, val g: Float, val b: Float, val a: Float)`
@@ -339,9 +339,9 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -- build.gradle.kts s
 - [ ] **Step 1: Write the failing tests**
 
 ```kotlin
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.dto.SceneReader
+import net.nevinsky.abyssus.plugin.dto.SceneReader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -443,13 +443,13 @@ class SceneRenderParamsTest {
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `./gradlew test --tests 'net.nevinsky.abyssus.sceneview.SceneRenderParamsTest'`
+Run: `./gradlew test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneRenderParamsTest'`
 Expected: FAIL to compile (types unresolved).
 
 - [ ] **Step 3: Implement**
 
 ```kotlin
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.plugin.sceneview
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -544,7 +544,7 @@ object MainCamera {
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `./gradlew test --tests 'net.nevinsky.abyssus.sceneview.SceneRenderParamsTest'`
+Run: `./gradlew test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneRenderParamsTest'`
 Expected: PASS (11 tests).
 
 - [ ] **Step 5: Commit**
@@ -573,7 +573,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -- src/main/kotlin/ne
 - [ ] **Step 1: Write the failing tests**
 
 ```kotlin
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.plugin.sceneview
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -651,13 +651,13 @@ class OrbitCameraTest {
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `./gradlew test --tests 'net.nevinsky.abyssus.sceneview.OrbitCameraTest'`
+Run: `./gradlew test --tests 'net.nevinsky.abyssus.plugin.sceneview.OrbitCameraTest'`
 Expected: FAIL to compile.
 
 - [ ] **Step 3: Implement**
 
 ```kotlin
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.plugin.sceneview
 
 import kotlin.math.asin
 import kotlin.math.atan2
@@ -731,7 +731,7 @@ class OrbitCamera(var target: Vec3, var distance: Float, var yaw: Float, var pit
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `./gradlew test --tests 'net.nevinsky.abyssus.sceneview.OrbitCameraTest'`
+Run: `./gradlew test --tests 'net.nevinsky.abyssus.plugin.sceneview.OrbitCameraTest'`
 Expected: PASS (7 tests).
 
 - [ ] **Step 5: Commit**
@@ -762,7 +762,7 @@ There is no GL unit test (no GL in CI); correctness is checked by compilation he
 - [ ] **Step 1: Write `SceneRenderer.kt`**
 
 ```kotlin
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.plugin.sceneview
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
@@ -878,7 +878,7 @@ class SceneRenderer : Disposable {
 - [ ] **Step 2: Write `SceneViewPanel.kt`**
 
 ```kotlin
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.plugin.sceneview
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3GL20
@@ -1021,7 +1021,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -- src/main/kotlin/ne
 - Test: `src/test/kotlin/net/nevinsky/abyssus/sceneview/SceneFileEditorTest.kt`
 
 **Interfaces:**
-- Consumes: `SceneViewPanel`, `SceneRenderParams`, `MainCamera` (Tasks 2, 4); `SceneReader.readScene(file): Result<SceneDto>` (existing, package `net.nevinsky.abyssus.dto`); `AbyssusBundle.message`.
+- Consumes: `SceneViewPanel`, `SceneRenderParams`, `MainCamera` (Tasks 2, 4); `SceneReader.readScene(file): Result<SceneDto>` (existing, package `net.nevinsky.abyssus.plugin.dto`); `AbyssusBundle.message`.
 - Produces:
   - `class SceneFileEditorProvider : FileEditorProvider, DumbAware` with `companion const val EDITOR_TYPE_ID = "abyssus-scene-view"`
   - `class SceneFileEditor(project: Project, file: VirtualFile) : UserDataHolderBase(), FileEditor` with `internal val statusText: String?` (non-null when the tab shows a message instead of a render)
@@ -1040,7 +1040,7 @@ viewSceneTooltip=View scene
 - [ ] **Step 2: Write the failing test**
 
 ```kotlin
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.plugin.sceneview
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
@@ -1086,13 +1086,13 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
 - [ ] **Step 3: Run to verify failure**
 
-Run: `./gradlew test --tests 'net.nevinsky.abyssus.sceneview.SceneFileEditorTest'`
+Run: `./gradlew test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneFileEditorTest'`
 Expected: FAIL to compile.
 
 - [ ] **Step 4: Implement `SceneFileEditor.kt`**
 
 ```kotlin
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.plugin.sceneview
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.thisLogger
@@ -1112,7 +1112,7 @@ import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.ui.components.JBLabel
 import net.nevinsky.abyssus.AbyssusBundle
-import net.nevinsky.abyssus.dto.SceneReader
+import net.nevinsky.abyssus.plugin.dto.SceneReader
 import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
 import javax.swing.JComponent
@@ -1208,7 +1208,7 @@ Note: `Disposer.dispose(panel)` works because `SceneViewPanel` is a `Disposable`
 - [ ] **Step 5: Implement `SceneViewActions.kt`**
 
 ```kotlin
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.plugin.sceneview
 
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
@@ -1229,12 +1229,12 @@ If `FileEditorManager.setSelectedEditor` does not compile on 2025.2.4, use `(man
 Inside `<extensions defaultExtensionNs="com.intellij">`, after the `projectViewPane` line:
 
 ```xml
-        <fileEditorProvider implementation="net.nevinsky.abyssus.sceneview.SceneFileEditorProvider"/>
+        <fileEditorProvider implementation="net.nevinsky.abyssus.plugin.sceneview.SceneFileEditorProvider"/>
 ```
 
 - [ ] **Step 7: Run tests**
 
-Run: `./gradlew test --tests 'net.nevinsky.abyssus.sceneview.SceneFileEditorTest'`
+Run: `./gradlew test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneFileEditorTest'`
 Expected: PASS (4 tests).
 
 - [ ] **Step 8: First visual check (temporary hook, not committed)**
@@ -1272,7 +1272,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -- src/main/kotlin/ne
 - [ ] **Step 1: Write the failing test**
 
 ```kotlin
-package net.nevinsky.abyssus.sceneview
+package net.nevinsky.abyssus.plugin.sceneview
 
 import com.intellij.ide.projectView.PresentationData
 import com.intellij.ide.projectView.ViewSettings
@@ -1339,7 +1339,7 @@ class SceneRowActionTest : BasePlatformTestCase() {
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `./gradlew test --tests 'net.nevinsky.abyssus.sceneview.SceneRowActionTest'`
+Run: `./gradlew test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneRowActionTest'`
 Expected: FAIL to compile (`sceneFileOf` unresolved).
 
 - [ ] **Step 3: Add `sceneFileOf` to `AbyssusNodes.kt`**
@@ -1376,7 +1376,7 @@ object SceneViewIcons {
 
 - [ ] **Step 5: Replace `EyeTree` with `RowActionTree` in `AbyssusProjectViewPane.kt`**
 
-Change `createTree` to `= RowActionTree(treeModel, myProject)`, add imports `net.nevinsky.abyssus.filetype.SceneViewIcons`, `net.nevinsky.abyssus.sceneview.openSceneView`, `com.intellij.openapi.vfs.VirtualFile`, `java.awt.event.MouseEvent` (already), `javax.swing.ToolTipManager`, and replace the whole `EyeTree` class (from its KDoc to the end of file) with:
+Change `createTree` to `= RowActionTree(treeModel, myProject)`, add imports `net.nevinsky.abyssus.plugin.filetype.SceneViewIcons`, `net.nevinsky.abyssus.plugin.sceneview.openSceneView`, `com.intellij.openapi.vfs.VirtualFile`, `java.awt.event.MouseEvent` (already), `javax.swing.ToolTipManager`, and replace the whole `EyeTree` class (from its KDoc to the end of file) with:
 
 ```kotlin
 private class RowAction(val icon: Icon, val tooltip: String?, val run: () -> Unit)
@@ -1448,7 +1448,7 @@ Remove the now-unused `VirtualFile` import if you added it speculatively.
 
 - [ ] **Step 6: Run the new and existing view tests**
 
-Run: `./gradlew test --tests 'net.nevinsky.abyssus.sceneview.SceneRowActionTest' --tests 'net.nevinsky.abyssus.AbyssusViewTest'`
+Run: `./gradlew test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneRowActionTest' --tests 'net.nevinsky.abyssus.AbyssusViewTest'`
 Expected: PASS (new 5 + all existing; the eye-toggle behavior is unchanged).
 
 - [ ] **Step 7: Manual check**

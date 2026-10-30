@@ -1,0 +1,125 @@
+[versions]
+lwjgl = "3.4.3"
+lwjgl-awt = "0.2.5"
+gdx = "1.14.2"
+jolt = "6.1.1"
+ashley = "1.7.4"
+
+junit = "6.1.3"
+junit4 = "4.13.2"
+slf4j = "2.0.20"
+jackson-databind = "2.22.3"
+
+
+commons-cli = "1.9.0"
+lombok = "1.18.34"
+caffeine = "3.1.8"
+postgresql = "42.7.3"
+commons-collections4 = "4.4"
+commons-lang3 = "3.16.0"
+commons-io = "2.16.1"
+mapstruct = "1.6.2"
+okhttp = "4.12.0"
+jjwt-api = "0.12.6"
+jjwt-impl = "0.12.6"
+jjwt-jackson = "0.12.6"
+jsoup = "1.8.1"
+jericho-html = "3.3"
+springdoc-openapi-starter-webmvc-ui = "2.6.0"
+google-api-client = "1.30.10"
+jaxb-impl-sun = "2.3.2"
+jaxb-core-sun = "2.3.0.1"
+httpclient-apache = "4.5.7"
+swc-engine = "2.0.0"
+minio = "8.3.4"
+jakarta-validation-api = "3.0.2"
+hibernate-validator = "8.0.1.Final"
+telegrambots-spring-boot-starter = "6.9.7.1"
+slf4j-api = "1.7.26"
+testcontainers = "1.21.4"
+jackson-databind-nullable = "0.2.6"
+swagger-annotations-jakarta = "2.2.25"
+spring-data-commons = "3.3.6"
+
+[libraries]
+lwjgl-bom = { module = "org.lwjgl:lwjgl-bom", version.ref = "lwjgl" }
+lwjgl-tinyexr = { module = "org.lwjgl:lwjgl-tinyexr" }
+lwjgl-assimp = { module = "org.lwjgl:lwjgl-assimp" }
+lwjgl-opengl = { module = "org.lwjgl:lwjgl-opengl" }
+lwjgl-vulkan = { module = "org.lwjgl:lwjgl-vulkan" }
+lwjgl-vma = { module = "org.lwjgl:lwjgl-vma" }
+lwjgl = { module = "org.lwjgl:lwjgl" }
+lwjgl-awt = { module = "org.lwjglx:lwjgl3-awt", version.ref = "lwjgl-awt" }
+
+gdx-platform = { module = "com.badlogicgames.gdx:gdx-platform", version.ref = "gdx" }
+gdx = { module = "com.badlogicgames.gdx:gdx" }
+gdx-backend-lwjgl3 = { module = "com.badlogicgames.gdx:gdx-backend-lwjgl3" }
+
+jolt-jni = { module = "com.github.stephengold:jolt-jni", version.ref = "jolt" }
+ashley = { module = "com.badlogicgames.ashley:ashley", version.ref = "ashley" }
+
+junit-platform = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+# every module's tests are JUnit 4 (the IntelliJ test framework runs them too)
+junit4 = { module = "junit:junit", version.ref = "junit4" }
+
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson-databind" }
+jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson-databind" }
+
+
+
+
+
+
+
+
+
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+spring-boot-starter-data-jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
+spring-boot-starter-security = { module = "org.springframework.boot:spring-boot-starter-security" }
+spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-security-test = { module = "org.springframework.security:spring-security-test" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+spring-boot-starter-liquibase = { module = "org.springframework.boot:spring-boot-starter-liquibase" }
+spring-cloud-starter-feign = { module = "org.springframework.cloud:spring-cloud-starter-openfeign" }
+ok-http-client = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+ok-http-client-logging = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp" }
+apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commons-lang3" }
+apache-commons-collections4 = { module = "org.apache.commons:commons-collections4", version.ref = "commons-collections4" }
+apache-commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
+spring-security-oauth2-client = { module = "org.springframework.security:spring-security-oauth2-client" }
+spring-security-oauth2-jose = { module = "org.springframework.security:spring-security-oauth2-jose" }
+jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt-api" }
+jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt-impl" }
+jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt-jackson" }
+jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
+jericho-html = { module = "net.htmlparser.jericho:jericho-html", version.ref = "jericho-html" }
+mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapstruct" }
+mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.ref = "mapstruct" }
+springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc-openapi-starter-webmvc-ui" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+google-api-client = { module = "com.google.api-client:google-api-client", version.ref = "google-api-client" }
+jaxb-impl-sun = { module = "com.sun.xml.bind:jaxb-impl", version.ref = "jaxb-impl-sun" }
+jaxb-core-sun = { module = "com.sun.xml.bind:jaxb-core", version.ref = "jaxb-core-sun" }
+httpclient-apache = { module = "org.apache.httpcomponents:httpclient", version.ref = "httpclient-apache" }
+swc-engine = { module = "org.sweble.wikitext:swc-engine", version.ref = "swc-engine" }
+minio = { module = "io.minio:minio", version.ref = "minio" }
+jakarta-validation-api = { module = "jakarta.validation:jakarta.validation-api", version.ref = "jakarta-validation-api" }
+hibernate-validator = { module = "org.hibernate.validator:hibernate-validator", version.ref = "hibernate-validator" }
+telegrambots-spring-boot-starter = { module = "org.telegram:telegrambots-spring-boot-starter", version.ref = "telegrambots-spring-boot-starter" }
+jackson-databind-nullable = { module = "org.openapitools:jackson-databind-nullable", version.ref = "jackson-databind-nullable" }
+swagger-annotations-jakarta = { module = "io.swagger.core.v3:swagger-annotations-jakarta", version.ref = "swagger-annotations-jakarta" }
+spring-boot-starter-cache = { module = "org.springframework.boot:spring-boot-starter-cache" }
+caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
+commons-cli = { module = "commons-cli:commons-cli", version.ref = "commons-cli" }
+spring-data-commons = { module = "org.springframework.data:spring-data-commons", version.ref = "spring-data-commons" }
+spring-boot-starter-kafka = { module = "org.springframework.boot:spring-boot-starter-kafka" }
+testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
+spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
+
+[bundles]
+apache-commons = ["apache-commons-lang3", "apache-commons-collections4", "apache-commons-io"]
+
+[plugins]

@@ -1,0 +1,100 @@
+# Spec Delta
+
+## MODIFIED Requirements
+
+### Requirement: Scene geometry casts and receives shadows
+
+Displayed opaque and alpha-tested models and terrain SHALL cast and receive shadows from supported directional, point and spot lights selected within the shadow budget. Displayed foliage copies of OBJECT layers SHALL cast and receive shadows like models; copies of DETAIL layers SHALL receive shadows and SHALL NOT cast them. Editor grids, sky backgrounds, camera and light markers, selection highlights and gizmos SHALL NOT cast or receive shadows. The only exception is the clouds of a procedural sky, which SHALL cast cloud shadows as defined in "Clouds cast shadows from the sun".
+
+#### Scenario: Model shadows terrain
+- **WHEN** a model stands between a shadowed light and a terrain surface
+- **THEN** the model casts a shadow on the terrain
+
+#### Scenario: Model shadows another model
+- **WHEN** one model blocks a shadowed light from another model
+- **THEN** the receiving model shows the shadow
+
+#### Scenario: Terrain occludes a light
+- **WHEN** a terrain ridge blocks a shadowed light from a model or another terrain surface
+- **THEN** the blocked surface shows the shadow
+
+#### Scenario: Point light coverage
+- **WHEN** objects surround a shadowed point light on different sides
+- **THEN** objects can cast shadows in every direction around the light
+
+#### Scenario: Spotlight coverage
+- **WHEN** an object blocks a shadowed spotlight within its cone
+- **THEN** surfaces behind the object within the cone show a shadow
+
+#### Scenario: Foliage trees shadow the terrain
+- **WHEN** foliage trees of an OBJECT layer stand between a shadowed directional light and the terrain
+- **THEN** the trees cast shadows on the terrain and on each other
+
+#### Scenario: Grass does not cast
+- **WHEN** DETAIL-layer grass stands in the shadow of a foliage tree
+- **THEN** the grass is darkened by the tree's shadow and casts no shadow of its own
+
+#### Scenario: Painted foliage shadows
+- **WHEN** the user paints new copies of an OBJECT layer
+- **THEN** their shadows appear with them during the stroke
+
+## ADDED Requirements
+
+### Requirement: Clouds cast shadows from the sun
+
+While the scene's procedural sky draws enabled clouds, terrain and models SHALL be shaded by the clouds between them
+and the sun, the brightest usable directional light. The shade SHALL drift with each band's wind, match where the sky shows
+clouds, attenuate only the sun light, and combine with that light's own scene shadow. Within the cloud shadow area, it
+SHALL replace the uniform sun dimming of `scene-entity-lights`; beyond it, that dimming SHALL apply.
+
+#### Scenario: Moving cloud shadows
+
+- **WHEN** a copy of `Main Scene` uses `skybox_physical` naming a cloud asset made from the fair template and the view stays open for ten
+  seconds
+- **THEN** dark patches move across the terrain along the low band's wind direction
+
+#### Scenario: Outside the shadow area
+
+- **WHEN** a surface lies beyond the cloud shadow area
+- **THEN** the existing uniform sun dimming applies, with a smooth transition at the boundary
+
+#### Scenario: Shadow resource failure
+
+- **WHEN** a cloud shadow resource cannot be built
+- **THEN** uniform sun dimming continues, the view remains interactive, and no modal error appears
+
+#### Scenario: Sun not rendered
+
+- **WHEN** the brightest usable directional light is outside the rendered light budget, or no usable directional light exists
+- **THEN** cloud shadows do not attenuate a different light
+
+#### Scenario: Cloud asset reload
+
+- **WHEN** the cloud asset is changed or removed while the view remains open
+- **THEN** cloud shadows follow the newly displayed clouds, and no stale cloud pattern remains
+
+#### Scenario: Only the sun is shaded
+
+- **WHEN** a copy of `Main Scene` makes entity `7` the brightest usable directional light within the light budget,
+  and a cloud shadow covers the part of the terrain that `Spot Light 8` lights
+- **THEN** entity `7`'s (the sun's) contribution is reduced there and the spot light's is unchanged
+
+#### Scenario: Combined with a model shadow
+
+- **WHEN** `Model 0` already shadows terrain from the sun and a cloud shadow passes over the same spot
+- **THEN** the spot is no darker than the sun's absence allows; ambient, sky and other lights still light it
+
+#### Scenario: No double dimming
+
+- **WHEN** the orbit target lies inside the cloud shadow area under a cloud
+- **THEN** surfaces there are dimmed by the cloud shadow only, not also by the uniform sun dimming
+
+#### Scenario: Clouds disabled
+
+- **WHEN** the sky's clouds are disabled or the scene has no procedural sky
+- **THEN** no cloud shadows are drawn and shadows are as before this change
+
+#### Scenario: Cloud drawing failed
+
+- **WHEN** every cloud drawing technique has failed and the sky is drawn without clouds
+- **THEN** no cloud shadows remain on models or terrain

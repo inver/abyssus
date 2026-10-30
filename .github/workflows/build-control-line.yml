@@ -1,0 +1,145 @@
+name: Build Control Line distributions
+
+# Native packages (deb, rpm, AppImage, msi, dmg) each need a runner of their own OS and architecture, because jpackage cannot
+# cross-build; the universal zip is built beside the Linux packages. Packages are unsigned. Pull requests build everything
+# and publish nothing; only a successful build of every platform on main replaces the canary release.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # A running main build may be mid-release; only superseded pull request builds are cancelled
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64 (deb, rpm, AppImage)
+            os: ubuntu-22.04 # the older glibc is the floor of the AppImage
+            artifact: linux-x64
+            tasks: ":app-game-control-line:packageDeb :app-game-control-line:packageRpm :app-game-control-line:packageAppImage"
+            paths: |
+              projects/app-game-control-line/build/packaging/deb/*.deb
+              projects/app-game-control-line/build/packaging/rpm/*.rpm
+              projects/app-game-control-line/build/packaging/appimage/*.AppImage
+          - name: Windows x64 (msi)
+            os: windows-latest
+            artifact: windows-x64
+            tasks: ":app-game-control-line:packageMsi"
+            paths: projects/app-game-control-line/build/packaging/msi/*.msi
+          - name: macOS arm64 (dmg)
+            os: macos-latest # Apple silicon
+            artifact: macos-arm64
+            tasks: ":app-game-control-line:packageDmg"
+            paths: projects/app-game-control-line/build/packaging/dmg/*.dmg
+          - name: macOS Intel x64 (dmg)
+            os: macos-15-intel # an Intel runner; check the label against GitHub's list if the job never starts
+            artifact: macos-x64
+            tasks: ":app-game-control-line:packageDmg"
+            paths: projects/app-game-control-line/build/packaging/dmg/*.dmg
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Install Linux packaging tools
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fakeroot rpm desktop-file-utils xvfb libgl1-mesa-dri libgl1 libasound2
+
+      # jpackage 21 builds an .msi with WiX 3.x; the runner image may already ship a 3.14.1 build
+      - name: Install WiX Toolset
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          if command -v candle.exe >/dev/null 2>&1 || ls -d "/c/Program Files (x86)"/WiX*3*/bin/candle.exe >/dev/null 2>&1; then
+            echo "WiX 3.x already installed"
+            for d in "/c/Program Files (x86)"/WiX*3*/bin; do
+              [ -d "$d" ] && cygpath -w "$d" >> "$GITHUB_PATH"
+            done
+          else
+            choco install wixtoolset --version=3.14.1 --no-progress -y
+          fi
+
+      # The package version must be numeric (.msi) and a newer canary must upgrade an installed one: 1.0.<run number>
+      - name: Build packages
+        shell: bash
+        run: ./gradlew ${{ matrix.tasks }} -PcontrolLineVersion=1.0.${{ github.run_number }} --no-daemon
+
+      - name: Smoke test Linux packages
+        if: runner.os == 'Linux'
+        run: scripts/smoke-control-line-linux.sh
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: control-line-${{ matrix.artifact }}
+          path: ${{ matrix.paths }}
+          if-no-files-found: error
+          retention-days: 30
+
+      # One archive for Windows, macOS and Linux with a system Java: natives of every platform, the macOS launch flag chosen at start
+      - name: Build universal distribution
+        if: runner.os == 'Linux'
+        run: ./gradlew :app-game-control-line:distZip -Pabyssus.universalDist=true --no-daemon
+
+      - name: Upload universal distribution
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: control-line-universal
+          path: projects/app-game-control-line/build/distributions/*.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  # Only when every platform built: a failed platform leaves the previous canary in place
+  publish:
+    name: Publish canary release
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: control-line-*
+          merge-multiple: true
+          path: dist
+
+      # Rolling pre-release: the previous canary and its tag are replaced by the build of this commit
+      - name: Publish canary release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          short_sha="${GITHUB_SHA::7}"
+          ls -lR dist
+          # Some artifacts keep a subfolder (appimage/, deb/, rpm/); gh needs files, not directories
+          mapfile -t assets < <(find dist -type f | sort)
+          gh release delete canary --cleanup-tag --yes || true
+          gh release create canary "${assets[@]}" \
+            --target "$GITHUB_SHA" \
+            --title "Control Line canary ($short_sha)" \
+            --notes "Automated build of \`main\` at $GITHUB_SHA: .deb, .rpm and .AppImage (Linux x64), .msi (Windows x64), .dmg (macOS arm64 and Intel), each with its own Java runtime, and a universal .zip that needs Java. The packages are not signed, so Windows SmartScreen and macOS Gatekeeper warn on first start; see the game's README. May be unstable." \
+            --prerelease

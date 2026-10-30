@@ -1,0 +1,24 @@
+{
+  "generator": "games/control-line/project/environment/build_environment.py",
+  "license": "CC0-1.0",
+  "description": "Five-storey panel apartment block (64 x 12 m) of the eastern residential background.",
+  "materials": {
+    "walls": "https://ambientcg.com/view?id=Concrete034",
+    "plinth and roof": "https://ambientcg.com/view?id=Concrete036",
+    "doors": "https://ambientcg.com/view?id=Planks037A"
+  },
+  "triangles": 478,
+  "bounds": {
+    "min": [
+      -32.040000915527344,
+      -0.5,
+      -7.199999809265137
+    ],
+    "max": [
+      32.040000915527344,
+      15.600000381469727,
+      6.039999961853027
+    ]
+  },
+  "sha256": "ea1092718005521f82318bd541aa13a31ec9de5be6c155e19fd676b207cef797"
+}

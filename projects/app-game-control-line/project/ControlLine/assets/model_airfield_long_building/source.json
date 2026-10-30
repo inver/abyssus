@@ -1,0 +1,24 @@
+{
+  "generator": "games/control-line/project/environment/build_environment.py",
+  "license": "CC0-1.0",
+  "description": "Long single-storey service building south-east of the field.",
+  "materials": {
+    "walls": "https://ambientcg.com/view?id=Plaster002",
+    "roof": "https://ambientcg.com/view?id=Concrete036",
+    "doors": "https://ambientcg.com/view?id=CorrugatedSteel005"
+  },
+  "triangles": 70,
+  "bounds": {
+    "min": [
+      -22.25,
+      -0.5,
+      -5.25
+    ],
+    "max": [
+      22.25,
+      4.300000190734863,
+      5.25
+    ]
+  },
+  "sha256": "dd46d618f630dc292aebd52650d01bb82b66a7de98a69d4033f022050ab8cea6"
+}

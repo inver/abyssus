@@ -1,0 +1,26 @@
+{
+  "author": {
+    "Rob Tuytel": "guidance",
+    "Rico Cilliers": "All"
+  },
+  "license": "CC0-1.0",
+  "sourcePage": "https://polyhaven.com/a/jacaranda_tree",
+  "sourceFile": "jacaranda_tree_1k.gltf",
+  "sha256Source": "ba4aa8ab4c3e3741ce3699604d6ec1607cd6b126ae2d32abbcc0d98e8edb3be4",
+  "use": "wide-crowned tree (white acacia stand-in)",
+  "note": "Reduced for the game: 8.0% of the leaf clusters kept and enlarged x2.8, the 200 largest branch pieces kept, then collapsed (leaves x0.12, branches x0.2, trunk x0.03); scaled to 12.0 m; textures resized, ARM map dropped, leaves opaque and two-sided.",
+  "triangles": 41758,
+  "bounds": {
+    "min": [
+      -7.8994011878967285,
+      -0.005252735689282417,
+      -5.962716102600098
+    ],
+    "max": [
+      7.193275451660156,
+      12.078782081604004,
+      6.11519718170166
+    ]
+  },
+  "sha256": "5180cf68be898ab7667841cc47bc321b723ddf0f87bda2f15a6d37cfddea5d56"
+}

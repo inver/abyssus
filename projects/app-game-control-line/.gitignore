@@ -1,0 +1,2 @@
+# Holds absolute paths of the build machine: written by ./gradlew :games:control-line:exportAbyssus
+project/ControlLine/abyssus/play.json

@@ -1,0 +1,16 @@
+[
+  {
+    "case": "untitled",
+    "beforeSha256": "ad602fa79ac0369f444de479716bc4b66005ab5db679099121349385e8b5e121",
+    "afterSha256": "ad602fa79ac0369f444de479716bc4b66005ab5db679099121349385e8b5e121",
+    "identical": true,
+    "repeatedRuns": 5
+  },
+  {
+    "case": "control-line-field",
+    "beforeSha256": "82026ce159919804ca228477e32b5c3e39f010fcc5944b744a0dec0b0160b720",
+    "afterSha256": "82026ce159919804ca228477e32b5c3e39f010fcc5944b744a0dec0b0160b720",
+    "identical": true,
+    "repeatedRuns": 5
+  }
+]

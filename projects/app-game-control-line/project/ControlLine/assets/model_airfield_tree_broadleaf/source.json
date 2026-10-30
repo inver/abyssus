@@ -1,0 +1,26 @@
+{
+  "author": {
+    "Rob Tuytel": "scanning, processing",
+    "Rico Cilliers": "cleanup, processing"
+  },
+  "license": "CC0-1.0",
+  "sourcePage": "https://polyhaven.com/a/island_tree_01",
+  "sourceFile": "island_tree_01_1k.gltf",
+  "sha256Source": "78e905a40670bfabb2760601d4d9a6c17193a50d68e6271c66893eb7bd75906d",
+  "use": "broadleaf tree (elm/oak stand-in)",
+  "note": "Reduced for the game: 13.0% of the leaf clusters kept and enlarged x2.6, the 300 largest branch pieces kept, then collapsed (leaves x0.12, branches x0.2, trunk x0.1); scaled to 9.5 m; textures resized, ARM map dropped, leaves opaque and two-sided.",
+  "triangles": 27064,
+  "bounds": {
+    "min": [
+      -4.36566686630249,
+      0.0008500482072122395,
+      -4.641001224517822
+    ],
+    "max": [
+      4.601334095001221,
+      9.483583450317383,
+      4.386968612670898
+    ]
+  },
+  "sha256": "325fbd7cc7abf87db05be865d046fa9a9b764eb9cd0a15933ec2776db622face"
+}

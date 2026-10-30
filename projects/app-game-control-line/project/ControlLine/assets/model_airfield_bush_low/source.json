@@ -1,0 +1,26 @@
+{
+  "author": {
+    "Rob Tuytel": "scanning, processing",
+    "Rico Cilliers": "cleanup, processing"
+  },
+  "license": "CC0-1.0",
+  "sourcePage": "https://polyhaven.com/a/island_tree_03",
+  "sourceFile": "island_tree_03_1k.gltf",
+  "sha256Source": "5efbe24ad6fc769db55ac771eec7a2ee7aa389c5667656f279d0743e455ef04a",
+  "use": "low steppe bush",
+  "note": "Reduced for the game: 6.0% of the leaf clusters kept and enlarged x2.4, the 80 largest branch pieces kept, then collapsed (leaves x0.12, branches x0.25, trunk x0.06); scaled to 1.8 m; textures resized, ARM map dropped, leaves opaque and two-sided.",
+  "triangles": 13725,
+  "bounds": {
+    "min": [
+      -0.8988693952560425,
+      0.0013386857463046908,
+      -1.0730940103530884
+    ],
+    "max": [
+      1.135882019996643,
+      1.8008599281311035,
+      0.9205372929573059
+    ]
+  },
+  "sha256": "67caadec162e250f030a39b0f3fe8b27a954f1b78eb5009b5f5fd9ea0dfa0687"
+}

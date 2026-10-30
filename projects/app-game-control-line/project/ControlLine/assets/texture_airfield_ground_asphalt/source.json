@@ -1,0 +1,9 @@
+{
+  "author": "ambientCG (Lennart Demes)",
+  "license": "CC0-1.0",
+  "sourcePage": "https://ambientcg.com/view?id=Road012A",
+  "sourceFile": "Road012A_2K-JPG_Color.jpg",
+  "sha256": "e2a664bb82ddfedafbc88735a4a4faf09d81f43d10de0c914e390a766acde6c3",
+  "use": "terrain G: street asphalt",
+  "note": "Colour map resized to 1024 px."
+}

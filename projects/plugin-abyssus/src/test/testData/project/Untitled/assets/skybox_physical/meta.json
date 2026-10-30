@@ -1,0 +1,19 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "version": 1,
+  "lastModified": 1663444124794,
+  "type": "SKYBOX_PROCEDURAL",
+  "additional": {
+    "vertex": "sky.vert",
+    "fragment": "sky.frag",
+    "planetRadius": 6360000.0,
+    "atmosphereRadius": 6420000.0,
+    "betaRayleigh": [5.8e-6, 13.5e-6, 33.1e-6],
+    "betaMie": 21e-6,
+    "heightRayleigh": 8000.0,
+    "heightMie": 1200.0,
+    "mieG": 0.76,
+    "sunIntensity": 20.0
+  }
+}

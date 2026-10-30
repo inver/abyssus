@@ -1,0 +1,25 @@
+{
+  "generator": "games/control-line/project/environment/build_environment.py",
+  "license": "CC0-1.0",
+  "description": "Single-storey private house with a gable roof, for the residential edges and gardens.",
+  "materials": {
+    "walls": "https://ambientcg.com/view?id=Plaster002",
+    "plinth": "https://ambientcg.com/view?id=Concrete036",
+    "roof": "https://ambientcg.com/view?id=RoofingTiles006",
+    "door": "https://ambientcg.com/view?id=Planks037A"
+  },
+  "triangles": 40,
+  "bounds": {
+    "min": [
+      -4.900000095367432,
+      -0.5,
+      -3.9000000953674316
+    ],
+    "max": [
+      4.900000095367432,
+      5.300000190734863,
+      3.9000000953674316
+    ]
+  },
+  "sha256": "57532f15572728eb3a50c0af2032a7770bda2b58e3d449f0a9c4204f72e86233"
+}

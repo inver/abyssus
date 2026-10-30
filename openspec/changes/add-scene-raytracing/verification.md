@@ -56,12 +56,12 @@ The following failures depend on those fixture assumptions:
 - `net.nevinsky.abyssus.ecs.SceneEcsLoaderTest.mainSceneLoads`: java.lang.AssertionError: expected:<7> but was:<9>
 - `net.nevinsky.abyssus.projectView.SceneTransformEditTest.testMoveKeepsIndentationAndEveryOtherLine`: junit.framework.AssertionFailedError: [44, 45] expected:<1> but was:<2>
 - `net.nevinsky.abyssus.projectView.SceneTransformEditTest.testNothingIsWrittenWhenTheEditChangesNothing`: junit.framework.AssertionFailedError
-- `net.nevinsky.abyssus.sceneview.SceneContentTest.mainSceneHasThreeModelsAndOneTerrain`: java.lang.AssertionError
-- `net.nevinsky.abyssus.sceneview.SceneContentTest.mainSceneHasTheFixtureCamera`: java.lang.AssertionError: expected:<Vec3(x=0.0, y=0.0, z=0.0)> but was:<Vec3(x=0.0, y=5.520455, z=0.0)>
-- `net.nevinsky.abyssus.sceneview.SceneMarkersTest.theViewCameraHasNoMarkerTarget`: java.lang.AssertionError
-- `net.nevinsky.abyssus.sceneview.SceneMarkersTest.aCameraDrawsABodyAndAFrustum`: java.lang.AssertionError: expected:<28> but was:<54>
-- `net.nevinsky.abyssus.sceneview.SceneRendererCameraTest.lookingThroughACameraUsesItsPositionDirectionAndLens`: java.lang.AssertionError: expected:<0.8857895> but was:<0.96025884>
-- `net.nevinsky.abyssus.sceneview.SceneTransformWriterTest.movingAnEntityChangesOnlyItsLocalPositionX`: org.junit.ComparisonFailure: expected:<[3.086434]> but was:<[0.9123962]>
+- `net.nevinsky.abyssus.plugin.sceneview.SceneContentTest.mainSceneHasThreeModelsAndOneTerrain`: java.lang.AssertionError
+- `net.nevinsky.abyssus.plugin.sceneview.SceneContentTest.mainSceneHasTheFixtureCamera`: java.lang.AssertionError: expected:<Vec3(x=0.0, y=0.0, z=0.0)> but was:<Vec3(x=0.0, y=5.520455, z=0.0)>
+- `net.nevinsky.abyssus.plugin.sceneview.SceneMarkersTest.theViewCameraHasNoMarkerTarget`: java.lang.AssertionError
+- `net.nevinsky.abyssus.plugin.sceneview.SceneMarkersTest.aCameraDrawsABodyAndAFrustum`: java.lang.AssertionError: expected:<28> but was:<54>
+- `net.nevinsky.abyssus.plugin.sceneview.SceneRendererCameraTest.lookingThroughACameraUsesItsPositionDirectionAndLens`: java.lang.AssertionError: expected:<0.8857895> but was:<0.96025884>
+- `net.nevinsky.abyssus.plugin.sceneview.SceneTransformWriterTest.movingAnEntityChangesOnlyItsLocalPositionX`: org.junit.ComparisonFailure: expected:<[3.086434]> but was:<[0.9123962]>
 
 Task 5.5 remains unchecked: the full suite is not green and the platform/manual
 checks have not been performed. Implementation is paused before task 1.3 pending
@@ -390,7 +390,7 @@ reflection retry is recorded above; it is not a substitute for complete gate tim
 `UnsatisfiedLinkError` (`Matrix4.prj`) because the `PerspectiveCamera` fixture needs the libGDX natives.
 Added `GdxNativesLoader.load()` in the test's `init`, as `SceneRendererCameraTest` does.
 
-`./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.RaySceneSnapshotTest'` now passes 9/9, no skips:
+`./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.RaySceneSnapshotTest'` now passes 9/9, no skips:
 drag preview (transforms only, shared geometry), mesh parts/channels/32-bit indices, selected-light identity and
 order, camera look-through, asset deletion and project replacement as structural rebuilds, resource limits as
 explicit fallback, pending/failed assets, environment/fog, and companion lease sharing/release.

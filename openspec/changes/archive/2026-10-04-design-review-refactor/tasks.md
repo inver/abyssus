@@ -10,7 +10,7 @@ in a task. Phase 8 changes no behavior either, but ports `SceneInteractionTest` 
   `CancellationTest` throws a PCE through the `core` `runCatchingKeepingCancellation` and expects it rethrown.
   Then delete `dto/Cancellation.kt` and switch the imports to `net.nevinsky.abyssus.assets`. Keep the PCE
   compatibility test in plugin `CancellationTest` (IntelliJ must not enter `core`'s test classpath).
-  Verify with `./gradlew :test --tests 'net.nevinsky.abyssus.dto.CancellationTest'`.
+  Verify with `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.dto.CancellationTest'`.
 - [x] 1.2 Replace `runCatching` in `EnabledToggle.kt`, `ComponentActions.kt`, `SceneRenderParams.kt` and
   `SceneJson.kt`, plus the current sites in `SceneViewPanel`, `NewTerrain`, `TerrainPreviewRunner`,
   `AssetReferenceChoices` and `core`'s `AssetMetaEditor`, with `runCatchingKeepingCancellation` (currently eleven
@@ -109,7 +109,7 @@ in a task. Phase 8 changes no behavior either, but ports `SceneInteractionTest` 
 - [x] 4.4 Add top-level `createFullscreenTriangle()` / `rotationOnlyViewProj` (`core/.../sky/SkyGeometry.kt`) and use them in
   `SkyboxCube`, `ProceduralSky`, `HdrSky`, `HdrEnvironmentBuild` and `LoadingOverlay`. Reformat the `SkyboxCube`
   vertex array and make `CAMERA_HEIGHT` a file-level const. Verify with a `SkyGeometryTest` for the matrix (no GL),
-  plus `./gradlew :test -Dabyssus.glTests=true --tests 'net.nevinsky.abyssus.sceneview.SceneRenderGlTest'`.
+  plus `./gradlew :test -Dabyssus.glTests=true --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneRenderGlTest'`.
   The code and `SkyGeometryTest` landed in f42624c; only the GL run remains before this box is ticked.
 - [x] 4.5 Add `JsonFormat` in `core` and use it from `JsonProcessor` and `SceneJson`. Verify with `JsonProcessorTest`,
   `SceneJsonTest` and `SceneEditFormattingTest` (pretty output unchanged).
@@ -151,7 +151,7 @@ in a task. Phase 8 changes no behavior either, but ports `SceneInteractionTest` 
   `testComponentEditsReachTheOpenView` and `testDroppingAnEntityIsOneMoveCommandAndUndoRestoresTheViewAndFile` still
   pass without a flush. All in `SceneFileEditorTest`.
   Add a dispose-with-pending-reload case and verify with
-  `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneFileEditorTest'`.
+  `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneFileEditorTest'`.
 - [ ] 6.4 Run the runIde check on a copy of `Untitled`:
   1. With the scene view and the text tab side by side, type quickly in `Model 0`'s `localPosition.x`; the view
      follows within about 0.3 s and shows no error flash.

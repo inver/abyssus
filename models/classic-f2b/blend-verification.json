@@ -1,0 +1,72 @@
+{
+  "blender_version": "5.2.2 LTS",
+  "mesh_objects": 63,
+  "packed_images": [
+    "classic-opposite.jpg",
+    "classic-photo.jpg",
+    "cockpit-reference.jpg",
+    "img.png",
+    "img_1.png",
+    "img_2.png",
+    "img_3.png"
+  ],
+  "collections": [
+    "01 Fuselage",
+    "02 Wings",
+    "03 Stabilizer",
+    "04 Landing gear",
+    "05 Engine and propeller",
+    "06 Cockpit",
+    "07 Studio"
+  ],
+  "airframe": {
+    "Fuselage | moulded outer envelope": {
+      "non_manifold_edges": 0,
+      "volume_m3": 0.004472353876302939
+    },
+    "Vertical fin and rudder": {
+      "non_manifold_edges": 0,
+      "volume_m3": 0.00020497804000860957
+    },
+    "Wing inboard | 740 mm": {
+      "non_manifold_edges": 0,
+      "volume_m3": 0.008542160817151109
+    },
+    "Wing outboard | 710 mm": {
+      "non_manifold_edges": 0,
+      "volume_m3": 0.008184550534430401
+    },
+    "Flap hinge": {
+      "non_manifold_edges": 0,
+      "volume_m3": 3.524203775885925e-08
+    },
+    "Flap hinge.001": {
+      "non_manifold_edges": 0,
+      "volume_m3": 3.524203775885925e-08
+    },
+    "Flap hinge.002": {
+      "non_manifold_edges": 0,
+      "volume_m3": 3.524203775885925e-08
+    },
+    "Flap hinge.003": {
+      "non_manifold_edges": 0,
+      "volume_m3": 3.524203775885925e-08
+    },
+    "Flap hinge.004": {
+      "non_manifold_edges": 0,
+      "volume_m3": 3.524203775885925e-08
+    },
+    "Flap hinge.005": {
+      "non_manifold_edges": 0,
+      "volume_m3": 3.524203775885925e-08
+    },
+    "Stabilizer left": {
+      "non_manifold_edges": 0,
+      "volume_m3": 0.0004707040573894408
+    },
+    "Stabilizer right": {
+      "non_manifold_edges": 0,
+      "volume_m3": 0.0004707040573894416
+    }
+  }
+}

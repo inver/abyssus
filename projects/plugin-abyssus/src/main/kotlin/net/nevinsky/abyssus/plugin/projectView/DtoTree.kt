@@ -1,0 +1,205 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package net.nevinsky.abyssus.plugin.projectView
+
+import net.nevinsky.abyssus.lib.core.editor.components.SetEnabledAction
+import net.nevinsky.abyssus.lib.core.format.isEnabled
+import net.nevinsky.abyssus.lib.core.editor.document.isSceneComponentEntry
+import net.nevinsky.abyssus.lib.core.editor.document.isSceneEcsEntry
+import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementCopyCount
+import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementCopyIds
+import net.nevinsky.abyssus.lib.core.editor.document.isSceneEntityEntry
+import net.nevinsky.abyssus.lib.core.editor.document.sceneComponentRows
+import net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs
+import net.nevinsky.abyssus.lib.core.editor.document.sceneEcsRows
+import net.nevinsky.abyssus.lib.core.editor.document.sceneEntityView
+import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
+import net.nevinsky.abyssus.lib.core.ui.model.UiMeta
+import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
+import net.nevinsky.abyssus.plugin.dto.ProjectDto
+import net.nevinsky.abyssus.plugin.dto.SceneError
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.plugin.dto.SceneEntry
+import net.nevinsky.abyssus.lib.core.editor.water.InvalidWater
+import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
+import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
+import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
+import net.nevinsky.abyssus.plugin.water.WATER_ROW
+import net.nevinsky.abyssus.plugin.water.WaterGroup
+
+/**
+ * A named, ordered child of a DTO as shown by the Abyssus view. [enabled] is set when the row is gated by an
+ * `xxxEnabled` toggle (see [foldToggles]); `null` means it has no toggle.
+ */
+data class DtoRow(
+    val name: String,
+    val value: Any?,
+    val enabled: Boolean? = null,
+    val toggleName: String? = null,
+    /** JSON keys the view skips between the parent and this row (`entities` above an entity), so paths and writes still name the real location. */
+    val via: List<String> = emptyList(),
+)
+
+/** Rows shown under another name than their property; the file keeps the property name. */
+private val DISPLAY_NAMES = mapOf("skyboxName" to "skybox")
+
+/** What the view calls the property [name]. */
+fun displayName(name: String): String = DISPLAY_NAMES[name] ?: name
+
+/** True for a value shown as `name: value`; everything else is a node with children. */
+fun isScalar(value: Any?): Boolean = when (value) {
+    null, is String, is Number, is Boolean, is Enum<*> -> true
+    is JsonNode -> !value.isContainerNode
+    else -> false
+}
+
+
+/**
+ * The children of [value] in order: a bound object lists the properties Jackson would serialize (declaration order, no
+ * `@JsonIgnore`d metadata), a list its indexes and a JSON node its fields or elements. A scalar has none.
+ */
+fun childrenOf(value: Any?): List<DtoRow> = when {
+    value is SceneEntry -> childrenOf(value.scene)
+    value is ProjectDto -> projectRows(value)
+    value is FolderRow -> folderRows(value)
+    value is TypeGroup -> groupRows(value)
+    value is UiMeta -> emptyList()
+    value is UiScreenGroup -> screenRows(value)
+    value is UiScreen || value is UiScreenEntry -> emptyList()
+    value is SceneDto -> sceneRows(value)
+    value is WaterGroup -> value.surfaces.map { DtoRow(it.id, it, enabled = (it as? ValidWater)?.settings?.enabled) }
+    value is WaterSurface -> emptyList()
+    isScalar(value) -> emptyList()
+    value is JsonNode ->
+        if (value.isObject) value.properties().map { (k, v) -> DtoRow(k, v) } else value.mapIndexed { i, v -> DtoRow("$i", v) }
+    value is List<*> -> value.mapIndexed { i, v -> DtoRow("$i", v) }
+    else -> beanProperties(value!!)
+}
+
+/**
+ * A scene's own properties, then its Water group when `abyssus.waterSurfaces` holds surfaces. The raw `abyssus`
+ * extension is not listed as a row: water is the only thing in it Abyssus shows, and an absent one must stay absent.
+ */
+private fun sceneRows(scene: SceneDto): List<DtoRow> {
+    val rows = beanProperties(scene).filter { it.name != "abyssus" }
+    val surfaces = WaterCodec().read(scene.water).surfaces
+    return if (surfaces.isEmpty()) rows else rows + DtoRow(WATER_ROW, WaterGroup(surfaces))
+}
+
+private fun beanProperties(bean: Any): List<DtoRow> =
+    SceneJson().mapper.serializationConfig.introspect(SceneJson().mapper.constructType(bean.javaClass)).findProperties().mapNotNull { p ->
+        val accessor = p.accessor ?: return@mapNotNull null
+        accessor.fixAccess(true)
+        DtoRow(p.name, accessor.getValue(bean))
+    }
+
+/**
+ * Folds each boolean `<x>Enabled` row into the sibling it gates (`<x>` or `<x>Name`), which gets [DtoRow.enabled] set
+ * instead of the toggle being listed as a separate row. A toggle without a matching sibling stays as a normal row.
+ */
+fun List<DtoRow>.foldToggles(): List<DtoRow> {
+    val folded = mutableMapOf<String, Pair<Boolean, String>>()
+    val consumed = mutableSetOf<String>()
+    for (toggle in this) {
+        val on = toggle.value as? Boolean ?: continue
+        if (!toggle.name.endsWith("Enabled")) continue
+        val base = toggle.name.removeSuffix("Enabled")
+        val target = firstOrNull { it.name == base } ?: firstOrNull { it.name == base + "Name" } ?: continue
+        folded[target.name] = on to toggle.name
+        consumed += toggle.name
+    }
+    return filter { it.name !in consumed }.map { r -> folded[r.name]?.let { (on, key) -> r.copy(enabled = on, toggleName = key) } ?: r }
+}
+
+/** `Main Scene (6275127)`: the scene name followed by its id; the index stands in for a missing name. */
+fun sceneLabel(scene: SceneDto, index: Int): String {
+    val name = scene.name?.takeIf { it.isNotBlank() } ?: AbyssusBundle.message("dtoListElementLabel", "scenes", index)
+    return scene.id?.let { "$name ($it)" } ?: name
+}
+
+/** What a list element is called in the tree: a scene's label, an asset's folder, a failed scene's file, else `parent[i]`. */
+fun elementLabel(parentName: String, element: Any?, index: Int): String = when (element) {
+    is SceneEntry -> sceneLabel(element.scene, index)
+    is SceneDto -> sceneLabel(element, index)
+    is Asset<*> -> element.name
+    is SceneError -> element.file.name
+    else -> AbyssusBundle.message("dtoListElementLabel", parentName, index)
+}
+
+/** What a row shows: its [label] and, in gray after it, [secondary] (a count). */
+data class RowText(val label: String, val secondary: String? = null)
+
+private const val ECS = "ecs"
+private const val COMPONENT_SUFFIX = "Component"
+
+fun isEcsEntry(entry: DtoEntry) = isSceneEcsEntry(entry.name, entry.parentKeys, entry.value as? JsonNode)
+fun isEntityEntry(entry: DtoEntry) = isSceneEntityEntry(entry.name, entry.parentKeys, entry.value as? JsonNode)
+fun isComponentEntry(entry: DtoEntry) = isSceneComponentEntry(entry.parentKeys)
+private fun entityName(entry: DtoEntry): String = sceneEntityView(entry.name, entry.value as JsonNode).name
+
+/** `Models`, `Skyboxes`, ...; a type without a label shows its capitalised name. */
+fun groupLabel(group: String): String = when (group) {
+    "MODEL" -> AbyssusBundle.message("treeGroup.MODEL")
+    "TERRAIN" -> AbyssusBundle.message("treeGroup.TERRAIN")
+    "FOLIAGE" -> AbyssusBundle.message("treeGroup.FOLIAGE")
+    "TEXTURE" -> AbyssusBundle.message("treeGroup.TEXTURE")
+    "SKYBOX" -> AbyssusBundle.message("treeGroup.SKYBOX")
+    "CLOUDS" -> AbyssusBundle.message("treeGroup.CLOUDS")
+    else -> group.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
+}
+
+/** The label and secondary text of [entry]; [label] is what its parent already named it (a list element). */
+fun rowText(entry: DtoEntry, label: String? = null): RowText {
+    val v = entry.value
+    return when {
+        v is List<*> && entry.name == "scenes" -> RowText(AbyssusBundle.message("treeScenes"), v.size.toString())
+        v is FolderRow -> RowText(AbyssusBundle.message(if (v.kind == FolderKind.UI) "treeUi" else "treeAssets"), v.assets.size.toString())
+        v is TypeGroup -> RowText(groupLabel(v.group), v.assets.size.toString())
+        v is UiScreenGroup -> RowText(AbyssusBundle.message(if (v.kind == net.nevinsky.abyssus.lib.core.ui.model.UiScreenKind.OVERLAY) "treeOverlays" else "treeScreens"), v.entries.size.toString())
+        v is UiScreenEntry -> RowText(v.screen.name.ifBlank { v.screen.id }, v.asset.name)
+        v is UiScreen -> RowText(v.name.ifBlank { v.id }, v.kind.json)
+        v is WaterGroup -> RowText(AbyssusBundle.message("treeWater"), v.surfaces.size.toString())
+        v is ValidWater -> RowText(v.name, AbyssusBundle.message("treeWaterAbyssusOnly"))
+        v is InvalidWater -> RowText(v.name, AbyssusBundle.message("treeWaterInvalid"))
+        isEcsEntry(entry) -> RowText(ECS, AbyssusBundle.message("treeEntities", sceneDocumentFromEcs(v as JsonNode).entitiesNode()?.size() ?: 0))
+        isEntityEntry(entry) -> entityText(entry, v as JsonNode)
+        isComponentEntry(entry) -> RowText(entry.name.removeSuffix(COMPONENT_SUFFIX).ifEmpty { entry.name })
+        else -> RowText(label ?: displayName(entry.name))
+    }
+}
+
+/** An entity row: its name and `N components`, with `M copies` after it for a path arrangement. */
+private fun entityText(entry: DtoEntry, entity: JsonNode): RowText {
+    val components = sceneEntityView(entry.name, entity).components?.size() ?: 0
+    val copies = arrangementCopyCount(entity)
+    return RowText(
+        entityName(entry),
+        if (copies > 0) AbyssusBundle.message("treeComponentsCopies", components, copies) else AbyssusBundle.message("treeComponents", components),
+    )
+}
+
+/** The children of an `ecs` object: its entities directly (an older scene's `entities` level is skipped), then its other keys. */
+fun ecsRows(ecs: JsonNode): List<DtoRow> {
+    // the linked copies of a path arrangement are squashed into its row, which counts them
+    val copies = arrangementCopyIds(ecs)
+    return sceneEcsRows(ecs).filter { it.name !in copies }.map { DtoRow(it.name, it.node, enabled = entityEye(it.node), via = it.via) }
+}
+
+private val toggles = SetEnabledAction()
+
+/** The eye state of an entity row: on or off for an entity that can be switched (not a `GROUP`), else null for no eye. */
+private fun entityEye(node: JsonNode): Boolean? =
+    if (node.isObject && node.get("components")?.isObject == true && toggles.isTogglable(node)) isEnabled(node) else null
+
+/** The component rows retain their skipped JSON path. */
+fun entityRows(entity: JsonNode): List<DtoRow> = sceneComponentRows(entity).map {
+    // a component that can be switched (all but Name, Parent and Position) gets the eye, on unless its entry says `enabled: false`
+    DtoRow(it.name, it.node, enabled = if (it.node.isObject && toggles.isTogglable(it.name)) isEnabled(it.node) else null, via = it.via)
+}

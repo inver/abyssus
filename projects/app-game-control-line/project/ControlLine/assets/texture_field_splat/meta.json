@@ -1,0 +1,11 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "version": 1,
+  "lastModified": 1767225600000,
+  "uuid": "9cda0e2f-e403-36e7-ae03-a96ec7bcbe82",
+  "type": "TEXTURE",
+  "additional": {
+    "file": "splat.png"
+  }
+}

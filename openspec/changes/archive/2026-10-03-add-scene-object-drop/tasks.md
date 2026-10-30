@@ -21,7 +21,7 @@
       platform. Verify: new cases in `ScenePickerTest` — `anIdentityMatrixLeavesTheCornersUnmoved`,
       `rotatingTheBoxRotatesItsCorners`, `bottomAndTopUseAllEightCorners`, `overlappingHullsOverlap`,
       `aRotatedBarDoesNotOverlapABoxOnlyItsAxisAlignedBoundsReach` — pass with
-      `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.ScenePickerTest'`
+      `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.ScenePickerTest'`
 - [x] 1.2 Add `ScenePicker.restHeight(footprint, boxes, terrains): Float?` over box surfaces only: a box counts when its
       hull overlaps the footprint and its `bottom < low + eps`, and offers its `top`; the result is the maximum or
       `null`. Verify: `restsOnTheHighestBoxBelow`, `aBoxWhollyAboveIsIgnored`, `aSunkObjectRisesOntoTheBox`,
@@ -48,12 +48,12 @@
       leaving picking behaviour unchanged. Verify: the existing picking cases in `ScenePickerTest` and
       `SceneInteractionTest` pass, and a case in `SceneMarkersTest` (`theViewCameraHasNoMarkerTarget`) that
       `targets(content, skipCamera = "4")` leaves out `Camera 4`, with
-      `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.ScenePickerTest' --tests 'net.nevinsky.abyssus.sceneview.SceneInteractionTest' --tests 'net.nevinsky.abyssus.sceneview.SceneMarkersTest'`
+      `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.ScenePickerTest' --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneInteractionTest' --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneMarkersTest'`
 - [x] 2.2 Add `SceneRenderer.groundBelow(entityId): Float?`: `null` for a terrain, for the view camera and for an
       entity not drawn; otherwise the entity's `OrientedBox` as footprint against every other target. Do not reuse
       `boundsOf`, which returns the world axis-aligned box. Verify: a case in `SceneRenderGlTest` that a drawn model
       over the terrain reports the terrain's height and a terrain reports `null`, passing with
-      `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneRenderGlTest' -Dabyssus.glTests=true` on a machine
+      `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneRenderGlTest' -Dabyssus.glTests=true` on a machine
       with a display; if no display is available, record that and leave the runIde check in 4.2 to cover it
 - [x] 2.3 Add `SceneRenderer.drawnVersion`, bumped when `models.drawn` or `terrains.drawn` gains or loses an entity.
       Verify: a case in `SceneRenderGlTest` that the version changes once the fixture's models finish loading and not
@@ -69,7 +69,7 @@
       `canDropIsFalseWithNothingBelow`, `canDropIsFalseDuringADrag`, `canDropIsFalseForAnAlreadyRestingObject`, `dropWithNothingBelowReportsNoTransform`,
       `anAlreadyRestingObjectReportsNoTransform`, `dropReportsAYOnlyPositionTransform`,
       `dropCanRaiseASunkObject` — pass with
-      `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneInteractionTest'`
+      `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneInteractionTest'`
 - [x] 3.2 Re-check `canDrop` after a frame whose `drawnVersion` differs from the last seen one, firing `onStateChanged`
       only when the answer flips. Verify: `canDropTurnsOnWhenTheDrawnListsChange` and
       `anUnchangedDrawnVersionFiresNoStateChange` in `SceneInteractionTest` pass with the same command
@@ -78,12 +78,12 @@
       only in `y` changes only `PositionComponent.localPosition.y` and keeps the `x` and `z` text, and for an entity
       with a `CameraComponent` whose `camera.position` equals `localPosition` it changes only `camera.position.y`, by
       the same amount — pass with
-      `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneTransformWriterTest'`; existing
+      `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneTransformWriterTest'`; existing
       `SceneFileEditorTest` cases pass unchanged
 - [x] 3.4 Confirm the drop reaches the file as one undoable command and that Undo in the scene view tab reverts it.
       Verify: a new case in `SceneFileEditorTest` invoking `applyTransform` with the drop's edit, asserting one command
       and an Undo back to the original text, passes with
-      `./gradlew :test --tests 'net.nevinsky.abyssus.sceneview.SceneFileEditorTest'`
+      `./gradlew :test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneFileEditorTest'`
 
 ## 4. The button and the key in the view
 

@@ -1,140 +1,48 @@
+import kotlinx.kover.gradle.plugin.dsl.KoverProjectExtension
+
 /*
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import org.jetbrains.changelog.Changelog
-import org.jetbrains.changelog.markdownToHTML
-
 fun properties(key: String) = providers.gradleProperty(key)
 fun environment(key: String) = providers.environmentVariable(key)
 
 plugins {
-    // Java support
-    id("java")
     // Kotlin support
-    id("org.jetbrains.kotlin.jvm") version "2.4.10"
+    id("org.jetbrains.kotlin.jvm") version "2.4.20" apply false
     // IntelliJ Platform Gradle Plugin
-    id("org.jetbrains.intellij.platform") version "2.19.0"
+    id("org.jetbrains.intellij.platform") version "2.19.0" apply false
     // Generates the GLTF lexer and parser from Gltf.flex / Gltf.bnf
-    id("org.jetbrains.grammarkit") version "2022.3.2.2"
+    id("org.jetbrains.grammarkit") version "2023.3.0.4" apply false
     // Gradle Changelog Plugin
-    id("org.jetbrains.changelog") version "2.5.0"
+    id("org.jetbrains.changelog") version "2.5.0" apply false
     // Gradle Kover Plugin
     id("org.jetbrains.kotlinx.kover") version "0.9.11"
     // Shadow / uber-jar (bundles libGDX + LWJGL classes into the plugin jar)
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.gradleup.shadow") version "9.6.1" apply false
 }
 
 group = properties("pluginGroup").get()
 version = properties("pluginVersion").get()
 
-// Configure project's dependencies
-repositories {
-    mavenCentral()
-    intellijPlatform {
-        defaultRepositories()
-    }
+tasks.named<Wrapper>("wrapper") {
+    gradleVersion = properties("gradleVersion").get()
 }
 
+// Merge coverage from every module, including library code exercised by another module's tests.
 dependencies {
-    intellijPlatform {
-        create(properties("platformType"), properties("platformVersion"))
-        // Plugin Dependencies. Uses `platformPlugins` property from the gradle.properties file.
-        plugins(properties("platformPlugins").map { it.split(',').map(String::trim).filter(String::isNotEmpty) })
-        // JSON language support: .scene files are JSON
-        bundledPlugin("com.intellij.modules.json")
-        pluginVerifier()
-        zipSigner()
-        testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
-    }
-    testImplementation("junit:junit:4.13.2")
-    // HdrFixtures: Radiance test images from a pixel function
-    testImplementation(testFixtures(project(":core")))
-
-    // JSON reading/writing for asset files; the platform does not ship jackson-databind, so it is bundled
-    implementation("com.fasterxml.jackson.core:jackson-databind:${properties("jacksonVersion").get()}")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:${properties("jacksonVersion").get()}")
-
-    // LWJGL 3 + AWT bridge for the OpenGL scene panel
-    val lwjglVersion = properties("lwjglVersion").get()
-    val lwjglNatives = listOf("natives-macos-arm64", "natives-macos", "natives-windows", "natives-linux")
-    implementation("org.lwjglx:lwjgl3-awt:0.2.5")
-    implementation("org.lwjgl:lwjgl:$lwjglVersion")
-    implementation("org.lwjgl:lwjgl-opengl:$lwjglVersion")
-    lwjglNatives.forEach {
-        runtimeOnly("org.lwjgl:lwjgl:$lwjglVersion:$it")
-        runtimeOnly("org.lwjgl:lwjgl-opengl:$lwjglVersion:$it")
-    }
-
-    // libGDX core (g3d, math) hosted on the AWT GL canvas; only the backend's GL wrapper classes are used
-    val gdxVersion = properties("gdxVersion").get()
-    implementation("com.badlogicgames.gdx:gdx:$gdxVersion")
-    implementation("com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion") { isTransitive = false }
-    runtimeOnly("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop")
-
-    // Entity-component engine behind the scene model (net.nevinsky.abyssus.ecs)
-    implementation("com.badlogicgames.ashley:ashley:1.7.4")
-
-    // Model runtime + Assimp importer (brings lwjgl-assimp and its natives); the IDE provides Kotlin and the SLF4J API
-    implementation(project(":gdx-model")) {
-        exclude(group = "org.jetbrains.kotlin")
-        exclude(group = "org.slf4j")
-    }
-    // Asset reading and loading (plain JVM, see core/README.md); the IDE provides Kotlin and SLF4J here too
-    implementation(project(":core")) {
-        exclude(group = "org.jetbrains.kotlin")
-        exclude(group = "org.slf4j")
-    }
-    implementation(project(":raytracing")) {
-        exclude(group = "org.jetbrains.kotlin")
-        exclude(group = "org.slf4j")
+    subprojects.forEach { module ->
+        kover(project(module.path))
     }
 }
 
-// Set the JVM language level used to build the project. IntelliJ 2025.2+ requires Java 21.
-java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
-    }
-}
-
-// Configure IntelliJ Platform Gradle Plugin - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-extension.html
-intellijPlatform {
-    pluginConfiguration {
-        name = properties("pluginName")
-        version = properties("pluginVersion")
-        ideaVersion {
-            sinceBuild = properties("pluginSinceBuild")
-            untilBuild = properties("pluginUntilBuild")
-        }
-    }
-    signing {
-        certificateChain = environment("CERTIFICATE_CHAIN")
-        privateKey = environment("PRIVATE_KEY")
-        password = environment("PRIVATE_KEY_PASSWORD")
-    }
-    publishing {
-        token = environment("PUBLISH_TOKEN")
-        channels = properties("pluginVersion").map { listOf(it.split('-').getOrElse(1) { "default" }.split('.').first()) }
-    }
-}
-
-// Configure Gradle Changelog Plugin - read more: https://github.com/JetBrains/gradle-changelog-plugin
-changelog {
-    groups.empty()
-    repositoryUrl.set(properties("pluginRepositoryUrl"))
-}
-
-// Configure Gradle Kover Plugin - read more: https://github.com/Kotlin/kotlinx-kover#configuration
 kover {
     reports {
         total {
+            html {
+                onCheck = true
+            }
             xml {
                 onCheck = true
             }
@@ -142,117 +50,62 @@ kover {
     }
 }
 
-tasks {
-    test {
-        // GL render tests open a real window: opt in with -Dabyssus.glTests=true
-        System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
-        System.getProperty("abyssus.rayTimingTests")?.let { systemProperty("abyssus.rayTimingTests", it) }
-        // device tests that render through the real Metal backend: opt in with -Dabyssus.metalTests=true
-        System.getProperty("abyssus.metalTests")?.let { systemProperty("abyssus.metalTests", it) }
-        // and through the real Vulkan backend: -Dabyssus.vulkanTests=true (add -Dabyssus.raytracing.validation=true for the validation layer)
-        System.getProperty("abyssus.vulkanTests")?.let { systemProperty("abyssus.vulkanTests", it) }
-        System.getProperty("abyssus.raytracing.validation")?.let { systemProperty("abyssus.raytracing.validation", it) }
-    }
-    runIde {
-        // Open a project on startup: -PideProject=/path/to/project
-        providers.gradleProperty("ideProject").orNull?.let { args(it) }
-        providers.gradleProperty("rayExperiment").orNull?.let { jvmArgs("-Dabyssus.raytracing.experiment=$it") }
-        // The sandbox IDE trusts every project (no "Trust project?" dialog) and opens the Abyssus view.
-        jvmArgs("-Didea.trust.all.projects=true", "-Dabyssus.openView=true")
-    }
-    wrapper {
-        gradleVersion = properties("gradleVersion").get()
+// Shared by every module: Kotlin on Java 21 and Kover reports. Plugin-specific setup (changelog, the GLTF grammar, the source
+// checks and plugin verification) stays in projects/plugin-abyssus.
+subprojects {
+    apply(plugin = "java")
+//    apply(plugin = "checkstyle")
+    apply(plugin = "org.jetbrains.kotlin.jvm")
+    apply(plugin = "org.jetbrains.kotlinx.kover")
+
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
     }
 
-    patchPluginXml {
 
-        // Extract the <!-- Plugin description --> section from README.md and provide for the plugin's manifest
-        pluginDescription.set(providers.fileContents(layout.projectDirectory.file("README.md")).asText.map {
-            val start = "<!-- Plugin description -->"
-            val end = "<!-- Plugin description end -->"
+    configure<JavaPluginExtension> {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
 
-            with (it.lines()) {
-                if (!containsAll(listOf(start, end))) {
-                    throw GradleException("Plugin description section not found in README.md:\n$start ... $end")
+    configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension> {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+        }
+    }
+
+    configure<KoverProjectExtension> {
+        reports {
+            total {
+                html {
+                    onCheck = true
                 }
-                subList(indexOf(start) + 1, indexOf(end)).joinToString("\n").let(::markdownToHTML)
-            }
-        })
-
-        val changelog = project.changelog // local variable for configuration cache compatibility
-        // Get the latest available change notes from the changelog file
-        changeNotes.set(properties("pluginVersion").map { pluginVersion ->
-            with(changelog) {
-                renderItem(
-                    (getOrNull(pluginVersion) ?: getUnreleased())
-                        .withHeader(false)
-                        .withEmptySections(false),
-                    Changelog.OutputType.HTML,
-                )
-            }
-        })
-    }
-
-}
-
-// Sandbox IDE with the robot-server plugin for UI tests (run configuration "Run IDE for UI Tests", run-ui-tests.yml)
-val runIdeForUiTests by intellijPlatformTesting.runIde.registering {
-    task {
-        jvmArgumentProviders += CommandLineArgumentProvider {
-            listOf(
-                "-Drobot-server.port=8082",
-                "-Dide.mac.message.dialogs.as.sheets=false",
-                "-Djb.privacy.policy.text=<!--999.999-->",
-                "-Djb.consents.confirmation.enabled=false",
-                "-Didea.trust.all.projects=true",
-            )
-        }
-    }
-    plugins {
-        robotServerPlugin()
-    }
-}
-
-sourceSets["main"].java {
-    srcDirs("src/main/gen")
-}
-
-val gltfGrammarDir = "src/main/java/net/nevinsky/abyssus/language/psi"
-
-val generateGltfParser by tasks.registering(org.jetbrains.grammarkit.tasks.GenerateParserTask::class) {
-    sourceFile.set(file("$gltfGrammarDir/Gltf.bnf"))
-    targetRootOutputDir.set(file("src/main/gen"))
-    pathToParser.set("/net/nevinsky/abyssus/language/parser/GltfParser.java")
-    pathToPsiRoot.set("/net/nevinsky/abyssus/language/psi")
-    purgeOldFiles.set(true)
-}
-
-val generateGltfLexer by tasks.registering(org.jetbrains.grammarkit.tasks.GenerateLexerTask::class) {
-    sourceFile.set(file("$gltfGrammarDir/Gltf.flex"))
-    targetOutputDir.set(file("src/main/gen/net/nevinsky/abyssus/language/lexer"))
-    purgeOldFiles.set(true)
-}
-
-tasks.named("compileKotlin") { dependsOn(generateGltfParser, generateGltfLexer) }
-tasks.named("compileJava") { dependsOn(generateGltfParser, generateGltfLexer) }
-
-// `runCatching` also catches cancellation, which must reach the IDE; use `runCatchingKeepingCancellation` instead
-// (see `core`'s Cancellation.kt). Covers the plugin and `core`, like `:core:checkNoSingletons` covers `core`.
-val checkNoRunCatching by tasks.registering {
-    val sources = files(fileTree("src/main/kotlin") { include("**/*.kt") }, fileTree("core/src/main/kotlin") { include("**/*.kt") })
-    val root = layout.projectDirectory.asFile
-    inputs.files(sources)
-    doLast {
-        val call = Regex("""\brunCatching\s*\{""")
-        val found = sources.files.sorted().flatMap { file ->
-            file.readLines().mapIndexedNotNull { i, line ->
-                if (call.containsMatchIn(line)) "${file.relativeTo(root)}:${i + 1}: ${line.trim()}" else null
+                xml {
+                    onCheck = true
+                }
             }
         }
-        if (found.isNotEmpty()) {
-            throw GradleException("Use runCatchingKeepingCancellation instead of runCatching:\n" + found.joinToString("\n"))
-        }
     }
-}
 
-tasks.named("check") { dependsOn(checkNoRunCatching) }
+//    configure<CheckstyleExtension> {
+//        configFile = rootProject.layout.projectDirectory.file("gradle/checkstyle/checkstyle.xml").asFile
+//        toolVersion = "14.3.0"
+//        sourceSets = listOf(project.the<SourceSetContainer>()["main"])
+//    }
+//
+//    tasks.named("check") {
+//        dependsOn("checkstyle")
+//    }
+
+    // the native fixture projects are shared by every module's tests; see testProject() in lib-core's testFixtures
+    tasks.withType<Test>().configureEach {
+        systemProperty("abyssus.testData", rootProject.file("projects/plugin-abyssus/src/test/testData").absolutePath)
+    }
+
+    // every module scans its own sources
+    extra["abyssusRunCatchingRoots"] = listOf("src/main/kotlin")
+    apply(from = "${project.rootDir}/gradle/checks.gradle.kts")
+    apply(from = "${project.rootDir}/gradle/package-cycles.gradle.kts")
+}

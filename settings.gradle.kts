@@ -2,8 +2,39 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
+pluginManagement {
+    // convention plugins (abyssus.dependency-platforms)
+    includeBuild("build-logic")
+}
+
+include(":lib-gdx")
+include(":lib-core")
+include(":lib-render")
+include(":lib-raytracing")
+include(":lib-core-editor")
+include(":lib-physics")
+include(":lib-game-link")
+include(":plugin-abyssus")
+include(":app-game-control-line")
+
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        maven {
+            url = uri("https://plugins.gradle.org/m2/")
+        }
+        gradlePluginPortal()
+    }
+}
 
 rootProject.name = "abyssus"
-include(":gdx-model")
-include(":core")
-include(":raytracing")
+rootProject.children.forEach { project ->
+    val fileBaseName = project.name.replace(Regex("\\p{Upper}")) { "-${it.value.lowercase()}" }
+    val projectDirName = "projects/$fileBaseName"
+
+    project.projectDir = File(settingsDir, projectDirName)
+    project.buildFileName = "$fileBaseName.gradle.kts"
+    project.name = fileBaseName
+    assert(project.projectDir.isDirectory)
+    assert(project.buildFile.isFile)
+}

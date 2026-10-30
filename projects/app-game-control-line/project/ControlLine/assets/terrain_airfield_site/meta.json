@@ -1,0 +1,19 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "version": 1,
+  "lastModified": 1791238941737,
+  "uuid": "44b8bc9e-15f2-5a4d-bdd4-5b83b0367659",
+  "type": "TERRAIN",
+  "additional": {
+    "terrainFile": "terrain.data",
+    "size": 300,
+    "uv": 100.0,
+    "splatMap": "bf86be3b-ba9d-5e0a-bce0-5124a55cf38f",
+    "splatBase": "70f69e76-47a4-5272-a11d-16cd6e49a664",
+    "splatR": "0e39bd6a-c63e-5a6c-8d17-4cdea041ab0b",
+    "splatG": "c24d50e5-630e-5a6d-a127-3c00d8aed408",
+    "splatB": "cfa5c513-ddb7-57c5-8ebd-55daea700fa7",
+    "splatA": "80ad9e3a-da33-5f58-a424-d9a6722111bf"
+  }
+}

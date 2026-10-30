@@ -1,0 +1,11 @@
+{
+  "format": "abyssus",
+  "formatVersion": 1,
+  "version": 1,
+  "lastModified": 1791238934192,
+  "uuid": "cfa5c513-ddb7-57c5-8ebd-55daea700fa7",
+  "type": "TEXTURE",
+  "additional": {
+    "file": "texture_airfield_ground_ballast.jpg"
+  }
+}
