@@ -23,7 +23,6 @@ internal interface GestureHost {
     fun brushStroke(kind: BrushKind): BrushStroke?
 
     val onTransform: ((String, TransformEdit) -> Boolean)?
-    val onWaterMove: ((String, Vector3) -> Boolean)?
     val onArrangementEdit: ((String, List<Vector3>) -> Boolean)?
 
     /** The selected entity, or null. */
@@ -44,11 +43,6 @@ internal sealed interface Gesture {
         var result: DragResult? = null
     }
 
-    /** A move handle of the water surface [waterId] is being dragged; [result] is where its centre is now. */
-    class DraggingWater(val drag: GizmoDrag, val waterId: String) : Gesture {
-        var result: DragResult? = null
-    }
-
     /** Set by Esc (or by the dragged entity leaving the scene): the rest of the gesture, up to the release, does nothing. */
     data object Cancelled : Gesture
 
@@ -63,7 +57,7 @@ internal sealed interface Gesture {
 }
 
 /**
- * The press-drag-release state of the scene view: starting a gizmo, water, path point or paint-stroke gesture, updating
+ * The press-drag-release state of the scene view: starting a gizmo, path point or paint-stroke gesture, updating
  * it while the mouse moves, and writing or discarding its result on release or Esc. Orbiting and clicking stay with
  * [SceneInteraction], which falls back to them while the gesture is [Gesture.Idle].
  */
@@ -76,7 +70,7 @@ internal class GestureDriver(
         private set
 
     val isIdle: Boolean get() = current == Gesture.Idle
-    val isDragging: Boolean get() = current is Gesture.Dragging || current is Gesture.DraggingWater
+    val isDragging: Boolean get() = current is Gesture.Dragging
     val isBrushing: Boolean get() = current is Gesture.Brushing
     val isDraggingPathPoint: Boolean get() = current is Gesture.DraggingPathPoint
 
@@ -93,7 +87,6 @@ internal class GestureDriver(
     /** The left press at ([x], [y]) with the selection [id]: starts the gesture that fits what is under the cursor, if any. */
     fun press(id: String?, x: Int, y: Int) {
         val size = host.size
-        state.selectedWater?.let { startWaterDrag(it, x, y); return }
         if (id == null) return
         val at = size.toFramebuffer(x, y)
         if (state.pathEditing == id) {
@@ -124,15 +117,6 @@ internal class GestureDriver(
         val started = queries.beginPlaneDrag(plane, at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return null
         state.hoveredPlane = plane
         return started
-    }
-
-    /** The left press on a move handle of the selected water surface starts a drag of its centre. */
-    private fun startWaterDrag(waterId: String, x: Int, y: Int) {
-        val size = host.size
-        val at = size.toFramebuffer(x, y)
-        val started = grab(at) ?: return
-        current = Gesture.DraggingWater(started, waterId)
-        host.stateChanged()
     }
 
     /** The left press on a move handle of the gizmo of the selected control point of [id]. */
@@ -194,12 +178,6 @@ internal class GestureDriver(
                 g.result = result
                 state.preview = mapOf(g.entityId to result)
             }
-            is Gesture.DraggingWater -> {
-                val ray = queries.rayFrom(size, x, y) ?: return true
-                val result = g.drag.update(ray)
-                g.result = result
-                state.waterPreview = mapOf(g.waterId to result.transform.position)
-            }
             is Gesture.DraggingPathPoint -> {
                 val ray = queries.rayFrom(size, x, y) ?: return true
                 val to = g.drag.update(ray).transform.position
@@ -236,15 +214,6 @@ internal class GestureDriver(
                 }
             }
             is Gesture.Brushing -> host.brushStroke(ended.kind)?.released()
-            is Gesture.DraggingWater -> {
-                val result = ended.result
-                if (result != null && result.transform != ended.drag.start) {
-                    val written = host.onWaterMove?.invoke(ended.waterId, result.transform.position) ?: false
-                    if (!written) state.waterPreview = emptyMap()
-                } else {
-                    state.waterPreview = emptyMap()
-                }
-            }
             is Gesture.Dragging -> {
                 val result = ended.result
                 if (result != null && result.transform != ended.drag.start) {
@@ -271,10 +240,9 @@ internal class GestureDriver(
                 current = Gesture.Cancelled
                 host.brushStroke(kind)?.cancelled()
             }
-            is Gesture.Dragging, is Gesture.DraggingWater -> {
+            is Gesture.Dragging -> {
                 current = Gesture.Cancelled
                 state.preview = emptyMap()
-                state.waterPreview = emptyMap()
                 state.hoveredAxis = null
                 state.hoveredPlane = null
             }
@@ -284,9 +252,8 @@ internal class GestureDriver(
         return true
     }
 
-    /** New scene content arrived: cancels a drag whose water surface, entity or arrangement the scene no longer has. */
+    /** New scene content arrived: cancels a drag whose entity or arrangement the scene no longer has. */
     fun contentChanged(content: SceneContent, contains: (String) -> Boolean) {
-        (current as? Gesture.DraggingWater)?.let { if (content.water.none { w -> w.id == it.waterId }) current = Gesture.Cancelled }
         (current as? Gesture.Dragging)?.let { if (!contains(it.entityId)) current = Gesture.Cancelled }
         (current as? Gesture.DraggingPathPoint)?.let {
             if (!contains(it.entityId)) {

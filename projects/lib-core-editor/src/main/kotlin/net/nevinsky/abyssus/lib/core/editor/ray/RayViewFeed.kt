@@ -6,7 +6,6 @@ package net.nevinsky.abyssus.lib.core.editor.ray
 
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsState
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
@@ -61,8 +60,7 @@ class RayViewFeed(
     @Volatile
     private var epoch = 0L
     private var settingsRevision = 0L
-    private var settingsSignature: Pair<SceneRaySettingsState, Map<String, com.fasterxml.jackson.databind.JsonNode>>? =
-        null
+    private var settingsSignature: SceneRaySettings? = null
 
     // Owned by the converter thread (the one worker that runs [drain]).
     private var lastFrame: RaySceneFrame? = null
@@ -78,8 +76,7 @@ class RayViewFeed(
     /** Render thread. The ray frame to present for [context], or null while raster should be shown. */
     fun frame(context: RayFrameContext): RaySceneDisplay? {
         if (closed.get()) return null
-        val overrides = rayOverridesOf(context.params.ecs)
-        val signature = context.params.rayTracing to overrides
+        val signature = context.params.rayTracing
         if (settingsSignature != signature) {
             settingsSignature = signature
             settingsRevision++

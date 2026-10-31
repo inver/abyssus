@@ -46,12 +46,6 @@ class SceneInteraction(
     /** Called with the entity id of a click that selected something. */
     var onPick: ((String) -> Unit)? = null
 
-    /** Called with the id of a click that selected a water surface. */
-    var onPickWater: ((String) -> Unit)? = null
-
-    /** Called when a water move ends with the surface at a new centre; returns whether it was written to the scene. */
-    var onWaterMove: ((String, Vector3) -> Boolean)? = null
-
     /** Called when a drag ends with a changed transform; returns whether it was written to the scene. */
     var onTransform: ((String, TransformEdit) -> Boolean)? = null
 
@@ -79,9 +73,6 @@ class SceneInteraction(
     /** Called on Delete with the selected entity's id; returns whether it was removed. */
     var onDelete: ((String) -> Boolean)? = null
 
-    /** Called on Delete with the selected water surface's id; returns whether it was removed. */
-    var onWaterDelete: ((String) -> Boolean)? = null
-
     private val brushStrokes = EnumMap<BrushKind, BrushStroke>(BrushKind::class.java)
 
     /** What strokes the terrain while the brush mode of [kind] in [state] is on, or null when nothing implements it. */
@@ -97,17 +88,6 @@ class SceneInteraction(
         private set(value) {
             state.selectedId = value
         }
-
-    /** The water surface that is selected, or null. */
-    val selectedWater: String? get() = state.selectedWater
-
-    /** Selects the water surface [id] (from the tree or after adding it); ends Paint Foliage. */
-    fun selectWater(id: String) {
-        if (state.selectedWater == id) return
-        state.selectedWater = id
-        state.endBrush()
-        stateChanged()
-    }
 
     var mode: GizmoMode
         get() = state.gizmoMode
@@ -131,7 +111,6 @@ class SceneInteraction(
         override val size: ViewSize get() = this@SceneInteraction.size
         override fun brushStroke(kind: BrushKind): BrushStroke? = this@SceneInteraction.brushStroke(kind)
         override val onTransform: ((String, TransformEdit) -> Boolean)? get() = this@SceneInteraction.onTransform
-        override val onWaterMove: ((String, Vector3) -> Boolean)? get() = this@SceneInteraction.onWaterMove
         override val onArrangementEdit: ((String, List<Vector3>) -> Boolean)? get() = this@SceneInteraction.stagedEdit
         override val selectedId: String? get() = this@SceneInteraction.selectedId
         override fun editOf(entityId: String, result: DragResult) = this@SceneInteraction.editOf(entityId, result)
@@ -337,7 +316,7 @@ class SceneInteraction(
 
     /**
      * Backspace / Delete: drops the last point of the drawing, removes the selected control point of the arrangement
-     * being edited, or otherwise removes the selected entity through [onDelete], or the selected water surface through [onWaterDelete].
+     * being edited, or otherwise removes the selected entity through [onDelete].
      */
     fun backspace() {
         when (val mode = state.mode) {
@@ -351,11 +330,6 @@ class SceneInteraction(
             }
             is ViewMode.Brush, ViewMode.Select -> {
                 if (isDragging) return
-                val water = state.selectedWater
-                if (water != null) {
-                    onWaterDelete?.invoke(water)
-                    return
-                }
                 val id = selectedId
                 if (id != null && id != state.viewCamera) onDelete?.invoke(id)
             }
@@ -420,14 +394,6 @@ class SceneInteraction(
         }
         val at = size.toFramebuffer(x, y)
         val target = queries.pickTarget(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
-        if (target is SceneTarget.Water) {
-            val changed = state.selectedWater != target.id || state.brushing
-            state.selectedWater = target.id
-            state.endBrush()
-            onPickWater?.invoke(target.id)
-            if (changed) stateChanged()
-            return
-        }
         val picked = (target as? SceneTarget.Entity)?.id
         // a model that belongs to a path arrangement stands for the whole arrangement
         val hit = picked?.let { queries.content.arrangementOf(it) ?: it }
@@ -448,18 +414,11 @@ class SceneInteraction(
     fun paramsChanged(params: SceneRenderParams) {
         refreshDropAfterFrame = true
         state.preview = emptyMap()
-        state.waterPreview = emptyMap()
         if (!gestures.isDraggingPathPoint) state.pathEdit = null
         var changed = false
         selectedId?.let {
             if (!ScenePreview().contains(params.content, it)) {
                 selectedId = null; changed = true
-            }
-        }
-        // a surface deleted (or made invalid) elsewhere leaves nothing selected rather than another target
-        state.selectedWater?.let { id ->
-            if (params.content.water.none { it.id == id }) {
-                state.selection = null; changed = true
             }
         }
         state.viewCamera?.let { id ->

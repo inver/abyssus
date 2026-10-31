@@ -38,11 +38,9 @@ data class BrushMode(
     val options: BrushOptions? = null,
 )
 
-/** What the view has selected: an entity of the scene, or a water surface (separate namespaces, so an id is never confused). */
+/** What the view has selected: an entity of the scene. */
 sealed interface SceneTarget {
     data class Entity(val id: String) : SceneTarget
-
-    data class Water(val id: String) : SceneTarget
 }
 
 /**
@@ -68,22 +66,12 @@ class SceneViewState {
     /** What the view highlights and shows a gizmo on, or null. */
     var selection: SceneTarget? = null
 
-    /** The entity id the view highlights and shows a gizmo on, or null (also when a water surface is selected). */
+    /** The entity id the view highlights and shows a gizmo on, or null. */
     var selectedId: String?
         get() = (selection as? SceneTarget.Entity)?.id
         set(value) {
             selection = value?.let(SceneTarget::Entity)
         }
-
-    /** The water surface the view highlights and shows a move gizmo on, or null. */
-    var selectedWater: String?
-        get() = (selection as? SceneTarget.Water)?.id
-        set(value) {
-            selection = value?.let(SceneTarget::Water)
-        }
-
-    /** The new centre of each water surface while it is dragged or just dropped, shown over the file's (water id to where it is now). */
-    var waterPreview: Map<String, Vector3> = emptyMap()
 
     var gizmoMode: GizmoMode = GizmoMode.MOVE
 

@@ -8,12 +8,10 @@ package net.nevinsky.abyssus.lib.core.editor.scene
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
-import com.badlogic.ashley.core.Entity
+import net.nevinsky.abyssus.lib.core.dto.EntityDto
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.lib.core.editor.content.*
-import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
-import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
 
 /**
  * A terrain entity's foliage: [foliageName] is the foliage asset folder its `FoliageComponent.assetName` holds as a
@@ -42,8 +40,6 @@ data class SceneContent(
     val handleIds: Set<String> = emptySet(),
     /** The path arrangements: the lines the view shows handles on when one is selected. */
     val arrangements: List<ArrangementPlacement> = emptyList(),
-    /** The saved water surfaces in file order, invalid ones included (they are rows, not drawn). */
-    val water: List<WaterSurface> = emptyList(),
 ) {
     // Built on first use: the lists never change, and every lookup of the selected entity would scan them otherwise.
     private val modelsById by lazy(LazyThreadSafetyMode.NONE) { models.associateBy { it.entityId } }
@@ -71,7 +67,7 @@ data class SceneContent(
 fun sceneContentOf(scene: SceneDto): SceneContent {
     val entities = scene.ecs.map { (id, entity) -> decode(id.toString(), entity) }
     val skybox = scene.skyboxName?.takeIf { scene.skyboxEnabled && it.isNotBlank() }
-    return PlacementMapper().map(entities, skybox).copy(water = WaterCodec().read(scene.water).surfaces)
+    return PlacementMapper().map(entities, skybox)
 }
 
 /**
@@ -79,10 +75,10 @@ fun sceneContentOf(scene: SceneDto): SceneContent {
  * A disabled entity is present as data (its position still answers a look-at) and absent as behavior; a component
  * disabled on its own is skipped.
  */
-private fun decode(id: String, entity: Entity): DecodedEntity {
-    val header = entity.getComponent(HeaderComponent::class.java)
+private fun decode(id: String, entity: EntityDto): DecodedEntity {
+    val header = entity.components.filterIsInstance<HeaderComponent>().firstOrNull()
     val disabled = header?.disabledComponents.orEmpty()
-    fun <C : Component> any(type: Class<C>): C? = entity.getComponent(type)
+    fun <C : Component> any(type: Class<C>): C? = entity.components.firstOrNull { type.isInstance(it) }?.let(type::cast)
     fun <C : Component> active(type: Class<C>): C? = any(type)?.takeIf { type !in disabled }
     val name = any(NameComponent::class.java)?.name?.takeIf { it.isNotBlank() } ?: id
     val position = any(PositionComponent::class.java)

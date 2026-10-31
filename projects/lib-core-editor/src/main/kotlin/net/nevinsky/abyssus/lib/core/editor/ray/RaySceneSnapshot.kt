@@ -9,9 +9,6 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.content.storageName
 import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import net.nevinsky.abyssus.lib.core.editor.pick.ScenePreview
-import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettings
-import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialIdentity
-import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialOverrides
 
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.graphics.Color
@@ -128,10 +125,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         environmentRevision: Long = 0,
         sunVisibility: RaySunVisibility? = null,
     ): RaySceneConversion {
-        val settings = params.rayTracing.settings ?: return RaySceneConversion.Fallback(
-            RaySceneFallback.UNSUPPORTED_GEOMETRY,
-            "Malformed rayTracing settings: ${params.rayTracing.errors.keys.joinToString()}"
-        )
+        val settings = params.rayTracing
         if (assets is RaySceneAssetState.Preparing) return RaySceneConversion.Preparing(assets.assets)
         if (assets is RaySceneAssetState.Failed) return RaySceneConversion.Fallback(
             RaySceneFallback.ASSET_FAILURE,
@@ -146,8 +140,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         val result = runCatchingKeepingCancellation {
             val builder = Builder(limits.copy(maxInstances = minOf(limits.maxInstances, settings.maxInstances)), environmentTextures, deform) { shared.getOrPut(it) { HashMap() } }
             for (placement in content.models) {
-                val render = rayRenderNode(placement.entityId.toLongOrNull()?.let(params.ecs::get))
-                builder.model(placement, assets.models.getValue(placement.storageName), poses[placement.entityId], render)
+                builder.model(placement, assets.models.getValue(placement.storageName), poses[placement.entityId])
             }
             for (placement in content.terrains) builder.terrain(
                 placement,
@@ -221,16 +214,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
             placement: AssetPlacement,
             asset: RayModelSnapshot,
             pose: RayModelPose?,
-            render: com.fasterxml.jackson.databind.JsonNode?
         ) {
-            val codec = RayMaterialOverrides()
-            val identities = asset.materials.map { RayMaterialIdentity(it.id, it.pbr) }
-            val optics = render?.let(codec::read)
-            require(optics?.errors.isNullOrEmpty()) { "Malformed optical overrides: ${optics?.errors?.keys?.joinToString()}" }
-            // A mesh keeps only its own materials: overrides for the others stay in the file but are ignored here.
-            val unresolved = render?.let { codec.unresolved(it, identities) }.orEmpty()
-                .filter { id -> placement.meshId == null || identities.any { it.id == id } }
-            require(unresolved.isEmpty()) { "Unresolved or ineligible optical material IDs: ${unresolved.joinToString()}" }
             val firstInstance = instances.size
             cache = cacheFor(asset)
             val prefix = "model:${placement.storageName}"
@@ -238,16 +222,8 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                 asset.images.mapValues { (name, image) -> texture("$prefix:$name", image, RayTextureSampler()) }
 
             fun material(id: String?): Int =
-                materialIds.getOrPut("$prefix:$id" + if (optics?.values?.containsKey(id) == true) ":${placement.entityId}" else "") {
-                    val source = asset.requireMaterial(id)
-                    val material = convertMaterial(source, textureIds)
-                    val override = optics?.values?.get(id)
-                    materials.add(
-                        if (override == null) material else material.copy(
-                            transmission = override.transmission.toFloat(),
-                            ior = override.ior.toFloat()
-                        )
-                    )
+                materialIds.getOrPut("$prefix:$id") {
+                    materials.add(convertMaterial(asset.requireMaterial(id), textureIds))
                     materials.lastIndex
                 }
 

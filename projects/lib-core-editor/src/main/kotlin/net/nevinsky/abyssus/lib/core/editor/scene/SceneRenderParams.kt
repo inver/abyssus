@@ -7,19 +7,18 @@ package net.nevinsky.abyssus.lib.core.editor.scene
 
 import net.nevinsky.abyssus.lib.core.dto.CameraDto
 import net.nevinsky.abyssus.lib.core.editor.content.unclampedColor
-import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsState
-import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsCodec
+import net.nevinsky.abyssus.lib.core.editor.ray.SceneRaySettings
 
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.graphics.Color
 
-import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import com.badlogic.ashley.core.Entity
+import net.nevinsky.abyssus.lib.core.dto.EntityDto
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.util.float
-import net.nevinsky.abyssus.lib.core.util.obj
 import java.io.File
 import net.nevinsky.abyssus.lib.core.util.quadraticFogCoefficient
 import kotlin.math.exp
@@ -62,8 +61,8 @@ data class SceneRenderParams(
     val content: SceneContent = SceneContent(),
     val projectDir: File? = null,
     /** The scene's typed entities, for scene overlays that draw components the view does not model. */
-    val ecs: Map<Long, Entity> = emptyMap(),
-    val rayTracing: SceneRaySettingsState = SceneRaySettingsCodec().read(SceneJson().mapper.createObjectNode()),
+    val ecs: Map<Long, EntityDto> = emptyMap(),
+    val rayTracing: SceneRaySettings = SceneRaySettings(),
 ) {
     companion object {
         val DEFAULT_CLEAR = Color(0.1f, 0.1f, 0.15f, 1f)
@@ -72,13 +71,10 @@ data class SceneRenderParams(
 }
 
 /**
- * The view parameters of [scene], seen through [camera]; [projectDir] holds its assets. [root] is the scene document the
- * editor-only `rayTracing` settings are read from, as the file holds them (the game's scene binding ignores them); without
- * it the ray settings are the defaults.
+ * The view parameters of [scene], seen through [camera]; [projectDir] holds its assets. The ray settings are the defaults:
+ * a scene does not save them.
  */
-fun renderParamsOf(
-    scene: SceneDto, camera: CameraParams, projectDir: File? = null, root: JsonNode? = null,
-): SceneRenderParams {
+fun renderParamsOf(scene: SceneDto, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
     val fog = fogOf(scene)
     return SceneRenderParams(
         fog?.color ?: SceneRenderParams.DEFAULT_CLEAR,
@@ -88,7 +84,6 @@ fun renderParamsOf(
         sceneContentOf(scene),
         projectDir,
         scene.ecs,
-        SceneRaySettingsCodec().read(root ?: SceneJson().mapper.createObjectNode()),
     )
 }
 
@@ -114,14 +109,18 @@ internal fun normalized(v: Vector3): Vector3? {
     return if (len > 1e-6f && len.isFinite()) Vector3(v).scl(1f / len) else null
 }
 
+/** The part of an `.abss` project file [MainCamera] reads. */
+private data class MainCameraDocument(val mainCamera: CameraDto? = null)
+
 /** The `mainCamera` of the `.abss` project a scene belongs to. */
-class MainCamera {
+class MainCamera(
+    private val json: JsonProcessor,
+    private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
+) {
     fun parse(abssText: String): CameraParams? = runCatchingKeepingCancellation {
-        val root = SceneJson().parse(abssText).takeIf { it.isObject } ?: return null
-        if (net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat()
-                .validate(root, net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT) != null
-        ) return null
-        val cam = SceneJson().bind(root.obj("mainCamera") ?: return null, CameraDto::class.java)
+        val root = json.readObject(abssText)
+        if (format.validate(root, DocumentKind.PROJECT) != null) return null
+        val cam = json.bind(root, MainCameraDocument::class.java).mainCamera ?: return null
         val position = cam.position ?: return null
         val direction = normalized(cam.viewPointPosition ?: return null) ?: return null
         val defaults = CameraParams.DEFAULT
