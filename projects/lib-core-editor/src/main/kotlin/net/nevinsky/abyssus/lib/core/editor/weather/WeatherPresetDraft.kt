@@ -4,88 +4,35 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.weather
 
-import net.nevinsky.abyssus.lib.core.editor.util.isWholeNumber
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.assets.AssetMetaBinder
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaParser
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
-import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyMeta
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
-import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.document.newAssetMetaTree
+import net.nevinsky.abyssus.lib.core.editor.document.newAssetMetaText
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import java.util.UUID
 
-/** Snapshots admitted metadata with the runtime's cloud defaults, without IO or rendering state. */
+/**
+ * Snapshots the clouds a procedural sky names as a new `CLOUDS` asset: the source's typed settings, with the runtime's
+ * defaults filled in, under a new [UUID]. Extension keys the typed settings do not model are not carried over.
+ */
 class WeatherPresetDraft(
-    processor: JsonProcessor,
+    private val processor: JsonProcessor,
     private val messages: EditorMessages,
-    private val json: SceneJson = SceneJson(),
-    private val reader: AssetMetaReader = AssetMetaReader(processor),
-    private val binder: AssetMetaBinder = AssetMetaBinder(processor),
+    private val parser: AssetMetaParser = AssetMetaParser(processor),
 ) {
     fun create(skyText: String, sourceText: String, uuid: UUID, lastModified: Long): String {
-        val sky = reader.read(json.parseObject(skyText))
+        val sky = parser.read("sky", skyText)
         require(sky.type == MetaType.SKYBOX_PROCEDURAL) { messages.message("weatherSourceSky") }
-        val reference = sky.json["additional"]?.get("clouds")
-        require(reference != null && reference.isTextual && reference.textValue().isNotBlank()) {
+        val reference = sky.typedAdditional<ProceduralSkyMeta>().cloudsReference
+        require(reference != null) { messages.message("weatherSourceReference") }
+        val source = parser.read("source", sourceText)
+        require(source.type == MetaType.CLOUDS && source.uuid?.toString() == reference) {
             messages.message("weatherSourceReference")
         }
-        val source = reader.read(json.parseObject(sourceText))
-        require(source.type == MetaType.CLOUDS && source.json["uuid"]?.asText() == reference.textValue()) {
-            messages.message("weatherSourceReference")
-        }
-        val settings = binder.bind("source", source.json).typedAdditional<CloudMeta>()
+        val settings = source.typedAdditional<CloudMeta>()
         require(settings.visible) { messages.message("weatherSourceEmpty") }
-        val original = source.json["additional"]
-        val additional = json.parseObject("{}")
-        additional.put("technique", settings.technique.key)
-        for (band in listOfNotNull(settings.low, settings.mid, settings.high)) {
-            additional.set<JsonNode>(band.level.key, bandJson(band, original?.get(band.level.key)))
-        }
-        copyExtensions(original, additional, setOf("technique", "low", "mid", "high"))
-        val root = newAssetMetaTree(json, MetaType.CLOUDS, uuid.toString(), lastModified)
-        root.set<JsonNode>("additional", additional)
-        copyExtensions(
-            source.json,
-            root,
-            setOf("format", "formatVersion", "version", "lastModified", "uuid", "type", "additional")
-        )
-        return json.compact(root)
-    }
-
-    private fun bandJson(band: CloudBand, source: JsonNode?): ObjectNode {
-        val root = json.parseObject("{}")
-        root.put("type", band.type.key)
-        for ((key, value) in listOf(
-            "base" to band.base,
-            "top" to band.top,
-            "coverage" to band.coverage,
-            "density" to band.density
-        )) {
-            root.set<JsonNode>(key, source?.get(key) ?: number(value))
-        }
-        val wind = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.arrayNode()
-        wind.add(source?.get("wind")?.get(0) ?: source?.get("windX") ?: number(band.windX))
-        wind.add(source?.get("wind")?.get(1) ?: source?.get("windZ") ?: number(band.windZ))
-        root.set<JsonNode>("wind", wind)
-        copyExtensions(
-            source,
-            root,
-            setOf("type", "base", "top", "coverage", "density", "wind", "level", "windX", "windZ")
-        )
-        return root
-    }
-
-    private fun number(value: Float): JsonNode = json.parse(
-        if (isWholeNumber(value.toDouble())) value.toLong().toString() else value.toString()
-    )
-
-    private fun copyExtensions(source: JsonNode?, target: ObjectNode, known: Set<String>) {
-        source?.fieldNames()?.forEachRemaining { key ->
-            if (key !in known) target.set<JsonNode>(key, source[key].deepCopy<JsonNode>())
-        }
+        return newAssetMetaText(parser, MetaType.CLOUDS, settings, uuid, lastModified)
     }
 }

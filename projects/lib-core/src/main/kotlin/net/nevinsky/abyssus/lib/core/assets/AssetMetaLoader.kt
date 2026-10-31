@@ -1,7 +1,5 @@
 package net.nevinsky.abyssus.lib.core.assets
 
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.FileLoader
@@ -14,8 +12,7 @@ class AssetMetaLoader(
     private val json: JsonProcessor,
     private val fileLoader: FileLoader,
     private val log: Logger = NOPLogger.NOP_LOGGER,
-    private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
-    private val binder: AssetMetaBinder = AssetMetaBinder(json)
+    private val parser: AssetMetaParser = AssetMetaParser(json),
 ) {
     private val metasCache = ConcurrentHashMap<File, CachedMeta>()
 
@@ -33,7 +30,7 @@ class AssetMetaLoader(
         if (cached != null && cached.text == text) {
             return cached.meta
         }
-        val result = runCatchingKeepingCancellation { parse(assetName, text) }
+        val result = runCatchingKeepingCancellation { parser.read(assetName, text) }
         val meta = result.getOrNull()
         val error = result.exceptionOrNull()
         metasCache[dir] = CachedMeta(stamp, text, meta, error)
@@ -41,13 +38,6 @@ class AssetMetaLoader(
             log.warn("$file: ${error.message}", error)
         }
         return meta
-    }
-
-    /** Binds [text] to an [AssetMeta] named [assetName], its `additional` block bound to the class of its `type`. */
-    private fun parse(assetName: String, text: String): AssetMeta<Any> {
-        val node = json.readObject(text)
-        format.requireSupported(node, DocumentKind.ASSET)
-        return binder.bind(assetName, node)
     }
 
     private data class CachedMeta(

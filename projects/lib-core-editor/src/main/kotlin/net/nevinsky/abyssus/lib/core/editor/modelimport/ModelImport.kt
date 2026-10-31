@@ -12,13 +12,8 @@ import net.nevinsky.abyssus.lib.core.editor.document.ImportItemRecord
 import net.nevinsky.abyssus.lib.core.editor.document.OriginalImportSize
 import net.nevinsky.abyssus.lib.core.editor.document.ImportLargestExtent
 import net.nevinsky.abyssus.lib.core.editor.document.ImportHeight
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaDocument
-import net.nevinsky.abyssus.lib.core.editor.document.ModelAssetAdditional
-import net.nevinsky.abyssus.lib.core.editor.document.validateAssetDocument
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriteException
 import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriter
@@ -54,12 +49,11 @@ class StagedModelImport(val folder: String, val uuid: UUID, val files: Map<Strin
  */
 class ModelImport(
     private val json: JsonProcessor,
-    private val format: AbyssusDocumentFormat,
     private val transform: ImportTransform = ImportTransform(),
     private val textures: TextureGather = TextureGather(),
     private val writer: GltfWriter = GltfWriter(),
 ) {
-    private val assets = ModelAssetFiles(format)
+    private val assets = ModelAssetFiles(json)
 
     /**
      * @param projectDir the folder of the project's `.abss` file: `source.json` records the source path relative to

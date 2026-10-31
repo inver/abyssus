@@ -11,14 +11,9 @@ import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.util.text
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
 
 /** One parsed `meta.json`: its [type], its raw [json] tree, and the typed binding on request. */
 class MetaDocument internal constructor(val type: MetaType, val json: JsonNode, private val processor: JsonProcessor) {
-    /** The document as a read-only [Document], for hosts that do not name Jackson's tree types. */
-    val document: Document get() = Document(json)
-
     /** Binds the document to [clazz], or null when it does not fit (a missing required field, say). */
     fun <T, M : AssetMeta<T>> typed(clazz: Class<M>): M? =
         runCatchingKeepingCancellation { processor.bind(json, clazz) }.getOrNull()
@@ -28,19 +23,18 @@ class MetaDocument internal constructor(val type: MetaType, val json: JsonNode, 
  * Parses `meta.json` text once into a [MetaDocument]. Every reader of asset metadata (the loaders, the project
  * listing, the properties panel) goes through it, so they agree on the type and read the text once.
  */
-class AssetMetaReader(private val json: JsonProcessor, private val format: AbyssusDocumentFormat = AbyssusDocumentFormat()) {
+class AssetMetaReader(private val json: JsonProcessor) {
     /**
      * [text] as a document; throws when it is not a JSON object. A missing or unknown `type` reads as
      * [MetaType.UNKNOWN].
      */
     fun read(text: String): MetaDocument = read(json.readObject(text))
 
-    /** [text] as a document whose numbers keep their text (for display); throws when it is not a JSON object. */
-    fun readExact(text: String): MetaDocument = read(SceneJson().parseObject(text))
+    /** [text] as a document for display; same as [read] now that number text is no longer kept. */
+    fun readExact(text: String): MetaDocument = read(text)
 
     /** An already parsed [tree] (a caller that needs its own number text, say) as a document. */
     fun read(tree: JsonNode): MetaDocument {
-        format.requireSupported(tree, DocumentKind.ASSET)
         return MetaDocument(typeOf(tree), tree, json)
     }
 

@@ -8,11 +8,11 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.Quaternion
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
 import net.nevinsky.abyssus.lib.core.editor.document.PlacementWrites
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
+import net.nevinsky.abyssus.lib.core.editor.scene.entityById
 
 /**
  * What a drag changes about an entity: any of its [position], its [rotation] and, for a camera, its view [direction].
@@ -28,52 +28,34 @@ data class TransformEdit(
 /** A move of another entity's `PositionComponent.localPosition`: [entityId] is the target, [position] is its new position. */
 data class TargetMove(val entityId: String, val position: Vector3)
 
-/** Writes a [TransformEdit] into a scene's JSON tree, touching only the values that change. */
+/** Writes a [TransformEdit] into a scene, touching only the values that change. */
 class SceneTransformWriter(private val arrangements: ArrangementEdits = ArrangementEdits()) {
     private val placements = PlacementWrites()
 
     /**
-     * Sets `PositionComponent.localPosition` / `localRotation` of the entity [entityId] under `ecs.entities`, adding
-     * missing objects and fields. For an entity with a `CameraComponent.camera` object it also sets that object's
-     * `position` and `viewPointPosition`. [target] is written as the target entity's `PositionComponent.localPosition`.
-     * Moving or turning a copy of a path arrangement detaches it in the same edit ([ArrangementEdits.detach]).
-     * Returns false, leaving [root] as it was, when the entity or the target is missing, either has a
-     * `PositionComponent` that is not an object, or no value differs.
+     * Sets the `PositionComponent` local position / rotation of the entity [entityId], adding the component when it is
+     * missing. For an entity with a `CameraComponent` it also sets the camera's position and view direction. [edit]'s
+     * target is written as the target entity's local position. Moving or turning a copy of a path arrangement detaches it
+     * in the same edit ([ArrangementEdits.detach]). Returns false, leaving [scene] as it was, when the entity or the
+     * target is missing or no value differs.
      */
-    fun apply(root: JsonNode, entityId: String, edit: TransformEdit): Boolean {
-        val tree = SceneEntityTree(root)
-        val components = tree.components(entityId) ?: return false
-        // Check every entity the edit touches before writing anything, so a rejected edit leaves [root] as it was.
-        if ((edit.position != null || edit.rotation != null) && !holdsPlacement(components)) return false
-        val targetComponents = edit.target?.let { tree.components(it.entityId) ?: return false }
-        if (targetComponents != null && !holdsPlacement(targetComponents)) return false
+    fun apply(scene: SceneDto, entityId: String, edit: TransformEdit): Boolean {
+        val entity = entityById(scene, entityId) ?: return false
+        val target = edit.target?.let { entityById(scene, it.entityId) ?: return false }
         var changed = false
         if (edit.position != null || edit.rotation != null) {
-            val placement = placementOf(components)
-            edit.position?.let { changed = setVec(placement, "localPosition", it) or changed }
-            edit.rotation?.let { changed = setQuat(placement, "localRotation", it) or changed }
-            if (changed) arrangements.detach(root, entityId)
+            val placement = placements.placementOf(entity)
+            edit.position?.let { changed = placements.setPosition(placement, it) or changed }
+            edit.rotation?.let { changed = placements.setRotation(placement, it) or changed }
+            if (changed) arrangements.detach(scene, entityId)
         }
-        val camera = components.get("CameraComponent")?.get("camera") as? ObjectNode
-        if (camera != null) {
-            edit.position?.let { changed = setVec(camera, "position", it) or changed }
-            edit.direction?.let { changed = setVec(camera, "viewPointPosition", it) or changed }
+        entity.components.filterIsInstance<CameraComponent>().firstOrNull()?.camera?.let { camera ->
+            edit.position?.let { if (camera.position != it) { camera.position.set(it); changed = true } }
+            edit.direction?.let { if (camera.direction != it) { camera.direction.set(it); changed = true } }
         }
-        if (edit.target != null && targetComponents != null) {
-            changed = setVec(placementOf(targetComponents), "localPosition", edit.target.position) or changed
+        if (edit.target != null && target != null) {
+            changed = placements.setPosition(placements.placementOf(target), edit.target.position) or changed
         }
         return changed
     }
-
-    /** Whether [components] has a `PositionComponent` object, or none yet (a missing or null one is added on write). */
-    private fun holdsPlacement(components: ObjectNode): Boolean =
-        components.get("PositionComponent").let { it == null || it.isNull || it is ObjectNode }
-
-    /** The `PositionComponent` object of [components], added when missing; call only after [holdsPlacement]. */
-    private fun placementOf(components: ObjectNode): ObjectNode =
-        components.get("PositionComponent") as? ObjectNode ?: components.putObject("PositionComponent")
-
-    private fun setVec(parent: ObjectNode, name: String, v: Vector3) = placements.setVector(parent, name, v)
-
-    private fun setQuat(parent: ObjectNode, name: String, q: Quaternion) = placements.setQuaternion(parent, name, q)
 }

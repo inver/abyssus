@@ -6,25 +6,42 @@
 package net.nevinsky.abyssus.lib.core.editor.document
 
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.scene.SceneParser
 import net.nevinsky.abyssus.lib.core.util.containsText
-import net.nevinsky.abyssus.lib.core.util.textAt
-import net.nevinsky.abyssus.lib.core.util.textValuesOf
 
-/**
- * The asset and sky names the scene [text] names (`assetName`, `shaderKey`, `skyboxName`), not counting the entity
- * [ignoring]; null when [text] is not a supported native scene.
- */
-fun sceneNamedAssets(text: String, ignoring: String? = null): Set<String>? = runCatchingKeepingCancellation {
-    val root = SceneJson().parse(text)
-    root.also { net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat().requireSupported(it, DocumentKind.SCENE) }
-    if (ignoring != null) removeEntityNode(root, ignoring)
-    root.textValuesOf("assetName", "shaderKey") + listOfNotNull(root.textAt("skyboxName"))
-}.getOrNull()
+/** Questions about the names a document holds, answered from its text. */
+class DocumentQueries(
+    private val scenes: SceneParser,
+    private val json: JsonProcessor,
+) {
+    /**
+     * The asset and sky names the scene [text] names (a render component's `assetName` and `shaderKey`, a foliage
+     * component's `assetName`, the scene's `skyboxName`), not counting the entity [ignoring]; null when [text] is not a
+     * readable scene.
+     */
+    fun sceneNamedAssets(text: String, ignoring: String? = null): Set<String>? = runCatchingKeepingCancellation {
+        val scene = scenes.parse(text)
+        val skipped = ignoring?.toLongOrNull()
+        buildSet {
+            scene.ecs.filterKeys { it != skipped }.values.flatMap { it.components }.forEach { component ->
+                when (component) {
+                    is RenderComponent -> {
+                        component.assetName.takeIf { it.isNotBlank() }?.let(::add)
+                        component.shaderKey?.takeIf { it.isNotBlank() }?.let(::add)
+                    }
 
-/** Whether the `additional` block of the asset `meta.json` [text] holds the string [uuid]; null when [text] is not a supported asset document. */
-fun metaReferencesUuid(text: String, uuid: String): Boolean? = runCatchingKeepingCancellation {
-    val root = SceneJson().parse(text)
-    net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat().requireSupported(root, DocumentKind.ASSET)
-    root.get("additional")?.containsText(uuid) ?: false
-}.getOrNull()
+                    is FoliageComponent -> component.assetName?.takeIf { it.isNotBlank() }?.let(::add)
+                }
+            }
+            scene.skyboxName?.takeIf { it.isNotBlank() }?.let(::add)
+        }
+    }.getOrNull()
+
+    /** Whether the `additional` block of the asset `meta.json` [text] holds the string [uuid]; null when [text] is not a JSON object. */
+    fun metaReferencesUuid(text: String, uuid: String): Boolean? = runCatchingKeepingCancellation {
+        json.readObject(text).get("additional")?.containsText(uuid) ?: false
+    }.getOrNull()
+}

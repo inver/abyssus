@@ -95,13 +95,16 @@ fun parseRecord(spec: String): List<Pair<String, UiBindingType>>? {
     return result
 }
 
+// The sample is free-form user JSON (an array of rows), which JsonProcessor's object-only reader refuses: gate G6.
+private val sampleMapper = com.fasterxml.jackson.databind.json.JsonMapper()
+
 /** The members of a list binding: its `fields` and a `sample` array whose rows match them. A list is always read-only. */
 private fun listMembers(form: BindingForm, errors: MutableList<FormError>): FormResult<ObjectNode> {
     val f = JsonNodeFactory.instance
     val record = parseRecord(form.fields)
     if (record == null) errors += FormError("fields", "fields")
     val sample = form.sample.takeIf { it.isNotBlank() }?.let { text ->
-        val rows = runCatchingKeepingCancellation { net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(text) }.getOrNull()
+        val rows = runCatchingKeepingCancellation { sampleMapper.readTree(text) }.getOrNull()
         val ok = rows != null && rows.isArray && record != null && rows.all { row ->
             row.isObject && row.properties().all { (k, v) ->
                 when (record.firstOrNull { it.first == k }?.second) {

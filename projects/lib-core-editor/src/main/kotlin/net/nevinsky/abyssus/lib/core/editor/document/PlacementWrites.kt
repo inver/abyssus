@@ -2,55 +2,35 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
+
 package net.nevinsky.abyssus.lib.core.editor.document
 
-import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.dto.EntityDto
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 
 /**
- * The one rule for writing a position or rotation into a `PositionComponent` object, used by the gizmo, arrangements and
- * paste, so they share one set of rules. A missing vector or quaternion object is created with every field, or with only
- * the fields that differ from their defaults when [omitDefaults] is set (the component codec's omission); an existing
- * one gets only the fields that differ from what it holds, an absent field holding its default. Numbers are written
- * as floats.
+ * The one rule for writing a position, rotation or scale into an entity's [PositionComponent], used by the gizmo,
+ * arrangements and paste, so they share one set of rules. Each write reports whether the value differed.
  */
-class PlacementWrites(private val omitDefaults: Boolean = false) {
-    private class Field(val key: String, val value: Float, val default: Float)
-
-    /** Writes [v] as the object [name] of [parent]; false when nothing needed to change. */
-    fun setVector(parent: PositionComponent, name: String, v: Vector3): Boolean =
-        setFields(parent, name, listOf(Field("x", v.x, 0f), Field("y", v.y, 0f), Field("z", v.z, 0f)))
-
-    /** Writes [q] as the object [name] of [parent]; false when nothing needed to change. */
-    fun setQuaternion(parent: ObjectNode, name: String, q: Quaternion): Boolean =
-        setFields(
-            parent,
-            name,
-            listOf(Field("x", q.x, 0f), Field("y", q.y, 0f), Field("z", q.z, 0f), Field("w", q.w, 1f))
-        )
-
-    /** The `PositionComponent` object of [components], added when missing; null when it holds something else. */
-    fun placementOf(components: List<Component>): PositionComponent {
-        val existing = components.filterIsInstance<PositionComponent>()
-        return if (existing.isEmpty()) {
-            components + PositionComponent()
-        } else existing
-    }
-
-    private fun setFields(parent: ObjectNode, name: String, fields: List<Field>): Boolean {
-        val existing = parent.get(name)
-        if (existing != null && !existing.isNull && existing !is ObjectNode) return false
-        val target = existing as? ObjectNode
-        val differing =
-            fields.filter { f -> (target?.get(f.key)?.takeIf { it.isNumber }?.floatValue() ?: f.default) != f.value }
-        if (differing.isEmpty()) return false
-        val written = target ?: parent.putObject(name)
-        for (f in if (target == null && !omitDefaults) fields else differing) written.set<JsonNode>(
-            f.key,
-            FloatNode.valueOf(f.value)
-        )
+class PlacementWrites {
+    /** Sets the local position of [placement] to [v]; false when it already is [v]. */
+    fun setPosition(placement: PositionComponent, v: Vector3): Boolean {
+        if (placement.localPosition == v) return false
+        placement.localPosition.set(v)
         return true
     }
+
+    /** Sets the local rotation of [placement] to [q]; false when it already is [q]. */
+    fun setRotation(placement: PositionComponent, q: Quaternion): Boolean {
+        if (placement.localRotation == q) return false
+        placement.localRotation.set(q)
+        return true
+    }
+
+    /** The [PositionComponent] of [entity], added when it has none. */
+    fun placementOf(entity: EntityDto): PositionComponent =
+        entity.components.filterIsInstance<PositionComponent>().firstOrNull()
+            ?: PositionComponent().also(entity::add)
 }

@@ -5,10 +5,9 @@
 
 package net.nevinsky.abyssus.lib.core.editor.foliage
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.document.newAssetMetaText
-import net.nevinsky.abyssus.lib.core.editor.document.FoliageAssetAdditional
 
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaParser
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDataFile
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageFingerprint
@@ -43,6 +42,7 @@ class NewFoliageFiles(val folder: String, val uuid: String, val metaText: String
  */
 class FoliageAssetWriter(
     private val json: JsonProcessor,
+    private val parser: AssetMetaParser = AssetMetaParser(json),
     private val dataFile: FoliageDataFile = FoliageDataFile(),
     private val fingerprint: FoliageFingerprint = FoliageFingerprint(),
     private val clock: () -> Long = System::currentTimeMillis,
@@ -72,7 +72,7 @@ class FoliageAssetWriter(
 
     private fun metaText(terrainFolder: String, maskResolution: Int, uuid: UUID, lastModified: Long): String {
         return newAssetMetaText(
-            MetaType.FOLIAGE, FoliageAssetAdditional(terrainFolder, maskResolution), uuid.toString(), lastModified,
+            parser, MetaType.FOLIAGE, FoliageMeta(terrain = terrainFolder, maskResolution = maskResolution), uuid, lastModified,
         )
     }
 }

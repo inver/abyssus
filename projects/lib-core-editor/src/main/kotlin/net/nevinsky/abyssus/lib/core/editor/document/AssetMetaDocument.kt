@@ -4,6 +4,15 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.document
 
+import net.nevinsky.abyssus.lib.core.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaParser
+import java.util.UUID
+
+/** The `meta.json` text of a new [type] asset with [additional]: compact, or indented when [pretty]. */
+fun <A : Any> newAssetMetaText(
+    parser: AssetMetaParser, type: MetaType, additional: A, uuid: UUID, lastModified: Long, pretty: Boolean = false,
+): String = parser.write(AssetMeta(type = type, lastModified = lastModified, additional = additional, uuid = uuid), pretty)
 
 /** The deliberately sparse initial UI document, without the optional defaults of a bound runtime widget. */
 data class UiAssetAdditional(val ui: InitialUiCollection = InitialUiCollection())

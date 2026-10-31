@@ -5,16 +5,14 @@
 
 package net.nevinsky.abyssus.lib.core.editor.terrain.splat
 
-import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaParser
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_MAP
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
+import net.nevinsky.abyssus.lib.core.assets.texture.TextureMeta
 import net.nevinsky.abyssus.lib.core.editor.document.newAssetMetaText
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaTextEditor
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
-import net.nevinsky.abyssus.lib.core.editor.document.TextureAssetAdditional
 import net.nevinsky.abyssus.lib.core.editor.terrain.uniqueAssetUuid
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import java.io.File
@@ -48,12 +46,13 @@ sealed interface SplatPlan {
 /**
  * Plans the files of Create splat map (a blank image) and Make unique copy (the shared map's image): a texture asset
  * folder `texture_<terrain>_splat` (`_2`, `_3` while taken) with a native compact `meta.json` of `type: "TEXTURE"` and
- * `additional.file`, and `splat.png`, plus the terrain's `meta.json` with `splatMap` set through [DocumentTextEditor],
- * so its formatting, key order, number text and unknown fields are kept. Nothing is written here; the caller stages the
+ * `additional.file`, and `splat.png`, plus the terrain's `meta.json` with `splatMap` set through [AssetMetaTextEditor]. Nothing is written here; the caller stages the
  * files in one `AssetTransaction`.
  */
 class SplatAssetWriter(
     private val json: JsonProcessor,
+    private val metaEditor: AssetMetaTextEditor,
+    private val parser: AssetMetaParser = AssetMetaParser(json),
     private val codec: SplatImageCodec,
     private val clock: () -> Long = System::currentTimeMillis,
     private val randomUuid: () -> UUID = { UUID.randomUUID() },
@@ -70,11 +69,7 @@ class SplatAssetWriter(
 
     /** [terrainMetaText] with `additional.splatMap` set to [uuid]; null when the text is not a supported native terrain `meta.json`. */
     fun link(terrainMetaText: String, uuid: String): String? {
-        val outcome = DocumentTextEditor().edit(terrainMetaText, DocumentKind.ASSET) { root ->
-            val additional = root.get("additional") as? ObjectNode ?: return@edit false
-            additional.put(SPLAT_MAP, uuid)
-            true
-        }
+        val outcome = metaEditor.edit<TerrainMeta>(terrainMetaText, MetaType.TERRAIN) { it.copy(splatMap = uuid) }
         return when (outcome) {
             is TextEditOutcome.Edited -> outcome.text
             TextEditOutcome.Unchanged -> terrainMetaText
@@ -86,7 +81,7 @@ class SplatAssetWriter(
         val assetsDir = File(projectDir, ASSETS_DIR)
         val uuid = uniqueAssetUuid(json, assetsDir, randomUuid)
         val linked = link(terrainMetaText, uuid.toString()) ?: return SplatPlan.Refused(SplatPlanProblem.TERRAIN_META)
-        val meta = newAssetMetaText(MetaType.TEXTURE, TextureAssetAdditional(SPLAT_FILE_NAME), uuid.toString(), clock())
+        val meta = newAssetMetaText(parser, MetaType.TEXTURE, TextureMeta(file = SPLAT_FILE_NAME), uuid, clock())
         return SplatPlan.Planned(NewSplatFiles(freeFolder(assetsDir, terrainFolder), uuid.toString(), meta, codec.encode(pixels), linked))
     }
 

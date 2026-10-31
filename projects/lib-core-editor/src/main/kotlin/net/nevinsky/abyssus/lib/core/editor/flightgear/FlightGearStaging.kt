@@ -10,7 +10,7 @@ import net.nevinsky.abyssus.lib.core.editor.document.FlightGearImportRecord
 import net.nevinsky.abyssus.lib.core.editor.document.OriginalImportSize
 import net.nevinsky.abyssus.lib.core.editor.document.ImportSpan
 import net.nevinsky.abyssus.lib.core.editor.document.ImportItemRecord
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriter
 import net.nevinsky.abyssus.lib.core.editor.modelimport.MODEL_FILE
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelAssetFiles
@@ -22,11 +22,11 @@ import java.util.UUID
 internal class FlightGearStaging(
     private val collection: FlightGearCollection,
     private val geometry: FlightGearGeometry,
-    private val format: AbyssusDocumentFormat,
+    private val json: JsonProcessor,
     private val sgi: SgiImage,
     private val writer: GltfWriter,
 ) {
-    private val assets = ModelAssetFiles(format)
+    private val assets = ModelAssetFiles(json)
 
     fun stage(
         archive: FlightGearArchive,
