@@ -13,24 +13,10 @@ import net.nevinsky.abyssus.lib.core.editor.pick.ScenePreview
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.graphics.Color
 
-import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
-import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.PerspectiveCamera
-import com.badlogic.gdx.graphics.VertexAttributes
-import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
-import com.badlogic.gdx.math.Matrix4
-import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelColor
-import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelImage
-import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelMaterial
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelMesh
-import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelNode
-import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSnapshot
-import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayTextureSampler
-import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayTextureWrap
-import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_LAYERS
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayTerrainSnapshot
 import net.nevinsky.abyssus.lib.raytracing.*
 import net.nevinsky.abyssus.lib.core.editor.pick.DragResult
 
@@ -108,9 +94,9 @@ fun raySceneDiff(previous: RaySceneFrame?, next: RaySceneFrame): RaySceneDiff {
 
 /** CPU-only conversion from the same preview and selected lights used by raster. Never reads GL mesh/texture handles. */
 class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimits()) {
-    // Converted static meshes and textures per retained asset object, so unchanged assets keep their identity from one
-    // capture to the next and the backend reuses its acceleration structures. Weak: a replaced asset drops its entry.
-    private val shared = java.util.WeakHashMap<Any, MutableMap<String, Any>>()
+    // Converts the assets; it keeps converted meshes and textures per retained asset object, so unchanged assets keep their
+    // identity from one capture to the next and the backend reuses its acceleration structures.
+    private val converter = RaySceneConverter(limits)
 
     // Halved copies of oversized textures, per source object, so a scene over the texel budget reduces them once, not every frame.
     private val halved = java.util.WeakHashMap<RayTexture, RayTexture>()
@@ -137,29 +123,42 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
             content.models.mapNotNull { if (it.storageName !in assets.models) "model:${it.storageName}" else null } +
                     content.terrains.mapNotNull { if (it.assetName !in assets.terrains) "terrain:${it.assetName}" else null }
         if (missing.isNotEmpty()) return RaySceneConversion.Preparing(missing.distinct())
+        var topology: List<String> = emptyList()
+        var transforms: Map<String, List<Float>> = emptyMap()
         val result = runCatchingKeepingCancellation {
-            val builder = Builder(limits.copy(maxInstances = minOf(limits.maxInstances, settings.maxInstances)), environmentTextures, deform) { shared.getOrPut(it) { HashMap() } }
-            for (placement in content.models) {
-                builder.model(placement, assets.models.getValue(placement.storageName), poses[placement.entityId])
+            val scene = synchronized(converter) {
+                converter.reset(
+                    environmentTextures,
+                    limits.copy(maxInstances = minOf(limits.maxInstances, settings.maxInstances)),
+                    deform,
+                )
+                for (placement in content.models) {
+                    val added = converter.model(
+                        placement.entityId.toString(), placement.transform.toMatrix(),
+                        assets.models.getValue(placement.storageName), poses[placement.entityId],
+                    )
+                    require(added > 0) { "Displayed model has no supported mesh parts" }
+                }
+                for (placement in content.terrains) converter.terrain(
+                    placement.entityId.toString(), placement.transform.toMatrix(), assets.terrains.getValue(placement.assetName),
+                )
+                converter.checkBounds()
+                topology = converter.topology.toList()
+                transforms = converter.transforms.toMap()
+                RaySceneSnapshot(
+                    converter.meshes.toList(),
+                    converter.instances.toList(),
+                    converter.materials.toList(),
+                    fitTextureTexels(converter.textures.toList(), halve = ::halvedTexture)
+                        ?: throw RaySceneLimitException("The scene textures cannot be reduced to $RAY_MAX_TEXTURE_TEXELS texels"),
+                    lights(lightSet),
+                    environment ?: RayEnvironment(
+                        ambient = params.ambient?.ray() ?: RayColor(0f, 0f, 0f),
+                        background = params.clear.ray()
+                    ),
+                    params.fog?.let { RayFog(it.color.ray(), it.density, it.gradient) },
+                    sunVisibility)
             }
-            for (placement in content.terrains) builder.terrain(
-                placement,
-                assets.terrains.getValue(placement.assetName)
-            )
-            builder.checkBounds()
-            val scene = RaySceneSnapshot(
-                builder.meshes,
-                builder.instances,
-                builder.materials,
-                fitTextureTexels(builder.textures, halve = ::halvedTexture)
-                    ?: throw RaySceneLimitException("The scene textures cannot be reduced to $RAY_MAX_TEXTURE_TEXELS texels"),
-                lights(lightSet),
-                environment ?: RayEnvironment(
-                    ambient = params.ambient?.ray() ?: RayColor(0f, 0f, 0f),
-                    background = params.clear.ray()
-                ),
-                params.fog?.let { RayFog(it.color.ray(), it.density, it.gradient) },
-                sunVisibility)
             val cameraSnapshot = RayCameraSnapshot(
                 camera.position.cpy().ray(),
                 camera.direction.cpy().ray(),
@@ -176,8 +175,8 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                 cameraSnapshot,
                 params.projectDir?.absoluteFile?.toPath()?.normalize()?.toString(),
                 assets.models.mapKeys { "model:${it.key}" } + assets.terrains.mapKeys { "terrain:${it.key}" },
-                builder.topology.toList(),
-                builder.transforms.toMap(),
+                topology,
+                transforms,
                 poses.entries.associate { it.key.toString() to it.value.revision },
                 environmentRevision,
                 settings
@@ -189,140 +188,6 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                 it.message
             )
         })
-    }
-
-    private class Builder(
-        private val limits: RaySnapshotLimits,
-        initialTextures: List<RayTexture>,
-        private val deform: ((RayModelMesh, List<FloatArray>) -> FloatArray)?,
-        private val cacheFor: (Any) -> MutableMap<String, Any>,
-    ) {
-
-        private var cache: MutableMap<String, Any> = HashMap()
-        val meshes = mutableListOf<RayMesh>();
-        val instances = mutableListOf<RayInstance>()
-        val materials = mutableListOf<RayMaterial>();
-        val textures = initialTextures.toMutableList()
-        val topology = mutableListOf<String>();
-        val transforms = linkedMapOf<String, List<Float>>()
-        private val geometry = mutableMapOf<String, Int>();
-        private val materialIds = mutableMapOf<String, Int>()
-        private var bytes = initialTextures.sumOf { it.width.toLong() * it.height * 16 };
-        private var triangles = 0L
-
-        fun model(
-            placement: AssetPlacement,
-            asset: RayModelSnapshot,
-            pose: RayModelPose?,
-        ) {
-            val firstInstance = instances.size
-            cache = cacheFor(asset)
-            val prefix = "model:${placement.storageName}"
-            val textureIds =
-                asset.images.mapValues { (name, image) -> texture("$prefix:$name", image, RayTextureSampler()) }
-
-            fun material(id: String?): Int =
-                materialIds.getOrPut("$prefix:$id") {
-                    materials.add(convertMaterial(asset.requireMaterial(id), textureIds))
-                    materials.lastIndex
-                }
-
-            fun visit(node: RayModelNode, parent: Matrix4, path: String) {
-                val local = node.localMatrix()
-                val global = pose?.node(node.id)?.let(::Matrix4) ?: Matrix4(parent).mul(local)
-                for ((ordinal, part) in node.parts.withIndex()) {
-                    val skin = pose?.bones(node.id, part.meshPartId)
-                    require(part.boneBindTransforms.isEmpty() || (skin != null && deform != null)) { "Skinned model requires the displayed animation pose and deformation" }
-                    val source =
-                        asset.requireMeshOfPart(part.meshPartId)
-                    val indices = source.parts.first { it.id == part.meshPartId }
-                    require(indices.primitiveType == GL20.GL_TRIANGLES) { "Only triangle mesh parts are supported" }
-                    val key =
-                        "$prefix:${part.meshPartId}" + if (skin != null) ":${placement.entityId}:$path/$ordinal" else ""
-                    val mesh = geometry.getOrPut(key) {
-                        fun build(): CachedMesh {
-                            val values = if (skin != null) requireNotNull(deform)(source, skin) else source.vertices()
-                            return rayMeshOf(source, values, indices.indices(), key)
-                        }
-                        // skinned geometry depends on the instance's pose; static geometry is converted once per asset
-                        val built = if (skin != null) build() else cache.getOrPut("mesh:$key") { build() } as CachedMesh
-                        bytes += built.bytes
-                        triangles += built.mesh.indexCount / 3
-                        meshes.add(built.mesh); meshes.lastIndex
-                    }
-                    val id = "${placement.entityId}/$path/$ordinal"
-                    val world = placement.transform.toMatrix()
-                    if (skin == null) world.mul(global)
-                    instance(id, mesh, material(part.materialId), world)
-                    topology += "$id:$key:${part.materialId}"
-                }
-                node.children.forEachIndexed { index, child -> visit(child, global, "$path/$index") }
-            }
-            asset.nodes.forEachIndexed { index, node -> visit(node, Matrix4(), index.toString()) }
-            require(instances.size > firstInstance) { "Displayed model has no supported mesh parts" }
-        }
-
-        fun terrain(placement: AssetPlacement, asset: RayTerrainSnapshot) {
-            val key = "terrain:${placement.assetName}"
-            cache = cacheFor(asset)
-            val mesh = geometry.getOrPut(key) {
-                val built = cache.getOrPut("mesh:$key") { rayTerrainMeshOf(asset, key) } as CachedMesh
-                triangles += built.mesh.indexCount / 3; bytes += built.bytes
-                meshes.add(built.mesh); meshes.lastIndex
-            }
-            val material = materialIds.getOrPut(key) {
-                val splat = asset.splatMap?.let { RayTextureBinding(texture("$key:splat", it.image, it.sampler)) }
-                val layers = SPLAT_LAYERS.map { name ->
-                    asset.layers[name]?.let {
-                        RayTextureBinding(
-                            texture(
-                                "$key:$name",
-                                it.image,
-                                it.sampler
-                            )
-                        )
-                    }
-                }
-                materials.add(
-                    RayMaterial(
-                        kind = RayMaterialKind.TERRAIN,
-                        terrain = RayTerrainMaterial(splat, layers, asset.size.toFloat())
-                    )
-                ); materials.lastIndex
-            }
-            instance(
-                placement.entityId.toString(),
-                mesh,
-                material,
-                placement.transform.toMatrix()
-            ); topology += "${placement.entityId}:$key"
-        }
-
-        private fun instance(id: String, mesh: Int, material: Int, matrix: Matrix4) {
-            instances.add(RayInstance(id, mesh, material, matrix.`val`)); transforms[id] =
-                matrix.`val`.toList(); checkBounds()
-        }
-
-        /** Says which bound was exceeded and by how much, so the toolbar can tell the user what to reduce. */
-        fun checkBounds() {
-            if (instances.size > limits.maxInstances) throw RaySceneLimitException("The scene needs ${instances.size} model parts and terrain; the limit is ${limits.maxInstances}")
-            if (triangles > limits.maxTriangles) throw RaySceneLimitException("The scene has $triangles triangles; the limit is ${limits.maxTriangles}")
-            if (bytes > limits.maxBytes) throw RaySceneLimitException("The scene needs ${bytes / (1024 * 1024)} MB of geometry and textures; the limit is ${limits.maxBytes / (1024 * 1024)} MB")
-        }
-
-        private fun texture(id: String, image: RayModelImage, sampler: RayTextureSampler): Int {
-            val existing = textures.indexOfFirst { it.id == id }
-            if (existing >= 0) return existing
-            bytes += image.byteSize; checkBounds()
-            // 8-bit texels stay 8-bit all the way to the backend: a 2048x2048 image is 16 MB, not 67 MB of floats
-            textures.add(cache.getOrPut("texture:$id:${sampler.wrapU}:${sampler.wrapV}") {
-                RayTexture(
-                    id, image.width, image.height, image.rgba(),
-                    sampler.wrapU.toRayWrap(), sampler.wrapV.toRayWrap()
-                )
-            } as RayTexture)
-            return textures.lastIndex
-        }
     }
 
     private fun lights(set: LightSet): List<RayLight> = set.directional.map {

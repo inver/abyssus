@@ -53,73 +53,73 @@ class RayAnimationSnapshotTest {
     }
 
     @Test fun firstAnimationIsCapturedAtItsCurrentTime() {
-        val entity = entity("a")
+        val entity = entity(1L)
         entity.animation!!.update(.5f)
-        val pose = RayModelPoses().capture(listOf(entity)).getValue("a")
+        val pose = RayModelPoses().capture(listOf(entity)).getValue(1L)
         assertEquals(1f, pose.node("joint")!![12], 1e-5f)
         assertEquals(1f, pose.bones("skin", "part")!!.single()[12], 1e-5f)
     }
 
     @Test fun twoInstancesOfOneModelKeepIndependentPoses() {
         val model = model()
-        val first = entity("first", model); val second = entity("second", model)
+        val first = entity(2L, model); val second = entity(3L, model)
         first.animation!!.update(.25f); second.animation!!.update(.75f)
         val poses = RayModelPoses().capture(listOf(first, second))
-        assertEquals(.5f, poses.getValue("first").bones("skin", "part")!!.single()[12], 1e-5f)
-        assertEquals(1.5f, poses.getValue("second").bones("skin", "part")!!.single()[12], 1e-5f)
+        assertEquals(.5f, poses.getValue(2L).bones("skin", "part")!!.single()[12], 1e-5f)
+        assertEquals(1.5f, poses.getValue(3L).bones("skin", "part")!!.single()[12], 1e-5f)
         // a captured pose is a copy: later animation or mutation of it never reaches the live instance
-        poses.getValue("first").bones("skin", "part")!!.single()[12] = 99f
-        assertEquals(.5f, poses.getValue("first").bones("skin", "part")!!.single()[12], 1e-5f)
+        poses.getValue(2L).bones("skin", "part")!!.single()[12] = 99f
+        assertEquals(.5f, poses.getValue(2L).bones("skin", "part")!!.single()[12], 1e-5f)
         first.animation!!.update(.25f)
-        assertEquals(.5f, poses.getValue("first").bones("skin", "part")!!.single()[12], 1e-5f)
+        assertEquals(.5f, poses.getValue(2L).bones("skin", "part")!!.single()[12], 1e-5f)
     }
 
     @Test fun revisionAdvancesOnlyWhenThePoseChanges() {
-        val entity = entity("a")
+        val entity = entity(1L)
         val poses = RayModelPoses()
         entity.animation!!.update(.2f)
-        val first = poses.capture(listOf(entity)).getValue("a").revision
-        assertEquals(first, poses.capture(listOf(entity)).getValue("a").revision)
+        val first = poses.capture(listOf(entity)).getValue(1L).revision
+        assertEquals(first, poses.capture(listOf(entity)).getValue(1L).revision)
         entity.animation.update(.2f)
-        assertTrue(poses.capture(listOf(entity)).getValue("a").revision > first)
+        assertTrue(poses.capture(listOf(entity)).getValue(1L).revision > first)
     }
 
     @Test fun removedEntitiesLoseTheirPoseAndStaticOnesHaveNone() {
-        val animated = entity("a"); val static = staticEntity("s")
+        val animated = entity(1L); val static = staticEntity(6L)
         val poses = RayModelPoses()
-        assertEquals(setOf("a"), poses.capture(listOf(animated, static)).keys)
-        assertEquals(emptySet<String>(), poses.capture(listOf(static)).keys)
-        assertEquals(setOf("a"), poses.capture(listOf(animated)).keys)
+        assertEquals(setOf(1L), poses.capture(listOf(animated, static)).keys)
+        assertEquals(emptySet<Long>(), poses.capture(listOf(static)).keys)
+        assertEquals(setOf(1L), poses.capture(listOf(animated)).keys)
     }
 
     @Test fun jointDeformationMovesOnlyTheAnimatedInstancesSnapshotGeometry() {
         val snapshot = snapshot()
         val model = model()
-        val moving = entity("moving", model); val still = entity("still", model)
+        val moving = entity(4L, model); val still = entity(5L, model)
         moving.animation!!.update(.75f)
         val poses = RayModelPoses().capture(listOf(moving, still))
         val content = SceneContent(models = listOf(
-            AssetPlacement("moving", "model", PlacementTransform.IDENTITY), AssetPlacement("still", "model", PlacementTransform.IDENTITY)))
+            AssetPlacement(4L, "model", PlacementTransform.IDENTITY), AssetPlacement(5L, "model", PlacementTransform.IDENTITY)))
         val frame = (RaySceneSnapshots().capture(
             SceneRenderParams.DEFAULT.copy(content = content, projectDir = File("project")), camera(), NO_LIGHTS,
             RaySceneAssetState.Ready(mapOf("model" to snapshot), emptyMap()), poses = poses,
             deform = { mesh, palette -> RayModelSkinning().deform(mesh, palette) },
         ) as RaySceneConversion.Ready).frame.scene
         val x = frame.instances.associate { it.id.substringBefore('/') to frame.meshes[it.mesh].positions()[0] }
-        assertEquals(1.5f, x.getValue("moving"), 1e-5f)
-        assertEquals(0f, x.getValue("still"), 1e-5f)
+        assertEquals(1.5f, x.getValue("4"), 1e-5f)
+        assertEquals(0f, x.getValue("5"), 1e-5f)
         assertEquals(2, frame.meshes.size)
     }
 
     private fun camera() = PerspectiveCamera(60f, 800f, 600f).apply { position.set(0f, 0f, 5f); lookAt(0f, 0f, 0f); update() }
 
-    private fun staticEntity(id: String) = ModelEntity(placement(id), Model(), ModelInstance(Model()), null)
-    private fun entity(id: String, model: Model = model()): ModelEntity {
+    private fun staticEntity(id: Long) = ModelEntity(placement(id), Model(), ModelInstance(Model()), null)
+    private fun entity(id: Long, model: Model = model()): ModelEntity {
         val instance = ModelInstance(model)
         val controller = AnimationController(instance).also { it.setAnimation("slide", -1) }
         return ModelEntity(placement(id), model, instance, controller)
     }
-    private fun placement(id: String) = AssetPlacement(id, "model", PlacementTransform.IDENTITY)
+    private fun placement(id: Long) = AssetPlacement(id, "model", PlacementTransform.IDENTITY)
 
     private fun model(): Model {
         val model = Model()

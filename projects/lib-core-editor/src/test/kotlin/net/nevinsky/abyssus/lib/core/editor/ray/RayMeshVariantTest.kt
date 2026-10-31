@@ -99,10 +99,10 @@ class RayMeshVariantTest {
         )
         val content = SceneContent(
             models = listOf(
-                AssetPlacement("1", "duo", PlacementTransform.IDENTITY),
-                AssetPlacement("2", "duo", PlacementTransform.IDENTITY, "mesh_0"),
-                AssetPlacement("3", "duo", PlacementTransform.IDENTITY, "mesh_1"),
-                AssetPlacement("4", "duo", PlacementTransform.IDENTITY, "mesh_1"),
+                AssetPlacement(1L, "duo", PlacementTransform.IDENTITY),
+                AssetPlacement(2L, "duo", PlacementTransform.IDENTITY, "mesh_0"),
+                AssetPlacement(3L, "duo", PlacementTransform.IDENTITY, "mesh_1"),
+                AssetPlacement(4L, "duo", PlacementTransform.IDENTITY, "mesh_1"),
             ),
         )
         assets.update(File("p"), content)
@@ -114,18 +114,16 @@ class RayMeshVariantTest {
     }
 
     @Test
-    fun overridesForMaterialsTheMeshDroppedAreKeptButIgnored() {
+    fun aMeshPlacementUsesItsOwnAssetAndWaitsForIt() {
         val camera = PerspectiveCamera(61f, 800f, 600f).apply {
             position.set(4f, 5f, 6f); direction.set(-1f, -1f, -1f).nor(); near = .2f; far = 500f; update()
         }
-        val ecs = sceneWithEcs("""{"0":{"components":{"RenderComponent":{"rayTracingMaterials":{"dropped":{"transmission":1}}}}}}""").ecs
         fun capture(meshId: String?, key: String): RaySceneConversion {
-            val content = SceneContent(models = listOf(AssetPlacement("0", "model", PlacementTransform.IDENTITY, meshId)))
-            val params = SceneRenderParams.DEFAULT.copy(content = content, projectDir = File("p"), ecs = ecs)
+            val content = SceneContent(models = listOf(AssetPlacement(0L, "model", PlacementTransform.IDENTITY, meshId)))
+            val params = SceneRenderParams.DEFAULT.copy(content = content, projectDir = File("p"))
             return RaySceneSnapshots().capture(params, camera, NO_LIGHTS, RaySceneAssetState.Ready(mapOf(key to rayTestModel(pbr = true)), emptyMap()))
         }
-        // the whole model still refuses an override naming a material it does not have
-        assertTrue(capture(null, "model") is RaySceneConversion.Fallback)
+        assertTrue(capture(null, "model") is RaySceneConversion.Ready)
         val key = ModelKey("model", "mesh").encode()
         assertTrue(capture("mesh", key) is RaySceneConversion.Ready)
         // a scene asking for the mesh waits for the mesh's own asset, not the whole model's

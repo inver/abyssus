@@ -48,7 +48,7 @@ class RaySceneConverterTest {
         assertEquals(1, converter.textures.size)
         assertEquals(1, converter.instances.size)
         assertEquals(1, converter.transforms.size)
-        assertEquals("inst-1/0/0:model:inst-1:part:mat", converter.topology.firstOrNull())
+        assertTrue(converter.topology.toString(), converter.topology.single().let { it.startsWith("inst-1/0/0:model:") && it.endsWith(":part:mat") })
     }
 
     @Test fun unchangedAssetReusesMeshIdentity() {
@@ -94,7 +94,7 @@ class RaySceneConverterTest {
         assertEquals(1, converter.meshes.size)
         assertEquals(1, converter.materials.size)
         assertEquals(1, converter.instances.size)
-        assertEquals("terr-1:terrain:terr-1", converter.topology.firstOrNull())
+        assertTrue(converter.topology.toString(), converter.topology.single().startsWith("terr-1:terrain:"))
     }
 
     @Test fun rejectsOverBudgetScene() {

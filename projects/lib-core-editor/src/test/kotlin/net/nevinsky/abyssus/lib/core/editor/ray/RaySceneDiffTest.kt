@@ -36,7 +36,7 @@ class RaySceneDiffTest {
         com.badlogic.gdx.utils.GdxNativesLoader.load() // the camera's frustum update is native
     }
 
-    private val placement = AssetPlacement("entity", "model", PlacementTransform.IDENTITY)
+    private val placement = AssetPlacement(1L, "model", PlacementTransform.IDENTITY)
     private val model = rayTestModel()
     private val assets = RaySceneAssetState.Ready(mapOf("model" to model), emptyMap())
     private val camera = PerspectiveCamera(61f, 800f, 600f).apply {
@@ -45,14 +45,14 @@ class RaySceneDiffTest {
     private val converter = RaySceneSnapshots()
 
     private fun frame(
-        content: SceneContent = SceneContent(models = listOf(placement)), project: String = "project", preview: Map<String, DragResult> = emptyMap(),
+        content: SceneContent = SceneContent(models = listOf(placement)), project: String = "project", preview: Map<Long, DragResult> = emptyMap(),
         lights: LightSet = NO_LIGHTS, environment: RayEnvironment? = null, view: PerspectiveCamera = camera,
-        state: RaySceneAssetState = assets, fog: FogParams? = null, poses: Map<String, RayModelPose> = emptyMap(),
+        state: RaySceneAssetState = assets, fog: FogParams? = null, poses: Map<Long, RayModelPose> = emptyMap(),
         snapshots: RaySceneSnapshots = converter, environmentRevision: Long = 0,
     ): RaySceneFrame = (snapshots.capture(SceneRenderParams.DEFAULT.copy(content = content, projectDir = File(project), fog = fog), view, lights,
         state, preview, environment = environment, poses = poses, environmentRevision = environmentRevision) as RaySceneConversion.Ready).frame
 
-    private fun moved(x: Float) = mapOf("entity" to DragResult(PlacementTransform(Vector3(x, 0f, 0f), Quaternion(), Vector3(1f, 1f, 1f)), null))
+    private fun moved(x: Float) = mapOf(1L to DragResult(PlacementTransform(Vector3(x, 0f, 0f), Quaternion(), Vector3(1f, 1f, 1f)), null))
 
     @Test fun theFirstFrameIsAStructuralRebuild() {
         val diff = raySceneDiff(null, frame())
@@ -94,14 +94,14 @@ class RaySceneDiffTest {
         assertTrue(diff.rebuild)
         assertTrue(RaySceneChange.MATERIAL in diff.changes)
         assertFalse("a replaced asset must not reuse the old mesh", before.scene.meshes[0] === frame(state = replaced).scene.meshes[0])
-        val removed = frame(content = SceneContent(models = listOf(placement, placement.copy(entityId = "second"))))
+        val removed = frame(content = SceneContent(models = listOf(placement, placement.copy(entityId = 3L))))
         assertTrue(raySceneDiff(before, removed).rebuild)
     }
 
     @Test fun poseCameraLightAndEnvironmentChangesAreClassifiedWithoutARebuild() {
         val before = frame()
         val pose = RayModelPose(1, emptyMap(), emptyMap())
-        assertEquals(setOf(RaySceneChange.POSE), raySceneDiff(before, frame(poses = mapOf("entity" to pose))).changes)
+        assertEquals(setOf(RaySceneChange.POSE), raySceneDiff(before, frame(poses = mapOf(1L to pose))).changes)
         val orbit = PerspectiveCamera(61f, 800f, 600f).apply { position.set(5f, 5f, 6f); direction.set(-1f, -1f, -1f).nor(); near = .2f; far = 500f; update() }
         assertEquals(setOf(RaySceneChange.CAMERA), raySceneDiff(before, frame(view = orbit)).changes)
         val env = RayEnvironment(ambient = RayColor(.3f, .3f, .3f))

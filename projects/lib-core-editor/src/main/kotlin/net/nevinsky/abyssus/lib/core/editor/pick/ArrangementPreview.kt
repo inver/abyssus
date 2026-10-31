@@ -19,19 +19,23 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
  * heights, not the terrain's). Nothing is written.
  */
 class ArrangementPreview {
+    /** The id of the not yet saved copy [k]: negative, so it never names a scene entity (`-1` is "none"). */
+    private fun previewId(k: Int): Long = -2L - k
+
+
     /** [content] with the copies of the arrangement of [draft] placed along the draft points on [heights]. */
     fun apply(content: SceneContent, draft: PathEdit, heights: GroundHeight): SceneContent {
         val placement = content.arrangements.firstOrNull { it.entityId == draft.entityId } ?: return content
         val along = arrangementAlong(draft.points, placement.arrangement)
         val slots = PathLayout().slots(along) ?: return content
         val old = placement.arrangement.slots
-        val oldIds = old.filter { it >= 0 }.map(Int::toString).toSet()
+        val oldIds = old.filter { it >= 0 }.map(Int::toLong).toSet()
         val existing = content.models.filter { it.entityId in oldIds }.associateBy { it.entityId }
         val copies = slots.mapIndexed { k, slot ->
-            val id = old.getOrNull(k)?.takeIf { it >= 0 }?.toString()
+            val id = old.getOrNull(k)?.takeIf { it >= 0 }?.toLong()
             val scale = id?.let { existing[it]?.transform?.scale } ?: Vector3(1f, 1f, 1f)
             AssetPlacement(
-                id ?: "preview-${draft.entityId}-$k",
+                id ?: previewId(k),
                 along.asset.name,
                 PlacementTransform(slot.position(heights), slot.rotation(), scale),
             )
