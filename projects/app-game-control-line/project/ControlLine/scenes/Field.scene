@@ -251,7 +251,7 @@
               "y": 0,
               "z": -0.04
             },
-            "thrust": 5,
+            "thrust": 5.2,
             "fuelTime": 360,
             "wingArea": 0.325,
             "liftSlope": 8,
@@ -6359,6 +6359,29 @@
           },
           "ParentComponent": {
             "parentEntityId": 659
+          }
+        }
+      },
+      "718": {
+        "archetype": 0,
+        "components": {
+          "NameComponent": {
+            "name": "Model 718"
+          },
+          "TypeComponent": {
+            "type": "OBJECT"
+          },
+          "PositionComponent": {
+            "localPosition": {
+              "x": 0.045512676,
+              "y": 1.4810364,
+              "z": 2.443109
+            }
+          },
+          "RenderComponent": {
+            "shaderKey": "defaultShader",
+            "type": "MODEL",
+            "assetName": "model_mig3"
           }
         }
       }

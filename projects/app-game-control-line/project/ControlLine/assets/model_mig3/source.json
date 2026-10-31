@@ -1,0 +1,21 @@
+{
+  "importer": "model",
+  "source": "mig3.glb",
+  "sourcePath": "/home/inv3r/Downloads/mig3.glb",
+  "sourceSha256": "daceecb29a4a87ae636e3e4c4a0f128a8025acd4a93dd7371942dfcd0ff56133",
+  "sourceFormat": "GLB",
+  "stated": {
+    "unit": "m",
+    "upAxis": "Y"
+  },
+  "chosen": {
+    "unit": "m",
+    "upAxis": "Y"
+  },
+  "size": {
+    "height": 0.4
+  },
+  "animations": [],
+  "skipped": [],
+  "approximated": []
+}

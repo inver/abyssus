@@ -134,7 +134,10 @@ class ControlLineGame(
                 val pilot = scene.position(s.rig.pilot).localPosition
                 cameras.flying(pilot, scene.position(s.plane).localPosition)
                 val color = if (s.flight.tension >= CONTROL_TENSION) TAUT_LINE else SLACK_LINE
-                lines = s.lines().map { (a, b) -> LineSegment(a, b, color) }
+                val thickness = s.rig.planeSettings.lineDiameter
+                lines = s.wires(seconds).flatMap { wire ->
+                    wire.zipWithNext { a, b -> LineSegment(Vector3(a), Vector3(b), color, thickness = thickness) }
+                }
                 if (screen is Screen.Flying || screen is Screen.Paused) guide?.let { lines = lines + it.segments().toLines(pilot) }
             } else {
                 cameras.menu(

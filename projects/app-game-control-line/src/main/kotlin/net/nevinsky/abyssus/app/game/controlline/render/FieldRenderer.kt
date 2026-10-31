@@ -8,6 +8,7 @@ import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.g3d.Model
 import com.badlogic.gdx.graphics.g3d.ModelBatch
@@ -15,6 +16,7 @@ import com.badlogic.gdx.graphics.g3d.ModelInstance
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
 import com.badlogic.gdx.graphics.g3d.utils.AnimationController
+import com.badlogic.gdx.graphics.glutils.ImmediateModeRenderer20
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
@@ -40,6 +42,7 @@ import net.nevinsky.abyssus.lib.render.terrain.*
 import org.slf4j.Logger
 import java.io.File
 import java.util.concurrent.Executor
+import kotlin.math.min
 
 /**
  * The one asset storage of the project in [projectDir], wired by constructors like the plugin does (both take the
@@ -60,9 +63,13 @@ fun fieldAssets(
 
 /**
  *  A segment to draw: a control line or a debrief track from [from] to [to], in [color], [width] pixels wide
- * (drivers may cap it at 1).
+ * (drivers may cap it at 1). With a [thickness] above 0 it is a wire of that many metres, drawn to scale as a ribbon
+ * facing the camera ([wireLook]) and [width] is ignored.
  */
-class LineSegment(val from: Vector3, val to: Vector3, val color: Color, val width: Float = 1f)
+class LineSegment(
+    val from: Vector3, val to: Vector3, val color: Color, val width: Float = 1f, val thickness: Float = 0f,
+)
+
 
 /** The game's field view: draw a frame, resize with the window, and release GL resources. Raster and ray modes both
  * present through this interface; `Main` picks the implementation at launch (design decision 7). */
@@ -216,13 +223,14 @@ class FieldRenderer(private val ctx: BaseCtx) : FieldView, Disposable {
         for (placement in foliage.values) batch.render(placement.drawable, environment)
         batch.end()
 
-        if (lines.isNotEmpty()) {
+        val (wires, plain) = lines.partition { it.thickness > 0f }
+        if (plain.isNotEmpty()) {
             Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
             Gdx.gl.glEnable(GL20.GL_BLEND)
             Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)
             shapes.projectionMatrix = camera.combined
             // one batch per width: the width is a GL state, set outside begin / end
-            for ((width, group) in lines.groupBy { it.width }) {
+            for ((width, group) in plain.groupBy { it.width }) {
                 Gdx.gl.glLineWidth(width)
                 shapes.begin(ShapeRenderer.ShapeType.Line)
                 for (line in group) {
@@ -234,9 +242,12 @@ class FieldRenderer(private val ctx: BaseCtx) : FieldView, Disposable {
             Gdx.gl.glLineWidth(1f)
             Gdx.gl.glDisable(GL20.GL_BLEND)
         }
+        if (wires.isNotEmpty()) wireRenderer.draw(wires, camera, field.sunDirection)
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
         Gdx.gl.glDisable(GL20.GL_CULL_FACE)
     }
+
+    private val wireRenderer = WireRenderer()
 
     /**
      * The drawables of the scene's foliage that can be shown, one per terrain entity: made from the shared asset the
@@ -320,5 +331,6 @@ class FieldRenderer(private val ctx: BaseCtx) : FieldView, Disposable {
         modelShaders.dispose()
         terrainPass.dispose()
         shapes.dispose()
+        wireRenderer.dispose()
     }
 }

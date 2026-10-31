@@ -91,6 +91,11 @@ class FieldRendererGlTest {
                 renderer.draw(field, camera, seconds = 0.016f)
                 assertEquals(GL20.GL_NO_ERROR, Gdx.gl.glGetError())
 
+                // a 0.5 mm wire drawn to scale, as the flight draws its lines
+                val wire = listOf(LineSegment(Vector3(250f, 5f, 0f), Vector3(252f, 5.5f, 20f), Color.WHITE, thickness = 0.0005f))
+                renderer.draw(field, camera, wire, seconds = 0.016f)
+                assertEquals(GL20.GL_NO_ERROR, Gdx.gl.glGetError())
+
                 // look away from one terrain: only the other still shows its copies
                 val away = camera().apply { lookAt(250f, 0f, -900f); update() }
                 renderer.draw(field, away, seconds = 0.016f)

@@ -15,6 +15,15 @@ import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import org.slf4j.Logger
+import kotlin.math.exp
+import kotlin.math.max
+import kotlin.math.min
+
+/** The time constant (s) of the tension the drawn curves use. */
+private const val WIRE_TENSION_SMOOTHING = 0.1f
+
+/** The least share of the lines' tension a drawn line is given while they pull. */
+private const val WIRE_SHARE = 0.3f
 
 /** A frame never runs more than this much simulation (s), so a stall does not jump the plane. */
 private const val MAX_FRAME = 0.1f
@@ -115,6 +124,37 @@ class FlightSession(
         val b = Vector3()
         line.anchors(a, b)
         a to b.add(offset)
+    }
+
+    private val wireShape = WireShape(rig.wire)
+    private val shapes = List(2) { List(WIRE_SEGMENTS + 1) { Vector3() } }
+    private val smoothTension = FloatArray(2)
+    private var smoothed = false
+    private val heading = Vector3()
+    private val velocity = Vector3()
+
+    /**
+     * The two lines as curves from the handle to the leadouts (world space), up line first: shaped by each line's
+     * tension (smoothed, so the curve does not flicker), weight and drag. The points are reused by the next call.
+     */
+    fun wires(seconds: Float = PHYSICS_STEP): List<List<Vector3>> {
+        planeBody.velocity(velocity)
+        val speed = velocity.len()
+        heading.set(velocity).also { if (speed > 1e-3f) it.scl(1f / speed) }
+        val blend = 1f - exp(-seconds / WIRE_TENSION_SMOOTHING)
+        for (i in smoothTension.indices) {
+            smoothTension[i] = if (smoothed) smoothTension[i] + (rig.tensionOf(i) - smoothTension[i]) * blend else rig.tensionOf(i)
+        }
+        smoothed = true
+        val pulled = rig.tension >= CONTROL_TENSION
+        return lines().mapIndexed { i, (from, to) ->
+            // while the lines pull, both are held taut by the handle: the plane's pitch makes one carry less, and the
+            // model's equal rest lengths would leave it with a few centimetres to spare and hang it like thread
+            val tension = if (pulled) max(max(smoothTension[i], WIRE_SHARE * smoothTension.sum()), TAKEOFF_PULL) else smoothTension[i]
+            val rest = if (pulled) min(rig.planeSettings.lineLength, from.dst(to)) else rig.planeSettings.lineLength
+            wireShape.points(from, to, rest, tension, speed, heading, shapes[i])
+            shapes[i]
+        }
     }
 
     override fun close() = world.close()

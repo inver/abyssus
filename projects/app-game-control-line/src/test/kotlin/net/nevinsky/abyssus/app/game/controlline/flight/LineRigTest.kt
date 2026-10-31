@@ -29,8 +29,8 @@ class LineRigTest {
         assertTrue("nose $nose", nose.z < -0.95f)
         val inboard = f.rotation.transform(Vector3(1f, 0f, 0f))
         assertTrue("inboard wing $inboard", inboard.x < -0.95f)
-        // with the engine running the lines pull at once
-        f.fly(0.5f)
+        // with the engine running the wire is soon pulled tight
+        f.fly(1f)
         assertTrue("tension ${f.flight.tension}", f.flight.tension >= CONTROL_TENSION)
     }
 
@@ -75,5 +75,29 @@ class LineRigTest {
         assertEquals(ELEVATOR_THROW, f.rig.elevator, 1e-6f)
         f.rig.tilt = -0.5f
         assertEquals(-0.5f * ELEVATOR_THROW, f.rig.elevator, 1e-6f)
+    }
+
+    @Test
+    fun theBundledPlanesFlyOnHalfAMillimetreWire() {
+        for (name in listOf("Trainer", "Stunter", "Racer")) FieldFlight(name).use { f ->
+            assertEquals(name, 0.0005f, f.settings.lineDiameter, 0f)
+        }
+    }
+
+    @Test
+    fun theWireAddsAboutFifteenGramsToTheTrainer() = FieldFlight("Trainer").use { f ->
+        assertEquals(0.0154f, f.rig.wireMass, 0.0005f)
+    }
+
+    @Test
+    fun underLoadTheLinesAreAFewMillimetresLongerThanTheirRestLength() = FieldFlight("Trainer").use { f ->
+        f.fly(6f)
+        val tension = f.flight.tension
+        assertTrue("tension $tension", tension > 10f)
+        val rest = f.settings.lineLength
+        val longest = f.anchors().maxOf { (a, b) -> a.dst(b) }
+        val expected = f.rig.wire.stretch(rest, tension / 2)
+        assertTrue("longest ${longest - rest} m over rest, expected about $expected", longest - rest in 0f..0.02f)
+        assertTrue("tension stayed above the control threshold", f.flight.tension >= CONTROL_TENSION)
     }
 }

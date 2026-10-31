@@ -22,7 +22,7 @@ class PlaneComponent : Component {
 
     var lineLength = 15f
 
-    var lineDiameter = 0.0004f
+    var lineDiameter = 0.0005f
 
     var leadoutUp = Vector3(0.45f, 0f, 0.02f)
 

@@ -10,6 +10,7 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.score.FlightScoring
 import net.nevinsky.abyssus.app.game.controlline.track.SphereTrack
 import net.nevinsky.abyssus.app.game.controlline.track.TrackSample
+import net.nevinsky.abyssus.lib.physics.GRAVITY
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import kotlin.math.max
@@ -94,6 +95,19 @@ class Flight(
         lastVelocity.setZero()
     }
 
+    private val inertia = Vector3()
+
+    /**
+     * The force that gives the plane the inertia of its wire: the plane (mass m) is pulled back as if `m_w` heavier,
+     * `-(m * m_w / (m + m_w)) * a`, where `a` is the acceleration the last step gave it, less gravity's.
+     */
+    private fun wireInertia(seconds: Float): Vector3 {
+        val m = body.mass
+        val wire = rig.wireMass
+        inertia.set(velocity).sub(lastVelocity).scl(1f / seconds).add(0f, GRAVITY, 0f)
+        return inertia.scl(-m * wire / (m + wire))
+    }
+
     fun update(seconds: Float) {
         if (result != null) return
         val position = plane.getComponent(PositionComponent::class.java)
@@ -129,6 +143,7 @@ class Flight(
         body.angularVelocity(spin)
         aero.forces(rig.planeSettings, rotation, velocity, spin, rig.elevator, aero.thrust(rig.planeSettings, time), forces)
         body.applyForce(forces.force)
+        if (started && time > 0f) body.applyForce(wireInertia(seconds))
         body.applyTorque(forces.torque)
         lastVelocity.set(velocity)
         time += seconds

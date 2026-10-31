@@ -552,15 +552,32 @@ fields, and `FlightTest` holds the flight to the `control-line-flight` spec with
 | `RUDDER_EFFECT` | 0.05 per rad | yaw moment of the rudder offset |
 | `ROLL_DAMPING`, `YAW_DAMPING` | 0.5, 0.3 | as pitch damping, on the span |
 | `LINE_DRAG_COEFFICIENT` | 1.0 | a line is a cylinder across the flow |
+| `STEEL_DENSITY`, `STEEL_MODULUS` | 7850 kg/m³, 200 GPa | the lines are steel wire (`flight/Wire.kt`) |
+
+### The lines (OpenSpec change `add-control-line-wire-physics`)
+
+The lines are 0.5 mm steel wire (`PlaneComponent.lineDiameter`). Each line weighs 1.54 g/m and acts as follows:
+
+- **Mass:** `Flight` gives the plane the inertia of its wire, a third of each wire's mass (about 15 g for the Trainer's
+  15 m lines), as a force against the plane's acceleration. The Stunter's thrust was raised from 5 to 5.2 for it (the foliage manifest's rest-of-scene hash leaves `thrust` out, so the retune needs no re-recording of the vegetation).
+- **Stretch:** `LineRig` pulls each line as a spring of `E * A / L` (about 2.6 kN/m at 15 m, so about 11 mm of stretch at
+  30 N) with 10% damping, and that force is the tension the flight reports. The Jolt ropes are a backstop 2% longer.
+  The pilot holds the lines at 3 N when the plane is put on the ground, so the tension rises from the first moments.
+- **Shape:** `WireShape` curves each drawn line from its tension (smoothed over 0.1 s), weight and drag: a few cm to
+  15 cm of bow back in steady flight, and a drape when the lines go slack. While the lines pull, both are drawn taut
+  (the handle holds them; the pitch only makes one carry less), each with at least 30% of the total tension and 3 N,
+  so neither hangs like thread.
+- **Look:** `FieldRenderer` draws the wire to scale as a camera-facing ribbon, one pixel wide at least, with opacity
+  scaled by the share of the pixel it covers (never under 0.12), and a glint in the sun (`render/WireLook.kt`, drawn by `render/WireRenderer.kt`, which `WireRendererGlTest` runs on its own).
 
 The planes' scene values, in `scenes/Field.scene` (unlisted fields keep `PlaneComponent`'s defaults: line diameter
-0.4 mm, fuel 120 s, wing area 0.2 m², lift slope 4.5, zero-lift drag 0.03, elevator effect 0.5, pitch damping 12,
+0.5 mm, fuel 120 s, wing area 0.2 m², lift slope 4.5, zero-lift drag 0.03, elevator effect 0.5, pitch damping 12,
 rudder and engine offset 2°):
 
 | Plane | Class | Mass | Lines | Thrust | Fuel | Wing area | Other |
 |---|---|---|---|---|---|---|---|
 | `Racer` | SPEED | 0.5 kg | 21 m | 6 N | 60 s | 0.09 m² | lift slope 4.2, zero-lift drag 0.02, elevator effect 0.3, pitch damping 10 |
-| `Stunter` | STUNT | 1.1 kg | 18 m | 5 N | 360 s | 0.325 m² | lift slope 8, elevator effect 3 |
+| `Stunter` | STUNT | 1.1 kg | 18 m | 5.2 N | 360 s | 0.325 m² | lift slope 8, elevator effect 3 |
 | `Trainer` | TRAINER | 0.8 kg | 15 m | 5.5 N | 120 s | 0.2 m² | zero-lift drag 0.06 |
 
 All three have no linear damping and friction 0.05 (they roll on their wheels). With the handle neutral they settle at:

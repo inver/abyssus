@@ -37,7 +37,10 @@ fun checksums(project: File): Map<String, String> = project.walkTopDown().filter
 /** Historic source recorded by the immutable manifest; later scene edits are replayed separately. */
 fun originalScene(): File = File(committedProject().parentFile.parentFile, "toolsTest/fixtures/Field.original.scene")
 
-/** Replays the ray settings authored after migration (d49555f4) when reproducing the current committed project. */
+/**
+ * Replays the edits authored after migration when reproducing the current committed project: the ray settings
+ * (d49555f4) and the Stunter's thrust (add-control-line-wire-physics, which offsets the wire's inertia).
+ */
 fun applyPostMigrationSceneEdits(project: File) {
     val scene = File(project, "scenes/Field.scene")
     val outcome = DocumentTextEditor().edit(scene.readText(), DocumentKind.SCENE) { root ->
@@ -46,6 +49,9 @@ fun applyPostMigrationSceneEdits(project: File) {
             .put("targetSamplesPerPixel", 4096)
             .put("maxReflectionBounces", 4)
             .put("maxRefractionBounces", 1)
+        val stunter = root.path("ecs").path("entities").path("4").path("components")
+        check(stunter.path("NameComponent").path("name").asText() == "Stunter") { "entity 4 is no longer the Stunter" }
+        (stunter.path("PlaneComponent") as ObjectNode).put("thrust", 5.2)
         true
     }
     check(outcome is TextEditOutcome.Edited) { "could not replay post-migration ray settings: $outcome" }

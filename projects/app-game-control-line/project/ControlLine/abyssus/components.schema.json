@@ -231,7 +231,7 @@
           "name": "lineDiameter",
           "label": "Line diameter (m)",
           "type": "decimal",
-          "default": 0.00040,
+          "default": 0.00050,
           "group": "Lines",
           "min": 0,
           "minExclusive": true

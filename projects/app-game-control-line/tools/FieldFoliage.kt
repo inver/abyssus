@@ -288,6 +288,8 @@ class FieldFoliageTool {
             if (id.toInt() in vegetation) continue
             val copy = entity.deepCopy<JsonNode>()
             (copy["components"] as? ObjectNode)?.remove("FoliageComponent")
+            // balance tuned after the migration (the wire's inertia, add-control-line-wire-physics): not part of the field
+            ((copy["components"] as? ObjectNode)?.get("PlaneComponent") as? ObjectNode)?.remove("thrust")
             text.append(id).append(':').append(json.compact(copy)).append('\n')
         }
         return sha.of(text.toString().toByteArray())
