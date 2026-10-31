@@ -15,13 +15,12 @@ import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 class DocumentFormatter(
     private val parsing: DocumentParsing,
     private val json: JsonProcessor,
-    private val scenes: SceneSerializer = SceneSerializer(json),
 ) {
     private val metas = AssetMetaParser(json)
 
     fun pretty(text: String, kind: DocumentKind): String? = runCatchingKeepingCancellation {
         when (kind) {
-            DocumentKind.SCENE -> scenes.serialize(parsing.parse(text))
+            DocumentKind.SCENE -> json.pretty(parsing.parse(text))
             DocumentKind.PROJECT -> json.pretty(parsing.project(text))
             DocumentKind.ASSET -> metas.write(parsing.assetMeta(text), pretty = true)
         }

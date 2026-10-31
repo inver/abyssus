@@ -30,7 +30,8 @@ class BaseCtx(val projectDir: String, shadersPath: String?, shadersAnchor: Class
     val log: Logger = logger
 
     init {
-        jsonProcessor = JsonProcessor(log)
+        componentRegistry = ComponentRegistry()
+        jsonProcessor = JsonProcessor(log, componentRegistry)
         fileLoader = FileLoader(File(projectDir))
         metaLoader = AssetMetaLoader(jsonProcessor, fileLoader, log)
         //todo migrate to virtual threads
@@ -45,7 +46,6 @@ class BaseCtx(val projectDir: String, shadersPath: String?, shadersAnchor: Class
         assetStorage = AssetStorage(log, executor, metaLoader::loadBaseMeta).also {
             it.registerAll(StandardAssetLoaders(fileLoader, metaLoader, shaderStorage, log = log).byType)
         }
-        componentRegistry = ComponentRegistry()
         sceneLoader = SceneLoader(jsonProcessor, fileLoader, componentRegistry)
         ecsLoader = EcsLoader()
     }

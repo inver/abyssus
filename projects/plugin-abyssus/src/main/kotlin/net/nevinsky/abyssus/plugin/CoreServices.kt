@@ -17,7 +17,6 @@ import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
 import net.nevinsky.abyssus.lib.core.editor.scene.DocumentFormatter
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
 import net.nevinsky.abyssus.lib.core.editor.document.ProjectTextEditor
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneSerializer
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneTextEditor
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.scene.SceneParser
@@ -41,13 +40,17 @@ import net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS
 import org.slf4j.Logger
 import java.util.concurrent.Executors
 
-class DocumentServices(val json: JsonProcessor, val format: AbyssusDocumentFormat, log: Logger) {
-    /** The built-in components and the physics ones, so a physics scene reads as typed components the Properties panel can edit. */
-    val registry = ComponentRegistry().also { it.registerAll(PHYSICS_COMPONENTS) }
+class DocumentServices(
+    val json: JsonProcessor,
+    val format: AbyssusDocumentFormat,
+    log: Logger,
+    /** The registry [json] writes component names with. */
+    val registry: ComponentRegistry,
+) {
     val parsing = DocumentParsing(json, log, registry)
 
     /** Scene, project and format writes: the text transforms the editing library shares with callers that have no IDE. */
-    val scenes = SceneTextEditor(SceneParser(json, registry), SceneSerializer(json))
+    val scenes = SceneTextEditor(SceneParser(json, registry), json)
     val projects = ProjectTextEditor(parsing, json)
     val formatter = DocumentFormatter(parsing, json)
 }

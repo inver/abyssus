@@ -23,7 +23,6 @@ import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.scene.SceneParser
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneEdit
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneSerializer
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneTextEditor
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageComponentEdits
@@ -62,7 +61,7 @@ class HeadlessEditing(
     registry: ComponentRegistry = ComponentRegistry(),
 ) {
     private val scenes = SceneParser(json, registry)
-    private val sceneEditor = SceneTextEditor(scenes, SceneSerializer(json))
+    private val sceneEditor = SceneTextEditor(scenes, json)
     private val components = ComponentEditor(messages)
     private val assetMeta = AssetMetaEditor(AssetFieldDescriptions())
     private val foliageEdits = FoliageComponentEdits()

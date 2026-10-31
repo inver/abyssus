@@ -16,59 +16,43 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.slf4j.helpers.NOPLogger
 
-/** The text transform with a stand-in serializer; the real one is checked by the round-trip tests in Phase 6. */
+/** The text transform: parse, edit, write back through [JsonProcessor.pretty]. */
 class SceneTextEditorTest {
-    private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
+    private val registry = ComponentRegistry()
+    private val json = JsonProcessor(NOPLogger.NOP_LOGGER, registry)
     private val text = """{"format":"abyssus","formatVersion":1,"name":"A","ecs":{}}"""
 
-    private class FakeSerializer(json: JsonProcessor, private val fail: Boolean = false) : SceneSerializer(json) {
-        var calls = 0
-        override fun serialize(scene: SceneDto): String {
-            calls++
-            if (fail) throw IllegalStateException("cannot write")
-            return "written:${scene.name}"
-        }
-    }
-
-    private fun editor(serializer: SceneSerializer) = SceneTextEditor(SceneParser(json, ComponentRegistry()), serializer)
+    private fun editor() = SceneTextEditor(SceneParser(json, registry), json)
 
     @Test
-    fun aMutationIsSerializedIntoTheNewText() {
-        val outcome = editor(FakeSerializer(json)).edit(text) { scene -> true.also { scene.ecs.clear() } }
-        assertEquals(TextEditOutcome.Edited("written:A"), outcome)
+    fun aMutationIsWrittenAsPrettyText() {
+        val outcome = editor().edit(text) { scene -> true.also { scene.ecs.clear() } }
+        val edited = (outcome as TextEditOutcome.Edited).text
+        assertTrue(edited.endsWith("\n"))
+        assertTrue(edited.contains("\"name\" : \"A\""))
     }
 
     @Test
-    fun aDeclinedMutationIsUnchangedAndNothingIsSerialized() {
-        val serializer = FakeSerializer(json)
-        assertEquals(TextEditOutcome.Unchanged, editor(serializer).edit(text) { false })
-        assertEquals(0, serializer.calls)
+    fun aDeclinedMutationIsUnchanged() {
+        assertEquals(TextEditOutcome.Unchanged, editor().edit(text) { false })
     }
 
     @Test
     fun aLegacyOrMalformedDocumentIsRefusedAndNeverMutated() {
         var ran = false
         for (bad in listOf("""{"ecs":{}}""", "not json", """{"format":"abyssus","formatVersion":1,"ecs":{"componentIdentifiers":{}}}""")) {
-            val outcome = editor(FakeSerializer(json)).edit(bad) { true.also { ran = true } }
+            val outcome = editor().edit(bad) { true.also { ran = true } }
             assertTrue(bad, outcome is TextEditOutcome.Refused)
         }
         assertFalse(ran)
     }
 
     @Test
-    fun aSerializerFailureIsARefusalNotAnException() {
-        val outcome = editor(FakeSerializer(json, fail = true)).edit(text) { true }
-        assertTrue(outcome is TextEditOutcome.Refused)
-        assertEquals("cannot write", (outcome as TextEditOutcome.Refused).cause.message)
-    }
-
-    @Test
-    fun aSettingsCopyIsSerializedAndAnEqualOrDeclinedOneIsNot() {
-        val serializer = FakeSerializer(json)
-        val sut = editor(serializer)
-        assertEquals(TextEditOutcome.Edited("written:renamed"), sut.replace(text) { it.copy(name = "renamed") })
+    fun aSettingsCopyIsWrittenAndAnEqualOrDeclinedOneIsNot() {
+        val sut = editor()
+        val edited = sut.replace(text) { it.copy(name = "renamed") }
+        assertTrue((edited as TextEditOutcome.Edited).text.contains("renamed"))
         assertEquals(TextEditOutcome.Unchanged, sut.replace(text) { it.copy() })
         assertEquals(TextEditOutcome.Unchanged, sut.replace(text) { null })
-        assertEquals(1, serializer.calls)
     }
 }

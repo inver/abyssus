@@ -22,6 +22,9 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.TreeTraversingParser
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import net.nevinsky.abyssus.lib.core.dto.EntityDto
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
+import net.nevinsky.abyssus.lib.core.ecs.EntitySerializer
 import org.slf4j.Logger
 import java.math.BigDecimal
 import kotlin.math.abs
@@ -65,7 +68,11 @@ class NodeBinder internal constructor(private val reader: ObjectReader, private 
  * Binds native JSON (`.abss`, `.scene`, asset `meta.json`) to Kotlin classes: unknown properties are skipped, unknown
  * enum values take their default, and properties keep declaration order. Create one and pass it to what needs it.
  */
-class JsonProcessor(internal val log: Logger) {
+class JsonProcessor(
+    internal val log: Logger,
+    /** The registry that names components when entities are written; share the one the scene is read with. */
+    registry: ComponentRegistry = ComponentRegistry(),
+) {
     private val format = JsonFormat()
     private val prettyPrinter: DefaultPrettyPrinter = format.prettyPrinter
 
@@ -78,6 +85,15 @@ class JsonProcessor(internal val log: Logger) {
         .addMixIn(Quaternion::class.java, PublicFieldsOnly::class.java)
         .addMixIn(Color::class.java, PublicFieldsOnly::class.java)
         .build()
+        .also { m ->
+            // a separate module from EntityDtoModule (which reads), so a reader's own registry is not shadowed
+            m.registerModule(
+                SimpleModule("AbyssusEntityWriter").addSerializer(
+                    EntityDto::class.java,
+                    EntitySerializer(registry, { componentTree(it) }, { componentWriter.readTree(it) })
+                )
+            )
+        }
 
     private val componentReader = mapper.copy()
         .setNodeFactory(JsonNodeFactory.withExactBigDecimals(true))

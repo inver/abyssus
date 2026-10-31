@@ -5,10 +5,12 @@
 
 package net.nevinsky.abyssus.lib.core.ecs
 
+import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Entity
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
@@ -32,12 +34,11 @@ import net.nevinsky.abyssus.lib.core.format.entityTypeOf
  * as
  * text, so the scene can be written back unchanged; an entity holds one component per class, so these share one
  * [RawComponentsWrapper]. A scene is project data, so a class name in it never loads an
- * arbitrary class.
+ * arbitrary class. Writing is done by [EntitySerializer], which `JsonProcessor` registers on its own mapper.
  */
 class EntityDtoModule(registry: ComponentRegistry) : SimpleModule("AbyssusEntity") {
     init {
         addDeserializer(EntityDto::class.java, EntityDeserializer(registry))
-        addSerializer(EntityDto::class.java, EntitySerializer(registry))
     }
 }
 
@@ -47,13 +48,41 @@ private const val COMPONENTS = "components"
 
 const val ENTITY_DISABLED_FLAG = 1
 
-private class EntitySerializer(registry: ComponentRegistry) : StdSerializer<EntityDto>(EntityDto::class.java) {
-    override fun serialize(
-        value: EntityDto?,
-        gen: JsonGenerator?,
-        provider: SerializerProvider?
-    ) {
-        TODO("Not yet implemented")
+/**
+ * Writes an [EntityDto] as an `ecs` entry: `type`, `flags` (the entity's disabled bit with the bits it does not own),
+ * `disabledComponents` and `components`, each omitted when empty. A component is written under the name [registry] gives
+ * its class, with the value [componentTree] makes; a [RawComponent] is written back as the payload it kept
+ * ([rawTree] reads that text without losing number spelling). The entity's id is the key of its `ecs` map entry, so it
+ * is not written here.
+ */
+internal class EntitySerializer(
+    private val registry: ComponentRegistry,
+    private val componentTree: (Component) -> JsonNode,
+    private val rawTree: (String) -> JsonNode,
+) : StdSerializer<EntityDto>(EntityDto::class.java) {
+    override fun serialize(value: EntityDto, gen: JsonGenerator, provider: SerializerProvider) {
+        val header = value.components.filterIsInstance<HeaderComponent>().firstOrNull()
+        val raw = value.components.filterIsInstance<RawComponentsWrapper>().flatMap { it.entries }
+        val modeled = value.components.filter { it !is HeaderComponent && it !is RawComponentsWrapper }
+
+        val flags = (header?.flags ?: 0) or (if (header?.entityEnabled == false) ENTITY_DISABLED_FLAG else 0)
+        val disabled = LinkedHashSet<String>()
+        header?.disabledComponents?.forEach { disabled.add(registry.nameOf(it)) }
+        raw.filter { it.disabled }.forEach { disabled.add(it.name) }
+
+        gen.writeStartObject()
+        header?.type?.let { gen.writeStringField("type", it.name) }
+        if (flags != 0) gen.writeNumberField(FLAGS_KEY, flags)
+        if (disabled.isNotEmpty()) {
+            gen.writeArrayFieldStart("disabledComponents")
+            disabled.forEach(gen::writeString)
+            gen.writeEndArray()
+        }
+        gen.writeObjectFieldStart(COMPONENTS)
+        modeled.forEach { gen.writeFieldName(registry.nameOf(it.javaClass)); gen.writeTree(componentTree(it)) }
+        raw.forEach { gen.writeFieldName(it.name); gen.writeTree(rawTree(it.json)) }
+        gen.writeEndObject()
+        gen.writeEndObject()
     }
 }
 

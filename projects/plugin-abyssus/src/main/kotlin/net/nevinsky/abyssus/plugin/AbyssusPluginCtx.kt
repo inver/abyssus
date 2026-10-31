@@ -10,8 +10,10 @@ import com.intellij.openapi.components.Service
 import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearImport
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelImport
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelSourceOpener
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS
 import net.nevinsky.abyssus.lib.gdx.ModelLogging
 import net.nevinsky.abyssus.plugin.log.IntellijLoggerFactory
 
@@ -24,9 +26,11 @@ class AbyssusPluginCtx : Disposable {
         ModelLogging.logger = loggers.getLogger("model")
     }
 
-    val json by lazy { JsonProcessor(loggers.getLogger("json")) }
+    /** The built-in components and the physics ones, so a physics scene reads as typed components the Properties panel can edit. */
+    val registry by lazy { ComponentRegistry().also { it.registerAll(PHYSICS_COMPONENTS) } }
+    val json by lazy { JsonProcessor(loggers.getLogger("json"), registry) }
     val format by lazy { AbyssusDocumentFormat() }
-    val documents by lazy { DocumentServices(json, format, loggers.getLogger("scenes")) }
+    val documents by lazy { DocumentServices(json, format, loggers.getLogger("scenes"), registry) }
     val assets by lazy { AssetServices(json, format, loggers.getLogger("assets")) }
     val terrain by lazy { TerrainServices(json) }
     val foliage by lazy { FoliageServices(json) }

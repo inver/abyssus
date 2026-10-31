@@ -8,16 +8,17 @@ package net.nevinsky.abyssus.lib.core.editor.scene
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.scene.SceneParser
 
 /**
  * The text transform behind every scene write: parse the text into a [SceneDto], let the edit change it, and write it
- * back through [SceneSerializer]. The plugin's `editSceneJson` wraps it in one undoable command; a caller without the
+ * back through [JsonProcessor.pretty], built with the registry the scene is read with. The plugin's `editSceneJson` wraps it in one undoable command; a caller without the
  * IDE uses it directly.
  */
 class SceneTextEditor(
     private val parser: SceneParser,
-    private val serializer: SceneSerializer,
+    private val json: JsonProcessor,
 ) {
     fun edit(text: String, edit: SceneEdit): TextEditOutcome {
         val scene = runCatchingKeepingCancellation { parser.parse(text) }
@@ -39,6 +40,6 @@ class SceneTextEditor(
     }
 
     private fun write(scene: SceneDto): TextEditOutcome =
-        runCatchingKeepingCancellation { serializer.serialize(scene) }
+        runCatchingKeepingCancellation { json.pretty(scene) }
             .fold({ TextEditOutcome.Edited(it) }, { TextEditOutcome.Refused(it) })
 }
