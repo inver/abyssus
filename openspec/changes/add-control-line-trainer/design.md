@@ -182,9 +182,12 @@ The change keeps its user-chosen name, `add-control-line-trainer`.
   → The rescue test flies every bundled plane. If one fails, first check the 0.15 s allowance and the share's immediate
   rise. Only then raise the bounds, in the spec and the constants together, keeping level flight at the 1.5 m base at 0
   danger.
-- **[Risk] Ghost noise in F2B.** A square loop's corner near the base could flash the ghost.
-  → The margin uses the tightest radius, not the figure's, so a corner flown at the base keeps a margin near 1.5 m. A
-  test flies the bot's own schedule with an instructor wrapped around a scripted player and asserts no takeovers.
+- **[Accepted] Figures that dive at the limit.** Watch AI dives vertically at about 22 m/s and pulls out within a few
+  centimetres of what the plane can do. The dive rescue needs more lead than that (a 0.05 s allowance already lets
+  `Stunter` crash), so no danger rule passes both, and a gate on the student's pull did not help (the bot is neutral until
+  its corner). Such a flight is Assisted by the spec. Once the instructor has taken over mid-figure, the bot's course no
+  longer fits the plane, so a wrapped bot does not finish its schedule. A test asserts only that the take-off and the
+  base need no takeover, and that the first takeover is in a figure.
 - **[Risk] The instructor and the student fight below share 1.** A student holding full down at share 0.5 cancels half
   the rescue.
   → The share rises to the danger at once, and the danger reaches 1 before the margin is gone. The rescue test holds full

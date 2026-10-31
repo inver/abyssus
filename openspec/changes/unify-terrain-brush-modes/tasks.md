@@ -48,4 +48,4 @@ Apply after `add-terrain-sculpting` is archived. Each group compiles and passes 
 ## 8. Integration
 
 - [x] 8.1 Manual check in `./gradlew :plugin-abyssus:runIde` on a copy of a project with a terrain and a foliage asset: (1) Paint Foliage paints and Shift or the Erase box erases; (2) Sculpt Terrain raises, and Shift lowers; (3) turning one mode on turns the other off; (4) Esc during a stroke of each discards it; (5) one undo reverts each stroke; (6) the cursor circle matches the footprint on a scaled and rotated terrain; (7) dragging Raise with a large radius on a 255 by 255 terrain stays smooth
-- [ ] 8.2 Run `./gradlew check` and `scripts/check-docs.sh`; confirm `checkNoSingletons`, `checkPackageCycles`, `checkNoEditorCode` and `NoPlatformClasspathTest` are green and the allowlist `gradle/package-cycles.allowlist` is still empty
+- [x] 8.2 Run `./gradlew check` and `scripts/check-docs.sh`; confirm `checkNoSingletons`, `checkPackageCycles`, `checkNoEditorCode` and `NoPlatformClasspathTest` are green and the allowlist `gradle/package-cycles.allowlist` is still empty

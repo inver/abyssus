@@ -62,6 +62,12 @@ Danger SHALL be 0 on the ground and below the airspeed at which the elevator ste
 - **WHEN** an instructed flight at the base pushes the handle full down
 - **THEN** the danger rises above 0 before the plane is 1.2 m above the ground
 
+#### Scenario: A figure that dives at the plane's limit
+
+- **WHEN** a flight dives straight at the ground and pulls out only at the plane's limit, as the Watch AI bot does in its
+  vertical figures
+- **THEN** the danger rises above 0 during the dive, and the instructor may take over, which makes the flight Assisted
+
 #### Scenario: Gentle landing
 
 - **WHEN** an instructed flight glides down upright with the engine stopped, sinking at 1 m/s

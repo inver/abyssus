@@ -122,4 +122,12 @@ the whole model). `docs/ai/file-formats.md` documents the field.
 ## Open Questions
 
 - (Resolved by `typed-scene-ecs`: the render component is flat, so `meshId` sits beside `assetName`.)
-- The `AssetStorage` call sites that reach `resolveBase` are recorded in this design before archive.
+- (Resolved.) The `AssetStorage` call sites that turn a name into a folder or `meta.json`, as found while implementing:
+  1. `DependencyResolver.route` reads `metas(name)` to choose the loader; reached from `requestName` (a first request or a
+     dependency) and `startRevision` (a reload after `invalidate`). `AssetStorage` hands it a wrapper of the `metas`
+     function (`resolveBase`) that reads the base folder's meta and returns it renamed to the encoded key.
+  2. `runPrepare` -> `LoaderRegistration.loadMeta(meta)` -> `ModelLoader.read(meta)`, which decodes `meta.name` (the key)
+     to find the files and the mesh.
+  3. `runPrepare` -> `LoaderRegistration.prepareNew(name)` -> `MetaAssetLoader.prepare(name)` -> `loadBaseMeta` (the
+     name-only path, used when the storage has no `metas`); it decodes the same way.
+  Hooks (`onPrepared`, `onBuilt`, `onDiscarded`) and `ModelPreparationTap.begin` receive the encoded name.
