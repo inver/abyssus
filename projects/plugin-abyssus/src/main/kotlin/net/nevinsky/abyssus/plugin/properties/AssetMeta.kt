@@ -35,7 +35,7 @@ fun loadAssetMeta(folder: VirtualFile, metaFiles: MetaFiles): AssetMeta {
         ?: return AssetMeta.Failed(folder, AbyssusBundle.message("propertiesMetaMissing", folder.name))
     return runCatchingKeepingCancellation { metaFiles.inEditor(folder) }.fold(
         onSuccess = { document ->
-            document?.let { AssetMeta.Loaded(folder, it.type, metaRowsOf(it.json, EditorBundle), it) }
+            document?.let { AssetMeta.Loaded(folder, it.type, metaRowsOf(it.values, EditorBundle), it) }
                 ?: AssetMeta.Failed(folder, AbyssusBundle.message("propertiesMetaMissing", folder.name))
         },
         onFailure = {

@@ -25,12 +25,16 @@ class AbyssusDocumentFormatTest {
         }
     }
 
-    @Test fun absentForeignNullAndNontextMarkersAreRejected() {
-        for (text in listOf("{}", """{"format":null,"formatVersion":1}""", """{"format":"foreign","formatVersion":1}""", """{"format":true,"formatVersion":1}""")) {
-            val reason = format.validate(json.readObject(text), DocumentKind.SCENE)
-            assertEquals(FormatProblem.MARKER, reason?.problem)
-            assertEquals("format", reason?.path)
+    @Test fun theFormatMarkerIsNotRequiredAndIsIgnoredWhenPresent() {
+        for (text in listOf("""{"formatVersion":1}""", """{"format":null,"formatVersion":1}""", """{"format":"foreign","formatVersion":1}""", """{"format":true,"formatVersion":1}""")) {
+            assertNull(text, format.validate(json.readObject(text), DocumentKind.SCENE))
         }
+    }
+
+    @Test fun aMissingVersionIsRejected() {
+        val reason = format.validate(json.readObject("{}"), DocumentKind.SCENE)
+        assertEquals(FormatProblem.VERSION, reason?.problem)
+        assertEquals("formatVersion", reason?.path)
     }
 
     @Test fun onlyIntegralVersionOneIsAccepted() {

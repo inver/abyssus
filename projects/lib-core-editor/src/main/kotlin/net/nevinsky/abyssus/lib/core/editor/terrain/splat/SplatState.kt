@@ -5,17 +5,15 @@
 
 package net.nevinsky.abyssus.lib.core.editor.terrain.splat
 
-import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_MAP
 import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
+import net.nevinsky.abyssus.lib.core.editor.document.MetaDocument
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetCatalog
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetReferenceChoices
 import net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.util.obj
-import net.nevinsky.abyssus.lib.core.util.text
 import java.io.File
 
 /** Why a terrain's splat map cannot be painted; [IMAGE] carries the codec's [SplatImageProblem] in the state. */
@@ -69,10 +67,10 @@ class SplatStateReader(private val json: JsonProcessor, private val codec: Splat
         val terrain = (terrainMetaText?.let(::parseMeta) ?: readMeta(File(terrainFolder, META_FILE)))
             ?: return SplatState.Unusable(SplatProblem.TERRAIN_META)
         val uuid =
-            terrain.json.obj("additional")?.text(SPLAT_MAP)?.takeIf { it.isNotBlank() } ?: return SplatState.None()
+            terrain.text("additional", SPLAT_MAP)?.takeIf { it.isNotBlank() } ?: return SplatState.None()
         val folder = textureFolder(assetsDir, uuid) ?: return SplatState.None(uuid)
         val meta = readMeta(File(folder, META_FILE)) ?: return SplatState.Unusable(SplatProblem.TEXTURE_META)
-        val name = meta.json.obj("additional")?.text("file")
+        val name = meta.text("additional", "file")
         val file = name?.let { choices.inside(folder, it) }?.takeIf { it.isFile && it.canRead() }
             ?: return SplatState.Unusable(SplatProblem.IMAGE_MISSING, detail = name.orEmpty())
         val length = file.length()
@@ -106,10 +104,8 @@ class SplatStateReader(private val json: JsonProcessor, private val codec: Splat
     private fun otherUsers(assetsDir: File, terrainFolder: File, uuid: String): List<String> =
         catalog.users(assetsDir, MetaType.TERRAIN, SPLAT_MAP, uuid, except = terrainFolder.name)
 
-    private class Meta(val type: MetaType, val json: JsonNode)
-
     /** The native `meta.json` in [file], or null when it is missing, not JSON or not a supported native document. */
-    private fun readMeta(file: File): Meta? {
+    private fun readMeta(file: File): MetaDocument? {
         if (!file.isFile) return null
         return try {
             parseMeta(file.readText())
@@ -118,10 +114,9 @@ class SplatStateReader(private val json: JsonProcessor, private val codec: Splat
         }
     }
 
-    private fun parseMeta(text: String): Meta? {
+    private fun parseMeta(text: String): MetaDocument? {
         return try {
-            val doc = metas.read(text)
-            Meta(doc.type, doc.json)
+            metas.read(text)
         } catch (e: UnsupportedDocumentFormat) {
             null
         } catch (e: IllegalArgumentException) {

@@ -61,8 +61,11 @@ class HeadlessEditingTest {
         // an unknown extension key, written as the file's own printer writes it
         val withExtension = terrainMeta.replaceFirst("\"type\": \"TERRAIN\",", "\"type\": \"TERRAIN\",\n  \"x-tool\": {\n    \"kept\": 1.50\n  },")
         val edited = editing.setAssetProperty(withExtension, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(2048)) as HeadlessEdit.Edited
-        // asset documents are still edited as a tree (Phase 5), which reads 1.50 back as 1.5
-        assertEquals(listOf("\"kept\": 1.5", "\"size\": 2048,"), changedLines(withExtension, edited.text))
+        // the typed terrain block does not model the extension key, so a rewrite does not keep it; only size differs otherwise
+        val after = net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader(JsonProcessor(NOPLogger.NOP_LOGGER)).read(edited.text)
+        assertEquals(2048, after.values["additional"].let { (it as Map<*, *>)["size"] })
+        assertEquals("TERRAIN", after.type.name)
+        assertFalse(edited.text.contains("x-tool"))
         val refused = editing.setAssetProperty(withExtension, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(0)) as HeadlessEdit.Refused
         assertEquals(ResourceEditorMessages().message("assetEditError.NOT_POSITIVE"), refused.refusal.message)
         val conflict = editing.setAssetProperty(withExtension, "size", AssetFieldValue.Int(999), AssetFieldValue.Int(2048)) as HeadlessEdit.Refused

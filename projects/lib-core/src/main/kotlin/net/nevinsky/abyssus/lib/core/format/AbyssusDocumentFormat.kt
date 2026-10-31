@@ -17,13 +17,14 @@ class UnsupportedDocumentFormat(val kind: DocumentKind, val reason: FormatReject
 /** Pure admission checks, on the caller's thread. Custom component and marker payloads stay opaque. */
 class AbyssusDocumentFormat {
     fun validate(document: JsonNode, kind: DocumentKind): FormatRejection? {
-        val marker = document.get("format")
-        if (marker == null || !marker.isTextual || marker.textValue() != "abyssus")
-            return FormatRejection(FormatProblem.MARKER, "format")
+        // a document is native when it carries formatVersion 1; there is no `format` marker any more, and one a file still has is ignored
         val version = document.get("formatVersion")
-        if (version == null || !version.isIntegralNumber || !version.canConvertToInt() || version.intValue() != 1)
+        if (version == null || !version.isIntegralNumber || !version.canConvertToInt() || version.intValue() != 1) {
             return FormatRejection(FormatProblem.VERSION, "formatVersion")
-        return if (kind == DocumentKind.SCENE) document.get("ecs")?.let(::validateEcs) else null
+        }
+        return if (kind == DocumentKind.SCENE) {
+            document.get("ecs")?.let(::validateEcs)
+        } else null
     }
 
     /** Raw ECS helpers have no enclosing header; they must still refuse reserved legacy dispatch fields. */
@@ -49,19 +50,23 @@ class AbyssusDocumentFormat {
             if (disabled != null && !(disabled.isArray && disabled.all { it.isTextual }))
                 return FormatRejection(FormatProblem.ENTITY_SHAPE, "ecs.$id.disabledComponents")
             val flags = entity.get("flags")
-            if (flags != null && !(flags.isIntegralNumber && flags.canConvertToInt()))
+            if (flags != null && !(flags.isIntegralNumber && flags.canConvertToInt())) {
                 return FormatRejection(FormatProblem.ENTITY_SHAPE, "ecs.$id.flags")
+            }
             val components = entity.get("components") ?: continue
-            if (!components.isObject)
+            if (!components.isObject) {
                 return FormatRejection(FormatProblem.ENTITY_SHAPE, "ecs.$id.components")
+            }
             for (name in components.fieldNames()) {
-                if (name.substringAfterLast('.') == "TypeComponent")
+                if (name.substringAfterLast('.') == "TypeComponent") {
                     return FormatRejection(FormatProblem.LEGACY_FIELD, "ecs.$id.components.$name")
+                }
             }
             for (name in listOf("RenderComponent", "net.nevinsky.abyssus.lib.runtime.ecs.render.RenderComponent")) {
                 val renderable = components.get(name)?.get("renderable")
-                if (renderable?.has("class") == true)
+                if (renderable?.has("class") == true) {
                     return FormatRejection(FormatProblem.LEGACY_FIELD, "ecs.$id.components.$name.renderable.class")
+                }
             }
         }
         return null

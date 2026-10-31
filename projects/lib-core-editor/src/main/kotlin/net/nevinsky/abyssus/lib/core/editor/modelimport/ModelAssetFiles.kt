@@ -23,13 +23,13 @@ class ModelAssetFiles(private val jsonProcessor: JsonProcessor) {
             lastModified = lastModified,
             uuid = uuid,
             type = MetaType.MODEL,
-            additional = ModelMeta(file = MODEL_FILE),
+            additional = ModelMeta(file = MODEL_FILE, format = ModelMeta.Format.GLTF, binary = true),
         )
-        return jsonProcessor.toString(meta).toByteArray()
+        return jsonProcessor.pretty(meta).toByteArray()
     }
 
     /** The pretty-printed `source.json` for an import [record]. */
-    fun sourceBytes(record: Any): ByteArray = jsonProcessor.toString(record).toByteArray()
+    fun sourceBytes(record: Any): ByteArray = jsonProcessor.pretty(record).toByteArray()
 }
 
 /**

@@ -40,17 +40,17 @@ class AssetCatalog(
     /** The asset folder whose meta has [uuid] and one of [types] (any type when empty); the first by name wins. */
     fun folderOf(assetsDir: File, uuid: String, types: Set<MetaType> = emptySet()): File? =
         folders(assetsDir).firstOrNull { dir ->
-            meta(dir)?.takeIf { types.isEmpty() || it.type in types }?.json?.text("uuid")?.let { same(it, uuid) } == true
+            meta(dir)?.takeIf { types.isEmpty() || it.type in types }?.text("uuid")?.let { same(it, uuid) } == true
         }
 
     /** The names of the asset folders other than [except] whose [type] meta holds [uuid] in its `additional.[field]`. */
     fun users(assetsDir: File, type: MetaType, field: String, uuid: String, except: String? = null): List<String> =
         folders(assetsDir).filter { it.name != except }.filter { dir ->
-            meta(dir)?.takeIf { it.type == type }?.json?.obj("additional")?.text(field)?.let { same(it, uuid) } == true
+            meta(dir)?.takeIf { it.type == type }?.text("additional", field)?.let { same(it, uuid) } == true
         }.map { it.name }
 
     /** Every `uuid` an asset meta under [assetsDir] declares, as written. */
-    fun uuids(assetsDir: File): Set<String> = folders(assetsDir).mapNotNull { meta(it)?.json?.text("uuid") }.toSet()
+    fun uuids(assetsDir: File): Set<String> = folders(assetsDir).mapNotNull { meta(it)?.text("uuid") }.toSet()
 
     private fun same(a: String, b: String): Boolean {
         val left = parseUuidOrNull(a)

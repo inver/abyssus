@@ -58,7 +58,7 @@ class DocumentServices(
 class AssetServices(json: JsonProcessor, format: AbyssusDocumentFormat, log: Logger) {
     val metaFiles = MetaFiles(AssetMetaReader(json))
     val fields = AssetFieldDescriptions()
-    val editor = AssetMetaEditor(fields)
+    val editor = AssetMetaEditor(fields, json)
     val sceneShaders = ShaderStorage().withResources("/shader/scene", AbyssusPluginCtx::class.java)
     val loading = AssetLoading(json, log, AppExecutorUtil.getAppExecutorService(), ShaderStorage())
     val hdrPreviews: HdrPreviewService get() = loading.hdrPreviews

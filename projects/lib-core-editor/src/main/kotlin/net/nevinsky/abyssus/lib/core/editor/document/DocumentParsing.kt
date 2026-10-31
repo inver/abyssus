@@ -15,6 +15,10 @@ import net.nevinsky.abyssus.lib.core.dto.ProjectDto
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.editor.util.JsonValues
+import net.nevinsky.abyssus.lib.core.editor.util.at
+import net.nevinsky.abyssus.lib.core.editor.util.objectAt
+import net.nevinsky.abyssus.lib.core.editor.util.textAt
 import net.nevinsky.abyssus.lib.core.scene.SceneParser
 import org.slf4j.Logger
 
@@ -26,12 +30,13 @@ class DocumentParsing(
     private val json: JsonProcessor,
     private val log: Logger,
     registry: ComponentRegistry = ComponentRegistry(),
+    private val format: net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat = net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat(),
 ) {
     /** Binds a scene with its components resolved through [registry]; what it does not know is kept raw. */
     private val scenes = SceneParser(json, registry)
 
     fun requireSupported(text: String, kind: DocumentKind) {
-        supported(text, kind)
+        format.requireSupported(json.readObject(text), kind)
     }
 
     fun project(text: String): ProjectDto = json.bind(supported(text, DocumentKind.PROJECT), ProjectDto::class.java)
@@ -40,21 +45,26 @@ class DocumentParsing(
 
     /** Narrow editor reads must not bind (and reject) unrelated settings or UUIDs. */
     fun assetFields(text: String): AssetDocumentFields {
-        val root = supported(text, DocumentKind.ASSET)
-        val type = root["type"]?.takeIf { it.isTextual }?.textValue()
+        val root = values(text)
         return AssetDocumentFields(
-            MetaType.entries.firstOrNull { it.name == type } ?: MetaType.UNKNOWN,
-            root["uuid"]?.asText(),
-            root["additional"]?.get("clouds")?.takeIf { it.isTextual }?.textValue(),
-            root.path("additional").path("terrainFile").asText(),
+            MetaType.entries.firstOrNull { it.name == root.textAt("type") } ?: MetaType.UNKNOWN,
+            root["uuid"]?.takeIf { it !is Map<*, *> && it !is List<*> }?.toString(),
+            root.textAt("additional", "clouds"),
+            root.at("additional", "terrainFile")?.toString().orEmpty(),
         )
     }
 
     /** Keeps the editor's existing wrong-type defaults, rather than runtime DTO coercions. */
-    fun foliageMeta(text: String): FoliageMeta = supported(text, DocumentKind.ASSET)["additional"]
-        ?.let { FoliageSettingsBinding().read(it) } ?: FoliageMeta()
+    fun foliageMeta(text: String): FoliageMeta =
+        values(text).objectAt("additional")?.let { FoliageSettingsBinding(json).read(it) } ?: FoliageMeta()
 
     private fun supported(text: String, @Suppress("UNUSED_PARAMETER") kind: DocumentKind) = json.readObject(text)
+
+    @Suppress("UNCHECKED_CAST")
+    private fun values(text: String): JsonValues {
+        json.readObject(text)
+        return json.parse(text, Map::class.java) as JsonValues
+    }
 
     fun projectName(text: String): String? {
         val root = json.readObject(text)

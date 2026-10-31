@@ -45,12 +45,11 @@ class AssetReferenceChoices(private val json: JsonProcessor) {
     /** The `uuid` of the texture asset in [folder], or null when it is not a texture, has no `uuid` or no readable image. */
     internal fun textureUuid(folder: File): String? {
         val meta = runCatchingKeepingCancellation {
-            File(folder, META_FILE).takeIf { it.isFile }?.let { AssetMetaReader(json).read(it.readText()).json }
+            File(folder, META_FILE).takeIf { it.isFile }?.let { AssetMetaReader(json).read(it.readText()) }
         }.getOrNull() ?: return null
-        val type = meta.text("type")
-        if (type != MetaType.TEXTURE.name && type != MetaType.PIXMAP_TEXTURE.name) return null
+        if (meta.type != MetaType.TEXTURE && meta.type != MetaType.PIXMAP_TEXTURE) return null
         val uuid = meta.text("uuid")?.takeIf { it.isNotBlank() } ?: return null
-        return uuid.takeIf { isImage(folder, meta.obj("additional")?.text("file")) }
+        return uuid.takeIf { isImage(folder, meta.text("additional", "file")) }
     }
 
     /**

@@ -14,18 +14,11 @@ import com.fasterxml.jackson.databind.ObjectMapper
 class JsonObjectWriter(private val mapper: ObjectMapper = ObjectMapper()) {
     /** The UTF-8 JSON object holding [members] in order. */
     fun bytes(members: Map<String, Any?>): ByteArray {
-        val node = mapper.createObjectNode()
         for ((name, value) in members) when (value) {
-            null -> node.putNull(name)
-            is String -> node.put(name, value)
-            is Int -> node.put(name, value)
-            is Long -> node.put(name, value)
-            is Double -> node.put(name, value)
-            is Float -> node.put(name, value)
-            is Boolean -> node.put(name, value)
+            null, is String, is Int, is Long, is Double, is Float, is Boolean -> Unit
             else -> throw IllegalArgumentException("member $name is a ${value.javaClass.simpleName}")
         }
-        return mapper.writeValueAsBytes(node)
+        return mapper.writeValueAsBytes(LinkedHashMap(members))
     }
 
     /** The JSON text of [value], quoted and escaped. */

@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.lib.core.editor.meta
 
-import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import java.io.File
 
@@ -29,13 +28,13 @@ fun formatFieldValue(value: AssetFieldValue): String = when (value) {
 }
 
 /**
- * The editable properties of the asset in [folder] for a `meta.json` of [type], with their current values from [json] and,
+ * The editable properties of the asset in [folder] for a `meta.json` of [type], with their current values from the typed [additional] block and,
  * for references, the [choices] found on disk. Empty for a type without editors. Reads files.
  */
 fun assetFieldStates(
     folder: File,
     type: MetaType,
-    json: JsonNode,
+    additional: Any?,
     descriptions: AssetFieldDescriptions,
     editor: AssetMetaEditor,
     choices: AssetReferenceChoices,
@@ -44,7 +43,7 @@ fun assetFieldStates(
     if (fields.isEmpty()) return emptyList()
     val assetsDir = folder.parentFile
     return fields.map { field ->
-        val value = editor.current(json, field)
+        val value = editor.current(additional, field)
         val current = (value as? AssetFieldValue.Text)?.value
         val offered = when (field.kind) {
             AssetFieldKind.ASSET_REFERENCE -> assetsDir?.let { choices.textures(it, current) } ?: emptyList()

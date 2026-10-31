@@ -6,7 +6,9 @@
 package net.nevinsky.abyssus.lib.core.editor.panel
 
 import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_FIELDS
-import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.editor.util.JsonValues
+import net.nevinsky.abyssus.lib.core.editor.util.scalarText
+import net.nevinsky.abyssus.lib.core.editor.util.valuesOf
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FAR
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_NEAR
@@ -411,10 +413,10 @@ class PanelBuilders(
      * asset no scene reaches. [hasEditors] is false for an asset the plugin only shows, which gets the `read-only` badge.
      */
     fun asset(
-        name: String, meta: JsonNode, used: Boolean, editable: Set<String>, projectFile: String,
+        name: String, meta: JsonValues, used: Boolean, editable: Set<String>, projectFile: String,
         hasEditors: Boolean = editable.isNotEmpty(),
     ): PanelModel {
-        val type = meta.get("type")?.takeIf { it.isTextual }?.asText()
+        val type = meta["type"] as? String
         val readOnly = !hasEditors
         val badges = buildList {
             if (readOnly) add(Badge(BadgeKind.READ_ONLY, messages.message("panelBadgeReadOnly")))
@@ -423,9 +425,9 @@ class PanelBuilders(
         val metaSection = Section(
             "meta", messages.message("panelSectionMeta"), null,
             listOf(
-                ReadonlyRow("version", meta.get("version")?.asText() ?: "1"),
-                ReadonlyRow("lastModified", modified(meta.get("lastModified"))),
-                meta.get("uuid")?.takeIf { it.isTextual }?.let { ReadonlyRow("uuid", it.asText()) }
+                ReadonlyRow("version", meta["version"]?.toString() ?: "1"),
+                ReadonlyRow("lastModified", modified(meta["lastModified"])),
+                (meta["uuid"] as? String)?.let { ReadonlyRow("uuid", it) }
                     ?: ReadonlyRow("uuid", messages.message("panelNotSet"), dim = true),
                 ReadonlyRow("type", type ?: ""),
             ),
@@ -444,14 +446,13 @@ class PanelBuilders(
         )
     }
 
-    private fun additionalSection(type: String?, meta: JsonNode, editable: Set<String>): Section {
-        val additional = meta.get("additional")
+    private fun additionalSection(type: String?, meta: JsonValues, editable: Set<String>): Section {
+        val additional = valuesOf(meta["additional"])
         val ui = type == "UI"
-        val node = (if (ui) additional?.get("ui") else additional)?.takeIf { it.isObject }
+        val node = if (ui) valuesOf(additional?.get("ui")) else additional
         // a supported property a file omits is listed with its effective value, dim, so it can be written
-        val props = node?.properties()?.toList().orEmpty() +
-                editable.filter { node == null || !node.has(it) }
-                    .map { java.util.AbstractMap.SimpleEntry<String, JsonNode>(it, MISSING) }
+        val props: List<Pair<String, Any?>> = node?.entries?.map { it.key to it.value }.orEmpty() +
+                editable.filter { node == null || !node.containsKey(it) }.map { it to MISSING }
         val rows = mutableListOf<Row>()
         when (type) {
             "SKYBOX_PROCEDURAL" -> {
@@ -470,29 +471,32 @@ class PanelBuilders(
             }
 
             "FOLIAGE" -> {
-                props.filter { (k, v) -> !(k == "layers" && v.isArray) }
+                props.filter { (k, v) -> !(k == "layers" && v is List<*>) }
                     .forEach { (k, v) -> rows += assetRow(k, v, editable, type) }
-                additional?.get("layers")?.takeIf { it.isArray }?.let {
-                    rows += SubHeadingRow(messages.message("panelLayers", it.size()))
+                (additional?.get("layers") as? List<*>)?.let {
+                    rows += SubHeadingRow(messages.message("panelLayers", it.size))
                     rows += foliageTable(it)
                 }
                 rows += CustomRow("foliage")
             }
 
             "CLOUDS" -> {
-                val (layers, rest) = props.partition { (_, v) -> v.isObject && v.has("type") }
+                val (layers, rest) = props.partition { (_, v) -> valuesOf(v)?.containsKey("type") == true }
                 rest.forEach { (k, v) -> rows += assetRow(k, v, editable, type) }
                 if (layers.isNotEmpty()) rows += cloudTable(layers)
             }
 
             "UI" -> {
-                props.filter { (_, v) -> !v.isContainerNode }
+                props.filter { (_, v) -> v !is List<*> && v !is Map<*, *> }
                     .forEach { (k, v) -> rows += assetRow(k, v, editable, type) }
-                node?.get("screens")?.takeIf { it.isArray }?.let { screens ->
-                    rows += SubHeadingRow(messages.message("panelScreens", screens.size()))
+                (node?.get("screens") as? List<*>)?.let { screens ->
+                    rows += SubHeadingRow(messages.message("panelScreens", screens.size))
                     rows += TableRow(
                         listOf("name"),
-                        screens.map { listOf(it.get("name")?.asText() ?: it.get("id")?.asText() ?: "") })
+                        screens.map { screen ->
+                            val values = valuesOf(screen)
+                            listOf((values?.get("name") ?: values?.get("id"))?.toString().orEmpty())
+                        })
                 }
                 rows += LinkRow(messages.message("panelLinkScreenEditor"), LinkTarget.SCREEN_EDITOR)
             }
@@ -509,25 +513,23 @@ class PanelBuilders(
         )
     }
 
-    private fun assetRow(key: String, value: JsonNode, editable: Set<String>, type: String?): Row {
+    private fun assetRow(key: String, value: Any?, editable: Set<String>, type: String?): Row {
         val ref = FieldRef("asset", key)
         val text = when {
-            value.isNull -> "null"
-            value.isArray && value.size() > 0 && value.all { it.isNumber } -> value.joinToString(
-                ", ",
-                "[",
-                "]"
-            ) { it.asText() }
+            value == null -> "null"
+            value is List<*> && value.isNotEmpty() && value.all { it is Number } ->
+                value.joinToString(", ", "[", "]") { scalarText(it) }
 
-            value.isArray -> "[] (${value.size()})"
-            value.isObject -> "{} (${value.size()})"
-            else -> value.asText()
+            value is List<*> -> "[] (${value.size})"
+            value is Map<*, *> -> "{} (${value.size})"
+            else -> scalarText(value)
         }
+        val missing = value === MISSING
         val reference = ASSET_REFERENCES[type to key]
         return when {
-            reference != null && (!value.isNull || key in editable) -> AssetRow(
+            reference != null && (value != null || key in editable) -> AssetRow(
                 key,
-                text,
+                if (missing) "" else text,
                 assetIconKey(reference),
                 key in editable,
                 emptyList(),
@@ -535,14 +537,14 @@ class PanelBuilders(
                 if (key in editable) ref else null,
             )
 
-            key in editable -> TextRow(key, if (value === MISSING) "" else text, value.isNull || value === MISSING, ref)
-            else -> ReadonlyRow(key, text, value.isNull)
+            key in editable -> TextRow(key, if (missing) "" else text, value == null || missing, ref)
+            else -> ReadonlyRow(key, text, value == null)
         }
     }
 
     /** The first model of a layer, with how many more it mixes in. */
-    private fun modelOf(layer: JsonNode): String {
-        val models = layer.get("models")?.takeIf { it.isArray }?.mapNotNull { it.get("asset")?.asText() }.orEmpty()
+    private fun modelOf(layer: JsonValues?): String {
+        val models = (layer?.get("models") as? List<*>)?.mapNotNull { valuesOf(it)?.get("asset")?.toString() }.orEmpty()
         return when {
             models.isEmpty() -> ""
             models.size == 1 -> models.single()
@@ -550,69 +552,37 @@ class PanelBuilders(
         }
     }
 
-    private fun foliageTable(layers: JsonNode): Row = TableRow(
+    private fun foliageTable(layers: List<*>): Row = TableRow(
         listOf("id", "kind", "model", "density"),
-        layers.mapIndexed { i, l ->
+        layers.mapIndexed { i, layer ->
+            val l = valuesOf(layer)
             listOf(
-                l.get("id")?.asText() ?: (i + 1).toString(),
-                l.get("kind")?.asText() ?: "",
+                l?.get("id")?.toString() ?: (i + 1).toString(),
+                l?.get("kind")?.toString() ?: "",
                 modelOf(l),
-                l.get("density")?.asText() ?: ""
+                l?.get("density")?.let(::scalarText) ?: ""
             )
         },
     )
 
-    private fun cloudTable(layers: List<Map.Entry<String, JsonNode>>): Row = TableRow(
+    private fun cloudTable(layers: List<Pair<String, Any?>>): Row = TableRow(
         listOf("layer", "type", "coverage", "density", "wind x, z"),
-        layers.map { (name, l) ->
+        layers.map { (name, layer) ->
+            val l = valuesOf(layer)
             listOf(
                 name,
-                l.get("type")?.asText() ?: "",
-                l.get("coverage")?.asText() ?: "",
-                l.get("density")?.asText() ?: "",
-                "${l.get("windX")?.asText() ?: ""}, ${l.get("windZ")?.asText() ?: ""}",
+                l?.get("type")?.toString() ?: "",
+                l?.get("coverage")?.let(::scalarText) ?: "",
+                l?.get("density")?.let(::scalarText) ?: "",
+                "${l?.get("windX")?.let(::scalarText) ?: ""}, ${l?.get("windZ")?.let(::scalarText) ?: ""}",
             )
         },
     )
 
     // ---- small helpers ----
 
-    private fun JsonNode.text(key: String): String = get(key)?.takeIf { !it.isNull }?.asText() ?: ""
-
-    private fun modified(value: JsonNode?): String =
-        value?.takeIf { it.isIntegralNumber }?.let { MODIFIED.format(Instant.ofEpochMilli(it.longValue())) } ?: ""
-
-    /** A number row; it is editable when [kind] names the object the plugin writes it under, else read only. */
-    private fun number(
-        label: String,
-        node: JsonNode?,
-        key: String,
-        default: String,
-        unit: String,
-        kind: String?
-    ): NumberRow {
-        val value = node?.get(key)
-        return NumberRow(label, value?.asText() ?: default, unit, value == null, kind?.let { FieldRef(it, key) })
-    }
-
-    private fun vector(label: String, node: JsonNode?, default: List<Float>, kind: String?): VectorRow {
-        val names = listOf("x", "y", "z")
-        val axes = names.mapIndexed { i, n ->
-            Axis(
-                n,
-                node?.get(n)?.asText() ?: default[i].toString(),
-                kind?.let { FieldRef(it, "$label.$n") })
-        }
-        return VectorRow(label, axes, dim = node == null || names.none { node.has(it) })
-    }
-
-    private fun color(label: String, node: JsonNode?, kind: String?): ColorRow {
-        val channels = listOf("r", "g", "b", "a")
-        val axes =
-            channels.map { Axis(it, node?.get(it)?.asText() ?: "", kind?.let { k -> FieldRef(k, "$label.$it") }) }
-        val rgb = listOf("r", "g", "b").map { node?.get(it)?.floatValue() ?: 0f }
-        return ColorRow(label, if (node == null) "" else hex(rgb[0], rgb[1], rgb[2]), dim = node == null, axes = axes)
-    }
+    private fun modified(value: Any?): String =
+        (value as? Number)?.takeIf { it is Int || it is Long }?.let { MODIFIED.format(Instant.ofEpochMilli(it.toLong())) } ?: ""
 
     /** A number row for a typed value; it is dim while the value is absent. */
     private fun numberRow(label: String, value: Float?, default: String, unit: String, kind: String?): NumberRow =
@@ -631,7 +601,7 @@ class PanelBuilders(
 }
 
 /** Stands in for a property the file omits that the plugin can still edit. */
-private val MISSING: JsonNode = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.textNode("")
+private val MISSING = Any()
 
 private val AXIS = Regex("(.+)\\.([xyzwrgba])")
 private val CAMEL = Regex("(?<=[a-z])(?=[A-Z])")

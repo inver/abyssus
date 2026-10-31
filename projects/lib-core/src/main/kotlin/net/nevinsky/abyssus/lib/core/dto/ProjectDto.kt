@@ -30,9 +30,8 @@ data class ProjectDto(
     @get:JsonInclude(JsonInclude.Include.NON_EMPTY)
     val uiAssetNames: List<String> = emptyList(),
     @get:JsonIgnore val dir: Path? = null,
-    /** The format marker and version as the file holds them, so a rewrite keeps them (null: not written). */
-    val format: String? = null,
-    val formatVersion: Int? = null,
+    /** The format version a native document carries; there is no `format` marker. */
+    val formatVersion: Int? = 1,
     /** The scene a project opens with; null when the file names none. */
     val activeSceneName: String? = null,
     val selectedCamera: Int? = null,

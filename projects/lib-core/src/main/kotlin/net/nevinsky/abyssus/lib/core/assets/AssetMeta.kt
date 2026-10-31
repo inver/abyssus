@@ -2,6 +2,8 @@ package net.nevinsky.abyssus.lib.core.assets
 
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonPropertyOrder
 import java.util.*
 
 const val META_VERSION_DEFAULT = 1
@@ -10,6 +12,8 @@ const val META_VERSION_DEFAULT = 1
  * The `meta.json` of one asset folder. [name] is the folder, not a JSON field: [AssetMetaLoader] sets it. [additional]
  * is the typed block of [type] (see [AssetMetaLoader]); the other fields default so a sparse meta still loads, and [uuid] is null for an asset that declares none.
  */
+@JsonIgnoreProperties("name")
+@JsonPropertyOrder("formatVersion", "version", "lastModified", "uuid", "type", "additional")
 open class AssetMeta<T>(
     type: MetaType,
     name: String = "",

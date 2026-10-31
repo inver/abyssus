@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.terrain.splat
 
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaParser
+import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaTextEditor
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -27,7 +29,7 @@ class SplatUniqueCopyTest {
 
     private fun terrain(name: String): File {
         val dir = File(assets, name).apply { mkdirs() }
-        File(dir, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"uuid":"t-$name","type":"TERRAIN","additional":{"size":100,"splatMap":"$shared"}}""")
+        File(dir, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"uuid":"${UUID.nameUUIDFromBytes(name.toByteArray())}","type":"TERRAIN","additional":{"size":100,"splatMap":"$shared"}}""")
         return dir
     }
 
@@ -45,7 +47,7 @@ class SplatUniqueCopyTest {
         val ready = reader.read(assets, a) as SplatState.Ready
         assertEquals(listOf("terrain_b"), ready.users)
 
-        val writer = SplatAssetWriter(json, SplatImageCodec(), randomUuid = { UUID.fromString("22222222-2222-2222-2222-222222222222") })
+        val writer = SplatAssetWriter(json, AssetMetaTextEditor(AssetMetaParser(json)), codec = SplatImageCodec(), randomUuid = { UUID.fromString("22222222-2222-2222-2222-222222222222") })
         val files = (writer.uniqueCopy(tmp.root, "terrain_a", File(a, "meta.json").readText(), ready.pixels) as SplatPlan.Planned).files
 
         assertArrayEquals(ready.pixels.rgba, SplatImageCodec().decode("splat.png", files.imageBytes).rgba)

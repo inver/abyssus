@@ -25,7 +25,7 @@ import java.util.UUID
 class ModelImportTest {
     private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
     private val format = AbyssusDocumentFormat()
-    private val import = ModelImport(json, format)
+    private val import = ModelImport(json)
     private val fixtures = importFixtures()
     private val uuid = UUID.fromString("0f8fad5b-d9cb-469f-a165-70867728950e")
 
@@ -51,7 +51,7 @@ class ModelImportTest {
 
         val meta = json.readObject(String(staged.files.getValue("meta.json")))
         assertNull(format.validate(meta, DocumentKind.ASSET))
-        assertEquals(listOf("format", "formatVersion", "version", "lastModified", "uuid", "type", "additional"), meta.fieldNames().asSequence().toList())
+        assertEquals(listOf("formatVersion", "version", "lastModified", "uuid", "type", "additional"), meta.fieldNames().asSequence().toList())
         assertEquals(uuid.toString(), meta["uuid"].asText())
         assertEquals("MODEL", meta["type"].asText())
         assertEquals("""{"file":"model.glb","format":"GLTF","binary":true,"materials":[]}""", meta["additional"].toString())
@@ -114,7 +114,7 @@ class ModelImportTest {
         assertEquals("model", source["importer"].asText())
         assertEquals("crate_missing.obj", source["source"].asText())
         assertEquals("OBJ", source["sourceFormat"].asText())
-        assertEquals("""{"unit":null,"upAxis":null}""", source["stated"].toString())
+        assertEquals("{}", source["stated"].toString())
         assertEquals("""{"unit":"cm","upAxis":"Y"}""", source["chosen"].toString())
         assertEquals("""{"height":2.0}""", source["size"].toString())
         assertEquals("""[{"item":"wood.png","reason":"missing"}]""", source["skipped"].toString())

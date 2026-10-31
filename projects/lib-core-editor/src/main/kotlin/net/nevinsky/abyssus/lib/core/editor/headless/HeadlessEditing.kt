@@ -63,7 +63,7 @@ class HeadlessEditing(
     private val scenes = SceneParser(json, registry)
     private val sceneEditor = SceneTextEditor(scenes, json)
     private val components = ComponentEditor(messages)
-    private val assetMeta = AssetMetaEditor(AssetFieldDescriptions())
+    private val assetMeta = AssetMetaEditor(AssetFieldDescriptions(), json)
     private val foliageEdits = FoliageComponentEdits()
     private val enabledAction = SetEnabledAction()
     private val entityRemoval = EntityRemoval(messages)
@@ -173,20 +173,14 @@ class HeadlessEditing(
      * (an edit made elsewhere since is refused as a conflict), as the Properties panel does.
      */
     fun setAssetProperty(metaText: String, key: String, expected: AssetFieldValue, value: AssetFieldValue): HeadlessEdit {
-        var refusal: Refusal? = null
-        val root = runCatchingKeepingCancellation { json.readObject(metaText) }
-            .getOrElse { return HeadlessEdit.Refused(refusal(it)) }
-        val changed = when (val result = assetMeta.edit(root, key, expected, value)) {
-            EditOutcome.Changed -> true
-            EditOutcome.NoChange -> false
-            is EditOutcome.Rejected -> false.also { refusal = Refusal(result.error.message(messages)) }
-            is EditOutcome.Conflict -> false.also { refusal = Refusal(messages.message("assetFieldConflict")) }
+        val edit = assetMeta.editText(metaText, key, expected, value)
+            ?: return HeadlessEdit.Refused(refusal(IllegalArgumentException("expected a JSON object")))
+        return when (val outcome = edit.outcome) {
+            EditOutcome.Changed -> edit.text?.takeIf { it != metaText }?.let { HeadlessEdit.Edited(it) } ?: HeadlessEdit.Unchanged
+            EditOutcome.NoChange -> HeadlessEdit.Unchanged
+            is EditOutcome.Rejected -> HeadlessEdit.Refused(Refusal(outcome.error.message(messages)))
+            is EditOutcome.Conflict -> HeadlessEdit.Refused(Refusal(messages.message("assetFieldConflict")))
         }
-        refusal?.let { return HeadlessEdit.Refused(it) }
-        if (!changed) return HeadlessEdit.Unchanged
-        // asset documents are still edited as a tree (gate G6)
-        val printed = json.pretty(root)
-        return if (printed == metaText) HeadlessEdit.Unchanged else HeadlessEdit.Edited(printed)
     }
 
     private fun editScene(text: String, edit: SceneEdit): HeadlessEdit =

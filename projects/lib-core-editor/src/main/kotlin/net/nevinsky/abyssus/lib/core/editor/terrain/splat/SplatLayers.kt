@@ -31,7 +31,7 @@ class SplatLayers(private val json: JsonProcessor) {
     /** The slots in order Base, R, G, B, A; empty when [terrainMetaText] is not a supported native document. */
     fun read(assetsDir: File, terrainMetaText: String): List<SplatLayer> {
         val additional = try {
-            metas.read(terrainMetaText).json.obj("additional")
+            metas.read(terrainMetaText)
         } catch (e: IllegalArgumentException) {
             null
         } catch (e: com.fasterxml.jackson.core.JsonProcessingException) {
@@ -39,7 +39,7 @@ class SplatLayers(private val json: JsonProcessor) {
         } ?: return emptyList()
         val textures = assetsDir.listFiles { f -> f.isDirectory }?.sortedBy { it.name }.orEmpty()
         return SPLAT_LAYERS.mapIndexed { slot, field ->
-            val uuid = additional.text(field)?.takeIf { it.isNotBlank() }
+            val uuid = additional.text("additional", field)?.takeIf { it.isNotBlank() }
             val folder = uuid?.let { id -> textures.firstOrNull { choices.textureUuid(it) == id } }
             when {
                 uuid == null -> SplatLayer(slot, field, null, null, true, null)
@@ -54,7 +54,7 @@ class SplatLayers(private val json: JsonProcessor) {
 
     private fun imageOf(folder: File): File? {
         val file = runCatchingKeepingCancellation {
-            metas.read(File(folder, META_FILE).readText()).json.obj("additional")?.text("file")
+            metas.read(File(folder, META_FILE).readText()).text("additional", "file")
         }.getOrElse { return null }
         return file?.let { choices.inside(folder, it) }
     }

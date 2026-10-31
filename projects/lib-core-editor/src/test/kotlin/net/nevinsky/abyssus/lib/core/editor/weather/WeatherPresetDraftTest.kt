@@ -10,7 +10,6 @@ import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.*
 import org.junit.Ignore
@@ -19,7 +18,6 @@ import org.slf4j.helpers.NOPLogger
 import java.util.*
 
 class WeatherPresetDraftTest {
-    private val json = SceneJson()
     private val processor = JsonProcessor(NOPLogger.NOP_LOGGER)
     private val draft = WeatherPresetDraft(processor, ResourceEditorMessages())
     private val sourceId = "00000000-0000-0000-0000-000000000001"
@@ -36,7 +34,7 @@ class WeatherPresetDraftTest {
     @Test
     fun snapshotDefaultsAndIdentityRoundTripThroughRuntime() {
         val text = snapshot(source("""{"low":{"type":"cumulus"}}"""))
-        val root = json.parse(text)
+        val root = processor.readObject(text)
         assertEquals(
             listOf("format", "formatVersion", "version", "lastModified", "uuid", "type", "additional"),
             root.fieldNames().asSequence().toList()
@@ -49,7 +47,7 @@ class WeatherPresetDraftTest {
         assertEquals(fresh.toString(), root["uuid"].asText())
         assertEquals("CLOUDS", root["type"].asText())
         assertEquals(
-            json.parse("""{"technique":"shells","low":{"type":"cumulus","base":800,"top":2000,"coverage":0.4,"density":0.8,"wind":[4,1]}}"""),
+            processor.readObject("""{"technique":"shells","low":{"type":"cumulus","base":800,"top":2000,"coverage":0.4,"density":0.8,"wind":[4,1]}}"""),
             root["additional"]
         )
         val settings = AssetMetaBinder(processor).bind("new", root).typedAdditional<CloudMeta>()
@@ -69,7 +67,7 @@ class WeatherPresetDraftTest {
         assertTrue(text.contains("1.2300"))
         assertTrue(text.contains("2.00"))
         assertTrue(text.contains("25.00"))
-        val root = json.parse(text)
+        val root = processor.readObject(text)
         assertTrue(root.has("tail"))
         assertEquals(listOf("vendor", "tail"), root.fieldNames().asSequence().toList().takeLast(2))
         val settings = AssetMetaBinder(processor).bind("new", root).typedAdditional<CloudMeta>()
@@ -82,14 +80,14 @@ class WeatherPresetDraftTest {
     @Test
     fun invalidBandIsOmittedAndAcceptedRuntimeFieldsBecomeCanonical() {
         val root =
-            json.parse(snapshot(source("""{"low":{"type":"cirrus"},"high":{"level":"HIGH","type":"CIRRUS","windX":-2.00,"windZ":3.00}}""")))
+            processor.readObject(snapshot(source("""{"low":{"type":"cirrus"},"high":{"level":"HIGH","type":"CIRRUS","windX":-2.00,"windZ":3.00}}""")))
         val additional = root["additional"]
         assertFalse(additional.has("low"))
         val high = additional["high"]
         assertEquals("cirrus", high["type"].asText())
         assertFalse(high.has("level"))
         assertFalse(high.has("windX"))
-        assertEquals("[-2.00,3.00]", json.compact(high["wind"]))
+        assertEquals("[-2.0,3.0]", high["wind"].toString())
     }
 
     @Test

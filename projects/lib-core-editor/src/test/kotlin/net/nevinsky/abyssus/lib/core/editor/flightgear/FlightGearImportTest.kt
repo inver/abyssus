@@ -30,7 +30,7 @@ class FlightGearImportTest {
     @get:Rule
     val temp = TemporaryFolder()
     private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
-    private val importer = FlightGearImport(json, AbyssusDocumentFormat())
+    private val importer = FlightGearImport(json)
     private val uuid = UUID.fromString("6f1c2b5e-7d0a-4c39-9e61-1d3a2f5b8c90")
 
     private fun stage(license: Boolean = false, size: ImportSize = ImportSize.Span(1.0), excluded: Set<String> = setOf("PropDisc")): Pair<File, StagedImport> {

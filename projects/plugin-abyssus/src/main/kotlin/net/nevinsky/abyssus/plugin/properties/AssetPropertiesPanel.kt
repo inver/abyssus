@@ -420,7 +420,7 @@ class AssetPropertiesPanel(
         val editable = d.fields.map { it.key }.toSet()
         val hasEditors = d.fields.isNotEmpty() || d.foliage != null
         val model = PanelBuilders(EditorBundle, { false }).asset(
-            d.name, d.meta.document.json, !selectedUnused, editable, d.meta.folder.parent?.parent?.children?.firstOrNull { it.extension == ProjectLayout.PROJECT_EXTENSION }?.name.orEmpty(), hasEditors,
+            d.name, d.meta.document.values, !selectedUnused, editable, d.meta.folder.parent?.parent?.children?.firstOrNull { it.extension == ProjectLayout.PROJECT_EXTENSION }?.name.orEmpty(), hasEditors,
         )
         val hooks = object : RowHooks {
             override fun commit(ref: FieldRef, text: String): CommitOutcome = CommitOutcome.Unchanged

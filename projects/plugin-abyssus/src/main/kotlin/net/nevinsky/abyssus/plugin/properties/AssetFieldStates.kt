@@ -34,4 +34,4 @@ fun choiceLabel(choice: AssetChoice): String = when {
  * for references, the choices found on disk. Empty for a type without editors. Reads files, so off the EDT.
  */
 fun readFieldStates(folder: VirtualFile, type: MetaType, document: MetaDocument, services: PanelServices): List<AssetFieldState> =
-    assetFieldStates(File(folder.path), type, document.json, services.assetFields, services.assetEditor, AssetReferenceChoices(services.json))
+    assetFieldStates(File(folder.path), type, document.bound().additional, services.assetFields, services.assetEditor, AssetReferenceChoices(services.json))

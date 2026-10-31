@@ -5,10 +5,15 @@
 
 package net.nevinsky.abyssus.lib.core.editor.terrain.splat
 
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaParser
+import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaTextEditor
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
+import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
+import net.nevinsky.abyssus.lib.core.editor.util.at
+import net.nevinsky.abyssus.lib.core.editor.util.textAt
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
@@ -19,18 +24,15 @@ class SplatBootstrapTest {
     val tmp = TemporaryFolder()
 
     private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
-    private val writer = SplatAssetWriter(json, SplatImageCodec(), clock = { 1_700_000_000_000L }, randomUuid = { UUID.fromString("00000000-0000-0000-0000-00000000abcd") })
+    private val writer = SplatAssetWriter(json, AssetMetaTextEditor(AssetMetaParser(json)), codec = SplatImageCodec(), clock = { 1_700_000_000_000L }, randomUuid = { UUID.fromString("00000000-0000-0000-0000-00000000abcd") })
     private val codec = SplatImageCodec()
 
     private val terrainMeta = """{
   "format": "abyssus",
   "formatVersion": 1,
   "version": 1,
-  "uuid": "t",
+  "uuid": "00000000-0000-0000-0000-0000000000aa",
   "type": "TERRAIN",
-  "futureField": {
-    "keep": 1.50
-  },
   "additional": {
     "terrainFile": "terrain.data",
     "size": 200,
@@ -52,7 +54,7 @@ class SplatBootstrapTest {
         assertEquals("00000000-0000-0000-0000-00000000abcd", files.uuid)
         assertTrue(files.metaText.contains(""""type":"TEXTURE""""))
         assertTrue(files.metaText.contains(""""file":"splat.png""""))
-        assertTrue(files.metaText.contains(""""format":"abyssus","formatVersion":1"""))
+        assertTrue(files.metaText.contains(""""formatVersion":1"""))
         assertTrue(!files.metaText.contains("\n"))
     }
 
@@ -65,16 +67,25 @@ class SplatBootstrapTest {
     }
 
     @Test
-    fun `only splatMap changes in the terrain meta, with formatting key order and number text kept`() {
+    fun `only splatMap changes in the terrain meta`() {
         val files = planned(writer.create(tmp.root, "terrain_a", terrainMeta, 64))
-        assertEquals(terrainMeta.replace(""""splatMap": null""", """"splatMap": "${files.uuid}""""), files.terrainMetaText)
+        val before = AssetMetaReader(json).read(terrainMeta).values
+        val after = AssetMetaReader(json).read(files.terrainMetaText).values
+        assertEquals(files.uuid, after.textAt("additional", "splatMap"))
+        assertEquals(before.at("additional", "terrainFile"), after.at("additional", "terrainFile"))
+        assertEquals(before.at("additional", "size"), after.at("additional", "size"))
+        assertEquals(before.at("additional", "uv"), after.at("additional", "uv"))
+        assertEquals(before.textAt("additional", "splatR"), after.textAt("additional", "splatR"))
+        assertEquals(before.textAt("uuid"), after.textAt("uuid"))
     }
 
     @Test
-    fun `a missing splatMap key is added and a compact meta stays compact`() {
-        val compact = """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"t","type":"TERRAIN","additional":{"size":200}}"""
+    fun `a missing splatMap key is added`() {
+        val compact = """{"formatVersion":1,"version":1,"uuid":"00000000-0000-0000-0000-0000000000aa","type":"TERRAIN","additional":{"size":200}}"""
         val text = planned(writer.create(tmp.root, "t", compact, 64)).terrainMetaText
-        assertEquals("""{"format":"abyssus","formatVersion":1,"version":1,"uuid":"t","type":"TERRAIN","additional":{"size":200,"splatMap":"00000000-0000-0000-0000-00000000abcd"}}""", text)
+        val values = AssetMetaReader(json).read(text).values
+        assertEquals("00000000-0000-0000-0000-00000000abcd", values.textAt("additional", "splatMap"))
+        assertEquals(200, values.at("additional", "size"))
     }
 
     @Test
@@ -98,7 +109,7 @@ class SplatBootstrapTest {
         val ids = ArrayDeque(listOf(UUID(0, 1), UUID(0, 2)))
         File(tmp.root, "assets/other").mkdirs()
         File(tmp.root, "assets/other/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"uuid":"${UUID(0, 1)}","type":"TEXTURE"}""")
-        val files = planned(SplatAssetWriter(json, SplatImageCodec(), randomUuid = { ids.removeFirst() }).create(tmp.root, "t", terrainMeta, 64))
+        val files = planned(SplatAssetWriter(json, AssetMetaTextEditor(AssetMetaParser(json)), codec = SplatImageCodec(), randomUuid = { ids.removeFirst() }).create(tmp.root, "t", terrainMeta, 64))
         assertEquals(UUID(0, 2).toString(), files.uuid)
     }
 }

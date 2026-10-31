@@ -74,7 +74,7 @@ class FoliageController(
     private val edits = FoliageMetaEdits(net.nevinsky.abyssus.lib.core.editor.document.AssetMetaTextEditor(net.nevinsky.abyssus.lib.core.assets.AssetMetaParser(com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.json)))
     private val settingsReader = FoliageSettingsReader(EditorBundle)
     private val colliderReader = FoliageColliderReader()
-    private val colliderEdits = FoliageColliderEdits()
+    private val colliderEdits = FoliageColliderEdits(com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.json)
 
     private var source: FoliageSource.Ready = initial
     private var disposed = false
@@ -198,7 +198,7 @@ class FoliageController(
                 FoliageColliderRead.Absent -> null
                 is FoliageColliderRead.Invalid -> FoliageCollider()
             }
-            layer.copy(collider = colliderEdits.patch(layer.collider, change(current)))
+            colliderEdits.patch(layer, change(current))
         })
     }
 

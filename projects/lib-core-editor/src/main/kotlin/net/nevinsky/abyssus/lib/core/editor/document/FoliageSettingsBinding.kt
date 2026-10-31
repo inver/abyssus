@@ -4,37 +4,44 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.document
 
-import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageModelMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageScale
+import net.nevinsky.abyssus.lib.core.editor.util.JsonValues
+import net.nevinsky.abyssus.lib.core.editor.util.valuesOf
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
-/** Editor admission defaults, kept distinct from the runtime mapper's coercions. Never rewrites its source. */
-class FoliageSettingsBinding {
+/**
+ * Editor admission defaults, kept distinct from the runtime mapper's coercions: a member of the wrong kind takes its
+ * default instead of failing the whole block. Reads the `additional` block as plain values and never rewrites its source.
+ */
+class FoliageSettingsBinding(private val json: JsonProcessor) {
     private val defaults = FoliageMeta()
     private val layerDefaults = FoliageLayerMeta()
-    fun read(node: JsonNode): FoliageMeta = FoliageMeta(
-        terrain = node.text("terrain") ?: "",
-        dataFile = node.text("dataFile"),
-        maskResolution = node.int("maskResolution") ?: defaults.maskResolution,
-        layers = node.get("layers")?.takeIf { it.isArray }?.mapNotNull(::layer) ?: emptyList(),
+
+    fun read(block: JsonValues): FoliageMeta = FoliageMeta(
+        terrain = block.text("terrain") ?: "",
+        dataFile = block.text("dataFile"),
+        maskResolution = block.int("maskResolution") ?: defaults.maskResolution,
+        layers = (block["layers"] as? List<*>)?.mapNotNull { layer(valuesOf(it) ?: return@mapNotNull null) } ?: emptyList(),
     )
 
-    private fun layer(node: JsonNode): FoliageLayerMeta? {
+    private fun layer(node: JsonValues): FoliageLayerMeta? {
         val id = node.int("id") ?: return null
+        val scale = valuesOf(node["scale"])
         return FoliageLayerMeta(
             id = id,
             kind = node.text("kind") ?: layerDefaults.kind,
-            models = node.get("models")?.takeIf { it.isArray }
-                ?.mapNotNull { model ->
-                    val asset = model.text("asset") ?: return@mapNotNull null
-                    FoliageModelMeta(asset, model.float("weight") ?: 1f)
-                } ?: emptyList(),
+            models = (node["models"] as? List<*>)?.mapNotNull { model ->
+                val values = valuesOf(model) ?: return@mapNotNull null
+                val asset = values.text("asset") ?: return@mapNotNull null
+                FoliageModelMeta(asset, values.float("weight") ?: 1f)
+            } ?: emptyList(),
             density = node.float("density") ?: layerDefaults.density,
             scale = FoliageScale(
-                min = node.get("scale")?.float("min") ?: layerDefaults.scale.min,
-                max = node.get("scale")?.float("max") ?: layerDefaults.scale.max,
+                min = scale?.float("min") ?: layerDefaults.scale.min,
+                max = scale?.float("max") ?: layerDefaults.scale.max,
             ),
             alignToNormal = node.float("alignToNormal") ?: layerDefaults.alignToNormal,
             minHeight = node.float("minHeight"),
@@ -42,11 +49,17 @@ class FoliageSettingsBinding {
             maxSlope = node.float("maxSlope"),
             drawDistance = node.float("drawDistance") ?: layerDefaults.drawDistance,
             seed = node.int("seed") ?: 0,
-            collider = node.get("collider")?.takeUnless { it.isNull },
+            collider = node["collider"]?.let { colliderNode(json, it) },
         )
     }
 
-    private fun JsonNode.text(name: String) = get(name)?.takeIf { it.isTextual }?.asText()
-    private fun JsonNode.int(name: String) = get(name)?.takeIf { it.isIntegralNumber }?.asInt()
-    private fun JsonNode.float(name: String) = get(name)?.takeIf { it.isNumber }?.floatValue()
+    private fun JsonValues.text(name: String) = this[name] as? String
+    private fun JsonValues.int(name: String) = (this[name] as? Number)?.takeIf { it is Int || it is Long }?.toInt()
+    private fun JsonValues.float(name: String) = (this[name] as? Number)?.toFloat()
 }
+
+/**
+ * A layer's `collider` member as the raw form [FoliageLayerMeta.collider] keeps. This is the one place the editor makes
+ * that form from plain values, so the rest of the editor never handles it.
+ */
+internal fun colliderNode(json: JsonProcessor, value: Any) = json.readObject("""{"collider":${json.toString(value)}}""").get("collider")

@@ -246,7 +246,12 @@ class PanelBuildersTest {
         assertEquals(LinkTarget.SCREEN_EDITOR, (panel.sections.single().rows.last() as LinkRow).target)
     }
 
-    private fun meta(asset: String) = json.readObject(File(project, "assets/$asset/meta.json").readText())
+    private fun values(text: String): Map<String, Any?> {
+        @Suppress("UNCHECKED_CAST")
+        return json.parse(text, Map::class.java) as Map<String, Any?>
+    }
+
+    private fun meta(asset: String) = values(File(project, "assets/$asset/meta.json").readText())
 
     @Test
     fun aModelHasMetaAndAdditionalSections() {
@@ -320,7 +325,7 @@ class PanelBuildersTest {
     private val untitled = File("../plugin-abyssus/src/test/testData/project/Untitled")
 
     private fun assetPanel(name: String, root: File = project, editable: Set<String> = emptySet(), used: Boolean = true) =
-        builders.asset(name, json.readObject(File(root, "assets/$name/meta.json").readText()), used, editable, "p.abss")
+        builders.asset(name, values(File(root, "assets/$name/meta.json").readText()), used, editable, "p.abss")
 
     @Test
     fun aModelListsItsFileFormatAndMaterials() {

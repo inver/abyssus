@@ -47,7 +47,7 @@ class NewFoliageFilesTest {
         staged!!
 
         val metaText = staged.metaText
-        assertTrue(metaText.indexOf("\"format\"") < metaText.indexOf("\"version\""))
+        assertTrue(metaText.indexOf("\"formatVersion\"") < metaText.indexOf("\"version\""))
         assertTrue(metaText.indexOf("\"version\"") < metaText.indexOf("\"uuid\""))
         assertTrue(metaText.indexOf("\"uuid\"") < metaText.indexOf("\"type\""))
         assertTrue(metaText.indexOf("\"type\"") < metaText.indexOf("\"additional\""))
