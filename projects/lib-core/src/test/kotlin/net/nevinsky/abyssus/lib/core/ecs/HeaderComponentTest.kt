@@ -5,19 +5,11 @@
 
 package net.nevinsky.abyssus.lib.core.ecs
 
-import net.nevinsky.abyssus.lib.core.ecs.component.isActive
-import net.nevinsky.abyssus.lib.core.ecs.component.activeComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
-import net.nevinsky.abyssus.lib.core.testing.loadEcs
 import com.badlogic.ashley.core.Component
-import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.io.NativeJsonTree
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import net.nevinsky.abyssus.lib.core.testing.loadEcs
+import org.junit.Assert.*
 import org.junit.Test
 import org.slf4j.helpers.NOPLogger
 

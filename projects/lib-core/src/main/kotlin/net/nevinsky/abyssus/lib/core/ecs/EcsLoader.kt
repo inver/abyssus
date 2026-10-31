@@ -7,12 +7,8 @@ package net.nevinsky.abyssus.lib.core.ecs
 
 import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
-import net.nevinsky.abyssus.lib.core.dto.ENTITY_DISABLED_FLAG
-import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.RawComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.RawComponentsWrapper
+import net.nevinsky.abyssus.lib.core.dto.EntityDto
+import net.nevinsky.abyssus.lib.core.ecs.component.*
 
 /**
  * Puts the typed entities of a scene's `ecs` block into a [SceneEngine]. The components were already bound when the scene
@@ -25,19 +21,23 @@ import net.nevinsky.abyssus.lib.core.ecs.component.RawComponentsWrapper
  */
 class EcsLoader {
 
-    fun loadToEngine(entities: Map<Long, Entity>, engine: SceneEngine): EcsLoadingWarns {
+    fun loadToEngine(entities: Map<Long, EntityDto>, engine: SceneEngine): EcsLoadingWarns {
         val warnings = LinkedHashSet<String>()
         val carried = HashMap<Long, Map<String, RawComponent>>()
 
-        for ((id, entity) in entities) {
-            // the raw entries are carried, not part of the running entity
-            entity.remove(RawComponentsWrapper::class.java)?.let { wrapper ->
-                val carriedRaw = LinkedHashMap<String, RawComponent>()
-                for (raw in wrapper.entries) {
-                    carriedRaw[raw.name] = raw
-                    warnings.add("entity $id: ${raw.reason}")
+        for ((id, dto) in entities) {
+            val entity = Entity()
+            dto.components.forEach {
+                if (it.javaClass != RawComponentsWrapper::class.java) {
+                    entity.add(it)
+                } else {
+                    val carriedRaw = LinkedHashMap<String, RawComponent>()
+                    for (raw in (it as RawComponentsWrapper).entries) {
+                        carriedRaw[raw.name] = raw
+                        warnings.add("entity $id: ${raw.reason}")
+                    }
+                    carried[id] = carriedRaw
                 }
-                carried[id] = carriedRaw
             }
             engine.addEntity(entity)
             engine.ids.register(id.toInt(), entity)

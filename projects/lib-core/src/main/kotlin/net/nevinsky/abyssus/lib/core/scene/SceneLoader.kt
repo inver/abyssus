@@ -5,7 +5,6 @@ import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.io.NativeJsonTree
 
 class SceneLoader(
     private val fileLoader: FileLoader,
@@ -16,8 +15,7 @@ class SceneLoader(
         fileLoader: FileLoader,
         registry: ComponentRegistry,
         format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
-        tree: NativeJsonTree = NativeJsonTree(),
-    ) : this(fileLoader, SceneParser(jsonProcessor, registry, format, tree))
+    ) : this(fileLoader, SceneParser(jsonProcessor, registry, format))
 
     /**
      * Load [SceneDto] from file

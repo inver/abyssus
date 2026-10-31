@@ -286,7 +286,18 @@ val terrain = assets.getAs<TerrainMesh>("terrain_x")   // null until built
 `ModelLoader` takes an optional `ModelPreparationTap`: `begin(name)` returns a `Capture` (or null), and the loader offers
 it the parsed `ModelData` and decoded images once, on the prepare thread, before the textures are uploaded. A host uses it
 to copy what the loader already holds (the editor's ray snapshots do); the loader keeps ownership and a cancellation from
-`offer` disposes the prepared model. A game passes none. The ray-tracing CPU snapshots themselves live in `lib-core-editor`
+`offer` disposes the prepared model. A game passes none.
+
+## Model variants (one mesh of a model)
+
+A model entity may name a `meshId` (`RenderComponent.meshId`). The asset storage then builds a *variant* of the model
+asset: `ModelKey(asset, meshId).encode()` is the storage name (the bare asset name for the whole model, so callers never
+join strings themselves) and `AssetStorage` reads the variant's `meta.json` from the base folder. `ModelLoader` cuts the
+parsed `ModelData` down with `selectMesh` before images are decoded: the other meshes, the materials only they use and
+the node parts that pointed at them go; the node tree, bones and animations stay, so the mesh sits where it does in the
+whole model. A mesh id the model lacks fails only that variant, with the model's mesh ids in the log. `invalidate`
+replaces every loaded variant of an asset, and `retain` keeps a variant whose encoded name is in its set. The hooks and
+`ModelPreparationTap` receive the encoded name. The ray-tracing CPU snapshots themselves live in `lib-core-editor`
 (`editor.ray.snapshot`), not here.
 
 ## Skies write display colour

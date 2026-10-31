@@ -24,3 +24,6 @@ class AssetNotReadyException(val asset: String, val state: AssetState?) :
 
 class MissingBuiltAssetException(val asset: String) :
     AssetPipelineException("Built asset '$asset' is not available")
+
+class UnknownMeshException(val asset: String, val meshId: String, val available: List<String>) :
+    AssetPipelineException("Model '$asset' has no mesh '$meshId'; its meshes are ${available.joinToString(", ") { "'$it'" }}")

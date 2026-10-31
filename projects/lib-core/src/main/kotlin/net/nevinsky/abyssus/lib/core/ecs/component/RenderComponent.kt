@@ -13,6 +13,13 @@ class RenderComponent(
     var type: MetaType? = null,
     var assetName: String = "",
 ) : Component {
+    /**
+     * The one mesh of a `MODEL` asset to draw, with its materials; absent draws the whole model.
+     * Ignored (but kept) on a `TERRAIN`.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    var meshId: String? = null
+
     /** Editor-only scene-instance optical overrides per material id; the game keeps them but never reads them. */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     var rayTracingMaterials: JsonNode? = null

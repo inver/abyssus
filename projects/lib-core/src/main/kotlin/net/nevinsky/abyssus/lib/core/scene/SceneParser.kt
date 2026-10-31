@@ -6,7 +6,6 @@ import net.nevinsky.abyssus.lib.core.ecs.EntityDtoModule
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.io.NativeJsonTree
 
 /**
  * Turns scene text into a [SceneDto]: the native format is checked first, then the tree (which keeps number text) is
@@ -14,15 +13,14 @@ import net.nevinsky.abyssus.lib.core.io.NativeJsonTree
  * editor's unsaved-buffer reads share one admission and binding rule.
  */
 class SceneParser(
-    jsonProcessor: JsonProcessor,
+    private val jsonProcessor: JsonProcessor,
     registry: ComponentRegistry,
     private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
-    private val tree: NativeJsonTree = NativeJsonTree(),
 ) {
     private val binder = jsonProcessor.binderWith(EntityDtoModule(registry))
 
     fun parse(text: String): SceneDto {
-        val node = tree.parseObject(text)
+        val node = jsonProcessor.readObject(text)
         format.requireSupported(node, DocumentKind.SCENE)
         return binder.bind(node, SceneDto::class.java)
     }

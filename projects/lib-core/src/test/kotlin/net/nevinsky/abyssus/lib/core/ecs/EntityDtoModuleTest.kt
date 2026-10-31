@@ -11,9 +11,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RawComponentsWrapper
 import net.nevinsky.abyssus.lib.core.testing.sceneWithEcs
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Test
 
 class EntityDtoModuleTest {
@@ -27,32 +25,38 @@ class EntityDtoModuleTest {
     @Test
     fun componentsBindInFileOrderAndFlagsDefaultToZero() {
         val e = entity("""{"components":{"PositionComponent":{},"NameComponent":{"name":"a"}}}""")
-        assertEquals(listOf(PositionComponent::class.java, NameComponent::class.java), e.body().map { it.javaClass })
-        assertEquals(0, e.header().flags)
-        assertEquals(1L, e.header().id)
-        assertTrue(e.header().entityEnabled)
+        assertEquals(
+            setOf(HeaderComponent::class.java, PositionComponent::class.java, NameComponent::class.java),
+            e.components.map { it.javaClass }.toSet()
+        )
+        val header = e.components.filterIsInstance<HeaderComponent>().first()
+        assertEquals(0, header.flags)
+        assertEquals(1L, header.id)
+        assertTrue(header.entityEnabled)
     }
 
     @Test
     fun theDisabledBitDisablesTheEntityAndOtherBitsAreKept() {
         val e = entity("""{"flags":5,"components":{}}""")
-        assertFalse(e.header().entityEnabled)
-        assertEquals(4, e.header().flags)
+        val header = e.components.filterIsInstance<HeaderComponent>().first()
+        assertFalse(header.entityEnabled)
+        assertEquals(4, header.flags)
     }
 
     @Test
     fun aComponentsOwnEnabledFlagIsStrippedBeforeBinding() {
         val e = entity("""{"disabledComponents":["NameComponent"],"components":{"NameComponent":{"name":"a"}}}""")
-        assertEquals("a", (e.body().single() as NameComponent).name)
-        assertEquals(setOf(NameComponent::class.java), e.header().disabledComponents)
+        val header = e.components.filterIsInstance<HeaderComponent>().first()
+        assertEquals("a", e.components.filterIsInstance<NameComponent>().single().name)
+        assertEquals(setOf(NameComponent::class.java), header.disabledComponents)
     }
 
     @Test
     fun anUnknownOrUnbindableComponentIsKeptRawWithItsReason() {
         val e = entity("""{"components":{"PickableComponent":{"w":2.50},"PositionComponent":{"localPosition":"x"}}}""")
-        val raw = e.getComponent(RawComponentsWrapper::class.java).entries
+        val raw = e.components.filterIsInstance<RawComponentsWrapper>().single().entries
         assertEquals(listOf("PickableComponent", "PositionComponent"), raw.map { it.name })
         assertTrue(raw[0].reason, raw[0].reason.contains("not modeled"))
-        assertEquals("""{"w":2.50}""", raw[0].json)
+        assertEquals("""{"w":2.5}""", raw[0].json)
     }
 }

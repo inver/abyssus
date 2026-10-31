@@ -12,6 +12,9 @@ import net.nevinsky.abyssus.lib.core.assets.loading.exception.CyclicDependencyEx
 import net.nevinsky.abyssus.lib.core.assets.loading.exception.DependencyFailedException
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.baseAssetName
+import net.nevinsky.abyssus.lib.core.assets.forVariant
+import net.nevinsky.abyssus.lib.core.assets.isModelVariant
 import org.slf4j.Logger
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicLong
@@ -50,6 +53,11 @@ private class AbsentLoader : AssetLoader<Unit, Unit, Disposable> {
     override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, Unit>? = null
     override fun prepare(name: String): Prepared<Unit, Unit>? = null
     override fun build(staged: Unit, assets: BuiltAssets): Disposable = error("nothing to build")
+}
+
+private fun resolveBase(name: String, read: (String) -> AssetMeta<Any>?): AssetMeta<Any>? {
+    if (!isModelVariant(name)) return read(name)
+    return read(baseAssetName(name))?.forVariant(name)
 }
 
 /** A storage with [loader] registered for every name, for assets that need no `meta.json` to pick their loader. */
@@ -105,8 +113,19 @@ class AssetStorage(
      * [register]) and the loader then prepares from that meta. Null when there is none. Without it a loader can
      * only be chosen by name.
      */
-    private val metas: ((String) -> AssetMeta<Any>?)? = null,
+    metas: ((String) -> AssetMeta<Any>?)? = null,
 ) : Disposable, BuiltAssets {
+    /**
+     * [metas] for storage names: a name that encodes a model variant (see `ModelKey`) is read from its base asset's
+     * folder, and the meta handed on carries the encoded name so the loader can tell which mesh is wanted. Every path
+     * that turns a name into a folder or a `meta.json` goes through here: the loader choice in `DependencyResolver.route`
+     * and the revision/reload route (`startRevision`) use this wrapper, and `MetaAssetLoader.prepare` does the same
+     * decoding for the name-only path.
+     */
+    private val variantMetas: ((String) -> AssetMeta<Any>?)? = metas?.let { read ->
+        { name -> resolveBase(name, read) }
+    }
+
     private val executor: Executor
     private val ownedExecutor: ExecutorService?
 
@@ -141,7 +160,7 @@ class AssetStorage(
 
     /** Stands in for a name nothing can load: it prepares to nothing, so the asset fails as absent. */
     private val absent = LoaderRegistration(AbsentLoader(), { _, _ -> false })
-    private val dependencies = DependencyResolver(metas, registrations, absent) { registration, name, type ->
+    private val dependencies = DependencyResolver(variantMetas, registrations, absent) { registration, name, type ->
         registration.handles(name, type)
     }
 
@@ -283,13 +302,14 @@ class AssetStorage(
     /**
      * Marks [names] as changed. A loaded asset is replaced once the next [request] has loaded and built its new
      * revision (the old one is disposed then); a loading request is dropped and a failed name forgotten, so the next
-     * [request] loads it again from the current files. Unknown names and every other asset are untouched.
+     * [request] loads it again from the current files. Unknown names and every other asset are untouched. Invalidating
+     * a model asset also marks every loaded variant of it (one mesh, see `ModelKey`) changed.
      */
     fun invalidate(names: Set<String>) {
         onGl {
             check(!disposed) { "AssetStorage is disposed" }
             val errors = ArrayList<Throwable>()
-            for (name in names) {
+            for (name in withVariants(names)) {
                 val live = lives[name] ?: continue
                 if (live.phase == Phase.Ready) {
                     errors += dropRevision(name)
@@ -301,6 +321,15 @@ class AssetStorage(
             propagateFailures()
             throwIfAny(errors, "invalidate")
         }
+    }
+
+    /** [names] and every loaded model variant (see `ModelKey`) of an asset among them: a changed model changes them all. */
+    private fun withVariants(names: Set<String>): Set<String> {
+        val result = LinkedHashSet(names)
+        for (loaded in lives.keys) {
+            if (isModelVariant(loaded) && baseAssetName(loaded) in names) result += loaded
+        }
+        return result
     }
 
     /** Disposes every asset neither in [names] nor needed by one that is, and forgets it (a later request loads it again). */

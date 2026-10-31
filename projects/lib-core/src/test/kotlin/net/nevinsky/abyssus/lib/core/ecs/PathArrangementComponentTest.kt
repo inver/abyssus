@@ -5,15 +5,12 @@
 
 package net.nevinsky.abyssus.lib.core.ecs
 
-import net.nevinsky.abyssus.lib.core.testing.loadEcs
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PathSides
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.io.NativeJsonTree
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertSame
-import org.junit.Assert.assertTrue
+import net.nevinsky.abyssus.lib.core.testing.loadEcs
+import org.junit.Assert.*
 import org.junit.Test
 import org.slf4j.helpers.NOPLogger
 

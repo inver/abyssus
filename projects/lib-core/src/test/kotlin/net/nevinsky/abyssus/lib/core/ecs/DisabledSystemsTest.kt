@@ -5,25 +5,12 @@
 
 package net.nevinsky.abyssus.lib.core.ecs
 
-import net.nevinsky.abyssus.lib.core.ecs.component.isActive
-import net.nevinsky.abyssus.lib.core.ecs.component.activeComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
-import net.nevinsky.abyssus.lib.core.testing.loadEcs
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.assetName
+import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.lib.core.ecs.system.SynchronizeCameraComponentSystem
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.io.NativeJsonTree
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import net.nevinsky.abyssus.lib.core.testing.loadEcs
+import org.junit.Assert.*
 import org.junit.Test
-import org.slf4j.helpers.NOPLogger
 
 class DisabledSystemsTest {
     private fun load(entities: String): SceneEngine {

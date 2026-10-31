@@ -5,19 +5,11 @@
 
 package net.nevinsky.abyssus.lib.core.ecs
 
-import net.nevinsky.abyssus.lib.core.testing.loadEcs
-import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.io.NativeJsonTree
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
-import org.junit.Assert.assertThrows
-import org.junit.Assert.assertTrue
+import net.nevinsky.abyssus.lib.core.testing.loadEcs
+import org.junit.Assert.*
 import org.junit.Test
 import org.slf4j.helpers.NOPLogger
 
@@ -107,7 +99,7 @@ class FoliageComponentTest {
         assertNotNull(entity.getComponent(HeaderComponent::class.java))
         assertEquals(1, warns.warnings.size)
         val raw = warns.carried.getValue(1L).getValue("FoliageComponent")
-        assertEquals("""{"assetName":5.0,"k":1.50}""", raw.json)
+        assertEquals("""{"assetName":5.0,"k":1.5}""", raw.json)
     }
 
     @Test

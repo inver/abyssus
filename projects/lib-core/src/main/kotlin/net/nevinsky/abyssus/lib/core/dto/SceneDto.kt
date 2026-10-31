@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.lib.core.dto
 
-import com.badlogic.ashley.core.Entity
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.JsonNode
 import java.util.*
@@ -26,5 +25,5 @@ data class SceneDto(
     @get:JsonProperty("abyssus")
     val water: JsonNode? = null,
 
-    val ecs: Map<Long, Entity> = emptyMap()
+    val ecs: Map<Long, EntityDto> = emptyMap()
 )

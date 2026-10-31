@@ -57,7 +57,7 @@ private class ComponentFloatSerializer : StdSerializer<Any>(Any::class.java) {
  * A tree parser that also hands out the node it is walking, so a deserializer can read an object's members as nodes
  * (keeping the spelling of a number [NativeJsonTree] read) instead of having them rebuilt from tokens.
  */
-class ExactTreeParser(node: JsonNode, codec: ObjectCodec) : TreeTraversingParser(node, codec) {
+private class ExactTreeParser(node: JsonNode, codec: ObjectCodec) : TreeTraversingParser(node, codec) {
     /** The node the parser is at; at a field name, that field's value. At a start-object or start-array token, null. */
     fun walkedNode(): JsonNode? = currentNode()
 }

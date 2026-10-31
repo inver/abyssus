@@ -7,73 +7,60 @@ package net.nevinsky.abyssus.lib.core.ecs
 
 import com.badlogic.ashley.core.Entity
 import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.DeserializationContext
-import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.dto.ENTITY_DISABLED_FLAG
+import net.nevinsky.abyssus.lib.core.dto.EntityDto
 import net.nevinsky.abyssus.lib.core.dto.EntityType
 import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RawComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RawComponentsWrapper
 import net.nevinsky.abyssus.lib.core.format.entityDisabledComponents
-import net.nevinsky.abyssus.lib.core.format.entityFlags
 import net.nevinsky.abyssus.lib.core.format.entityTypeOf
-import net.nevinsky.abyssus.lib.core.io.ExactTreeParser
 
 /**
- * Teaches a Jackson mapper to bind an `ecs` entry to an [Entity]: the entry's `type`, `flags` and `disabledComponents` are
- * its [HeaderComponent] (with the entry's id, its key in the `ecs` map), and each member of `components` is keyed by the class name of a component [registry] knows (fully qualified
- * or short) and bound into that class, with no per-component codec. A component named in `disabledComponents` is recorded
- * as disabled. A name nobody registered and a value Jackson cannot bind become a [RawComponent] that keeps the payload as
+ * Teaches a Jackson mapper to bind an `ecs` entry to an [Entity]: the entry's `type`, `flags` and `disabledComponents`
+ * are
+ * its [HeaderComponent] (with the entry's id, its key in the `ecs` map), and each member of `components` is keyed by
+ * the class name of a component [registry] knows (fully qualified
+ * or short) and bound into that class, with no per-component codec. A component named in `disabledComponents` is
+ * recorded
+ * as disabled. A name nobody registered and a value Jackson cannot bind become a [RawComponent] that keeps the payload
+ * as
  * text, so the scene can be written back unchanged; an entity holds one component per class, so these share one
  * [RawComponentsWrapper]. A scene is project data, so a class name in it never loads an
  * arbitrary class.
  */
 class EntityDtoModule(registry: ComponentRegistry) : SimpleModule("AbyssusEntity") {
     init {
-        addDeserializer(Entity::class.java, EntityDeserializer(registry))
+        addDeserializer(EntityDto::class.java, EntityDeserializer(registry))
     }
 }
+
+private const val FLAGS_KEY = "flags"
 
 private const val COMPONENTS = "components"
 
-/**
- * The members of the entry [p] is at. An [ExactTreeParser] stands at a field name on the member's own node, which keeps
- * the spelling of a number; readTree would rebuild it from tokens.
- */
-private fun members(p: JsonParser, ctxt: DeserializationContext): Map<String, JsonNode> {
-    if (p !is ExactTreeParser) return ctxt.readTree(p).properties().associate { it.key to it.value }
-    val members = LinkedHashMap<String, JsonNode>()
-    while (p.nextToken() == JsonToken.FIELD_NAME) {
-        val name = p.currentName()
-        members[name] = p.walkedNode() ?: ctxt.readTree(p)
-        p.nextToken()
-        p.skipChildren()
-    }
-    return members
-}
+const val ENTITY_DISABLED_FLAG = 1
+
 
 private class EntityDeserializer(private val registry: ComponentRegistry) :
-    StdDeserializer<Entity>(Entity::class.java) {
-    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Entity {
+    StdDeserializer<EntityDto>(Entity::class.java) {
+    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): EntityDto {
         // the entry's key in the `ecs` map; read before the entry is consumed
         val id = p.parsingContext.parent?.currentName?.toLongOrNull() ?: -1L
-        val node = ObjectNode(JsonNodeFactory.instance, members(p, ctxt))
+        val node = ctxt.readTree(p)
 
         val disabledNames = entityDisabledComponents(node)
         val disabledClasses = disabledNames.mapNotNull { registry.get(it) }.toMutableSet()
-        val flags = entityFlags(node)
+        val flags = node.get(FLAGS_KEY)?.takeIf { it.isIntegralNumber && it.canConvertToInt() }?.intValue() ?: 0
 
-        val entity = Entity()
+        val entity = EntityDto()
         val raw = RawComponentsWrapper()
         entity.add(
             HeaderComponent(
                 id = id,
-                type = entityTypeOf(node)?.let { EntityType.entries.firstOrNull { et-> et.name == it } },
+                type = entityTypeOf(node)?.let { EntityType.entries.firstOrNull { et -> et.name == it } },
                 entityEnabled = flags and ENTITY_DISABLED_FLAG == 0,
                 disabledComponents = LinkedHashSet(disabledClasses),
                 flags = flags and ENTITY_DISABLED_FLAG.inv(),

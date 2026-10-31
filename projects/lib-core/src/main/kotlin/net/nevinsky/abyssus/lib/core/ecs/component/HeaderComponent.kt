@@ -28,7 +28,9 @@ fun Entity.isActive(): Boolean = getComponent(HeaderComponent::class.java)?.enti
 /** True when this entity and its component of class [type] are both enabled. A missing component is not active. */
 fun Entity.isActive(type: Class<out Component>): Boolean {
     val header = getComponent(HeaderComponent::class.java)
-    if (header != null && (!header.entityEnabled || type in header.disabledComponents)) return false
+    if (header != null && (!header.entityEnabled || type in header.disabledComponents)) {
+        return false
+    }
     return getComponent(type) != null
 }
 

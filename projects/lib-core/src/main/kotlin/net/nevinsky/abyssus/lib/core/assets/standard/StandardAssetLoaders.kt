@@ -49,7 +49,7 @@ class StandardAssetLoaders(
         RuntimeFoliageLoader(metas, FoliageRuntimeLoad(files, metas, terrains)) { log.warn(it) }
     },
 ) {
-    val model = ModelLoader(metas, assimp, files, modelPreparation)
+    val model = ModelLoader(metas, assimp, files, modelPreparation, log = log)
     val terrain = TerrainLoader(files, metas)
     val foliage: AssetLoader<Unit, PreparedFoliage, FoliageDrawable> = foliage(terrain)
     val texture = TextureLoader(files, metas)

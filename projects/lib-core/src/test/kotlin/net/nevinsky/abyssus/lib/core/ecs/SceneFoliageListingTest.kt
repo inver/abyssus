@@ -6,12 +6,9 @@
 package net.nevinsky.abyssus.lib.core.ecs
 
 import net.nevinsky.abyssus.lib.core.testing.loadEcs
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.io.NativeJsonTree
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.slf4j.helpers.NOPLogger
 
 class SceneFoliageListingTest {
     private val warnings = ArrayList<String>()

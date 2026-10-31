@@ -11,6 +11,9 @@ import com.badlogic.gdx.graphics.Texture
 import net.nevinsky.abyssus.lib.core.assets.loading.*
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.decodeModelKey
+import org.slf4j.Logger
+import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.loader.PreloadedTextureProvider
@@ -29,15 +32,24 @@ class ModelLoader(
     private val fileLoader: FileLoader,
     private val preparation: ModelPreparationTap? = null,
     private val decodeTextures: Boolean = true,
+    private val log: Logger = NOPLogger.NOP_LOGGER,
 ) : StagedMetaAssetLoader<PreparedModel, Model>(metaLoader) {
     override fun read(meta: AssetMeta<Any>): PreparedModel {
+        // A variant is named by its encoded key (see AssetStorage); the files are the base asset's.
+        val key = decodeModelKey(meta.name)
+        val started = System.nanoTime()
         val capture = preparation?.begin(meta.name)
-        val handle = FileHandle(fileLoader.loadAssetFile(meta.name, meta.typedAdditional<ModelMeta>().file))
+        val handle = FileHandle(fileLoader.loadAssetFile(key.name, meta.typedAdditional<ModelMeta>().file))
         val data = assimp.loadData(handle)
+        // Before the images are decoded, so only the kept materials' textures are.
+        key.meshId?.let { selectMesh(data, key.name, it) }
         val images = if (decodeTextures) assimp.decodeTextures(data, handle) else mutableMapOf()
         val prepared = PreparedModel(data, handle, images)
         try {
             capture?.offer(data, images)
+            if (key.meshId != null) {
+                log.atDebug().log { "Read model '${key.name}' mesh '${key.meshId}' in ${(System.nanoTime() - started) / 1_000_000} ms" }
+            }
             return prepared
         } catch (cancelled: CancellationException) {
             prepared.dispose()
