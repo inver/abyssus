@@ -9,7 +9,7 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode
 
 /** An entry of the camera selector: [id] is the camera entity to look through, null for the free orbit view. */
-data class CameraChoice(val id: String?, val label: String) {
+data class CameraChoice(val id: Long?, val label: String) {
     override fun toString() = label
 }
 

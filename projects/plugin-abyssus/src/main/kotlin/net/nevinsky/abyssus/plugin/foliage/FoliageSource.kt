@@ -5,8 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.foliage
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDataFile
@@ -66,21 +64,10 @@ sealed interface FoliageSource {
 
 /**
  * Reads the foliage asset [folderName] of the project in [projectDir] from the `meta.json` text [metaText] and its
- * already parsed [additional] block: the settings and their problems, the terrain it stands on, the layer masks and
+ * already read [settings]: the settings and their problems, the terrain it stands on, the layer masks and
  * the state of the bake. Reads files, so off the EDT; an asset whose terrain or masks cannot be read is
  * [FoliageSource.Unusable] with the reason, because neither the preview nor a write could work from it.
  */
-fun readFoliageSource(
-    folderName: String,
-    projectDir: File,
-    json: JsonProcessor,
-    metaText: String,
-    additional: Document?,
-): FoliageSource {
-    return readFoliageSource(folderName, projectDir, json, metaText,
-        additional?.let { net.nevinsky.abyssus.lib.core.editor.document.FoliageSettingsBinding().read(it) } ?: FoliageMeta())
-}
-
 fun readFoliageSource(
     folderName: String,
     projectDir: File,

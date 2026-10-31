@@ -1,3 +1,4 @@
+/* DISABLED (G7: scene water is no longer modeled by lib-core-editor); kept for reference, not compiled.
 /*
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
@@ -6,7 +7,6 @@
 package net.nevinsky.abyssus.plugin.projectView
 
 import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.lib.core.util.rawAt
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
@@ -137,3 +137,4 @@ open class RemoveWaterAction : AbyssusTreeAction<WaterTarget>() {
         reportWaterRejection(project, WaterSceneEdits(project).remove(target.file, target.id))
     }
 }
+*/

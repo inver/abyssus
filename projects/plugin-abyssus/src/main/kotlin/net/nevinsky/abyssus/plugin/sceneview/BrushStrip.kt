@@ -41,7 +41,7 @@ internal abstract class BrushStrip<S : Any>(
     /** The session of the selected entity, or null while none is loaded (or the entity has none). */
     protected var loaded: S? = null
     protected var closed = false
-    private var entity: String? = null
+    private var entity: Long? = null
     private var load = 0
 
     /** Whether this strip put its mode on the view and has not taken it off. */
@@ -66,7 +66,7 @@ internal abstract class BrushStrip<S : Any>(
     protected abstract val wanted: Boolean
 
     /** Opens the session of [selected] (the mode is read by its stroke) and calls [ready] with it, null when there is none. */
-    protected abstract fun openSession(selected: String, mode: () -> BrushMode?, ready: (S?) -> Unit)
+    protected abstract fun openSession(selected: Long, mode: () -> BrushMode?, ready: (S?) -> Unit)
 
     protected abstract fun disposeSession(session: S)
 
@@ -79,7 +79,7 @@ internal abstract class BrushStrip<S : Any>(
     protected abstract fun canBrush(): Boolean
 
     /** The mode for [selected] from the strip's values ([shift] is held), or null when the strip cannot build one. */
-    protected abstract fun modeFor(selected: String, shift: Boolean): BrushMode?
+    protected abstract fun modeFor(selected: Long, shift: Boolean): BrushMode?
 
     /** The loaded session was dropped for a reload. */
     protected open fun sessionCleared() {}

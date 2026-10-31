@@ -11,6 +11,7 @@ import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor
 import net.nevinsky.abyssus.lib.core.editor.components.EnabledTarget
 import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.core.dto.ProjectDto
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
@@ -34,7 +35,7 @@ class PanelBuildersTest {
     private val builders = PanelBuilders(messages) { it in game }
     private val project = File("../app-game-control-line/project/ControlLine")
     private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
-    private val abss = json.readObject(File(project, "ControlLine.abss").readText())
+    private val abss = json.parse(File(project, "ControlLine.abss").readText(), ProjectDto::class.java)
     private val fieldText = File(project, "scenes/Field.scene").readText()
     private val field = parseScene(fieldText)
 
@@ -73,7 +74,7 @@ class PanelBuildersTest {
 
     @Test
     fun aMissingProjectValueIsDimAndAWrittenOneIsNot() {
-        val partial = json.readObject("""{"format":"abyssus","formatVersion":1,"name":"P","mainCamera":{"near":0.1}}""")
+        val partial = json.parse("""{"format":"abyssus","formatVersion":1,"name":"P","mainCamera":{"near":0.1}}""", ProjectDto::class.java)
         val panel = builders.project(partial, "P.abss", emptyList())
         val camera = panel.sections[1]
         assertFalse(camera.row<NumberRow>("near").dim)

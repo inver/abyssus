@@ -4,25 +4,16 @@
  */
 package net.nevinsky.abyssus.plugin.physics
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.components.*
-import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
 import net.nevinsky.abyssus.lib.physics.*
-import org.slf4j.helpers.NOPLogger
 
 /** Fixed physics fields supplied by plugin composition, with no platform, GL or native dependencies. */
 class PhysicsComponentKinds(private val messages: EditorMessages) {
-    private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
-    private val reader = ComponentReader(json)
-    private val writer = EcsWriter(json)
-
     private fun <C : Component> kind(type: Class<C>, fields: List<ComponentField<C>>, create: () -> C) =
-        ComponentKind(type.simpleName, runtimeCodec(type.simpleName, type, reader, writer), fields, create, messages.message("physics.${type.simpleName}"))
+        ComponentKind(type.simpleName, type, fields, create, messages.message("physics.${type.simpleName}"))
 
     private fun <C : Component> number(name: String, get: (C) -> Float, set: (C, Float) -> Unit,
                                       min: Double? = null, exclusive: Boolean = false) =

@@ -4,25 +4,18 @@
  */
 package net.nevinsky.abyssus.plugin.physics
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
-import com.badlogic.ashley.core.Entity
+import net.nevinsky.abyssus.lib.core.dto.EntityDto
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.physics.largestScaleAxis
 import net.nevinsky.abyssus.lib.physics.scaledBoxHalfExtents
 import net.nevinsky.abyssus.lib.physics.scaledHalfHeight
 import net.nevinsky.abyssus.lib.physics.scaledRadius
-import net.nevinsky.abyssus.lib.core.ecs.component.RawComponentsWrapper
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.components.ComponentReader
 import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.physics.*
-import org.slf4j.helpers.NOPLogger
 import kotlin.math.*
 
 /** A segment of the physics overlay; [selected] segments belong to the selected entity and are drawn on top. */
@@ -52,24 +45,13 @@ private const val DASH = 0.25f
  */
 class PhysicsOverlayGeometry(private val terrainSize: (String) -> Float? = { null }) {
 
-    private val reader = ComponentReader(JsonProcessor(NOPLogger.NOP_LOGGER))
+    /** The entity's component of [type]; the physics components are registered, so they are bound, not raw. */
+    private fun <C : com.badlogic.ashley.core.Component> component(entity: EntityDto?, type: Class<C>): C? =
+        entity?.component(type)
 
-    /**
-     * The entity's component of [type]: the bound instance, or, when the scene's registry does not know the physics
-     * components, the raw entry of that name decoded with the type's defaults.
-     */
-    private fun <C : com.badlogic.ashley.core.Component> component(entity: Entity?, type: Class<C>): C? {
-        entity ?: return null
-        entity.getComponent(type)?.let { return it }
-        val raw = entity.getComponent(RawComponentsWrapper::class.java)?.entries
-            ?.firstOrNull { it.name.substringAfterLast('.') == type.simpleName } ?: return null
-        return runCatchingKeepingCancellation { reader.readText(type, raw.json) }.getOrNull()
-    }
-
-    fun segments(content: SceneContent, entities: Map<Long, Entity>, selectedId: String?): List<OverlaySegment> {
+    fun segments(content: SceneContent, entities: Map<Long, EntityDto>, selectedId: Long?): List<OverlaySegment> {
         val out = ArrayList<OverlaySegment>()
-        for ((key, entity) in entities) {
-            val id = key.toString()
+        for ((id, entity) in entities) {
             val selected = id == selectedId
             component(entity, ColliderComponent::class.java)?.let { collider ->
                 val motion = component(entity, RigidBodyComponent::class.java)?.motionType ?: MotionType.STATIC
@@ -82,13 +64,13 @@ class PhysicsOverlayGeometry(private val terrainSize: (String) -> Float? = { nul
                 collider(id, entity, collider, content, Sink(out, color, selected))
             }
             component(entity, ConstraintComponent::class.java)?.let { c ->
-                val other = c.other.takeIf { it != -1 }?.toString()
+                val other = c.other.takeIf { it != -1 }?.toLong()
                 val selectedToo = selected || other == selectedId
                 val color =
                     if (selectedToo) PhysicsColors.brighter(PhysicsColors.CONSTRAINT) else PhysicsColors.CONSTRAINT
                 val a = Vector3(c.anchor).mul(transformOf(id, entity, content))
                 val b = if (other != null) {
-                    Vector3(c.otherAnchor).mul(transformOf(other, entities[other.toLong()], content))
+                    Vector3(c.otherAnchor).mul(transformOf(other, entities[other], content))
                 } else Vector3(c.otherAnchor)
                 val sink = Sink(out, color, selectedToo)
                 val slackOrTaut = c.kind != ConstraintKind.DISTANCE || a.dst(b) <= c.maxDistance + 1e-4f
@@ -101,7 +83,7 @@ class PhysicsOverlayGeometry(private val terrainSize: (String) -> Float? = { nul
     }
 
 
-    private fun collider(id: String, entity: Entity, c: ColliderComponent, content: SceneContent, sink: Sink) {
+    private fun collider(id: Long, entity: EntityDto, c: ColliderComponent, content: SceneContent, sink: Sink) {
         val world = transformOf(id, entity, content)
         val scale = world.getScale(Vector3())
         val position = world.getTranslation(Vector3())
@@ -200,8 +182,8 @@ class PhysicsOverlayGeometry(private val terrainSize: (String) -> Float? = { nul
      * The entity's transform: where the view shows it (a model, terrain, light or camera placement, or a bare position),
      * with the rotation and scale its `PositionComponent` holds when the view does not place it.
      */
-    private fun transformOf(id: String, entity: Entity?, content: SceneContent): Matrix4 {
-        val authored = entity?.getComponent(PositionComponent::class.java) ?: PositionComponent()
+    private fun transformOf(id: Long, entity: EntityDto?, content: SceneContent): Matrix4 {
+        val authored = entity?.component(PositionComponent::class.java) ?: PositionComponent()
         content.models.firstOrNull { it.entityId == id }?.transform?.let {
             return matrix(
                 it.position,

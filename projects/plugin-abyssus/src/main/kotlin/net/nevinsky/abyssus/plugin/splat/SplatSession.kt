@@ -53,7 +53,7 @@ class SplatSession(
     private val closeStroke: () -> Unit,
     private val cache: SplatStateCache,
 ) {
-    private val writer = SplatAssetWriter(json, ImageIoSplatCodec())
+    private val writer = SplatAssetWriter(json, net.nevinsky.abyssus.lib.core.editor.document.AssetMetaTextEditor(net.nevinsky.abyssus.lib.core.assets.AssetMetaParser(json)), codec = ImageIoSplatCodec())
     private val transactions = SplatTransactions(store) { File(projectDir, ASSETS_DIR).isDirectory }
     private val layers = SplatLayers(json)
 

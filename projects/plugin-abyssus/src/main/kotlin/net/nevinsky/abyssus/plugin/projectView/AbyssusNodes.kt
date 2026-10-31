@@ -6,8 +6,6 @@
 package net.nevinsky.abyssus.plugin.projectView
 
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.icons.AllIcons
 import com.intellij.ide.projectView.PresentationData
 import com.intellij.ide.projectView.ProjectViewNode
@@ -24,16 +22,12 @@ import com.intellij.ui.SimpleTextAttributes
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.dto.EntityType
-import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
-import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
-import net.nevinsky.abyssus.lib.core.water.WaterPreset
 import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
 import net.nevinsky.abyssus.plugin.filetype.*
-import net.nevinsky.abyssus.plugin.water.WaterGroup
 import javax.swing.Icon
 
 /** Shown in a scene entry's label (`name (id)`) and edited via Rename, so not repeated as rows. */
@@ -134,8 +128,7 @@ class DtoEntry(
 /** Reads only the admitted row's JSON, without loading runtime components or assets. */
 private fun DtoEntry.entityType(): EntityType? {
     if (!isEntityEntry(this)) return null
-    val name = net.nevinsky.abyssus.lib.core.editor.host.entityTypeOf(value as? Document) ?: return null
-    return EntityType.entries.firstOrNull { it.name == name }
+    return (value as? EntityNode)?.entity?.header()?.type
 }
 
 private fun entryIcon(entry: DtoEntry): Icon {
@@ -146,9 +139,6 @@ private fun entryIcon(entry: DtoEntry): Icon {
         dto is UiScreenGroup -> if (dto.kind == net.nevinsky.abyssus.lib.core.ui.model.UiScreenKind.OVERLAY) ScenesIcons.UI_OVERLAYS else ScenesIcons.UI_SCREENS
         dto is TypeGroup -> ScenesIcons.FOLDER
         dto is UiScreen || dto is UiScreenEntry -> ScenesIcons.UI_SCREEN
-        dto is WaterGroup -> ScenesIcons.WATER
-        dto is ValidWater -> if (dto.settings.preset == WaterPreset.SEA) ScenesIcons.WATER_SEA else ScenesIcons.WATER_LAKE
-        dto is WaterSurface -> AllIcons.Nodes.Variable
         dto is Asset<*> -> AssetIcons.forType(dto.meta.type.name)
         isEntityEntry(entry) -> EntityIcons.forType(entry.entityType())
         isComponentEntry(entry) -> ComponentIcons.forComponent(entry.name)
@@ -221,10 +211,8 @@ class DtoEntryNode(
         val v = value
         val dto = v.value
         val rows = when {
-            isEcsEntry(v) -> ecsRows(dto as Document)
             // a path arrangement is a plain line: its copies are squashed into it and its components are edited in Properties
-            isEntityEntry(v) && isArrangementEntity(dto as Document) -> emptyList()
-            isEntityEntry(v) -> entityRows(dto as Document)
+            dto is EntityNode && dto.entity?.let(::isArrangementEntity) == true -> emptyList()
             else -> childrenOf(dto)
         }.filterNot { sceneFileOf(v) != null && it.name in SCENE_HEADER }.foldToggles()
         return rows.mapIndexed { i, row ->

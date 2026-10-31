@@ -11,7 +11,10 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.lib.core.editor.meta.EditError
 import net.nevinsky.abyssus.lib.core.editor.meta.EditOutcome
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
-import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
+import com.intellij.openapi.components.service
+import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
+import net.nevinsky.abyssus.plugin.filetype.editTextDocument
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetMetaEditor
 
@@ -40,14 +43,16 @@ object AssetMetaEdits {
     fun update(project: Project, assetFolder: VirtualFile, key: String, expected: AssetFieldValue, value: AssetFieldValue, editor: AssetMetaEditor): AssetEditResult {
         val file = assetFolder.takeIf { it.isValid }?.findChild(META_FILE) ?: return AssetEditResult.Unreadable
         var result: AssetEditResult = AssetEditResult.Unreadable
-        editSceneDocument(project, file, AbyssusBundle.message("commandEditAssetMeta")) { root ->
-            result = when (val outcome = editor.edit(root, key, expected, value)) {
+        val json = service<AbyssusPluginCtx>().documents.json
+        editTextDocument(project, file, AbyssusBundle.message("commandEditAssetMeta")) { text ->
+            val edit = editor.editText(json, text, key, expected, value) ?: return@editTextDocument TextEditOutcome.Unchanged
+            result = when (val outcome = edit.outcome) {
                 EditOutcome.Changed -> AssetEditResult.Changed
                 EditOutcome.NoChange -> AssetEditResult.Unchanged
                 is EditOutcome.Rejected -> AssetEditResult.Rejected(outcome.error)
                 is EditOutcome.Conflict -> AssetEditResult.Conflict(outcome.actual)
             }
-            result == AssetEditResult.Changed
+            edit.text?.let { TextEditOutcome.Edited(it) } ?: TextEditOutcome.Unchanged
         }
         return result
     }

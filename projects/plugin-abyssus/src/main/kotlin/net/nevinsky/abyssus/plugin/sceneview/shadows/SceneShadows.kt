@@ -117,7 +117,7 @@ class SceneShadows : Disposable {
                 else -> if (pass.radialDepth) 0.5f / resolution else 0.00005f * tan(Math.toRadians((viewCamera as PerspectiveCamera).fieldOfView.toDouble() / 2)).toFloat()
             }
             records += ShadowLightRecord(
-                allocation.entityId, allocation.kind, light,
+                allocation.entityId.toString(), allocation.kind, light,
                 views.zip(allocation.tiles).map { (view, tile) ->
                     ShadowAtlasView(
                         view.combined,

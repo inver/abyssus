@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.filetype
 
-import net.nevinsky.abyssus.lib.core.editor.document.setBooleanMember
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.editor.components.EnabledTarget
@@ -19,8 +18,8 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
  */
 fun setEnabled(project: Project, scene: VirtualFile, target: EnabledTarget, enabled: Boolean): Boolean {
     val action = SetEnabledAction()
-    return editSceneDocument(project, scene, AbyssusBundle.message("commandSetEnabled")) { root ->
-        action.apply(root, target, enabled)
+    return editSceneDocument(project, scene, AbyssusBundle.message("commandSetEnabled")) { dto ->
+        action.apply(dto, target, enabled)
     }
 }
 
@@ -29,6 +28,11 @@ fun setEnabled(project: Project, scene: VirtualFile, target: EnabledTarget, enab
  * command, adding the key when the file has none. Only that key changes. Returns whether anything was written.
  */
 fun setSceneToggle(project: Project, scene: VirtualFile, key: String, on: Boolean): Boolean =
-    editSceneDocument(project, scene, AbyssusBundle.message("commandToggleEnabled")) { root ->
-        setBooleanMember(root, key, on)
+    editSceneSettings(project, scene, AbyssusBundle.message("commandToggleEnabled")) { dto ->
+        when (key) {
+            "fogEnabled" -> dto.copy(fogEnabled = on)
+            "ambientLightEnabled" -> dto.copy(ambientLightEnabled = on)
+            "skyboxEnabled" -> dto.copy(skyboxEnabled = on)
+            else -> null
+        }
     }

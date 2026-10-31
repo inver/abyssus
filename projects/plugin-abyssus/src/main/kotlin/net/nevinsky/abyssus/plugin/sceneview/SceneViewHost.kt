@@ -9,22 +9,17 @@ import net.nevinsky.abyssus.lib.core.editor.components.EditResult
 
 /** Tree integration supplied by the project pane, without exposing tree nodes to the scene editor. */
 interface SceneViewHost {
-    fun listen(file: VirtualFile, parent: Disposable, selected: (String) -> Unit)
-    fun select(file: VirtualFile, entityId: String)
+    fun listen(file: VirtualFile, parent: Disposable, selected: (Long) -> Unit)
+    fun select(file: VirtualFile, entityId: Long)
     fun lightActions(file: VirtualFile, position: () -> Vector3): DefaultActionGroup
     fun assetActions(file: VirtualFile, position: () -> Vector3): DefaultActionGroup
     /** The project's models to arrange along a path; choosing one calls [start]. */
     fun pathActions(file: VirtualFile, start: (BaseMeta) -> Unit): DefaultActionGroup = DefaultActionGroup()
-    /** Called with the id of the water surface of [file] selected in the tree. */
-    fun listenWater(file: VirtualFile, parent: Disposable, selected: (String) -> Unit) {}
-    fun selectWater(file: VirtualFile, waterId: String) {}
-    /** The Lake and Sea presets, placed at [position] when chosen. */
-    fun waterActions(file: VirtualFile, position: () -> Vector3): DefaultActionGroup = DefaultActionGroup()
-    fun canAddWater(file: VirtualFile): Boolean = false
+    // G7: the water members (listenWater, selectWater, waterActions, canAddWater) are disabled; scene water is not modeled.
     fun canAddLight(file: VirtualFile): Boolean
     fun canAddPath(file: VirtualFile): Boolean = false
     fun canAddAsset(file: VirtualFile): Boolean
 
     /** Removes entity [entityId] of [file] as one undoable command; refused (and rejected) while it is still referenced. */
-    fun removeEntity(file: VirtualFile, entityId: String): EditResult = EditResult.Unchanged
+    fun removeEntity(file: VirtualFile, entityId: Long): EditResult = EditResult.Unchanged
 }

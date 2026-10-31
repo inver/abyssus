@@ -48,15 +48,15 @@ class SceneViewPanel internal constructor(
     /** Play in this view; without a simulation provider there are no play controls. */
     private val play: PlayState = PlayState(null),
     /** What Play starts from; read when Play is pressed. */
-    private val simulationRequest: ((selection: String?) -> SimulationRequest)? = null,
+    private val simulationRequest: ((selection: Long?) -> SimulationRequest)? = null,
     /** Other plugins' overlays for this view. */
     private val overlays: SceneOverlayHost? = null,
-    private val foliageActions: ((String) -> DefaultActionGroup?)? = null,
-    private val paintSession: ((String, () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?, (net.nevinsky.abyssus.plugin.foliage.FoliagePaintSession?) -> Unit) -> Unit)? = null,
+    private val foliageActions: ((Long) -> DefaultActionGroup?)? = null,
+    private val paintSession: ((Long, () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?, (net.nevinsky.abyssus.plugin.foliage.FoliagePaintSession?) -> Unit) -> Unit)? = null,
     /** Opens the Sculpt Terrain session of an entity (the mode and the tool are read by its stroke); null: no Sculpt Terrain button. */
-    private val sculptSession: ((String, () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?, () -> net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptTool?, (net.nevinsky.abyssus.plugin.terrain.SculptSession?) -> Unit) -> Unit)? = null,
+    private val sculptSession: ((Long, () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?, () -> net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptTool?, (net.nevinsky.abyssus.plugin.terrain.SculptSession?) -> Unit) -> Unit)? = null,
     /** Opens the Paint Texture session of an entity (the mode is read by its stroke); null: no Paint Texture strip. */
-    private val splatSession: ((String, () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?, (net.nevinsky.abyssus.plugin.splat.SplatSession?) -> Unit) -> Unit)? = null,
+    private val splatSession: ((Long, () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?, (net.nevinsky.abyssus.plugin.splat.SplatSession?) -> Unit) -> Unit)? = null,
     /** The project's models to arrange along a path; the callback starts drawing. Null: no Add Path Arrangement button. */
     private val pathMenu: PlacementMenu<(BaseMeta) -> Unit>? = null,
     /** The project's `Show FPS`, read before every frame so a missed change event cannot leave the counter off; null: only [setFpsEnabled]. */
@@ -431,25 +431,13 @@ class SceneViewPanel internal constructor(
         repaint()
     }
 
-    override var onPick: ((String) -> Unit)?
+    override var onPick: ((Long) -> Unit)?
         get() = interaction.onPick
         set(value) {
             interaction.onPick = value
         }
 
-    override var onPickWater: ((String) -> Unit)?
-        get() = interaction.onPickWater
-        set(value) {
-            interaction.onPickWater = value
-        }
-
-    override var onWaterMove: ((String, Vector3) -> Boolean)?
-        get() = interaction.onWaterMove
-        set(value) {
-            interaction.onWaterMove = value
-        }
-
-    override var onTransform: ((String, TransformEdit) -> Boolean)?
+    override var onTransform: ((Long, TransformEdit) -> Boolean)?
         get() = interaction.onTransform
         set(value) {
             interaction.onTransform = value
@@ -461,7 +449,7 @@ class SceneViewPanel internal constructor(
             interaction.onArrangementCreate = value
         }
 
-    override var onCopy: ((String) -> Unit)?
+    override var onCopy: ((Long) -> Unit)?
         get() = interaction.onCopy
         set(value) {
             interaction.onCopy = value
@@ -473,31 +461,25 @@ class SceneViewPanel internal constructor(
             interaction.onPaste = value
         }
 
-    override var onDelete: ((String) -> Boolean)?
+    override var onDelete: ((Long) -> Boolean)?
         get() = interaction.onDelete
         set(value) {
             interaction.onDelete = value
         }
 
-    override var onWaterDelete: ((String) -> Boolean)?
-        get() = interaction.onWaterDelete
-        set(value) {
-            interaction.onWaterDelete = value
-        }
-
-    override var onArrangementEdit: ((String, List<Vector3>) -> Boolean)?
+    override var onArrangementEdit: ((Long, List<Vector3>) -> Boolean)?
         get() = interaction.onArrangementEdit
         set(value) {
             interaction.onArrangementEdit = value
         }
 
-    override var onRegenerate: ((String) -> Unit)? = null
+    override var onRegenerate: ((Long) -> Unit)? = null
         set(value) {
             field = value
             syncControls()
         }
 
-    override fun setPathEditing(entityId: String?) {
+    override fun setPathEditing(entityId: Long?) {
         if (interaction.pathEditing == entityId) return
         endBrushes()
         interaction.setPathEditing(entityId)
@@ -505,13 +487,13 @@ class SceneViewPanel internal constructor(
         syncControls()
     }
 
-    override fun setSculpting(entityId: String?) {
+    override fun setSculpting(entityId: Long?) {
         if (entityId == null) sculpt.end(notify = false) else sculpt.begin(entityId)
     }
 
     override var onSculptEnded: (() -> Unit)? = null
 
-    override fun setPaintingTexture(entityId: String?) {
+    override fun setPaintingTexture(entityId: Long?) {
         if (entityId == null) paintTexture.end(notify = false) else paintTexture.begin(entityId)
     }
 
@@ -537,14 +519,7 @@ class SceneViewPanel internal constructor(
 
     override fun groundHeights(): GroundHeight? = renderer.groundHeights()
 
-    override fun selectWater(waterId: String) {
-        endBrushes()
-        interaction.selectWater(waterId)
-        interaction.selectionChanged()
-        syncControls()
-    }
-
-    override fun selectEntity(entityId: String) {
+    override fun selectEntity(entityId: Long) {
         if (renderer.state.selectedId != entityId) endBrushes()
         renderer.state.selectedId = entityId
         interaction.selectionChanged()

@@ -6,7 +6,6 @@
 package net.nevinsky.abyssus.plugin.projectView.action.asset
 
 import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -16,7 +15,6 @@ import com.intellij.ui.tree.TreeVisitor
 import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
@@ -41,7 +39,7 @@ fun assetsNodeProjectFile(node: Any?): VirtualFile? {
     return entry.source?.takeIf {
         it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION &&
                 runCatchingKeepingCancellation {
-                    parseDocument(textOf(it)).rejection(DocumentKind.PROJECT) == null
+                    com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing.project(textOf(it)) != null
                 }.getOrDefault(false)
     }
 }

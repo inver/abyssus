@@ -6,8 +6,6 @@
 package net.nevinsky.abyssus.plugin.properties
 
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import net.nevinsky.abyssus.lib.core.assets.MetaType
@@ -72,7 +70,7 @@ internal fun structuralOf(node: Any?): Structural? {
         }
 
         source != null && ProjectLayout.isScene(source) && entry.parentKeys.isEmpty() ->
-            if (value is Document && isEcsEntry(entry)) Structural.Ecs(source)
+            if (isEcsEntry(entry)) Structural.Ecs(source)
             else SETTINGS[entry.name]?.let { Structural.Setting(source, it) }
 
         else -> null

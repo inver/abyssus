@@ -21,25 +21,17 @@ class ProjectSceneViewHost(
     /** The entry the pane and the editor provider use: resolves the application's meta files once. */
     constructor(project: Project) : this(project, service<AbyssusPluginCtx>().assets.metaFiles)
 
-    override fun listen(file: VirtualFile, parent: Disposable, selected: (String) -> Unit) {
+    override fun listen(file: VirtualFile, parent: Disposable, selected: (Long) -> Unit) {
         project.messageBus.connect(parent).subscribe(AbyssusSelectionListener.TOPIC, AbyssusSelectionListener { node ->
             componentTargetOf(node)?.takeIf { it.file == file }?.let { selected(it.entityId) }
         })
     }
 
-    override fun removeEntity(file: VirtualFile, entityId: String): EditResult =
+    override fun removeEntity(file: VirtualFile, entityId: Long): EditResult =
         SceneComponentEdits.removeEntity(project, file, entityId)
 
-    override fun listenWater(file: VirtualFile, parent: Disposable, selected: (String) -> Unit) {
-        project.messageBus.connect(parent).subscribe(AbyssusSelectionListener.TOPIC, AbyssusSelectionListener { node ->
-            waterTargetOf(node)?.takeIf { it.file == file }?.let { selected(it.id) }
-        })
-    }
-
-    override fun selectWater(file: VirtualFile, waterId: String) = selectWaterInAbyssusView(project, file, waterId)
-    override fun waterActions(file: VirtualFile, position: () -> Vector3) = AddWaterGroup(project, file, position)
-    override fun canAddWater(file: VirtualFile) = canAddWater(file, project.service<SceneDocumentCache>())
-    override fun select(file: VirtualFile, entityId: String) = selectEntityInAbyssusView(project, file, entityId)
+    // G7: the water members of the host (listenWater, selectWater, waterActions, canAddWater) are disabled.
+    override fun select(file: VirtualFile, entityId: Long) = selectEntityInAbyssusView(project, file, entityId)
     override fun lightActions(file: VirtualFile, position: () -> Vector3) = AddLightGroup(project, file, position)
     override fun assetActions(file: VirtualFile, position: () -> Vector3) =
         AddAssetGroup(project, file, metaFiles, position, meshes = projectModelMeshes(file))

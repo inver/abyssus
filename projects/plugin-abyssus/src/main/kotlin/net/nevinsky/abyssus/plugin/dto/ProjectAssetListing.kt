@@ -5,8 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.dto
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_FIELDS
 import net.nevinsky.abyssus.lib.core.assets.Asset
@@ -38,21 +37,10 @@ class ProjectAssetListing(json: JsonProcessor) {
             @Suppress("UNCHECKED_CAST")
             val bound = document.typed(AssetMeta::class.java as Class<AssetMeta<Any>>) ?: return@runCatchingKeepingCancellation null
             // the name is the folder's, not a field of the file
-            val additional: Any = if (bound.type == MetaType.UI) UiMeta(uiDecoder.decode(document.document)) else bound.additional
+            val additional: Any = if (bound.type == MetaType.UI) UiMeta(uiDecoder.decode(document.json)) else bound.additional
             val parsedMeta = AssetMeta(bound.type, dir.name, bound.formatVersion, bound.version, bound.lastModified, additional, bound.uuid)
-            val references = runCatchingKeepingCancellation { references(document.document) }.getOrDefault(emptyList())
+            val references = runCatchingKeepingCancellation { document.referenceUuids() }.getOrDefault(emptyList())
             Asset(File(dir.path), parsedMeta, references)
         }.getOrNull() ?: Asset(File(dir.path), AssetMeta(name = dir.name, type = MetaType.UNKNOWN, additional = Any()))
-    }
-
-    /**
-     * The `uuid`s a `meta.json` holds in the fields Abyssus resolves to other assets: the splat textures, the
-     * `materials` list and a procedural sky's `clouds`. Files named in `meta.json` live in the asset's own folder and
-     * are not references.
-     */
-    private fun references(meta: Document): List<String> {
-        if (!meta.isObjectAt("additional")) return emptyList()
-        val materials = meta.textsAt("additional", "materials")
-        return SPLAT_FIELDS.mapNotNull { meta.textAt("additional", it) } + materials + listOfNotNull(meta.textAt("additional", "clouds"))
     }
 }

@@ -4,8 +4,6 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.lib.core.editor.ui.UiTreeEdit
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.service
@@ -16,7 +14,6 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
 import net.nevinsky.abyssus.lib.core.editor.terrain.checkFolderName
 import net.nevinsky.abyssus.lib.core.editor.terrain.uniqueAssetUuid
@@ -25,7 +22,7 @@ import net.nevinsky.abyssus.lib.core.editor.ui.UiEditError
 import net.nevinsky.abyssus.lib.core.editor.ui.UiEditResult
 import net.nevinsky.abyssus.lib.core.editor.ui.UiRegistryEdits
 import net.nevinsky.abyssus.lib.core.editor.ui.UiTextEditor
-import net.nevinsky.abyssus.lib.core.editor.ui.UiTransform
+import net.nevinsky.abyssus.lib.core.editor.ui.UiTextResult
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
@@ -36,7 +33,8 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.textOf
-import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
+import net.nevinsky.abyssus.plugin.filetype.editProjectDocument
+import net.nevinsky.abyssus.plugin.filetype.editTextDocument
 import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetLater
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import java.io.File
@@ -63,31 +61,32 @@ sealed interface UiEditOutcome {
  */
 fun editUiMeta(
     project: Project, file: VirtualFile, commandName: String = AbyssusBundle.message("commandEditUiAsset"),
-    baseText: String? = null, editor: UiTextEditor = UiTextEditor(),
+    baseText: String? = null, editor: UiTextEditor = UiTextEditor(service<AbyssusPluginCtx>().documents.json),
     op: UiTreeEdit,
 ): UiEditOutcome {
     val document = FileDocumentManager.getInstance().getDocument(file) ?: return UiEditOutcome.Unavailable
     if (!file.isWritable) return UiEditOutcome.ReadOnly
     if (baseText != null && document.text != baseText) return UiEditOutcome.Stale
-    var transform: UiTransform = UiTransform.Unchanged
-    val written = editSceneDocument(project, file, commandName) { root ->
-        transform = editor.transform(root, op)
-        transform is UiTransform.Changed
+    var verdict: UiTextResult = UiTextResult.Unchanged
+    val written = editTextDocument(project, file, commandName) { text ->
+        verdict = editor.apply(text, null, op)
+        (verdict as? UiTextResult.Edited)?.let { TextEditOutcome.Edited(it.after) } ?: TextEditOutcome.Unchanged
     }
-    return when (val t = transform) {
-        is UiTransform.Rejected -> UiEditOutcome.Rejected(t.error, t.subject, t.issues)
-        is UiTransform.Changed -> if (written) UiEditOutcome.Edited(t.result) else UiEditOutcome.Stale
-        UiTransform.Unchanged -> UiEditOutcome.Unchanged
+    return when (val v = verdict) {
+        is UiTextResult.Rejected -> UiEditOutcome.Rejected(v.error, v.subject, v.issues)
+        is UiTextResult.Refused -> UiEditOutcome.Unavailable
+        is UiTextResult.Edited -> if (written) UiEditOutcome.Edited(v.result) else UiEditOutcome.Stale
+        UiTextResult.Unchanged -> UiEditOutcome.Unchanged
     }
 }
 
 /** Adds [name] to the project file's `uiAssetNames` as one undoable command. Returns whether the file was written. EDT. */
 fun registerUiAsset(project: Project, abss: VirtualFile, name: String, registry: UiRegistryEdits = UiRegistryEdits()): Boolean =
-    abss.isWritable && editSceneDocument(project, abss, AbyssusBundle.message("commandRegisterUiAsset")) { registry.register(it, name) }
+    abss.isWritable && editProjectDocument(project, abss, AbyssusBundle.message("commandRegisterUiAsset")) { registry.register(it, name) }
 
 /** Removes [name] from `uiAssetNames`; the asset folder is untouched. Returns whether the file was written. EDT. */
 fun unregisterUiAsset(project: Project, abss: VirtualFile, name: String, registry: UiRegistryEdits = UiRegistryEdits()): Boolean =
-    abss.isWritable && editSceneDocument(project, abss, AbyssusBundle.message("commandUnregisterUiAsset")) { registry.unregister(it, name) }
+    abss.isWritable && editProjectDocument(project, abss, AbyssusBundle.message("commandUnregisterUiAsset")) { registry.unregister(it, name) }
 
 class StagedUiAsset(val name: String, val uuid: String, val transaction: AssetTransaction)
 
@@ -99,7 +98,7 @@ class StagedUiAsset(val name: String, val uuid: String, val transaction: AssetTr
  */
 class NewUiAssetFactory(
     private val processor: JsonProcessor,
-    private val template: UiAssetTemplate = UiAssetTemplate(),
+    private val template: UiAssetTemplate = UiAssetTemplate(processor),
     private val registry: UiRegistryEdits = UiRegistryEdits(),
     private val clock: () -> Long = System::currentTimeMillis,
     private val randomUuid: () -> UUID = UUID::randomUUID,
@@ -111,11 +110,11 @@ class NewUiAssetFactory(
         require(abss.isWritable) { AbyssusBundle.message("uiProjectReadOnly") }
         require(!FileDocumentManager.getInstance().isFileModified(abss)) { AbyssusBundle.message("uiProjectUnsaved") }
         val projectText = textOf(abss)
-        net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing(processor, org.slf4j.helpers.NOPLogger.NOP_LOGGER).requireSupported(projectText, DocumentKind.PROJECT)
+        net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing(processor, org.slf4j.helpers.NOPLogger.NOP_LOGGER).project(projectText)
         checkFolderName(assetsDir, name)?.let { throw IllegalArgumentException(AbyssusBundle.message("newTerrainNameError.$it")) }
         val uuid = uniqueAssetUuid(processor, assetsDir, randomUuid)
         val meta = template.create(uuid, clock())
-        val registered = (DocumentTextEditor().edit(projectText, DocumentKind.PROJECT) { registry.register(it, name) } as? TextEditOutcome.Edited)?.text
+        val registered = (service<AbyssusPluginCtx>().documents.projects.edit(projectText) { registry.register(it, name) } as? TextEditOutcome.Edited)?.text
         val base = "$ASSETS_DIR/$name"
         val changes = buildList {
             add(FileChange("$base/$META_FILE", FileSnapshot.Absent, FileSnapshot.Bytes(meta.toByteArray(Charsets.UTF_8))))
@@ -140,7 +139,7 @@ fun uiNavigationBlocker(projectDir: File, name: String): String? {
         val file = File(dir, META_FILE)
         val unsaved = LocalFileSystem.getInstance().findFileByIoFile(file)?.let { FileDocumentManager.getInstance().getCachedDocument(it)?.text }
         val text = unsaved ?: runCatchingKeepingCancellation { file.takeIf { it.isFile }?.readText() }.getOrNull() ?: continue
-        val tree = runCatchingKeepingCancellation { parseDocument(text) }.getOrNull() ?: continue
+        val tree = runCatchingKeepingCancellation { service<AbyssusPluginCtx>().documents.json.readObject(text) }.getOrNull() ?: continue
         val collection = (decoder.decode(tree) as? UiAdmission.Admitted)?.collection ?: continue
         val navigates = collection.screens.any { screen ->
             val stack = ArrayDeque(listOf(screen.root))

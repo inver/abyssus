@@ -5,9 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.assetfiles
 
-import net.nevinsky.abyssus.lib.core.editor.document.metaReferencesUuid
-import net.nevinsky.abyssus.lib.core.editor.document.sceneNamedAssets
-import net.nevinsky.abyssus.lib.core.editor.document.removeEntityNode
 import net.nevinsky.abyssus.lib.core.util.textAt
 import net.nevinsky.abyssus.lib.core.util.textValuesOf
 import net.nevinsky.abyssus.lib.core.util.containsText
@@ -17,12 +14,10 @@ import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DI
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import java.io.File
 
 /** An entity [entityId] of the scene file [scene]. */
-data class PlacedEntity(val scene: File, val entityId: String)
+data class PlacedEntity(val scene: File, val entityId: Long)
 
 /**
  * Finds what depends on an asset, so Undo of its creation does not delete something in use: the project's scenes that
@@ -65,3 +60,17 @@ class AssetReferenceGuard(private val projectDir: File) {
         }.toMap()
     }
 }
+
+private val documents get() = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents
+
+/** The asset folders the scene [text] names directly, leaving out the entity [ignored]; null when it is not a readable scene. */
+internal fun sceneNamedAssets(text: String, ignored: Long?): Set<String>? = runCatchingKeepingCancellation {
+    val scene = documents.parsing.parse(text)
+    if (ignored != null) scene.ecs.remove(ignored)
+    net.nevinsky.abyssus.plugin.dto.sceneReferences(scene, net.nevinsky.abyssus.lib.core.editor.document.RawComponentValues(documents.json))
+}.getOrNull()
+
+/** Whether the `meta.json` [text] holds [uuid] in a field that names another asset; null when it is not a readable meta. */
+internal fun metaReferencesUuid(text: String, uuid: String): Boolean? = runCatchingKeepingCancellation {
+    uuid in net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader(documents.json).read(text).referenceUuids()
+}.getOrNull()

@@ -82,6 +82,9 @@ sealed interface ParseOutcome {
     data class Failed(val error: EditError) : ParseOutcome
 }
 
+/** The verdict of [AssetMetaEditor.editText] and the new text of a change. */
+class AssetTextEdit(val outcome: EditOutcome, val text: String?)
+
 sealed interface EditOutcome {
     /** The tree was changed. */
     data object Changed : EditOutcome
@@ -251,6 +254,19 @@ class AssetMetaEditor(private val descriptions: AssetFieldDescriptions, private 
      * is written for a refused edit, for a value equal to the effective value, or for a default that is already in
      * effect.
      */
+    /**
+     * [edit] on the `meta.json` text: the verdict and, when it changed, the pretty-printed new text. Null when [text] is
+     * not a JSON object. Asset documents are still edited as a tree here (gate G6).
+     */
+    fun editText(
+        json: net.nevinsky.abyssus.lib.core.io.JsonProcessor, text: String, key: String, expected: AssetFieldValue, value: AssetFieldValue,
+    ): AssetTextEdit? {
+        val root = net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation { json.readObject(text) }.getOrNull()
+            ?: return null
+        val outcome = edit(root, key, expected, value)
+        return AssetTextEdit(outcome, json.pretty(root).takeIf { outcome == EditOutcome.Changed })
+    }
+
     fun edit(root: JsonNode, key: String, expected: AssetFieldValue, value: AssetFieldValue): EditOutcome {
         if (format.validate(root, net.nevinsky.abyssus.lib.core.format.DocumentKind.ASSET) != null) return EditOutcome.Rejected(EditError.UNSUPPORTED_FORMAT)
         val field = descriptions.field(typeOf(root), key) ?: return EditOutcome.Rejected(EditError.UNSUPPORTED_FIELD)

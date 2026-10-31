@@ -5,8 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.dto
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
@@ -22,11 +20,8 @@ import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * A scene's text read as the plugin needs it: [root] is the JSON tree (with its original number text) and [scene] the
- * bound DTO. Both are shared between callers: read them, never change them (an edit parses the document afresh).
- */
-class ParsedScene(val root: Document, val scene: SceneDto)
+/** A scene's text read as the plugin needs it: the bound DTO, shared between callers: read it, never change it (an edit parses the document afresh). */
+class ParsedScene(val scene: SceneDto)
 
 /**
  * The parsed text of scene files as the editors show it (unsaved text included), keyed by the document's modification
@@ -65,8 +60,7 @@ class SceneDocumentCache(project: Project, private val parse: ((String) -> Parse
     companion object {
         /** Binds [text] with [reader] and parses it as a JSON tree; throws when either cannot read it. */
         fun parsedScene(reader: SceneReader, text: String): ParsedScene {
-            val scene = reader.parse(text)
-            return ParsedScene(parseDocument(text), scene)
+            return ParsedScene(reader.parse(text))
         }
 
         fun of(project: Project): SceneDocumentCache = project.service()

@@ -4,7 +4,6 @@
  */
 package net.nevinsky.abyssus.plugin.foliage
 
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
@@ -26,13 +25,13 @@ import net.nevinsky.abyssus.plugin.dto.textOf
 @Service(Service.Level.PROJECT)
 class FoliageEditing(private val project: Project, private val scope: CoroutineScope) {
     fun open(
-        scene: VirtualFile, entity: String, mode: () -> BrushMode?, report: (String) -> Unit,
+        scene: VirtualFile, entity: Long, mode: () -> BrushMode?, report: (String) -> Unit,
         ready: (FoliagePaintSession?) -> Unit
     ) {
         val found = resolveTerrainEntity(project, scene, entity)
         val terrain = found?.terrain
         val abss = found?.abss
-        val name = found?.document?.componentText(entity, "FoliageComponent", "assetName")
+        val name = found?.scene?.component(entity, net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent::class.java)?.assetName
         val folder = found?.assetFolder(name ?: "")
         val metadata = folder?.findChild(META_FILE)
         if (terrain == null || abss == null || name == null || folder == null || metadata == null) {

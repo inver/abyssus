@@ -5,9 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.lib.core.util.numberTextOrNull
 import net.nevinsky.abyssus.lib.core.util.numberOrNull
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import com.intellij.icons.AllIcons
 import com.intellij.ide.DataManager
 import com.intellij.openapi.components.service
@@ -21,14 +21,8 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.core.editor.document.SceneDocument
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
-import net.nevinsky.abyssus.lib.core.editor.document.RayDataEdit
-import net.nevinsky.abyssus.lib.core.editor.document.RayDataError
-import net.nevinsky.abyssus.lib.core.editor.document.RayOpticalField
-import net.nevinsky.abyssus.lib.core.editor.meta.OpticalMaterialRow
-import net.nevinsky.abyssus.lib.core.editor.meta.RenderOptics
 import net.nevinsky.abyssus.lib.core.editor.panel.FieldRef
 import net.nevinsky.abyssus.lib.core.editor.panel.NoteRow
 import net.nevinsky.abyssus.lib.core.editor.panel.ReadonlyRow
@@ -39,7 +33,6 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
-import net.nevinsky.abyssus.plugin.filetype.SceneRayEdits
 import net.nevinsky.abyssus.plugin.filetype.setEnabled
 import net.nevinsky.abyssus.plugin.panel.RowHooks
 import net.nevinsky.abyssus.plugin.projectView.addComponentGroup
@@ -64,9 +57,7 @@ import javax.swing.JToggleButton
 /**
  * An entity (or one component) of a scene with an editor for every field of the components the plugin models. Editors
  * are named `field-<Kind>-<field>` (their message `error-<Kind>-<field>`), a section's Remove button `remove-<Kind>` and
- * the Add button `add-component`, which is how tests reach them. A model's Render section also lists its materials'
- * Ray Tracing overrides: `optics-<field>-<material>` (message `optics-error-<material>`), `optics-unresolved-<material>`
- * and `optics-problem`.
+ * the Add button `add-component`, which is how tests reach them..
  */
 internal class EntityDetailsView @JvmOverloads constructor(
     private val project: Project,
@@ -90,14 +81,7 @@ internal class EntityDetailsView @JvmOverloads constructor(
             sectionActions = { removeButton(it) },
             sectionExtra = { section ->
                 when (section.kind) {
-                    "RenderComponent" -> {
-                        val optics = state.optics?.let { opticsView(it) }
-                        val sculpt = if (isTerrain()) sculptBar() else null
-                        when {
-                            optics != null && sculpt != null -> JPanel(VerticalLayout(0)).apply { isOpaque = false; add(sculpt); add(optics) }
-                            else -> sculpt ?: optics
-                        }
-                    }
+                    "RenderComponent" -> if (isTerrain()) sculptBar() else null
                     PathArrangementComponent::class.simpleName -> pathEditBar()
                     else -> null
                 }
@@ -115,8 +99,8 @@ internal class EntityDetailsView @JvmOverloads constructor(
 
     /** Whether the entity renders a terrain asset, which can be sculpted. */
     private fun isTerrain(): Boolean {
-        val root = SceneDocumentCache.of(project).read(target.file)?.root ?: return false
-        return SceneDocument(root).BaseMeta(target.entityId)?.type == MetaType.TERRAIN
+        val scene = SceneDocumentCache.of(project).read(target.file)?.scene ?: return false
+        return scene.component(target.entityId, RenderComponent::class.java)?.type == MetaType.TERRAIN
     }
 
     /**
@@ -128,7 +112,7 @@ internal class EntityDetailsView @JvmOverloads constructor(
         val paint = project.service<PaintTextureRequests>()
         val sculptToggle = JToggleButton(AbyssusBundle.message("sculptTitle")).apply { name = "sculpt-terrain"; isFocusable = false }
         val paintToggle = JToggleButton(AbyssusBundle.message("paintTextureToggle")).apply { name = "paint-texture"; isFocusable = false }
-        fun here(file: com.intellij.openapi.vfs.VirtualFile?, entity: String?) = file == target.file && entity == target.entityId
+        fun here(file: com.intellij.openapi.vfs.VirtualFile?, entity: Long?) = file == target.file && entity == target.entityId
         var syncing = false
         fun sync() {
             syncing = true
@@ -246,114 +230,7 @@ internal class EntityDetailsView @JvmOverloads constructor(
         setEnabled(project, target.file, component, checked)
     }
 
-    /** Transmission (in percent) and IOR per PBR material of the model, as overrides of this entity only. */
-    private fun opticsView(optics: RenderOptics): JComponent = JPanel(VerticalLayout(JBUI.scale(2))).apply {
-        add(JBLabel(AbyssusBundle.message("propertiesOptics")).apply {
-            foreground = secondary(); font = JBFont.small().asBold(); border = JBUI.Borders.empty(8, 0, 2, 0)
-        })
-        add(JBLabel("<html>${AbyssusBundle.message("propertiesOpticsNote")} ${AbyssusBundle.message("propertiesOpticsRange")}</html>").apply {
-            foreground = secondary(); font = JBFont.small(); name = "optics-note"
-        })
-        optics.problem?.let {
-            add(JBLabel("<html>$it</html>").apply {
-                foreground = JBColor.RED; name = "optics-problem"
-            })
-        }
-        for (row in optics.materials) add(opticsRow(optics, row))
-        for (id in optics.unresolved) add(
-            JBLabel(
-                "<html>${
-                    AbyssusBundle.message(
-                        "propertiesOpticsUnresolved",
-                        id
-                    )
-                }</html>"
-            ).apply {
-                foreground = JBColor.RED; name = "optics-unresolved-$id"
-            })
-    }
-
-    private fun opticsRow(optics: RenderOptics, row: OpticalMaterialRow): JComponent {
-        val box = JPanel(VerticalLayout(JBUI.scale(2))).apply { border = JBUI.Borders.emptyTop(4) }
-        box.add(JBLabel(row.id ?: AbyssusBundle.message("propertiesOpticsUnnamed")).apply {
-            font = JBFont.label().asBold()
-        })
-        val id = row.id
-        if (id == null || row.error != null) {
-            box.add(JBLabel("<html>${EditorBundle.message("propertiesRayError${(row.error ?: RayDataError.MATERIAL_ID).name}")}</html>").apply {
-                foreground = secondary(); name = "optics-error-${id ?: ""}"
-            })
-            return box
-        }
-        val error =
-            JBLabel(row.errors.values.firstOrNull()?.let { EditorBundle.message("propertiesRayError${it.name}") }
-                ?: "").apply {
-                foreground = JBColor.RED; name = "optics-error-$id"
-            }
-        for (field in RayOpticalField.entries) {
-            val stored = row.storedDocuments[field]
-            val shown = stored?.numberAt() ?: field.default
-            val text =
-                if (field == RayOpticalField.TRANSMISSION) percent(shown) else stored?.numberText()
-                    ?: number(shown)
-            val editor = JBTextField(text).apply { name = "optics-${field.key}-$id"; columns = 6 }
-            val save = {
-                if (editor.text.trim() != text) {
-                    // Transmission is typed in percent; the scene stores the 0..1 fraction
-                    val value = if (field == RayOpticalField.TRANSMISSION) editor.text.trim().toDoubleOrNull()
-                        ?.takeIf { it.isFinite() }?.let { number(it / 100) } else editor.text
-                    val result = if (value == null) RayDataEdit.Rejected(RayDataError.NUMBER)
-                    else SceneRayEdits.material(
-                        project,
-                        target.file,
-                        target.entityId,
-                        id,
-                        field,
-                        stored,
-                        value,
-                        optics.identities
-                    )
-                    when (result) {
-                        RayDataEdit.Changed -> error.text = ""
-                        RayDataEdit.Unchanged -> {
-                            error.text = ""; editor.text = text
-                        }
-
-                        RayDataEdit.Conflict -> {
-                            error.text = AbyssusBundle.message("propertiesRayConflict"); editor.text = text
-                        }
-
-                        is RayDataEdit.Rejected -> {
-                            error.text = EditorBundle.message("propertiesRayError${result.error.name}"); editor.text =
-                                text
-                        }
-                    }
-                }
-            }
-            editor.addActionListener { save() }
-            editor.addFocusListener(object : FocusAdapter() {
-                override fun focusLost(e: FocusEvent) = save()
-            })
-            val label =
-                JBLabel(AbyssusBundle.message(if (field == RayOpticalField.TRANSMISSION) "propertiesOpticsTransmission" else "propertiesOpticsIor")).apply {
-                    preferredSize = Dimension(JBUI.scale(170), preferredSize.height)
-                }
-            box.add(JPanel(GridBagLayout()).apply {
-                add(label, GridBagConstraints().apply { gridx = 0; anchor = GridBagConstraints.WEST })
-                add(
-                    editor,
-                    GridBagConstraints().apply { gridx = 1; weightx = 1.0; fill = GridBagConstraints.HORIZONTAL })
-            })
-        }
-        box.add(error)
-        return box
-    }
-
-    /** [fraction] as a percentage without float noise (0.07 shows as 7, not 7.000000000000001). */
-    private fun percent(fraction: Double) = number(fraction * 100)
-
-    private fun number(value: Double): String =
-        numberText(value, NumberTextStyle.DETAIL)
+// G7: the Ray Tracing optical overrides panel (opticsView) is disabled; overrides are no longer saved in scenes.
 
     /** Saves [text] for field [field] of component [kind]; the editor shows a refusal and puts the stored value back. */
     private fun commit(kind: String, field: String, text: String): CommitOutcome =

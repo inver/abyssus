@@ -5,35 +5,20 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.editor.host.sceneEntityView
-import net.nevinsky.abyssus.lib.core.editor.host.arrangementCopyIds
-import net.nevinsky.abyssus.lib.core.editor.host.arrangementCopyCount
-import net.nevinsky.abyssus.lib.core.editor.host.sceneComponentRows
-import net.nevinsky.abyssus.lib.core.editor.host.sceneEcsRows
-import net.nevinsky.abyssus.lib.core.editor.host.isTogglable
-import net.nevinsky.abyssus.lib.core.editor.host.isComponentEnabled
-import net.nevinsky.abyssus.lib.core.editor.host.isEntityEnabled
-import net.nevinsky.abyssus.lib.core.editor.host.componentCountOf
-import net.nevinsky.abyssus.lib.core.editor.host.hasComponent
-import net.nevinsky.abyssus.lib.core.editor.host.entityCountOf
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
-import net.nevinsky.abyssus.lib.core.editor.components.SetEnabledAction
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
-import net.nevinsky.abyssus.lib.core.editor.water.InvalidWater
-import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
-import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
-import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
+import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementCopyCount
+import com.fasterxml.jackson.annotation.JsonIgnore
+import kotlin.reflect.full.hasAnnotation
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.jvm.isAccessible
 import net.nevinsky.abyssus.lib.core.ui.model.UiMeta
 import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectDto
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
 import net.nevinsky.abyssus.plugin.dto.SceneError
-import net.nevinsky.abyssus.plugin.water.WATER_ROW
-import net.nevinsky.abyssus.plugin.water.WaterGroup
 
 /**
  * A named, ordered child of a DTO as shown by the Abyssus view. [enabled] is set when the row is gated by an
@@ -54,10 +39,13 @@ private val DISPLAY_NAMES = mapOf("skyboxName" to "skybox")
 /** What the view calls the property [name]. */
 fun displayName(name: String): String = DISPLAY_NAMES[name] ?: name
 
+/** What a scalar row shows: the value itself. */
+fun scalarOf(value: Any?): Any? = value
+
 /** True for a value shown as `name: value`; everything else is a node with children. */
 fun isScalar(value: Any?): Boolean = when (value) {
     null, is String, is Number, is Boolean, is Enum<*> -> true
-    is Document -> !value.isContainer
+    is EcsNode, is EntityNode, is ComponentNode -> false
     else -> false
 }
 
@@ -67,40 +55,44 @@ fun isScalar(value: Any?): Boolean = when (value) {
  * `@JsonIgnore`d metadata), a list its indexes and a JSON node its fields or elements. A scalar has none.
  */
 fun childrenOf(value: Any?): List<DtoRow> = when {
-    value is SceneEntry -> sceneRows(value.scene, value.ecsTree)
+    value is SceneEntry -> sceneRows(value.scene)
     value is ProjectDto -> projectRows(value)
     value is TreeSource -> value.children()
     value is UiMeta -> emptyList()
     value is UiScreen || value is UiScreenEntry -> emptyList()
-    value is SceneDto -> sceneRows(value, null)
-    value is WaterGroup -> value.surfaces.map { DtoRow(it.id, it, enabled = (it as? ValidWater)?.settings?.enabled) }
-    value is WaterSurface -> emptyList()
+    value is SceneDto -> sceneRows(value)
+    value is EcsNode -> ecsRows(value.scene)
+    value is EntityNode -> entityRows(value)
+    value is ComponentNode -> emptyList()
     isScalar(value) -> emptyList()
-    value is Document -> value.members().map { (k, v) -> DtoRow(k, v) }
-
     value is List<*> -> value.mapIndexed { i, v -> DtoRow("$i", v) }
     else -> beanProperties(value!!)
 }
 
-/**
- * A scene's own properties (its `ecs` row is [ecsTree]), then its Water group when `abyssus.waterSurfaces` holds surfaces. The raw `abyssus`
- * extension is not listed as a row: water is the only thing in it Abyssus shows, and an absent one must stay absent.
- */
-private fun sceneRows(scene: SceneDto, ecsTree: Document?): List<DtoRow> {
-    // the `ecs` row shows the document's entities and components, which the typed `SceneDto.ecs` does not keep as JSON
-    val rows = beanProperties(scene).filter { it.name != "abyssus" }
-        .map { if (it.name == "ecs") it.copy(value = ecsTree) else it }
-    val surfaces = WaterCodec().read(scene.water).surfaces
-    return if (surfaces.isEmpty()) rows else rows + DtoRow(WATER_ROW, WaterGroup(surfaces))
-}
+/** A scene's own properties, with the `ecs` row standing for its entities. The `abyssus` extension block is not listed. */
+private fun sceneRows(scene: SceneDto): List<DtoRow> =
+    beanProperties(scene).filter { it.name != "water" && it.name != "abyssus" }
+        .map { if (it.name == "ecs") it.copy(value = EcsNode(scene)) else it }
 
-private fun beanProperties(bean: Any): List<DtoRow> =
-    SceneJson().mapper.serializationConfig.introspect(SceneJson().mapper.constructType(bean.javaClass)).findProperties()
-        .mapNotNull { p ->
-            val accessor = p.accessor ?: return@mapNotNull null
-            accessor.fixAccess(true)
-            DtoRow(p.name, accessor.getValue(bean))
+/**
+ * The properties of a bean in declaration order: the constructor parameters of a Kotlin class (skipping `@JsonIgnore`d
+ * ones), else the public fields of a Java class.
+ */
+private fun beanProperties(bean: Any): List<DtoRow> {
+    val kotlin = bean::class
+    val constructor = kotlin.primaryConstructor
+    if (constructor != null) {
+        val properties = kotlin.memberProperties.associateBy { it.name }
+        return constructor.parameters.mapNotNull { parameter ->
+            val property = properties[parameter.name] ?: return@mapNotNull null
+            if (property.hasAnnotation<JsonIgnore>() || property.getter.hasAnnotation<JsonIgnore>()) return@mapNotNull null
+            property.isAccessible = true
+            DtoRow(property.name, property.getter.call(bean))
         }
+    }
+    return bean.javaClass.fields.filter { !java.lang.reflect.Modifier.isStatic(it.modifiers) }
+        .map { DtoRow(it.name, it.get(bean)) }
+}
 
 /**
  * Folds each boolean `<x>Enabled` row into the sibling it gates (`<x>` or `<x>Name`), which gets [DtoRow.enabled] set
@@ -148,10 +140,10 @@ data class RowText(val label: String, val secondary: String? = null)
 private const val ECS = "ecs"
 private const val COMPONENT_SUFFIX = "Component"
 
-fun isEcsEntry(entry: DtoEntry) = isSceneEcsEntry(entry.name, entry.parentKeys, entry.value as? Document)
-fun isEntityEntry(entry: DtoEntry) = isSceneEntityEntry(entry.name, entry.parentKeys, entry.value as? Document)
-fun isComponentEntry(entry: DtoEntry) = isSceneComponentEntry(entry.parentKeys)
-private fun entityName(entry: DtoEntry): String = sceneEntityView(entry.name, entry.value as Document).name
+fun isEcsEntry(entry: DtoEntry) = entry.value is EcsNode
+fun isEntityEntry(entry: DtoEntry) = entry.value is EntityNode
+fun isComponentEntry(entry: DtoEntry) = entry.value is ComponentNode
+private fun entityName(node: EntityNode): String = node.scene.nameOf(node.id) ?: node.id.toString()
 
 /** `Models`, `Skyboxes`, ...; a type without a label shows its capitalised name. */
 fun groupLabel(group: String): String = when (group) {
@@ -172,59 +164,24 @@ fun rowText(entry: DtoEntry, label: String? = null): RowText {
         v is TreeSource -> v.text()
         v is UiScreenEntry -> RowText(v.screen.name.ifBlank { v.screen.id }, v.asset.name)
         v is UiScreen -> RowText(v.name.ifBlank { v.id }, v.kind.json)
-        v is WaterGroup -> RowText(AbyssusBundle.message("treeWater"), v.surfaces.size.toString())
-        v is ValidWater -> RowText(v.name, AbyssusBundle.message("treeWaterAbyssusOnly"))
-        v is InvalidWater -> RowText(v.name, AbyssusBundle.message("treeWaterInvalid"))
-        isEcsEntry(entry) -> RowText(
-            ECS,
-            AbyssusBundle.message("treeEntities", entityCountOf(v as Document))
-        )
-
-        isEntityEntry(entry) -> entityText(entry, v as Document)
-        isComponentEntry(entry) -> RowText(entry.name.removeSuffix(COMPONENT_SUFFIX).ifEmpty { entry.name })
+        v is EcsNode -> RowText(ECS, AbyssusBundle.message("treeEntities", v.count))
+        v is EntityNode -> entityText(v)
+        v is ComponentNode -> RowText(entry.name.removeSuffix(COMPONENT_SUFFIX).ifEmpty { entry.name })
         else -> RowText(label ?: displayName(entry.name))
     }
 }
 
-/** Whether [entity] carries a `PathArrangementComponent`. */
-fun isArrangementEntity(entity: Document): Boolean =
-    hasComponent(entity, PathArrangementComponent::class.simpleName!!)
-
 /** An entity row: its name and `N components`, with `M copies` after it for a path arrangement. */
-private fun entityText(entry: DtoEntry, entity: Document): RowText {
+private fun entityText(node: EntityNode): RowText {
+    val entity = node.entity ?: return RowText(node.id.toString())
     val components = componentCountOf(entity)
     val copies = arrangementCopyCount(entity)
     return RowText(
-        entityName(entry),
+        entityName(node),
         if (copies > 0) AbyssusBundle.message(
             "treeComponentsCopies",
             components,
             copies
         ) else AbyssusBundle.message("treeComponents", components),
-    )
-}
-
-/** The children of an `ecs` object: its entities. */
-fun ecsRows(ecs: Document): List<DtoRow> {
-    // the linked copies of a path arrangement are squashed into its row, which counts them
-    val copies = arrangementCopyIds(ecs)
-    return sceneEcsRows(ecs).filter { it.name !in copies }
-        .map { DtoRow(it.name, it.node, enabled = entityEye(it.node), via = it.via) }
-}
-
-private val toggles = SetEnabledAction()
-
-/** The eye state of an entity row: on or off for an entity that can be switched (not a `GROUP`), else null for no eye. */
-private fun entityEye(node: Document): Boolean? =
-    if (node.isObjectAt("components") && toggles.isTogglable(node)) isEntityEnabled(node) else null
-
-/** The component rows retain their skipped JSON path. */
-fun entityRows(entity: Document): List<DtoRow> = sceneComponentRows(entity).map {
-    // a component that can be switched (all but Name, Parent and Position) gets the eye, on unless the entity lists it in `disabledComponents`
-    DtoRow(
-        it.name,
-        it.node,
-        enabled = if (it.node.isObjectAt() && toggles.isTogglable(it.name)) isComponentEnabled(entity, it.name) else null,
-        via = it.via
     )
 }

@@ -10,7 +10,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.messages.Topic
 
 /** The terrain [entityId] of the scene [file] that has a terrain brush on. */
-data class BrushRequestTarget(val file: VirtualFile, val entityId: String)
+data class BrushRequestTarget(val file: VirtualFile, val entityId: Long)
 
 fun interface BrushRequestListener {
     /** [target] is the terrain the brush is now on, or null when the brush is off. */
@@ -29,7 +29,7 @@ abstract class BrushRequests(private val project: Project, private val topic: To
     var current: BrushRequestTarget? = null
         private set
 
-    fun start(file: VirtualFile, entityId: String) = set(BrushRequestTarget(file, entityId))
+    fun start(file: VirtualFile, entityId: Long) = set(BrushRequestTarget(file, entityId))
 
     /** Ends the brush on [file]; one of another file is left alone. */
     fun stop(file: VirtualFile? = null) {

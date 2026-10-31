@@ -1,7 +1,7 @@
 package net.nevinsky.abyssus.plugin.dto
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
+import net.nevinsky.abyssus.lib.core.editor.document.RawComponentValues
 import net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RawComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
@@ -30,6 +30,7 @@ class ProjectReader(
     )
 
     private val assetListing by lazy { ProjectAssetListing(json) }
+    private val rawValues = RawComponentValues(json)
 
     override fun stamp(file: VirtualFile): Long {
         return (ProjectLayout.sceneFiles(file)
@@ -46,14 +47,14 @@ class ProjectReader(
         runCatchingKeepingCancellation {
             val name = loading.projectName(file.path) { textOf(file) }
             val sceneResults = ProjectLayout.sceneFiles(file).map { it to scenes.read(it) }
-            val roots = sceneResults.flatMap { (_, result) -> result.obj?.let(::sceneReferences) ?: emptySet() }
+            val roots = sceneResults.flatMap { (_, result) -> result.obj?.let { sceneReferences(it, rawValues) } ?: emptySet() }
                 .toSet()
             val assets = readAssets(file)
             val usage = usage(assets, roots, loading.uiAssetNames(file.path) { textOf(file) })
             ProjectDto(
                 name ?: file.nameWithoutExtension,
                 sceneResults.map { (f, result) ->
-                    result.obj?.let { SceneEntry(f, it, ecsTreeOf(f)) } ?: SceneError(
+                    result.obj?.let { SceneEntry(f, it) } ?: SceneError(
                         f,
                         result.message
                     )
@@ -62,11 +63,6 @@ class ProjectReader(
                 usage.uiIssues,
             )
         }.let { AssetReadResult.of(it) }
-
-    /** The `ecs` object of the scene [file]'s document, or null when it has none or cannot be read. */
-    private fun ecsTreeOf(file: VirtualFile): Document? = runCatchingKeepingCancellation {
-        parseDocument(textOf(file)).objectAt("ecs")
-    }.getOrNull()
 
     private fun readAssets(abss: VirtualFile): List<Asset<Any>> = runCatchingKeepingCancellation {
         return assetListing.list(abss)
@@ -114,7 +110,7 @@ class ProjectReader(
  * What a scene names directly: the `assetName` and `shaderKey` of its render and foliage components (and of components it
  * could not bind, from their raw data), and `skyboxName`.
  */
-fun sceneReferences(scene: SceneDto): Set<String> {
+fun sceneReferences(scene: SceneDto, raw: RawComponentValues): Set<String> {
     val names = mutableSetOf<String>()
     for (component in scene.ecs.values.flatMap { it.components }) when (component) {
         is RenderComponent -> {
@@ -122,7 +118,7 @@ fun sceneReferences(scene: SceneDto): Set<String> {
             component.shaderKey?.let { names += it }
         }
         is FoliageComponent -> component.assetName?.let { names += it }
-        is RawComponent -> names += parseDocument(component.json).textValuesOf("assetName", "shaderKey")
+        is RawComponent -> names += raw.textValues(component, "assetName", "shaderKey")
     }
     scene.skyboxName?.let { names += it }
     return names

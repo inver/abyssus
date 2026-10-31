@@ -63,9 +63,9 @@ class TerrainShader(shaders: ShaderStorage) : Disposable {
 
 /** The view's lights in `lib-render`'s host-neutral form. */
 internal fun renderLights(lights: LightSet) = RenderLights(
-    lights.directional.map { DirectionalInput(it.entityId, it.direction.cpy(), it.color.r, it.color.g, it.color.b) },
-    lights.point.map { PointInput(it.entityId, it.position.cpy(), it.color.r, it.color.g, it.color.b, it.range) },
+    lights.directional.map { DirectionalInput(it.entityId.toString(), it.direction.cpy(), it.color.r, it.color.g, it.color.b) },
+    lights.point.map { PointInput(it.entityId.toString(), it.position.cpy(), it.color.r, it.color.g, it.color.b, it.range) },
     lights.spot.map {
-        SpotInput(it.entityId, it.position.cpy(), it.direction.cpy(), it.color.r, it.color.g, it.color.b, it.range, it.cone.outerCos, it.cone.innerCos)
+        SpotInput(it.entityId.toString(), it.position.cpy(), it.direction.cpy(), it.color.r, it.color.g, it.color.b, it.range, it.cone.outerCos, it.cone.innerCos)
     },
 )

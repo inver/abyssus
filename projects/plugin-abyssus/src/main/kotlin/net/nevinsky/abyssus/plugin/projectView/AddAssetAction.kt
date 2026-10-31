@@ -33,7 +33,7 @@ class AddAssetGroup(
     private val file: VirtualFile,
     private val metaFiles: MetaFiles,
     private val position: () -> Vector3,
-    private val select: (String) -> Unit = { selectCreatedEntity(project, file, it) },
+    private val select: (Long) -> Unit = { selectCreatedEntity(project, file, it) },
     /** The mesh ids of a model asset, or null when unknown; called when the menu opens, off the UI thread. */
     private val meshes: (String) -> List<String>? = { null },
 ) : AddChildGroup<AssetPick>(AbyssusBundle.message("addAssetTitle")) {

@@ -121,7 +121,7 @@ fun placementOption(project: Project, placement: ScenePlacement?): PlacementOpti
 }
 
 /** What an import did: how the folder write ended, and the entity it placed, if any. */
-class ModelImportOutcome(val result: AssetCommandResult, val entityId: String?)
+class ModelImportOutcome(val result: AssetCommandResult, val entityId: Long?)
 
 /**
  * Stages [source] with [settings] (under a modal progress on the EDT) and writes it under [abss]'s project. With

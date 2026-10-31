@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.splat
 
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
@@ -26,7 +25,7 @@ class SplatEditing(private val project: Project) {
      * Opens the splat session of [entity] in [scene] and calls [ready] on the UI thread with it, or with null when the
      * entity is not a terrain. [mode] is read by the stroke on every press and drag.
      */
-    fun open(scene: VirtualFile, entity: String, mode: () -> BrushMode?, report: (String) -> Unit, ready: (SplatSession?) -> Unit) {
+    fun open(scene: VirtualFile, entity: Long, mode: () -> BrushMode?, report: (String) -> Unit, ready: (SplatSession?) -> Unit) {
         val found = resolveTerrainEntity(project, scene, entity)
         val folder = found?.assetFolder(found.terrain.name)
         if (found == null || folder == null) {

@@ -30,7 +30,7 @@ internal class FoliagePaintControls(
     interaction: SceneInteraction,
     play: PlayState,
     kinds: BrushKinds,
-    private val paintSession: ((String, () -> BrushMode?, (FoliagePaintSession?) -> Unit) -> Unit)?,
+    private val paintSession: ((Long, () -> BrushMode?, (FoliagePaintSession?) -> Unit) -> Unit)?,
     onChanged: () -> Unit,
 ) : BrushStrip<FoliagePaintSession>(
     renderer, interaction, play, kinds, FOLIAGE_BRUSH, onChanged, "foliage-brush-radius", "foliage-brush-strength", "foliage-brush-strip",
@@ -75,7 +75,7 @@ internal class FoliagePaintControls(
         strip.isVisible = painting
     }
 
-    override fun openSession(selected: String, mode: () -> BrushMode?, ready: (FoliagePaintSession?) -> Unit) {
+    override fun openSession(selected: Long, mode: () -> BrushMode?, ready: (FoliagePaintSession?) -> Unit) {
         paintSession?.invoke(selected, mode, ready)
     }
 
@@ -95,7 +95,7 @@ internal class FoliagePaintControls(
 
     override fun canBrush(): Boolean = button.isSelected && loaded != null
 
-    override fun modeFor(selected: String, shift: Boolean): BrushMode? {
+    override fun modeFor(selected: Long, shift: Boolean): BrushMode? {
         val layer = layers.selectedItem as? Int ?: return null
         return BrushMode(FOLIAGE_BRUSH, selected, (radius.value as Number).toFloat(),
             (strength.value as Number).toFloat(), erase.isSelected || shift, FoliageBrushOptions(layer))

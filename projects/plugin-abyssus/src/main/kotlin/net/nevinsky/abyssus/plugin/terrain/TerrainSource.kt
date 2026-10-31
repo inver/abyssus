@@ -5,9 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.terrain
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
-import net.nevinsky.abyssus.lib.core.util.wholeNumberAt
+import net.nevinsky.abyssus.lib.core.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.assets.terrain.MAX_TERRAIN_RESOLUTION
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetReferenceChoices
@@ -15,11 +14,8 @@ import net.nevinsky.abyssus.lib.core.editor.terrain.*
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.*
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.lib.core.util.obj
-import net.nevinsky.abyssus.lib.core.util.text
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
-import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import java.io.File
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -56,27 +52,19 @@ sealed interface TerrainSource {
 
 /**
  * Reads the terrain in [folder] (an asset folder on disk) from `meta.json` text [metaText] (the editors' text, saved or not)
- * parsed as [meta]: size, the height file and the recipe beside it. Reads files, so off the EDT.
+ * read as [meta]: size, the height file and the recipe beside it. Reads files, so off the EDT.
  */
 fun readTerrainSource(
     folder: File,
     metaText: String,
-    meta: Document,
+    meta: AssetMeta<Any>,
     choices: AssetReferenceChoices,
     recipes: TerrainRecipeCodec,
     sculpt: SculptStateReader,
 ): TerrainSource {
-    meta.rejection(net.nevinsky.abyssus.lib.core.format.DocumentKind.ASSET)?.let {
-        return TerrainSource.Unusable(
-            net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat(
-                net.nevinsky.abyssus.lib.core.format.DocumentKind.ASSET,
-                it
-            ).documentDisplayMessage()
-        )
-    }
-    if (!meta.isObjectAt("additional")) return unusable("terrainNoAdditional")
-    val size = meta.wholeNumberAt("additional", "size")?.takeIf { it > 0 } ?: return unusable("terrainBadSize")
-    val dataName = meta.textAt("additional", "terrainFile")?.takeIf { it.isNotBlank() } ?: return unusable("terrainNoDataFile")
+    val terrain = meta.additional as? TerrainMeta ?: return unusable("terrainNoAdditional")
+    val size = terrain.size.takeIf { it > 0 } ?: return unusable("terrainBadSize")
+    val dataName = terrain.terrainFile?.takeIf { it.isNotBlank() } ?: return unusable("terrainNoDataFile")
     val dataFile =
         choices.inside(folder, dataName)?.takeIf { it.isFile } ?: return unusable("terrainDataMissing", dataName)
     val heights = runCatchingKeepingCancellation { dataFile.readBytes() }.getOrElse {

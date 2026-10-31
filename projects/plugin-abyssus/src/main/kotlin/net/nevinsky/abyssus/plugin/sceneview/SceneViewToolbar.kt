@@ -32,13 +32,13 @@ internal class SceneViewToolbarSources(
     val assetMenu: PlacementMenu<() -> Vector3>?,
     val waterMenu: PlacementMenu<() -> Vector3>?,
     val pathMenu: PlacementMenu<(BaseMeta) -> Unit>?,
-    val foliageActions: ((String) -> DefaultActionGroup?)?,
+    val foliageActions: ((Long) -> DefaultActionGroup?)?,
     val overlays: SceneOverlayHost?,
     val lightChoices: () -> DefaultActionGroup?,
     val assetChoices: () -> DefaultActionGroup?,
     val waterChoices: () -> DefaultActionGroup?,
     val pathChoices: () -> DefaultActionGroup?,
-    val onRegenerate: () -> ((String) -> Unit)?,
+    val onRegenerate: () -> ((Long) -> Unit)?,
     val unavailable: () -> Boolean,
 )
 

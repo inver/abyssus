@@ -57,7 +57,7 @@ internal class PaintTextureControls(
     interaction: SceneInteraction,
     play: PlayState,
     kinds: BrushKinds,
-    private val splatSession: ((String, () -> BrushMode?, (SplatSession?) -> Unit) -> Unit)?,
+    private val splatSession: ((Long, () -> BrushMode?, (SplatSession?) -> Unit) -> Unit)?,
     private val onChanged: () -> Unit,
     onEnded: () -> Unit,
     private val report: (String) -> Unit,
@@ -145,7 +145,7 @@ internal class PaintTextureControls(
     }
 
     /** Puts the brush on [entityId], the selected terrain (the Properties panel's toggle); ends the painting when it cannot be. */
-    fun begin(entityId: String) {
+    fun begin(entityId: Long) {
         if (play.active || entityId != interaction.selectedId) { end(); return }
         kinds.endOthers(this)
         requested = true
@@ -159,7 +159,7 @@ internal class PaintTextureControls(
         strip.isVisible = painting
     }
 
-    override fun openSession(selected: String, mode: () -> BrushMode?, ready: (SplatSession?) -> Unit) {
+    override fun openSession(selected: Long, mode: () -> BrushMode?, ready: (SplatSession?) -> Unit) {
         splatSession?.invoke(selected, mode, ready)
     }
 
@@ -193,7 +193,7 @@ internal class PaintTextureControls(
 
     override fun canBrush(): Boolean = requested && loaded != null
 
-    override fun modeFor(selected: String, shift: Boolean): BrushMode {
+    override fun modeFor(selected: Long, shift: Boolean): BrushMode {
         val chosen = mode.selectedItem as SplatMode
         return BrushMode(
             SPLAT_BRUSH, selected, num(radius), num(strength).coerceIn(0f, 1f),

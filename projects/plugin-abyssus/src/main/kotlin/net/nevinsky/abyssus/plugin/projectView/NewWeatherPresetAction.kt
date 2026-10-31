@@ -7,8 +7,7 @@ package net.nevinsky.abyssus.plugin.projectView
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
-import net.nevinsky.abyssus.lib.core.util.textAt
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyMeta
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -22,7 +21,6 @@ import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.terrain.checkFolderName
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
@@ -47,7 +45,7 @@ internal fun weatherPresetTarget(node: Any?, reader: AssetMetaReader): WeatherPr
     val sky = LocalFileSystem.getInstance().findFileByIoFile(File(asset.baseDir, META_FILE)) ?: return null
     if (sky.parent.parent != abss.parent.findChild(ASSETS_DIR)) return null
     val meta = reader.readExact(textOf(sky))
-    val reference = meta.document.textAt("additional", "clouds")
+    val reference = (meta.bound().additional as? ProceduralSkyMeta)?.cloudsReference
     if (meta.type != MetaType.SKYBOX_PROCEDURAL || reference.isNullOrBlank()) return null
     WeatherPresetTarget(abss, sky)
 }.getOrNull()

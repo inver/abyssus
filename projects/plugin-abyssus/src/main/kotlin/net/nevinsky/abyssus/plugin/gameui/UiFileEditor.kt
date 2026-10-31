@@ -5,7 +5,6 @@
 package net.nevinsky.abyssus.plugin.gameui
 
 import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.lib.core.util.textAt
 import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
 import net.nevinsky.abyssus.plugin.dto.SceneReader
@@ -31,7 +30,6 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.update.MergingUpdateQueue
 import com.intellij.util.ui.update.Update
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.ui.model.UiIssue
@@ -60,7 +58,7 @@ private const val MAX_SNIFF_BYTES = 8L * 1024 * 1024
 fun isUiAsset(file: VirtualFile): Boolean {
     if (uiAssetOwner(file) == null || file.length > MAX_SNIFF_BYTES) return false
     return runCatchingKeepingCancellation {
-        parseDocument(textOf(file)).textAt("type") == "UI"
+        com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing.assetFields(textOf(file)).type == net.nevinsky.abyssus.lib.core.assets.MetaType.UI
     }.getOrDefault(false)
 }
 

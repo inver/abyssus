@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialIdentity
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldDescriptions
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetMetaEditor
 import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainGenerator
@@ -23,7 +22,7 @@ import java.io.File
 /**
  * What the Properties panel and its state readers use, passed in by the tool window factory instead of being looked up:
  * asset metadata and its editor, the HDR preview pieces, the terrain generation pieces, the Scene views' Ray Tracing
- * switches, and the material tables of models for their optical overrides.
+ * switches.
  */
 class PanelServices(
     val metaFiles: MetaFiles,
@@ -38,11 +37,6 @@ class PanelServices(
     val rayControls: SceneRayControls,
     /** The component editor of each scene, from the project's and the contributed component schemas. */
     val schemas: ComponentSchemas,
-    /**
-     * The material table of model [String] in project directory [File], or null when the model cannot be found. Called off the
-     * EDT; it may parse the model file and may throw.
-     */
-    val rayMaterials: (File, String) -> List<RayMaterialIdentity>? = { _, _ -> null },
     /**
      * The mesh ids of model [String] in project directory [File], or null when the model cannot be found or read. Called
      * off the EDT; it may parse the model file.

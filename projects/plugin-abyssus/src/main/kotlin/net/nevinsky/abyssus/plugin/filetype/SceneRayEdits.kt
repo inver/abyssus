@@ -1,3 +1,4 @@
+/* DISABLED (G7: ray settings are no longer saved in scenes); kept for reference, not compiled.
 /*
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
@@ -6,7 +7,6 @@ package net.nevinsky.abyssus.plugin.filetype
 
 
 import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.AbyssusBundle
@@ -49,3 +49,4 @@ object SceneRayEdits {
         return result
     }
 }
+*/

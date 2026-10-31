@@ -11,7 +11,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.messages.Topic
 
 /** The arrangement [entityId] of the scene [file] whose control points are being edited. */
-data class PathEditTarget(val file: VirtualFile, val entityId: String)
+data class PathEditTarget(val file: VirtualFile, val entityId: Long)
 
 fun interface PathEditListener {
     /** [target] is the arrangement now being edited, or null when no edit is under way. */
@@ -39,7 +39,7 @@ class PathEditSession(private val project: Project) {
     var current: PathEditTarget? = null
         private set
 
-    fun start(file: VirtualFile, entityId: String) = set(PathEditTarget(file, entityId))
+    fun start(file: VirtualFile, entityId: Long) = set(PathEditTarget(file, entityId))
 
     /** Writes the changes of the edit of [file] (the Scene view does) and ends it. */
     fun apply(file: VirtualFile) {

@@ -95,10 +95,12 @@ class PlayState(
     }
 
     /** The simulated poses to show, or null for the authored ones. */
-    fun poses(): Map<String, Pose>? {
+    fun poses(): Map<Long, Pose>? {
         if (!active) return null
         val sim = simulation ?: return null
+        // the simulation names entities by their id text; a name that is no id has no entity to pose
         return runCatchingKeepingCancellation { sim.poses() }.getOrNull()
+            ?.mapNotNull { (id, pose) -> id.toLongOrNull()?.let { it to pose } }?.toMap()
     }
 
     private fun start(request: () -> SimulationRequest) {

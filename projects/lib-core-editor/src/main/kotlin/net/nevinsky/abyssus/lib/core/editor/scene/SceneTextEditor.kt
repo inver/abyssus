@@ -23,7 +23,22 @@ class SceneTextEditor(
         val scene = runCatchingKeepingCancellation { parser.parse(text) }
             .getOrElse { return TextEditOutcome.Refused(it) }
         if (!edit.apply(scene)) return TextEditOutcome.Unchanged
-        return runCatchingKeepingCancellation { serializer.serialize(scene) }
-            .fold({ TextEditOutcome.Edited(it) }, { TextEditOutcome.Refused(it) })
+        return write(scene)
     }
+
+    /**
+     * Edits the settings of the scene (name, ambient light, fog, sky), which [SceneDto] holds as read-only values: [change]
+     * returns the changed copy (sharing the entities), or null to decline. An equal copy is [TextEditOutcome.Unchanged].
+     */
+    fun replace(text: String, change: (SceneDto) -> SceneDto?): TextEditOutcome {
+        val scene = runCatchingKeepingCancellation { parser.parse(text) }
+            .getOrElse { return TextEditOutcome.Refused(it) }
+        val changed = change(scene) ?: return TextEditOutcome.Unchanged
+        if (changed == scene) return TextEditOutcome.Unchanged
+        return write(changed)
+    }
+
+    private fun write(scene: SceneDto): TextEditOutcome =
+        runCatchingKeepingCancellation { serializer.serialize(scene) }
+            .fold({ TextEditOutcome.Edited(it) }, { TextEditOutcome.Refused(it) })
 }

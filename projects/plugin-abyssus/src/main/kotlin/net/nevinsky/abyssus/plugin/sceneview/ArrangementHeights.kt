@@ -75,7 +75,7 @@ class ArrangementHeights(private val project: Project, private val json: JsonPro
         FileEditorManager.getInstance(project).getEditors(file).filterIsInstance<SceneFileEditor>()
             .firstNotNullOfOrNull { it.sceneView?.groundHeights() }
 
-    private class Placement(val entityId: String, val asset: String, val world: com.badlogic.gdx.math.Matrix4)
+    private class Placement(val entityId: Long, val asset: String, val world: com.badlogic.gdx.math.Matrix4)
 
     private fun terrainPlacements(file: VirtualFile): List<Placement> {
         val scene = runCatchingKeepingCancellation { DocumentParsing(json, org.slf4j.helpers.NOPLogger.NOP_LOGGER).parse(textOf(file)) }.getOrNull() ?: return emptyList()

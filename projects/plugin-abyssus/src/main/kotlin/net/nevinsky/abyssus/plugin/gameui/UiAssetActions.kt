@@ -7,7 +7,6 @@ package net.nevinsky.abyssus.plugin.gameui
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.lib.core.util.textsAt
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
@@ -17,7 +16,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.terrain.checkFolderName
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.textOf
@@ -28,7 +26,7 @@ import java.io.File
 
 /** The names in the project file's `uiAssetNames`, from its current text; empty when it is missing or malformed. */
 fun registeredUiAssets(abss: VirtualFile): List<String> = runCatchingKeepingCancellation {
-    parseDocument(textOf(abss)).textsAt("uiAssetNames")
+    com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing.project(textOf(abss)).uiAssetNames
 }.getOrNull().orEmpty()
 
 /** Right-click on the Assets node: create a UI asset in this project. */
@@ -102,7 +100,7 @@ class ProjectUiSource(
         val project = abss ?: return null
         if (assetName !in registeredUiAssets(project)) return null
         val meta = project.parent?.findChild(ASSETS_DIR)?.findChild(assetName)?.findChild(META_FILE) ?: return null
-        val tree = runCatchingKeepingCancellation { parseDocument(textOf(meta)) }.getOrNull() ?: return null
+        val tree = runCatchingKeepingCancellation { com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.json.readObject(textOf(meta)) }.getOrNull() ?: return null
         return (decoder.decode(tree) as? net.nevinsky.abyssus.lib.core.ui.model.UiAdmission.Admitted)?.collection
     }
 }

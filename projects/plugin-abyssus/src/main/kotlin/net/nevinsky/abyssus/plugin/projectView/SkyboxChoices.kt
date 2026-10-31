@@ -6,8 +6,13 @@
 package net.nevinsky.abyssus.plugin.projectView
 
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
+import com.intellij.openapi.components.service
+import net.nevinsky.abyssus.lib.core.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxMeta
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyMeta
+import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyMeta
+import net.nevinsky.abyssus.lib.core.editor.document.RawComponentValues
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
@@ -91,19 +96,32 @@ class SkyboxChoice(
  * `meta.json` (absent or null when unreadable) and [hdr] what was read of each HDR sky's image (absent: nothing).
  */
 @JvmOverloads
-fun skyboxChoices(project: ProjectDto, metas: Map<String, Document?>, hdr: Map<String, HdrSkyInfo> = emptyMap()): List<SkyboxChoice> {
-    val references = project.scenes.filterIsInstance<SceneEntry>().map { sceneReferences(it.scene) }
+fun skyboxChoices(project: ProjectDto, metas: Map<String, AssetMeta<Any>?>, hdr: Map<String, HdrSkyInfo> = emptyMap()): List<SkyboxChoice> {
+    val raw = RawComponentValues(service<AbyssusPluginCtx>().documents.json)
+    val references = project.scenes.filterIsInstance<SceneEntry>().map { sceneReferences(it.scene, raw) }
     return project.assets.filter { it.meta.type in SKY_TYPES }.sortedBy { it.name }.map { asset ->
         val meta = metas[asset.name]
-        val files = SKYBOX_FACES.mapNotNull { key -> meta?.textAt("additional", key)?.takeIf { it.isNotBlank() } }
+        val files = SKYBOX_FACES.mapNotNull { key -> faceFile(meta, key)?.takeIf { it.isNotBlank() } }
         val formats = files.mapNotNull { f -> f.substringAfterLast('.', "").lowercase().takeIf { it.isNotEmpty() } }.distinct().sorted()
         val procedural = asset.meta.type == MetaType.SKYBOX_PROCEDURAL
         val hdrInfo = if (asset.meta.type == MetaType.SKYBOX_HDR) hdr[asset.name] ?: HdrSkyInfo(null) else null
-        val clouds = procedural && meta?.textAt("additional", "clouds")?.isNotBlank() == true
+        val clouds = procedural && ((meta?.additional as? ProceduralSkyMeta)?.cloudsReference != null)
         SkyboxChoice(asset.name, files.size, formats, references.count { asset.name in it }, asset.unused, procedural, hdrInfo, clouds).also { choice ->
             choice.faceFiles = if (hdrInfo != null) listOfNotNull(hdrInfo.file)
-            else THUMB_ORDER.map { key -> meta?.textAt("additional", key)?.takeIf { it.isNotBlank() } }
+            else THUMB_ORDER.map { key -> faceFile(meta, key)?.takeIf { it.isNotBlank() } }
         }
+    }
+}
+
+/** The file a cube sky names for [face], or null. */
+private fun faceFile(meta: AssetMeta<Any>?, face: String): String? = (meta?.additional as? SkyboxMeta)?.let {
+    when (face) {
+        "top" -> it.top
+        "bottom" -> it.bottom
+        "left" -> it.left
+        "right" -> it.right
+        "front" -> it.front
+        else -> it.back
     }
 }
 
@@ -113,7 +131,7 @@ fun loadSkyboxChoices(project: Project, abss: VirtualFile, metaFiles: MetaFiles,
     val skyboxes = dto.assets.filter { it.meta.type in SKY_TYPES }.map { it.name }.toSet()
     val metas = ProjectLayout.assetFolders(abss).filter { it.name in skyboxes }.associate { dir ->
         dir.name to runCatchingKeepingCancellation {
-            metaFiles.saved(dir)?.document
+            metaFiles.saved(dir)?.bound()
         }.getOrNull()
     }
     val folders = ProjectLayout.assetFolders(abss).associateBy { it.name }
@@ -127,9 +145,9 @@ fun loadSkyboxChoices(project: Project, abss: VirtualFile, metaFiles: MetaFiles,
  * The `.exr` image an HDR sky folder uses: the file its `meta.json` names when the folder has it, else the first `.exr`
  * by name. Reads only its header for the original size; no image pixels are decoded. Call off the EDT.
  */
-fun hdrSkyInfo(folder: VirtualFile, meta: Document?, source: HdrPreviewService): HdrSkyInfo {
+fun hdrSkyInfo(folder: VirtualFile, meta: AssetMeta<Any>?, source: HdrPreviewService): HdrSkyInfo {
     val files = folder.children.filter { !it.isDirectory }.map { it.name }
-    val named = meta?.textAt("additional", "file")?.takeIf { it in files }
+    val named = (meta?.additional as? HdrSkyMeta)?.file?.takeIf { it in files }
     val file = named ?: files.sorted().firstOrNull { it.endsWith(".exr", ignoreCase = true) } ?: return HdrSkyInfo(null)
     val dimensions = runCatchingKeepingCancellation {
         source.preview.dimensions(java.io.File(folder.path, file))

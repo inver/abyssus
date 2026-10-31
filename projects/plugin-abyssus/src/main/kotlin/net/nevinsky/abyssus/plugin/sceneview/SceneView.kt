@@ -23,26 +23,13 @@ interface SceneView : Disposable {
     var onFailure: ((Throwable) -> Unit)?
 
     /** Called on the AWT thread with the id (key under `ecs/entities`) of the entity the user clicked. */
-    var onPick: ((String) -> Unit)?
-
-    /** Called on the AWT thread with the id of the water surface the user clicked. */
-    var onPickWater: ((String) -> Unit)?
-        get() = null
-        set(_) {}
-
-    /**
-     * Called on the AWT thread when a move of a water surface ends, with its id and new centre. Returns whether it was
-     * written to the scene.
-     */
-    var onWaterMove: ((String, Vector3) -> Boolean)?
-        get() = null
-        set(_) {}
+    var onPick: ((Long) -> Unit)?
 
     /**
      * Called on the AWT thread when a drag of a gizmo handle ends with the entity moved or rotated, with the entity's id
      * (key under `ecs/entities`) and the change. Returns whether it was written to the scene.
      */
-    var onTransform: ((String, TransformEdit) -> Boolean)?
+    var onTransform: ((Long, TransformEdit) -> Boolean)?
 
     /**
      * Called on the AWT thread when a drawing is finished: the model, the points on the terrain and whether the line is
@@ -53,7 +40,7 @@ interface SceneView : Disposable {
         set(_) {}
 
     /** Called with the id of the selected entity when the user presses Copy in the view. */
-    var onCopy: ((String) -> Unit)?
+    var onCopy: ((Long) -> Unit)?
         get() = null
         set(_) {}
 
@@ -63,30 +50,25 @@ interface SceneView : Disposable {
         set(_) {}
 
     /** Called with the id of the selected entity when the user presses Delete in the view. Returns whether it was removed. */
-    var onDelete: ((String) -> Boolean)?
-        get() = null
-        set(_) {}
-
-    /** Called with the id of the selected water surface when the user presses Delete in the view. Returns whether it was removed. */
-    var onWaterDelete: ((String) -> Boolean)?
+    var onDelete: ((Long) -> Boolean)?
         get() = null
         set(_) {}
 
     /** Called when a path point was dragged, inserted or removed, with the arrangement's id and its new points. Returns whether it was written. */
-    var onArrangementEdit: ((String, List<Vector3>) -> Boolean)?
+    var onArrangementEdit: ((Long, List<Vector3>) -> Boolean)?
         get() = null
         set(_) {}
 
     /** Called when the user asks to regenerate the arrangement with this id. */
-    var onRegenerate: ((String) -> Unit)?
+    var onRegenerate: ((Long) -> Unit)?
         get() = null
         set(_) {}
 
     /** Starts (with an id) or ends (null) editing the control points of an arrangement; the view selects it. */
-    fun setPathEditing(entityId: String?) {}
+    fun setPathEditing(entityId: Long?) {}
 
     /** Puts the Sculpt Terrain brush on the terrain with this id, or takes it off for null. */
-    fun setSculpting(entityId: String?) {}
+    fun setSculpting(entityId: Long?) {}
 
     /** Called when the view ended the sculpting itself (the selection moved on, play started, or the terrain cannot be sculpted). */
     var onSculptEnded: (() -> Unit)?
@@ -94,7 +76,7 @@ interface SceneView : Disposable {
         set(_) {}
 
     /** Puts the Paint Texture brush on the terrain with this id, or takes it off for null. */
-    fun setPaintingTexture(entityId: String?) {}
+    fun setPaintingTexture(entityId: Long?) {}
 
     /** Called when the view ended the texture painting itself (the selection moved on, play started, or the terrain cannot be painted). */
     var onPaintTextureEnded: (() -> Unit)?
@@ -119,10 +101,7 @@ interface SceneView : Disposable {
     fun groundHeights(): GroundHeight? = null
 
     /** Selects an entity after creation or a selection in the Abyssus tree. */
-    fun selectEntity(entityId: String) {}
-
-    /** Selects the water surface [waterId] after creation or a selection in the Abyssus tree. */
-    fun selectWater(waterId: String) {}
+    fun selectEntity(entityId: Long) {}
 
     fun setParams(params: SceneRenderParams)
 

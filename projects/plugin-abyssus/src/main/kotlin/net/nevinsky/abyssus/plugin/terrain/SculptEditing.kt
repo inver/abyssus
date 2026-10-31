@@ -44,7 +44,7 @@ class SculptEditing(private val project: Project) {
      */
     fun open(
         scene: VirtualFile,
-        entity: String,
+        entity: Long,
         mode: () -> BrushMode?,
         tool: () -> SculptTool?,
         report: (String) -> Unit,

@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.plugin.assetfiles.AssetEditResult
 import net.nevinsky.abyssus.plugin.assetfiles.AssetMetaEdits
 import net.nevinsky.abyssus.lib.core.editor.panel.FieldRef
@@ -185,9 +184,8 @@ class AssetPropertiesPanel(
         if (assetFolder != terrainFolder) useTerrain(null) // another selection: its draft and pending preview are discarded
         if (assetFolder != foliageFolder) useFoliage(null)
         val entity = if (assetFolder == null) componentTargetOf(node) else null
-        val water = if (assetFolder == null && entity == null) waterTargetOf(node) else null
-        val structural = if (assetFolder == null && entity == null && water == null) structuralOf(node) else null
-        scene = entity?.file ?: water?.file ?: when (structural) {
+        val structural = if (assetFolder == null && entity == null) structuralOf(node) else null
+        scene = entity?.file ?: when (structural) {
             is Structural.Setting -> structural.file
             is Structural.Ecs -> structural.file
             else -> null
@@ -196,13 +194,6 @@ class AssetPropertiesPanel(
         if (structural != null) {
             background {
                 val result = readStructuralState(structural)
-                ui { if (token == generation && !disposed) apply(result) }
-            }
-            return
-        }
-        if (water != null) {
-            background {
-                val result = readWaterState(water)
                 ui { if (token == generation && !disposed) apply(result) }
             }
             return
@@ -342,8 +333,7 @@ class AssetPropertiesPanel(
                 val own = com.intellij.openapi.util.Disposer.newDisposable(parentDisposable, "scene-details")
                     .also { viewDisposable = it }
                 content.removeAll()
-                val conflict = conflictKey.also { conflictKey = null }
-                val view = SceneDetailsView(services.rayControls, newState, own, conflict, onConflict = { conflictKey = it }, collapsed = collapsedSections)
+                val view = SceneDetailsView(services.rayControls, newState, own, collapsed = collapsedSections)
                 content.add(
                     scrolled(view).apply { border = BorderFactory.createEmptyBorder() },
                     BorderLayout.CENTER
@@ -357,17 +347,6 @@ class AssetPropertiesPanel(
                 useUndoEditor(null)
                 fillEmpty(newState)
                 cards.show(this, EMPTY)
-            }
-
-            is PanelState.WaterDetails -> {
-                useTerrain(null)
-                useFoliage(null)
-                useUndoEditor(newState.target.file)
-                content.removeAll()
-                content.add(scrolled(WaterPropertiesView(project, newState, collapsedSections)).apply {
-                    border = BorderFactory.createEmptyBorder()
-                }, BorderLayout.CENTER)
-                cards.show(this, DETAILS)
             }
 
             is PanelState.EntityDetails -> {
@@ -441,7 +420,7 @@ class AssetPropertiesPanel(
         val editable = d.fields.map { it.key }.toSet()
         val hasEditors = d.fields.isNotEmpty() || d.foliage != null
         val model = PanelBuilders(EditorBundle, { false }).asset(
-            d.name, d.meta.json, !selectedUnused, editable, d.meta.folder.parent?.parent?.children?.firstOrNull { it.extension == ProjectLayout.PROJECT_EXTENSION }?.name.orEmpty(), hasEditors,
+            d.name, d.meta.document.json, !selectedUnused, editable, d.meta.folder.parent?.parent?.children?.firstOrNull { it.extension == ProjectLayout.PROJECT_EXTENSION }?.name.orEmpty(), hasEditors,
         )
         val hooks = object : RowHooks {
             override fun commit(ref: FieldRef, text: String): CommitOutcome = CommitOutcome.Unchanged

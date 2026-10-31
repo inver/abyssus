@@ -4,9 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
-import net.nevinsky.abyssus.lib.core.util.isObjectAt
+import com.intellij.openapi.components.service
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -26,7 +25,7 @@ class AddLightGroup(
     private val project: Project,
     private val file: VirtualFile,
     private val position: () -> Vector3,
-    private val select: (String) -> Unit = { selectCreatedEntity(project, file, it) },
+    private val select: (Long) -> Unit = { selectCreatedEntity(project, file, it) },
 ) : AddChildGroup<LightPreset>(AbyssusBundle.message("addLightTitle")) {
     init {
         for (preset in LightPreset.entries) addChild(preset, EditorBundle.message(preset.labelKey))
@@ -42,18 +41,18 @@ class AddLightGroup(
 }
 
 /** Publish a new entity immediately, then select its row when the asynchronous tree refresh reaches it. */
-internal fun selectCreatedEntity(project: Project, file: VirtualFile, entityId: String) {
-    val root = runCatchingKeepingCancellation { parseDocument(textOf(file)) }.getOrNull()
-    val entity = root?.at("ecs", entityId)
-    if (entity?.isObjectAt() == true) {
-        val node = DtoEntryNode(project, file.path, DtoRow(entityId, entity), file, SceneEntityTree(root).entityKeys())
-        AbyssusSelection.of(project).select(node)
+internal fun selectCreatedEntity(project: Project, file: VirtualFile, entityId: Long) {
+    val scene = runCatchingKeepingCancellation { service<AbyssusPluginCtx>().documents.parsing.parse(textOf(file)) }.getOrNull()
+    val entity = scene?.entity(entityId)
+    if (scene != null && entity != null) {
+        val row = DtoRow(entityId.toString(), EntityNode(scene, entityId), enabled = entityEye(entity))
+        AbyssusSelection.of(project).select(DtoEntryNode(project, file.path, row, file, emptyList()))
     }
     selectEntityInAbyssusView(project, file, entityId)
 }
 
 internal fun canAddLight(file: VirtualFile, cache: SceneDocumentCache): Boolean =
-    cache.read(file)?.let { SceneEntityTree(it.root).canAdd() } ?: false
+    cache.read(file) != null
 
 /** Only scene rows can create an entity; the tree uses the origin as its placement point. */
 open class AddLightAction : AbyssusTreeAction<VirtualFile>() {

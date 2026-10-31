@@ -25,9 +25,9 @@ import java.io.File
  */
 class OverlayView(
     val content: SceneContent,
-    val ecs: Map<Long, Entity>,
+    val ecs: Map<Long, net.nevinsky.abyssus.lib.core.dto.EntityDto>,
     val projectDir: File?,
-    val selectedId: String?,
+    val selectedId: Long?,
     val camera: Camera,
     val viewportHeight: Int,
     val playing: Boolean,

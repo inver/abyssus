@@ -6,7 +6,6 @@
 package net.nevinsky.abyssus.plugin.projectView
 
 import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.ide.projectView.ProjectView
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -34,7 +33,7 @@ import net.nevinsky.abyssus.plugin.ui.showActionGroup
 fun addComponentGroup(
     project: Project,
     file: VirtualFile,
-    entityId: String,
+    entityId: Long,
     kinds: List<String>,
     metaFiles: MetaFiles
 ): DefaultActionGroup =
@@ -99,7 +98,7 @@ open class AddComponentAction : AbyssusTreeAction<ComponentTarget>() {
 
     /** What can be added to the entity [target] stands for: the modeled kinds it lacks in the scene's current text. */
     internal fun choices(project: Project, target: ComponentTarget, metaFiles: MetaFiles): DefaultActionGroup {
-        val root = SceneDocumentCache.of(project).read(target.file)?.root ?: return DefaultActionGroup()
+        val root = SceneDocumentCache.of(project).read(target.file)?.scene ?: return DefaultActionGroup()
         val kinds =
             ComponentSchemas.of(project).editorFor(target.file).missingKinds(root, target.entityId).map { it.name }
         return addComponentGroup(project, target.file, target.entityId, kinds, metaFiles)

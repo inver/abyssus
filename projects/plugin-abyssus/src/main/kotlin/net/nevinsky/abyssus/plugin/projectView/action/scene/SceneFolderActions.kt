@@ -5,7 +5,6 @@
 package net.nevinsky.abyssus.plugin.projectView.scene
 
 import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -14,7 +13,6 @@ import com.intellij.openapi.ui.InputValidator
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.plugin.AbyssusBundle
@@ -34,7 +32,7 @@ class SceneDropdownAction : DropdownAction {
         return entry.value is SceneEntry && entry.source?.takeIf {
             it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION &&
                     runCatchingKeepingCancellation {
-                        parseDocument(textOf(it)).rejection(DocumentKind.PROJECT) == null
+                        com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing.project(textOf(it)) != null
                     }.getOrDefault(false)
         } != null
     }

@@ -12,11 +12,11 @@ import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 
 data class ShadowTile(val index: Int, val x: Int, val y: Int, val size: Int = 1024, val atlasSize: Int = 4096)
 
-data class ShadowAllocation(val entityId: String, val kind: ShadowLightKind, val tiles: List<ShadowTile>)
+data class ShadowAllocation(val entityId: Long, val kind: ShadowLightKind, val tiles: List<ShadowTile>)
 
 /** Bounded atlas packing. Small light sets use larger tiles; the grid grows only when more views are needed. */
 class ShadowLayout {
-    private var previous = emptyMap<String, ShadowAllocation>()
+    private var previous = emptyMap<Long, ShadowAllocation>()
     private var grid = 0
 
     fun allocate(lights: LightSet): List<ShadowAllocation> {
@@ -29,7 +29,7 @@ class ShadowLayout {
         val count = candidates.sumOf { tileCount(it.second) }
         grid = maxOf(grid, kotlin.math.ceil(kotlin.math.sqrt(count.toDouble())).toInt())
         val used = HashSet<Int>()
-        val indices = HashMap<String, List<Int>>()
+        val indices = HashMap<Long, List<Int>>()
         candidates.forEach { (id, kind) ->
             val old = previous[id]?.takeIf { it.kind == kind }
             if (old != null && old.tiles.size == tileCount(kind) && old.tiles.none { it.index in used }) {

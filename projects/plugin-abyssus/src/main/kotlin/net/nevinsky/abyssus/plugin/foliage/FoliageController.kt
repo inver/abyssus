@@ -7,7 +7,6 @@ package net.nevinsky.abyssus.plugin.foliage
 
 import net.nevinsky.abyssus.plugin.assetfiles.assetResultMessage
 import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.components.service
 import com.intellij.openapi.vfs.VirtualFile
@@ -72,7 +71,7 @@ class FoliageController(
     private val fingerprints = FoliageFingerprint()
     private val scatter = FoliageScatter(fingerprints)
     private val dataFile = FoliageDataFile()
-    private val edits = FoliageMetaEdits()
+    private val edits = FoliageMetaEdits(net.nevinsky.abyssus.lib.core.editor.document.AssetMetaTextEditor(net.nevinsky.abyssus.lib.core.assets.AssetMetaParser(com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.json)))
     private val settingsReader = FoliageSettingsReader(EditorBundle)
     private val colliderReader = FoliageColliderReader()
     private val colliderEdits = FoliageColliderEdits()
@@ -178,7 +177,7 @@ class FoliageController(
             TextEditOutcome.Unchanged -> source.metaText
             is TextEditOutcome.Refused -> return outcome.cause.documentDisplayMessage()
         }
-        val read = settingsReader.read(additionalOf(text), source.modelAssets)
+        val read = settingsReader.read(foliageOf(text), source.modelAssets)
         val added = (read.problems + settingsReader.transitions(source.settings, read.settings))
             .filter { problem -> source.read.problems.none { it.sameAs(problem) } }
         if (added.isNotEmpty()) return added.first().reason
@@ -483,8 +482,8 @@ class FoliageController(
         else -> source.metaText
     }
 
-    private fun additionalOf(text: String): Document? =
-        runCatchingKeepingCancellation { parseDocumentObject(text).at("additional") }.getOrNull()
+    private fun foliageOf(text: String): FoliageMeta =
+        runCatchingKeepingCancellation { com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing.foliageMeta(text) }.getOrNull() ?: FoliageMeta()
 
     /** Counts the copies of the current settings off the EDT; the newest request wins. */
     private fun generate() {

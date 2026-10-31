@@ -24,7 +24,7 @@ class SunShading(val lights: LightSet, val mapLightIndex: Int?, val outside: Flo
  * [scale] (the sun-occlusion transmittance) as before cloud shadows; if the sun is not in [lights] there is nothing to
  * scale.
  */
-fun planSunShading(lights: LightSet, sunId: String?, cloudsDrawn: Boolean, mapReady: Boolean, scale: Float): SunShading {
+fun planSunShading(lights: LightSet, sunId: Long?, cloudsDrawn: Boolean, mapReady: Boolean, scale: Float): SunShading {
     val index = lights.directionalIndexOf(sunId)
     if (cloudsDrawn && mapReady && index != null) return SunShading(lights, index, scale)
     return SunShading(lights.withSunScale(sunId, scale), null, 1f)

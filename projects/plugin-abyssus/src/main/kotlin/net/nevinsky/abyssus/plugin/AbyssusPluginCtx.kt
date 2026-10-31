@@ -14,7 +14,6 @@ import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.ModelLogging
 import net.nevinsky.abyssus.plugin.log.IntellijLoggerFactory
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat as CoreDocumentFormat
 
 /** Application composition root. Groups build only on first use; entry points pass narrow collaborators onward. */
 @Service(Service.Level.APP)
@@ -48,9 +47,9 @@ class AbyssusPluginCtx : Disposable {
     val terrainSculpt get() = terrain.sculpt
     val newTerrains get() = terrain.newTerrains
     val newFoliages get() = foliage.newFoliages
-    val flightGearImport by lazy { FlightGearImport(json, CoreDocumentFormat()) }
+    val flightGearImport by lazy { FlightGearImport(json) }
     val modelSources by lazy { ModelSourceOpener() }
-    val modelImport by lazy { ModelImport(json, CoreDocumentFormat()) }
+    val modelImport by lazy { ModelImport(json) }
     internal val rayService get() = ray.service
     internal val rayConverter get() = ray.converter
 

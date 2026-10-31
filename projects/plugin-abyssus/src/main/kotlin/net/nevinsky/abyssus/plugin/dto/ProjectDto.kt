@@ -5,8 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.dto
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.Asset
@@ -28,6 +26,4 @@ data class SceneError(@get:JsonIgnore val file: VirtualFile, val error: String?)
 data class SceneEntry @JvmOverloads constructor(
     @get:JsonIgnore val file: VirtualFile,
     val scene: SceneDto,
-    /** The scene document's `ecs` object as the file holds it, which the tree shows (entity and component rows). */
-    @get:JsonIgnore val ecsTree: Document? = null,
 )

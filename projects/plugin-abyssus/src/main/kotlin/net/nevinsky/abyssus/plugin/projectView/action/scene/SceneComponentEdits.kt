@@ -5,7 +5,10 @@
 
 package net.nevinsky.abyssus.plugin.projectView.scene
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
+import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -57,11 +60,11 @@ object SceneComponentEdits {
 
     private fun run(
         project: Project, file: VirtualFile, command: String, global: Boolean = false,
-        edit: DocumentEdit<EditResult>,
+        edit: (SceneDto) -> EditResult,
     ): EditResult {
         var result: EditResult = EditResult.Rejected(EditorBundle.message("componentSceneUnreadable"))
-        editSceneDocument(project, file, command, global) { root ->
-            result = edit(root)
+        editSceneDocument(project, file, command, global) { scene ->
+            result = edit(scene)
             result == EditResult.Changed
         }
         return result
@@ -75,9 +78,9 @@ object SceneComponentEdits {
         cache: SceneDocumentCache
     ): AddedLight {
         var added = AddedLight(EditResult.Rejected(EditorBundle.message("componentSceneUnreadable")))
-        editSceneDocument(project, file, AbyssusBundle.message("commandAddLight")) { root ->
+        editSceneDocument(project, file, AbyssusBundle.message("commandAddLight")) { scene ->
             if (cache.read(file) == null) return@editSceneDocument false
-            added = LightEntities(EditorBundle).add(root, preset, position)
+            added = LightEntities(EditorBundle).add(scene, preset, position)
             added.result == EditResult.Changed
         }
         return added
@@ -100,9 +103,9 @@ object SceneComponentEdits {
             terrainSize(file, asset.name, metaFiles)
         } else null
         var added = AddedEntity(EditResult.Rejected(EditorBundle.message("componentSceneUnreadable")))
-        editSceneDocument(project, file, AbyssusBundle.message("commandAddAsset")) { root ->
+        editSceneDocument(project, file, AbyssusBundle.message("commandAddAsset")) { scene ->
             if (cache.read(file) == null) return@editSceneDocument false
-            added = AssetEntities(EditorBundle).add(root, asset, position, size, meshId)
+            added = AssetEntities(EditorBundle).add(scene, asset, position, size, meshId)
             added.result == EditResult.Changed
         }
         return added
@@ -112,8 +115,8 @@ object SceneComponentEdits {
     private fun terrainSize(sceneFile: VirtualFile, name: String, metaFiles: MetaFiles): Float? {
         val abss = ProjectLayout.abssFor(sceneFile) ?: return null
         val folder = ProjectLayout.assetFolders(abss).firstOrNull { it.name == name } ?: return null
-        val size = readMeta(folder, metaFiles)?.document?.numberTextAt("additional", "size") ?: return null
-        return size.toFloatOrNull()
+        val terrain = readMeta(folder, metaFiles)?.bound()?.additional as? TerrainMeta ?: return null
+        return terrain.size.takeIf { it > 0 }?.toFloat()
     }
 
     /**
@@ -128,12 +131,12 @@ object SceneComponentEdits {
         initial: Map<String, String> = emptyMap()
     ): AddedEntity {
         var added = AddedEntity(EditResult.Rejected(EditorBundle.message("componentSceneUnreadable")))
-        editSceneDocument(project, file, AbyssusBundle.message("commandAddComponent")) { root ->
-            val id = SceneEntityTree(root).insert { id ->
-                nameOnlyComponents(AbyssusBundle.message("newEntityName", id))
-            } ?: return@editSceneDocument false
+        editSceneDocument(project, file, AbyssusBundle.message("commandAddComponent")) { scene ->
+            val id = scene.add(EntityType.OBJECT) { id ->
+                listOf(NameComponent(AbyssusBundle.message("newEntityName", id.toString())))
+            }
             val result = editor(project, file).add(
-                root,
+                scene,
                 id,
                 kindName,
                 initial,
@@ -141,13 +144,15 @@ object SceneComponentEdits {
                 assetsByType(file, metaFiles)
             )
             added = AddedEntity(result, id.takeIf { result == EditResult.Changed })
+            // a refused component leaves the new entity out of the scene again
+            if (result != EditResult.Changed) scene.ecs.remove(id)
             result == EditResult.Changed
         }
         return added
     }
 
     fun add(
-        project: Project, file: VirtualFile, entityId: String, kindName: String, metaFiles: MetaFiles,
+        project: Project, file: VirtualFile, entityId: Long, kindName: String, metaFiles: MetaFiles,
         initial: Map<String, String> = emptyMap(),
     ): EditResult = run(project, file, AbyssusBundle.message("commandAddComponent")) {
         editor(project, file).add(
@@ -163,7 +168,7 @@ object SceneComponentEdits {
     fun update(
         project: Project,
         file: VirtualFile,
-        entityId: String,
+        entityId: Long,
         kindName: String,
         field: String,
         text: String,
@@ -179,7 +184,7 @@ object SceneComponentEdits {
     private fun updateWith(
         project: Project,
         file: VirtualFile,
-        entityId: String,
+        entityId: Long,
         kindName: String,
         field: String,
         text: String,
@@ -199,7 +204,7 @@ object SceneComponentEdits {
             )
         }
 
-    fun remove(project: Project, file: VirtualFile, entityId: String, kindName: String): EditResult =
+    fun remove(project: Project, file: VirtualFile, entityId: Long, kindName: String): EditResult =
         run(project, file, AbyssusBundle.message("commandRemoveComponent")) {
             editor(project, file).remove(
                 it,
@@ -212,7 +217,7 @@ object SceneComponentEdits {
      * Removes the one entity [entityId] as one undoable command; refused, with nothing written, when another entity
      * still refers to it, it owns arrangement copies, or the entity is gone from the latest document text.
      */
-    fun removeEntity(project: Project, file: VirtualFile, entityId: String): EditResult =
+    fun removeEntity(project: Project, file: VirtualFile, entityId: Long): EditResult =
         // global: the tree that starts a removal has the focus, and Undo and Redo must reach it from there
         run(project, file, AbyssusBundle.message("commandRemoveEntity"), global = true) {
             EntityRemoval(EditorBundle, editor(project, file).kinds).remove(it, entityId)

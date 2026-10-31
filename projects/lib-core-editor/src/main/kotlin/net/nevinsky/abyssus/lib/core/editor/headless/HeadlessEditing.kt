@@ -9,6 +9,7 @@ import net.nevinsky.abyssus.lib.core.editor.components.EnabledTarget
 import net.nevinsky.abyssus.lib.core.editor.components.SetEnabledAction
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.format.FormatRejection
+import net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor
@@ -196,5 +197,6 @@ class HeadlessEditing(
             is TextEditOutcome.Refused -> HeadlessEdit.Refused(refusal(outcome.cause))
         }
 
-    private fun refusal(cause: Throwable): Refusal = Refusal(cause.documentDisplayMessage(messages))
+    private fun refusal(cause: Throwable): Refusal =
+        Refusal(cause.documentDisplayMessage(messages), (cause as? UnsupportedDocumentFormat)?.reason)
 }

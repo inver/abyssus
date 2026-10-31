@@ -134,7 +134,7 @@ fun readTerrainFolder(
     val metaFile = folder.findChild(META_FILE) ?: return TerrainSource.Unusable("meta.json")
     val text = com.intellij.openapi.application.runReadAction { net.nevinsky.abyssus.plugin.dto.textOf(metaFile) }
     val meta = net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation {
-        net.nevinsky.abyssus.lib.core.editor.document.parseDocument(text)
+        net.nevinsky.abyssus.lib.core.assets.AssetMetaParser(json).read(folder.name, text)
     }.getOrElse { return TerrainSource.Unusable("meta.json") }
     return readTerrainSource(File(folder.path), text, meta, net.nevinsky.abyssus.lib.core.editor.meta.AssetReferenceChoices(json), recipes, sculpt.reader)
 }

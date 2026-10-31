@@ -18,6 +18,7 @@ import net.nevinsky.abyssus.lib.core.editor.components.FieldValue
 import net.nevinsky.abyssus.lib.core.editor.components.SetEnabledAction
 import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.dto.EntityDto
+import net.nevinsky.abyssus.lib.core.dto.ProjectDto
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.RawComponentsWrapper
 import net.nevinsky.abyssus.lib.core.editor.components.decimalText
@@ -58,47 +59,57 @@ class PanelBuilders(
      * [FieldRef] (the plugin writes them); every other value is shown read only.
      */
     fun project(
-        abss: JsonNode,
+        abss: ProjectDto,
         fileName: String,
         sceneNames: List<String>,
         editable: Set<String> = emptySet()
     ): PanelModel {
         fun ref(key: String) = if (key in editable) FieldRef("project", key) else null
-        val camera = abss.get("mainCamera")
+        val camera = abss.mainCamera
         val settings = Section(
             "project.main", messages.message("panelSectionProject"), "project",
             listOf(
-                TextRow("name", abss.text("name"), dim = !abss.has("name"), field = ref("name")),
+                TextRow("name", abss.name.orEmpty(), dim = abss.name == null, field = ref("name")),
                 ChoiceRow(
-                    "activeSceneName", abss.text("activeSceneName"), sceneNames, !abss.has("activeSceneName"),
+                    "activeSceneName", abss.activeSceneName.orEmpty(), sceneNames, abss.activeSceneName == null,
                     ref("activeSceneName"),
                 ),
                 CheckRow(
                     "physicsEnabled",
-                    abss.get("physicsEnabled")?.asBoolean() ?: false,
+                    abss.physicsEnabled ?: false,
                     messages.message("panelEnabled"),
-                    !abss.has("physicsEnabled"),
+                    abss.physicsEnabled == null,
                     ref("physicsEnabled"),
                 ),
                 CustomRow("antialiasing"),
                 CustomRow("showFps"),
-                ReadonlyRow("uiAssetNames", abss.get("uiAssetNames")?.toString() ?: "[]", !abss.has("uiAssetNames")),
+                ReadonlyRow(
+                    "uiAssetNames", abss.uiAssetNames.joinToString(",", "[", "]") { "\"$it\"" },
+                    abss.uiAssetNames.isEmpty(),
+                ),
             ),
         )
         val main = Section(
             "project.camera", messages.message("panelSectionMainCamera"), "render",
             listOf(
-                vector("position", camera?.get("position"), listOf(0f, 0f, 0f), null),
-                vector("viewPointPosition", camera?.get("viewPointPosition"), listOf(0f, 0f, -1f), null),
-                number("near", camera, "near", CAMERA_NEAR.toString(), "", null),
-                number("far", camera, "far", CAMERA_FAR.toString(), "", null),
-                number("fieldOfView", camera, "fieldOfView", CAMERA_FOV.toString(), "°", null),
+                vectorRow("position", camera?.position, listOf(0f, 0f, 0f)),
+                vectorRow("viewPointPosition", camera?.viewPointPosition, listOf(0f, 0f, -1f)),
+                numberRow("near", camera?.near, CAMERA_NEAR.toString(), "", null),
+                numberRow("far", camera?.far, CAMERA_FAR.toString(), "", null),
+                numberRow("fieldOfView", camera?.fieldOfView, CAMERA_FOV.toString(), "°", null),
             ),
         )
         return PanelModel(
             Header(emptyList(), "project", fileName, messages.message("panelSubtitleProject", fileName)),
             listOf(settings, main), messages.message("panelFooterDefaults"),
         )
+    }
+
+    /** A read-only vector row for a typed value; it is dim while the value is absent. */
+    private fun vectorRow(label: String, v: com.badlogic.gdx.math.Vector3?, default: List<Float>): VectorRow {
+        val values = v?.let { listOf(it.x, it.y, it.z) } ?: default
+        val axes = listOf("x", "y", "z").mapIndexed { i, n -> Axis(n, decimalText(values[i]), null) }
+        return VectorRow(label, axes, dim = v == null)
     }
 
     /** A folder row (Scenes, UI, Assets or a type group): read only, with [items] entries. */

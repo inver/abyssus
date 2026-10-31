@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.terrain
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaParser
+import net.nevinsky.abyssus.lib.core.assets.texture.TextureMeta
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.utils.GdxNativesLoader
@@ -16,8 +16,6 @@ import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.StampImage
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.util.obj
-import net.nevinsky.abyssus.lib.core.util.text
 import java.io.File
 
 /** A project image asset a Stamp can use: its folder [name] and the image [file] its `meta.json` names. */
@@ -30,12 +28,17 @@ data class StampImageChoice(val name: String, val file: File) {
  * whose file exists, and [decode] reads one as a grid of luminance values. Decoding uses a libGDX `Pixmap` only, no GL,
  * so it may run on any thread; it is blocking file work, so not on the AWT thread.
  */
-class StampImages(private val json: JsonProcessor) {
+class StampImages(json: JsonProcessor) {
+    private val metas = AssetMetaParser(json)
+
     fun list(assetsDir: File): List<StampImageChoice> =
         assetsDir.listFiles { f -> f.isDirectory }?.sortedBy { it.name }.orEmpty().mapNotNull { folder ->
-            val meta = File(folder, META_FILE).takeIf { it.isFile }?.let { assetFileRef(it.readText()) } ?: return@mapNotNull null
-            if (meta.type != MetaType.TEXTURE.name && meta.type != MetaType.PIXMAP_TEXTURE.name) return@mapNotNull null
-            val file = meta.file?.let { File(folder, it) }?.takeIf { it.isFile } ?: return@mapNotNull null
+            val meta = File(folder, META_FILE).takeIf { it.isFile }
+                ?.let { file -> runCatchingKeepingCancellation { metas.read(folder.name, file.readText()) }.getOrNull() }
+                ?: return@mapNotNull null
+            if (meta.type != MetaType.TEXTURE && meta.type != MetaType.PIXMAP_TEXTURE) return@mapNotNull null
+            val file = (meta.additional as? TextureMeta)?.file?.let { File(folder, it) }?.takeIf { it.isFile }
+                ?: return@mapNotNull null
             StampImageChoice(folder.name, file)
         }
 

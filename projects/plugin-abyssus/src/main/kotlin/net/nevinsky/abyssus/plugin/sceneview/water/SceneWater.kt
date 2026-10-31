@@ -1,3 +1,4 @@
+/* DISABLED (G7: scene water is no longer modeled by lib-core-editor); kept for reference, not compiled.
 /*
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
@@ -299,3 +300,4 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
         const val IDLE_FRAMES_BEFORE_RELEASE = 600
     }
 }
+*/

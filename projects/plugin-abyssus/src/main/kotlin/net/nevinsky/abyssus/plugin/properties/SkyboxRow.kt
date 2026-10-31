@@ -5,12 +5,11 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
+import com.intellij.openapi.components.service
 import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.panel.pinFieldHeight
 import net.nevinsky.abyssus.plugin.dto.textOf
@@ -51,7 +50,7 @@ internal class SkyboxRow(
                 preferredSize = Dimension(side, side)
             }
             button.addActionListener {
-                if (browse(file)) field.text = text(parseDocument(textOf(file)).textAt("skyboxName"))
+                if (browse(file)) field.text = text(service<AbyssusPluginCtx>().documents.parsing.parse(textOf(file)).skyboxName)
             }
             line.add(button, BorderLayout.EAST)
         }

@@ -4,7 +4,6 @@
  */
 package net.nevinsky.abyssus.plugin.foliage
 
-import net.nevinsky.abyssus.lib.core.editor.document.replaceDocument
 import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.command.UndoConfirmationPolicy
 import com.intellij.openapi.command.undo.UndoManager
@@ -12,7 +11,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.textOf
-import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
+import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
+import net.nevinsky.abyssus.plugin.filetype.editTextDocument
 import net.nevinsky.abyssus.plugin.undo.DocumentSaveUndoableAction
 
 /** Keeps the metadata document's native Undo and the binary transaction in the same command. */
@@ -37,10 +37,7 @@ internal fun applyFoliageFiles(
         val manager = UndoManager.getInstance(project)
         // Undo runs actions in reverse: this saves the document after its native text Undo has finished.
         manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = true))
-        val edited = editSceneDocument(project, meta, txn.name) { root ->
-            replaceDocument(root, after)
-            true
-        }
+        val edited = editTextDocument(project, meta, txn.name) { TextEditOutcome.Edited(after) }
         if (!edited) {
             result = command.revert(txn).let {
                 if (it == AssetCommandResult.Done) AssetCommandResult.Conflict(meta.path) else it
@@ -66,10 +63,7 @@ internal fun applyFoliageMetadata(project: Project, meta: VirtualFile, name: Str
         if (textOf(meta) != before) return@executeCommand
         val manager = UndoManager.getInstance(project)
         manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = true))
-        done = editSceneDocument(project, meta, name) { root ->
-            replaceDocument(root, after)
-            true
-        }
+        done = editTextDocument(project, meta, name) { TextEditOutcome.Edited(after) }
         if (done) manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = false))
     }, name, null, UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION)
     return done

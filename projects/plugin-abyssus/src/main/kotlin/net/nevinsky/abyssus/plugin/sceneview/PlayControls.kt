@@ -19,7 +19,7 @@ import javax.swing.JPanel
 internal class PlayControlsStrip(
     private val play: PlayState,
     private val renderer: SceneRenderer,
-    private val simulationRequest: ((selection: String?) -> SimulationRequest)?,
+    private val simulationRequest: ((selection: Long?) -> SimulationRequest)?,
     private val beforePlay: () -> Unit,
     private val afterPlay: () -> Unit,
 ) {

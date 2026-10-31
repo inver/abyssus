@@ -17,6 +17,20 @@ class MetaDocument internal constructor(val type: MetaType, val json: JsonNode, 
     /** Binds the document to [clazz], or null when it does not fit (a missing required field, say). */
     fun <T, M : AssetMeta<T>> typed(clazz: Class<M>): M? =
         runCatchingKeepingCancellation { processor.bind(json, clazz) }.getOrNull()
+
+    /** The document bound to its typed [AssetMeta] (`additional` as the class of its `type`); the name is left empty. */
+    fun bound(): AssetMeta<Any> = net.nevinsky.abyssus.lib.core.assets.AssetMetaBinder(processor).bind("", json)
+
+    /**
+     * The `uuid`s the document holds in the fields Abyssus resolves to other assets: the splat textures, the `materials`
+     * list and a procedural sky's `clouds`. Files named in `meta.json` live in the asset's own folder and are not references.
+     */
+    fun referenceUuids(): List<String> {
+        val additional = json.get("additional")?.takeIf { it.isObject } ?: return emptyList()
+        val materials = additional.get("materials")?.takeIf { it.isArray }?.filter { it.isTextual }?.map { it.textValue() }.orEmpty()
+        val splats = net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_FIELDS.mapNotNull { additional.get(it)?.takeIf { v -> v.isTextual }?.textValue() }
+        return splats + materials + listOfNotNull(additional.get("clouds")?.takeIf { it.isTextual }?.textValue())
+    }
 }
 
 /**

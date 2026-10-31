@@ -60,6 +60,7 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
         return SceneFileEditor(
             project,
             file,
+            core.documents.parsing,
             core.documents.json,
             project.service<SceneRayControls>(),
             SceneParamsSource.editorText(reader),
@@ -75,7 +76,6 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
                 ),
                 lightMenu = PlacementMenu({ host.canAddLight(file) }) { position -> host.lightActions(file, position) },
                 assetMenu = PlacementMenu({ host.canAddAsset(file) }) { position -> host.assetActions(file, position) },
-                waterMenu = PlacementMenu({ host.canAddWater(file) }) { position -> host.waterActions(file, position) },
                 pathMenu = PlacementMenu({ host.canAddPath(file) }) { start -> host.pathActions(file, start) },
                 ray = ray,
                 play = play,
@@ -134,10 +134,10 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
         PluginManager.getPluginByClass(extension.javaClass)?.name ?: extension.javaClass.name
 
     /** The scene as the editor holds it, unsaved text included. */
-    private fun simulationRequest(project: Project, file: VirtualFile, selection: String?): SimulationRequest {
+    private fun simulationRequest(project: Project, file: VirtualFile, selection: Long?): SimulationRequest {
         val text = FileDocumentManager.getInstance().getDocument(file)?.text ?: VfsUtilCore.loadText(file)
         val projectDir = ProjectLayout.projectDirFor(file) ?: File(file.parent.parent.path)
-        return SimulationRequest(project, file, text, projectDir, selection)
+        return SimulationRequest(project, file, text, projectDir, selection?.toString())
     }
 
     override fun getEditorTypeId() = EDITOR_TYPE_ID

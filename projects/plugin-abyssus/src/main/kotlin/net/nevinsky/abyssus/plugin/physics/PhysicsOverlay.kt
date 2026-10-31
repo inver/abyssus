@@ -54,8 +54,8 @@ class PhysicsOverlay(initialProjectDir: File?) : SceneOverlay {
     init { initialProjectDir?.let(::useProject) }
 
     private var lastContent: SceneContent? = null
-    private var lastEcs: Map<Long, com.badlogic.ashley.core.Entity>? = null
-    private var lastSelection: String? = null
+    private var lastEcs: Map<Long, net.nevinsky.abyssus.lib.core.dto.EntityDto>? = null
+    private var lastSelection: Long? = null
     private var segments: List<OverlaySegment> = emptyList()
 
     override fun draw(view: OverlayView, lines: LineSink) {

@@ -21,8 +21,8 @@ open class RegenerateArrangementAction : AbyssusTreeAction<ComponentTarget>() {
         templatePresentation.text = AbyssusBundle.message("regenerateArrangementTitle")
     }
 
-    override fun targetOf(node: Any?): ComponentTarget? = entityTargetOf(node) { _, json ->
-        json.hasAt("components", PathArrangementComponent::class.simpleName!!)
+    override fun targetOf(node: Any?): ComponentTarget? = entityTargetOf(node) { _, entity ->
+        entity.component(PathArrangementComponent::class.java) != null
     }
 
     override fun perform(project: Project, target: ComponentTarget, e: AnActionEvent) {

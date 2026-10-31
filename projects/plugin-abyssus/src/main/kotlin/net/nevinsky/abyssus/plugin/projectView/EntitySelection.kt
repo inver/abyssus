@@ -6,7 +6,6 @@
 package net.nevinsky.abyssus.plugin.projectView
 
 import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.lib.core.util.rawAt
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
@@ -16,19 +15,18 @@ import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementOwnerOf
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
-import net.nevinsky.abyssus.plugin.water.WATER_ROW
 
 private val LOG = Logger.getInstance("net.nevinsky.abyssus.projectView.EntitySelection")
 
 /** Where an entity sits under its scene's node: `ecs` / `<id>` (the `entities` level is not shown). */
-private fun entityPath(entityId: String) = net.nevinsky.abyssus.lib.core.editor.document.sceneEntityTreePath(entityId)
+private fun entityPath(entityId: Long) = listOf("ecs", entityId.toString())
 
 /**
  * What a tree visitor should do with the node at the end of [chain] (the user objects from the view root down) when
  * looking for the row of entity [entityId] of [sceneFile]. The scene is found either as a standalone `.scene` asset
  * or as an entry of its project's `scenes` list.
  */
-fun entityVisitAction(sceneFile: VirtualFile, entityId: String, chain: List<Any?>): TreeVisitor.Action =
+fun entityVisitAction(sceneFile: VirtualFile, entityId: Long, chain: List<Any?>): TreeVisitor.Action =
     rowVisitAction(sceneFile, entityPath(entityId), chain)
 
 /**
@@ -67,10 +65,10 @@ private fun isSceneRoot(node: Any, sceneFile: VirtualFile): Boolean = when (node
  * Shows the Abyssus view and selects the row of entity [entityId] of [sceneFile] in it, expanding the tree as needed.
  * Does nothing when the row does not exist; never throws. Call on the EDT.
  */
-fun selectEntityInAbyssusView(project: Project, sceneFile: VirtualFile, entityId: String) {
+fun selectEntityInAbyssusView(project: Project, sceneFile: VirtualFile, entityId: Long) {
     try {
         // a linked copy of a path arrangement has no row of its own: its arrangement's row stands for it
-        val rowId = SceneDocumentCache.of(project).read(sceneFile)?.root?.at("ecs")
+        val rowId = SceneDocumentCache.of(project).read(sceneFile)?.scene
             ?.let { arrangementOwnerOf(it, entityId) } ?: entityId
         val visitor = TreeVisitor { path -> entityVisitAction(sceneFile, rowId, path.path.map(TreeUtil::getUserObject)) }
         selectInAbyssusView(project, visitor)
@@ -79,13 +77,4 @@ fun selectEntityInAbyssusView(project: Project, sceneFile: VirtualFile, entityId
     }
 }
 
-/** Like [selectEntityInAbyssusView] for the water surface [waterId] of [sceneFile]. */
-fun selectWaterInAbyssusView(project: Project, sceneFile: VirtualFile, waterId: String) {
-    try {
-        val wanted = listOf(WATER_ROW, waterId)
-        val visitor = TreeVisitor { path -> rowVisitAction(sceneFile, wanted, path.path.map(TreeUtil::getUserObject)) }
-        selectInAbyssusView(project, visitor)
-    } catch (e: Throwable) {
-        LOG.warn("Could not select water $waterId in the Abyssus view", e)
-    }
-}
+// G7: selectWaterInAbyssusView (selecting a water surface in the tree) is disabled.

@@ -42,7 +42,7 @@ internal class SculptTerrainControls(
     interaction: SceneInteraction,
     play: PlayState,
     kinds: BrushKinds,
-    private val sculptSession: ((String, () -> BrushMode?, () -> SculptTool?, (SculptSession?) -> Unit) -> Unit)?,
+    private val sculptSession: ((Long, () -> BrushMode?, () -> SculptTool?, (SculptSession?) -> Unit) -> Unit)?,
     private val tools: SculptToolFactory,
     private val onChanged: () -> Unit,
     onEnded: () -> Unit,
@@ -140,7 +140,7 @@ internal class SculptTerrainControls(
     }
 
     /** Puts the brush on [entityId], the selected terrain (the Properties panel's toggle); ends the sculpting when it cannot be. */
-    fun begin(entityId: String) {
+    fun begin(entityId: Long) {
         if (play.active || entityId != interaction.selectedId) { end(); return }
         kinds.endOthers(this)
         requested = true
@@ -157,7 +157,7 @@ internal class SculptTerrainControls(
         strip.isVisible = sculpting
     }
 
-    override fun openSession(selected: String, mode: () -> BrushMode?, ready: (SculptSession?) -> Unit) {
+    override fun openSession(selected: Long, mode: () -> BrushMode?, ready: (SculptSession?) -> Unit) {
         sculptSession?.invoke(selected, mode, ::tool, ready)
     }
 
@@ -182,7 +182,7 @@ internal class SculptTerrainControls(
 
     override fun canBrush(): Boolean = requested && loaded?.stroke != null
 
-    override fun modeFor(selected: String, shift: Boolean): BrushMode =
+    override fun modeFor(selected: Long, shift: Boolean): BrushMode =
         BrushMode(SCULPT_BRUSH, selected, num(radius), num(strength).coerceIn(0f, 1f), shift)
 
     /** Releases the session when the view is disposed. */
