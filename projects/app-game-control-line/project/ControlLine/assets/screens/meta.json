@@ -21,6 +21,11 @@
           "sample": true
         },
         {
+          "name": "scaleEnabled",
+          "type": "boolean",
+          "sample": true
+        },
+        {
           "name": "hasMessage",
           "type": "boolean",
           "sample": false
@@ -54,6 +59,16 @@
           "name": "planeFacts",
           "type": "string",
           "sample": "Stunt    Lines 18 m    Mass 1.10 kg    Fuel 360 s"
+        },
+        {
+          "name": "hasScaleFacts",
+          "type": "boolean",
+          "sample": true
+        },
+        {
+          "name": "scaleFacts",
+          "type": "string",
+          "sample": "Replica of the MiG-3    First flight 1940    Span 10.3 m    Scale 1:8"
         },
         {
           "name": "tensionText",
@@ -134,6 +149,11 @@
           "name": "isPattern",
           "type": "boolean",
           "sample": true
+        },
+        {
+          "name": "isScale",
+          "type": "boolean",
+          "sample": false
         },
         {
           "name": "patternHeader",
@@ -267,6 +287,11 @@
           "sample": "tab"
         },
         {
+          "name": "tabScaleStyle",
+          "type": "string",
+          "sample": "tab"
+        },
+        {
           "name": "scoresHint",
           "type": "string",
           "sample": "Left / Right: change the tab    Up / Down, Enter or a click: replay a flight"
@@ -290,6 +315,11 @@
           "name": "isBoardTab",
           "type": "boolean",
           "sample": true
+        },
+        {
+          "name": "isScaleTab",
+          "type": "boolean",
+          "sample": false
         },
         {
           "name": "freeRows",
@@ -397,6 +427,66 @@
               "time": "5:10",
               "date": "2026-01-01",
               "style": "normal"
+            }
+          ]
+        },
+        {
+          "name": "scaleRows",
+          "type": "list",
+          "fields": [
+            {
+              "name": "rank",
+              "type": "string"
+            },
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "plane",
+              "type": "string"
+            },
+            {
+              "name": "score",
+              "type": "string"
+            },
+            {
+              "name": "speed",
+              "type": "string"
+            },
+            {
+              "name": "level",
+              "type": "string"
+            },
+            {
+              "name": "landing",
+              "type": "string"
+            },
+            {
+              "name": "time",
+              "type": "string"
+            },
+            {
+              "name": "date",
+              "type": "string"
+            },
+            {
+              "name": "style",
+              "type": "string"
+            }
+          ],
+          "sample": [
+            {
+              "rank": "1",
+              "name": "Ann",
+              "plane": "Mig-3",
+              "score": "900",
+              "speed": "400",
+              "level": "300",
+              "landing": "200",
+              "time": "1:10",
+              "date": "2026-01-02",
+              "style": "highlight"
             }
           ]
         },
@@ -884,6 +974,27 @@
                     "style": "outline"
                   },
                   {
+                    "id": "mm-scale",
+                    "type": "button",
+                    "layout": {
+                      "width": 340,
+                      "height": 56
+                    },
+                    "properties": {
+                      "text": "Scale"
+                    },
+                    "bindings": {
+                      "enabled": "scaleEnabled"
+                    },
+                    "actions": {
+                      "click": {
+                        "type": "emitAction",
+                        "name": "scale"
+                      }
+                    },
+                    "style": "outline"
+                  },
+                  {
                     "id": "mm-scores",
                     "type": "button",
                     "layout": {
@@ -1198,6 +1309,18 @@
                     "type": "label",
                     "bindings": {
                       "text": "planeFacts"
+                    },
+                    "style": "body",
+                    "layout": {
+                      "height": 22
+                    }
+                  },
+                  {
+                    "id": "ps-scale-facts",
+                    "type": "label",
+                    "bindings": {
+                      "text": "scaleFacts",
+                      "visible": "hasScaleFacts"
                     },
                     "style": "body",
                     "layout": {
@@ -1537,6 +1660,214 @@
                     },
                     "layout": {
                       "height": 40
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "hudScale",
+          "name": "HUD (scale)",
+          "kind": "overlay",
+          "root": {
+            "id": "hudScale-root",
+            "type": "panel",
+            "children": [
+              {
+                "id": "hudScale-pane",
+                "type": "panel",
+                "style": "pane",
+                "layout": {
+                  "anchor": "topLeft",
+                  "x": 16,
+                  "y": 16,
+                  "padding": 10
+                },
+                "children": [
+                  {
+                    "id": "hudScale-rows",
+                    "type": "column",
+                    "layout": {
+                      "spacing": 10
+                    },
+                    "children": [
+                      {
+                        "id": "hs-tension",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "children": [
+                          {
+                            "id": "hs-tension-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Tension"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hs-bar",
+                            "type": "progressBar",
+                            "layout": {
+                              "width": 140,
+                              "height": 12
+                            },
+                            "properties": {
+                              "maximum": 60
+                            },
+                            "bindings": {
+                              "value": "tensionValue"
+                            },
+                            "style": "bar"
+                          },
+                          {
+                            "id": "hs-tension-v",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 24
+                            },
+                            "bindings": {
+                              "text": "tensionText"
+                            },
+                            "style": "hudValue"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hs-laps",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "children": [
+                          {
+                            "id": "hs-laps-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Laps"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hs-laps-v",
+                            "type": "label",
+                            "layout": {
+                              "width": 90,
+                              "height": 24
+                            },
+                            "bindings": {
+                              "text": "laps"
+                            },
+                            "style": "hudValue"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hs-score",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "children": [
+                          {
+                            "id": "hs-score-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Realism"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hs-score-v",
+                            "type": "label",
+                            "layout": {
+                              "width": 90,
+                              "height": 40
+                            },
+                            "bindings": {
+                              "text": "score"
+                            },
+                            "style": "hudBig"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hs-fuel",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "children": [
+                          {
+                            "id": "hs-fuel-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Fuel"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hs-fuel-v",
+                            "type": "label",
+                            "layout": {
+                              "width": 90,
+                              "height": 24
+                            },
+                            "bindings": {
+                              "text": "fuel"
+                            },
+                            "style": "hudValue"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "hudScale-hint-panel",
+                "type": "panel",
+                "style": "pane",
+                "layout": {
+                  "anchor": "bottomLeft",
+                  "x": 16,
+                  "y": -16,
+                  "padding": 8
+                },
+                "children": [
+                  {
+                    "id": "hudScale-hint",
+                    "type": "label",
+                    "style": "muted",
+                    "properties": {
+                      "text": "W / S or Up / Down or the mouse: handle    Esc: pause"
+                    },
+                    "layout": {
+                      "height": 19
                     }
                   }
                 ]
@@ -2085,6 +2416,62 @@
                             ]
                           },
                           {
+                            "id": "ns-free",
+                            "type": "column",
+                            "layout": {
+                              "spacing": 4,
+                              "align": "start"
+                            },
+                            "bindings": {
+                              "visible": "isScale"
+                            },
+                            "children": [
+                              {
+                                "id": "ns-facts",
+                                "type": "list",
+                                "layout": {
+                                  "spacing": 6
+                                },
+                                "bindings": {
+                                  "items": "facts"
+                                },
+                                "template": {
+                                  "id": "ns-frow",
+                                  "type": "row",
+                                  "layout": {
+                                    "spacing": 14
+                                  },
+                                  "children": [
+                                    {
+                                      "id": "ns-fn",
+                                      "type": "label",
+                                      "layout": {
+                                        "width": 130,
+                                        "height": 22
+                                      },
+                                      "bindings": {
+                                        "text": "item.name"
+                                      },
+                                      "style": "body"
+                                    },
+                                    {
+                                      "id": "ns-fv",
+                                      "type": "label",
+                                      "layout": {
+                                        "width": 200,
+                                        "height": 22
+                                      },
+                                      "bindings": {
+                                        "text": "item.value"
+                                      },
+                                      "style": "body"
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          {
                             "id": "ne-pattern",
                             "type": "column",
                             "layout": {
@@ -2366,6 +2753,62 @@
                                     },
                                     {
                                       "id": "go-fv",
+                                      "type": "label",
+                                      "layout": {
+                                        "width": 200,
+                                        "height": 22
+                                      },
+                                      "bindings": {
+                                        "text": "item.value"
+                                      },
+                                      "style": "body"
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "id": "gs-free",
+                            "type": "column",
+                            "layout": {
+                              "spacing": 4,
+                              "align": "start"
+                            },
+                            "bindings": {
+                              "visible": "isScale"
+                            },
+                            "children": [
+                              {
+                                "id": "gs-facts",
+                                "type": "list",
+                                "layout": {
+                                  "spacing": 6
+                                },
+                                "bindings": {
+                                  "items": "facts"
+                                },
+                                "template": {
+                                  "id": "gs-frow",
+                                  "type": "row",
+                                  "layout": {
+                                    "spacing": 14
+                                  },
+                                  "children": [
+                                    {
+                                      "id": "gs-fn",
+                                      "type": "label",
+                                      "layout": {
+                                        "width": 130,
+                                        "height": 22
+                                      },
+                                      "bindings": {
+                                        "text": "item.name"
+                                      },
+                                      "style": "body"
+                                    },
+                                    {
+                                      "id": "gs-fv",
                                       "type": "label",
                                       "layout": {
                                         "width": 200,
@@ -2733,6 +3176,37 @@
                         ],
                         "bindings": {
                           "style": "tabNoobStyle"
+                        }
+                      },
+                      {
+                        "id": "sc-t-scale",
+                        "type": "column",
+                        "layout": {
+                          "width": 150,
+                          "padding": 7,
+                          "align": "center"
+                        },
+                        "actions": {
+                          "click": {
+                            "type": "emitAction",
+                            "name": "tabScale"
+                          }
+                        },
+                        "children": [
+                          {
+                            "id": "sc-t-scale-l",
+                            "type": "label",
+                            "properties": {
+                              "text": "Scale"
+                            },
+                            "style": "tabLabel",
+                            "layout": {
+                              "height": 29
+                            }
+                          }
+                        ],
+                        "bindings": {
+                          "style": "tabScaleStyle"
                         }
                       }
                     ]
@@ -3200,6 +3674,273 @@
                             },
                             "empty": {
                               "id": "sc-b-none",
+                              "type": "label",
+                              "properties": {
+                                "text": "No flights yet"
+                              },
+                              "style": "body",
+                              "layout": {
+                                "height": 22
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "id": "sc-scale",
+                        "type": "column",
+                        "layout": {
+                          "spacing": 6
+                        },
+                        "bindings": {
+                          "visible": "isScaleTab"
+                        },
+                        "children": [
+                          {
+                            "id": "sc-sh-head",
+                            "type": "row",
+                            "layout": {
+                              "spacing": 10
+                            },
+                            "children": [
+                              {
+                                "id": "sc-sh-h0",
+                                "type": "label",
+                                "layout": {
+                                  "width": 50,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "#"
+                                },
+                                "style": "muted"
+                              },
+                              {
+                                "id": "sc-sh-h1",
+                                "type": "label",
+                                "layout": {
+                                  "width": 120,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "Name"
+                                },
+                                "style": "muted"
+                              },
+                              {
+                                "id": "sc-sh-h2",
+                                "type": "label",
+                                "layout": {
+                                  "width": 110,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "Plane"
+                                },
+                                "style": "muted"
+                              },
+                              {
+                                "id": "sc-sh-h3",
+                                "type": "label",
+                                "layout": {
+                                  "width": 70,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "Speed"
+                                },
+                                "style": "muted"
+                              },
+                              {
+                                "id": "sc-sh-h4",
+                                "type": "label",
+                                "layout": {
+                                  "width": 70,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "Level"
+                                },
+                                "style": "muted"
+                              },
+                              {
+                                "id": "sc-sh-h5",
+                                "type": "label",
+                                "layout": {
+                                  "width": 80,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "Landing"
+                                },
+                                "style": "muted"
+                              },
+                              {
+                                "id": "sc-sh-h6",
+                                "type": "label",
+                                "layout": {
+                                  "width": 80,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "Score"
+                                },
+                                "style": "muted"
+                              },
+                              {
+                                "id": "sc-sh-h7",
+                                "type": "label",
+                                "layout": {
+                                  "width": 70,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "Time"
+                                },
+                                "style": "muted"
+                              },
+                              {
+                                "id": "sc-sh-h8",
+                                "type": "label",
+                                "layout": {
+                                  "width": 100,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "Date"
+                                },
+                                "style": "muted"
+                              }
+                            ]
+                          },
+                          {
+                            "id": "sc-slist",
+                            "type": "list",
+                            "layout": {
+                              "spacing": 4
+                            },
+                            "bindings": {
+                              "items": "scaleRows"
+                            },
+                            "template": {
+                              "id": "sc-s-row",
+                              "type": "row",
+                              "layout": {
+                                "spacing": 10
+                              },
+                              "children": [
+                                {
+                                  "id": "sc-s-rank",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 50,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.rank",
+                                    "style": "item.style"
+                                  }
+                                },
+                                {
+                                  "id": "sc-s-name",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 120,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.name",
+                                    "style": "item.style"
+                                  }
+                                },
+                                {
+                                  "id": "sc-s-plane",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 110,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.plane",
+                                    "style": "item.style"
+                                  }
+                                },
+                                {
+                                  "id": "sc-s-speed",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 70,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.speed",
+                                    "style": "item.style"
+                                  }
+                                },
+                                {
+                                  "id": "sc-s-level",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 70,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.level",
+                                    "style": "item.style"
+                                  }
+                                },
+                                {
+                                  "id": "sc-s-landing",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 80,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.landing",
+                                    "style": "item.style"
+                                  }
+                                },
+                                {
+                                  "id": "sc-s-score",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 80,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.score",
+                                    "style": "item.style"
+                                  }
+                                },
+                                {
+                                  "id": "sc-s-time",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 70,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.time",
+                                    "style": "item.style"
+                                  }
+                                },
+                                {
+                                  "id": "sc-s-date",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 100,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.date",
+                                    "style": "item.style"
+                                  }
+                                }
+                              ]
+                            },
+                            "empty": {
+                              "id": "sc-s-none",
                               "type": "label",
                               "properties": {
                                 "text": "No flights yet"

@@ -2,6 +2,7 @@
 label|normal|Control Line
 button|enabled|checked|Free flight
 button|enabled|F2B pattern
+button|enabled|Scale
 button|enabled|Scores
 button|enabled|Quit
 == assist-select
@@ -330,6 +331,7 @@ button|enabled|Free flight
 button|enabled|Pro
 button|enabled|checked|Mid
 button|enabled|Noob
+button|enabled|Scale
 label|muted|Left / Right: change the tab    Up / Down, Enter or a click: replay a flight
 label|muted|#
 label|muted|Name
@@ -350,10 +352,30 @@ button|enabled|Free flight
 button|enabled|Pro
 button|enabled|Mid
 button|enabled|checked|Noob
+button|enabled|Scale
 label|muted|Left / Right: change the tab    Up / Down, Enter or a click: replay a flight
 label|muted|#
 label|muted|Name
 label|muted|Plane
+label|muted|Score
+label|muted|Time
+label|muted|Date
+label|normal|No flights yet
+button|enabled|checked|Back
+== scores-scale-empty
+label|normal|Best flights
+button|enabled|Free flight
+button|enabled|Pro
+button|enabled|Mid
+button|enabled|Noob
+button|enabled|checked|Scale
+label|muted|Left / Right: change the tab
+label|muted|#
+label|muted|Name
+label|muted|Plane
+label|muted|Speed
+label|muted|Level
+label|muted|Landing
 label|muted|Score
 label|muted|Time
 label|muted|Date
@@ -365,6 +387,7 @@ button|enabled|checked|Free flight
 button|enabled|Pro
 button|enabled|Mid
 button|enabled|Noob
+button|enabled|Scale
 label|muted|Left / Right: change the tab
 label|muted|#
 label|muted|Name
@@ -382,6 +405,7 @@ button|enabled|Free flight
 button|enabled|checked|Pro
 button|enabled|Mid
 button|enabled|Noob
+button|enabled|Scale
 label|muted|Left / Right: change the tab    Up / Down, Enter or a click: replay a flight
 label|muted|#
 label|muted|Name
@@ -395,14 +419,16 @@ button|enabled|checked|Back
 label|normal|Control Line
 button|enabled|checked|Free flight
 button|enabled|F2B pattern
+button|enabled|Scale
 button|enabled|Scores
 button|enabled|Quit
 == plane-select-free
-label|normal|Choose a plane  (1 of 3)
+label|normal|Choose a plane  (1 of 4)
 button|enabled|<
-label|normal|Racer
+label|normal|Mig-3
 button|enabled|>
-label|normal|Speed    Lines 21 m    Mass 0.50 kg    Fuel 60 s
+label|normal|Scale    Lines 16 m    Mass 0.90 kg    Fuel 240 s
+label|normal|Replica of the MiG-3    First flight 1940    Span 10.3 m    Scale 1:10
 button|enabled|Fly  (Enter)
 button|enabled|Back  (Esc)
 == hud-free
@@ -416,7 +442,7 @@ label|normal|0
 label|normal|Combo
 label|normal|x1
 label|normal|Fuel
-label|normal|60 s
+label|normal|240 s
 label|muted|W / S or Up / Down or the mouse: handle    Esc: pause
 == name-entry-free
 label|normal|GAME OVER
@@ -457,6 +483,7 @@ button|enabled|checked|Free flight
 button|enabled|Pro
 button|enabled|Mid
 button|enabled|Noob
+button|enabled|Scale
 label|muted|Left / Right: change the tab
 label|muted|#
 label|muted|Name
@@ -473,6 +500,99 @@ label|highlight|1250
 label|highlight|12
 label|highlight|x3
 label|highlight|1:35
+label|highlight|2026-01-02
+button|enabled|checked|Back
+== plane-select-scale
+label|highlight|Scale
+label|normal|Choose a plane  (1 of 1)
+button|enabled|<
+label|normal|Mig-3
+button|enabled|>
+label|normal|Scale    Lines 16 m    Mass 0.90 kg    Fuel 240 s
+label|normal|Replica of the MiG-3    First flight 1940    Span 10.3 m    Scale 1:10
+button|enabled|Fly  (Enter)
+button|enabled|Back  (Esc)
+== hud-scale
+label|normal|Tension
+bar|0.00
+label|normal|0.0 N
+label|normal|Laps
+label|normal|0
+label|normal|Realism
+label|normal|0
+label|normal|Fuel
+label|normal|240 s
+label|muted|W / S or Up / Down or the mouse: handle    Esc: pause
+== name-entry-scale
+label|normal|GAME OVER
+label|highlight|Landed
+label|normal|Plane
+label|normal|Mig-3
+label|normal|Prototype
+label|normal|MiG-3
+label|normal|Realism score
+label|normal|980
+label|normal|Steady speed
+label|normal|400
+label|normal|Level laps
+label|normal|380
+label|normal|Landing
+label|normal|200
+label|normal|Laps
+label|normal|6
+label|normal|Flight time
+label|normal|1:10
+label|normal|Your flight made the top 10. Your name:
+field|Bob
+button|enabled|Save
+== game-over-scale
+label|normal|GAME OVER
+label|highlight|Landed
+label|normal|Plane
+label|normal|Mig-3
+label|normal|Prototype
+label|normal|MiG-3
+label|normal|Realism score
+label|normal|980
+label|normal|Steady speed
+label|normal|400
+label|normal|Level laps
+label|normal|380
+label|normal|Landing
+label|normal|200
+label|normal|Laps
+label|normal|6
+label|normal|Flight time
+label|normal|1:10
+label|normal|Saved in place 1
+button|enabled|checked|Retry
+button|enabled|Scores
+button|enabled|Main menu
+== scores-scale-saved
+label|normal|Best flights
+button|enabled|Free flight
+button|enabled|Pro
+button|enabled|Mid
+button|enabled|Noob
+button|enabled|checked|Scale
+label|muted|Left / Right: change the tab
+label|muted|#
+label|muted|Name
+label|muted|Plane
+label|muted|Speed
+label|muted|Level
+label|muted|Landing
+label|muted|Score
+label|muted|Time
+label|muted|Date
+label|highlight|1
+label|highlight|Cy
+label|highlight|Mig-3
+label|highlight|400
+label|highlight|380
+label|highlight|200
+label|highlight|980
+label|highlight|1:10
 label|highlight|2026-01-02
 button|enabled|checked|Back
 == hud-pro
@@ -670,6 +790,7 @@ label|highlight|AI demonstration: the bot holds the handle    Esc: pause
 label|normal|Control Line
 button|disabled|Free flight
 button|disabled|F2B pattern
+button|disabled|Scale
 button|enabled|checked|Scores
 button|enabled|Quit
 label|highlight|No plane was found in the field scene

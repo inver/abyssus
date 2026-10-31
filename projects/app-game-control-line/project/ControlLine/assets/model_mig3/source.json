@@ -17,5 +17,6 @@
   },
   "animations": [],
   "skipped": [],
-  "approximated": []
+  "approximated": [],
+  "note": "Root node yawed +90 degrees about Y (translation turned with it) after import, so the nose points +Z, the wings run along X and the model rests on y=0: the plane frame. Then scaled by 0.9556 to a 1.03 m span, 1:10 of the MiG-3 (10.3 m)."
 }

@@ -19,6 +19,7 @@ import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefModel
 import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefFrame
 import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefView
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
 import net.nevinsky.abyssus.app.game.controlline.screens.GameUiHost
 import net.nevinsky.abyssus.app.game.controlline.screens.createGameUi
@@ -49,6 +50,7 @@ class ControlLineGame(
     private val project: Path, private val scoresFile: Path,
     private val patternScoresFile: Path = scoresFile.resolveSibling("f2b-scores.json"),
     private val fieldView: FieldView? = null,
+    private val scaleScoresFile: Path = scoresFile.resolveSibling("scale-scores.json"),
 ) : ApplicationAdapter() {
     /** Problems go to stderr through `physics`'s slf4j-simple binding. */
     private val log = LoggerFactory.getLogger("control-line")
@@ -88,8 +90,8 @@ class ControlLineGame(
         ShaderProgram.prependVertexCode = "#version 150\n#define attribute in\n#define varying out\n"
         ShaderProgram.prependFragmentCode = "#version 150\n#define varying in\n#define texture2D texture\n" +
             "#define textureCube texture\n#define gl_FragColor fragColor\nout vec4 fragColor;\n"
-        parked = loadScene()
-        flow = GameFlow(parked.planes, ScoreTable(scoresFile), PatternScoreTable(patternScoresFile))
+        parked = loadScene().also { it.standOnTables(PhysicsAssets(project.toFile())::modelPoints) }
+        flow = GameFlow(parked.planes, ScoreTable(scoresFile), PatternScoreTable(patternScoresFile), ScaleScoreTable(scaleScoresFile))
         flights = FlightRunner(flow, ::loadScene, { PhysicsAssets(project.toFile()) }, log, natives)
         ui = createGameUi(project, PROJECT_FILE, flow, log) { Gdx.app.exit() }
         cameras = Cameras(Gdx.graphics.width.toFloat(), Gdx.graphics.height.toFloat())
@@ -157,7 +159,7 @@ class ControlLineGame(
             seconds = seconds,
         )
         (optIn as? FailableFieldView)?.failure?.let(::fallBackToRaster)
-        ui.update(s, flights.judge, seconds)
+        ui.update(s, flights.judge, seconds, flights.scaleJudge)
         ui.draw(seconds)
     }
 

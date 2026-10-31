@@ -8,6 +8,7 @@ import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.components.PilotComponent
+import net.nevinsky.abyssus.app.game.controlline.components.VitrineTableComponent
 import net.nevinsky.abyssus.app.game.controlline.flow.PlaneChoice
 import net.nevinsky.abyssus.app.game.controlline.flow.planeChoices
 import net.nevinsky.abyssus.lib.core.assets.MetaType
@@ -18,6 +19,9 @@ import net.nevinsky.abyssus.lib.core.ecs.isActive
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.assetName
+import net.nevinsky.abyssus.app.game.controlline.vitrine.VitrinePlane
+import net.nevinsky.abyssus.app.game.controlline.vitrine.VitrineTable
+import net.nevinsky.abyssus.app.game.controlline.vitrine.vitrinePoses
 import net.nevinsky.abyssus.lib.core.scene.SceneContext
 
 /** The field scene's file in the project. */
@@ -35,6 +39,31 @@ class FieldScene(val loaded: SceneContext) {
     val pilot: Entity? = entities.values.firstOrNull { it.getComponent(PilotComponent::class.java) != null }
 
     fun entity(id: Int): Entity? = entities[id]
+
+    /**
+     * Stands the planes on the display tables of plane select (design decision 4): plane `i` of [planes], in the order of
+     * their names, on the `i`th entity with a `VitrineTableComponent` in id order, by [vitrinePoses]. [modelPoints] gives
+     * a model asset's vertices in model space (null when unreadable). Call it on the scene plane select shows only: a
+     * flight loads its own scene. A plane's scale is taken as 1.
+     */
+    fun standOnTables(modelPoints: (String) -> List<Vector3>?) {
+        val tables = entities.values.mapNotNull { e ->
+            val table = e.getComponent(VitrineTableComponent::class.java) ?: return@mapNotNull null
+            val at = position(e)
+            VitrineTable(at.localPosition.cpy(), at.localRotation.getYawRad(), table.topHeight)
+        }
+        val standing = planes.map { choice ->
+            val entity = entities.getValue(choice.entityId)
+            val at = position(entity)
+            VitrinePlane(at.localPosition.cpy(), at.localRotation.cpy(), assetName(entity, MetaType.MODEL)?.let(modelPoints))
+        }
+        vitrinePoses(standing, tables).forEachIndexed { i, pose ->
+            if (pose == null) return@forEachIndexed
+            val at = position(entities.getValue(planes[i].entityId))
+            at.localPosition.set(pose.position)
+            at.localRotation.set(pose.rotation)
+        }
+    }
 
     /** Entities drawn with a model: (entity, model asset folder). */
     val models: List<Pair<Entity, String>> =

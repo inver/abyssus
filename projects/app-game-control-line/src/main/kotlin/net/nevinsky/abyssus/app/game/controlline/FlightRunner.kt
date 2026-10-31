@@ -19,6 +19,7 @@ import net.nevinsky.abyssus.app.game.controlline.input.HandleInput
 import net.nevinsky.abyssus.app.game.controlline.pattern.GuidePlanner
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
 import net.nevinsky.abyssus.app.game.controlline.render.FieldScene
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleJudge
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
 import net.nevinsky.abyssus.lib.physics.RigidBodyComponent
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
@@ -44,6 +45,10 @@ class FlightRunner(
     var session: FlightSession? = null
         private set
     var judge: PatternJudge? = null
+        private set
+
+    /** The realism judge of a Scale flight, or null at the other modes. */
+    var scaleJudge: ScaleJudge? = null
         private set
 
     /** The Noob guide of the flight, or null at the other levels. */
@@ -79,7 +84,7 @@ class FlightRunner(
             is Screen.Flying -> {
                 s.advance(seconds)
                 judge?.let { guide?.update(it) }
-                flying?.let { f -> reportOf(s, f.mode, judge, f.plane.name)?.let(flow::flightEnded) }
+                flying?.let { f -> reportOf(s, f.mode, judge, f.plane.name, scaleJudge)?.let(flow::flightEnded) }
             }
             // the plane comes to rest; the flight itself is over
             is Screen.GameOver, is Screen.NameEntry -> s.advance(seconds)
@@ -113,6 +118,8 @@ class FlightRunner(
         val pattern = screen.mode as? Mode.Pattern
         val judge = pattern?.let { PatternJudge(screen.plane.lineLength) }
         this.judge = judge
+        val scaleJudge = if (screen.mode == Mode.Scale) ScaleJudge() else null
+        this.scaleJudge = scaleJudge
         guide = pattern?.takeIf { it.level.guided }?.let { GuidePlanner(screen.plane.lineLength) }
         input.reset()
         val control: FlightControlSource = when (screen.control) {
@@ -124,7 +131,7 @@ class FlightRunner(
                 f2bBot(settings, mass, checkNotNull(judge) { "Watch AI flies an F2B pattern" }::guideInput).also { bot = it }
             }
         }
-        session = FlightSession(loaded.engine, pilot, plane, assets(), log, natives, judge, control)
+        session = FlightSession(loaded.engine, pilot, plane, assets(), log, natives, judge ?: scaleJudge, control)
         scene = loaded
         flying = screen
     }
@@ -133,6 +140,7 @@ class FlightRunner(
         session?.close()
         session = null
         judge = null
+        scaleJudge = null
         guide = null
         bot = null
         scene = null

@@ -3,8 +3,8 @@
 A control-line flight game on Abyssus's `lib-core` and `lib-physics`. The plane flies on two lines from the handle the
 pilot holds, and the handle moves only the elevator, through taut lines. Its field, pilot and planes, and every number
 of a plane, are scene data in the bundled native project `project/ControlLine`, authored in Abyssus. Required
-behaviour: `control-line-flight`, `control-line-scoring` and `control-line-game-flow` (OpenSpec change
-`add-control-line-game`).
+behaviour: `control-line-flight`, `control-line-scoring`, `control-line-game-flow` and, for Scale,
+`control-line-scale` (OpenSpec changes `add-control-line-game` and `add-control-line-scale-mode`).
 
 ## Run
 
@@ -13,10 +13,11 @@ behaviour: `control-line-flight`, `control-line-scoring` and `control-line-game-
 ```
 
 The `run` task points the game at the bundled project (system property `controlLine.project`). The main menu offers
-**Free flight** (the arcade game below) and **F2B pattern** (practice for the real schedule, see [F2B pattern](#f2b-pattern)).
-Free flight scores are kept in `<user-home>/.abyssus-control-line/scores.json` and F2B scores in
-`<user-home>/.abyssus-control-line/f2b-scores.json`; a file that cannot be read is renamed to `scores.json.bad` or
-`f2b-scores.json.bad`.
+**Free flight** (the arcade game below), **F2B pattern** (practice for the real schedule, see [F2B pattern](#f2b-pattern)) and
+**Scale** (fly a replica of a real aircraft, see [Scale](#scale)).
+Free flight scores are kept in `<user-home>/.abyssus-control-line/scores.json`, F2B scores in
+`<user-home>/.abyssus-control-line/f2b-scores.json` and Scale scores in `<user-home>/.abyssus-control-line/scale-scores.json`; a file
+that cannot be read is renamed to `scores.json.bad`, `f2b-scores.json.bad` or `scale-scores.json.bad`.
 
 ## Packages
 
@@ -135,13 +136,50 @@ the game falls back to the raster field and states the reason the same way.
 | Where | Keys and mouse |
 |---|---|
 | Menus | Up / Down and Enter, or the mouse; Escape goes back |
-| Plane select | Left / Right change the plane, Enter flies it, Escape returns to the screen before it (the main menu, or the assist level for an F2B pattern). For an F2B pattern, A or the **Watch AI** button (Tab to it, then Enter) has the AI fly the shown plane, see [Watch AI](#watch-ai) |
-| Scores | Left / Right change the tab (Free flight, Pro, Mid, Noob), Escape or Back returns. On the F2B tabs, Up / Down select a flight and Enter or a click opens its debrief |
+| Plane select (the vitrine) | Left / Right change the plane, Enter flies it, Escape returns to the screen before it (the main menu, or the assist level for an F2B pattern). For an F2B pattern, A or the **Watch AI** button (Tab to it, then Enter) has the AI fly the shown plane, see [Watch AI](#watch-ai) |
+| Scores | Left / Right change the tab (Free flight, Pro, Mid, Noob, Scale), Escape or Back returns. On the F2B tabs, Up / Down select a flight and Enter or a click opens its debrief |
 | Debrief | Up / Down: manoeuvre; Space: pause or resume; R: restart; 1 / 2 / 3: speed ½× / 1× / 2×; V: pilot view or outside view; Escape returns |
 | Flying | W or Up: handle up; S or Down: handle down (full tilt in 0.15 s, back to neutral on release). Moving the mouse up or down sets the tilt by its distance from the window's centre; whichever was used last wins. Escape pauses. In a Watch AI demonstration the keys and the mouse do not move the handle; Escape still pauses |
 
 In Free flight, laps score 10. Inside and outside loops score 50, an inverted lap 80, a wingover 100 and a figure 8 150, times the
 combo multiplier (up to x5 for maneuvers within 10 s of each other). A landing with the engine stopped adds 200.
+
+## Scale
+
+Scale is flying a replica of a real aircraft as the real thing flies: steady, level and then down. It uses Free flight's
+physics, lines and controls (the keys above) with the planes of class `SCALE`; the bundled field has one, `Mig-3` (a 1:10
+replica of the Mikoyan-Gurevich MiG-3, 1940). A Scale flight scores no laps, manoeuvres or combo. It is marked out of 1000 on
+the laps it flies in the air (spec `control-line-scale`):
+
+| Mark | Points | Full marks | Falls to 0 at |
+|---|---|---|---|
+| Steady speed | 400 | every lap time within 5 % of the mean | 30 % |
+| Level laps | 400 | mean absolute elevation of at most 15° | 45° |
+| Clean landing | 200 | the flight ends as a landing (not a crash or slack lines) | |
+
+Speed and level need at least two completed laps; a lap still being flown when the flight ends does not count. The flying HUD
+shows the laps flown and the realism score so far. The best 10 flights are kept in `scale-scores.json` and shown on the
+**Scale** tab of Scores (name, plane, the three marks, score, time, date). Watch AI and the debrief belong to the F2B pattern and
+are not offered. The thresholds are constants in `scale/ScaleMarks.kt`.
+
+### The vitrine
+
+Plane select is a vitrine: each plane stands on a table of its own and the camera glides from table to table. Its card shows the
+plane's class, lines, mass and fuel, and for a replica its prototype, first flight, real span and scale. The tables are the entities
+with a `VitrineTableComponent` (`topHeight`: the table-top above the table's origin), in entity id order: plane `i`, in the order
+of their names, stands on table `i`, facing the way the table faces (its +Z) with the tilt it was authored with, and its lowest
+point exactly on the table-top. Planes beyond the last table stand on the ground in line with the tables; with no tables the
+planes stay where the scene puts them. The display row is outside the planes' flight circle, east of the fence. Only the plane
+select scene is rearranged; a flight loads its own copy.
+
+### A replica in Abyssus
+
+Add a model entity with a `RigidBodyComponent`, a convex hull `ColliderComponent` and a `PlaneComponent` of class `SCALE`
+(lines, leadouts, thrust, wing area...: tuned by hand as for any plane), and a `ScaleComponent`
+(`prototype`, `firstFlight`, `wingspan` in metres, `scale` as a denominator). The model must be in the plane frame: nose +Z, up +Y,
+the wings along X, resting on y = 0 (the bundled `model_mig3` was turned 90° about Y at its root node after import; see its
+`source.json`). A `SCALE` plane without a `ScaleComponent` is flown too, with its prototype shown as unknown. To add a table,
+duplicate a `Display table` entity: it takes the next free slot by entity id.
 
 ## F2B pattern
 
@@ -384,7 +422,7 @@ show nothing about what a plane can fly.
 ## The project in Abyssus
 
 Open a **copy** of `project/ControlLine` in Abyssus (`./gradlew :plugin-abyssus:runIde`), never the committed folder:
-the tests assert on its scene. `PlaneComponent` and `PilotComponent` are registered game components and currently
+the tests assert on its scene. `PlaneComponent`, `PilotComponent`, `ScaleComponent` and `VitrineTableComponent` are registered game components and currently
 remain read-only JSON in the editor. The committed `abyssus/components.schema.json` is retained data; it does not
 enable Properties editing. A plane duplicated in the field scene appears on plane select at the next game start.
 
@@ -425,9 +463,11 @@ Only the trainer's model has the clips; the other planes stay whole. Slack lines
 
 | Package (`net.nevinsky.abyssus.app.game.controlline.`) | Holds | GL |
 |---|---|---|
-| `components` | `PilotComponent`, `PlaneComponent`, `GameComponents`, `ControlLineComponents` (with the physics components) | no |
+| `components` | `PilotComponent`, `PlaneComponent`, `ScaleComponent`, `VitrineTableComponent`, `GameComponents`, `ControlLineComponents` (with the physics components) | no |
 | `flight` | `Aero`, `LineRig`, `Ground`, `Flight` / `FlightSystem`, `FlightOutcome`, `FlightSession`, `FlightJudge`, and who holds the handle: `FlightControlSource`, `FlightObservation`, `HumanControl` | no |
 | `track` | `SphereTrack`, `Maneuvers`, `Laps` | no |
+| `scale` | Scale: `ScaleMarks` (the realism arithmetic), `ScaleJudge` (a `FlightJudge`), `ScaleScoreTable` | no |
+| `vitrine` | `vitrinePoses` (where each plane stands on plane select) | no |
 | `score` | `ScoreKeeper`, `FlightScoring`, `ScoreTable` | no |
 | `pattern` | the F2B pattern: `Schedule` (`Figure`), `HemisphereGeometry`, `PathTokens`, `TrackBuilder`, `IdealTracks`, `IdealSampler`, `Matchers`, `Grader` / `MarkWeights`, `PatternJudge`, `ScoreSheet`, `PatternScoreTable`, and the debrief's `FlightRecording`, `RecordingStore`, `DebriefModel`, and the Noob guide `GuidePlanner` | no |
 | `flow` | `GameFlow` (the screen state machine, with the mode, the assist level and who flies, `Control`), `FlightReport` | no |
@@ -579,13 +619,15 @@ rudder and engine offset 2°):
 | `Racer` | SPEED | 0.5 kg | 21 m | 6 N | 60 s | 0.09 m² | lift slope 4.2, zero-lift drag 0.02, elevator effect 0.3, pitch damping 10 |
 | `Stunter` | STUNT | 1.1 kg | 18 m | 5.2 N | 360 s | 0.325 m² | lift slope 8, elevator effect 3 |
 | `Trainer` | TRAINER | 0.8 kg | 15 m | 5.5 N | 120 s | 0.2 m² | zero-lift drag 0.06 |
+| `Mig-3` | SCALE | 0.85 kg | 16 m | 5.2 N | 240 s | 0.22 m² | lift slope 5, zero-lift drag 0.05, elevator effect 1, leadouts at x 0.485 |
 
-All three have no linear damping and friction 0.05 (they roll on their wheels). With the handle neutral they settle at:
+All four have no linear damping and friction 0.05 (they roll on their wheels). With the handle neutral they settle at:
 
 | Plane | Above 1 m after | Speed | Lap | Tension | Elevation |
 |---|---|---|---|---|---|
 | `Racer` | 2.8 s | 39 m/s | 3.4 s | 34 N | 9° |
 | `Stunter` | 4.8 s | 24 m/s | 4.9 s | 29 N | 8° |
 | `Trainer` | 4.2 s | 24 m/s | 4.0 s | 28 N | 3° |
+| `Mig-3` | 5.0 s | 23 m/s | 4.3 s | 30 N | 3° |
 
 Full up loops the `Stunter` in about 0.5 s, over the top at 45° of elevation or more, and its corners at full tilt are about 2.7 m in radius (`PatternFlyabilityTest`). Its fuel and its lift slope and elevator effect were raised for the F2B pattern (the old values turned no tighter than about 9 m).

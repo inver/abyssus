@@ -11,6 +11,8 @@ import net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS
 val GAME_COMPONENTS: Map<String, Class<out Component>> = mapOf(
     "PilotComponent" to PilotComponent::class.java,
     "PlaneComponent" to PlaneComponent::class.java,
+    "ScaleComponent" to ScaleComponent::class.java,
+    "VitrineTableComponent" to VitrineTableComponent::class.java,
 )
 
 /** Everything the field scene uses: the physics components and the game's own. Registered by the game. */

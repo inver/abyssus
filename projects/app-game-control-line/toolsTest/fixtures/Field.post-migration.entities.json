@@ -1,0 +1,188 @@
+{
+  "718": {
+    "components": {
+      "NameComponent": {
+        "name": "Mig-3"
+      },
+      "TypeComponent": {
+        "type": "OBJECT"
+      },
+      "PositionComponent": {
+        "localPosition": {
+          "x": 3.9667,
+          "y": -0.043,
+          "z": 5.0199
+        },
+        "localRotation": {
+          "x": -0.1222,
+          "y": -0.7015,
+          "z": -0.0298,
+          "w": 0.7015
+        }
+      },
+      "RenderComponent": {
+        "shaderKey": "defaultShader",
+        "type": "MODEL",
+        "assetName": "model_mig3"
+      },
+      "RigidBodyComponent": {
+        "mass": 0.85,
+        "friction": 0.05,
+        "linearDamping": 0
+      },
+      "ColliderComponent": {
+        "shape": "CONVEX_HULL"
+      },
+      "PlaneComponent": {
+        "planeClass": "SCALE",
+        "lineLength": 16,
+        "leadoutUp": {
+          "x": 0.485,
+          "y": 0,
+          "z": 0.02
+        },
+        "leadoutDown": {
+          "x": 0.485,
+          "y": 0,
+          "z": -0.04
+        },
+        "thrust": 5.2,
+        "fuelTime": 240,
+        "wingArea": 0.22,
+        "liftSlope": 5,
+        "zeroLiftDrag": 0.05,
+        "elevatorEffect": 1
+      },
+      "ScaleComponent": {
+        "prototype": "MiG-3",
+        "firstFlight": 1940,
+        "wingspan": 10.3,
+        "scale": 10
+      }
+    }
+  },
+  "719": {
+    "components": {
+      "NameComponent": {
+        "name": "Display table 1"
+      },
+      "TypeComponent": {
+        "type": "OBJECT"
+      },
+      "PositionComponent": {
+        "localPosition": {
+          "x": 29.2,
+          "y": 0.0,
+          "z": -6.0
+        },
+        "localRotation": {
+          "x": 0.0,
+          "y": 0.7071068,
+          "z": 0.0,
+          "w": 0.7071068
+        }
+      },
+      "RenderComponent": {
+        "shaderKey": "defaultShader",
+        "type": "MODEL",
+        "assetName": "model_airfield_table_work"
+      },
+      "VitrineTableComponent": {
+        "topHeight": 0.958
+      }
+    }
+  },
+  "720": {
+    "components": {
+      "NameComponent": {
+        "name": "Display table 2"
+      },
+      "TypeComponent": {
+        "type": "OBJECT"
+      },
+      "PositionComponent": {
+        "localPosition": {
+          "x": 29.2,
+          "y": 0.0,
+          "z": -3.0
+        },
+        "localRotation": {
+          "x": 0.0,
+          "y": 0.7071068,
+          "z": 0.0,
+          "w": 0.7071068
+        }
+      },
+      "RenderComponent": {
+        "shaderKey": "defaultShader",
+        "type": "MODEL",
+        "assetName": "model_airfield_table_work"
+      },
+      "VitrineTableComponent": {
+        "topHeight": 0.958
+      }
+    }
+  },
+  "721": {
+    "components": {
+      "NameComponent": {
+        "name": "Display table 3"
+      },
+      "TypeComponent": {
+        "type": "OBJECT"
+      },
+      "PositionComponent": {
+        "localPosition": {
+          "x": 29.2,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "localRotation": {
+          "x": 0.0,
+          "y": 0.7071068,
+          "z": 0.0,
+          "w": 0.7071068
+        }
+      },
+      "RenderComponent": {
+        "shaderKey": "defaultShader",
+        "type": "MODEL",
+        "assetName": "model_airfield_table_work"
+      },
+      "VitrineTableComponent": {
+        "topHeight": 0.958
+      }
+    }
+  },
+  "722": {
+    "components": {
+      "NameComponent": {
+        "name": "Display table 4"
+      },
+      "TypeComponent": {
+        "type": "OBJECT"
+      },
+      "PositionComponent": {
+        "localPosition": {
+          "x": 29.2,
+          "y": 0.0,
+          "z": 3.0
+        },
+        "localRotation": {
+          "x": 0.0,
+          "y": 0.7071068,
+          "z": 0.0,
+          "w": 0.7071068
+        }
+      },
+      "RenderComponent": {
+        "shaderKey": "defaultShader",
+        "type": "MODEL",
+        "assetName": "model_airfield_table_work"
+      },
+      "VitrineTableComponent": {
+        "topHeight": 0.958
+      }
+    }
+  }
+}

@@ -17,6 +17,7 @@ import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreEntry
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
 import net.nevinsky.abyssus.app.game.controlline.pattern.SCHEDULE
 import net.nevinsky.abyssus.app.game.controlline.render.FieldScene
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.gdx.testing.failOnWarnings
@@ -61,7 +62,7 @@ class AiFlightLifecycleTest {
     private fun game(): Game {
         val planes = loadField().engine.let { engine -> planeChoices(engine.ids.ids.associateWith { engine.ids[it]!! }) }
         val dir = temp.root.toPath()
-        val flow = GameFlow(planes, ScoreTable(dir.resolve("scores.json")), PatternScoreTable(dir.resolve("f2b-scores.json"))) {
+        val flow = GameFlow(planes, ScoreTable(dir.resolve("scores.json")), PatternScoreTable(dir.resolve("f2b-scores.json")), ScaleScoreTable(dir.resolve("scale-scores.json"))) {
             Instant.parse("2026-10-20T12:00:00Z")
         }
         val runner = FlightRunner(flow, { FieldScene(loadField()) }, { PhysicsAssets(bundledProject().toFile()) }, failOnWarnings(), JoltNatives())

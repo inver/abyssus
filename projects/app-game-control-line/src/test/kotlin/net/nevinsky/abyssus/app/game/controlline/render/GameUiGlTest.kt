@@ -23,6 +23,7 @@ import net.nevinsky.abyssus.app.game.controlline.pattern.AssistLevel
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
 import net.nevinsky.abyssus.app.game.controlline.pattern.SyntheticSchedule
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
 import net.nevinsky.abyssus.app.game.controlline.screens.GameUiHostDriver
 import net.nevinsky.abyssus.app.game.controlline.screens.createGameUi
@@ -51,7 +52,7 @@ class GameUiGlTest {
         Gdx.files = Lwjgl3Files()
         val scene = loadField()
         val planes = planeChoices(scene.engine.ids.ids.associateWith { scene.engine.ids[it]!! })
-        val flow = GameFlow(planes, ScoreTable(temp.root.toPath().resolve("scores.json")), PatternScoreTable(temp.root.toPath().resolve("f2b-scores.json")))
+        val flow = GameFlow(planes, ScoreTable(temp.root.toPath().resolve("scores.json")), PatternScoreTable(temp.root.toPath().resolve("f2b-scores.json")), ScaleScoreTable(temp.root.toPath().resolve("scale-scores.json")))
         val ui = createGameUi(bundledProject(), "ControlLine.abss", flow, NOPLogger.NOP_LOGGER) {}
         val driver = GameUiHostDriver(ui)
         try {

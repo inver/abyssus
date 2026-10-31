@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.app.game.controlline.tools
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import java.io.File
 import java.nio.file.Files
@@ -37,9 +38,13 @@ fun checksums(project: File): Map<String, String> = project.walkTopDown().filter
 /** Historic source recorded by the immutable manifest; later scene edits are replayed separately. */
 fun originalScene(): File = File(committedProject().parentFile.parentFile, "toolsTest/fixtures/Field.original.scene")
 
+/** The entities added after the migration (ids 718 and up): the Mig-3 and the display tables of `add-control-line-scale-mode`. */
+fun postMigrationEntities(): File = File(committedProject().parentFile.parentFile, "toolsTest/fixtures/Field.post-migration.entities.json")
+
 /**
  * Replays the edits authored after migration when reproducing the current committed project: the ray settings
- * (d49555f4) and the Stunter's thrust (add-control-line-wire-physics, which offsets the wire's inertia).
+ * (d49555f4), the Stunter's thrust (add-control-line-wire-physics, which offsets the wire's inertia) and the entities
+ * of [postMigrationEntities] (add-control-line-scale-mode).
  */
 fun applyPostMigrationSceneEdits(project: File) {
     val scene = File(project, "scenes/Field.scene")
@@ -52,6 +57,8 @@ fun applyPostMigrationSceneEdits(project: File) {
         val stunter = root.path("ecs").path("entities").path("4").path("components")
         check(stunter.path("NameComponent").path("name").asText() == "Stunter") { "entity 4 is no longer the Stunter" }
         (stunter.path("PlaneComponent") as ObjectNode).put("thrust", 5.2)
+        val entities = root.path("ecs").path("entities") as ObjectNode
+        SceneJson().parse(postMigrationEntities().readText()).fields().forEach { (id, entity) -> entities.set<ObjectNode>(id, entity) }
         true
     }
     check(outcome is TextEditOutcome.Edited) { "could not replay post-migration ray settings: $outcome" }

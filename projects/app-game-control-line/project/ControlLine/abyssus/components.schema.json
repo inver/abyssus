@@ -215,7 +215,7 @@
           "name": "planeClass",
           "label": "Class",
           "type": "choice",
-          "choices": ["SPEED", "STUNT", "TRAINER"],
+          "choices": ["SPEED", "STUNT", "TRAINER", "SCALE"],
           "default": "TRAINER"
         },
         {
@@ -332,6 +332,54 @@
           "group": "Trim",
           "min": -15,
           "max": 15
+        }
+      ]
+    },
+    {
+      "name": "ScaleComponent",
+      "class": "net.nevinsky.abyssus.app.game.controlline.components.ScaleComponent",
+      "label": "Scale replica",
+      "fields": [
+        {
+          "name": "prototype",
+          "label": "Prototype",
+          "type": "text",
+          "default": ""
+        },
+        {
+          "name": "firstFlight",
+          "label": "First flight (year)",
+          "type": "decimal",
+          "default": 0,
+          "min": 0
+        },
+        {
+          "name": "wingspan",
+          "label": "Real wingspan (m)",
+          "type": "decimal",
+          "default": 0,
+          "min": 0
+        },
+        {
+          "name": "scale",
+          "label": "Model scale (1:n)",
+          "type": "decimal",
+          "default": 1,
+          "min": 1
+        }
+      ]
+    },
+    {
+      "name": "VitrineTableComponent",
+      "class": "net.nevinsky.abyssus.app.game.controlline.components.VitrineTableComponent",
+      "label": "Display table",
+      "fields": [
+        {
+          "name": "topHeight",
+          "label": "Table-top height (m)",
+          "type": "decimal",
+          "default": 0.75,
+          "min": 0
         }
       ]
     }

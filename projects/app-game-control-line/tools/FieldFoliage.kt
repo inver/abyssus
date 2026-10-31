@@ -109,6 +109,9 @@ const val FIELD_FOLIAGE_TIME = 1791244800000L
 
 private const val MANIFEST_FORMAT = "abyssus-field-foliage-manifest"
 private const val GRASS_MODEL = "model_airfield_grass"
+
+/** The first id of the entities added after the migration; the original scene ends at 717. */
+private const val FIRST_POST_MIGRATION_ENTITY = 718
 private const val GRASS_LAYER = 6
 
 /** Nothing of a tree or bush crown may reach inside this radius around the pilot (the Racer line plus a margin). */
@@ -286,6 +289,8 @@ class FieldFoliageTool {
         val text = StringBuilder()
         for ((id, entity) in entities.entries.sortedBy { it.key.toInt() }) {
             if (id.toInt() in vegetation) continue
+            // entities added after the migration (the Mig-3 and the display tables, add-control-line-scale-mode) are not part of the field
+            if (id.toInt() >= FIRST_POST_MIGRATION_ENTITY) continue
             val copy = entity.deepCopy<JsonNode>()
             (copy["components"] as? ObjectNode)?.remove("FoliageComponent")
             // balance tuned after the migration (the wire's inertia, add-control-line-wire-physics): not part of the field

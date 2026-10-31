@@ -16,6 +16,8 @@ import net.nevinsky.abyssus.app.game.controlline.pattern.AssistLevel
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
 import net.nevinsky.abyssus.app.game.controlline.pattern.SyntheticSchedule
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleMarks
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
 import net.nevinsky.abyssus.lib.core.scene.SceneContext
 import net.nevinsky.abyssus.lib.gdx.testing.failOnWarnings
@@ -50,7 +52,7 @@ class ScreenWalk(private val scene: SceneContext, private val dir: Path) {
     /** A fixed clock, so saved flights always carry the same date. */
     private val clock = { java.time.Instant.parse("2026-01-02T03:04:05Z") }
 
-    fun flow() = GameFlow(planes, ScoreTable(dir.resolve("scores.json")), PatternScoreTable(dir.resolve("f2b-scores.json")), clock)
+    fun flow() = GameFlow(planes, ScoreTable(dir.resolve("scores.json")), PatternScoreTable(dir.resolve("f2b-scores.json")), ScaleScoreTable(dir.resolve("scale-scores.json")), clock)
 
     /** Runs the walk on a driver built over a fresh flow; [driver] gets the flow it must follow. */
     fun run(driver: (GameFlow) -> ScreenDriver): Map<String, List<String>> {
@@ -100,6 +102,7 @@ class ScreenWalk(private val scene: SceneContext, private val dir: Path) {
         ui.keyDown(Input.Keys.ESCAPE); show("game-over-after-debrief")
         flow.scores(); show("scores-mid-saved")
         flow.nextTab(); show("scores-noob-empty")
+        flow.nextTab(); show("scores-scale-empty")
         flow.nextTab(); show("scores-free-empty")
         flow.nextTab(); show("scores-pro-empty")
         flow.back(); flow.mainMenu(); show("main-menu-again")
@@ -111,6 +114,16 @@ class ScreenWalk(private val scene: SceneContext, private val dir: Path) {
         show("name-entry-free")
         flow.nameEntered("Bob"); show("game-over-free")
         flow.scores(); show("scores-free-saved")
+        flow.back(); flow.mainMenu()
+
+        // Scale: the replica's card, its HUD, results and the Scale tab of the scores
+        flow.scale(); show("plane-select-scale")
+        flow.choosePlane()
+        flying("hud-scale", null) { _, _ -> }
+        flow.flightEnded(FlightReport("Mig-3", FlightEnd.LANDED, 70f, FlightResult.Scale(ScaleMarks(400, 380, 200), 6)))
+        show("name-entry-scale")
+        flow.nameEntered("Cy"); show("game-over-scale")
+        flow.scores(); show("scores-scale-saved")
         flow.back(); flow.mainMenu()
 
         for ((level, name) in listOf(AssistLevel.PRO to "hud-pro", AssistLevel.NOOB to "hud-noob")) {
@@ -138,7 +151,7 @@ class ScreenWalk(private val scene: SceneContext, private val dir: Path) {
         flying("hud-pro-ai", AssistLevel.PRO) { _, _ -> }
         flow.pause(); flow.mainMenu()
         // a field without planes
-        val empty = GameFlow(emptyList(), ScoreTable(dir.resolve("none.json")), PatternScoreTable(dir.resolve("none-f2b.json")), clock)
+        val empty = GameFlow(emptyList(), ScoreTable(dir.resolve("none.json")), PatternScoreTable(dir.resolve("none-f2b.json")), ScaleScoreTable(dir.resolve("none-scale.json")), clock)
         driver(empty).let { other -> other.update(null, null, 1f / 60f); steps["main-menu-no-planes"] = other.dump() }
         return steps
     }

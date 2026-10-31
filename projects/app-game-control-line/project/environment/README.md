@@ -73,7 +73,7 @@ foliage assets, so Abyssus draws and bakes them as layers and the game draws the
 model, world position, yaw and scale, and the terrain it belongs to (inside the site square, `-150..150` on both axes,
 the site terrain; otherwise the outer ground), the species totals (52 broadleaf, 40 young, 33 acacia, 42 tall bushes,
 48 low bushes), the pilot's position, the SHA-256 of the original scene, of the vegetation and of the rest of the scene
-(everything but the vegetation and the foliage components, and without the planes' `thrust`: the Stunter's was retuned after the migration, see `toolsTest/FieldFoliageTestSupport.kt`), the hashes of the inputs (both terrains' `meta.json` and
+(everything but the vegetation and the foliage components, without the planes' `thrust` (the Stunter's was retuned after the migration) and without the entities added after it, ids 718 and up: the Mig-3 and the display tables of `add-control-line-scale-mode`; see `toolsTest/FieldFoliageTestSupport.kt`, which replays them from `toolsTest/fixtures/Field.post-migration.entities.json`), the hashes of the inputs (both terrains' `meta.json` and
 `terrain.data`, the site's splat map and the species' model files), the generator id (`field-foliage-v1`), the seed and the
 fixed `lastModified` of every generated asset. Asset UUIDs are derived from their folder names. The manifest is immutable:
 the tool records it only from an original scene and refuses to replace a different one. Nothing at runtime reads it.

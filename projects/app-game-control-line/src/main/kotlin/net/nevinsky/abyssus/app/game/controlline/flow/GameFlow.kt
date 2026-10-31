@@ -7,12 +7,15 @@ package net.nevinsky.abyssus.app.game.controlline.flow
 import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneClass
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
+import net.nevinsky.abyssus.app.game.controlline.components.ScaleComponent
 import net.nevinsky.abyssus.app.game.controlline.pattern.AssistLevel
 import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefModel
 import net.nevinsky.abyssus.app.game.controlline.pattern.debriefOf
 import net.nevinsky.abyssus.app.game.controlline.pattern.sheetOnlyDebrief
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreEntry
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreEntry
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreEntry
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
 import net.nevinsky.abyssus.lib.physics.RigidBodyComponent
@@ -28,24 +31,32 @@ const val NO_PLANE_MESSAGE = "No plane was found in the field scene"
 /** What the main menu says when the field scene has planes but none of class `STUNT`. */
 const val NO_STUNT_MESSAGE = "The F2B pattern needs a stunt plane"
 
+/** What the main menu says when the field scene has planes but none of class `SCALE`. */
+const val NO_SCALE_MESSAGE = "Scale needs a scale replica"
+
 /** The assist levels the game offers. */
 val OFFERED_LEVELS = listOf(AssistLevel.PRO, AssistLevel.MID, AssistLevel.NOOB)
 
-/** The tabs of the score table screen: Free flight, then one per offered assist level. */
+/** The tabs of the score table screen: Free flight, then one per offered assist level, then Scale. */
 enum class ScoreTab(val label: String, val level: AssistLevel?) {
     FREE("Free flight", null),
     PRO("Pro", AssistLevel.PRO),
     MID("Mid", AssistLevel.MID),
     NOOB("Noob", AssistLevel.NOOB),
+    SCALE("Scale", null),
 }
 
 /** The score table tab of the flights of [mode]. */
 fun tabOf(mode: Mode): ScoreTab = when (mode) {
     Mode.Free -> ScoreTab.FREE
     is Mode.Pattern -> ScoreTab.entries.first { it.level == mode.level }
+    Mode.Scale -> ScoreTab.SCALE
 }
 
-/** A plane of the field scene as plane select shows it; [entityId] is its scene id. */
+/** What plane select's card says of a replica's prototype; a field the scene left unset is blank or 0. */
+data class ScaleFacts(val prototype: String, val firstFlight: Int, val wingspan: Float, val scale: Int)
+
+/** A plane of the field scene as plane select shows it; [entityId] is its scene id, [scale] its replica facts. */
 data class PlaneChoice(
     val entityId: Int,
     val name: String,
@@ -53,6 +64,7 @@ data class PlaneChoice(
     val lineLength: Float,
     val mass: Float,
     val fuelTime: Float,
+    val scale: ScaleFacts? = null,
 )
 
 /** Every entity of a scene with a [PlaneComponent], in the order of their names. */
@@ -61,6 +73,7 @@ fun planeChoices(entities: Map<Int, Entity>): List<PlaneChoice> = entities.mapNo
     PlaneChoice(
         id, entity.getComponent(NameComponent::class.java)?.name ?: "Plane $id", plane.planeClass, plane.lineLength,
         entity.getComponent(RigidBodyComponent::class.java)?.mass ?: 0f, plane.fuelTime,
+        entity.getComponent(ScaleComponent::class.java)?.let { ScaleFacts(it.prototype, it.firstFlight, it.wingspan, it.scale) },
     )
 }.sortedWith(compareBy<PlaneChoice> { it.name }.thenBy { it.entityId })
 
@@ -109,7 +122,7 @@ sealed interface Screen {
  * show [screen] and send events here; nothing here touches GL or input devices.
  */
 class GameFlow(
-    val planes: List<PlaneChoice>, val table: ScoreTable, val patternTable: PatternScoreTable,
+    val planes: List<PlaneChoice>, val table: ScoreTable, val patternTable: PatternScoreTable, val scaleTable: ScaleScoreTable,
     private val now: () -> Instant = Instant::now,
 ) {
     var screen: Screen = Screen.MainMenu
@@ -129,17 +142,22 @@ class GameFlow(
     /** Whether the F2B pattern can be chosen: there is a plane of class `STUNT`. */
     val patternEnabled: Boolean get() = planes.any { it.planeClass == PlaneClass.STUNT }
 
-    /** The main menu's message: why Free flight or the F2B pattern is disabled, or null. */
+    /** Whether Scale can be chosen: there is a plane of class `SCALE`. */
+    val scaleEnabled: Boolean get() = planes.any { it.planeClass == PlaneClass.SCALE }
+
+    /** The main menu's message: why Free flight, the F2B pattern or Scale is disabled (the first reason), or null. */
     val message: String? get() = when {
         !freeEnabled -> NO_PLANE_MESSAGE
         !patternEnabled -> NO_STUNT_MESSAGE
+        !scaleEnabled -> NO_SCALE_MESSAGE
         else -> null
     }
 
-    /** The planes plane select offers for [mode]: all of them in Free flight, the stunt planes in an F2B pattern. */
+    /** The planes plane select offers for [mode]: all of them in Free flight, the stunt planes in an F2B pattern, the replicas in Scale. */
     fun choices(mode: Mode): List<PlaneChoice> = when (mode) {
         Mode.Free -> planes
         is Mode.Pattern -> planes.filter { it.planeClass == PlaneClass.STUNT }
+        Mode.Scale -> planes.filter { it.planeClass == PlaneClass.SCALE }
     }
 
     // main menu
@@ -150,6 +168,10 @@ class GameFlow(
 
     fun f2bPattern() {
         if (screen == Screen.MainMenu && patternEnabled) screen = Screen.AssistSelect
+    }
+
+    fun scale() {
+        if (screen == Screen.MainMenu && scaleEnabled) screen = Screen.PlaneSelect(0, Mode.Scale)
     }
 
     fun scores() {
@@ -262,6 +284,7 @@ class GameFlow(
         val enters = when (val r = report.result) {
             is FlightResult.Free -> table.qualifies(r.score)
             is FlightResult.Pattern -> patternTable.qualifies(r.level, r.sheet.tenths / 10.0)
+            is FlightResult.Scale -> scaleTable.qualifies(r.score)
         }
         screen = if (enters) Screen.NameEntry(flying, report, lastName) else Screen.GameOver(flying, report, null)
     }
@@ -279,6 +302,12 @@ class GameFlow(
                 result.level,
                 PatternScoreEntry(clean, r.plane, result.sheet.tenths / 10.0, r.flightTime, now().toString(), result.sheet.marks.map { it.toDouble() }),
                 result.recording,
+            )
+            is FlightResult.Scale -> scaleTable.add(
+                ScaleScoreEntry(
+                    clean, r.plane, s.flying.plane.scale?.prototype.orEmpty(), result.score, result.marks.speed,
+                    result.marks.level, result.marks.landing, result.laps, r.flightTime, now().toString(),
+                ),
             )
         }
         screen = Screen.GameOver(s.flying, r, rank)

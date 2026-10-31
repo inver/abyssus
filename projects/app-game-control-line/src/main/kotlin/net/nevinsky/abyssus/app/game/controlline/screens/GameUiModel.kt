@@ -5,6 +5,7 @@
 package net.nevinsky.abyssus.app.game.controlline.screens
 
 import com.badlogic.gdx.Input
+import net.nevinsky.abyssus.app.game.controlline.components.PlaneClass
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
 import net.nevinsky.abyssus.app.game.controlline.flow.Control
 import net.nevinsky.abyssus.app.game.controlline.flow.FlightReport
@@ -12,6 +13,7 @@ import net.nevinsky.abyssus.app.game.controlline.flow.FlightResult
 import net.nevinsky.abyssus.app.game.controlline.flow.GameFlow
 import net.nevinsky.abyssus.app.game.controlline.flow.Mode
 import net.nevinsky.abyssus.app.game.controlline.flow.NAME_LENGTH
+import net.nevinsky.abyssus.app.game.controlline.flow.PlaneChoice
 import net.nevinsky.abyssus.app.game.controlline.flow.Screen
 import net.nevinsky.abyssus.app.game.controlline.flow.ScoreTab
 import net.nevinsky.abyssus.app.game.controlline.pattern.AssistLevel
@@ -25,6 +27,7 @@ import net.nevinsky.abyssus.app.game.controlline.pattern.PAUSE_LAPS
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
 import net.nevinsky.abyssus.app.game.controlline.pattern.SCHEDULE
 import net.nevinsky.abyssus.app.game.controlline.pattern.SheetEntry
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleJudge
 import net.nevinsky.abyssus.lib.core.ui.state.UiSnapshot
 import net.nevinsky.abyssus.lib.core.ui.state.UiValue
 import net.nevinsky.abyssus.lib.core.ui.state.UiWrite
@@ -83,7 +86,11 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
         is Screen.Debrief -> GameLayers(SCREEN_DEBRIEF)
     }
 
-    private fun hudOf(mode: Mode) = if (mode is Mode.Pattern) SCREEN_HUD_PATTERN else SCREEN_HUD_FREE
+    private fun hudOf(mode: Mode) = when (mode) {
+        is Mode.Pattern -> SCREEN_HUD_PATTERN
+        Mode.Scale -> SCREEN_HUD_SCALE
+        Mode.Free -> SCREEN_HUD_FREE
+    }
 
     private fun modeOf(screen: Screen): Mode? = when (screen) {
         is Screen.Flying -> screen.mode
@@ -91,14 +98,14 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
         else -> null
     }
 
-    /** Every binding of the contract, for the flow's current screen and the flight [session] (with the F2B [judge]). */
-    fun snapshot(session: FlightSession?, judge: PatternJudge?, seconds: Float): UiSnapshot {
+    /** Every binding of the contract, for the flow's current screen and the flight [session] (with the F2B [judge] or the [scaleJudge]). */
+    fun snapshot(session: FlightSession?, judge: PatternJudge?, seconds: Float, scaleJudge: ScaleJudge? = null): UiSnapshot {
         val screen = flow.screen
         if (screen is Screen.NameEntry && screen !== nameFor) {
             nameFor = screen
             playerName = screen.name
         }
-        if (session != null) hud(screen, session, judge, seconds)
+        if (session != null) hud(screen, session, judge, seconds, scaleJudge)
         val values = LinkedHashMap<String, UiValue>()
         menus(values)
         planeSelect(values, screen)
@@ -135,6 +142,7 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
     private fun menus(values: MutableMap<String, UiValue>) {
         values["freeEnabled"] = flag(flow.freeEnabled)
         values["patternEnabled"] = flag(flow.patternEnabled)
+        values["scaleEnabled"] = flag(flow.scaleEnabled)
         values["hasMessage"] = flag(flow.message != null)
         values["message"] = text(flow.message.orEmpty())
     }
@@ -143,19 +151,25 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
         val select = screen as? Screen.PlaneSelect
         val choices = select?.let { flow.choices(it.mode) }.orEmpty()
         val plane = select?.let { choices.getOrNull(it.index) }
-        val label = (select?.mode as? Mode.Pattern)?.let { "F2B pattern - ${it.level.label}" }
+        val label = when (val mode = select?.mode) {
+            is Mode.Pattern -> "F2B pattern - ${mode.level.label}"
+            Mode.Scale -> "Scale"
+            else -> null
+        }
         values["hasModeLabel"] = flag(label != null)
         values["modeLabel"] = text(label.orEmpty())
         values["planeCount"] = text(select?.let { "Choose a plane  (${it.index + 1} of ${choices.size})" }.orEmpty())
         values["planeName"] = text(plane?.name.orEmpty())
         values["watchAiVisible"] = flag(flow.watchAiOffered)
+        values["hasScaleFacts"] = flag(plane != null && (plane.planeClass == PlaneClass.SCALE || plane.scale != null))
+        values["scaleFacts"] = text(plane?.let(::replicaFacts).orEmpty())
         values["planeFacts"] = text(plane?.let {
             String.format(Locale.ROOT, "%s    Lines %.0f m    Mass %.2f kg    Fuel %.0f s",
                 it.planeClass.name.lowercase().replaceFirstChar { c -> c.uppercase() }, it.lineLength, it.mass, it.fuelTime)
         }.orEmpty())
     }
 
-    private fun hud(screen: Screen, session: FlightSession, judge: PatternJudge?, seconds: Float) {
+    private fun hud(screen: Screen, session: FlightSession, judge: PatternJudge?, seconds: Float, scaleJudge: ScaleJudge?) {
         val mode = modeOf(screen)
         if (mode == null) return
         val flight = session.flight
@@ -165,6 +179,10 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
         if (mode is Mode.Pattern && judge != null) {
             clock = "${time(flight.time)} / ${time(FLIGHT_TIME)}"
             if (mode.level.prompted) guidance(judge)
+        } else if (mode == Mode.Scale) {
+            // a replica scores realism, not laps and manoeuvres: the laps flown and the marks so far
+            laps = (scaleJudge?.laps ?: 0).toString()
+            score = (scaleJudge?.marks?.total ?: 0).toString()
         } else {
             laps = keeper.laps.toString()
             score = keeper.score.toString()
@@ -225,13 +243,23 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
     private fun summary(values: MutableMap<String, UiValue>, report: FlightReport?) {
         val free = report?.result as? FlightResult.Free
         val pattern = report?.result as? FlightResult.Pattern
+        val scale = report?.result as? FlightResult.Scale
+        values["isScale"] = flag(scale != null)
         values["endLabel"] = text(report?.end?.label.orEmpty())
         values["isFree"] = flag(free != null)
         values["isPattern"] = flag(pattern != null)
-        values["facts"] = rows(if (free == null) emptyList() else listOf(
-            "Plane" to report.plane, "Score" to free.score.toString(), "Laps" to free.laps.toString(),
-            "Best combo" to "x${free.bestCombo}", "Flight time" to time(report.flightTime),
-        ).map { (name, value) -> mapOf("name" to name, "value" to value) })
+        values["facts"] = rows((when {
+            free != null -> listOf(
+                "Plane" to report.plane, "Score" to free.score.toString(), "Laps" to free.laps.toString(),
+                "Best combo" to "x${free.bestCombo}", "Flight time" to time(report.flightTime),
+            )
+            scale != null -> listOf(
+                "Plane" to report.plane, "Prototype" to prototypeOf(report.plane), "Realism score" to scale.score.toString(),
+                "Steady speed" to scale.marks.speed.toString(), "Level laps" to scale.marks.level.toString(),
+                "Landing" to scale.marks.landing.toString(), "Laps" to scale.laps.toString(), "Flight time" to time(report.flightTime),
+            )
+            else -> emptyList()
+        }).map { (name, value) -> mapOf("name" to name, "value" to value) })
         values["patternHeader"] = text(if (pattern == null) "" else "F2B pattern - ${pattern.level.label} - ${report.plane}")
         values["sheetScore"] = text(if (pattern == null) "" else "Score ${pattern.sheet.score}    Flight time ${time(report.flightTime)}")
         values["sheet"] = rows(if (pattern == null) emptyList() else SCHEDULE.mapIndexed { i, figure ->
@@ -252,8 +280,9 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
             values["tab${t.name.lowercase().replaceFirstChar { it.uppercase() }}Style"] = text(if (t == tab) "tabSelected" else "tab")
         }
         val level = tab?.level
-        values["isFreeTab"] = flag(screen != null && level == null)
+        values["isFreeTab"] = flag(screen != null && tab == ScoreTab.FREE)
         values["isBoardTab"] = flag(screen != null && level != null)
+        values["isScaleTab"] = flag(screen != null && tab == ScoreTab.SCALE)
         values["scoresHint"] = text(when {
             screen == null -> ""
             level != null -> "Left / Right: change the tab    Up / Down, Enter or a click: replay a flight"
@@ -261,6 +290,7 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
         })
         val damaged = when {
             screen == null -> null
+            tab == ScoreTab.SCALE -> "The old Scale scores could not be read; they were kept as scale-scores.json.bad.".takeIf { flow.scaleTable.damaged }
             level == null -> "The old scores could not be read; they were kept as scores.json.bad.".takeIf { flow.table.damaged }
             else -> "The old F2B scores could not be read; they were kept as f2b-scores.json.bad.".takeIf { flow.patternTable.damaged }
         }
@@ -272,9 +302,14 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
             highlight == rank -> "highlight"
             else -> "normal"
         }
-        values["freeRows"] = rows(if (screen == null || level != null) emptyList() else flow.table.entries.mapIndexed { i, e ->
+        values["freeRows"] = rows(if (screen == null || tab != ScoreTab.FREE) emptyList() else flow.table.entries.mapIndexed { i, e ->
             mapOf("rank" to (i + 1).toString(), "name" to e.name, "plane" to e.plane, "score" to e.score.toString(), "laps" to e.laps.toString(),
                 "combo" to "x${e.bestCombo}", "time" to time(e.flightTime), "date" to e.date.take(10), "style" to look(i + 1, false))
+        })
+        values["scaleRows"] = rows(if (screen == null || tab != ScoreTab.SCALE) emptyList() else flow.scaleTable.entries.mapIndexed { i, e ->
+            mapOf("rank" to (i + 1).toString(), "name" to e.name, "plane" to e.plane, "score" to e.score.toString(),
+                "speed" to e.speed.toString(), "level" to e.level.toString(), "landing" to e.landing.toString(),
+                "time" to time(e.flightTime), "date" to e.date.take(10), "style" to look(i + 1, false))
         })
         values["boardRows"] = rows(if (screen == null || level == null) emptyList() else flow.patternTable.board(level).mapIndexed { i, e ->
             val picked = i == screen.selected
@@ -316,6 +351,17 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
 
     private fun seconds(value: Float) = String.format(Locale.ROOT, "%.1f s", value)
 
+    /** The plane select card's line for a replica: its prototype's facts, or that they are unknown. */
+    private fun replicaFacts(plane: PlaneChoice): String {
+        val facts = plane.scale ?: return "Scale replica    Prototype unknown"
+        val name = facts.prototype.ifBlank { null } ?: return "Scale replica    Prototype unknown"
+        return String.format(Locale.ROOT, "Replica of the %s    First flight %d    Span %.1f m    Scale 1:%d", name, facts.firstFlight, facts.wingspan, facts.scale)
+    }
+
+    /** The prototype of the plane named [plane] in the field, or `unknown`. */
+    private fun prototypeOf(plane: String): String =
+        flow.planes.firstOrNull { it.name == plane }?.scale?.prototype?.ifBlank { null } ?: "unknown"
+
     private fun time(seconds: Float): String {
         val s = seconds.toInt()
         return String.format(Locale.ROOT, "%d:%02d", s / 60, s % 60)
@@ -342,6 +388,7 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
         when (name) {
             "freeFlight" -> flow.freeFlight()
             "f2bPattern" -> flow.f2bPattern()
+            "scale" -> flow.scale()
             "scores" -> flow.scores()
             "quit" -> { flow.quitGame(); quit() }
             "assistPro" -> flow.chooseAssist(AssistLevel.PRO)
@@ -361,6 +408,7 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
             "tabPro" -> showTab(ScoreTab.PRO)
             "tabMid" -> showTab(ScoreTab.MID)
             "tabNoob" -> showTab(ScoreTab.NOOB)
+            "tabScale" -> showTab(ScoreTab.SCALE)
             else -> return false
         }
         return true

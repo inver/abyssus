@@ -13,6 +13,7 @@ import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
 import net.nevinsky.abyssus.app.game.controlline.flow.GameFlow
 import net.nevinsky.abyssus.app.game.controlline.flow.Screen
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleJudge
 import net.nevinsky.abyssus.lib.core.assets.ui.UiBuiltResources
 import net.nevinsky.abyssus.lib.core.assets.ui.UiBundledFont
 import net.nevinsky.abyssus.lib.core.assets.ui.UiPreparedResource
@@ -49,7 +50,7 @@ class GameUiHost(
     private var shown: GameLayers? = null
 
     /** Shows the flow's screen (when it changed) and takes the model's values for this frame. */
-    fun update(session: FlightSession?, judge: PatternJudge?, seconds: Float) {
+    fun update(session: FlightSession?, judge: PatternJudge?, seconds: Float, scaleJudge: ScaleJudge? = null) {
         val layers = model.layersOf(flow.screen)
         if (layers != shown) {
             shown = layers
@@ -58,7 +59,7 @@ class GameUiHost(
                 presenter.navigator.activate(UiAction(UiActionType.SHOW_OVERLAY.json, UiActionType.SHOW_OVERLAY, screenId = overlay, raw = JsonNodeFactory.instance.objectNode()))
             }
         }
-        presenter.publish(model.snapshot(session, judge, seconds))
+        presenter.publish(model.snapshot(session, judge, seconds, scaleJudge))
     }
 
     fun draw(seconds: Float) = presenter.render(seconds)

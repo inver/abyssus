@@ -8,6 +8,7 @@ import com.badlogic.gdx.Input
 import net.nevinsky.abyssus.app.game.controlline.flow.GameFlow
 import net.nevinsky.abyssus.app.game.controlline.flow.Screen
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
 import net.nevinsky.abyssus.lib.core.ui.state.UiValue
 import net.nevinsky.abyssus.lib.core.ui.state.UiWrite
@@ -25,7 +26,7 @@ class GameUiHostTest {
     val temp = TemporaryFolder()
 
     private var quit = 0
-    private fun flow() = GameFlow(emptyList(), ScoreTable(temp.root.toPath().resolve("s.json")), PatternScoreTable(temp.root.toPath().resolve("p.json")))
+    private fun flow() = GameFlow(emptyList(), ScoreTable(temp.root.toPath().resolve("s.json")), PatternScoreTable(temp.root.toPath().resolve("p.json")), ScaleScoreTable(temp.root.toPath().resolve("sc.json")))
     private fun model(flow: GameFlow = flow()) = GameUiModel(flow) { quit++ }
 
     @Test fun everySnapshotPublishesExactlyTheContract() {

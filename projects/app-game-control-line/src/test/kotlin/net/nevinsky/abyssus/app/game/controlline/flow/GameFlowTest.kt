@@ -4,7 +4,11 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.flow
 
+import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneClass
+import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
+import net.nevinsky.abyssus.app.game.controlline.components.ScaleComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.app.game.controlline.flight.FieldFlight
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightEnd
 import net.nevinsky.abyssus.app.game.controlline.loadField
@@ -15,6 +19,9 @@ import net.nevinsky.abyssus.app.game.controlline.pattern.ScoreSheet
 import net.nevinsky.abyssus.app.game.controlline.pattern.ZeroReason
 import net.nevinsky.abyssus.app.game.controlline.pattern.recordedFlight
 import net.nevinsky.abyssus.app.game.controlline.pattern.SheetEntry
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleMarks
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreEntry
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreEntry
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
 import org.junit.Assert.assertEquals
@@ -36,12 +43,19 @@ class GameFlowTest {
 
     private fun patternTable() = PatternScoreTable(temp.root.toPath().resolve("f2b-scores.json"))
 
-    private fun flow(table: ScoreTable = table(), patternTable: PatternScoreTable = patternTable(), planes: List<PlaneChoice> = this.planes) =
-        GameFlow(planes, table, patternTable) { Instant.parse("2026-10-04T12:00:00Z") }
+    private fun scaleTable() = ScaleScoreTable(temp.root.toPath().resolve("scale-scores.json"))
+
+    private fun flow(table: ScoreTable = table(), patternTable: PatternScoreTable = patternTable(), planes: List<PlaneChoice> = this.planes, scaleTable: ScaleScoreTable = scaleTable()) =
+        GameFlow(planes, table, patternTable, scaleTable) { Instant.parse("2026-10-04T12:00:00Z") }
+
+    private val stunter get() = planes.single { it.name == "Stunter" }
+
+    /** The planes without the bundled replica, to add a synthetic one to. */
+    private val withoutReplicas get() = planes.filter { it.planeClass != PlaneClass.SCALE }
 
     private fun GameFlow.flyStunter(): Screen.Flying {
         freeFlight()
-        nextPlane()
+        while (choices(Mode.Free)[(screen as Screen.PlaneSelect).index].name != "Stunter") nextPlane()
         choosePlane()
         return screen as Screen.Flying
     }
@@ -112,7 +126,7 @@ class GameFlowTest {
         flow.nextPlane()
         assertEquals(Screen.PlaneSelect(0, Mode.Pattern(AssistLevel.MID)), flow.screen)
         flow.choosePlane()
-        assertEquals(Screen.Flying(planes[1], 1, Mode.Pattern(AssistLevel.MID)), flow.screen)
+        assertEquals(Screen.Flying(stunter, 1, Mode.Pattern(AssistLevel.MID)), flow.screen)
     }
 
     @Test
@@ -124,7 +138,7 @@ class GameFlowTest {
         assertEquals(Screen.PlaneSelect(0, Mode.Pattern(AssistLevel.NOOB)), flow.screen)
         flow.nextPlane()
         flow.choosePlane()
-        assertEquals(Screen.Flying(planes[1], 1, Mode.Pattern(AssistLevel.NOOB)), flow.screen)
+        assertEquals(Screen.Flying(stunter, 1, Mode.Pattern(AssistLevel.NOOB)), flow.screen)
     }
 
     @Test
@@ -175,8 +189,7 @@ class GameFlowTest {
 
     @Test
     fun theBundledPlanesAreListedByName() {
-        assertEquals(listOf("Racer", "Stunter", "Trainer"), planes.map { it.name })
-        val stunter = planes[1]
+        assertEquals(listOf("Mig-3", "Racer", "Stunter", "Trainer"), planes.map { it.name })
         assertEquals(PlaneClass.STUNT, stunter.planeClass)
         assertEquals(18f, stunter.lineLength, 0f)
         assertEquals(1.1f, stunter.mass, 1e-6f)
@@ -191,7 +204,7 @@ class GameFlowTest {
         assertEquals(Screen.PlaneSelect(1, Mode.Free), flow.screen)
         flow.previousPlane()
         flow.previousPlane()
-        assertEquals(Screen.PlaneSelect(2, Mode.Free), flow.screen)
+        assertEquals(Screen.PlaneSelect(3, Mode.Free), flow.screen)
         flow.back()
         assertEquals(Screen.MainMenu, flow.screen)
     }
@@ -247,7 +260,7 @@ class GameFlowTest {
         val flow = flow(table)
         flow.flyStunter()
         flow.flightEnded(report(20))
-        assertEquals(Screen.GameOver(Screen.Flying(planes[1], 1, Mode.Free), report(20), null), flow.screen)
+        assertEquals(Screen.GameOver(Screen.Flying(stunter, 1, Mode.Free), report(20), null), flow.screen)
     }
 
     @Test
@@ -344,7 +357,11 @@ class GameFlowTest {
         flow.nextTab()
         assertEquals(ScoreTab.NOOB, (flow.screen as Screen.Scores).tab)
         flow.nextTab()
+        assertEquals(ScoreTab.SCALE, (flow.screen as Screen.Scores).tab)
+        flow.nextTab()
         assertEquals(ScoreTab.FREE, (flow.screen as Screen.Scores).tab)
+        flow.previousTab()
+        assertEquals(ScoreTab.SCALE, (flow.screen as Screen.Scores).tab)
         flow.previousTab()
         assertEquals(ScoreTab.NOOB, (flow.screen as Screen.Scores).tab)
     }
@@ -466,6 +483,7 @@ class GameFlowTest {
         assertTrue((flow.screen as Screen.Debrief).model.title.contains("Mid"))
         flow.back()
         assertEquals(1, (flow.screen as Screen.Scores).selected)
+        flow.nextTab()
         flow.nextTab()
         flow.nextTab()
         assertEquals(0, (flow.screen as Screen.Scores).selected)
@@ -606,5 +624,123 @@ class GameFlowTest {
         flow.flightEnded(recordedReport(AssistLevel.MID, 100))
         flow.mainMenu()
         assertEquals(Control.HUMAN, flow.flyPattern(AssistLevel.MID).control)
+    }
+
+    private fun scaleEntity(id: Int, facts: ScaleComponent?) = Entity().apply {
+        add(NameComponent("Replica $id"))
+        add(PlaneComponent().also { it.planeClass = PlaneClass.SCALE })
+        facts?.let(::add)
+    }
+
+    @Test
+    fun aScalePlaneCarriesItsPrototypeFacts() {
+        val facts = ScaleComponent().also { it.prototype = "MiG-3"; it.firstFlight = 1940; it.wingspan = 10.3f; it.scale = 8 }
+        val choice = planeChoices(mapOf(7 to scaleEntity(7, facts))).single()
+        assertEquals(PlaneClass.SCALE, choice.planeClass)
+        assertEquals(ScaleFacts("MiG-3", 1940, 10.3f, 8), choice.scale)
+    }
+
+    @Test
+    fun aScalePlaneWithoutTheComponentHasNoFacts() {
+        assertNull(planeChoices(mapOf(7 to scaleEntity(7, null))).single().scale)
+    }
+
+    private val replica = PlaneChoice(
+        99, "Mig-3", PlaneClass.SCALE, 18f, 1.2f, 240f, ScaleFacts("MiG-3", 1940, 10.3f, 8),
+    )
+
+    private fun scaleReport(speed: Int = 400, level: Int = 300, landing: Int = 200, laps: Int = 5) =
+        FlightReport("Mig-3", FlightEnd.LANDED, 61f, FlightResult.Scale(ScaleMarks(speed, level, landing), laps))
+
+    private fun GameFlow.flyReplica(): Screen.Flying {
+        scale()
+        choosePlane()
+        return screen as Screen.Flying
+    }
+
+    @Test
+    fun scaleOpensPlaneSelectWithOnlyTheReplicas() {
+        val flow = flow(planes = withoutReplicas + replica)
+        assertTrue(flow.scaleEnabled)
+        flow.scale()
+        assertEquals(Screen.PlaneSelect(0, Mode.Scale), flow.screen)
+        assertEquals(listOf(replica), flow.choices(Mode.Scale))
+        assertEquals(withoutReplicas + replica, flow.choices(Mode.Free))
+    }
+
+    @Test
+    fun noReplicaDisablesScaleWithAMessage() {
+        val flow = flow(planes = planes.filter { it.planeClass != PlaneClass.SCALE })
+        assertFalse(flow.scaleEnabled)
+        assertTrue(flow.freeEnabled)
+        assertEquals("Scale needs a scale replica", flow.message)
+        flow.scale()
+        assertEquals(Screen.MainMenu, flow.screen)
+    }
+
+    @Test
+    fun noPlanesDisablesScaleToo() {
+        val flow = flow(planes = emptyList())
+        assertFalse(flow.scaleEnabled)
+        flow.scale()
+        assertEquals(Screen.MainMenu, flow.screen)
+    }
+
+    @Test
+    fun escapeOnScalePlaneSelectReturnsToTheMenuAndWatchAiIsNotOffered() {
+        val flow = flow(planes = withoutReplicas + replica)
+        flow.scale()
+        assertFalse(flow.watchAiOffered)
+        flow.watchAi()
+        assertTrue(flow.screen is Screen.PlaneSelect)
+        flow.back()
+        assertEquals(Screen.MainMenu, flow.screen)
+    }
+
+    @Test
+    fun aScaleFlightEntersItsOwnTableAndRetryKeepsTheMode() {
+        val free = table()
+        val scale = scaleTable()
+        val flow = flow(table = free, scaleTable = scale, planes = withoutReplicas + replica)
+        val flying = flow.flyReplica()
+        assertEquals(Mode.Scale, flying.mode)
+        assertEquals(replica, flying.plane)
+
+        flow.flightEnded(scaleReport())
+        assertTrue(flow.screen is Screen.NameEntry)
+        flow.nameEntered("Ann")
+        val over = flow.screen as Screen.GameOver
+        assertEquals(1, over.rank)
+
+        val entry = scale.entries.single()
+        assertEquals(ScaleScoreEntry("Ann", "Mig-3", "MiG-3", 900, 400, 300, 200, 5, 61f, "2026-10-04T12:00:00Z"), entry)
+        assertEquals(emptyList<ScoreEntry>(), free.entries)
+
+        flow.retry()
+        assertEquals(Mode.Scale, (flow.screen as Screen.Flying).mode)
+    }
+
+    @Test
+    fun aScaleFlightBelowTheLowestEntryGoesStraightToGameOver() {
+        val scale = scaleTable()
+        repeat(10) { scale.add(ScaleScoreEntry("P$it", "Mig-3", "MiG-3", 700 + it, 0, 0, 0, 0, 1f, "d")) }
+        val flow = flow(scaleTable = scale, planes = withoutReplicas + replica)
+        flow.flyReplica()
+        flow.flightEnded(scaleReport(speed = 100, level = 100, landing = 0))
+        assertEquals(Screen.GameOver::class, flow.screen::class)
+        assertNull((flow.screen as Screen.GameOver).rank)
+    }
+
+    @Test
+    fun theScaleScoresTabIsOpenedFromAScaleGameOver() {
+        val flow = flow(planes = withoutReplicas + replica)
+        flow.flyReplica()
+        flow.flightEnded(scaleReport())
+        flow.nameEntered("Ann")
+        flow.scores()
+        val scores = flow.screen as Screen.Scores
+        assertEquals(ScoreTab.SCALE, scores.tab)
+        assertEquals(1, scores.highlight)
+        assertEquals(ScoreTab.SCALE, scores.highlightTab)
     }
 }
