@@ -183,7 +183,7 @@ class HeadlessEditing(
         return refusal?.let { HeadlessEdit.Refused(it) } ?: outcome
     }
 
-    private fun edit(text: String, kind: DocumentKind, mutate: (JsonNode) -> Boolean): HeadlessEdit =
+    private fun edit(text: String, kind: DocumentKind, mutate: (Any) -> Boolean): HeadlessEdit =
         when (val outcome = documents.edit(text, kind, mutate)) {
             is TextEditOutcome.Edited -> HeadlessEdit.Edited(outcome.text)
             TextEditOutcome.Unchanged -> HeadlessEdit.Unchanged

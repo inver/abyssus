@@ -6,8 +6,6 @@ package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.math.Vector3
-import com.fasterxml.jackson.databind.node.ObjectNode
-import jdk.internal.vm.ThreadContainers.root
 import net.nevinsky.abyssus.lib.core.dto.EntityDto
 import net.nevinsky.abyssus.lib.core.dto.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
@@ -55,9 +53,6 @@ class EntityClipboard(
         return CopyResult.Copied(jsonProcessor.toString(CopyPasteEntityWrapper("abyssusEntity", components)))
     }
 
-    /** Whether [text] is what [copy] makes. */
-    fun holdsEntity(text: String?): Boolean = parse(text) != null
-
     /** Adds the entity [text] holds to [root] with its pivot at [point]; rejected, leaving [root] as it was, otherwise. */
     fun paste(scene: SceneDto, text: String?, point: Vector3): AddedEntity {
         var rejected = AddedEntity(EditResult.Rejected(messages.message("entityClipboardNotEntity")))
@@ -72,7 +67,7 @@ class EntityClipboard(
         val entity = EntityDto(wrapper.components)
         scene.ecs[maxId + 1] = entity
 
-        var positionComponents = wrapper.components.filterIsInstance<PositionComponent>()
+        val positionComponents = wrapper.components.filterIsInstance<PositionComponent>()
         val position: PositionComponent
         if (positionComponents.isEmpty()) {
             position = PositionComponent()
@@ -90,8 +85,3 @@ class EntityClipboard(
         val components: MutableList<Component>
     )
 }
-
-private const val MARKER = "abyssusEntity"
-private const val VERSION = 1
-private const val RENDER = "RenderComponent"
-private val KEEP_OUT = listOf("PathArrangementComponent", "ParentComponent")
