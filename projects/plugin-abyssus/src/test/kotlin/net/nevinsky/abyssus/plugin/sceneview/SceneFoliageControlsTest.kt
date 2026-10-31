@@ -8,6 +8,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.editor.pick.*
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.plugin.foliage.FoliagePaintSession
+import net.nevinsky.abyssus.plugin.foliage.layerId
 import java.awt.Component
 import java.awt.Container
 import javax.swing.JToggleButton
@@ -19,9 +20,9 @@ class SceneFoliageControlsTest : BasePlatformTestCase() {
     fun testPaintModeShowsBrushAndSelectionChangeDisposesIt() {
         val renderer = testRenderer()
         var closed = false
-        val session = FoliagePaintSession(listOf(7, 9), object : FoliagePaint {
+        val session = FoliagePaintSession(listOf(7, 9), object : BrushStroke {
             override fun pressed(terrain: TerrainTarget, at: com.badlogic.gdx.math.Vector3) = true
-            override fun dragged(to: com.badlogic.gdx.math.Vector3, erase: Boolean) {}
+            override fun dragged(to: com.badlogic.gdx.math.Vector3, reversed: Boolean) {}
             override fun released() {}
             override fun cancelled() {}
         }) { closed = true }
@@ -31,10 +32,10 @@ class SceneFoliageControlsTest : BasePlatformTestCase() {
             panel.selectEntity("1")
             val button = named(panel, "paint-foliage") as JToggleButton
             button.doClick()
-            assertEquals(7, renderer.state.paint!!.layerId)
+            assertEquals(7, renderer.state.brush!!.layerId)
             assertTrue(named(panel, "foliage-brush-strip")!!.isVisible)
             panel.selectEntity("2")
-            assertNull(renderer.state.paint)
+            assertNull(renderer.state.brush)
             assertTrue(closed)
             assertFalse(button.isSelected)
         } finally { panel.dispose() }
@@ -47,9 +48,9 @@ class SceneFoliageControlsTest : BasePlatformTestCase() {
         val panel = SceneViewPanel(SceneRenderParams.DEFAULT, renderer, paintSession = { _, _, ready ->
             opens++
             ready(if (renderer.params.content.foliages.isEmpty()) null else FoliagePaintSession(listOf(1),
-                object : FoliagePaint {
+                object : BrushStroke {
                     override fun pressed(terrain: TerrainTarget, at: com.badlogic.gdx.math.Vector3) = true
-                    override fun dragged(to: com.badlogic.gdx.math.Vector3, erase: Boolean) {}
+                    override fun dragged(to: com.badlogic.gdx.math.Vector3, reversed: Boolean) {}
                     override fun released() {}
                     override fun cancelled() {}
                 }) { closes++ })
@@ -89,9 +90,9 @@ class SceneFoliageControlsTest : BasePlatformTestCase() {
                 override fun poses(): Map<String, net.nevinsky.abyssus.lib.core.editor.content.Pose>? = null
             }
         })
-        val session = FoliagePaintSession(listOf(1), object : FoliagePaint {
+        val session = FoliagePaintSession(listOf(1), object : BrushStroke {
             override fun pressed(terrain: TerrainTarget, at: com.badlogic.gdx.math.Vector3) = true
-            override fun dragged(to: com.badlogic.gdx.math.Vector3, erase: Boolean) {}
+            override fun dragged(to: com.badlogic.gdx.math.Vector3, reversed: Boolean) {}
             override fun released() {}
             override fun cancelled() { cancelled++ }
         }) {}
@@ -101,12 +102,12 @@ class SceneFoliageControlsTest : BasePlatformTestCase() {
             panel.selectEntity("1")
             val button = named(panel, "paint-foliage") as JToggleButton
             button.doClick()
-            assertNotNull(renderer.state.paint)
+            assertNotNull(renderer.state.brush)
             val previous = cancelled
             play.play { SimulationRequest(project, com.intellij.testFramework.LightVirtualFile("Main.scene"),
                 "{}", java.io.File("."), "1") }
             assertTrue(cancelled > previous)
-            assertNull(renderer.state.paint)
+            assertNull(renderer.state.brush)
             assertFalse(button.isEnabled)
             assertFalse(button.isSelected)
         } finally { panel.dispose() }

@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.lib.raytracing
 
+import com.badlogic.gdx.math.Vector3
+
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -14,7 +16,7 @@ class RayWorkBudgetTest {
         val mesh=RayMesh("plane",floatArrayOf(-10f,-10f,0f,10f,-10f,0f,0f,10f,0f),intArrayOf(0,1,2))
         return RaySceneSnapshot(listOf(mesh),(0..20).map { i -> RayInstance("$i",0,0,identity.copyOf().also { it[14]=-i.toFloat() }) },
             listOf(RayMaterial(kind=RayMaterialKind.PBR,alphaMode=alpha,baseColor=RayColor(1f,1f,1f,.2f),opacity=.5f)),emptyList(),
-            (0 until lights).map { RayLight("$it",RayLightKind.DIRECTIONAL,RayColor(1f,1f,1f),direction=RayVec3(0f,0f,1f)) })
+            (0 until lights).map { RayLight("$it",RayLightKind.DIRECTIONAL,RayColor(1f,1f,1f),direction=Vector3(0f,0f,1f)) })
     }
     @Test fun actualReferenceQueriesNeverExceedCameraSampleBound() {
         val camera=RaySliceCamera(listOf(0f,0f,2f),listOf(0f,0f,-1f),listOf(0f,1f,0f),60f,.1f,100f)

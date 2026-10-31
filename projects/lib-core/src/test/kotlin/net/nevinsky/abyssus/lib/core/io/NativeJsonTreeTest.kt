@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.io
 
+import net.nevinsky.abyssus.lib.core.ecs.component.RawComponentsWrapper
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import com.fasterxml.jackson.databind.json.JsonMapper
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.scene.SceneLoader
@@ -34,9 +36,10 @@ class NativeJsonTreeTest {
     }
 
     @Test
-    fun theRuntimeSceneLoaderKeepsTheEcsBlockAsRead() {
-        val text = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"1":{"components":{"X":{"w":2.50}}}}}}"""
-        val scene: SceneDto = SceneLoader(JsonProcessor(NOPLogger.NOP_LOGGER), FileLoader(File("."))).parse(text)
-        assertTrue(compact.writeValueAsString(scene.ecs).contains("2.50"))
+    fun aComponentTheSceneLoaderCannotModelKeepsItsNumberText() {
+        val text = """{"format":"abyssus","formatVersion":1,"ecs":{"1":{"components":{"X":{"w":2.50}}}}}"""
+        val scene: SceneDto = SceneLoader(JsonProcessor(NOPLogger.NOP_LOGGER), FileLoader(File(".")), ComponentRegistry()).parse(text)
+        val raw = scene.ecs.getValue(1L).getComponent(RawComponentsWrapper::class.java).entries.single()
+        assertTrue(raw.json, raw.json.contains("2.50"))
     }
 }

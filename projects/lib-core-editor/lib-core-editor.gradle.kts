@@ -38,3 +38,5 @@ extra["abyssusSingletonExcludes"] = listOf(
     "net/nevinsky/abyssus/lib/core/editor/content/Placements.kt",
     "net/nevinsky/abyssus/lib/core/editor/scene/SceneRenderParams.kt",
 )
+
+// lib-core reads JSON into values and lib-core-editor writes it, so both may use Jackson tree types freely: no `abyssusJacksonTreeAllowed` here.

@@ -8,22 +8,29 @@ package net.nevinsky.abyssus.lib.core.water
 /** The starting choice a surface was created from; it is a record of that choice, not a live link to its values. */
 enum class WaterPreset { LAKE, SEA }
 
-/** One scalar of a surface, with the JSON path (relative to the surface object) that stores it. */
-enum class WaterField(val path: List<String>) {
-    X(listOf("position", "x")),
-    LEVEL(listOf("position", "y")),
-    Z(listOf("position", "z")),
-    WIDTH(listOf("width")),
-    LENGTH(listOf("length")),
-    TINT_R(listOf("tint", "r")),
-    TINT_G(listOf("tint", "g")),
-    TINT_B(listOf("tint", "b")),
-    CLARITY(listOf("clarity")),
-    WAVE_AMPLITUDE(listOf("waveAmplitude")),
-    WAVE_LENGTH(listOf("waveLength")),
-    WAVE_SPEED(listOf("waveSpeed")),
-    FOAM_AMOUNT(listOf("foamAmount")),
-    FOAM_WIDTH(listOf("foamWidth")),
+/**
+ * One scalar of a surface: the JSON [path] (relative to the surface object) that stores it, and how to read and replace
+ * it on a [WaterSettings]. The one table behind the codec, the validation and the property editors.
+ */
+enum class WaterField(
+    val path: List<String>,
+    val get: (WaterSettings) -> Double,
+    val set: (WaterSettings, Double) -> WaterSettings,
+) {
+    X(listOf("position", "x"), { it.x }, { s, v -> s.copy(x = v) }),
+    LEVEL(listOf("position", "y"), { it.level }, { s, v -> s.copy(level = v) }),
+    Z(listOf("position", "z"), { it.z }, { s, v -> s.copy(z = v) }),
+    WIDTH(listOf("width"), { it.width }, { s, v -> s.copy(width = v) }),
+    LENGTH(listOf("length"), { it.length }, { s, v -> s.copy(length = v) }),
+    TINT_R(listOf("tint", "r"), { it.tintR }, { s, v -> s.copy(tintR = v) }),
+    TINT_G(listOf("tint", "g"), { it.tintG }, { s, v -> s.copy(tintG = v) }),
+    TINT_B(listOf("tint", "b"), { it.tintB }, { s, v -> s.copy(tintB = v) }),
+    CLARITY(listOf("clarity"), { it.clarity }, { s, v -> s.copy(clarity = v) }),
+    WAVE_AMPLITUDE(listOf("waveAmplitude"), { it.waveAmplitude }, { s, v -> s.copy(waveAmplitude = v) }),
+    WAVE_LENGTH(listOf("waveLength"), { it.waveLength }, { s, v -> s.copy(waveLength = v) }),
+    WAVE_SPEED(listOf("waveSpeed"), { it.waveSpeed }, { s, v -> s.copy(waveSpeed = v) }),
+    FOAM_AMOUNT(listOf("foamAmount"), { it.foamAmount }, { s, v -> s.copy(foamAmount = v) }),
+    FOAM_WIDTH(listOf("foamWidth"), { it.foamWidth }, { s, v -> s.copy(foamWidth = v) }),
 }
 
 /**
@@ -51,39 +58,9 @@ data class WaterSettings(
     val foamWidth: Double,
     val enabled: Boolean = true,
 ) {
-    fun value(field: WaterField): Double = when (field) {
-        WaterField.X -> x
-        WaterField.LEVEL -> level
-        WaterField.Z -> z
-        WaterField.WIDTH -> width
-        WaterField.LENGTH -> length
-        WaterField.TINT_R -> tintR
-        WaterField.TINT_G -> tintG
-        WaterField.TINT_B -> tintB
-        WaterField.CLARITY -> clarity
-        WaterField.WAVE_AMPLITUDE -> waveAmplitude
-        WaterField.WAVE_LENGTH -> waveLength
-        WaterField.WAVE_SPEED -> waveSpeed
-        WaterField.FOAM_AMOUNT -> foamAmount
-        WaterField.FOAM_WIDTH -> foamWidth
-    }
+    fun value(field: WaterField): Double = field.get(this)
 
-    fun with(field: WaterField, value: Double): WaterSettings = when (field) {
-        WaterField.X -> copy(x = value)
-        WaterField.LEVEL -> copy(level = value)
-        WaterField.Z -> copy(z = value)
-        WaterField.WIDTH -> copy(width = value)
-        WaterField.LENGTH -> copy(length = value)
-        WaterField.TINT_R -> copy(tintR = value)
-        WaterField.TINT_G -> copy(tintG = value)
-        WaterField.TINT_B -> copy(tintB = value)
-        WaterField.CLARITY -> copy(clarity = value)
-        WaterField.WAVE_AMPLITUDE -> copy(waveAmplitude = value)
-        WaterField.WAVE_LENGTH -> copy(waveLength = value)
-        WaterField.WAVE_SPEED -> copy(waveSpeed = value)
-        WaterField.FOAM_AMOUNT -> copy(foamAmount = value)
-        WaterField.FOAM_WIDTH -> copy(foamWidth = value)
-    }
+    fun with(field: WaterField, value: Double): WaterSettings = field.set(this, value)
 }
 
 /** The values a preset starts with. Written explicitly on creation, so retuning them never changes a saved surface. */

@@ -86,6 +86,10 @@ data class UiAction(
     val raw: JsonNode,
 )
 
+/** The action that shows the overlay screen [screenId], as code (not a document) builds it. */
+fun showOverlayAction(screenId: String): UiAction =
+    UiAction(UiActionType.SHOW_OVERLAY.json, UiActionType.SHOW_OVERLAY, screenId = screenId, raw = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode())
+
 /**
  * A widget. [type] is null for a kind this build does not know ([rawType] keeps the authored name); such a widget is an
  * inert placeholder and [raw] keeps its whole object, children included.

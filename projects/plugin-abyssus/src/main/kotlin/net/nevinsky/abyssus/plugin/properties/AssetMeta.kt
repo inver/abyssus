@@ -5,10 +5,11 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.lib.core.editor.meta.PropertyRow
 import net.nevinsky.abyssus.lib.core.editor.meta.metaRowsOf
 import net.nevinsky.abyssus.plugin.EditorBundle
-import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.lib.core.assets.MetaType
@@ -19,7 +20,7 @@ import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 
 sealed interface AssetMeta {
     /** The asset's `meta.json` as a table: [type] is the Meta `type` ([MetaType.UNKNOWN] when absent, not text or not known). */
-    data class Loaded(val folder: VirtualFile, val type: MetaType, val rows: List<PropertyRow>, val json: JsonNode) :
+    data class Loaded(val folder: VirtualFile, val type: MetaType, val rows: List<PropertyRow>, val json: Document) :
         AssetMeta
 
     /** The `meta.json` is missing or is not a JSON object; [message] says why and is shown in place of the table. */
@@ -32,7 +33,7 @@ fun loadAssetMeta(folder: VirtualFile, metaFiles: MetaFiles): AssetMeta {
         ?: return AssetMeta.Failed(folder, AbyssusBundle.message("propertiesMetaMissing", folder.name))
     return runCatchingKeepingCancellation { metaFiles.inEditor(folder) }.fold(
         onSuccess = { document ->
-            document?.let { AssetMeta.Loaded(folder, it.type, metaRowsOf(it.json, EditorBundle), it.json) }
+            document?.let { AssetMeta.Loaded(folder, it.type, metaRowsOf(it.document, EditorBundle), it.document) }
                 ?: AssetMeta.Failed(folder, AbyssusBundle.message("propertiesMetaMissing", folder.name))
         },
         onFailure = {

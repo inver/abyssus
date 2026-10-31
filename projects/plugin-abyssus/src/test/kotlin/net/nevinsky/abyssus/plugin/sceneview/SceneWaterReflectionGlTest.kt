@@ -6,8 +6,7 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import org.junit.Assert.assertEquals
@@ -23,7 +22,7 @@ import org.junit.Test
 class SceneWaterReflectionGlTest {
     @Before fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", GlHarness.enabled)
 
-    private val orbit = OrbitCamera(Vec3(0f, 0f, 0f), 25f, 0.6f, 0.35f)
+    private val orbit = OrbitCamera(Vector3(0f, 0f, 0f), 25f, 0.6f, 0.35f)
 
     private fun shoot(params: SceneRenderParams, orbit: OrbitCamera = this.orbit, configure: (SceneRenderer) -> Unit = {}) =
         WaterGlRig.shoot(params, orbit, configure = configure)
@@ -83,7 +82,7 @@ class SceneWaterReflectionGlTest {
         assertTrue("models and floor are all below the level: nothing reaches the reflection ($different of ${a.width * a.height}, ${camera.far})", different < a.width * a.height / 500)
     }
 
-    private val clear = Rgba(0.92f, 0.94f, 0.98f, 1f)
+    private val clear = Color(0.92f, 0.94f, 0.98f, 1f)
 
     /** The scene with no sky, a bright clear colour and no models: a reflection shows the clear colour wherever nothing stands. */
     private fun bareScene(): SceneRenderParams {
@@ -145,7 +144,7 @@ class SceneWaterReflectionGlTest {
             root.put("fogEnabled", true)
             root.putObject("fog").put("density", 0.01).put("gradient", 1.0).putObject("color").put("r", 1.0).put("g", 0.0).put("b", 0.0).put("a", 1.0)
         }
-        val view = OrbitCamera(Vec3(0f, 0f, 0f), 30f, 0.2f, 0.12f)
+        val view = OrbitCamera(Vector3(0f, 0f, 0f), 30f, 0.2f, 0.12f)
         val shot = shoot(fogged, view)
         val eye = view.position()
         val length = Math.hypot((0f - eye.x).toDouble(), (0f - eye.z).toDouble()).toFloat()
@@ -163,7 +162,7 @@ class SceneWaterReflectionGlTest {
 
     @Test fun reflectionGrowsStrongerAtGrazingAngles() {
         fun waterBrightness(pitch: Float): Double {
-            val shot = shoot(bareScene(), OrbitCamera(Vec3(0f, 0f, 0f), 30f, 0.3f, pitch))
+            val shot = shoot(bareScene(), OrbitCamera(Vector3(0f, 0f, 0f), 30f, 0.3f, pitch))
             val camera = shot.renderer.frameCamera
             val centre = Vector3(0f, 0f, 0f)
             camera.project(centre, 0f, 0f, shot.image.width.toFloat(), shot.image.height.toFloat())
@@ -181,7 +180,7 @@ class SceneWaterReflectionGlTest {
         val moved = shoot(base) { renderer ->
             renderer.state.preview = mapOf(
                 "2" to net.nevinsky.abyssus.lib.core.editor.pick.DragResult(
-                    model.transform.copy(position = Vec3(model.transform.position.x + 5f, model.transform.position.y, model.transform.position.z)), null,
+                    model.transform.copy(position = Vector3(model.transform.position.x + 5f, model.transform.position.y, model.transform.position.z)), null,
                 ),
             )
         }
@@ -208,7 +207,7 @@ class SceneWaterReflectionGlTest {
             net.nevinsky.abyssus.lib.core.editor.parseScene(net.nevinsky.abyssus.lib.core.editor.document.SceneJson().compact(text)),
             net.nevinsky.abyssus.lib.core.editor.scene.CameraParams.DEFAULT, dir,
         )
-        val target = Vec3(position.x, position.y, position.z)
+        val target = Vector3(position.x, position.y, position.z)
         val orbit = OrbitCamera(target, 14f, 0.4f, 0.4f)
         var early: TargetImage? = null
         var late: TargetImage? = null

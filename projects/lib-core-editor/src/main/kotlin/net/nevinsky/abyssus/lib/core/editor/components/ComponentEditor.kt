@@ -11,18 +11,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
-import net.nevinsky.abyssus.lib.core.editor.arrange.ARRANGEMENT_COMPONENT
-import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
-import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
-import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
-import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
-import net.nevinsky.abyssus.lib.core.editor.arrange.MAX_ARRANGEMENT_SLOTS
-import net.nevinsky.abyssus.lib.core.editor.arrange.PathLayout
-import net.nevinsky.abyssus.lib.core.editor.components.BuiltInComponentKinds
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
+import net.nevinsky.abyssus.lib.core.editor.arrange.*
 import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
 /** What an edit of a scene's JSON tree did. The tree is only touched for [Changed]. */
 sealed interface EditResult {
@@ -46,12 +39,13 @@ class ComponentEditor(
     contributions: List<ComponentKind<*>> = emptyList()
 ) {
     constructor(messages: EditorMessages, contributions: List<ComponentKind<*>> = emptyList()) :
-        this(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), messages, contributions)
+            this(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), messages, contributions)
 
     constructor(json: JsonProcessor, messages: EditorMessages, contributions: List<ComponentKind<*>> = emptyList()) :
-        this(json, EcsWriter(json), messages, contributions)
+            this(json, EcsWriter(json), messages, contributions)
 
     private val reader = ComponentReader(jsonProcessor)
+    private val references = EntityReferences(contributions)
     private val arrangements = ArrangementEdits(messages)
     val kinds: List<ComponentKind<*>> = BuiltInComponentKinds(reader, ecsWriter).kinds + contributions
 
@@ -67,7 +61,8 @@ class ComponentEditor(
     fun missingKinds(root: JsonNode, entityId: String): List<ComponentKind<*>> {
         val components = componentsOf(root, entityId) ?: return emptyList()
         return kinds.filter { kind ->
-            kind.name != ARRANGEMENT_COMPONENT && components.fieldNames().asSequence().none { byName[it] === kind }
+            kind.name != PathArrangementComponent::class.simpleName && components.fieldNames().asSequence()
+                .none { byName[it] === kind }
         }
     }
 
@@ -76,7 +71,7 @@ class ComponentEditor(
         val kind = byName[kindName] ?: return null
         val node = componentsOf(root, entityId)?.get(kindName) ?: return null
         val fields = readFields(kind, node)
-        val spotlight = componentsOf(root, entityId)?.get("TypeComponent")?.get("type")?.asText() == "LIGHT_SPOT"
+        val spotlight = SceneEntityTree(root).entities()?.get(entityId)?.let { net.nevinsky.abyssus.lib.core.format.entityTypeOf(it) } == "LIGHT_SPOT"
         return if (kindName == "LightComponent" && !spotlight) fields.filterNot {
             it.field in listOf(
                 "coneAngle",
@@ -180,7 +175,17 @@ class ComponentEditor(
         val components = componentsOf(root, entityId) ?: return reject("componentEntityMissing", entityId)
         val kind = byName[kindName] ?: return reject("componentKindUnknown", kindName)
         val node = components.get(kindName) ?: return reject("componentMissing", entityId, kind.label)
-        return updateIn(root, components, node, entityId, kind, field, text, Assets(assets, assetsByType), heights ?: LineHeights())
+        return updateIn(
+            root,
+            components,
+            node,
+            entityId,
+            kind,
+            field,
+            text,
+            Assets(assets, assetsByType),
+            heights ?: LineHeights()
+        )
     }
 
     private fun <C : Component> updateIn(
@@ -196,7 +201,7 @@ class ComponentEditor(
         checkValue(root, entityId, kind, field, text, assets)?.let { return it }
         val before = field.get(component)
         val base = kind.codec.write(component)
-        val previous = if (kind.name == ARRANGEMENT_COMPONENT) kind.codec.read(node) else null
+        val previous = if (kind.name == PathArrangementComponent::class.simpleName) kind.codec.read(node) else null
         field.set(component, text)
         if (field.get(component) == before) return EditResult.Unchanged
         if (component is PathArrangementComponent && PathLayout().slots(component) == null) {
@@ -235,17 +240,25 @@ class ComponentEditor(
                         if (child.isEmpty) target.remove(key)
                     }
                 }
+
                 n == null -> target.remove(key)
-                n is ObjectNode && target.get(key) is ObjectNode -> applyDiff(target.get(key) as ObjectNode, b, n, values?.get(key))
+                n is ObjectNode && target.get(key) is ObjectNode -> applyDiff(
+                    target.get(key) as ObjectNode,
+                    b,
+                    n,
+                    values?.get(key)
+                )
+
                 else -> target.set<JsonNode>(key, n)
             }
         }
     }
 
-    private fun containsUnknown(target: ObjectNode, modeled: JsonNode): Boolean = target.fields().asSequence().any { (key, value) ->
-        val known = modeled.get(key)
-        known == null || value is ObjectNode && known is ObjectNode && containsUnknown(value, known)
-    }
+    private fun containsUnknown(target: ObjectNode, modeled: JsonNode): Boolean =
+        target.fields().asSequence().any { (key, value) ->
+            val known = modeled.get(key)
+            known == null || value is ObjectNode && known is ObjectNode && containsUnknown(value, known)
+        }
 
     /** Remove only modeled values that changed to their defaults; unknown and unchanged children retain their text. */
     private fun removeDefaulted(target: ObjectNode, base: JsonNode, values: JsonNode?) {
@@ -258,6 +271,7 @@ class ComponentEditor(
                     removeDefaulted(child, previous, value)
                     if (child.isEmpty) target.remove(key)
                 }
+
                 else -> target.remove(key)
             }
         }
@@ -275,18 +289,13 @@ class ComponentEditor(
         return EditResult.Changed
     }
 
-    /** An entity other than [entityId] that looks at it, has it as parent or ends a point-to-point at it. */
+    /** An entity other than [entityId] that has a reference field naming it, or null. */
     private fun referrer(root: JsonNode, entityId: String): String? {
-        val wanted = entityId.toIntOrNull() ?: return null
-        for ((id, c) in SceneEntityTree(root).componentsById()) {
+        for ((id, components) in SceneEntityTree(root).componentsById()) {
             if (id == entityId) continue
-            val refs = listOf(
-                c.get("PositionComponent")?.get("lookAtId"),
-                c.get("ParentComponent")?.get("parentEntityId"),
-                c.get("Point2PointPositionComponent")?.get("entity1Id"),
-                c.get("Point2PointPositionComponent")?.get("entity2Id"),
-            )
-            if (refs.any { it?.asInt(NO_ENTITY) == wanted }) return id
+            for ((key, node) in components.properties()) {
+                if (references.fieldNaming(key.substringAfterLast('.'), node, entityId) != null) return id
+            }
         }
         return null
     }

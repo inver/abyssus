@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 import net.nevinsky.abyssus.lib.core.assets.AssetIndex
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.MetaAssetLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.StagedMetaAssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
@@ -29,13 +29,11 @@ class ProceduralSkyLoader(
     shaders: ShaderStorage = ShaderStorage(),
     private val log: Logger = NOPLogger.NOP_LOGGER,
     private val index: AssetIndex = AssetIndex(fileLoader, metaLoader),
-) : MetaAssetLoader<Unit, PreparedProceduralSky, ProceduralSky>(metaLoader) {
+) : StagedMetaAssetLoader<PreparedProceduralSky, ProceduralSky>(metaLoader) {
     /** The sky's own shader files come from its asset folder; the cloud shaders from the resources and defaults. */
     private val shaders = shaders.withAssets(fileLoader)
 
-    override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedProceduralSky> = Prepared(read(meta))
-
-    private fun read(meta: AssetMeta<Any>): PreparedProceduralSky {
+    override fun read(meta: AssetMeta<Any>): PreparedProceduralSky {
         val additional = meta.typedAdditional<ProceduralSkyMeta>()
         val vertex = shader(meta.name, additional.vertex)
         val fragment = shader(meta.name, additional.fragment)

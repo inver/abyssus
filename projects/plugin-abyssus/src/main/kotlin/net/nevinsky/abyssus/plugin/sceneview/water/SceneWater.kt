@@ -16,7 +16,7 @@ import com.badlogic.gdx.utils.Disposable
 import com.badlogic.gdx.utils.Pool
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
@@ -38,8 +38,8 @@ internal class WaterFrameInput(
     val height: Int,
     val deltaSeconds: Float,
     val surfaces: List<WaterSettings>,
-    val clear: Rgba,
-    val ambient: Rgba?,
+    val clear: Color,
+    val ambient: Color?,
     val fog: FogParams?,
     val lights: LightSet,
     val models: Collection<ModelEntity>,
@@ -238,7 +238,7 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
         depthPass.radialDepth = false
         depthPass.clipPlane = null
         depthPass.linearFar = camera.far
-        val ok = resources.render(target, Rgba(1f, 1f, 1f, 1f)) {
+        val ok = resources.render(target, Color(1f, 1f, 1f, 1f)) {
             depthSubmission.submit(
                 camera,
                 casters.filter { camera.frustum.boundsInFrustum(it.bounds) }.map { it.renderable })

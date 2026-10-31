@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.lib.raytracing
 
+import com.badlogic.gdx.math.Vector3
+
 /** CPU boundary validation, across material parts, before any native upload. Medium overlap is checked per path. */
 class RayOpticalEligibility {
     private data class Point(val x:Float,val y:Float,val z:Float)
@@ -21,8 +23,8 @@ class RayOpticalEligibility {
             var volume=0.0
             for(part in parts) {
                 val mesh=scene.meshes[part.mesh];val p=mesh.positions();val indices=mesh.indices();val m=part.transform()
-                val x=RayVec3(m[0],m[1],m[2]);val y=RayVec3(m[4],m[5],m[6]);val z=RayVec3(m[8],m[9],m[10])
-                val sign=if(x.dot(y.cross(z))<0f) -1 else 1
+                val x=Vector3(m[0],m[1],m[2]);val y=Vector3(m[4],m[5],m[6]);val z=Vector3(m[8],m[9],m[10])
+                val sign=if(x.dot(y.crossed(z))<0f) -1 else 1
                 fun point(i:Int):Point {
                     val a=p[i*3];val b=p[i*3+1];val c=p[i*3+2]
                     return Point(m[0]*a+m[4]*b+m[8]*c+m[12],m[1]*a+m[5]*b+m[9]*c+m[13],m[2]*a+m[6]*b+m[10]*c+m[14])
@@ -31,9 +33,9 @@ class RayOpticalEligibility {
                     val a=point(indices[i]);val b=point(indices[i+1]);val c=point(indices[i+2])
                     val ids=listOf(a,b,c).map { points.getOrPut(it) { points.size } }
                     if(ids.distinct().size!=3) return "Transmission requires a closed nondegenerate solid"
-                    val av=RayVec3(a.x,a.y,a.z);val bv=RayVec3(b.x,b.y,b.z);val cv=RayVec3(c.x,c.y,c.z)
-                    if((bv-av).cross(cv-av).dot((bv-av).cross(cv-av))<=1e-16f) return "Transmission requires a closed nondegenerate solid"
-                    volume+=av.dot(bv.cross(cv)).toDouble()*sign
+                    val av=Vector3(a.x,a.y,a.z);val bv=Vector3(b.x,b.y,b.z);val cv=Vector3(c.x,c.y,c.z)
+                    if((bv-av).crossed(cv-av).dot((bv-av).crossed(cv-av))<=1e-16f) return "Transmission requires a closed nondegenerate solid"
+                    volume+=av.dot(bv.crossed(cv)).toDouble()*sign
                     faces+=Face(ids[0],ids[1],ids[2])
                 }
             }

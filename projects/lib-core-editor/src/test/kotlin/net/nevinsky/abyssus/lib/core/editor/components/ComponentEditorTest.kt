@@ -5,37 +5,47 @@
 
 package net.nevinsky.abyssus.lib.core.editor.components
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
-import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
-import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-
+import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import java.io.File
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
+import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
+import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import org.junit.Assert.*
 import org.junit.Test
+import java.io.File
 
 class ComponentEditorTest {
     private val editor = ComponentEditor(ResourceEditorMessages())
 
     private fun scene(vararg entities: String) =
-        SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{${entities.joinToString(",")}},"archetypes":{"1":{"a":1}},"metadata":{"m":2}}}""")
+        SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{${entities.joinToString(",")}}}""")
 
-    private fun entity(id: Int, components: String) = """"$id":{"archetype":1,"components":{$components}}"""
+    /** Entity [id]; a `"TypeComponent":{"type":...}` in [components] is the entity's `type`. */
+    private fun entity(id: Int, components: String): String {
+        val typed = Regex(""""TypeComponent"\s*:\s*\{\s*"type"\s*:\s*"(\w+)"\s*\},?""")
+        val type = typed.find(components)?.groupValues?.get(1)
+        val header = if (type != null) """"type":"$type",""" else ""
+        return """"$id":{$header"components":{${typed.replace(components, "").trimEnd(',')}}}"""
+    }
 
-    private fun components(root: JsonNode, id: Int) = root["ecs"]["entities"]["$id"]["components"]
+    private fun components(root: JsonNode, id: Int) = root["ecs"]["$id"]["components"]
 
-    private fun assertRejected(result: EditResult) = assertTrue("expected Rejected, was $result", result is EditResult.Rejected)
+    private fun assertRejected(result: EditResult) =
+        assertTrue("expected Rejected, was $result", result is EditResult.Rejected)
 
     @Test
     fun spotLightFieldsCarryTheirLabelsAndTheRangeTooltip() {
-        val scene = SceneJson().parse(File(net.nevinsky.abyssus.lib.core.assets.testProject("Untitled"), "scenes/Main Scene.scene").readText())
+        val scene = SceneJson().parse(
+            File(
+                net.nevinsky.abyssus.lib.core.assets.testProject("Untitled"),
+                "scenes/Main Scene.scene"
+            ).readText()
+        )
         val fields = editor.read(scene, "8", "LightComponent")!!.associateBy { it.field }
         assertEquals("Range", fields.getValue("range").label)
         assertEquals("Distance a point or spot light reaches.", fields.getValue("range").tooltip)
@@ -48,21 +58,34 @@ class ComponentEditorTest {
     @Test
     fun everyKindHasFields() {
         val names = editor.kinds.associate { it.name to it.fields.map { f -> f.name } }
-        assertEquals(9, names.size)
+        assertEquals(7, names.size)
         assertEquals(listOf("name"), names["NameComponent"])
-        assertEquals(listOf("type"), names["TypeComponent"])
         assertEquals(listOf("parentEntityId"), names["ParentComponent"])
         assertEquals(11, names["PositionComponent"]!!.size)
         assertTrue("camera.fieldOfView" in names["CameraComponent"]!!)
-        assertEquals(listOf("color.r", "color.g", "color.b", "color.a", "intensity", "range", "coneAngle", "edgeSoftness"), names["LightComponent"])
-        assertEquals(listOf("entity1Id", "entity2Id"), names["Point2PointPositionComponent"])
+        assertEquals(
+            listOf(
+                "color.r",
+                "color.g",
+                "color.b",
+                "color.a",
+                "intensity",
+                "range",
+                "coneAngle",
+                "edgeSoftness"
+            ), names["LightComponent"]
+        )
         assertEquals(listOf("assetType", "assetName", "shaderKey"), names["RenderComponent"])
-        assertEquals(listOf("asset.assetName", "spacing", "offset", "sides", "alignToPath", "yawOffset"), names["PathArrangementComponent"])
+        assertEquals(
+            listOf("asset.assetName", "spacing", "offset", "sides", "alignToPath", "yawOffset"),
+            names["PathArrangementComponent"]
+        )
     }
 
     @Test
     fun lightRangeChangesOnlyRangeAndWritesTheDefaultExplicitly() {
-        val root = scene(entity(0, """"LightComponent":{"light":{"color":{"r":1.00,"g":1,"b":1,"a":1},"intensity":1.0}}"""))
+        val root =
+            scene(entity(0, """"LightComponent":{"light":{"color":{"r":1.00,"g":1,"b":1,"a":1},"intensity":1.0}}"""))
         val before = root.toString()
         assertEquals(EditResult.Unchanged, editor.update(root, "0", "LightComponent", "range", "100"))
         assertEquals(before, root.toString())
@@ -70,7 +93,10 @@ class ComponentEditorTest {
         assertEquals(30, components(root, 0)["LightComponent"]["light"]["range"].asInt())
         assertEquals(EditResult.Changed, editor.update(root, "0", "LightComponent", "range", "100"))
         val expected = SceneJson().parse(before)
-        (components(expected, 0)["LightComponent"]["light"] as com.fasterxml.jackson.databind.node.ObjectNode).put("range", 100)
+        (components(
+            expected,
+            0
+        )["LightComponent"]["light"] as com.fasterxml.jackson.databind.node.ObjectNode).put("range", 100)
         assertEquals(expected.toString(), root.toString())
         for (invalid in listOf("0", "-1", "abc", "NaN", "Infinity")) {
             val result = editor.update(root, "0", "LightComponent", "range", invalid)
@@ -89,8 +115,10 @@ class ComponentEditorTest {
         for ((field, default) in listOf("coneAngle" to "45", "edgeSoftness" to "20")) {
             assertEquals(EditResult.Unchanged, editor.update(root, "0", "LightComponent", field, default))
         }
-        for ((field, invalid) in listOf("coneAngle" to listOf("0", "180", "-1", "181", "NaN", "Infinity", "abc"),
-            "edgeSoftness" to listOf("-1", "101", "NaN", "Infinity", "abc"))) {
+        for ((field, invalid) in listOf(
+            "coneAngle" to listOf("0", "180", "-1", "181", "NaN", "Infinity", "abc"),
+            "edgeSoftness" to listOf("-1", "101", "NaN", "Infinity", "abc")
+        )) {
             for (value in invalid) {
                 val result = editor.update(root, "0", "LightComponent", field, value)
                 assertRejected(result)
@@ -147,7 +175,10 @@ class ComponentEditorTest {
         assertRejected(editor.add(root, "0", "RenderComponent"))
         assertFalse(components(root, 0).has("RenderComponent"))
         assertRejected(editor.add(root, "0", "RenderComponent", mapOf("assetName" to "tree"), assets = setOf("rock")))
-        assertEquals(EditResult.Changed, editor.add(root, "0", "RenderComponent", mapOf("assetName" to "tree"), setOf("tree")))
+        assertEquals(
+            EditResult.Changed,
+            editor.add(root, "0", "RenderComponent", mapOf("assetName" to "tree"), setOf("tree"))
+        )
         val asset = components(root, 0)["RenderComponent"]
         assertEquals("MODEL", asset["type"].asText())
         assertEquals("tree", asset["assetName"].asText())
@@ -168,12 +199,13 @@ class ComponentEditorTest {
         assertFalse("PositionComponent" in missing)
         assertFalse("PickableComponent" in missing)
         assertTrue("LightComponent" in missing)
-        assertEquals(7, missing.size)
+        assertEquals(5, missing.size)
     }
 
     @Test
     fun updateCameraFieldTouchesOnlyThatValue() {
-        val camera = """"CameraComponent":{"camera":{"position":{"x":1.50,"y":2},"far":200,"near":0.5,"fieldOfView":67}}"""
+        val camera =
+            """"CameraComponent":{"camera":{"position":{"x":1.50,"y":2},"far":200,"near":0.5,"fieldOfView":67}}"""
         val root = scene(entity(0, camera))
         assertEquals(EditResult.Changed, editor.update(root, "0", "CameraComponent", "camera.fieldOfView", "60"))
         val cam = components(root, 0)["CameraComponent"]["camera"]
@@ -208,13 +240,11 @@ class ComponentEditorTest {
     }
 
     @Test
-    fun updateNameAndType() {
-        val root = scene(entity(0, """"NameComponent":{"name":"a"},"TypeComponent":{"type":"OBJECT"}"""))
+    fun updateName() {
+        val root = scene(entity(0, """"NameComponent":{"name":"a"}"""))
         assertEquals(EditResult.Changed, editor.update(root, "0", "NameComponent", "name", "b"))
-        assertEquals(EditResult.Changed, editor.update(root, "0", "TypeComponent", "type", "GROUP"))
-        assertRejected(editor.update(root, "0", "TypeComponent", "type", "NOPE"))
+        assertRejected(editor.update(root, "0", "TypeComponent", "type", "GROUP"))
         assertEquals("b", components(root, 0)["NameComponent"]["name"].asText())
-        assertEquals("GROUP", components(root, 0)["TypeComponent"]["type"].asText())
     }
 
     @Test
@@ -243,9 +273,9 @@ class ComponentEditorTest {
 
     @Test
     fun removeKeepsTheOtherComponentsInOrder() {
-        val root = scene(entity(0, """"NameComponent":{},"LightComponent":{"light":{}},"TypeComponent":{}"""))
+        val root = scene(entity(0, """"NameComponent":{},"LightComponent":{"light":{}},"PickableComponent":{}"""))
         assertEquals(EditResult.Changed, editor.remove(root, "0", "LightComponent"))
-        assertEquals(listOf("NameComponent", "TypeComponent"), components(root, 0).fieldNames().asSequence().toList())
+        assertEquals(listOf("NameComponent", "PickableComponent"), components(root, 0).fieldNames().asSequence().toList())
         assertRejected(editor.remove(root, "0", "LightComponent"))
     }
 
@@ -274,7 +304,8 @@ class ComponentEditorTest {
 
     @Test
     fun readListsFieldValues() {
-        val root = scene(entity(0, """"LightComponent":{"light":{"color":{"r":0.5,"g":1,"b":1,"a":1},"intensity":2}}"""))
+        val root =
+            scene(entity(0, """"LightComponent":{"light":{"color":{"r":0.5,"g":1,"b":1,"a":1},"intensity":2}}"""))
         val values = editor.read(root, "0", "LightComponent")!!.associate { it.field to it.value }
         assertEquals("0.5", values["color.r"])
         assertEquals("2", values["intensity"])
@@ -290,7 +321,10 @@ class ComponentEditorTest {
         assertEquals(EditResult.Changed, editor.remove(root, "0", "LightComponent"))
         // camera field changed; everything else equals the original
         (root["ecs"]["4"]["components"]["CameraComponent"]["camera"] as com.fasterxml.jackson.databind.node.ObjectNode)
-            .set<JsonNode>("fieldOfView", original["ecs"]["4"]["components"]["CameraComponent"]["camera"]["fieldOfView"])
+            .set<JsonNode>(
+                "fieldOfView",
+                original["ecs"]["4"]["components"]["CameraComponent"]["camera"]["fieldOfView"]
+            )
         assertEquals(original.toString(), root.toString())
     }
 
@@ -301,14 +335,10 @@ class ComponentEditorTest {
         editor.add(root, "0", "LightComponent")
         editor.update(root, "4", "CameraComponent", "camera.near", "0.25")
         editor.update(root, "0", "PositionComponent", "localPosition.y", "2.5")
-        val loader = net.nevinsky.abyssus.lib.core.ecs.EcsLoader(
-            JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER),
-            net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry(),
-        )
         val before = net.nevinsky.abyssus.lib.core.ecs.SceneEngine()
         val after = net.nevinsky.abyssus.lib.core.ecs.SceneEngine()
-        val beforeWarnings = loader.loadToEngine(original["ecs"], before)
-        val afterWarnings = loader.loadToEngine(root["ecs"], after)
+        val beforeWarnings = net.nevinsky.abyssus.lib.core.testing.loadEcs(SceneJson().compact(original["ecs"]), before)
+        val afterWarnings = net.nevinsky.abyssus.lib.core.testing.loadEcs(SceneJson().compact(root["ecs"]), after)
         assertEquals(beforeWarnings.warnings, afterWarnings.warnings)
         assertEquals(before.entities.size(), after.entities.size())
     }
@@ -351,12 +381,18 @@ class ComponentEditorTest {
     /** Main Scene with a line of trees: arrangement 11 and copies 12 to 16. */
     private fun arranged(): JsonNode {
         val root = SceneJson().parse(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
-        val points = listOf(Vec3(0f, 0f, 0f), Vec3(40f, 0f, 0f))
-        ArrangementEdits(ResourceEditorMessages()).create(root, RenderAsset("MODEL", "tree"), points, false, LineHeights())
+        val points = listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f))
+        ArrangementEdits(ResourceEditorMessages()).create(
+            root,
+            BaseMeta(
+                MetaType.MODEL, " tree "
+            ), points, false, LineHeights()
+        )
         return root
     }
 
-    private fun slotsOf(root: JsonNode) = SceneEntityTree(root).components("11")!!["PathArrangementComponent"]["slots"].map { it.asInt() }
+    private fun slotsOf(root: JsonNode) =
+        SceneEntityTree(root).components("11")!!["PathArrangementComponent"]["slots"].map { it.asInt() }
 
     @Test
     fun editAnArrangedCopysPosition() {
@@ -396,7 +432,12 @@ class ComponentEditorTest {
     @Test
     fun settingsThatMakeTooManyCopiesAreRefused() {
         val root = arranged()
-        SceneEntityTree(root).components("11")!!["PathArrangementComponent"]["points"][1].let { (it as com.fasterxml.jackson.databind.node.ObjectNode).put("x", 2000) }
+        SceneEntityTree(root).components("11")!!["PathArrangementComponent"]["points"][1].let {
+            (it as com.fasterxml.jackson.databind.node.ObjectNode).put(
+                "x",
+                2000
+            )
+        }
         val before = root.toString()
         assertRejected(editor.update(root, "11", "PathArrangementComponent", "spacing", "1"))
         assertEquals(before, root.toString())

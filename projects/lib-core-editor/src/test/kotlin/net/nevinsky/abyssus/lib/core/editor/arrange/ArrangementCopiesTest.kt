@@ -14,14 +14,14 @@ class ArrangementCopiesTest {
     private fun ecs(text: String): JsonNode = ObjectMapper().readTree(text)
 
     private val scene = """
-        {"entities": {
+        {
           "1": {"components": {"NameComponent": {"name": "Ground"}}},
           "2": {"components": {"NameComponent": {"name": "Railway"}, "PathArrangementComponent": {"slots": [3, -1, 4, 9, 6]}}},
           "3": {"components": {"ParentComponent": {"parentEntityId": 2}}},
           "4": {"components": {"ParentComponent": {"parentEntityId": 2}}},
           "5": {"components": {"NameComponent": {"name": "Detached"}}},
           "6": {"components": {"ParentComponent": {"parentEntityId": 5}}}
-        }}
+        }
     """
 
     @Test
@@ -32,7 +32,7 @@ class ArrangementCopiesTest {
 
     @Test
     fun aSceneWithoutArrangementsHasNoCopies() {
-        assertEquals(emptySet<String>(), arrangementCopyIds(ecs("""{"entities": {"1": {"components": {}}}}""")))
+        assertEquals(emptySet<String>(), arrangementCopyIds(ecs("""{"1": {"components": {}}}""")))
         assertEquals(emptySet<String>(), arrangementCopyIds(ecs("{}")))
     }
 
@@ -44,7 +44,7 @@ class ArrangementCopiesTest {
 
     @Test
     fun theCountIsTheSlotsThatNameAnEntity() {
-        val entities = ecs(scene)["entities"]
+        val entities = ecs(scene)
         assertEquals(4, arrangementCopyCount(entities["2"]))
         assertEquals(0, arrangementCopyCount(entities["1"]))
     }

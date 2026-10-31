@@ -1,5 +1,8 @@
 package net.nevinsky.abyssus.lib.core.editor.content
 
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Quaternion
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.dto.LIGHT_CONE_ANGLE
 import net.nevinsky.abyssus.lib.core.dto.LIGHT_EDGE_SOFTNESS
 import net.nevinsky.abyssus.lib.core.dto.LIGHT_RANGE
@@ -8,24 +11,15 @@ import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_NEAR
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 
-data class Vec3(val x: Float, val y: Float, val z: Float)
+/** A [Color] whose components are not clamped to 0..1: light colors are scaled by intensity and can exceed 1. */
+fun unclampedColor(r: Float, g: Float, b: Float, a: Float): Color = Color().also { it.r = r; it.g = g; it.b = b; it.a = a }
 
-/** An entity's simulated position and rotation; its authored scale is kept. */
-data class Pose(val position: Vec3, val rotation: Quat)
-
-data class Rgba(val r: Float, val g: Float, val b: Float, val a: Float)
-
-/** [w] is 1 for the identity rotation, which native scenes leave out of the file together with the other default fields. */
-data class Quat(val x: Float, val y: Float, val z: Float, val w: Float) {
-    companion object {
-        val IDENTITY = Quat(0f, 0f, 0f, 1f)
-    }
-}
+data class Pose(val position: Vector3, val rotation: Quaternion)
 
 /** Native `PositionComponent`: position 0, identity rotation and unit scale unless the file says otherwise. */
-data class PlacementTransform(val position: Vec3, val rotation: Quat, val scale: Vec3) {
+data class PlacementTransform(val position: Vector3, val rotation: Quaternion, val scale: Vector3) {
     companion object {
-        val IDENTITY = PlacementTransform(Vec3(0f, 0f, 0f), Quat.IDENTITY, Vec3(1f, 1f, 1f))
+        val IDENTITY = PlacementTransform(Vector3(0f, 0f, 0f), Quaternion(), Vector3(1f, 1f, 1f))
     }
 }
 
@@ -41,12 +35,12 @@ enum class LightKind { DIRECTIONAL, POINT, SPOT }
 data class LightPlacement(
     val entityId: String,
     val kind: LightKind,
-    val color: Rgba,
+    val color: Color,
     val intensity: Float,
-    val position: Vec3,
-    val direction: Vec3,
+    val position: Vector3,
+    val direction: Vector3,
     val range: Float = LIGHT_RANGE,
-    val rotation: Quat = Quat.IDENTITY,
+    val rotation: Quaternion = Quaternion(),
     val coneAngle: Float = LIGHT_CONE_ANGLE,
     val edgeSoftness: Float = LIGHT_EDGE_SOFTNESS,
     /** The `PositionComponent.lookAtId` of the light, or null when it does not name a target. */
@@ -61,12 +55,12 @@ data class LightPlacement(
 data class CameraPlacement(
     val entityId: String,
     val name: String,
-    val position: Vec3,
-    val direction: Vec3,
+    val position: Vector3,
+    val direction: Vector3,
     val lookAtId: String?,
     val near: Float = CAMERA_NEAR,
     val far: Float = CAMERA_FAR,
     val fieldOfView: Float = CAMERA_FOV,
-    val rotation: Quat = Quat.IDENTITY,
+    val rotation: Quaternion = Quaternion(),
 )
 

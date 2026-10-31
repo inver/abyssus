@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.document
 
+import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.assets.META_VERSION_DEFAULT
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 
@@ -17,6 +18,22 @@ data class AssetMetaDocument<A>(
     val type: MetaType,
     val additional: A,
 )
+
+/** The `meta.json` text of a new [type] asset with [additional], compact or [pretty]. */
+fun newAssetMetaText(type: MetaType, additional: Any, uuid: String, lastModified: Long, pretty: Boolean = false): String {
+    val meta = AssetMetaDocument(lastModified = lastModified, uuid = uuid, type = type, additional = additional)
+    return SceneJson().let { if (pretty) it.pretty(meta) else it.compact(meta) }
+}
+
+/**
+ * The header of a new asset `meta.json` as a tree: the markers, versions, [lastModified], [uuid] and [type] an
+ * [AssetMetaDocument] declares, in file order, with an empty `additional` for the caller to replace. For kinds whose
+ * `additional` is built from existing nodes, so their number text is kept.
+ */
+fun newAssetMetaTree(json: SceneJson, type: MetaType, uuid: String, lastModified: Long): ObjectNode =
+    json.mapper.valueToTree(
+        AssetMetaDocument(lastModified = lastModified, uuid = uuid, type = type, additional = emptyMap<String, Any>()),
+    )
 
 data class TerrainAssetAdditional(
     val terrainFile: String,
@@ -60,3 +77,5 @@ data class InitialUiLabel(
 )
 data class InitialUiLayout(val anchor: String = "center")
 data class InitialUiProperties(val text: String = "Hello")
+
+data class TextureAssetAdditional(val file: String)

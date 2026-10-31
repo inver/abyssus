@@ -62,7 +62,7 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
-        file = myFixture.addFileToProject("Ray.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""").virtualFile
+        file = myFixture.addFileToProject("Ray.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""").virtualFile
         controls = SceneRayControls(project) { _, f -> opened += f }
     }
 

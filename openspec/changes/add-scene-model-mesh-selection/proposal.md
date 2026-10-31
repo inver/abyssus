@@ -7,7 +7,7 @@ and forces authors to split content into many asset folders to show different pa
 
 ## What Changes
 
-- Add an optional `meshId` field to a model entity's `RenderComponent` in the scene JSON (`renderable.asset.meshId`), naming
+- Add an optional `meshId` field to a model entity's `RenderComponent` in the scene JSON (beside `assetName`, in the flat render component), naming
   the concrete mesh (with its materials) of the model asset to use; when absent the whole model is drawn as before.
 - Filter a model's `ModelData` at build time (mesh, its materials, node parts, textures) so the built `Model` contains
   only the selected mesh; identify and cache each variant by a typed `ModelKey(asset, meshId)`.
@@ -15,7 +15,7 @@ and forces authors to split content into many asset folders to show different pa
   (`FieldRenderer`) so both draw the selected mesh.
 - Add a mesh chooser to the model entity's Properties panel and a mesh choice to Add Asset, fed by a GL-free mesh lister.
 - Read/write `meshId` through `editSceneJson` and the headless editing API (one undoable command, preserving formatting and number text).
-- Invalidate a model's variants together with the model; document the field in `docs/ai/file-formats.md`.
+- Invalidate (in `AssetStorage`, `ViewAssets` and the ray scene assets) and retain a model's variants together with the model; document the field in `docs/ai/file-formats.md`.
 
 ## Capabilities
 

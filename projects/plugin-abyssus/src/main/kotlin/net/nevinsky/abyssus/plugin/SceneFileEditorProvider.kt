@@ -69,7 +69,8 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
             val overlays = overlays(project, file)
             val panel = SceneViewPanel(
                 params, SceneRenderer(
-                    ViewAssets(assets.loading), assets.sceneShaders, project.service<FoliageDrafts>(),
+                    ViewAssets(assets.loading), assets.sceneShaders, project.service<FoliageDrafts>(), project.service<net.nevinsky.abyssus.plugin.terrain.SculptDrafts>(),
+                    project.service<net.nevinsky.abyssus.plugin.splat.SplatDrafts>(),
                     log = core.loggers.getLogger("sceneview"),
                 ),
                 lightMenu = PlacementMenu({ host.canAddLight(file) }) { position -> host.lightActions(file, position) },
@@ -82,6 +83,16 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
                 overlays = overlays,
                 foliageActions = { entity -> net.nevinsky.abyssus.plugin.projectView.foliageGroup(project, file, entity) },
                 showFps = { project.service<net.nevinsky.abyssus.plugin.sceneview.SceneViewSettings>().showFps },
+                sculptSession = { entity, mode, tool, ready ->
+                    project.service<net.nevinsky.abyssus.plugin.terrain.SculptEditing>().open(file, entity, mode, tool,
+                        report = { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(project, reason, AbyssusBundle.message("sculptTitle")) },
+                        ready = ready)
+                },
+                splatSession = { entity, mode, ready ->
+                    project.service<net.nevinsky.abyssus.plugin.splat.SplatEditing>().open(file, entity, mode,
+                        report = { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(project, reason, AbyssusBundle.message("splatTitle")) },
+                        ready = ready)
+                },
                 paintSession = { entity, mode, ready ->
                     project.service<net.nevinsky.abyssus.plugin.foliage.FoliageEditing>().open(file, entity, mode,
                         report = { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(project, reason, AbyssusBundle.message("paintFoliageTitle")) },

@@ -33,7 +33,7 @@ class UiPreviewControllerTest : BasePlatformTestCase() {
     override fun setUp() {
         super.setUp()
         myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1}""")
-        myFixture.addFileToProject("p/scenes/Main.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""")
+        myFixture.addFileToProject("p/scenes/Main.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""")
         file = myFixture.addFileToProject("p/assets/menus/meta.json", source).virtualFile
     }
 
@@ -150,7 +150,7 @@ class UiPreviewControllerTest : BasePlatformTestCase() {
         c.setBackdropScene(null)
         assertNull(controller(prefs).backdropScene)
         assertEquals(text, document.text)
-        assertEquals("the scene is untouched", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""",
+        assertEquals("the scene is untouched", """{"format":"abyssus","formatVersion":1,"ecs":{}}""",
             String(file.parent.parent.parent.findChild("scenes")!!.findChild("Main.scene")!!.contentsToByteArray()))
     }
 

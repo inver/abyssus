@@ -6,24 +6,20 @@
 package net.nevinsky.abyssus.lib.core.editor.arrange
 
 import com.badlogic.gdx.math.Matrix4
+import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.pick.GroundHeights
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
 import net.nevinsky.abyssus.lib.core.editor.terrainData
-import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Test
 import org.slf4j.helpers.NOPLogger
 import java.io.File
@@ -31,24 +27,33 @@ import java.io.File
 class ArrangementEditsTest {
     private val edits = ArrangementEdits(ResourceEditorMessages())
     private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
-    private val tree = RenderAsset("MODEL", "tree")
+    private val tree = BaseMeta(MetaType.MODEL, "tree")
     private val project = testProject("Untitled")
     private val terrain = terrainData(project, "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b")
-    private val heights = GroundHeights(listOf(TerrainTarget("1", terrain, Matrix4().setToTranslation(-38.25267f, 0f, -32.7754f))))
+    private val heights =
+        GroundHeights(listOf(TerrainTarget("1", terrain, Matrix4().setToTranslation(-38.25267f, 0f, -32.7754f))))
 
     private fun mainScene() = SceneJson().parse(File(project, "scenes/Main Scene.scene").readText())
 
-    private fun entity(root: JsonNode, id: Int) = root["ecs"].let { (it["entities"] ?: it)[id.toString()] }
+    private fun entity(root: JsonNode, id: Int) = root["ecs"][id.toString()]
     private fun components(root: JsonNode, id: Int) = entity(root, id)?.get("components") as ObjectNode?
-    private fun arrangement(root: JsonNode, id: Int = 11) = components(root, id)!![ARRANGEMENT_COMPONENT] as ObjectNode
+    private fun arrangement(root: JsonNode, id: Int = 11) =
+        components(root, id)!![PathArrangementComponent::class.simpleName] as ObjectNode
+
     private fun slots(root: JsonNode, id: Int = 11) = arrangement(root, id)["slots"].map { it.asInt() }
-    private fun component(root: JsonNode, id: Int = 11) = json.bindComponent(arrangement(root, id), PathArrangementComponent::class.java)
+    private fun component(root: JsonNode, id: Int = 11) =
+        json.bindComponent(arrangement(root, id), PathArrangementComponent::class.java)
 
-    private fun y(root: JsonNode, id: Int) = components(root, id)!!["PositionComponent"]["localPosition"].path("y").floatValue()
-    private fun x(root: JsonNode, id: Int) = components(root, id)!!["PositionComponent"]["localPosition"].path("x").floatValue()
-    private fun z(root: JsonNode, id: Int) = components(root, id)!!["PositionComponent"]["localPosition"].path("z").floatValue()
+    private fun y(root: JsonNode, id: Int) =
+        components(root, id)!!["PositionComponent"]["localPosition"].path("y").floatValue()
 
-    private fun point(x: Float, z: Float) = Vec3(x, heights.heightAt(x, z, 0f), z)
+    private fun x(root: JsonNode, id: Int) =
+        components(root, id)!!["PositionComponent"]["localPosition"].path("x").floatValue()
+
+    private fun z(root: JsonNode, id: Int) =
+        components(root, id)!!["PositionComponent"]["localPosition"].path("z").floatValue()
+
+    private fun point(x: Float, z: Float) = Vector3(x, heights.heightAt(x, z, 0f), z)
 
     /** A fresh line of trees from (0, 0) to (40, 0) written to Main Scene: arrangement 11, copies 12 to 16. */
     private fun drawn(): ObjectNode {
@@ -59,14 +64,19 @@ class ArrangementEditsTest {
     }
 
     /** Applies [change] to the arrangement's component text, then regenerates the way a settings edit does. */
-    private fun edit(root: JsonNode, id: Int = 11, refillAware: Boolean = true, change: (PathArrangementComponent, ObjectNode) -> Unit): ArrangementResult {
+    private fun edit(
+        root: JsonNode,
+        id: Int = 11,
+        refillAware: Boolean = true,
+        change: (PathArrangementComponent, ObjectNode) -> Unit
+    ): ArrangementResult {
         val before = component(root, id)
         val node = arrangement(root, id)
         change(component(root, id), node)
         return edits.regenerate(root, id.toString(), if (refillAware) before else null, heights)
     }
 
-    private fun setPoints(node: ObjectNode, vararg points: Vec3) {
+    private fun setPoints(node: ObjectNode, vararg points: Vector3) {
         val array = node.putArray("points")
         for (p in points) array.addObject().put("x", p.x).put("y", p.y).put("z", p.z)
     }
@@ -78,14 +88,14 @@ class ArrangementEditsTest {
         for (id in 0..10) assertEquals(entity(before, id).toString(), entity(root, id).toString())
         val path = components(root, 11)!!
         assertEquals("Path 11", path["NameComponent"]["name"].asText())
-        assertEquals("GROUP", path["TypeComponent"]["type"].asText())
+        assertEquals("GROUP", root["ecs"]["11"]["type"].asText())
         val c = component(root)
         assertEquals(2, c.points.size)
         assertFalse(c.closed)
-        assertEquals("tree", c.asset.assetName)
+        assertEquals("tree", c.asset.name)
         assertEquals(10f, c.spacing, 0f)
         assertEquals(listOf(12, 13, 14, 15, 16), c.slots)
-        assertEquals(17, (root["ecs"].let { it["entities"] ?: it }).size())
+        assertEquals(17, (root["ecs"]).size())
     }
 
     @Test
@@ -93,7 +103,7 @@ class ArrangementEditsTest {
         val root = drawn()
         val copy = components(root, 12)!!
         assertEquals("Path 11 #0", copy["NameComponent"]["name"].asText())
-        assertEquals("OBJECT", copy["TypeComponent"]["type"].asText())
+        assertEquals("OBJECT", root["ecs"]["12"]["type"].asText())
         assertEquals("tree", copy["RenderComponent"]["assetName"].asText())
         assertEquals("MODEL", copy["RenderComponent"]["type"].asText())
         assertEquals("defaultShader", copy["RenderComponent"]["shaderKey"].asText())
@@ -121,7 +131,7 @@ class ArrangementEditsTest {
     fun aTooLongLineIsRefusedAndWritesNothing() {
         val root = mainScene()
         val before = root.toString()
-        val result = edits.create(root, tree, listOf(Vec3(0f, 0f, 0f), Vec3(20000f, 0f, 0f)), false, heights)
+        val result = edits.create(root, tree, listOf(Vector3(0f, 0f, 0f), Vector3(20000f, 0f, 0f)), false, heights)
         assertTrue(result is ArrangementResult.Rejected)
         assertEquals(before, root.toString())
     }
@@ -150,9 +160,17 @@ class ArrangementEditsTest {
     @Test
     fun changingTheModelChangesEveryCopy() {
         val root = drawn()
-        edit(root) { _, node -> (node["asset"] as ObjectNode).put("assetName", "model_900f6f61-6384-434a-be81-56ce303fbb56") }
+        edit(root) { _, node ->
+            (node["asset"] as ObjectNode).put(
+                "assetName",
+                "model_900f6f61-6384-434a-be81-56ce303fbb56"
+            )
+        }
         for (id in 12..16) {
-            assertEquals("model_900f6f61-6384-434a-be81-56ce303fbb56", components(root, id)!!["RenderComponent"]["assetName"].asText())
+            assertEquals(
+                "model_900f6f61-6384-434a-be81-56ce303fbb56",
+                components(root, id)!!["RenderComponent"]["assetName"].asText()
+            )
             assertEquals("Path 11 #${id - 12}", components(root, id)!!["NameComponent"]["name"].asText())
         }
         assertEquals(listOf(12, 13, 14, 15, 16), slots(root))
@@ -169,7 +187,7 @@ class ArrangementEditsTest {
     @Test
     fun aDeletedCopyStaysEmpty() {
         val root = drawn()
-        (root["ecs"].let { it["entities"] ?: it } as ObjectNode).remove("15")
+        (root["ecs"] as ObjectNode).remove("15")
         edit(root) { _, node -> setPoints(node, point(0f, 0f), point(60f, 0f)) }
         assertEquals(listOf(12, 13, 14, -1, 16, 17, 18), slots(root))
         assertNull(entity(root, 15))
@@ -190,7 +208,7 @@ class ArrangementEditsTest {
     @Test
     fun movingTheLastPointKeepsAnEmptyFirstSlotEmpty() {
         val root = drawn()
-        (root["ecs"].let { it["entities"] ?: it } as ObjectNode).remove("12")
+        (root["ecs"] as ObjectNode).remove("12")
         edit(root) { _, node -> setPoints(node, point(0f, 0f), point(60f, 0f)) }
         assertEquals(-1, slots(root)[0])
         assertEquals(7, slots(root).size)
@@ -199,7 +217,7 @@ class ArrangementEditsTest {
     @Test
     fun movingTheFirstPointRefillsEmptySlots() {
         val root = drawn()
-        (root["ecs"].let { it["entities"] ?: it } as ObjectNode).remove("12")
+        (root["ecs"] as ObjectNode).remove("12")
         edit(root) { _, node -> setPoints(node, point(2f, 0f), point(40f, 0f)) }
         assertTrue(slots(root).none { it == -1 })
     }
@@ -280,8 +298,22 @@ class ArrangementEditsTest {
         val root = drawn()
         val text = root.toString()
         assertTrue(edits.setPoints(root, "11", listOf(point(0f, 0f)), heights) is ArrangementResult.Rejected)
-        assertTrue(edits.setPoints(root, "11", listOf(point(0f, 0f), point(50000f, 0f)), heights) is ArrangementResult.Rejected)
-        assertTrue(edits.setPoints(root, "99", listOf(point(0f, 0f), point(5f, 0f)), heights) is ArrangementResult.Rejected)
+        assertTrue(
+            edits.setPoints(
+                root,
+                "11",
+                listOf(point(0f, 0f), point(50000f, 0f)),
+                heights
+            ) is ArrangementResult.Rejected
+        )
+        assertTrue(
+            edits.setPoints(
+                root,
+                "99",
+                listOf(point(0f, 0f), point(5f, 0f)),
+                heights
+            ) is ArrangementResult.Rejected
+        )
         assertEquals(text, root.toString())
     }
 
@@ -289,7 +321,7 @@ class ArrangementEditsTest {
     fun setPointsKeepsTheTextOfPointsThatDidNotMove() {
         val root = drawn()
         val first = component(root).points[0]
-        edits.setPoints(root, "11", listOf(Vec3(first.x, first.y, first.z), point(60f, 0f)), heights)
+        edits.setPoints(root, "11", listOf(Vector3(first.x, first.y, first.z), point(60f, 0f)), heights)
         assertEquals(first.y, component(root).points[0].y, 0f)
     }
 }

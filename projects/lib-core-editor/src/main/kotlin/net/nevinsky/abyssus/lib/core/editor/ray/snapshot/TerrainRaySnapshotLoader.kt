@@ -20,7 +20,7 @@ import net.nevinsky.abyssus.lib.core.assets.texture.TextureLoader
 class TerrainRaySnapshotLoader(
     private val terrainLoader: TerrainLoader,
     private val textureLoader: TextureLoader,
-    private val maxBytes: Long = 128L * 1024 * 1024,
+    private val maxBytes: Long = RAY_SNAPSHOT_MAX_BYTES,
 ) : RaySnapshotLoader<RayTerrainSnapshot, Nothing> {
     override fun load(meta: AssetMeta<Any>): RayTerrainSnapshot {
         val prepared = checkNotNull(terrainLoader.loadPrepared(meta)).staged
@@ -42,7 +42,7 @@ class TerrainRaySnapshotLoader(
         val cells = data.resolution.toLong() - 1
         val bytes = data.heights.size.toLong() * (1 + TERRAIN_FLOATS_PER_VERTEX) * 4 + cells * cells * 6 * 4 +
                 SPLAT_FIELDS.sumOf { field -> images[field]?.let { it.width.toLong() * it.height * 4 } ?: 0L }
-        require(bytes <= maxBytes) { "CPU terrain snapshot exceeds its $maxBytes byte limit" }
+        requireSnapshotSize("terrain", bytes, maxBytes)
         val splat = images[SPLAT_MAP]?.let {
             RayTerrainTexture(
                 copyRayImage(it),

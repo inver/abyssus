@@ -9,10 +9,9 @@ import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GLTexture
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
-import net.nevinsky.abyssus.lib.core.editor.scene.toVector3
 import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.lib.render.frame.FrameInputs
@@ -42,7 +41,7 @@ class TerrainShader(shaders: ShaderStorage) : Disposable {
      * With a [clipPlane] `(a, b, c, d)` (a planar reflection pass), fragments with `a x + b y + c z + d < 0` are discarded.
      */
     fun draw(
-        camera: Camera, terrains: Collection<TerrainEntity>, ambient: Rgba?, fog: FogParams?, lights: LightSet,
+        camera: Camera, terrains: Collection<TerrainEntity>, ambient: Color?, fog: FogParams?, lights: LightSet,
         irradiance: GLTexture? = null, atlas: ShadowAtlasAttribute? = null,
         fadeIrradiance: GLTexture? = null, fade: Float = 0f, sunVisibility: DirectionalVisibilityAttribute? = null,
         clipPlane: FloatArray? = null,
@@ -64,9 +63,9 @@ class TerrainShader(shaders: ShaderStorage) : Disposable {
 
 /** The view's lights in `lib-render`'s host-neutral form. */
 internal fun renderLights(lights: LightSet) = RenderLights(
-    lights.directional.map { DirectionalInput(it.entityId, it.direction.toVector3(), it.color.r, it.color.g, it.color.b) },
-    lights.point.map { PointInput(it.entityId, it.position.toVector3(), it.color.r, it.color.g, it.color.b, it.range) },
+    lights.directional.map { DirectionalInput(it.entityId, it.direction.cpy(), it.color.r, it.color.g, it.color.b) },
+    lights.point.map { PointInput(it.entityId, it.position.cpy(), it.color.r, it.color.g, it.color.b, it.range) },
     lights.spot.map {
-        SpotInput(it.entityId, it.position.toVector3(), it.direction.toVector3(), it.color.r, it.color.g, it.color.b, it.range, it.cone.outerCos, it.cone.innerCos)
+        SpotInput(it.entityId, it.position.cpy(), it.direction.cpy(), it.color.r, it.color.g, it.color.b, it.range, it.cone.outerCos, it.cone.innerCos)
     },
 )

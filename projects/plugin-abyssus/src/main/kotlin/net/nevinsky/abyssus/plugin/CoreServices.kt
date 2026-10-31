@@ -22,6 +22,10 @@ import net.nevinsky.abyssus.lib.raytracing.MetalRayBackendFactory
 import net.nevinsky.abyssus.lib.raytracing.VulkanRayBackendFactory
 import net.nevinsky.abyssus.lib.core.editor.ray.RayBackendService
 import net.nevinsky.abyssus.plugin.terrain.NewTerrainFactory
+import net.nevinsky.abyssus.plugin.terrain.SculptServices
+import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptManifestCodec
+import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptPlanner
+import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptStateReader
 import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainAssetWriter
 import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainHeightEncoder
 import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainGenerator
@@ -49,6 +53,11 @@ class TerrainServices(json: JsonProcessor) {
     val writer = TerrainAssetWriter(json, heightEncoder)
     val recipes = TerrainRecipeCodec(json)
     val newTerrains = NewTerrainFactory(json, writer, heightEncoder, recipes)
+    private val sculptManifests = SculptManifestCodec(json)
+    val sculpt = SculptServices(
+        SculptStateReader(generator, recipes, sculptManifests),
+        SculptPlanner(generator, heightEncoder, recipes, sculptManifests),
+    )
 }
 
 /** Foliage services: the writer that plans a new foliage asset's files before any command writes them. */

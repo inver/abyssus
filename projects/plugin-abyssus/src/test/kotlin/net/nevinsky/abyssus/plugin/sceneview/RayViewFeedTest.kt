@@ -18,8 +18,8 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.ray.RayModePhase
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
@@ -94,7 +94,7 @@ class RayViewFeedTest {
         SwingUtilities.invokeAndWait { feed.runtime.setRequested(true) }
         presented(feed)
         val before = device.submitted.get()
-        val moved = placement.copy(transform = PlacementTransform(Vec3(5f, 0f, 0f), Quat.IDENTITY, Vec3(1f, 1f, 1f)))
+        val moved = placement.copy(transform = PlacementTransform(Vector3(5f, 0f, 0f), Quaternion(), Vector3(1f, 1f, 1f)))
         val content = SceneContent(models = listOf(moved))
         // an older frame may be shown briefly while motion continues, so wait for one rendered for the moved content
         var display: RaySceneDisplay? = null

@@ -183,6 +183,7 @@ float getShadow()
 #endif //shadowMapFlag
 
 #pragma include "shadow_visibility.glsl"
+#pragma include "output_transform.glsl"
 
 #endif //lightingFlag
 
@@ -232,13 +233,13 @@ void main() {
 	#endif // normalFlag
 
 	#if defined(diffuseTextureFlag) && defined(diffuseColorFlag) && defined(colorFlag)
-		vec4 diffuse = texture2D(u_diffuseTexture, v_diffuseUV) * u_diffuseColor * v_color;
+		vec4 diffuse = sampleColor(u_diffuseTexture, v_diffuseUV) * u_diffuseColor * v_color;
 	#elif defined(diffuseTextureFlag) && defined(diffuseColorFlag)
-		vec4 diffuse = texture2D(u_diffuseTexture, v_diffuseUV) * u_diffuseColor;
+		vec4 diffuse = sampleColor(u_diffuseTexture, v_diffuseUV) * u_diffuseColor;
 	#elif defined(diffuseTextureFlag) && defined(colorFlag)
-		vec4 diffuse = texture2D(u_diffuseTexture, v_diffuseUV) * v_color;
+		vec4 diffuse = sampleColor(u_diffuseTexture, v_diffuseUV) * v_color;
 	#elif defined(diffuseTextureFlag)
-		vec4 diffuse = texture2D(u_diffuseTexture, v_diffuseUV);
+		vec4 diffuse = sampleColor(u_diffuseTexture, v_diffuseUV);
 	#elif defined(diffuseColorFlag) && defined(colorFlag)
 		vec4 diffuse = u_diffuseColor * v_color;
 	#elif defined(diffuseColorFlag)
@@ -250,9 +251,9 @@ void main() {
 	#endif
 
 	#if defined(emissiveTextureFlag) && defined(emissiveColorFlag)
-		vec4 emissive = texture2D(u_emissiveTexture, v_emissiveUV) * u_emissiveColor;
+		vec4 emissive = sampleColor(u_emissiveTexture, v_emissiveUV) * u_emissiveColor;
 	#elif defined(emissiveTextureFlag)
-		vec4 emissive = texture2D(u_emissiveTexture, v_emissiveUV);
+		vec4 emissive = sampleColor(u_emissiveTexture, v_emissiveUV);
 	#elif defined(emissiveColorFlag)
 		vec4 emissive = u_emissiveColor;
 	#else
@@ -378,8 +379,16 @@ void main() {
 	#endif //lightingFlag
 
 	#ifdef fogFlag
-		gl_FragColor.rgb = mix(gl_FragColor.rgb, u_fogColor.rgb, v_fog);
+		#ifdef outputTransformFlag
+			gl_FragColor.rgb = mix(gl_FragColor.rgb, outputSrgbToLinear(u_fogColor.rgb), v_fog);
+		#else
+			gl_FragColor.rgb = mix(gl_FragColor.rgb, u_fogColor.rgb, v_fog);
+		#endif
 	#endif // end fogFlag
+
+	#ifdef outputTransformFlag
+		gl_FragColor.rgb = outputTransform(gl_FragColor.rgb);
+	#endif
 
 	float surfaceAlpha = diffuse.a;
 	#ifdef blendedFlag

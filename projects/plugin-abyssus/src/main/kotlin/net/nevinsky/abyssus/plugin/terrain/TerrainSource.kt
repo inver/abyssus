@@ -5,22 +5,20 @@
 
 package net.nevinsky.abyssus.plugin.terrain
 
-import net.nevinsky.abyssus.lib.core.editor.terrain.sha256Hex
-import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.util.wholeNumberAt
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.terrain.MAX_TERRAIN_RESOLUTION
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetReferenceChoices
+import net.nevinsky.abyssus.lib.core.editor.terrain.*
+import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.*
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.util.obj
 import net.nevinsky.abyssus.lib.core.util.text
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.assets.terrain.MAX_TERRAIN_RESOLUTION
-import net.nevinsky.abyssus.lib.core.editor.terrain.MIN_TERRAIN_RESOLUTION
-import net.nevinsky.abyssus.lib.core.editor.terrain.RecipeStatus
-import net.nevinsky.abyssus.lib.core.editor.terrain.SourceSnapshot
-import net.nevinsky.abyssus.lib.core.editor.terrain.TERRAIN_RECIPE_FILE
-import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainRecipeCodec
-import net.nevinsky.abyssus.lib.core.editor.meta.AssetReferenceChoices
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import java.io.File
 import kotlin.math.roundToInt
@@ -38,6 +36,10 @@ sealed interface TerrainSource {
         val recipe: RecipeStatus,
         val source: SourceSnapshot,
         val metaBytes: FileSnapshot.Bytes,
+        /** What the sculpt files say about the heights; [SculptState.None] without a manifest. */
+        val sculpt: SculptState = SculptState.None,
+        /** The height-layer files as read, for planning an operation on them; null when nothing was read. */
+        val files: SculptFiles? = null,
     ) : TerrainSource {
         val dataPath: String get() = "$ASSETS_DIR/$folderName/$dataName"
         val recipePath: String get() = "$ASSETS_DIR/$folderName/$TERRAIN_RECIPE_FILE"
@@ -56,31 +58,78 @@ sealed interface TerrainSource {
  * Reads the terrain in [folder] (an asset folder on disk) from `meta.json` text [metaText] (the editors' text, saved or not)
  * parsed as [meta]: size, the height file and the recipe beside it. Reads files, so off the EDT.
  */
-fun readTerrainSource(folder: File, metaText: String, meta: JsonNode, choices: AssetReferenceChoices, recipes: TerrainRecipeCodec): TerrainSource {
-    net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat().validate(meta, net.nevinsky.abyssus.lib.core.format.DocumentKind.ASSET)?.let {
-        return TerrainSource.Unusable(net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat(net.nevinsky.abyssus.lib.core.format.DocumentKind.ASSET, it).documentDisplayMessage())
+fun readTerrainSource(
+    folder: File,
+    metaText: String,
+    meta: Document,
+    choices: AssetReferenceChoices,
+    recipes: TerrainRecipeCodec,
+    sculpt: SculptStateReader,
+): TerrainSource {
+    meta.rejection(net.nevinsky.abyssus.lib.core.format.DocumentKind.ASSET)?.let {
+        return TerrainSource.Unusable(
+            net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat(
+                net.nevinsky.abyssus.lib.core.format.DocumentKind.ASSET,
+                it
+            ).documentDisplayMessage()
+        )
     }
-    val additional = meta.obj("additional") ?: return unusable("terrainNoAdditional")
-    val size = additional.get("size")?.takeIf { it.isIntegralNumber && it.canConvertToInt() }?.intValue()?.takeIf { it > 0 }
-        ?: additional.get("size")?.takeIf { it.isNumber && it.doubleValue() == it.intValue().toDouble() && it.intValue() > 0 }?.intValue()
-        ?: return unusable("terrainBadSize")
-    val dataName = additional.text("terrainFile")?.takeIf { it.isNotBlank() } ?: return unusable("terrainNoDataFile")
-    val dataFile = choices.inside(folder, dataName)?.takeIf { it.isFile } ?: return unusable("terrainDataMissing", dataName)
-    val heights = runCatchingKeepingCancellation { dataFile.readBytes() }.getOrElse { return unusable("terrainDataUnreadable", dataName) }
+    if (!meta.isObjectAt("additional")) return unusable("terrainNoAdditional")
+    val size = meta.wholeNumberAt("additional", "size")?.takeIf { it > 0 } ?: return unusable("terrainBadSize")
+    val dataName = meta.textAt("additional", "terrainFile")?.takeIf { it.isNotBlank() } ?: return unusable("terrainNoDataFile")
+    val dataFile =
+        choices.inside(folder, dataName)?.takeIf { it.isFile } ?: return unusable("terrainDataMissing", dataName)
+    val heights = runCatchingKeepingCancellation { dataFile.readBytes() }.getOrElse {
+        return unusable(
+            "terrainDataUnreadable",
+            dataName
+        )
+    }
     val count = heights.size / Float.SIZE_BYTES
     val resolution = sqrt(count.toDouble()).roundToInt()
-    if (heights.size % Float.SIZE_BYTES != 0 || resolution * resolution != count) return unusable("terrainDataNotSquare", dataName)
-    if (resolution !in MIN_TERRAIN_RESOLUTION..MAX_TERRAIN_RESOLUTION) return unusable("terrainDataResolution", resolution.toString(), MAX_TERRAIN_RESOLUTION.toString())
+    if (heights.size % Float.SIZE_BYTES != 0 || resolution * resolution != count) return unusable(
+        "terrainDataNotSquare",
+        dataName
+    )
+    if (resolution !in MIN_TERRAIN_RESOLUTION..MAX_TERRAIN_RESOLUTION) return unusable(
+        "terrainDataResolution",
+        resolution.toString(),
+        MAX_TERRAIN_RESOLUTION.toString()
+    )
 
     val recipeFile = File(folder, TERRAIN_RECIPE_FILE)
-    val recipeBytes = if (recipeFile.isFile) runCatchingKeepingCancellation { recipeFile.readBytes() }.getOrNull() else null
+    val recipeBytes =
+        if (recipeFile.isFile) runCatchingKeepingCancellation { recipeFile.readBytes() }.getOrNull() else null
     val recipeText = recipeBytes?.toString(Charsets.UTF_8)
-    val status = recipes.status(recipeText, size, resolution, heights)
-    val snapshot = SourceSnapshot(metaText, sha256Hex(heights), recipeText, folderExists = true)
+    fun optional(name: String) =
+        File(folder, name).takeIf { it.isFile }?.let { runCatchingKeepingCancellation { it.readBytes() }.getOrNull() }
+
+    val manifestBytes = optional(SCULPT_MANIFEST_FILE)
+    val deltaBytes = optional(SCULPT_DELTA_FILE)
+    val baseBytes = optional(SCULPT_BASE_FILE)
+    val files = SculptFiles(
+        size,
+        resolution,
+        heights,
+        recipeText,
+        manifestBytes?.toString(Charsets.UTF_8),
+        deltaBytes,
+        baseBytes
+    )
+    val sculptState = sculpt.read(files)
+    // a sculpted terrain's recipe describes its base, not the composed heights in terrain.data
+    val status = if (sculptState is SculptState.Sculpted) {
+        recipes.status(recipeText, size, resolution, encodeSculptGrid(sculptState.base))
+    } else {
+        recipes.status(recipeText, size, resolution, heights)
+    }
+    val sculptSha = manifestBytes?.let { sha256Hex(it + (deltaBytes ?: ByteArray(0)) + (baseBytes ?: ByteArray(0))) }
+    val snapshot =
+        SourceSnapshot(metaText, sha256Hex(heights), recipeText, folderExists = true, sculptSha256 = sculptSha)
     return TerrainSource.Ready(
         folder.name, size, resolution, FileSnapshot.Bytes(heights),
         recipeBytes?.let { FileSnapshot.Bytes(it) } ?: FileSnapshot.Absent,
-        status, snapshot, FileSnapshot.Bytes(metaText.toByteArray()),
+        status, snapshot, FileSnapshot.Bytes(metaText.toByteArray()), sculptState, files,
     ).also { it.dataName = dataName }
 }
 

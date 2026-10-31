@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.ecs
 
+import net.nevinsky.abyssus.lib.core.testing.loadEcs
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PathSides
@@ -19,12 +20,10 @@ import org.slf4j.helpers.NOPLogger
 class PathArrangementComponentTest {
     private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
     private val registry = ComponentRegistry()
-    private val loader = EcsLoader(json, registry)
 
     private fun load(body: String): Pair<PathArrangementComponent, EcsLoadingWarns> {
-        val ecs = NativeJsonTree().parse("""{"entities":{"11":{"components":{"PathArrangementComponent":$body}}}}""")
         val engine = SceneEngine()
-        val warns = loader.loadToEngine(ecs, engine)
+        val warns = loadEcs("""{"11":{"components":{"PathArrangementComponent":$body}}}""", engine, registry, json)
         return engine.entities.single().getComponent(PathArrangementComponent::class.java) to warns
     }
 
@@ -48,7 +47,7 @@ class PathArrangementComponentTest {
         assertEquals(1.2f, component.points[0].y, 0f)
         assertEquals(40f, component.points[1].x, 0f)
         assertEquals(MetaType.MODEL, component.asset.type)
-        assertEquals("tree", component.asset.assetName)
+        assertEquals("tree", component.asset.name)
         assertEquals(listOf(12, 13, 14, 15, 16), component.slots)
     }
 

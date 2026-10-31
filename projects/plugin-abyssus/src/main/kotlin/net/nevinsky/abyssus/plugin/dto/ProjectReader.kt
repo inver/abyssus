@@ -1,5 +1,10 @@
 package net.nevinsky.abyssus.plugin.dto
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RawComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
@@ -8,7 +13,6 @@ import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
@@ -49,7 +53,7 @@ class ProjectReader(
             ProjectDto(
                 name ?: file.nameWithoutExtension,
                 sceneResults.map { (f, result) ->
-                    result.obj?.let { SceneEntry(f, it) } ?: SceneError(
+                    result.obj?.let { SceneEntry(f, it, ecsTreeOf(f)) } ?: SceneError(
                         f,
                         result.message
                     )
@@ -58,6 +62,11 @@ class ProjectReader(
                 usage.uiIssues,
             )
         }.let { AssetReadResult.of(it) }
+
+    /** The `ecs` object of the scene [file]'s document, or null when it has none or cannot be read. */
+    private fun ecsTreeOf(file: VirtualFile): Document? = runCatchingKeepingCancellation {
+        parseDocument(textOf(file)).objectAt("ecs")
+    }.getOrNull()
 
     private fun readAssets(abss: VirtualFile): List<Asset<Any>> = runCatchingKeepingCancellation {
         return assetListing.list(abss)
@@ -101,12 +110,19 @@ class ProjectReader(
     }
 }
 
-/** What a scene names directly: `assetName` and `shaderKey` values in its ECS data, and `skyboxName`. */
+/**
+ * What a scene names directly: the `assetName` and `shaderKey` of its render and foliage components (and of components it
+ * could not bind, from their raw data), and `skyboxName`.
+ */
 fun sceneReferences(scene: SceneDto): Set<String> {
     val names = mutableSetOf<String>()
-    scene.ecs?.let { ecs ->
-        for (field in listOf("assetName", "shaderKey")) ecs.findValues(field)
-            .forEach { v -> if (v.isTextual) names += v.asText() }
+    for (component in scene.ecs.values.flatMap { it.components }) when (component) {
+        is RenderComponent -> {
+            component.assetName.takeIf { it.isNotEmpty() }?.let { names += it }
+            component.shaderKey?.let { names += it }
+        }
+        is FoliageComponent -> component.assetName?.let { names += it }
+        is RawComponent -> names += parseDocument(component.json).textValuesOf("assetName", "shaderKey")
     }
     scene.skyboxName?.let { names += it }
     return names

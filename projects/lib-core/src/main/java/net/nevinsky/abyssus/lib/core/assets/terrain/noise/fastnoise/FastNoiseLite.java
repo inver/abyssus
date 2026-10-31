@@ -54,6 +54,9 @@ package net.nevinsky.abyssus.lib.core.assets.terrain.noise.fastnoise;
 // /*FNLfloat*/ float
 // /*FNLfloat*/ double
 
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
+
 public class FastNoiseLite {
     public enum NoiseType {
         OpenSimplex2,
@@ -2457,25 +2460,4 @@ public class FastNoiseLite {
         coord.z += vz * warpAmp;
     }
 
-    public static class Vector2 {
-        public /*FNLfloat*/ float x;
-        public /*FNLfloat*/ float y;
-
-        public Vector2(/*FNLfloat*/ float x, /*FNLfloat*/ float y) {
-            this.x = x;
-            this.y = y;
-        }
-    }
-
-    public static class Vector3 {
-        public /*FNLfloat*/ float x;
-        public /*FNLfloat*/ float y;
-        public /*FNLfloat*/ float z;
-
-        public Vector3(/*FNLfloat*/ float x, /*FNLfloat*/ float y, /*FNLfloat*/ float z) {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-        }
-    }
 }

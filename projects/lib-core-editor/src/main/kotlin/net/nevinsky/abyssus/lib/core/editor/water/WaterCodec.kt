@@ -5,13 +5,12 @@
 
 package net.nevinsky.abyssus.lib.core.editor.water
 
+import net.nevinsky.abyssus.lib.core.editor.util.isWholeNumber
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.water.WaterField
-import net.nevinsky.abyssus.lib.core.water.WaterPresets
+import net.nevinsky.abyssus.lib.core.water.WaterSurfaceReader
 import net.nevinsky.abyssus.lib.core.water.WaterSettings
-import net.nevinsky.abyssus.lib.core.water.WaterValidation
 
 const val ABYSSUS_EXTENSION = "abyssus"
 const val WATER_SURFACES = "waterSurfaces"
@@ -40,8 +39,7 @@ data class WaterRead(val surfaces: List<WaterSurface>, val incompatible: Boolean
  * write; an unknown preset, a wrong-typed value or an out-of-range value makes the surface invalid.
  */
 class WaterCodec(
-    private val presets: WaterPresets = WaterPresets(),
-    private val validation: WaterValidation = WaterValidation(),
+    private val reader: WaterSurfaceReader = WaterSurfaceReader(),
 ) {
     /** The surfaces of a scene's `abyssus` block ([abyssus] may be null when the scene has none). */
     fun read(abyssus: JsonNode?): WaterRead {
@@ -53,29 +51,8 @@ class WaterCodec(
     }
 
     fun surface(id: String, node: JsonNode): WaterSurface {
-        if (!node.isObject) return InvalidWater(id, id, listOf("surface is not an object"))
-        val name = node.get("name")?.takeIf { it.isTextual }?.textValue()?.takeIf { it.isNotBlank() } ?: id
-        val problems = mutableListOf<String>()
-        val preset = presets.parse(node.get("preset")?.takeIf { it.isTextual }?.textValue())
-        if (preset == null) {
-            problems += "unknown preset"
-            return InvalidWater(id, name, problems)
-        }
-        var settings = presets.defaults(preset, id, name)
-        for (field in WaterField.entries) {
-            val value = lookup(node, field.path) ?: continue
-            if (!value.isNumber) {
-                problems += "${field.path.joinToString(".")} is not a number"
-                continue
-            }
-            settings = settings.with(field, value.doubleValue())
-        }
-        val enabled = node.get("enabled")
-        if (enabled != null) {
-            if (enabled.isBoolean) settings = settings.copy(enabled = enabled.booleanValue()) else problems += "enabled is not a boolean"
-        }
-        for ((field, issue) in validation.check(settings)) problems += "${field.path.joinToString(".")}: $issue"
-        return if (problems.isEmpty()) ValidWater(settings) else InvalidWater(id, name, problems)
+        val read = reader.read(id, node)
+        return read.settings?.let(::ValidWater) ?: InvalidWater(id, read.name, read.problems)
     }
 
     /** The complete saved form of [settings]: every field written explicitly. */
@@ -100,14 +77,8 @@ class WaterCodec(
         node.put("enabled", settings.enabled)
         return node
     }
-
-    private fun lookup(node: JsonNode, path: List<String>): JsonNode? {
-        var current: JsonNode = node
-        for (key in path) current = current.get(key) ?: return null
-        return current
-    }
 }
 
 /** Stores [value] as an integer when it is whole (so `100`, not `100.0`), else as a double. */
 internal fun ObjectNode.putNumber(key: String, value: Double): ObjectNode =
-    if (value == Math.rint(value) && kotlin.math.abs(value) < 1e15) put(key, value.toLong()) else put(key, value)
+    if (isWholeNumber(value)) put(key, value.toLong()) else put(key, value)

@@ -89,6 +89,10 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
 
 ## Hard rules
 
+- **No manual JSON <-> DTO (de)serialization.** Don't hand-write parsing or serialization between JSON and DTOs (no field-by-field
+  reads from a tree, no string-built JSON). Bind to DTOs and write them back through the existing mapper (`JsonProcessor.bind`). `NativeJsonTree` is the only token-level reader (exact number text and key order); don't add another.
+  Use only `JsonProcessor`. To extend it or add methods, ask first.
+
 - **Native documents only:** `.abss`, `.scene` and asset `meta.json` require `format: "abyssus"` and integral
   `formatVersion: 1`. Validate with `AbyssusDocumentFormat` before binding, enumerating, editing or formatting.
   Reject legacy `ecs.componentIdentifiers` and renderable `class`; a component entry is keyed by the class name of a built-in or registered component (fully qualified, or its short name), assets use `kind: "asset"`.
@@ -116,6 +120,13 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
   has no platform artifact; `NoPlatformClasspathTest` checks), and no `object` or `companion object` with behavior in
   `projects/lib-core-editor/src/main` (`./gradlew :lib-core-editor:checkNoSingletons`, part of `check`; pure constant holders are listed
   in its `abyssusSingletonExcludes`). `lib-core` does not depend on it.
+- **Jackson tree types stay in `lib-core` and `lib-core-editor`:** `JsonNode`, `ObjectNode`, `ArrayNode` and the rest of `databind.node`
+  are used only there, and every other module has an empty `abyssusJacksonTreeAllowed` list in its Gradle script
+  (`./gradlew checkJacksonTreeUse`, part of `check`). Reading JSON into values (including the path readers in `core.util`
+  and `JsonObjectReader`) lives in `lib-core`; changing and writing JSON lives in `lib-core-editor`
+  (`document.Document`, `DocumentEdit`, `DocumentApi` and the `DocumentTree` helpers, `JsonObjectWriter`). Other modules hold a document as a read-only `Document`
+  (plain-value readers such as `textAt` and `members`), edit through a `DocumentEdit` lambda that only passes its tree to the editing API, and never
+  name, cast or check a Jackson tree type.
 - **No package cycles:** `./gradlew checkPackageCycles` (part of `check`) fails on a cycle between the packages of a
   module; its allowlist `gradle/package-cycles.allowlist` stays empty.
 - **Write scene files only through `editSceneJson`** (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`).

@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.lib.core.ecs
 
+import net.nevinsky.abyssus.lib.core.ecs.component.isActive
+import net.nevinsky.abyssus.lib.core.ecs.component.activeComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
+import net.nevinsky.abyssus.lib.core.testing.loadEcs
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
@@ -24,8 +28,7 @@ import org.slf4j.helpers.NOPLogger
 class DisabledSystemsTest {
     private fun load(entities: String): SceneEngine {
         val engine = SceneEngine()
-        EcsLoader(JsonProcessor(NOPLogger.NOP_LOGGER), ComponentRegistry())
-            .loadToEngine(NativeJsonTree().parse("""{"entities":{$entities}}"""), engine)
+        loadEcs("""{$entities}""", engine)
         return engine
     }
 
@@ -33,7 +36,7 @@ class DisabledSystemsTest {
 
     @Test
     fun aDisabledRenderableIsNotRenderedButTheEntityIsPositioned() {
-        val engine = load(""""1":{"components":{"PositionComponent":{"position":{"x":1,"y":2,"z":3}},"RenderComponent":{"type":"MODEL","assetName":"tree","enabled":false}}}""")
+        val engine = load(""""1":{"disabledComponents":["RenderComponent"],"components":{"PositionComponent":{"position":{"x":1,"y":2,"z":3}},"RenderComponent":{"type":"MODEL","assetName":"tree"}}}""")
         val entity = engine.ids[1]!!
         assertNull(assetName(entity, MetaType.MODEL))
         assertNotNull(entity.activeComponent(PositionComponent::class.java))
@@ -41,7 +44,7 @@ class DisabledSystemsTest {
 
     @Test
     fun aDisabledEntityRendersNothing() {
-        val engine = load(""""1":{"enabled":false,"components":{$model}},"2":{"components":{$model}}""")
+        val engine = load(""""1":{"flags":1,"components":{$model}},"2":{"components":{$model}}""")
         assertNull(assetName(engine.ids[1]!!, MetaType.MODEL))
         assertEquals("tree", assetName(engine.ids[2]!!, MetaType.MODEL))
     }
@@ -51,24 +54,24 @@ class DisabledSystemsTest {
         val engine = load(""""1":{"components":{$model}}""")
         val entity = engine.ids[1]!!
         assertEquals("tree", assetName(entity, MetaType.MODEL))
-        entity.add(EnabledState(entityEnabled = false))
+        entity.getComponent(HeaderComponent::class.java).entityEnabled = false
         assertNull(assetName(entity, MetaType.MODEL))
-        entity.getComponent(EnabledState::class.java).entityEnabled = true
+        entity.getComponent(HeaderComponent::class.java).entityEnabled = true
         assertEquals("tree", assetName(entity, MetaType.MODEL))
     }
 
     @Test
     fun aDisabledLightIsNotActive() {
-        val engine = load(""""1":{"components":{"LightComponent":{"light":{"intensity":2},"enabled":false}}},"2":{"components":{"LightComponent":{"light":{"intensity":2}}}}""")
+        val engine = load(""""1":{"disabledComponents":["LightComponent"],"components":{"LightComponent":{"light":{"intensity":2}}}},"2":{"components":{"LightComponent":{"light":{"intensity":2}}}}""")
         assertTrue(!engine.ids[1]!!.isActive(LightComponent::class.java))
         assertTrue(engine.ids[2]!!.isActive(LightComponent::class.java))
     }
 
     @Test
     fun aDisabledFoliageIsNotListed() {
-        val engine = load(""""1":{"components":{"RenderComponent":{"type":"TERRAIN","assetName":"t"},"FoliageComponent":{"assetName":"f","enabled":false}}},"2":{"components":{"RenderComponent":{"type":"TERRAIN","assetName":"u"},"FoliageComponent":{"assetName":"g"}}}""")
+        val engine = load(""""1":{"disabledComponents":["FoliageComponent"],"components":{"RenderComponent":{"type":"TERRAIN","assetName":"t"},"FoliageComponent":{"assetName":"f"}}},"2":{"components":{"RenderComponent":{"type":"TERRAIN","assetName":"u"},"FoliageComponent":{"assetName":"g"}}}""")
         assertEquals(listOf("g"), SceneFoliageListing {}.list(engine).map { it.foliage })
-        engine.ids[1]!!.getComponent(EnabledState::class.java).disabledComponents.clear()
+        engine.ids[1]!!.getComponent(HeaderComponent::class.java).disabledComponents.clear()
         assertEquals(listOf("f", "g"), SceneFoliageListing {}.list(engine).map { it.foliage })
     }
 
@@ -82,13 +85,13 @@ class DisabledSystemsTest {
         val camera = CameraComponent()
         entity.add(position)
         entity.add(camera)
-        entity.add(EnabledState(disabledComponents = linkedSetOf(CameraComponent::class.java)))
+        entity.add(HeaderComponent(1, disabledComponents = linkedSetOf(CameraComponent::class.java)))
         engine.addEntity(entity)
         val system = SynchronizeCameraComponentSystem(ids)
         engine.addSystem(system)
         engine.update(0.016f)
         assertEquals(0f, camera.camera.position.x, 0f)
-        entity.getComponent(EnabledState::class.java).disabledComponents.clear()
+        entity.getComponent(HeaderComponent::class.java).disabledComponents.clear()
         engine.update(0.016f)
         assertEquals(5f, camera.camera.position.x, 0f)
     }

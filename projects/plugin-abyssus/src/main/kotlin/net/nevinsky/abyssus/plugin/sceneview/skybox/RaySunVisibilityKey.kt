@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.skybox
 
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.CLOUD_DRIFT_REFRESH_SECONDS
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
@@ -25,7 +25,7 @@ private const val SCALE_STEPS = 20
  */
 data class RaySunVisibilityKey(
     val sunId: String,
-    val sun: Vec3,
+    val sun: Vector3,
     val clouds: Any?,
     val mapped: Boolean,
     val scaleStep: Int,
@@ -36,7 +36,7 @@ data class RaySunVisibilityKey(
 
 /** The key for the sun [sunId] toward [sun] at [timeSeconds] of the sky clock, orbit target ([targetX], [targetZ]). */
 fun raySunVisibilityKey(
-    sunId: String, sun: Vec3, clouds: Any?, drifting: Boolean, mapped: Boolean, scale: Float,
+    sunId: String, sun: Vector3, clouds: Any?, drifting: Boolean, mapped: Boolean, scale: Float,
     targetX: Float, targetZ: Float, timeSeconds: Double,
 ) = RaySunVisibilityKey(
     sunId, sun, clouds, mapped, (scale * SCALE_STEPS).roundToInt(),

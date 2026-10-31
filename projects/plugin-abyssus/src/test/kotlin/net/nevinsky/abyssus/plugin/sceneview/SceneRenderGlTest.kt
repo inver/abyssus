@@ -16,8 +16,8 @@ import net.nevinsky.abyssus.lib.core.editor.pick.SceneInteraction
 import net.nevinsky.abyssus.lib.core.editor.pick.ScenePicker
 import net.nevinsky.abyssus.lib.core.editor.pick.ScenePreview
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
@@ -66,7 +66,7 @@ class SceneRenderGlTest {
         val p = fixture.copy(content = fixture.content.copy(
             models = fixture.content.models.filter { it.entityId in listOf("0", "2") }.mapIndexed { index, model ->
                 val position = model.transform.position
-                model.copy(transform = model.transform.copy(position = Vec3(index * 100f, position.y + 10f, position.z)))
+                model.copy(transform = model.transform.copy(position = Vector3(index * 100f, position.y + 10f, position.z)))
             },
             lights = emptyList(),
             cameras = emptyList(),
@@ -436,7 +436,7 @@ class SceneRenderGlTest {
     fun lightEntitiesChangeTheShading() {
         val fixture = params("Untitled", "Main Scene.scene") { edit(it, ::noFog) }
         val base = fixture.copy(content = fixture.content.copy(lights = emptyList()))
-        val light = """{"archetype":1,"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{"light":{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1.0}},"PositionComponent":{"localRotation":{"x":-0.7071,"w":0.7071}}}}"""
+        val light = """{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{"light":{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1.0}},"PositionComponent":{"localRotation":{"x":-0.7071,"w":0.7071}}}}"""
         val lit = params("Untitled", "Main Scene.scene") {
             edit(it) { root ->
                 noFog(root)
@@ -465,17 +465,17 @@ class SceneRenderGlTest {
         val fixture = params("Untitled", "Main Scene.scene")
         for (id in listOf("0", "6", "1")) {
             val placement = (fixture.content.models + fixture.content.terrains).single { it.entityId == id }
-            val center = if (id == "1") Vec3(0f, 0f, 0f) else placement.transform.position
+            val center = if (id == "1") Vector3(0f, 0f, 0f) else placement.transform.position
             val content = SceneContent(
                 models = fixture.content.models.filter { it.entityId == id },
                 terrains = fixture.content.terrains.filter { it.entityId == id },
             )
-            val base = fixture.copy(content = content, ambient = Rgba(0.05f, 0.05f, 0.05f, 1f), fog = null)
-            val light = LightPlacement("99", LightKind.SPOT, Rgba(1f, 1f, 1f, 1f), 2f,
-                Vec3(center.x, center.y + 20f, center.z), Vec3(0f, -1f, 0f), coneAngle = 60f, edgeSoftness = 0f)
+            val base = fixture.copy(content = content, ambient = Color(0.05f, 0.05f, 0.05f, 1f), fog = null)
+            val light = LightPlacement("99", LightKind.SPOT, Color(1f, 1f, 1f, 1f), 2f,
+                Vector3(center.x, center.y + 20f, center.z), Vector3(0f, -1f, 0f), coneAngle = 60f, edgeSoftness = 0f)
             fun image(l: LightPlacement) = GlHarness.render(base.copy(content = content.copy(lights = listOf(l))), 200).also { assertNull(it.error) }.image
             val inside = image(light)
-            val outside = image(light.copy(direction = Vec3(0f, 1f, 0f)))
+            val outside = image(light.copy(direction = Vector3(0f, 1f, 0f)))
             val soft = image(light.copy(edgeSoftness = 1f))
             fun brightness(img: java.awt.image.BufferedImage): Long {
                 var sum = 0L
@@ -497,20 +497,20 @@ class SceneRenderGlTest {
         val asset = fixture.content.models.first { it.entityId == "0" }
         val terrain = fixture.content.terrains.single()
         for (terrainReceives in listOf(true, false)) {
-            val model = asset.copy(transform = PlacementTransform.IDENTITY.copy(position = Vec3(0f, if (terrainReceives) 4f else 1f, 0f)))
+            val model = asset.copy(transform = PlacementTransform.IDENTITY.copy(position = Vector3(0f, if (terrainReceives) 4f else 1f, 0f)))
             val ground = terrain.copy(transform = PlacementTransform.IDENTITY.copy(
-                position = Vec3(-8f, if (terrainReceives) 0f else 5f, -8f), scale = Vec3(0.01f, 1f, 0.01f)))
+                position = Vector3(-8f, if (terrainReceives) 0f else 5f, -8f), scale = Vector3(0.01f, 1f, 0.01f)))
             val content = SceneContent(models = listOf(model), terrains = listOf(ground))
-            val base = fixture.copy(content = content, ambient = Rgba(0.05f, 0.05f, 0.05f, 1f), fog = null)
+            val base = fixture.copy(content = content, ambient = Color(0.05f, 0.05f, 0.05f, 1f), fog = null)
             val receiver = if (terrainReceives) terrain.entityId else model.entityId
             val mask = mutableListOf<Pair<Int, Int>>()
             // Only one directional light receives a tile. Changing ids moves that tile between an emitting
             // light and a black light without changing geometry or the unshadowed illumination.
             fun image(shadowRed: Boolean, fill: Boolean = false): java.awt.image.BufferedImage {
-                val red = LightPlacement(if (shadowRed) "a" else "z", LightKind.DIRECTIONAL, Rgba(1f, 0f, 0f, 1f), 1f,
-                    Vec3(0f, 0f, 0f), Vec3(0f, -1f, 0f))
-                val other = red.copy(entityId = if (shadowRed) "z" else "a", color = Rgba(0f, if (fill) 1f else 0f, 0f, 1f))
-                val orbit = OrbitCamera(Vec3(0f, 1f, -2f), 14f, 0.7f, if (terrainReceives) 0.65f else 0.04f)
+                val red = LightPlacement(if (shadowRed) "a" else "z", LightKind.DIRECTIONAL, Color(1f, 0f, 0f, 1f), 1f,
+                    Vector3(0f, 0f, 0f), Vector3(0f, -1f, 0f))
+                val other = red.copy(entityId = if (shadowRed) "z" else "a", color = Color(0f, if (fill) 1f else 0f, 0f, 1f))
+                val orbit = OrbitCamera(Vector3(0f, 1f, -2f), 14f, 0.7f, if (terrainReceives) 0.65f else 0.04f)
                 val result = GlHarness.render(base.copy(content = content.copy(lights = listOf(red, other))), 160, orbit) { r, frame ->
                     if (frame == 159 && mask.isEmpty()) {
                         assertEquals(setOf("a"), r.shadowedLightIds)
@@ -535,8 +535,8 @@ class SceneRenderGlTest {
     @Test
     fun shadowRecordsFollowLightRemovalAndContextRebuild() {
         val fixture = params("Untitled", "Main Scene.scene")
-        val light = LightPlacement("shadow", LightKind.DIRECTIONAL, Rgba(1f, 1f, 1f, 1f), 1f,
-            Vec3(0f, 0f, 0f), Vec3(0f, -1f, 0f))
+        val light = LightPlacement("shadow", LightKind.DIRECTIONAL, Color(1f, 1f, 1f, 1f), 1f,
+            Vector3(0f, 0f, 0f), Vector3(0f, -1f, 0f))
         val base = fixture.copy(content = fixture.content.copy(lights = listOf(light)))
         var removed = false
         var rebuilt = false
@@ -775,14 +775,14 @@ class SceneRenderGlTest {
     fun everyDisplayModeRendersWithoutAGlError() {
         val p = params("Untitled", "Main Scene.scene")
         for (display in listOf(
-            ViewDisplay(), ViewDisplay(grid = false), ViewDisplay(fog = false), ViewDisplay(shadows = false), ViewDisplay(shading = Shading.UNLIT),
+            ViewDisplay(), ViewDisplay(grid = true), ViewDisplay(fog = false), ViewDisplay(shadows = false), ViewDisplay(shading = Shading.UNLIT),
         )) assertNull("$display", renderWith(p, display).error)
     }
 
     @Test
     fun theGridToggleChangesThePicture() {
         val p = params("Untitled", "Main Scene.scene")
-        assertTrue(differs(renderWith(p, ViewDisplay()).image, renderWith(p, ViewDisplay(grid = false)).image))
+        assertTrue(differs(renderWith(p, ViewDisplay(grid = true)).image, renderWith(p, ViewDisplay(grid = false)).image))
     }
 
     @Test

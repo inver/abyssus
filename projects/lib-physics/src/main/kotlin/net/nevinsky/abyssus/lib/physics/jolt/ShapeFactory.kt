@@ -5,6 +5,9 @@
 package net.nevinsky.abyssus.lib.physics.jolt
 
 
+import net.nevinsky.abyssus.lib.physics.scaledBoxHalfExtents
+import net.nevinsky.abyssus.lib.physics.scaledHalfHeight
+import net.nevinsky.abyssus.lib.physics.scaledRadius
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Vector3
 import com.github.stephengold.joltjni.*
@@ -37,13 +40,12 @@ internal class ShapeFactory(
         val s = Vector3(abs(scale.x), abs(scale.y), abs(scale.z))
         if (s.x == 0f || s.y == 0f || s.z == 0f) return Built.Refused("PositionComponent.localScale has a zero axis")
         val uniform = s.x == s.y && s.y == s.z
-        val largest = max(s.x, max(s.y, s.z))
         var warning: String? = null
         val settings: ShapeSettings = when (collider.shape) {
             ColliderShape.BOX -> {
                 val h = collider.halfExtents
                 if (h.x <= 0f || h.y <= 0f || h.z <= 0f) return Built.Refused("ColliderComponent.halfExtents $h is not greater than 0")
-                val half = Vector3(h.x * s.x, h.y * s.y, h.z * s.z)
+                val half = scaledBoxHalfExtents(h, s)
                 BoxShapeSettings(
                     Vec3(half.x, half.y, half.z),
                     min(Jolt.cDefaultConvexRadius, min(half.x, min(half.y, half.z)))
@@ -53,14 +55,18 @@ internal class ShapeFactory(
             ColliderShape.SPHERE -> {
                 if (collider.radius <= 0f) return Built.Refused("ColliderComponent.radius ${collider.radius} is not greater than 0")
                 if (!uniform) warning = "has a non-uniform scale; its sphere takes the largest axis"
-                SphereShapeSettings(collider.radius * largest)
+                SphereShapeSettings(scaledRadius(collider.radius, s))
             }
 
             ColliderShape.CAPSULE -> {
-                if (collider.radius <= 0f) return Built.Refused("ColliderComponent.radius ${collider.radius} is not greater than 0")
-                if (collider.halfHeight <= 0f) return Built.Refused("ColliderComponent.halfHeight ${collider.halfHeight} is not greater than 0")
+                if (collider.radius <= 0f) {
+                    return Built.Refused("ColliderComponent.radius ${collider.radius} is not greater than 0")
+                }
+                if (collider.halfHeight <= 0f) {
+                    return Built.Refused("ColliderComponent.halfHeight ${collider.halfHeight} is not greater than 0")
+                }
                 if (!uniform) warning = "has a non-uniform scale; its capsule takes the largest axis"
-                CapsuleShapeSettings(collider.halfHeight * largest, collider.radius * largest)
+                CapsuleShapeSettings(scaledHalfHeight(collider.halfHeight, s), scaledRadius(collider.radius, s))
             }
 
             ColliderShape.CONVEX_HULL -> {

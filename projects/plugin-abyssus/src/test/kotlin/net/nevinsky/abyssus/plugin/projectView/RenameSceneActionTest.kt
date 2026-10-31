@@ -24,9 +24,9 @@ class RenameSceneActionTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
-        myFixture.addFileToProject("Standalone.scene", """{"format":"abyssus","formatVersion":1,"name":"Standalone","ecs":{"entities":{}}}""")
+        myFixture.addFileToProject("Standalone.scene", """{"format":"abyssus","formatVersion":1,"name":"Standalone","ecs":{}}""")
         myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""")
-        myFixture.addFileToProject("p/scenes/Main.scene", """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{}}}""")
+        myFixture.addFileToProject("p/scenes/Main.scene", """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{}}""")
         val root = AbyssusRootNode(project, ViewSettings.DEFAULT)
         standaloneRow = children(root).single { label(it) == "Standalone.scene" }
         projectRow = children(root).single { label(it).endsWith(".abss") }

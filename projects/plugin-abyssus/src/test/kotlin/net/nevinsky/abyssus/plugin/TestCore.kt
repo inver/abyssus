@@ -20,7 +20,7 @@ internal fun testPanelServices(
 ) = testCore.let {
     PanelServices(
         it.metaFiles, it.hdrPreviews, it.json, it.assetFields, it.assetEditor,
-        it.terrainGenerator, it.heightEncoder, it.terrainRecipes, project.service<SceneRayControls>(),
+        it.terrainGenerator, it.heightEncoder, it.terrainRecipes, it.terrainSculpt, project.service<SceneRayControls>(),
         net.nevinsky.abyssus.plugin.schema.ComponentSchemas.of(project), rayMaterials,
     )
 }

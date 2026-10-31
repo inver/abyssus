@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.scene
 
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -33,9 +33,7 @@ class SceneEntityParityTest {
         entities.set<JsonNode>(
             "8",
             SceneJson().parse(
-                """{"archetype":1,"components":{"NameComponent":{"name":"Spot Light 8"},"TypeComponent":{"type":"LIGHT_SPOT"},
-                "PositionComponent":{"localPosition":{"x":1,"y":5,"z":2}},
-                "LightComponent":{"light":{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1}}}}""",
+                """{"type":"LIGHT_SPOT","components":{"NameComponent":{"name":"Spot Light 8"},"PositionComponent":{"localPosition":{"x":1,"y":5,"z":2}},"LightComponent":{"light":{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1}}}}""",
             ),
         )
         return root
@@ -52,7 +50,7 @@ class SceneEntityParityTest {
         for (light in content.lights) {
             val id = light.entityId
             fun v(field: String) = value(root, id, "LightComponent", field)
-            assertEquals(id, Rgba(v("color.r"), v("color.g"), v("color.b"), 1f), light.color)
+            assertEquals(id, Color(v("color.r"), v("color.g"), v("color.b"), 1f), light.color)
             assertEquals(id, v("intensity"), light.intensity, 0f)
             if (light.kind == LightKind.SPOT) {
                 assertEquals(id, v("range"), light.range, 0f)
@@ -91,7 +89,7 @@ class SceneEntityParityTest {
     fun aNumericStringHandleTargetIsReadTheSameWay() {
         val root = scene()
         val entities = root.get("ecs") as ObjectNode
-        entities.set<JsonNode>("9", SceneJson().parse("""{"archetype":1,"components":{"TypeComponent":{"type":"HANDLE"},"PositionComponent":{"localPosition":{"y":-5}}}}"""))
+        entities.set<JsonNode>("9", SceneJson().parse("""{"type":"HANDLE","components":{"PositionComponent":{"localPosition":{"y":-5}}}}"""))
         ((entities.get("7").get("components") as ObjectNode).get("PositionComponent") as ObjectNode).put("lookAtId", "9")
         val content = sceneContentOf(parseScene(root.toString()))
         assertEquals("9", content.lights.single { it.entityId == "7" }.lookAtId)

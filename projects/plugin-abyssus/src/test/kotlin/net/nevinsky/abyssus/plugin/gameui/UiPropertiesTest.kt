@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.lib.core.editor.ui.*
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager

@@ -16,16 +16,8 @@ plugins {
 
 val joltVersion = libs.versions.jolt.get()
 
-/** The jolt-jni platform of the machine running the build, for the tests' `DebugSp` natives. */
-val joltJniBuildPlatform: String = run {
-    val os = System.getProperty("os.name").lowercase()
-    val arm = System.getProperty("os.arch").let { it == "aarch64" || it == "arm64" }
-    when {
-        os.contains("mac") -> if (arm) "MacOSX_ARM64" else "MacOSX64"
-        os.contains("win") -> "Windows64"
-        else -> "Linux64"
-    }
-}
+/** The jolt-jni platform of the machine running the build (from `abyssus.dependency-platforms`). */
+val joltJniBuildPlatform: String by extra
 
 dependencies {
     implementation(kotlin("stdlib"))
@@ -47,3 +39,6 @@ extra["abyssusSingletonExcludes"] = listOf<String>()
 
 // Games ship this library: `checkNoEditorCode` keeps editor imports and ray-tracing snapshot types out of it.
 extra["abyssusShippedLibrary"] = true
+
+// No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in lib-core-editor (see gradle/checks.gradle.kts).
+extra["abyssusJacksonTreeAllowed"] = emptyList<String>()

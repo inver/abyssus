@@ -10,10 +10,11 @@ import org.slf4j.Logger
 import java.util.EnumMap
 import java.util.EnumSet
 
-/** The technique to try when [technique] cannot be built: volumetric to shells to layered, then none. */
+/** The technique to try when [technique] cannot be built: volumetric to shells to cumulus to layered, then none. */
 fun simplerThan(technique: CloudTechnique): CloudTechnique? = when (technique) {
     CloudTechnique.VOLUMETRIC -> CloudTechnique.SHELLS
-    CloudTechnique.SHELLS -> CloudTechnique.LAYERED
+    CloudTechnique.SHELLS -> CloudTechnique.CUMULUS
+    CloudTechnique.CUMULUS -> CloudTechnique.LAYERED
     CloudTechnique.LAYERED -> null
 }
 

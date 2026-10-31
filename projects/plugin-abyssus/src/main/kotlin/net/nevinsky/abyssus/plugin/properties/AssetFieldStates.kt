@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.lib.core.editor.meta.message
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldState
@@ -12,7 +14,6 @@ import net.nevinsky.abyssus.lib.core.editor.meta.assetFieldStates
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetChoice
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetReferenceChoices
 
-import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.lib.core.editor.meta.EditError
@@ -33,5 +34,5 @@ fun choiceLabel(choice: AssetChoice): String = when {
  * The editable properties of the asset in [folder] for a `meta.json` of [type], with their current values from [json] and,
  * for references, the choices found on disk. Empty for a type without editors. Reads files, so off the EDT.
  */
-fun readFieldStates(folder: VirtualFile, type: MetaType, json: JsonNode, services: PanelServices): List<AssetFieldState> =
+fun readFieldStates(folder: VirtualFile, type: MetaType, json: Document, services: PanelServices): List<AssetFieldState> =
     assetFieldStates(File(folder.path), type, json, services.assetFields, services.assetEditor, AssetReferenceChoices(services.json))

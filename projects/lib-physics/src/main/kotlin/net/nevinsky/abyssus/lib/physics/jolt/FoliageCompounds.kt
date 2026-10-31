@@ -4,15 +4,7 @@
  */
 package net.nevinsky.abyssus.lib.physics.jolt
 
-import com.github.stephengold.joltjni.BoxShapeSettings
-import com.github.stephengold.joltjni.CapsuleShapeSettings
-import com.github.stephengold.joltjni.Jolt
-import com.github.stephengold.joltjni.Quat
-import com.github.stephengold.joltjni.ShapeRefC
-import com.github.stephengold.joltjni.ShapeSettings
-import com.github.stephengold.joltjni.SphereShapeSettings
-import com.github.stephengold.joltjni.StaticCompoundShapeSettings
-import com.github.stephengold.joltjni.Vec3
+import com.github.stephengold.joltjni.*
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderShape
 import net.nevinsky.abyssus.lib.physics.ColliderPlacement
 import kotlin.math.min

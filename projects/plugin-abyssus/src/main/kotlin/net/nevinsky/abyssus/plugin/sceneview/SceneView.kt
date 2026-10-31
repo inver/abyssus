@@ -5,15 +5,14 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
-
+import com.badlogic.gdx.math.Vector3
+import com.intellij.openapi.Disposable
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
-import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import com.intellij.openapi.Disposable
+import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
 import javax.swing.JComponent
 
 /** A live view of a scene. The editor talks to this so the GL-backed [SceneViewPanel] can be replaced in tests. */
@@ -35,7 +34,7 @@ interface SceneView : Disposable {
      * Called on the AWT thread when a move of a water surface ends, with its id and new centre. Returns whether it was
      * written to the scene.
      */
-    var onWaterMove: ((String, Vec3) -> Boolean)?
+    var onWaterMove: ((String, Vector3) -> Boolean)?
         get() = null
         set(_) {}
 
@@ -49,12 +48,32 @@ interface SceneView : Disposable {
      * Called on the AWT thread when a drawing is finished: the model, the points on the terrain and whether the line is
      * closed. Returns whether the arrangement was written.
      */
-    var onArrangementCreate: ((RenderAsset, List<Vec3>, Boolean) -> Boolean)?
+    var onArrangementCreate: ((BaseMeta, List<Vector3>, Boolean) -> Boolean)?
+        get() = null
+        set(_) {}
+
+    /** Called with the id of the selected entity when the user presses Copy in the view. */
+    var onCopy: ((String) -> Unit)?
+        get() = null
+        set(_) {}
+
+    /** Called with the point under the cursor when the user presses Paste in the view. Returns whether an entity was added. */
+    var onPaste: ((Vector3) -> Boolean)?
+        get() = null
+        set(_) {}
+
+    /** Called with the id of the selected entity when the user presses Delete in the view. Returns whether it was removed. */
+    var onDelete: ((String) -> Boolean)?
+        get() = null
+        set(_) {}
+
+    /** Called with the id of the selected water surface when the user presses Delete in the view. Returns whether it was removed. */
+    var onWaterDelete: ((String) -> Boolean)?
         get() = null
         set(_) {}
 
     /** Called when a path point was dragged, inserted or removed, with the arrangement's id and its new points. Returns whether it was written. */
-    var onArrangementEdit: ((String, List<Vec3>) -> Boolean)?
+    var onArrangementEdit: ((String, List<Vector3>) -> Boolean)?
         get() = null
         set(_) {}
 
@@ -63,8 +82,38 @@ interface SceneView : Disposable {
         get() = null
         set(_) {}
 
+    /** Starts (with an id) or ends (null) editing the control points of an arrangement; the view selects it. */
+    fun setPathEditing(entityId: String?) {}
+
+    /** Puts the Sculpt Terrain brush on the terrain with this id, or takes it off for null. */
+    fun setSculpting(entityId: String?) {}
+
+    /** Called when the view ended the sculpting itself (the selection moved on, play started, or the terrain cannot be sculpted). */
+    var onSculptEnded: (() -> Unit)?
+        get() = null
+        set(_) {}
+
+    /** Puts the Paint Texture brush on the terrain with this id, or takes it off for null. */
+    fun setPaintingTexture(entityId: String?) {}
+
+    /** Called when the view ended the texture painting itself (the selection moved on, play started, or the terrain cannot be painted). */
+    var onPaintTextureEnded: (() -> Unit)?
+        get() = null
+        set(_) {}
+
+    /** Writes the control point changes made since Edit (Apply); false when there was nothing to write or the write failed. */
+    fun applyPathEdit(): Boolean = false
+
+    /** Drops every control point of the arrangement being edited onto the terrain, as an unapplied change. */
+    fun dropPathToTerrain() {}
+
+    /** Called when the view ended the control point edit itself because the selection moved on. */
+    var onPathEditEnded: (() -> Unit)?
+        get() = null
+        set(_) {}
+
     /** Puts the view in drawing mode for a new path arrangement of the model [asset]. */
-    fun startDrawing(asset: RenderAsset) {}
+    fun startDrawing(asset: BaseMeta) {}
 
     /** The ground under the scene as the view drew it, or null before the first frame or when the view has none. */
     fun groundHeights(): GroundHeight? = null
@@ -84,7 +133,7 @@ interface SceneView : Disposable {
     fun stopPlay() {}
 
     /** Where a new object is placed (the point the camera orbits around); null when the view places nothing. */
-    fun placementPoint(): Vec3? = null
+    fun placementPoint(): Vector3? = null
 
     /**
      * Rendering cannot continue: shows [message] in place of the viewport and keeps whatever else the view has (its toolbar,

@@ -119,7 +119,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertTrue("Unexpected asset row order: $assetRows", assetRows in assetOrders)
         assertEquals(assetRows, childrenOf(asset).map { it.name })
         assertEquals(listOf("error"), childrenOf(SceneError(add("e.scene", "x"), "boom")).map { it.name })
-        val fog = parseScene("""{"fog":{"color":{"r":1,"g":2,"b":3,"a":4},"density":0.5}}""").fog!!
+        val fog = parseScene("""{"format":"abyssus","formatVersion":1,"fog":{"color":{"r":1,"g":2,"b":3,"a":4},"density":0.5}}""").fog!!
         assertEquals(listOf("color", "density", "gradient"), childrenOf(fog).map { it.name })
         assertEquals(listOf("r", "g", "b", "a"), childrenOf(fog.color).map { it.name })
     }
@@ -201,7 +201,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         val entities = children(ecs)
         assertTrue(entities.none { text(it) == "entities" })
         assertTrue(entities.isNotEmpty())
-        assertEquals("Model 0  5 components", text(entities.first()))
+        assertEquals("Model 0  4 components", text(entities.first()))
         assertTrue(children(entities.first()).any { text(it) == "Name" })
     }
 

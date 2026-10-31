@@ -10,7 +10,7 @@ import com.intellij.openapi.ui.ComboBox
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice
-import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudFrameBudget
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudFrameBudget
 import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudViewState
 import javax.swing.JLabel
 
@@ -95,6 +95,7 @@ internal class CloudChoiceItem(val choice: CloudChoice) {
         when (choice) {
             CloudChoice.ASSET -> "sceneViewCloudsAsset"
             CloudChoice.LAYERED -> "sceneViewCloudsLayered"
+            CloudChoice.CUMULUS -> "sceneViewCloudsCumulus"
             CloudChoice.SHELLS -> "sceneViewCloudsShells"
             CloudChoice.VOLUMETRIC -> "sceneViewCloudsVolumetric"
         }

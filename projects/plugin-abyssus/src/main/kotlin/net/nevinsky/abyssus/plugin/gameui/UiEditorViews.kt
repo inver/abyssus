@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.lib.core.ui.model.propertyText
 import com.intellij.icons.AllIcons
 import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -38,7 +39,7 @@ private fun labelOf(widget: UiWidget, role: String? = null): String {
 
 private fun labelOfWidget(widget: UiWidget): String {
     val kind = widget.type?.let { AbyssusBundle.message("uiWidgetType.${it.json}") } ?: "? ${widget.rawType}"
-    val text = widget.properties["text"]?.takeIf { it.isTextual }?.textValue()?.take(24)
+    val text = widget.propertyText("text")?.take(24)
     return if (text != null) "$kind  \"$text\"  (${widget.id})" else "$kind  (${widget.id})"
 }
 

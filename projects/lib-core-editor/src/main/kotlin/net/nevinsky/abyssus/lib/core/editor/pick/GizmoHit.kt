@@ -7,7 +7,6 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
-import net.nevinsky.abyssus.lib.core.editor.scene.toVector3
 import kotlin.math.abs
 
 /** How close, in pixels, a ray must pass to a handle to grab it. */
@@ -34,9 +33,31 @@ class GizmoHit {
         return best
     }
 
+    /** The plane handle of [handles] that [ray] crosses, or null; only move gizmos have them. */
+    fun findPlane(ray: Ray, handles: GizmoHandles): GizmoPlane? {
+        if (handles.mode != GizmoMode.MOVE) return null
+        var best: GizmoPlane? = null
+        var bestT = Float.MAX_VALUE
+        val margin = TOLERANCE_PIXELS / 2f * handles.worldPerPixel / handles.size
+        for (plane in GizmoPlane.entries) {
+            val a = handles.axisVector(plane.first)
+            val b = handles.axisVector(plane.second)
+            val t = GizmoMath().rayPlane(ray, handles.origin, Vector3(a).crs(b)) ?: continue
+            val local = Vector3(ray.origin).mulAdd(ray.direction, t).sub(handles.origin)
+            val u = local.dot(a) / handles.size
+            val v = local.dot(b) / handles.size
+            val inside = u in (PLANE_INNER - margin)..(PLANE_OUTER + margin) && v in (PLANE_INNER - margin)..(PLANE_OUTER + margin)
+            if (inside && t < bestT) {
+                bestT = t
+                best = plane
+            }
+        }
+        return best
+    }
+
     /** The distance along [ray] of the point nearest the arrow, when that is within [tolerance] of it. */
     private fun arrowHit(ray: Ray, handles: GizmoHandles, axis: GizmoAxis, tolerance: Float): Float? {
-        val origin = handles.origin.toVector3()
+        val origin = handles.origin.cpy()
         val a = handles.axisVector(axis)
         val w = Vector3(ray.origin).sub(origin)
         val b = ray.direction.dot(a)
@@ -55,7 +76,7 @@ class GizmoHit {
 
     /** The distance along [ray] to the ring's plane, when it crosses it within [tolerance] of the ring. */
     private fun ringHit(ray: Ray, handles: GizmoHandles, axis: GizmoAxis, tolerance: Float): Float? {
-        val origin = handles.origin.toVector3()
+        val origin = handles.origin.cpy()
         val normal = handles.axisVector(axis)
         val t = GizmoMath().rayPlane(ray, origin, normal) ?: return null
         val point = Vector3(ray.origin).mulAdd(ray.direction, t)

@@ -42,7 +42,7 @@ class AbyssusDocumentFormatTest {
     }
 
     @Test fun markersCannotAdmitLegacyIdentifiersOrRenderableClasses() {
-        for (ecs in listOf("""{"componentIdentifiers":null}""", """{"componentIdentifiers":{}}""", """{"entities":{"0":{"components":{"RenderComponent":{"renderable":{"class":null,"kind":"asset"}}}}}}""")) {
+        for (ecs in listOf("""{"componentIdentifiers":null}""", """{"componentIdentifiers":{}}""", """{"0":{"components":{"RenderComponent":{"renderable":{"class":null,"kind":"asset"}}}}}""")) {
             val node = json.readObject("""{"format":"abyssus","formatVersion":1,"ecs":$ecs}""")
             assertEquals(FormatProblem.LEGACY_FIELD, format.validate(node, DocumentKind.SCENE)?.problem)
             assertEquals(FormatProblem.LEGACY_FIELD, format.validateEcs(node["ecs"])?.problem)
@@ -50,7 +50,7 @@ class AbyssusDocumentFormatTest {
     }
 
     @Test fun reservedFieldsAreCheckedOnlyAtTheirDefinedPaths() {
-        val node = json.readObject("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":{"components":{"WindComponent":{"class":"net.example.Wind","componentIdentifiers":{},"renderable":{"class":"opaque"}},"RenderComponent":{"renderable":{"kind":"debug-marker","payload":{"class":"opaque"}}}}}},"metadata":{"class":"opaque"}}}""")
+        val node = json.readObject("""{"format":"abyssus","formatVersion":1,"ecs":{"0":{"components":{"WindComponent":{"class":"net.example.Wind","componentIdentifiers":{},"renderable":{"class":"opaque"}},"RenderComponent":{"renderable":{"kind":"debug-marker","payload":{"class":"opaque"}}}}}}}""")
         assertNull(format.validate(node, DocumentKind.SCENE))
         assertNull(format.validateEcs(node["ecs"]))
     }
@@ -65,22 +65,39 @@ class AbyssusDocumentFormatTest {
     }
 
     private fun sceneWith(entity: String) =
-        json.readObject("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":$entity}}}""")
+        json.readObject("""{"format":"abyssus","formatVersion":1,"ecs":{"0":$entity}}""")
 
     @Test fun enabledFlagIsAdmittedWhenMissingOrBoolean() {
         for (entity in listOf(
             """{"components":{"NameComponent":{"name":"a"}}}""",
-            """{"enabled":false,"components":{"NameComponent":{"name":"a","enabled":true}}}""",
-            """{"components":{"NameComponent":{"name":"a","enabled":false}}}""",
+            """{"flags":1,"components":{"NameComponent":{"name":"a","enabled":true}}}""",
+            """{"disabledComponents":["NameComponent"],"components":{"NameComponent":{"name":"a"}}}""",
         )) assertNull(entity, format.validate(sceneWith(entity), DocumentKind.SCENE))
     }
 
-    @Test fun nonBooleanEnabledFlagMakesTheSceneUnsupported() {
-        val component = format.validate(sceneWith("""{"components":{"NameComponent":{"enabled":"no"}}}"""), DocumentKind.SCENE)
-        assertEquals(FormatProblem.ENABLED_FLAG, component?.problem)
-        assertEquals("ecs.entities.0.components.NameComponent.enabled", component?.path)
-        val entity = format.validate(sceneWith("""{"enabled":0,"components":{}}"""), DocumentKind.SCENE)
-        assertEquals(FormatProblem.ENABLED_FLAG, entity?.problem)
-        assertEquals("ecs.entities.0.enabled", entity?.path)
+    @Test fun theHeaderMembersAreValidated() {
+        for ((entity, path) in listOf(
+            """{"type":"NOPE","components":{}}""" to "ecs.0.type",
+            """{"disabledComponents":"NameComponent","components":{}}""" to "ecs.0.disabledComponents",
+            """{"disabledComponents":[1],"components":{}}""" to "ecs.0.disabledComponents",
+            """{"components":{"Type""" + """Component":{}}}""" to "ecs.0.components.TypeComponent",
+        )) assertEquals(entity, path, format.validate(sceneWith(entity), DocumentKind.SCENE)?.path)
+        assertNull(format.validate(sceneWith("""{"type":"OBJECT","disabledComponents":["NameComponent"],"components":{"NameComponent":{}}}"""), DocumentKind.SCENE))
+    }
+
+    @Test fun theOldEntityShapeMakesTheSceneUnsupported() {
+        val wrapper = format.validate(json.readObject("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":{"components":{}}}}}"""), DocumentKind.SCENE)
+        assertEquals(FormatProblem.LEGACY_FIELD, wrapper?.problem)
+        assertEquals("ecs.entities", wrapper?.path)
+        val entity = format.validate(sceneWith("""{"enabled":false,"components":{}}"""), DocumentKind.SCENE)
+        assertEquals(FormatProblem.LEGACY_FIELD, entity?.problem)
+        assertEquals("ecs.0.enabled", entity?.path)
+    }
+
+    @Test fun flagsMustBeIntegralAndComponentsAnObject() {
+        for (bad in listOf("""{"flags":1.5,"components":{}}""", """{"flags":"1","components":{}}""", """{"components":[]}""")) {
+            assertEquals(bad, FormatProblem.ENTITY_SHAPE, format.validate(sceneWith(bad), DocumentKind.SCENE)?.problem)
+        }
+        assertNull(format.validate(sceneWith("""{"flags":5,"components":{}}"""), DocumentKind.SCENE))
     }
 }

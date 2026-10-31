@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 
 /**
  * What lights the scene's content besides its light entities: the ambient color, or a built HDR sky (or a procedural
@@ -13,7 +12,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.Rgba
  */
 sealed interface SceneAmbient<out E> {
     /** The scene's ambient color; null when its ambient light is disabled. */
-    data class Color(val rgba: Rgba?) : SceneAmbient<Nothing>
+    data class Color(val rgba: com.badlogic.gdx.graphics.Color?) : SceneAmbient<Nothing>
 
     /** A built sky's lighting [environment]. */
     data class Sky<E>(val environment: E) : SceneAmbient<E>
@@ -24,7 +23,7 @@ sealed interface SceneAmbient<out E> {
          * environment is built ([builtSky] returns it), whether or not the ambient light is enabled; otherwise the
          * [ambient] color.
          */
-        fun <E : Any> of(skybox: String?, ambient: Rgba?, builtSky: (String) -> E?): SceneAmbient<E> =
+        fun <E : Any> of(skybox: String?, ambient: com.badlogic.gdx.graphics.Color?, builtSky: (String) -> E?): SceneAmbient<E> =
             skybox?.let(builtSky)?.let { Sky(it) } ?: Color(ambient)
     }
 }

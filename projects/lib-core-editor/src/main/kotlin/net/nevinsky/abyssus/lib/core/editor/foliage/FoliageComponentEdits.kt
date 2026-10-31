@@ -26,7 +26,7 @@ class FoliageComponentEdits {
 
     /**
      * Removes the entities [ids] from the scene tree. Nothing changes and the first reference is returned when a
-     * remaining entity still refers to a removed one (as its parent, look-at target or point-to-point end).
+     * remaining entity still refers to a removed one (as its parent or look-at target).
      */
     fun remove(root: JsonNode, ids: Set<String>): Removal {
         val entities = SceneEntityTree(root).entities() as? ObjectNode ?: return Removal(false, null)
@@ -50,7 +50,5 @@ class FoliageComponentEdits {
     private val REFERENCES = listOf(
         "ParentComponent" to "parentEntityId",
         "PositionComponent" to "lookAtId",
-        "Point2PointPositionComponent" to "entity1Id",
-        "Point2PointPositionComponent" to "entity2Id",
     )
 }

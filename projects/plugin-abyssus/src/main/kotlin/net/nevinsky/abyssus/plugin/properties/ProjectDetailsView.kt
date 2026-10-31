@@ -4,6 +4,9 @@
  */
 package net.nevinsky.abyssus.plugin.properties
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.editor.document.copyWithBoolean
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.SimpleListCellRenderer
@@ -61,9 +64,7 @@ internal class ProjectDetailsView @JvmOverloads constructor(
         val scenes = ProjectLayout.sceneFiles(state.file).map { it.nameWithoutExtension }
         val editable = if (state.settings.supported) setOf("physicsEnabled") else emptySet()
         // the settings reader decides what physicsEnabled means (an unsupported project reads as off)
-        val root = (state.root.deepCopy() as? com.fasterxml.jackson.databind.node.ObjectNode)?.also {
-            if (it.has("physicsEnabled")) it.put("physicsEnabled", state.settings.physicsEnabled)
-        } ?: state.root
+        val root = copyWithBoolean(state.root, "physicsEnabled", state.settings.physicsEnabled)
         val model = PanelBuilders(EditorBundle, { false }).project(root, state.name, scenes, editable)
         val problem = if (state.settings.problems.isEmpty()) null else JBLabel(
             if (state.settings.supported) projectSettingsProblems(state.settings)

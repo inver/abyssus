@@ -115,7 +115,7 @@ but syntax, and the curve already has a parameter (exposure) an instance can car
 scene shaders (`lines`, `overlay`, `terrain`), the dto readers, and the VFS listing formerly
 `ProjectAssetFiles.loadShortAssets`, which moves to `dto/ProjectAssetListing.kt` and takes the `JsonProcessor`.
 
-`core` drawables take libGDX types (`Camera`, `Vector3`); the plugin converts its `Vec3` sun direction at the
+`core` drawables take libGDX types (`Camera`, `Vector3`); the plugin converts its `Vector3` sun direction at the
 `SceneSkybox` call. `TerrainMesh.draw(program, blank)` keeps taking the plugin's terrain program.
 
 ### 5. Cancellation

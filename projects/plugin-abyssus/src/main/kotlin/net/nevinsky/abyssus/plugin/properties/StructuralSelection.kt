@@ -5,7 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import net.nevinsky.abyssus.lib.core.assets.MetaType
@@ -58,19 +60,19 @@ internal fun structuralOf(node: Any?): Structural? {
             Structural.Folder(PanelFolderKind.SCENES, tree.label ?: rowText(entry).label, value.size, abss)
 
         value is UiScreenEntry -> value.asset.let { asset ->
-            Structural.Screen(value.screen.name, asset.name, value.screen.id, java.io.File(asset.baseDir, "meta.json").let {
+            Structural.Screen(value.screen.name, asset.name, value.screen.id, java.io.File(asset.baseDir, META_FILE).let {
                 com.intellij.openapi.vfs.LocalFileSystem.getInstance().findFileByIoFile(it)
             }, abss)
         }
 
         value is UiScreen -> uiAsset(tree)?.let { asset ->
-            Structural.Screen(value.name, asset.name, value.id, java.io.File(asset.baseDir, "meta.json").let {
+            Structural.Screen(value.name, asset.name, value.id, java.io.File(asset.baseDir, META_FILE).let {
                 com.intellij.openapi.vfs.LocalFileSystem.getInstance().findFileByIoFile(it)
             }, abss)
         }
 
         source != null && ProjectLayout.isScene(source) && entry.parentKeys.isEmpty() ->
-            if (value is JsonNode && isEcsEntry(entry)) Structural.Ecs(source)
+            if (value is Document && isEcsEntry(entry)) Structural.Ecs(source)
             else SETTINGS[entry.name]?.let { Structural.Setting(source, it) }
 
         else -> null

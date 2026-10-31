@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.lib.core.editor.ui.*
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -166,7 +167,7 @@ class UiListEditorTest : BasePlatformTestCase() {
         assertEquals(listOf("sample"), errors(BindingForm("l", "list", fields = "a:number", sample = """[{"a":"x"}]""")))
         assertEquals(listOf("sample"), errors(BindingForm("l", "list", fields = "a:number", sample = """[{"b":1}]""")))
         assertEquals(listOf("sample"), errors(BindingForm("l", "list", fields = "a:number", sample = "{")))
-        val roundTrip = BindingForm.of(collection.binding("scores")!!)
+        val roundTrip = bindingFormOf(collection.binding("scores")!!)
         assertEquals("rank:number, name:string, look:string", roundTrip.fields)
         assertEquals("list", roundTrip.type)
         assertTrue(bindingMembers(roundTrip) is FormResult.Valid)

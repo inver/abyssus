@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.properties
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.JBColor
@@ -129,7 +131,7 @@ internal class SceneDetailsView @JvmOverloads constructor(
 
     /** One saved limit: label, editor, the reason of a rejected edit or malformed saved value, and its help and range. */
     private fun settingRow(field: SceneRayField): JComponent {
-        var expected = state.rayRoot.get("rayTracing")?.get(field.key)
+        var expected = state.rayRoot.at("rayTracing", field.key)
         val editor = JBTextField(expected?.toString() ?: field.default.toString()).apply {
             name = "ray-setting-${field.key}"; columns = 10
             pinFieldHeight()
@@ -145,7 +147,7 @@ internal class SceneDetailsView @JvmOverloads constructor(
             when (val result = SceneRayEdits.setting(controls.project, file, field, expected, editor.text)) {
                 RayDataEdit.Changed, RayDataEdit.Unchanged -> {
                     error.text = ""
-                    expected = SceneJson().parse(textOf(file)).get("rayTracing")?.get(field.key)
+                    expected = parseDocument(textOf(file)).at("rayTracing", field.key)
                     editor.text = expected?.toString() ?: field.default.toString()
                 }
                 RayDataEdit.Conflict -> {
@@ -204,6 +206,6 @@ internal class SceneDetailsView @JvmOverloads constructor(
 internal fun chooseSceneSkybox(project: com.intellij.openapi.project.Project, file: VirtualFile): Boolean {
     val abss = ProjectLayout.abssFor(file) ?: return false
     val assets = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().assets
-    val current = SceneJson().parse(textOf(file)).get("skyboxName")?.takeIf { it.isTextual }?.textValue()
+    val current = parseDocument(textOf(file)).textAt("skyboxName")
     return net.nevinsky.abyssus.plugin.projectView.chooseSkyboxFor(project, file, abss, current, assets.metaFiles, assets.hdrPreviews)
 }

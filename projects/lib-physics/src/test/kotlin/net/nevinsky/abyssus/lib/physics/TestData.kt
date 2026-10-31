@@ -36,8 +36,8 @@ fun physicsLoader(
         it.registerAll(extra)
     }
     return RuntimeSceneLoader(
-        SceneLoader(json, FileLoader(project)),
-        EcsLoader(json, registry),
+        SceneLoader(json, FileLoader(project), registry),
+        EcsLoader(),
         log,
     )
 }

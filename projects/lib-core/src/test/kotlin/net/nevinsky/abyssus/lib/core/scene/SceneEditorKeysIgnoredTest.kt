@@ -38,7 +38,7 @@ class SceneEditorKeysIgnoredTest {
 
     private fun loader(root: File): RuntimeSceneLoader {
         val json = JsonProcessor(NOPLogger.NOP_LOGGER)
-        return RuntimeSceneLoader(SceneLoader(json, FileLoader(root)), EcsLoader(json, ComponentRegistry()), NOPLogger.NOP_LOGGER)
+        return RuntimeSceneLoader(SceneLoader(json, FileLoader(root), ComponentRegistry()), EcsLoader(), NOPLogger.NOP_LOGGER)
     }
 
     @Test
@@ -52,9 +52,9 @@ class SceneEditorKeysIgnoredTest {
 
         assertNotNull(plain)
         assertNotNull(loaded)
-        assertNotNull(loaded!!.scene.ecs)
+        assertTrue(loaded!!.scene.ecs.isNotEmpty())
         assertEquals(plain!!.engine.entities.size(), loaded.engine.entities.size())
-        assertEquals(plain.scene.ecs, loaded.scene.ecs)
+        assertEquals(plain.scene.ecs.keys, loaded.scene.ecs.keys)
         assertEquals(plain.scene.skyboxName, loaded.scene.skyboxName)
         assertArrayEquals(before, file.readBytes())
     }

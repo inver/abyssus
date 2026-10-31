@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.lib.raytracing
 
+import com.badlogic.gdx.math.Vector3
+
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.sqrt
@@ -14,18 +16,18 @@ private const val MAX_BLEND_LAYERS = RAY_PRIMARY_BLEND_LAYERS
 /** Test-only triangle traversal with the same semantics as the native kernels. */
 internal class RaySceneReferenceRenderer(private val onIntersection: () -> Unit = {}) {
     private val reference=RayMaterialReference()
-    private class Triangle(val a:RayVec3,val b:RayVec3,val c:RayVec3,val normals:List<RayVec3>?,val uv:FloatArray,val local:List<RayVec3>,val material:Int,val solid:Int) {
-        fun hit(origin:RayVec3,direction:RayVec3,min:Float,max:Float):Hit? {
-            val e1=b-a;val e2=c-a;val p=direction.cross(e2);val determinant=e1.dot(p)
+    private class Triangle(val a:Vector3,val b:Vector3,val c:Vector3,val normals:List<Vector3>?,val uv:FloatArray,val local:List<Vector3>,val material:Int,val solid:Int) {
+        fun hit(origin:Vector3,direction:Vector3,min:Float,max:Float):Hit? {
+            val e1=b-a;val e2=c-a;val p=direction.crossed(e2);val determinant=e1.dot(p)
             if(abs(determinant)<1e-8f) return null
-            val t=origin-a;val u=t.dot(p)/determinant;val q=t.cross(e1);val v=direction.dot(q)/determinant
+            val t=origin-a;val u=t.dot(p)/determinant;val q=t.crossed(e1);val v=direction.dot(q)/determinant
             val distance=e2.dot(q)/determinant
             return if(u<0 || v<0 || u+v>1 || distance<min || distance>max) null else Hit(this,distance,u,v)
         }
     }
     private class Hit(val triangle:Triangle,val distance:Float,val u:Float,val v:Float)
-    private class Surface(val position:RayVec3,val normal:RayVec3,val material:RayMaterial,val evaluated:RayMaterial,val base:RayColor,
-        val emissive:RayColor,val occlusion:Float,val geometric:RayVec3,val solid:Int)
+    private class Surface(val position:Vector3,val normal:Vector3,val material:RayMaterial,val evaluated:RayMaterial,val base:RayColor,
+        val emissive:RayColor,val occlusion:Float,val geometric:Vector3,val solid:Int)
 
     fun render(request:RaySceneRequest):RayFrame {
         request.scene.unsupportedReason()?.let { throw IllegalArgumentException(it) }
@@ -37,10 +39,10 @@ internal class RaySceneReferenceRenderer(private val onIntersection: () -> Unit 
         val queryLimit=RayWorkBudget().perCameraSample(scene,request.maxReflectionBounces,request.maxRefractionBounces)
         val triangles=scene.instances.flatMap { instance ->
             val mesh=scene.meshes[instance.mesh];val p=mesh.positions();val indices=mesh.indices();val normals=mesh.normals();val uv=mesh.uvs();val matrix=instance.transform()
-            fun local(i:Int)=RayVec3(p[i*3],p[i*3+1],p[i*3+2])
-            fun world(v:RayVec3)=RayVec3(matrix[0]*v.x+matrix[4]*v.y+matrix[8]*v.z+matrix[12],matrix[1]*v.x+matrix[5]*v.y+matrix[9]*v.z+matrix[13],matrix[2]*v.x+matrix[6]*v.y+matrix[10]*v.z+matrix[14])
-            val x=RayVec3(matrix[0],matrix[1],matrix[2]);val y=RayVec3(matrix[4],matrix[5],matrix[6]);val z=RayVec3(matrix[8],matrix[9],matrix[10]);val sign=if(x.dot(y.cross(z))<0)-1f else 1f
-            fun normal(i:Int):RayVec3 { val n=normals!!;return ((y.cross(z)*n[i*3]+z.cross(x)*n[i*3+1]+x.cross(y)*n[i*3+2])*sign).unit() }
+            fun local(i:Int)=Vector3(p[i*3],p[i*3+1],p[i*3+2])
+            fun world(v:Vector3)=Vector3(matrix[0]*v.x+matrix[4]*v.y+matrix[8]*v.z+matrix[12],matrix[1]*v.x+matrix[5]*v.y+matrix[9]*v.z+matrix[13],matrix[2]*v.x+matrix[6]*v.y+matrix[10]*v.z+matrix[14])
+            val x=Vector3(matrix[0],matrix[1],matrix[2]);val y=Vector3(matrix[4],matrix[5],matrix[6]);val z=Vector3(matrix[8],matrix[9],matrix[10]);val sign=if(x.dot(y.crossed(z))<0)-1f else 1f
+            fun normal(i:Int):Vector3 { val n=normals!!;return ((y.crossed(z)*n[i*3]+z.crossed(x)*n[i*3+1]+x.crossed(y)*n[i*3+2])*sign).unit() }
             (indices.indices step 3).map { j ->
                 val ids=listOf(indices[j],indices[j+1],indices[j+2]);val points=ids.map(::local)
                 Triangle(world(points[0]),world(points[1]),world(points[2]),normals?.let { ids.map(::normal) },
@@ -49,10 +51,10 @@ internal class RaySceneReferenceRenderer(private val onIntersection: () -> Unit 
         }
         // Blended triangles are visible to primary rays only; shadow and reflection rays never see them.
         val secondary=triangles.filter { scene.materials[it.material].alphaMode!=RayAlphaMode.BLEND }
-        fun nearest(candidates:List<Triangle>,origin:RayVec3,direction:RayVec3,min:Float,max:Float): Hit? { onIntersection(); queries++;check(queries<=queryLimit) { "Ray query budget exceeded" }; return candidates.mapNotNull { it.hit(origin,direction,min,max) }.minByOrNull { it.distance } }
-        fun surfaceOf(hit:Hit,position:RayVec3,direction:RayVec3):Surface {
+        fun nearest(candidates:List<Triangle>,origin:Vector3,direction:Vector3,min:Float,max:Float): Hit? { onIntersection(); queries++;check(queries<=queryLimit) { "Ray query budget exceeded" }; return candidates.mapNotNull { it.hit(origin,direction,min,max) }.minByOrNull { it.distance } }
+        fun surfaceOf(hit:Hit,position:Vector3,direction:Vector3):Surface {
             val triangle=hit.triangle;val weights=floatArrayOf(1-hit.u-hit.v,hit.u,hit.v)
-            var normal=triangle.normals?.let { (it[0]*weights[0]+it[1]*weights[1]+it[2]*weights[2]).unit() } ?: (triangle.b-triangle.a).cross(triangle.c-triangle.a).unit()
+            var normal=triangle.normals?.let { (it[0]*weights[0]+it[1]*weights[1]+it[2]*weights[2]).unit() } ?: (triangle.b-triangle.a).crossed(triangle.c-triangle.a).unit()
             val material=scene.materials[triangle.material]
             if(material.doubleSided && normal.dot(direction)>0) normal=normal*-1f
             val u=(0..2).sumOf { (triangle.uv[it*2]*weights[it]).toDouble() }.toFloat();val v=(0..2).sumOf { (triangle.uv[it*2+1]*weights[it]).toDouble() }.toFloat()
@@ -62,11 +64,11 @@ internal class RaySceneReferenceRenderer(private val onIntersection: () -> Unit 
             fun texture(b:RayTextureBinding?)=b?.let { reference.sample(it,scene.textures,u,v) } ?: RayColor(1f,1f,1f)
             val mr=texture(material.metallicRoughnessTexture)
             val evaluated=material.copy(specular=material.specular*texture(material.specularTexture),metallic=material.metallic*mr.b,roughness=material.roughness*mr.g)
-            return Surface(position,normal,material,evaluated,base,material.emissive*texture(material.emissiveTexture),texture(material.occlusionTexture).r,(triangle.b-triangle.a).cross(triangle.c-triangle.a).unit(),triangle.solid)
+            return Surface(position,normal,material,evaluated,base,material.emissive*texture(material.emissiveTexture),texture(material.occlusionTexture).r,(triangle.b-triangle.a).crossed(triangle.c-triangle.a).unit(),triangle.solid)
         }
         fun isCutout(s:Surface)=s.material.alphaMode==RayAlphaMode.MASK && s.base.a*s.material.opacity<s.material.alphaCutoff
         /** Nearest hit that is not an alpha-test hole; more than [MAX_CUTOUT_LAYERS] holes count as solid. */
-        fun traceMasked(origin:RayVec3,direction:RayVec3,min:Float,max:Float):Pair<Hit,Surface>? {
+        fun traceMasked(origin:Vector3,direction:Vector3,min:Float,max:Float):Pair<Hit,Surface>? {
             var start=0f;var last:Pair<Hit,Surface>?=null
             for(i in 0 until MAX_CUTOUT_LAYERS) {
                 val from=origin+direction*start;val lo=if(i==0) min else .0005f;val hi=max-start
@@ -83,7 +85,7 @@ internal class RaySceneReferenceRenderer(private val onIntersection: () -> Unit 
         val sun=scene.sunVisibility?.takeIf { v -> scene.lights.any { it.id==v.lightId } }
         val sunTexels=sun?.visibility()
         val sunMatrix=sun?.worldToMap()
-        fun sunVisibility(lightIndex:Int,position:RayVec3):Float {
+        fun sunVisibility(lightIndex:Int,position:Vector3):Float {
             if(sun==null || sunTexels==null || sunMatrix==null || scene.lights.indexOfFirst { it.id==sun.lightId }!=lightIndex) return 1f
             val u=sunMatrix[0]*position.x+sunMatrix[1]*position.y+sunMatrix[2]*position.z+sunMatrix[3]
             val v=sunMatrix[4]*position.x+sunMatrix[5]*position.y+sunMatrix[6]*position.z+sunMatrix[7]
@@ -94,7 +96,7 @@ internal class RaySceneReferenceRenderer(private val onIntersection: () -> Unit 
             val map=(texel(x0,y0)*(1-fx)+texel(x0+1,y0)*fx)*(1-fy)+(texel(x0,y0+1)*(1-fx)+texel(x0+1,y0+1)*fx)*fy
             return sun.outside+(map-sun.outside)*inside
         }
-        fun shade(s:Surface,view:RayVec3,environment:RayColor?):RayColor {
+        fun shade(s:Surface,view:Vector3,environment:RayColor?):RayColor {
             val ambient=reference.ambientAt(scene.environment,s.normal)
             var value=reference.ambient(s.evaluated,s.base,ambient,environment ?: ambient,s.normal.dot(view))*s.occlusion+s.emissive
             for((lightIndex,light) in scene.lights.withIndex()) {
@@ -108,7 +110,7 @@ internal class RaySceneReferenceRenderer(private val onIntersection: () -> Unit 
             }
             return value
         }
-        fun shadeSurface(initial:Surface,initialView:RayVec3,x:Int,y:Int,sample:Int):RayColor {
+        fun shadeSurface(initial:Surface,initialView:Vector3,x:Int,y:Int,sample:Int):RayColor {
             var s=initial;var view=initialView
             var result=RayColor(0f,0f,0f);var throughput=RayColor(1f,1f,1f)
             val path=RayOpticalPath(request.maxReflectionBounces,request.maxRefractionBounces)
@@ -156,7 +158,7 @@ internal class RaySceneReferenceRenderer(private val onIntersection: () -> Unit 
             error("Optical event bound exceeded")
         }
         val camera=request.camera.uniforms(request.width,request.height)
-        fun vector(i:Int)=RayVec3(camera[i],camera[i+1],camera[i+2])
+        fun vector(i:Int)=Vector3(camera[i],camera[i+1],camera[i+2])
         val origin=vector(0);val forward=vector(4);val right=vector(8);val up=vector(12)
         val near=camera[3];val far=camera[7]
         val colors=FloatArray(request.width*request.height*4);val depths=FloatArray(request.width*request.height){1f}

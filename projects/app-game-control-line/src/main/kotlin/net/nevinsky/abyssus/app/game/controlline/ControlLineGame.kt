@@ -135,6 +135,7 @@ class ControlLineGame(
 
         val scene = (screen as? Screen.Debrief)?.let { debriefSceneOf(it.model) } ?: flights.scene ?: parked
         var lines = emptyList<LineSegment>()
+        var cables = emptyList<Cable>()
         var hidden = if (s != null && screen !is Screen.PlaneSelect) s.rig.pilot else null
         when (screen) {
             is Screen.Debrief -> {
@@ -155,9 +156,15 @@ class ControlLineGame(
                 val pilot = scene.position(s.rig.pilot).localPosition
                 cameras.flying(pilot, scene.position(s.plane).localPosition)
                 val color = if (s.flight.tension >= CONTROL_TENSION) TAUT_LINE else SLACK_LINE
-                val thickness = s.rig.planeSettings.lineDiameter
-                lines = s.wires(seconds).flatMap { wire ->
-                    wire.zipWithNext { a, b -> LineSegment(Vector3(a), Vector3(b), color, thickness = thickness) }
+                // the lines bend with their tension, weight and drag: lit cables where the renderer draws them, wire ribbons otherwise
+                val diameter = s.rig.planeSettings.lineDiameter
+                val wires = s.wires(seconds)
+                if (renderer.drawsCables) {
+                    cables = wires.map { wire -> Cable(wire.map { Vector3(it) }, diameter, color) }
+                } else {
+                    lines = wires.flatMap { wire ->
+                        wire.zipWithNext { a, b -> LineSegment(Vector3(a), Vector3(b), color, thickness = diameter) }
+                    }
                 }
                 if (screen is Screen.Flying || screen is Screen.Paused) guide?.let { lines = lines + it.segments().toLines(pilot) }
             } else {
@@ -176,6 +183,7 @@ class ControlLineGame(
             hidden = hidden,
             clips = if (screen is Screen.Debrief) emptyMap() else s?.flight?.crash?.let { mapOf(s.plane to it.clip) }.orEmpty(),
             seconds = seconds,
+            cables = cables,
         )
         (optIn as? FailableFieldView)?.failure?.let(::fallBackToRaster)
         ui.update(s, flights.judge, seconds, flights.scaleJudge)

@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.ui
 
+import net.nevinsky.abyssus.lib.core.editor.util.shortNumberText
 import net.nevinsky.abyssus.lib.core.ui.model.UiBinding
 import net.nevinsky.abyssus.lib.core.ui.model.UiBindingAccess
 import net.nevinsky.abyssus.lib.core.ui.model.UiBindingType
@@ -186,7 +187,7 @@ class UiPreviewState private constructor(
     }
 
     private fun show(value: UiValue) = when (value) {
-        is UiValue.Num -> if (value.value == Math.rint(value.value)) value.value.toLong().toString() else value.value.toString()
+        is UiValue.Num -> shortNumberText(value.value)
         is UiValue.Bool -> value.value.toString()
         is UiValue.Text -> "\"${value.value}\""
         is UiValue.Rows -> "${value.items.size} rows"

@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.util.textAt
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -28,15 +30,15 @@ import net.nevinsky.abyssus.plugin.ui.showActionGroup
 internal fun foliageChoices(project: Project, file: VirtualFile, entityId: String, metas: MetaFiles): List<String> {
     val root = SceneDocumentCache.of(project).read(file)?.root ?: return emptyList()
     val terrain =
-        SceneDocument(root).renderAsset(entityId)?.takeIf { it.type == MetaType.TERRAIN.name } ?: return emptyList()
+        SceneDocument(root).BaseMeta(entityId)?.takeIf { it.isTerrain() } ?: return emptyList()
     val abss = ProjectLayout.abssFor(file) ?: return emptyList()
     if (AssetReadCache.of(project).read(abss)?.obj !is ProjectDto) return emptyList()
     return ProjectLayout.assetFolders(abss).mapNotNull { folder ->
         runCatchingKeepingCancellation {
             val meta = metas.inEditor(folder) ?: return@runCatchingKeepingCancellation null
             folder.name.takeIf {
-                meta.json["type"]?.textValue() == MetaType.FOLIAGE.name &&
-                        meta.json["additional"]?.get("terrain")?.textValue() == terrain.name
+                meta.json.textAt("type") == MetaType.FOLIAGE.name &&
+                        meta.json.textAt("additional", "terrain") == terrain.name
             }
         }.getOrNull()
     }
@@ -58,7 +60,7 @@ internal fun setFoliage(
 /** The same terrain-bound choices serve the tree and the Scene view toolbar; an empty group means none fit. */
 fun foliageGroup(project: Project, file: VirtualFile, entityId: String): DefaultActionGroup? {
     val root = SceneDocumentCache.of(project).read(file)?.root ?: return null
-    if (SceneDocument(root).renderAsset(entityId)?.type != MetaType.TERRAIN.name) return null
+    if (SceneDocument(root).BaseMeta(entityId)?.isTerrain() != true) return null
     val metas = service<AbyssusPluginCtx>().assets.metaFiles
     val names = foliageChoices(project, file, entityId, metas)
     return DefaultActionGroup().apply {
@@ -80,14 +82,8 @@ open class AddFoliageAction : AbyssusTreeAction<ComponentTarget>() {
         templatePresentation.text = AbyssusBundle.message("addFoliageTitle")
     }
 
-    override fun targetOf(node: Any?): ComponentTarget? {
-        val entry = (node as? DtoEntryNode)?.value ?: return null
-        val json = entry.value as? com.fasterxml.jackson.databind.JsonNode ?: return null
-        val target = componentTargetOf(node)?.takeIf { it.kind == null } ?: return null
-        return target.takeIf {
-            net.nevinsky.abyssus.lib.core.editor.document.sceneEntityView(entry.name, json)
-                .renderAsset()?.type == MetaType.TERRAIN.name
-        }
+    override fun targetOf(node: Any?): ComponentTarget? = entityTargetOf(node) { name, json ->
+        net.nevinsky.abyssus.lib.core.editor.host.sceneEntityView(name, json).BaseMeta()?.isTerrain() == true
     }
 
     override fun isEnabled(e: AnActionEvent, target: ComponentTarget): Boolean {

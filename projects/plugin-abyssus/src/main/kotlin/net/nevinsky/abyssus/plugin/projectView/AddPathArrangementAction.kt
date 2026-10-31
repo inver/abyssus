@@ -10,8 +10,8 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
@@ -21,9 +21,9 @@ import net.nevinsky.abyssus.plugin.sceneview.openSceneView
 import net.nevinsky.abyssus.plugin.ui.showActionGroup
 
 /** The MODEL assets of the project [file] belongs to, by folder name: the only assets a path can arrange. */
-internal fun pathModels(file: VirtualFile): List<RenderAsset> =
+internal fun pathModels(file: VirtualFile): List<BaseMeta> =
     SceneComponentEdits.renderAssets(file, service<AbyssusPluginCtx>().assets.metaFiles)
-        .filter { it.type == MetaType.MODEL.name }
+        .filter { it.type == MetaType.MODEL }
 
 /** Whether a path arrangement can be added to [file] now: the scene reads as a native scene and its project has a model. */
 internal fun canAddPathArrangement(file: VirtualFile, cache: SceneDocumentCache): Boolean =
@@ -36,18 +36,20 @@ internal fun canAddPathArrangement(file: VirtualFile, cache: SceneDocumentCache)
 class AddPathArrangementGroup(
     private val project: Project,
     private val file: VirtualFile,
-    private val start: (RenderAsset) -> Unit,
-) : AddChildGroup<RenderAsset>(AbyssusBundle.message("addPathArrangementTitle")) {
+    private val start: (BaseMeta) -> Unit,
+) : AddChildGroup<BaseMeta>(AbyssusBundle.message("addPathArrangementTitle")) {
     init {
-        for (asset in pathModels(file)) addChild(asset, asset.name, literalName = true)
+        for (asset in pathModels(file)) {
+            addChild(asset, asset.name, literalName = true)
+        }
     }
 
-    override fun canAdd(target: RenderAsset) = canAddAsset(file, SceneDocumentCache.of(project))
-    override fun addTarget(target: RenderAsset) = start(target)
+    override fun canAdd(target: BaseMeta) = canAddAsset(file, SceneDocumentCache.of(project))
+    override fun addTarget(target: BaseMeta) = start(target)
 }
 
 /** Opens the Scene view of [file] in drawing mode for the model [asset]. */
-internal fun startDrawingIn(project: Project, file: VirtualFile, asset: RenderAsset) {
+internal fun startDrawingIn(project: Project, file: VirtualFile, asset: BaseMeta) {
     openSceneView(project, file)
     fun view() = FileEditorManager.getInstance(project).getEditors(file).filterIsInstance<SceneFileEditor>()
         .firstOrNull()?.sceneView

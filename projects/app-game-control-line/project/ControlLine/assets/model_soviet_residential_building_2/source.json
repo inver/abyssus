@@ -1,0 +1,19 @@
+{
+  "importer": "model",
+  "source": "soviet_residential_building_2.glb",
+  "sourcePath": "/home/inv3r/Downloads/soviet_residential_building_2.glb",
+  "sourceSha256": "459a22478ca9ae99b96fee6def09854658e6d4ee5c6894190372a1ed51b6bbca",
+  "sourceFormat": "GLB",
+  "stated": {
+    "unit": "m",
+    "upAxis": "Y"
+  },
+  "chosen": {
+    "unit": "m",
+    "upAxis": "Y"
+  },
+  "size": "original",
+  "animations": [],
+  "skipped": [],
+  "approximated": []
+}

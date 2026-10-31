@@ -56,6 +56,24 @@ class IdeFrame(remoteRobot: RemoteRobot, remoteComponent: RemoteComponent) : Com
     fun saveAll() = keyboard { hotKey(java.awt.event.KeyEvent.VK_CONTROL, java.awt.event.KeyEvent.VK_S) }
 
     /** The IDE's Undo shortcut. */
+    /** Types [text] into the popup's speed search and presses Enter: picks the one entry the text leaves, however its label is shortened. */
+    fun pickByTyping(text: String) {
+        keyboard {
+            enterText(text)
+            Thread.sleep(400)
+            enter()
+        }
+    }
+
+    /** Replaces the text of the focused field with [text]: select all, then type. */
+    fun replaceFocusedText(text: String) = keyboard {
+        hotKey(java.awt.event.KeyEvent.VK_CONTROL, java.awt.event.KeyEvent.VK_A)
+        enterText(text)
+    }
+
+    /** Presses Enter in whatever has the focus. */
+    fun pressEnter() = keyboard { enter() }
+
     fun undo() = keyboard { hotKey(java.awt.event.KeyEvent.VK_CONTROL, java.awt.event.KeyEvent.VK_Z) }
 
     fun redo() = keyboard { hotKey(java.awt.event.KeyEvent.VK_CONTROL, java.awt.event.KeyEvent.VK_SHIFT, java.awt.event.KeyEvent.VK_Z) }
@@ -154,6 +172,10 @@ class IdeFrame(remoteRobot: RemoteRobot, remoteComponent: RemoteComponent) : Com
         remoteRobot.findAll<CommonContainerFixture>(byXpath("//div[@class='MyDialog' and @title='$title']")).isNotEmpty()
 
     /** Clicks the named item of the context menu that is open. */
+    /** Whether the context menu item [text] is shown and enabled; false when it is absent. */
+    fun menuItemEnabled(text: String): Boolean = remoteRobot.findAll<ComponentFixture>(byXpath("//div[@class='ActionMenuItem' and @text='$text']"))
+        .any { it.callJs<Boolean>("component.isShowing() && component.isEnabled()", runInEdt = true) }
+
     fun clickMenuItem(text: String) = find<ComponentFixture>(byXpath("//div[@class='ActionMenuItem' and @text='$text']"), SHORT).click()
 
     private val headerButtonXpath =
@@ -250,9 +272,15 @@ class AbyssusTree(private val frame: IdeFrame) {
 
     /** The texts of the selected rows, as the tree draws them. */
     fun selectedRows(): List<String> {
-        val all = rows()
-        val selected = fixture.callJs<String>("var r = component.getSelectionRows(); r == null ? '' : java.util.Arrays.toString(r)", runInEdt = true)
-        return selected.trim('[', ']').split(',').map(String::trim).filter(String::isNotEmpty).map { all[it.toInt()] }
+        // a pick selects a row and expands its parents while this runs: read both again until the indexes fit the rows read
+        repeat(6) {
+            val selected = fixture.callJs<String>("var r = component.getSelectionRows(); r == null ? '' : java.util.Arrays.toString(r)", runInEdt = true)
+            val all = rows()
+            val indexes = selected.trim('[', ']').split(',').map(String::trim).filter(String::isNotEmpty).map { it.toInt() }
+            if (indexes.all { it in all.indices }) return indexes.map { all[it] }
+            Thread.sleep(300)
+        }
+        return emptyList()
     }
 
     /** Expands the type groups under Assets (Models, Skyboxes, Terrains, ...) so asset rows are listed. */
@@ -429,6 +457,40 @@ class PropertiesPanel(private val frame: IdeFrame) {
         return items[target]
     }
 
+    /**
+     * Picks [item] of the combo [name] with the keyboard, one step at a time: an arrow key in the popup already selects the
+     * neighbouring item, which can rebuild the panel and replace the combo, so each step opens the current combo again.
+     */
+    fun chooseWithKeyboard(name: String, item: String) {
+        val items = byName(name).callJs<String>(
+            "var out = []; for (var i = 0; i < component.getItemCount(); i++) out.push(String(component.getItemAt(i))); out.join('\\n')",
+            runInEdt = true,
+        ).lines()
+        // an asset choice prints as `AssetChoice(value=…, label=<label>, …)`: match its label, and the empty label is None
+        val target = items.indexOfFirst { it == item || it.contains("label=$item,") }
+        require(target >= 0) { "the combo $name offers $items, not $item" }
+        repeat(items.size) {
+            val index = byName(name).callJs<Int>("component.getSelectedIndex()", runInEdt = true)
+            if (index == target) return
+            byName(name).click()
+            Thread.sleep(300)
+            frame.keyboard { if (target > index) down() else up() }
+            Thread.sleep(300)
+            frame.keyboard { enter() }
+            Thread.sleep(700)
+        }
+        check(byName(name).callJs<Int>("component.getSelectedIndex()", runInEdt = true) == target) { "the combo $name did not reach $item" }
+    }
+
+    /** Clicks the first of several components named [name] (a Properties window can hold more than one Undo row). */
+    fun clickFirst(name: String) = window.findAll<ComponentFixture>(byXpath("//div[@name='$name']")).first().click()
+
+    /** The items of the combo [name], as their text. */
+    fun choiceItems(name: String): List<String> = byName(name).callJs<String>(
+        "var out = []; for (var i = 0; i < component.getItemCount(); i++) out.push(String(component.getItemAt(i))); out.join('\\n')",
+        runInEdt = true,
+    ).lines()
+
     /** The selected item of the combo [name]. */
     fun choiceText(name: String): String =
         byName(name).callJs("String(component.getSelectedItem() == null ? '' : component.getSelectedItem())", runInEdt = true)
@@ -468,6 +530,10 @@ class PropertiesPanel(private val frame: IdeFrame) {
     fun errorText(kind: String, field: String): String =
         window.findAll<ComponentFixture>(byXpath("//div[@class='JBLabel' and @name='error-$kind-$field']")).firstOrNull()
             ?.callJs<String>("component.getText()", runInEdt = true).orEmpty()
+
+    /** The text of the label named [name] (an inline error such as `water-error-WIDTH`), empty when it is blank or absent. */
+    fun labelText(name: String): String =
+        window.findAll<ComponentFixture>(byXpath("//div[@name='$name']")).firstOrNull()?.callJs<String>("component.getText()", runInEdt = true).orEmpty()
 
     private fun byName(name: String) = window.find<ComponentFixture>(byXpath("//div[@name='$name']"), SHORT)
 
@@ -564,6 +630,31 @@ class IdeDialog(private val frame: IdeFrame, val title: String) {
 
     fun click(button: String) = root.find<ComponentFixture>(byXpath("//div[@class='JButton' and @text='$button']"), SHORT).click()
 
+    private fun named(name: String) = root.find<ComponentFixture>(byXpath("//div[@name='$name']"), SHORT)
+
+    /** The text of the named text field or label. */
+    fun namedText(name: String): String =
+        root.findAll<ComponentFixture>(byXpath("//div[@name='$name']")).firstOrNull()?.callJs<String>("component.getText()", runInEdt = true)?.trim() ?: ""
+
+    /** Replaces the text of the named field with the keyboard and commits it with Tab (focus loss), as a user does. */
+    fun typeNamed(name: String, text: String) {
+        named(name).click()
+        frame.keyboard {
+            hotKey(java.awt.event.KeyEvent.VK_CONTROL, java.awt.event.KeyEvent.VK_A)
+            enterText(text)
+            key(java.awt.event.KeyEvent.VK_TAB)
+        }
+    }
+
+    fun clickNamed(name: String) = named(name).click()
+
+    fun isNamedSelected(name: String): Boolean = named(name).callJs("component.isSelected()", runInEdt = true)
+
+    fun isNamedEnabled(name: String): Boolean = named(name).callJs("component.isEnabled()", runInEdt = true)
+
+    fun isButtonEnabled(button: String): Boolean =
+        root.find<ComponentFixture>(byXpath("//div[@class='JButton' and @text='$button']"), SHORT).callJs("component.isEnabled()", runInEdt = true)
+
     /** Every text the dialog draws, including painted list rows. */
     fun texts(): List<String> = root.findAllText().map { it.text }
 
@@ -580,6 +671,20 @@ class IdeDialog(private val frame: IdeFrame, val title: String) {
     }
 
     fun textFieldText(): String = root.find<ComponentFixture>(byXpath("//div[@class='JTextField' or @class='JBTextField']"), SHORT).callJs("component.getText()", runInEdt = true)
+
+    /** Types [path] into the path field of IntelliJ's file chooser (an editable combo box) and leaves it there. */
+    fun typeChooserPath(path: String) {
+        root.find<ComponentFixture>(byXpath("//div[contains(@class, 'BorderlessTextField')]"), SHORT).click()
+        frame.keyboard {
+            hotKey(java.awt.event.KeyEvent.VK_CONTROL, java.awt.event.KeyEvent.VK_A)
+            enterText(path)
+        }
+    }
+
+    /** Clicks the painted text [text] (a row of the chooser's tree) once. */
+    fun clickText(text: String) {
+        root.findAllText().first { it.text == text }.click()
+    }
 
     /** Replaces the text of the dialog's single text field with the keyboard. */
     fun type(text: String) {

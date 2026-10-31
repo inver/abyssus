@@ -5,6 +5,7 @@
 package net.nevinsky.abyssus.app.game.controlline.tools
 
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
@@ -14,7 +15,7 @@ import java.io.File
 
 /** Reruns, conflicts and what a migration leaves of the scene. */
 class FieldFoliageMigrationTest {
-    private fun entities(project: File) = SceneJson().parse(File(project, "scenes/Field.scene").readText())["ecs"]["entities"]
+    private fun entities(project: File) = SceneJson().parse(File(project, "scenes/Field.scene").readText())["ecs"]
 
     private fun vegetation(project: File): Boolean = File(project, "scenes/Field.scene").readText().let {
         listOf("tree_broadleaf", "tree_young", "tree_acacia", "bush_tall", "bush_low").any { s -> it.contains("model_airfield_$s") }
@@ -27,21 +28,22 @@ class FieldFoliageMigrationTest {
         repeat(2) {
             withOriginal { project ->
                 tool.generate(project, committedManifest())
-                applyPostMigrationSceneEdits(project)
-                results += checksums(project)
+                results += assetChecksums(project)
             }
         }
-        // the committed project is already migrated
+        // the committed project is already migrated, and has been authored further since: its scene is left alone
+        val authored = File(committedProject(), "scenes/Field.scene").readBytes()
         withCopy { project ->
             tool.generate(project, committedManifest())
             repeat(2) {
                 tool.generate(project, committedManifest())
-                results += checksums(project)
+                results += assetChecksums(project)
             }
+            assertArrayEquals(authored, File(project, "scenes/Field.scene").readBytes())
         }
         assertEquals(results[0].keys, results[1].keys)
         for (other in results.drop(1)) assertEquals(results[0], other)
-        assertEquals(results[0], checksums(committedProject()))
+        assertEquals(results[0], assetChecksums(committedProject()))
     }
 
     @Test

@@ -109,9 +109,6 @@ const val FIELD_FOLIAGE_TIME = 1791244800000L
 
 private const val MANIFEST_FORMAT = "abyssus-field-foliage-manifest"
 private const val GRASS_MODEL = "model_airfield_grass"
-
-/** The first id of the entities added after the migration; the original scene ends at 717. */
-private const val FIRST_POST_MIGRATION_ENTITY = 718
 private const val GRASS_LAYER = 6
 
 /** Nothing of a tree or bush crown may reach inside this radius around the pilot (the Racer line plus a margin). */
@@ -289,12 +286,8 @@ class FieldFoliageTool {
         val text = StringBuilder()
         for ((id, entity) in entities.entries.sortedBy { it.key.toInt() }) {
             if (id.toInt() in vegetation) continue
-            // entities added after the migration (the Mig-3 and the display tables, add-control-line-scale-mode) are not part of the field
-            if (id.toInt() >= FIRST_POST_MIGRATION_ENTITY) continue
             val copy = entity.deepCopy<JsonNode>()
             (copy["components"] as? ObjectNode)?.remove("FoliageComponent")
-            // balance tuned after the migration (the wire's inertia, add-control-line-wire-physics): not part of the field
-            ((copy["components"] as? ObjectNode)?.get("PlaneComponent") as? ObjectNode)?.remove("thrust")
             text.append(id).append(':').append(json.compact(copy)).append('\n')
         }
         return sha.of(text.toString().toByteArray())
@@ -347,7 +340,11 @@ class FieldFoliageTool {
         }
     }
 
-    /** Refuses a project whose vegetation, rest of scene or inputs differ from what the manifest recorded. */
+    /**
+     * Refuses a project whose vegetation, rest of scene or inputs differ from what the manifest recorded. The rest of
+     * the scene is checked only while the scene still holds the recorded vegetation, that is while it is being migrated:
+     * a migrated scene belongs to the editor again, so what is authored in it after the migration is left alone.
+     */
     private fun checkSource(project: File, manifest: FieldManifest, entities: Map<String, JsonNode>) {
         val ids = manifest.instances.map { it.id }
         val present = ids.filter { it.toString() in entities }
@@ -360,9 +357,9 @@ class FieldFoliageTool {
             if (vegetationHash(now) != manifest.vegetationSha256) {
                 throw MigrationConflict("the trees and bushes of the scene differ from the manifest: re-record it from the original scene")
             }
-        }
-        if (restHash(entities, ids.toSet()) != manifest.restSha256) {
-            throw MigrationConflict("the rest of the scene differs from the manifest: re-record it from the original scene")
+            if (restHash(entities, ids.toSet()) != manifest.restSha256) {
+                throw MigrationConflict("the rest of the scene differs from the manifest: re-record it from the original scene")
+            }
         }
         for ((path, hash) in manifest.inputs) {
             val file = File(project, path)

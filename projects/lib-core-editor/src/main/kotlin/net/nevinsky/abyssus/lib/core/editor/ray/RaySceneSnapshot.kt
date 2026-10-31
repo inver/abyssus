@@ -7,17 +7,14 @@ package net.nevinsky.abyssus.lib.core.editor.ray
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
-import net.nevinsky.abyssus.lib.core.editor.scene.toVec3
 import net.nevinsky.abyssus.lib.core.editor.pick.ScenePreview
 import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettings
 import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialIdentity
 import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialOverrides
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.graphics.Color
 
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
-import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
 import com.badlogic.gdx.graphics.GL20
@@ -41,7 +38,7 @@ import net.nevinsky.abyssus.lib.core.editor.pick.DragResult
 
 /** Immutable render-thread camera capture. The actual camera preserves orbit and look-through lens/up conventions. */
 data class RayCameraSnapshot(
-    val position: RayVec3, val direction: RayVec3, val up: RayVec3,
+    val position: Vector3, val direction: Vector3, val up: Vector3,
     val fieldOfView: Float, val near: Float, val far: Float,
     val projection: List<Float>, val view: List<Float>, val activeCameraId: String?,
 ) {
@@ -147,9 +144,8 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         if (missing.isNotEmpty()) return RaySceneConversion.Preparing(missing.distinct())
         val result = runCatchingKeepingCancellation {
             val builder = Builder(limits.copy(maxInstances = minOf(limits.maxInstances, settings.maxInstances)), environmentTextures, deform) { shared.getOrPut(it) { HashMap() } }
-            val document = net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs(params.ecs)
             for (placement in content.models) {
-                val render = document.entity(placement.entityId)?.componentNode("RenderComponent")
+                val render = rayRenderNode(placement.entityId.toLongOrNull()?.let(params.ecs::get))
                 builder.model(placement, assets.models.getValue(placement.assetName), poses[placement.entityId], render)
             }
             for (placement in content.terrains) builder.terrain(
@@ -171,9 +167,9 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                 params.fog?.let { RayFog(it.color.ray(), it.density, it.gradient) },
                 sunVisibility)
             val cameraSnapshot = RayCameraSnapshot(
-                camera.position.toVec3().ray(),
-                camera.direction.toVec3().ray(),
-                camera.up.toVec3().ray(),
+                camera.position.cpy().ray(),
+                camera.direction.cpy().ray(),
+                camera.up.cpy().ray(),
                 camera.fieldOfView,
                 camera.near,
                 camera.far,
@@ -207,7 +203,6 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         private val deform: ((RayModelMesh, List<FloatArray>) -> FloatArray)?,
         private val cacheFor: (Any) -> MutableMap<String, Any>,
     ) {
-        private class CachedMesh(val mesh: RayMesh, val bytes: Long)
 
         private var cache: MutableMap<String, Any> = HashMap()
         val meshes = mutableListOf<RayMesh>();
@@ -241,7 +236,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
 
             fun material(id: String?): Int =
                 materialIds.getOrPut("$prefix:$id" + if (optics?.values?.containsKey(id) == true) ":${placement.entityId}" else "") {
-                    val source = requireNotNull(asset.materials.firstOrNull { it.id == id }) { "Missing material $id" }
+                    val source = asset.requireMaterial(id)
                     val material = convertMaterial(source, textureIds)
                     val override = optics?.values?.get(id)
                     materials.add(
@@ -254,17 +249,13 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                 }
 
             fun visit(node: RayModelNode, parent: Matrix4, path: String) {
-                val local = PlacementTransform(
-                    Vec3(node.translation.x, node.translation.y, node.translation.z),
-                    Quat(node.rotation.x, node.rotation.y, node.rotation.z, node.rotation.w),
-                    Vec3(node.scale.x, node.scale.y, node.scale.z)
-                ).toMatrix()
+                val local = node.localMatrix()
                 val global = pose?.node(node.id)?.let(::Matrix4) ?: Matrix4(parent).mul(local)
                 for ((ordinal, part) in node.parts.withIndex()) {
                     val skin = pose?.bones(node.id, part.meshPartId)
                     require(part.boneBindTransforms.isEmpty() || (skin != null && deform != null)) { "Skinned model requires the displayed animation pose and deformation" }
                     val source =
-                        requireNotNull(asset.meshes.firstOrNull { mesh -> mesh.parts.any { it.id == part.meshPartId } }) { "Missing mesh part ${part.meshPartId}" }
+                        asset.requireMeshOfPart(part.meshPartId)
                     val indices = source.parts.first { it.id == part.meshPartId }
                     require(indices.primitiveType == GL20.GL_TRIANGLES) { "Only triangle mesh parts are supported" }
                     val key =
@@ -272,15 +263,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                     val mesh = geometry.getOrPut(key) {
                         fun build(): CachedMesh {
                             val values = if (skin != null) requireNotNull(deform)(source, skin) else source.vertices()
-                            val stride = source.vertexSizeBytes / 4
-                            val position = channel(source, values, stride, VertexAttributes.Usage.Position, 3)
-                            val normal = channelOrNull(source, values, stride, VertexAttributes.Usage.Normal, 3)
-                            val uv = channelOrNull(source, values, stride, VertexAttributes.Usage.TextureCoordinates, 2)
-                            val tangent = tangent(source, values, stride, normal)
-                            val copiedIndices = indices.indices()
-                            val size = (position.size.toLong() + (normal?.size ?: 0) + (uv?.size ?: 0) + (tangent?.size
-                                ?: 0) + copiedIndices.size) * 4
-                            return CachedMesh(RayMesh(key, position, copiedIndices, normal, uv, tangent), size)
+                            return rayMeshOf(source, values, indices.indices(), key)
                         }
                         // skinned geometry depends on the instance's pose; static geometry is converted once per asset
                         val built = if (skin != null) build() else cache.getOrPut("mesh:$key") { build() } as CachedMesh
@@ -304,18 +287,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
             val key = "terrain:${placement.assetName}"
             cache = cacheFor(asset)
             val mesh = geometry.getOrPut(key) {
-                val built = cache.getOrPut("mesh:$key") {
-                    val values = asset.vertices();
-                    val count = values.size / 8
-                    val positions = FloatArray(count * 3) { values[it / 3 * 8 + it % 3] }
-                    val normals = FloatArray(count * 3) { values[it / 3 * 8 + 3 + it % 3] }
-                    val uvs = FloatArray(count * 2) { values[it / 2 * 8 + 6 + it % 2] }
-                    val indices = asset.indices()
-                    CachedMesh(
-                        RayMesh(key, positions, indices, normals, uvs),
-                        (positions.size.toLong() + normals.size + uvs.size + indices.size) * 4
-                    )
-                } as CachedMesh
+                val built = cache.getOrPut("mesh:$key") { rayTerrainMeshOf(asset, key) } as CachedMesh
                 triangles += built.mesh.indexCount / 3; bytes += built.bytes
                 meshes.add(built.mesh); meshes.lastIndex
             }
@@ -367,103 +339,10 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
             textures.add(cache.getOrPut("texture:$id:${sampler.wrapU}:${sampler.wrapV}") {
                 RayTexture(
                     id, image.width, image.height, image.rgba(),
-                    if (sampler.wrapU == RayTextureWrap.REPEAT) RayWrap.REPEAT else RayWrap.CLAMP_TO_EDGE,
-                    if (sampler.wrapV == RayTextureWrap.REPEAT) RayWrap.REPEAT else RayWrap.CLAMP_TO_EDGE
+                    sampler.wrapU.toRayWrap(), sampler.wrapV.toRayWrap()
                 )
             } as RayTexture)
             return textures.lastIndex
-        }
-
-        private fun convertMaterial(source: RayModelMaterial, images: Map<String, Int>): RayMaterial {
-            fun binding(usage: Int) = source.textures.firstOrNull { it.usage == usage }?.let {
-                RayTextureBinding(images.getValue(it.fileName), it.offsetU, it.offsetV, it.scaleU, it.scaleV)
-            }
-
-            fun RayModelColor?.color(default: RayColor) = this?.let { RayColor(it.r, it.g, it.b, it.a) } ?: default
-            return RayMaterial(
-                kind = if (source.pbr) RayMaterialKind.PBR else RayMaterialKind.DEFAULT,
-                baseColor = (if (source.pbr) source.baseColor ?: source.diffuse else source.diffuse).color(
-                    RayColor(
-                        1f,
-                        1f,
-                        1f
-                    )
-                ),
-                emissive = source.emissive.color(
-                    if (binding(ModelTexture.USAGE_EMISSIVE) != null) RayColor(
-                        1f,
-                        1f,
-                        1f
-                    ) else RayColor(0f, 0f, 0f)
-                ),
-                specular = source.specular.color(
-                    if (binding(ModelTexture.USAGE_SPECULAR) != null) RayColor(
-                        1f,
-                        1f,
-                        1f
-                    ) else RayColor(0f, 0f, 0f)
-                ),
-                shininess = source.shininess.takeIf { it > 0f } ?: 20f,
-                metallic = source.metallic ?: 0f,
-                roughness = source.roughness ?: 1f,
-                opacity = source.opacity,
-                alphaMode = RayAlphaMode.valueOf(source.alphaMode.name),
-                alphaCutoff = source.alphaCutoff,
-                doubleSided = source.doubleSided,
-                baseTexture = binding(ModelTexture.USAGE_DIFFUSE),
-                emissiveTexture = binding(ModelTexture.USAGE_EMISSIVE),
-                specularTexture = binding(ModelTexture.USAGE_SPECULAR),
-                normalTexture = binding(ModelTexture.USAGE_NORMAL),
-                metallicRoughnessTexture = binding(100),
-                occlusionTexture = binding(101))
-        }
-
-        private fun channelOrNull(
-            mesh: RayModelMesh,
-            values: FloatArray,
-            stride: Int,
-            usage: Int,
-            components: Int
-        ): FloatArray? =
-            if (mesh.attributes.none { it.usage == usage && it.unit == 0 }) null else channel(
-                mesh,
-                values,
-                stride,
-                usage,
-                components
-            )
-
-        private fun channel(
-            mesh: RayModelMesh,
-            values: FloatArray,
-            stride: Int,
-            usage: Int,
-            components: Int
-        ): FloatArray {
-            val attribute =
-                requireNotNull(mesh.attributes.firstOrNull { it.usage == usage && it.unit == 0 }) { "Missing position channel" }
-            require(attribute.type == GL20.GL_FLOAT && attribute.components >= components && attribute.offsetBytes % 4 == 0 && values.size % stride == 0) { "Unsupported vertex channel" }
-            val offset = attribute.offsetBytes / 4
-            return FloatArray(values.size / stride * components) { values[it / components * stride + offset + it % components] }
-        }
-
-        private fun tangent(mesh: RayModelMesh, values: FloatArray, stride: Int, normals: FloatArray?): FloatArray? {
-            val attribute = mesh.attributes.firstOrNull { it.usage == VertexAttributes.Usage.Tangent } ?: return null
-            if (attribute.components == 4) return channel(mesh, values, stride, VertexAttributes.Usage.Tangent, 4)
-            val xyz = channel(mesh, values, stride, VertexAttributes.Usage.Tangent, 3)
-            val binormal = channelOrNull(mesh, values, stride, VertexAttributes.Usage.BiNormal, 3)
-            return FloatArray(xyz.size / 3 * 4) { index ->
-                val vertex = index / 4
-                if (index % 4 != 3) xyz[vertex * 3 + index % 4]
-                else if (normals == null || binormal == null) 1f
-                else {
-                    val i = vertex * 3
-                    val handed = (normals[i + 1] * xyz[i + 2] - normals[i + 2] * xyz[i + 1]) * binormal[i] +
-                            (normals[i + 2] * xyz[i] - normals[i] * xyz[i + 2]) * binormal[i + 1] +
-                            (normals[i] * xyz[i + 1] - normals[i + 1] * xyz[i]) * binormal[i + 2]
-                    if (handed < 0f) -1f else 1f
-                }
-            }
         }
     }
 
@@ -491,8 +370,9 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
     }
 }
 
-private class RaySceneLimitException(message: String) : IllegalArgumentException(message)
+/** A scene bound the ray view cannot exceed; the message says which and by how much. */
+internal class RaySceneLimitException(message: String) : IllegalArgumentException(message)
 
-private fun Vec3.ray() = RayVec3(x, y, z)
-private fun Rgba.ray(scale: Float = 1f) = RayColor(r * scale, g * scale, b * scale, a)
-private fun RayVec3.list() = listOf(x, y, z)
+private fun Vector3.ray() = Vector3(x, y, z)
+private fun Color.ray(scale: Float = 1f) = RayColor(r * scale, g * scale, b * scale, a)
+private fun Vector3.list() = listOf(x, y, z)

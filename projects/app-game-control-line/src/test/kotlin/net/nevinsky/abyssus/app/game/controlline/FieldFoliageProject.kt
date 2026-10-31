@@ -85,13 +85,13 @@ class FieldFoliageProject : AutoCloseable {
               "RenderComponent":{"shaderKey":"terrain","type":"TERRAIN","assetName":"terr"}
               ${foliage?.let { ""","FoliageComponent":{"assetName":"$it"}""" } ?: ""}}}"""
         }
-        return """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{${terrains.joinToString(",")}$extra}}}"""
+        return """{"format":"abyssus","formatVersion":1,"ecs":{${terrains.joinToString(",")}$extra}}"""
     }
 
     fun load(text: String, messages: MutableList<String> = mutableListOf()): SceneContext {
         val log = warningsTo(messages)
         val json = JsonProcessor(log)
-        val loader = RuntimeSceneLoader(SceneLoader(json, files), EcsLoader(json, ComponentRegistry()), log)
+        val loader = RuntimeSceneLoader(SceneLoader(json, files, ComponentRegistry()), EcsLoader(), log)
         return requireNotNull(loader.loadFromText(text)) { messages.joinToString("\n") }
     }
 

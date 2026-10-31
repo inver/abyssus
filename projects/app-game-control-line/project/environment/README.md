@@ -73,7 +73,7 @@ foliage assets, so Abyssus draws and bakes them as layers and the game draws the
 model, world position, yaw and scale, and the terrain it belongs to (inside the site square, `-150..150` on both axes,
 the site terrain; otherwise the outer ground), the species totals (52 broadleaf, 40 young, 33 acacia, 42 tall bushes,
 48 low bushes), the pilot's position, the SHA-256 of the original scene, of the vegetation and of the rest of the scene
-(everything but the vegetation and the foliage components, without the planes' `thrust` (the Stunter's was retuned after the migration) and without the entities added after it, ids 718 and up: the Mig-3 and the display tables of `add-control-line-scale-mode`; see `toolsTest/FieldFoliageTestSupport.kt`, which replays them from `toolsTest/fixtures/Field.post-migration.entities.json`), the hashes of the inputs (both terrains' `meta.json` and
+(everything but the vegetation and the foliage components), the hashes of the inputs (both terrains' `meta.json` and
 `terrain.data`, the site's splat map and the species' model files), the generator id (`field-foliage-v1`), the seed and the
 fixed `lastModified` of every generated asset. Asset UUIDs are derived from their folder names. The manifest is immutable:
 the tool records it only from an original scene and refuses to replace a different one. Nothing at runtime reads it.
@@ -98,13 +98,15 @@ through the runtime loaders (matching bake, no warnings, counts, formats, clear 
 scene is then edited through `HeadlessEditing`: the vegetation entities are removed and each terrain entity gets its
 `FoliageComponent`, and nothing else in the scene changes.
 
-A project whose vegetation, rest of the scene or inputs differ from the manifest is refused with nothing written. A
-migrated project is accepted too, and a run on it writes the same bytes as a run on the original: tests in
+A project whose vegetation, rest of the scene or inputs differ from the manifest is refused with nothing written; the rest
+of the scene is checked only while the scene still holds the recorded vegetation, that is while it is being migrated. A
+migrated project is accepted too: its scene belongs to the editor again, so what was authored in it after the migration
+(the ray settings, buildings, water) is left alone, and a run on it writes the same assets as a run on the original. Tests in
 `toolsTest/` (`./gradlew :app-game-control-line:testFieldFoliageTools`, part of `check`) start from the original scene
-kept in `toolsTest/fixtures/Field.original.scene` and check that the committed project is exactly what the tool makes
-of it, followed by the later authored ray settings recorded in the test harness. The original fixture stays unchanged
-so its full-scene hash still verifies the immutable manifest's provenance; the migration itself preserves those later
-settings when rerun on the committed project.
+kept in `toolsTest/fixtures/Field.original.scene` and check that the committed foliage assets and grass model are exactly
+what the tool makes of it, and that the committed scene has what the migration does to a scene (the `FoliageComponent` of
+each terrain, none of the recorded vegetation). The original fixture stays unchanged so its full-scene hash still verifies
+the immutable manifest's provenance.
 
 **Limits.** The copies are a statistical match, not the old positions: they follow the old weighting but can stand where
 the old placements did not (nothing keeps them off the facilities, only off the clear areas). Species totals hold on each

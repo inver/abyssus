@@ -37,7 +37,7 @@ class NewWeatherPresetActionTest : BasePlatformTestCase() {
         dir = FileUtil.createTempDirectory("abyssus-weather", null)
         File(dir, "P.abss").writeText("""{"format":"abyssus","formatVersion":1,"name":"P"}""")
         File(dir, "scenes").mkdirs()
-        File(dir, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""")
+        File(dir, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"ecs":{}}""")
         File(dir, "assets/sky").mkdirs()
         File(dir, "assets/clouds").mkdirs()
         File(dir, "assets/sky/meta.json").writeText(

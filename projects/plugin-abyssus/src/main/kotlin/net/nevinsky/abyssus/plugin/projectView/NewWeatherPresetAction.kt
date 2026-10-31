@@ -4,6 +4,11 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.util.textAt
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -23,7 +28,8 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.textOf
-import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetInAbyssusView
+import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetLater
+import net.nevinsky.abyssus.plugin.ui.documentChanges
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import java.awt.BorderLayout
 import java.io.File
@@ -38,11 +44,11 @@ internal fun weatherPresetTarget(node: Any?, reader: AssetMetaReader): WeatherPr
     val entry = (node as? DtoEntryNode)?.value ?: return null
     val asset = entry.value as? Asset<*> ?: return null
     val abss = entry.source?.takeIf { it.extension == "abss" } ?: return null
-    val sky = LocalFileSystem.getInstance().findFileByIoFile(File(asset.baseDir, "meta.json")) ?: return null
-    if (sky.parent.parent != abss.parent.findChild("assets")) return null
-    val meta = reader.read(SceneJson().parseObject(textOf(sky)))
-    val reference = meta.json["additional"]?.get("clouds")
-    if (meta.type != MetaType.SKYBOX_PROCEDURAL || reference?.isTextual != true || reference.textValue().isBlank()) return null
+    val sky = LocalFileSystem.getInstance().findFileByIoFile(File(asset.baseDir, META_FILE)) ?: return null
+    if (sky.parent.parent != abss.parent.findChild(ASSETS_DIR)) return null
+    val meta = reader.readExact(textOf(sky))
+    val reference = meta.document.textAt("additional", "clouds")
+    if (meta.type != MetaType.SKYBOX_PROCEDURAL || reference.isNullOrBlank()) return null
     WeatherPresetTarget(abss, sky)
 }.getOrNull()
 
@@ -54,7 +60,7 @@ open class NewWeatherPresetAction : AbyssusTreeAction<WeatherPresetTarget>() {
         val factory = NewWeatherPresetFactory(service<AbyssusPluginCtx>().documents.json)
         val valid = runCatchingKeepingCancellation { factory.validateSource(target.abss, target.sky) }
         valid.exceptionOrNull()?.let { reportWeatherFailure(project, it.documentDisplayMessage()); return }
-        val dialog = NewWeatherPresetDialog(project, File(target.abss.parent.path, "assets"), target.sky.parent.name)
+        val dialog = NewWeatherPresetDialog(project, File(target.abss.parent.path, ASSETS_DIR), target.sky.parent.name)
         if (dialog.showAndGet()) createWeatherPreset(project, target.abss, target.sky, dialog.nameField.text)
     }
 }
@@ -67,11 +73,7 @@ internal class NewWeatherPresetDialog(project: Project, private val assetsDir: F
         setOKButtonText(AbyssusBundle.message("newWeatherPresetCreate"))
         nameField.name = "weather-preset-name"
         init()
-        nameField.document.addDocumentListener(object : DocumentListener {
-            override fun insertUpdate(e: DocumentEvent) = validateName()
-            override fun removeUpdate(e: DocumentEvent) = validateName()
-            override fun changedUpdate(e: DocumentEvent) = validateName()
-        })
+        nameField.document.addDocumentListener(documentChanges(::validateName))
         validateName()
     }
     private fun validateName() {
@@ -94,21 +96,13 @@ private fun reportWeatherFailure(project: Project, reason: String) = Messages.sh
 fun createWeatherPreset(
     project: Project, abss: VirtualFile, sky: VirtualFile, name: String,
     report: (String) -> Unit = { reportWeatherFailure(project, it) },
-    select: (String) -> Unit = { created -> ApplicationManager.getApplication().invokeLater(
-        { if (!project.isDisposed) selectAssetInAbyssusView(project, abss, created) }, ModalityState.nonModal()) },
+    select: (String) -> Unit = selectAssetLater(project, abss),
 ): AssetCommandResult? {
     val staged = runCatchingKeepingCancellation {
         NewWeatherPresetFactory(service<AbyssusPluginCtx>().documents.json).stage(abss, sky, name)
     }.getOrElse { report(it.documentDisplayMessage()); return null }
     val result = AssetFileCommand(project, LocalAssetFileStore(File(abss.parent.path))).execute(staged.transaction, onDone = { select(staged.name) })
-    val reason = when (result) {
-        AssetCommandResult.Done -> null
-        is AssetCommandResult.Collision -> AbyssusBundle.message("newTerrainNameError.EXISTS")
-        is AssetCommandResult.Conflict -> AbyssusBundle.message("weatherConflict", result.path)
-        is AssetCommandResult.Blocked -> result.reason
-        AssetCommandResult.Cancelled -> AbyssusBundle.message("weatherCancelled")
-        is AssetCommandResult.Failed -> result.cause.documentDisplayMessage()
-    }
+    val reason = assetResultMessage(result, "weatherCancelled", conflict = { AbyssusBundle.message("weatherConflict", it) })
     reason?.let(report)
     return result
 }

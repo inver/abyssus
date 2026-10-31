@@ -16,6 +16,9 @@ import net.nevinsky.abyssus.lib.core.format.DocumentKind
 
 /** One parsed `meta.json`: its [type], its raw [json] tree, and the typed binding on request. */
 class MetaDocument internal constructor(val type: MetaType, val json: JsonNode, private val processor: JsonProcessor) {
+    /** The document as a read-only [Document], for hosts that do not name Jackson's tree types. */
+    val document: Document get() = Document(json)
+
     /** Binds the document to [clazz], or null when it does not fit (a missing required field, say). */
     fun <T, M : AssetMeta<T>> typed(clazz: Class<M>): M? =
         runCatchingKeepingCancellation { processor.bind(json, clazz) }.getOrNull()
@@ -31,6 +34,9 @@ class AssetMetaReader(private val json: JsonProcessor, private val format: Abyss
      * [MetaType.UNKNOWN].
      */
     fun read(text: String): MetaDocument = read(json.readObject(text))
+
+    /** [text] as a document whose numbers keep their text (for display); throws when it is not a JSON object. */
+    fun readExact(text: String): MetaDocument = read(SceneJson().parseObject(text))
 
     /** An already parsed [tree] (a caller that needs its own number text, say) as a document. */
     fun read(tree: JsonNode): MetaDocument {

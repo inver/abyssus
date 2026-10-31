@@ -63,7 +63,7 @@ class RayControlTest : BasePlatformTestCase() {
     }
 
     fun testThePropertiesRaySectionShowsTheNoteWhileAViewShowsFoliage() {
-        val file = myFixture.addFileToProject("Foliage.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""").virtualFile
+        val file = myFixture.addFileToProject("Foliage.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""").virtualFile
         val controls = SceneRayControls(project) { _, _ -> }
         controls.register(file, panel(foliaged()).rayControl!!, Disposer.newDisposable(testRootDisposable))
         val note = named(SceneDetailsView(controls, PanelState.UISceneState(file, "Foliage scene"), testRootDisposable),
@@ -73,7 +73,7 @@ class RayControlTest : BasePlatformTestCase() {
     }
 
     fun testThePropertiesRaySectionSaysNothingWhileNoViewShowsFoliage() {
-        val file = myFixture.addFileToProject("Plain.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""").virtualFile
+        val file = myFixture.addFileToProject("Plain.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""").virtualFile
         val controls = SceneRayControls(project) { _, _ -> }
         controls.register(file, panel(SceneContent()).rayControl!!, Disposer.newDisposable(testRootDisposable))
         val note = named(SceneDetailsView(controls, PanelState.UISceneState(file, "Plain scene"), testRootDisposable),

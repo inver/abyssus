@@ -11,6 +11,13 @@ interface RaySnapshot {
     val byteSize: Long
 }
 
+/** The most CPU bytes one asset's ray snapshot may take. */
+const val RAY_SNAPSHOT_MAX_BYTES = 128L * 1024 * 1024
+
+/** Refuses a [kind] snapshot of [bytes] above [maxBytes]. */
+internal fun requireSnapshotSize(kind: String, bytes: Long, maxBytes: Long) =
+    require(bytes <= maxBytes) { "CPU $kind snapshot exceeds its $maxBytes byte limit" }
+
 /**
  * Builds the CPU snapshot of one asset: [load] reads it afresh from its meta (null when the asset has none), and
  * [capture] copies the [D] a raster preparation already holds, so nothing is read twice.

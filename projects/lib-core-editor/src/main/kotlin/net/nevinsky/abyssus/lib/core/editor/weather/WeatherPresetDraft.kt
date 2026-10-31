@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.weather
 
+import net.nevinsky.abyssus.lib.core.editor.util.isWholeNumber
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaBinder
@@ -13,6 +14,7 @@ import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.newAssetMetaTree
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import java.util.UUID
 
@@ -44,13 +46,7 @@ class WeatherPresetDraft(
             additional.set<JsonNode>(band.level.key, bandJson(band, original?.get(band.level.key)))
         }
         copyExtensions(original, additional, setOf("technique", "low", "mid", "high"))
-        val root = json.parseObject("{}")
-        root.put("format", "abyssus")
-        root.put("formatVersion", 1)
-        root.put("version", 1)
-        root.put("lastModified", lastModified)
-        root.put("uuid", uuid.toString())
-        root.put("type", "CLOUDS")
+        val root = newAssetMetaTree(json, MetaType.CLOUDS, uuid.toString(), lastModified)
         root.set<JsonNode>("additional", additional)
         copyExtensions(
             source.json,
@@ -71,7 +67,7 @@ class WeatherPresetDraft(
         )) {
             root.set<JsonNode>(key, source?.get(key) ?: number(value))
         }
-        val wind = json.parse("[]") as com.fasterxml.jackson.databind.node.ArrayNode
+        val wind = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.arrayNode()
         wind.add(source?.get("wind")?.get(0) ?: source?.get("windX") ?: number(band.windX))
         wind.add(source?.get("wind")?.get(1) ?: source?.get("windZ") ?: number(band.windZ))
         root.set<JsonNode>("wind", wind)
@@ -84,7 +80,7 @@ class WeatherPresetDraft(
     }
 
     private fun number(value: Float): JsonNode = json.parse(
-        if (value.toDouble() == Math.rint(value.toDouble())) value.toLong().toString() else value.toString()
+        if (isWholeNumber(value.toDouble())) value.toLong().toString() else value.toString()
     )
 
     private fun copyExtensions(source: JsonNode?, target: ObjectNode, known: Set<String>) {

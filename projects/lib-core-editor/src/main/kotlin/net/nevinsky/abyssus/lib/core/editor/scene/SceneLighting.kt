@@ -5,11 +5,6 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
-import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_DIRECTIONAL
-import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_POINT
-import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_SPOT
-import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_LOCAL
-
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g3d.Environment
 import com.badlogic.gdx.graphics.g3d.attributes.DirectionalLightsAttribute
@@ -22,26 +17,29 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.dto.LIGHT_RANGE
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.editor.content.unclampedColor
+import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_DIRECTIONAL
+import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_LOCAL
+import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_POINT
+import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_SPOT
 import kotlin.math.sqrt
 
 /** A directional light: [color] already multiplied by the light's intensity. */
 data class DirectionalSource(
-    val direction: Vec3,
-    val color: Rgba,
+    val direction: Vector3,
+    val color: Color,
     val entityId: String = "",
-    val position: Vec3 = Vec3(0f, 0f, 0f)
+    val position: Vector3 = Vector3(0f, 0f, 0f)
 )
 
 /** A point light: [color] already multiplied by the light's intensity. */
-data class PointSource(val position: Vec3, val color: Rgba, val range: Float = LIGHT_RANGE, val entityId: String = "")
+data class PointSource(val position: Vector3, val color: Color, val range: Float = LIGHT_RANGE, val entityId: String = "")
 
 data class SpotSource(
     val entityId: String,
-    val position: Vec3,
-    val direction: Vec3,
-    val color: Rgba,
+    val position: Vector3,
+    val direction: Vector3,
+    val color: Color,
     val range: Float,
     val cone: SpotCone
 )
@@ -72,7 +70,7 @@ class LightSet(
         if (entityId == null || scale == 1f || directional.none { it.entityId == entityId }) return this
         val scaled = directional.map {
             if (it.entityId != entityId) it else it.copy(
-                color = Rgba(
+                color = unclampedColor(
                     it.color.r * scale,
                     it.color.g * scale,
                     it.color.b * scale,
@@ -133,7 +131,7 @@ const val MAX_SPOT = EDITOR_MAX_SPOT
 val NO_LIGHTS = LightSet(emptyList(), emptyList())
 
 /** Nearest lights with stable identity ties; unusable lights are skipped. */
-fun lightSetOf(lights: List<LightPlacement>, target: Vec3): LightSet {
+fun lightSetOf(lights: List<LightPlacement>, target: Vector3): LightSet {
     val directional = lights.filter { it.kind == LightKind.DIRECTIONAL && usable(it) }
         .sortedWith(compareBy<LightPlacement> { distance(it.position, target) }.thenBy { it.entityId })
         .take(MAX_DIRECTIONAL)
@@ -175,12 +173,7 @@ private fun usable(l: LightPlacement) =
                 .all { it.isFinite() }
 
 private fun scaled(l: LightPlacement) =
-    Rgba(l.color.r * l.intensity, l.color.g * l.intensity, l.color.b * l.intensity, 1f)
+    unclampedColor(l.color.r * l.intensity, l.color.g * l.intensity, l.color.b * l.intensity, 1f)
 
-private fun distance(a: Vec3, b: Vec3): Float {
-    val dx = a.x - b.x
-    val dy = a.y - b.y
-    val dz = a.z - b.z
-    return sqrt(dx * dx + dy * dy + dz * dz)
-}
+private fun distance(a: Vector3, b: Vector3): Float = a.dst(b)
 

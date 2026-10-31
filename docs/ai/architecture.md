@@ -45,7 +45,7 @@ loaders from one table, `StandardAssetLoaders` (`projects/lib-core/src/main/kotl
 one place. A host differs only by what it passes in (model preparation tap, logger, and the plugin's `FoliageLoader` in
 place of the game's `RuntimeFoliageLoader`).
 `AbyssusCore` creates four groups independently on first access: `documents` owns JSON, native validation and parsing;
-`assets` owns metadata, loading, property descriptions and previews; `terrain` owns generation and file staging;
+`assets` owns metadata, loading, property descriptions and previews; `terrain` owns generation, sculpting (`SculptStateReader` reads a terrain's sculpt state, `SculptPlanner` plans the height-layer files of Regenerate, Reset and Forget as a `SculptFileSet`, and `SculptTransactions` stages it as one undoable `AssetTransaction`) and file staging;
 `ray` owns the backend service and conversion worker. Actions, providers and factories pass the group collaborators
 they need. Disposal closes only initialized ray resources; reading a document does not create native workers.
 The plugin's `SceneReader` and `ProjectReader` use `DocumentParsing` and `JsonProcessor` to validate and bind
@@ -90,7 +90,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    target exists and is not at the entity itself; otherwise it uses the entity's `localRotation`. `handleIds` records
    the `HANDLE` entities that a light may be aimed at.
 3. `SceneViewPanel` hosts a `GuardedGLCanvas` and wires small collaborators, each owning one job: `SceneInputForwarder`
-   (keys and mouse), `RayControlBinding`, `CloudControls`, `PlayControlsStrip` and `FoliagePaintControls`; the "Add ..."
+   (keys and mouse), `RayControlBinding`, `CloudControls`, `PlayControlsStrip` and the terrain brush strips (`BrushStrip`: `FoliagePaintControls`, `SculptTerrainControls`); the "Add ..."
    menus come in as `PlacementMenu`s. A Swing `Timer` renders frames through
    `SceneRenderer.render`, which loads assets through `SceneModels` / `SceneTerrains` / `SceneSkybox` (each holding a
    `lib-core` `AssetStorage` built by `AssetLoading`) and draws markers (`lib-core-editor`'s `SceneMarkers` through a
@@ -107,8 +107,8 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    noise (FastNoiseLite) on the pool thread, and its build uploads the noise. The sky reads the built `Clouds` from
    `BuiltAssets` on every draw, as `TerrainMesh` reads its splat textures, and never owns it. Every `SkyRenderer.draw` takes a `SkyFrame(sun, timeSeconds, technique, clouds)`;
    `ProceduralSky` draws the asset's atmosphere, then a core-owned cloud pass blended premultiplied over it through a
-   `CloudRenderer` strategy (`LayeredClouds`, `ShellClouds`, `VolumetricClouds`, built lazily by `CloudTechniques`, which
-   steps down volumetric to shells to layered to none when one cannot be built). All techniques and `SunOcclusion` share
+   `CloudRenderer` strategy (`LayeredClouds`, `CumulusClouds`, `ShellClouds`, `VolumetricClouds`, built lazily by `CloudTechniques`, which
+   steps down volumetric to shells to cumulus to layered to none when one cannot be built). All techniques and `SunOcclusion` share
    one coverage field, `CloudField` in Kotlin and `clouds_common.glsl` (kept equal by `CloudFieldParityGlTest`).
    A procedural sky whose asset has `additional.lightsScene: true` (parsed as a strict boolean by
    `ProceduralSkyMeta`, staged in `PreparedProceduralSky`) also lights the content. `ProceduralSky` then owns a
@@ -196,7 +196,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
   heights and marker bounds). It selects in the view, and `selectEntityInAbyssusView` selects the entity's row in
   the tree. Foliage copies are never pick targets: they ride their terrain entity, so a click through them picks
   what they stand on.
-- **Drags:** a drag on a gizmo handle runs a `GizmoDrag`, and `ScenePreview` shows the result live. Esc cancels.
+- **Drags:** a drag on a gizmo handle runs a `GizmoDrag`, and `ScenePreview` shows the result live. Esc cancels. `ScenePreviewLayers` lays every unwritten change (simulated poses, the drag, a water move, the copies of a path being edited) over the file's content in one order, and the renderer and `SnapshotSceneQueries` both read it, so what is drawn and what is picked agree.
   Any other drag orbits or pans `OrbitCamera`.
 - **Drop:** the toolbar button or D calls `SceneInteraction.drop`. `ScenePicker.restHeight` queries the highest
   surface under the selection's oriented-box footprint, using box tops and transformed bilinear terrain cells.
@@ -210,8 +210,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
 - **Path arrangements:** Add Path Arrangement (tree scene row and toolbar, `AddPathArrangementGroup`) puts the view in
   drawing mode: `SceneViewState.drawing` holds the model and the points, and `SceneInteraction` adds a point where a
   left click hits a terrain (`SceneQueries.groundHit`), closes on the first point, finishes on Enter or a double click,
-  drops the last point on Backspace and cancels on Esc. A selected arrangement shows `PathHandles`: dragging a point or
-  a middle handle is a `DraggingPathPoint` gesture whose points are shown through `SceneViewState.pathEdit` until the
+  drops the last point on Backspace and cancels on Esc. A selected arrangement shows `PathHandles`: dragging a point handle is a `DraggingPathPoint` gesture whose points are shown through `SceneViewState.pathEdit` until the
   release calls `SceneFileEditor.editArrangement`. Both write through `editSceneJson` with `ArrangementEdits`
   (`lib-core-editor`, `editor.arrange`), one undoable command each. The copies' heights come from `GroundHeight`: the
   open view's `GroundHeights` over its drawn terrains, else `ArrangementHeights` (plugin `sceneview`), which reads the scene's
@@ -262,6 +261,16 @@ simulation. The size and backdrop are viewer preferences (`PropertiesComponent`-
 inside `GdxRuntime.withContext` on the AWT thread behind `GuardedGLCanvas.glSafe()`, and closing the tab releases the
 presenter, the offscreen buffer, the backdrop and the GL kit while the context is current.
 
+Terrain brushes (Paint Foliage, Sculpt Terrain, and later a splat brush) share one path from the mouse to the engine. A
+`BrushStrip` in the Scene view (`FoliagePaintControls`, `SculptTerrainControls`, registered in `BrushKinds`) puts one
+`BrushMode` on `SceneViewState.brush`; `GestureDriver` turns a left press on the mode's terrain into a `Gesture.Brushing`
+and calls the `BrushStroke` registered for the mode's kind (`pressed` / `dragged` / `released` / `cancelled`). That stroke
+is a `TerrainStrokeCommand` (`FoliageStrokeCommand`, `SculptStrokeCommand`): its brush is a `StampBrush` in
+the `brush` package of `lib-core-editor`, which walks the drag with `BrushPath`, has a `BrushTool` compute one change per cell from the
+grid as it was, and has a `BrushTarget` (a density mask, the sculpt draft) apply them, reporting the `GridRect` that
+changed. Nothing is written before the release; each command then commits through its own transaction, and a view shows
+the stroke from the draft meanwhile (`FoliageDrafts`, `SculptDrafts`).
+
 Foliage creation, Re-bake and stroke commits also use asset transactions for their new files, bake and masks.
 Apply combines its binary transaction with an `editSceneJson` metadata edit in one platform command
 (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/foliage/FoliageApplyCommand.kt`): the binary undo action is registered after the document edit, with document-save
@@ -274,10 +283,10 @@ cache. See `docs/ai/conventions.md` for conflicts, mask patches and cache cleanu
 
 `core.ecs.ComponentRegistry` maps built-in and explicitly registered names to Ashley component classes. Keys may be
 short or fully qualified; scene data never triggers arbitrary class loading. `EcsLoader` binds the wrapped
-`ecs.entities` map through `JsonProcessor.ecsReader()` and Jackson. Unregistered or unbindable component entries
-are carried as raw JSON in `EcsLoadingWarns`, with warnings. Entity ids are numeric; invalid references become
-`NO_ENTITY`. `FoliageComponent` is built in and carries its source object (`SourceBackedComponent`), so a write keeps
-unknown members and number text. `SceneFoliageListing` lists a loaded engine's terrain-bound foliage without files or GL.
+`ecs` map in `SceneLoader` through `JsonProcessor.binderWith(EntityDtoModule(registry))` and Jackson; `EcsLoader` turns the
+typed entities into engine entities. Unregistered or unbindable component entries are bound as a `RawComponent`, carried as raw
+JSON in `EcsLoadingWarns`, with warnings. Entity ids are numeric; invalid references become
+`NO_ENTITY`. `FoliageComponent` is built in and keeps unmodeled members in an extras map (any-setter/any-getter), so a typed write keeps them. `SceneFoliageListing` lists a loaded engine's terrain-bound foliage without files or GL.
 `NativeJsonTree` in `core.io` is the one lossless JSON reader, used by `SceneJson` and by `SceneLoader`.
 `SceneEngine` and `SceneEntityIds` live in `core.ecs`; the look-at and camera synchronization systems
 are in `projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/ecs/system`.
@@ -291,9 +300,9 @@ It is a serialization API, not an IDE file writer; plugin document edits still g
 
 The editor keeps the parsed JSON tree as its model (unknown keys, key order and number text stay the file's);
 games and Play keep an Ashley `SceneEngine`. Both use Jackson binding to `lib-core`'s component classes. In the editor,
-readers use `SceneDocument` / `EntityView`; writers use `SceneEntityTree`, supporting both a flat entity map and
-`ecs.entities`. The current runtime loader only enumerates `ecs.entities`; see the current-source review for
-compatibility gaps.
+document readers use `SceneDocument` / `EntityView` and writers use `SceneEntityTree`, both over the id-keyed `ecs` map.
+The read model (`SceneContent`, `SceneRenderParams`, ray snapshots, the physics overlay) takes the typed
+`SceneDto.ecs: Map<Long, EntityDto>` that `SceneLoader` and `DocumentParsing` bind; the runtime loader reads the same map.
 
 **Foliage in games.** `lib-core`'s `FoliageComponent` and `SceneFoliageListing` name a loaded scene's foliage without
 files or GL; `FoliageRuntimeLoad` reads each asset as written (shared by games and `lib-physics`, so both see one
@@ -316,7 +325,7 @@ poses (`RayModelPoses`), freezes them into a job and offers it to a one-slot mai
 job into an immutable `RaySceneSnapshot` (`RaySceneSnapshots`, including CPU skin deformation) and offers it to the view's
 `RayRenderScheduler`. The native worker keeps one frame in flight and one replaceable pending request per view and polls
 completion, so the EDT never waits on a fence or a conversion. A completed linear RGBA/depth frame returns to the EDT,
-where `RayFramePresenter` uploads it inside the safe canvas context and `SceneRenderer` composes the grid and overlays
+where `RayFramePresenter` (over `lib-render`'s `HostFramePresenter`) uploads it inside the safe canvas context and `SceneRenderer` composes the grid and overlays
 against its depth. Scenes the backend cannot represent, a failed asset, or a device loss restore raster rendering at
 once and surface a reason with a Retry button; no scene file is written by any of this. See `projects/lib-raytracing/README.md` for
 toolchains, the opt-in device test commands (`-Dabyssus.metalTests=true`, `-Dabyssus.vulkanTests=true`), shading rules
@@ -350,8 +359,8 @@ collaborator may import: **plain** is a plain JVM class, **GL** needs a libGDX o
 |---|---|---|---|
 | `AssetStorage` (`lib-core`) | `OffGlExecutor`, `StorageCallGuard`, `DependencyResolver`, `HookRegistry` | The off-GL executor factory, the thread and call-depth guard, dependency satisfaction and the hook registry; `AssetStorage` owns upload, build and discard | plain |
 | `SceneRenderer` (plugin) | `SceneContentPass`, `SceneSkyPass` | The model, terrain, foliage and gizmo pass; the sky, fog and cloud pass, with the snapshot packing that pass reads | GL |
-| `SceneViewPanel` (plugin) | `SceneViewToolbar`, `SceneGlLifecycle`, `SceneFrameDriver` | The toolbar and its control sync; the canvas, libGDX context and capabilities of one GL context; the frame timer with its idle throttle | Swing (toolbar, driver), GL (lifecycle) |
-| `SceneInteraction` (`lib-core-editor`) | `GestureDriver`, `DrawingSession` | The press-drag-release gestures (gizmo, water, path point, paint stroke); drawing and editing a path arrangement | plain |
+| `SceneViewPanel` (plugin) | `SceneViewToolbar`, `SceneGlLifecycle`, `SceneFrameDriver` | The toolbar and its control sync; the canvas, libGDX context and capabilities of one GL context (through `GlCanvasHost`, which the Game UI canvas and the Import Model preview also use); the frame timer with its idle throttle | Swing (toolbar, driver), GL (lifecycle) |
+| `SceneInteraction` (`lib-core-editor`) | `GestureDriver`, `DrawingSession` | The press-drag-release gestures (gizmo, water, path point, terrain brush stroke); drawing and editing a path arrangement | plain |
 | `PhysicsWorld` (`lib-physics`) | `PhysicsBodyFactory`, `PhysicsStepper`, `PhysicsPoseWriter` | Body creation and refusal, the fixed-step advance, the pose write-back; Jolt stays in the module's `jolt` package | plain (Jolt) |
 | `FlightGearImport` (`lib-core-editor`) | `FlightGearCollection`, `FlightGearGeometry`, `FlightGearStaging` | Reading the source files, building the geometry, staging the new MODEL folder; the facade stays | plain |
 | `UiEditorController` (plugin) | `UiCanvasGestures`, `UiViewSettings` | The canvas drag and its one command; the preview size and backdrop per viewer. The controller keeps the document, the selection and the edits | plain |
@@ -457,3 +466,7 @@ content type lets the contract stay independent of render code. `SceneRayControl
 content, selection and ray-mode queries, removes facts on editor disposal, and retains the separate ray commands.
 Pure ray settings, optical overrides and diagnostic records live in `editor.ray`; their localized wording lives
 in `ui.RayModeText`, and `filetype.SceneRayEdits` owns the IDE document-command adapter.
+
+## Paint Texture (the fourth brush kind)
+
+`PaintTextureControls` is a `BrushStrip<SplatSession>` registered after Sculpt in `BrushKinds`. Its stroke, `SplatStrokeCommand`, edits a `SplatDraft` (RGBA weights) kept in the project's `SplatDrafts` by splat texture folder; each view's `SplatViewSync` copies the changed tiles into its own splat `Texture` with `SplatTexture.updateRegion`, and reloads the texture when the draft is gone. Release encodes the PNG off the AWT thread and writes it as one `AssetTransaction` (`SplatTransactions`); Create splat map and Make unique copy are multi-file transactions.

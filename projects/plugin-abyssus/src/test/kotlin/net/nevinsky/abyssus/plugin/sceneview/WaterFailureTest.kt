@@ -8,8 +8,8 @@ package net.nevinsky.abyssus.plugin.sceneview
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.water.WaterPreset
@@ -34,7 +34,7 @@ import java.awt.image.BufferedImage
 class WaterFailureTest {
     @Before fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", GlHarness.enabled)
 
-    private val orbit = OrbitCamera(Vec3(0f, 0f, 0f), 25f, 0.6f, 0.35f)
+    private val orbit = OrbitCamera(Vector3(0f, 0f, 0f), 25f, 0.6f, 0.35f)
     private val broken = ShaderStorage().withResources("/shader/scene", SceneRenderer::class.java)
         .withResources("/shader/broken", WaterFailureTest::class.java)
 
@@ -83,7 +83,7 @@ class WaterFailureTest {
             it.position.set(0f, 20f, 20f); it.lookAt(0f, 0f, 0f); it.near = 0.1f; it.far = 500f; it.update()
         }
         return WaterFrameInput(
-            camera, width, height, 0.016f, listOf(surface), Rgba(0.5f, 0.6f, 0.8f, 1f), Rgba(0.3f, 0.3f, 0.3f, 1f), null,
+            camera, width, height, 0.016f, listOf(surface), Color(0.5f, 0.6f, 0.8f, 1f), Color(0.3f, 0.3f, 0.3f, 1f), null,
             LightSet(emptyList(), emptyList()), emptyList(), emptyList(), null,
         )
     }

@@ -10,16 +10,16 @@ import org.junit.Test
 class PhysicsComponentKindsTest {
     private val messages = ResourceEditorMessages()
     private val editor = ComponentEditor(messages, PhysicsComponentKinds(messages).kinds)
-    private fun scene(component: String = "") = SceneJson().parse("""{"ecs":{"entities":{"0":{"components":{$component}},"1":{"components":{}}}}}""")
+    private fun scene(component: String = "") = SceneJson().parse("""{"ecs":{"0":{"components":{$component}},"1":{"components":{}}}}""")
 
     @Test fun rigidBodyDefaultsAreOmittedAndChangesPreserveUnknownData() {
         val root = scene()
         assertEquals(EditResult.Changed, editor.add(root, "0", "RigidBodyComponent"))
-        assertEquals("{}", root.at("/ecs/entities/0/components/RigidBodyComponent").toString())
+        assertEquals("{}", root.at("/ecs/0/components/RigidBodyComponent").toString())
         assertEquals("1", editor.read(root, "0", "RigidBodyComponent")!!.first { it.field == "mass" }.value)
         val preserved = scene(""""RigidBodyComponent":{"mass":1.000,"extension":{"n":0.123450}}""")
         assertEquals(EditResult.Changed, editor.update(preserved, "0", "RigidBodyComponent", "mass", "2"))
-        assertEquals("""{"mass":2,"extension":{"n":0.123450}}""", preserved.at("/ecs/entities/0/components/RigidBodyComponent").toString())
+        assertEquals("""{"mass":2,"extension":{"n":0.123450}}""", preserved.at("/ecs/0/components/RigidBodyComponent").toString())
     }
 
     @Test fun unitsAndDimDefaultsComeFromTheKindsAndTheFile() {
@@ -38,9 +38,9 @@ class PhysicsComponentKindsTest {
     @Test fun returningNestedFieldsToDefaultsPreservesUnknownChildren() {
         val root = scene(""""ColliderComponent":{"offset":{"x":1,"extension":{"n":0.123450}},"halfExtents":{"x":1,"y":0.5000,"extension":42}}""")
         assertEquals(EditResult.Changed, editor.update(root,"0","ColliderComponent","offset.x","0"))
-        assertEquals("""{"extension":{"n":0.123450}}""",root.at("/ecs/entities/0/components/ColliderComponent/offset").toString())
+        assertEquals("""{"extension":{"n":0.123450}}""",root.at("/ecs/0/components/ColliderComponent/offset").toString())
         assertEquals(EditResult.Changed, editor.update(root,"0","ColliderComponent","halfExtents.x","0.5"))
-        assertEquals("""{"y":0.5000,"extension":42}""",root.at("/ecs/entities/0/components/ColliderComponent/halfExtents").toString())
+        assertEquals("""{"y":0.5000,"extension":42}""",root.at("/ecs/0/components/ColliderComponent/halfExtents").toString())
     }
 
     @Test fun fullClassNameIsEditableAndDoesNotOfferDuplicate() {
@@ -48,8 +48,8 @@ class PhysicsComponentKindsTest {
         val root = scene("\"$name\":{}")
         assertFalse(editor.missingKinds(root, "0").any { it.name == "ColliderComponent" })
         assertEquals(EditResult.Changed, editor.update(root, "0", name, "halfExtents.x", "1"))
-        assertEquals(1, root.at("/ecs/entities/0/components").size())
-        assertEquals(1, root.at("/ecs/entities/0/components/$name/halfExtents/x").intValue())
+        assertEquals(1, root.at("/ecs/0/components").size())
+        assertEquals(1, root.at("/ecs/0/components/$name/halfExtents/x").intValue())
     }
 
     @Test fun invalidDimensionsMassDistanceAndReferencesAreRejected() {
@@ -64,6 +64,6 @@ class PhysicsComponentKindsTest {
         }
         val root = scene(""""ConstraintComponent":{}""")
         assertEquals(EditResult.Changed, editor.update(root, "0", "ConstraintComponent", "other", "1"))
-        assertEquals(1, root.at("/ecs/entities/0/components/ConstraintComponent/other").intValue())
+        assertEquals(1, root.at("/ecs/0/components/ConstraintComponent/other").intValue())
     }
 }

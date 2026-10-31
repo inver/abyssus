@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.lib.core.assets.sky.cube
 import com.badlogic.gdx.graphics.Pixmap
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.MetaAssetLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.StagedMetaAssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
@@ -20,10 +20,8 @@ class SkyboxLoader(
     private val fileLoader: FileLoader,
     metaLoader: AssetMetaLoader,
     private val shaders: ShaderStorage
-) : MetaAssetLoader<Unit, PreparedSkybox, SkyboxCube>(metaLoader) {
-    override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedSkybox> = Prepared(read(meta))
-
-    private fun read(meta: AssetMeta<Any>): PreparedSkybox {
+) : StagedMetaAssetLoader<PreparedSkybox, SkyboxCube>(metaLoader) {
+    override fun read(meta: AssetMeta<Any>): PreparedSkybox {
         val additional = meta.typedAdditional<SkyboxMeta>()
         val faces = ArrayList<Pixmap>(6)
         try {

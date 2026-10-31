@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
+import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
@@ -12,12 +13,12 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.terrainData
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
@@ -28,7 +29,7 @@ import java.io.File
 class ArrangementEditingTest : BasePlatformTestCase() {
     private lateinit var projectDir: File
     private lateinit var scene: VirtualFile
-    private val tree = RenderAsset("MODEL", "tree")
+    private val tree = BaseMeta(MetaType.MODEL, "tree")
     private val terrain = "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
 
     override fun setUp() {
@@ -39,12 +40,12 @@ class ArrangementEditingTest : BasePlatformTestCase() {
     }
 
     private fun text() = FileDocumentManager.getInstance().getDocument(scene)!!.text
-    private fun ecs() = SceneJson().parse(text())["ecs"].let { it["entities"] ?: it }
+    private fun ecs() = SceneJson().parse(text())["ecs"]
     private fun slots() = ecs()["11"]["components"]["PathArrangementComponent"]["slots"].map { it.asInt() }
     private fun y(id: Int) = ecs()["$id"]["components"]["PositionComponent"]["localPosition"].path("y").floatValue()
 
     private fun draw(heights: GroundHeight = LineHeights()): ArrangementResult =
-        ArrangementEditing.create(project, scene, tree, listOf(Vec3(0f, 0f, 0f), Vec3(40f, 0f, 0f)), false, heights)
+        ArrangementEditing.create(project, scene, tree, listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)), false, heights)
 
     fun testADrawingIsOneUndoStep() {
         myFixture.openFileInEditor(scene)
@@ -97,7 +98,7 @@ class ArrangementEditingTest : BasePlatformTestCase() {
         for (id in 12..16) {
             assertEquals(7f, y(id), 0f)
             fun withoutY(root: com.fasterxml.jackson.databind.JsonNode): com.fasterxml.jackson.databind.JsonNode {
-                val entity = (root["ecs"].let { it["entities"] ?: it }["$id"]).deepCopy<com.fasterxml.jackson.databind.JsonNode>()
+                val entity = (root["ecs"]["$id"]).deepCopy<com.fasterxml.jackson.databind.JsonNode>()
                 (entity["components"]["PositionComponent"]["localPosition"] as? com.fasterxml.jackson.databind.node.ObjectNode)?.remove("y")
                 return entity
             }
@@ -110,7 +111,7 @@ class ArrangementEditingTest : BasePlatformTestCase() {
         myFixture.openFileInEditor(scene)
         draw()
         val before = text()
-        val result = ArrangementEditing.setPoints(project, scene, "11", listOf(Vec3(0f, 0f, 0f), Vec3(60f, 0f, 0f)), LineHeights())
+        val result = ArrangementEditing.setPoints(project, scene, "11", listOf(Vector3(0f, 0f, 0f), Vector3(60f, 0f, 0f)), LineHeights())
         assertEquals(ArrangementResult.Changed(), result)
         assertEquals(7, slots().size)
         UndoManager.getInstance(project).undo(TextEditorProvider.getInstance().getTextEditor(myFixture.editor))

@@ -5,8 +5,12 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.util.numberTextOrNull
+import net.nevinsky.abyssus.lib.core.util.numberOrNull
 import com.intellij.icons.AllIcons
 import com.intellij.ide.DataManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
@@ -15,7 +19,10 @@ import com.intellij.ui.components.panels.VerticalLayout
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.editor.document.SceneDocument
+import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
 import net.nevinsky.abyssus.lib.core.editor.document.RayDataEdit
 import net.nevinsky.abyssus.lib.core.editor.document.RayDataError
@@ -31,20 +38,28 @@ import net.nevinsky.abyssus.lib.core.editor.util.numberText
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
+import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 import net.nevinsky.abyssus.plugin.filetype.SceneRayEdits
 import net.nevinsky.abyssus.plugin.filetype.setEnabled
 import net.nevinsky.abyssus.plugin.panel.RowHooks
 import net.nevinsky.abyssus.plugin.projectView.addComponentGroup
-import net.nevinsky.abyssus.plugin.projectView.reportRejection
+import net.nevinsky.abyssus.plugin.ui.reportRejection
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
+import net.nevinsky.abyssus.plugin.sceneview.PathEditListener
+import net.nevinsky.abyssus.plugin.sceneview.BrushRequestListener
+import net.nevinsky.abyssus.plugin.sceneview.PaintTextureRequests
+import net.nevinsky.abyssus.plugin.sceneview.SculptRequests
+import net.nevinsky.abyssus.plugin.sceneview.PathEditSession
 import net.nevinsky.abyssus.plugin.ui.CommitOutcome
 import net.nevinsky.abyssus.plugin.ui.showActionGroup
+import com.intellij.util.messages.MessageBusConnection
 import java.awt.*
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.JToggleButton
 
 /**
  * An entity (or one component) of a scene with an editor for every field of the components the plugin models. Editors
@@ -73,7 +88,20 @@ internal class EntityDetailsView @JvmOverloads constructor(
             model, hooks, collapsed, titleName = "entity-name",
             onEnabled = { section, checked -> toggle(section, checked) },
             sectionActions = { removeButton(it) },
-            sectionExtra = { section -> if (section.kind == "RenderComponent") state.optics?.let { opticsView(it) } else null },
+            sectionExtra = { section ->
+                when (section.kind) {
+                    "RenderComponent" -> {
+                        val optics = state.optics?.let { opticsView(it) }
+                        val sculpt = if (isTerrain()) sculptBar() else null
+                        when {
+                            optics != null && sculpt != null -> JPanel(VerticalLayout(0)).apply { isOpaque = false; add(sculpt); add(optics) }
+                            else -> sculpt ?: optics
+                        }
+                    }
+                    PathArrangementComponent::class.simpleName -> pathEditBar()
+                    else -> null
+                }
+            },
             after = if (target.kind == null) listOf(addButton()) else emptyList(),
         )
         // the raw JSON of a component the plugin does not edit is reached by `raw-<Kind>`
@@ -83,6 +111,101 @@ internal class EntityDetailsView @JvmOverloads constructor(
             }
         }
         add(view, BorderLayout.CENTER)
+    }
+
+    /** Whether the entity renders a terrain asset, which can be sculpted. */
+    private fun isTerrain(): Boolean {
+        val root = SceneDocumentCache.of(project).read(target.file)?.root ?: return false
+        return SceneDocument(root).BaseMeta(target.entityId)?.type == MetaType.TERRAIN
+    }
+
+    /**
+     * The Sculpt Terrain and Paint Texture toggles: each puts its brush on the terrain in the Scene view; the project's
+     * [SculptRequests] and [PaintTextureRequests] follow them. Turning one on ends the other (the view holds one brush).
+     */
+    private fun sculptBar(): JComponent {
+        val sculpt = project.service<SculptRequests>()
+        val paint = project.service<PaintTextureRequests>()
+        val sculptToggle = JToggleButton(AbyssusBundle.message("sculptTitle")).apply { name = "sculpt-terrain"; isFocusable = false }
+        val paintToggle = JToggleButton(AbyssusBundle.message("paintTextureToggle")).apply { name = "paint-texture"; isFocusable = false }
+        fun here(file: com.intellij.openapi.vfs.VirtualFile?, entity: String?) = file == target.file && entity == target.entityId
+        var syncing = false
+        fun sync() {
+            syncing = true
+            sculptToggle.isSelected = sculpt.current?.let { here(it.file, it.entityId) } == true
+            paintToggle.isSelected = paint.current?.let { here(it.file, it.entityId) } == true
+            syncing = false
+        }
+        sculptToggle.addActionListener {
+            if (syncing) return@addActionListener
+            if (sculptToggle.isSelected) { paint.stop(target.file); sculpt.start(target.file, target.entityId) } else sculpt.stop(target.file)
+        }
+        paintToggle.addActionListener {
+            if (syncing) return@addActionListener
+            if (paintToggle.isSelected) { sculpt.stop(target.file); paint.start(target.file, target.entityId) } else paint.stop(target.file)
+        }
+        sync()
+        return syncedBar(::sync) { connection ->
+            connection.subscribe(SculptRequests.TOPIC, BrushRequestListener { sync() })
+            connection.subscribe(PaintTextureRequests.TOPIC, BrushRequestListener { sync() })
+        }.apply {
+            isOpaque = false
+            add(sculptToggle)
+            add(paintToggle)
+        }
+    }
+
+    /** A button bar that runs [sync] and calls [subscribe] with a project bus connection while it is on screen. */
+    private fun syncedBar(sync: () -> Unit, subscribe: (MessageBusConnection) -> Unit): JPanel =
+        object : JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), JBUI.scale(4))) {
+            private var connection: MessageBusConnection? = null
+
+            override fun addNotify() {
+                super.addNotify()
+                sync()
+                connection = project.messageBus.connect().also(subscribe)
+            }
+
+            override fun removeNotify() {
+                connection?.disconnect()
+                connection = null
+                super.removeNotify()
+            }
+        }
+
+    /**
+     * Edit for the spline of a path arrangement shows the control points in the Scene view (a click on one gives it the
+     * move gizmo); while it is on, Drop path to terrain, Close (drops the changes) and Apply (writes them) replace Edit.
+     * The buttons follow the project's [PathEditSession].
+     */
+    private fun pathEditBar(): JComponent {
+        val session = project.service<PathEditSession>()
+        val edit = JButton(AbyssusBundle.message("arrangementEditSpline")).apply { name = "arrangement-edit"; isFocusable = false }
+        val drop = JButton(AbyssusBundle.message("arrangementDropSpline")).apply { name = "arrangement-drop"; isFocusable = false }
+        val close = JButton(AbyssusBundle.message("arrangementCloseSpline")).apply { name = "arrangement-close"; isFocusable = false }
+        val apply = JButton(AbyssusBundle.message("arrangementApplySpline")).apply { name = "arrangement-apply"; isFocusable = false }
+        fun editing() = session.current?.let { it.file == target.file && it.entityId == target.entityId } == true
+        fun sync() {
+            val on = editing()
+            edit.isVisible = !on
+            drop.isVisible = on
+            close.isVisible = on
+            apply.isVisible = on
+        }
+        edit.addActionListener { session.start(target.file, target.entityId) }
+        drop.addActionListener { session.drop(target.file) }
+        close.addActionListener { session.stop(target.file) }
+        apply.addActionListener { session.apply(target.file) }
+        sync()
+        return syncedBar(::sync) { connection ->
+            connection.subscribe(PathEditListener.TOPIC, PathEditListener { sync() })
+        }.apply {
+            isOpaque = false
+            add(edit)
+            add(drop)
+            add(close)
+            add(apply)
+        }
     }
 
     private fun allComponents(c: java.awt.Component): List<java.awt.Component> =
@@ -168,10 +291,10 @@ internal class EntityDetailsView @JvmOverloads constructor(
                 foreground = JBColor.RED; name = "optics-error-$id"
             }
         for (field in RayOpticalField.entries) {
-            val stored = row.stored[field]
-            val shown = stored?.takeIf { it.isNumber }?.doubleValue() ?: field.default
+            val stored = row.storedDocuments[field]
+            val shown = stored?.numberAt() ?: field.default
             val text =
-                if (field == RayOpticalField.TRANSMISSION) percent(shown) else stored?.takeIf { it.isNumber }?.asText()
+                if (field == RayOpticalField.TRANSMISSION) percent(shown) else stored?.numberText()
                     ?: number(shown)
             val editor = JBTextField(text).apply { name = "optics-${field.key}-$id"; columns = 6 }
             val save = {

@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.modelimport
 
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.editor.document.ModelImportRecord
 import net.nevinsky.abyssus.lib.core.editor.document.ImportFrameRecord
 import net.nevinsky.abyssus.lib.core.editor.document.ImportItemRecord
@@ -58,6 +59,8 @@ class ModelImport(
     private val textures: TextureGather = TextureGather(),
     private val writer: GltfWriter = GltfWriter(),
 ) {
+    private val assets = ModelAssetFiles(format)
+
     /**
      * @param projectDir the folder of the project's `.abss` file: `source.json` records the source path relative to
      * it when the source is inside it
@@ -83,12 +86,7 @@ class ModelImport(
         val leftOut = (source.leftOut + gathered.leftOut).distinct()
 
         val files = LinkedHashMap<String, ByteArray>()
-        val meta = AssetMetaDocument(
-            lastModified = lastModified, uuid = uuid.toString(), type = MetaType.MODEL,
-            additional = ModelAssetAdditional(file = MODEL_FILE),
-        )
-        validateAssetDocument(meta, format)?.let { throw IllegalStateException("the staged meta.json is not native: $it") }
-        files["meta.json"] = SceneJson().pretty(meta).toByteArray()
+        files[META_FILE] = assets.metaBytes(uuid, lastModified)
         files[MODEL_FILE] = glb
         files.putAll(gathered.files)
 
@@ -108,7 +106,7 @@ class ModelImport(
             skipped = leftOut.map { ImportItemRecord(it.item, it.reason.id) },
             approximated = source.approximated.map { ImportItemRecord(it.item, it.reason) },
         )
-        files[SOURCE_FILE] = SceneJson().pretty(record).toByteArray()
+        files[SOURCE_FILE] = assets.sourceBytes(record)
 
         val report = ImportReport(transformed.size, source.animations, gathered.files.size, leftOut, source.approximated)
         return StagedModelImport(settings.folderName, uuid, files, report)

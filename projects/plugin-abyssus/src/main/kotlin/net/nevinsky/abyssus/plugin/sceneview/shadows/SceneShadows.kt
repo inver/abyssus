@@ -9,7 +9,6 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.g3d.Environment
-import com.badlogic.gdx.graphics.g3d.Renderable
 import com.badlogic.gdx.graphics.g3d.attributes.DirectionalLightsAttribute
 import com.badlogic.gdx.graphics.g3d.attributes.PointLightsAttribute
 import com.badlogic.gdx.graphics.g3d.attributes.SpotLightsAttribute
@@ -18,16 +17,12 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.Vector4
 import com.badlogic.gdx.math.collision.BoundingBox
-import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.Disposable
-import com.badlogic.gdx.utils.Pool
 import com.intellij.openapi.diagnostic.Logger
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
-import net.nevinsky.abyssus.lib.core.editor.scene.toVector3
-import net.nevinsky.abyssus.lib.gdx.g3d.ModelDepthShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.*
-import net.nevinsky.abyssus.lib.render.shadow.DepthSubmission
+import net.nevinsky.abyssus.lib.render.shadow.DepthCasters
 import net.nevinsky.abyssus.lib.render.shadow.sunShadowBias
 import net.nevinsky.abyssus.plugin.sceneview.TerrainEntity
 import kotlin.math.max
@@ -39,13 +34,8 @@ class SceneShadows : Disposable {
     private val owner = Gdx.app
     private val resources = ShadowResources()
     private val layout = ShadowLayout()
-    private val pass = ShadowDepthPass()
-    private val shaders = ModelDepthShaderProvider(pass)
-    private val submission = DepthSubmission { shaders.get(it) }
-    private val pool = object : Pool<Renderable>() {
-        override fun newObject() = Renderable()
-    }
-    private val renderables = Array<Renderable>()
+    private val depth = DepthCasters()
+    private val pass get() = depth.pass
     private val casterBounds = ShadowCasterBounds()
     private val log = Logger.getInstance(SceneShadows::class.java)
     private var failed = false
@@ -60,8 +50,8 @@ class SceneShadows : Disposable {
         foliage: FoliageCastSource?
     ): ShadowAtlasAttribute? {
         if (failed || !resources.available) return null
-        pool.freeAll(renderables); renderables.clear()
-        val casters = shadowCasters(models, terrains, foliage, renderables, pool, casterBounds)
+        depth.begin()
+        val casters = shadowCasters(models, terrains, foliage, depth.renderables, depth.pool, casterBounds)
         val receiver = receiverBounds(camera, casters.map { it.bounds })
         val dirs = (environment.get(DirectionalLightsAttribute.Type) as? DirectionalLightsAttribute)?.lights
         val points = (environment.get(PointLightsAttribute.Type) as? PointLightsAttribute)?.lights
@@ -79,10 +69,10 @@ class SceneShadows : Disposable {
                     val index = lights.directional.indexOfFirst { it.entityId == allocation.entityId }
                     val source = lights.directional[index]
                     light = dirs?.get(index) ?: continue
-                    sourcePosition = source.position.toVector3(); range = 1f
+                    sourcePosition = source.position.cpy(); range = 1f
                     views = receiver?.let {
                         projection.directional(
-                            source.direction.toVector3(),
+                            source.direction.cpy(),
                             it,
                             casters.map(ShadowCaster::bounds)
                         )
@@ -93,7 +83,7 @@ class SceneShadows : Disposable {
                     val index = lights.point.indexOfFirst { it.entityId == allocation.entityId }
                     val source = lights.point[index]
                     light = points?.get(index) ?: continue
-                    sourcePosition = source.position.toVector3(); range = source.range
+                    sourcePosition = source.position.cpy(); range = source.range
                     views = projection.point(sourcePosition, range)
                 }
 
@@ -101,8 +91,8 @@ class SceneShadows : Disposable {
                     val index = lights.spot.indexOfFirst { it.entityId == allocation.entityId }
                     val source = lights.spot[index]
                     light = spots?.get(index) ?: continue
-                    sourcePosition = source.position.toVector3(); range = source.range
-                    views = projection.spot(sourcePosition, source.direction.toVector3(), source.cone.angle, range)
+                    sourcePosition = source.position.cpy(); range = source.range
+                    views = projection.spot(sourcePosition, source.direction.cpy(), source.cone.angle, range)
                         ?.let(::listOf) ?: continue
                 }
             }
@@ -111,7 +101,7 @@ class SceneShadows : Disposable {
             pass.lightPosition.set(sourcePosition); pass.far = range
             for ((view, tile) in views.zip(allocation.tiles)) {
                 val success = resources.render(tile) {
-                    submission.submit(
+                    depth.submit(
                         view.camera,
                         casters.filter { view.camera.frustum.boundsInFrustum(it.bounds) }.map { it.renderable })
                 }
@@ -175,10 +165,10 @@ class SceneShadows : Disposable {
     fun abandon() {
         resources.abandon()
         ShaderProgram.clearAllShaderPrograms(owner)
-        renderables.clear(); pool.clear(); casterBounds.clear()
+        depth.abandon(); casterBounds.clear()
     }
 
     override fun dispose() {
-        shaders.dispose(); resources.dispose(); renderables.clear(); pool.clear(); casterBounds.clear()
+        depth.dispose(); resources.dispose(); casterBounds.clear()
     }
 }

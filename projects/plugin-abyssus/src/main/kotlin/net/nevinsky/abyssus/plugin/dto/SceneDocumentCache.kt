@@ -5,7 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.dto
 
-import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
@@ -18,7 +19,6 @@ import com.intellij.openapi.vfs.newvfs.events.VFileDeleteEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import java.util.concurrent.ConcurrentHashMap
 
@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap
  * A scene's text read as the plugin needs it: [root] is the JSON tree (with its original number text) and [scene] the
  * bound DTO. Both are shared between callers: read them, never change them (an edit parses the document afresh).
  */
-class ParsedScene(val root: JsonNode, val scene: SceneDto)
+class ParsedScene(val root: Document, val scene: SceneDto)
 
 /**
  * The parsed text of scene files as the editors show it (unsaved text included), keyed by the document's modification
@@ -42,11 +42,7 @@ class SceneDocumentCache(project: Project, private val parse: ((String) -> Parse
     private val entries = ConcurrentHashMap<VirtualFile, Entry>()
 
     init {
-        project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
-            override fun after(events: List<VFileEvent>) {
-                for (e in events) if (e is VFileDeleteEvent || e is VFileMoveEvent) e.file?.let(entries::remove)
-            }
-        })
+        evictOnDeleteOrMove(project, this, entries)
     }
 
     /** The scene in [file], or null when the file is gone or its text is not a readable scene. */
@@ -70,7 +66,7 @@ class SceneDocumentCache(project: Project, private val parse: ((String) -> Parse
         /** Binds [text] with [reader] and parses it as a JSON tree; throws when either cannot read it. */
         fun parsedScene(reader: SceneReader, text: String): ParsedScene {
             val scene = reader.parse(text)
-            return ParsedScene(SceneJson().parse(text), scene)
+            return ParsedScene(parseDocument(text), scene)
         }
 
         fun of(project: Project): SceneDocumentCache = project.service()

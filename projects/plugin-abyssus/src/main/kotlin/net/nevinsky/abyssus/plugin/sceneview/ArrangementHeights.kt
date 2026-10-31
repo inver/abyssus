@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -75,7 +78,7 @@ class ArrangementHeights(private val project: Project, private val json: JsonPro
     private class Placement(val entityId: String, val asset: String, val world: com.badlogic.gdx.math.Matrix4)
 
     private fun terrainPlacements(file: VirtualFile): List<Placement> {
-        val scene = runCatchingKeepingCancellation { json.parse(textOf(file), SceneDto::class.java) }.getOrNull() ?: return emptyList()
+        val scene = runCatchingKeepingCancellation { DocumentParsing(json, org.slf4j.helpers.NOPLogger.NOP_LOGGER).parse(textOf(file)) }.getOrNull() ?: return emptyList()
         return sceneContentOf(scene).terrains.map { Placement(it.entityId, it.assetName, it.transform.toMatrix()) }
     }
 
@@ -91,9 +94,9 @@ class ArrangementHeights(private val project: Project, private val json: JsonPro
 
     private fun dataOf(projectDir: File, name: String, metas: AssetMetaLoader, loader: TerrainLoader): TerrainData? {
         val meta = metas.loadBaseMeta(name) ?: return null
-        val folder = File(File(projectDir, "assets"), name)
+        val folder = File(File(projectDir, ASSETS_DIR), name)
         val dataFile = File(folder, meta.typedAdditional<TerrainMeta>().terrainFile ?: return null)
-        val stamp = listOf(File(folder, "meta.json").lastModified(), dataFile.lastModified(), dataFile.length())
+        val stamp = listOf(File(folder, META_FILE).lastModified(), dataFile.lastModified(), dataFile.length())
         val key = dataFile.path
         cache[key]?.takeIf { it.stamp == stamp }?.let { return it.data }
         val data = loader.loadPrepared(meta).staged.data

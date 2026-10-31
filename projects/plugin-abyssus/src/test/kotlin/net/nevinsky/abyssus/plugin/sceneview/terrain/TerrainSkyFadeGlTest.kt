@@ -21,7 +21,6 @@ import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.plugin.sceneview.GlHarness
 import net.nevinsky.abyssus.plugin.sceneview.SceneRenderer
@@ -57,7 +56,7 @@ class TerrainSkyFadeGlTest {
             }
             val framebuffer = FrameBuffer(Pixmap.Format.RGBA8888, 32, 32, true)
             try {
-                fun draw(irradiance: Cubemap?, to: Cubemap?, weight: Float, ambient: Rgba? = null): IntArray {
+                fun draw(irradiance: Cubemap?, to: Cubemap?, weight: Float, ambient: Color? = null): IntArray {
                     framebuffer.begin()
                     try {
                         Gdx.gl.glViewport(0, 0, 32, 32)
@@ -82,9 +81,9 @@ class TerrainSkyFadeGlTest {
                 val half = draw(a, b, 0.5f)
                 assertEquals("red at 0.5 ${half.toList()}", onlyB[0] / 2f, half[0].toFloat(), 3f)
                 assertEquals("blue at 0.5 ${half.toList()}", onlyA[2] / 2f, half[2].toFloat(), 3f)
-                val grey = draw(null, null, 0f, Rgba(0.3f, 0.3f, 0.3f, 1f))
+                val grey = draw(null, null, 0f, Color(0.3f, 0.3f, 0.3f, 1f))
                 assertTrue("ambient restored ${grey.toList()}", grey[0] > 20 && kotlin.math.abs(grey[0] - grey[1]) <= 2 && kotlin.math.abs(grey[0] - grey[2]) <= 2)
-                assertArrayEquals("a weight without a target keeps the ambient", grey, draw(null, b, 1f, Rgba(0.3f, 0.3f, 0.3f, 1f)))
+                assertArrayEquals("a weight without a target keeps the ambient", grey, draw(null, b, 1f, Color(0.3f, 0.3f, 0.3f, 1f)))
                 checked = true
             } finally {
                 framebuffer.dispose(); shader.dispose(); mesh.dispose(); a.dispose(); b.dispose()

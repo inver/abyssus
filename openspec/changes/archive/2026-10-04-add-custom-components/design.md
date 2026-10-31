@@ -8,7 +8,7 @@ See proposal.md - Why. After `extract-scene-runtime`:
   fixed `ComponentCodecs` list, `SceneEcsLoader` (an unknown name is kept in `RawComponentsComponent` with a warning),
   `SceneEcsWriter` (writes components in the file's order; unknown block `extras` are written back unchanged), the `number(Float)` helper for whole-number text, and `SceneLoading(json, log)`.
 - The plugin's `ComponentEditor` is an `object` with a fixed `kinds` list. Each `ComponentKind<C>` has a codec, a
-  list of `ComponentField<C>` read and written as text, and `create()`. `FieldKind` is `FLOAT, TEXT, CHOICE,
+  list of `ComponentField<C>` read and written as text, and `create()`. `AssetFieldKind` is `FLOAT, TEXT, CHOICE,
   ENTITY_REF, ASSET_NAME`. Vectors and colors are edited as dotted float fields (`localPosition.x`, `color.r`).
   Updates apply only the keys that differ; values are checked in `checkValue` (numbers, choices, assets, references
   with cycle checks).
@@ -101,7 +101,7 @@ task runs. Infinite limits are not written.
 - **`ComponentEditor`** stops being an `object`: it is built with the current schemas and adds one `ComponentKind` per
   schema component. Its codec is a `SchemaCodec` (a `ComponentCodec<SchemaValues>` over `SchemaJson`, where
   `SchemaValues` is a map-backed component). Vectors and colors become dotted decimal fields (`leadout.x`,
-  `paint.r`) as `Position` and `Light` already do. `FieldKind` gains `INT` and `BOOLEAN`; `checkValue` gains whole
+  `paint.r`) as `Position` and `Light` already do. `AssetFieldKind` gains `INT` and `BOOLEAN`; `checkValue` gains whole
   numbers, booleans and the schema's limits; entity references reuse `checkReference`; asset references reuse the
   asset-name check filtered by the declared asset type. `add` writes only the short-name component.
 - **Panel:** `EntityDetailsView` adds a checkbox editor for `BOOLEAN` and group sub-headings; labels come from the

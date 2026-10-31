@@ -21,6 +21,11 @@ context: |
   - lib-gdx stays a plain JVM library with no IntelliJ or plugin imports; it is meant to be reusable in other libGDX
     projects.
 
+  JSON and DTOs:
+  - Do not do manual serialization or deserialization between JSON and DTOs. Bind and write through the existing mappers
+    (JsonProcessor.bind, SceneReader.parse, SceneJson.bind); NativeJsonTree stays the only token-level reader.
+  - Use only JsonProcessor. To extend it or add methods, ask first.
+
   Specs and docs:
   - openspec/specs/ is the source of truth for required behavior. Read the affected capabilities before planning and
     reuse their exact paths.

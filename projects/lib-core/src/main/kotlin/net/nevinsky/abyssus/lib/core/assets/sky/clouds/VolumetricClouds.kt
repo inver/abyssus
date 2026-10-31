@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
+import net.nevinsky.abyssus.lib.core.util.GlStateScope
 import net.nevinsky.abyssus.lib.core.util.checkFramebufferComplete
 
 import net.nevinsky.abyssus.lib.core.util.GL_HALF_FLOAT
@@ -23,7 +24,6 @@ import net.nevinsky.abyssus.lib.core.util.createFullscreenTriangle
 import kotlin.math.abs
 
 private const val GL_RGBA16F = 0x881A
-private const val GL_FRAMEBUFFER_BINDING = 0x8CA6
 
 /** How much of the resolved image comes from this frame; the rest is the reprojected history. */
 private const val HISTORY_BLEND = 0.15f
@@ -88,19 +88,14 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
     override fun draw(scene: CloudScene) {
         check(scene.clouds.baseNoise != 0) { scene.clouds.noiseFailure ?: "the cloud asset has no noise textures" }
         val gl = Gdx.gl
-        val ints = BufferUtils.newIntBuffer(16)
-        gl.glGetIntegerv(GL20.GL_VIEWPORT, ints)
-        val viewport = IntArray(4) { ints.get(it) }
-        ints.clear()
-        gl.glGetIntegerv(GL_FRAMEBUFFER_BINDING, ints)
-        val previousFramebuffer = ints.get(0)
+        val state = GlStateScope(listOf(GL20.GL_BLEND))
+        val viewport = IntArray(4).also { v -> BufferUtils.newIntBuffer(16).let { gl.glGetIntegerv(GL20.GL_VIEWPORT, it); for (i in v.indices) v[i] = it.get(i) } }
         // a baked face is drawn once, so it gets the full resolution (the cloud detail follows the pixel size) and a few samples
         val divisor = if (scene.bake) 1 else 2
         ensureTargets(maxOf(1, viewport[2] / divisor), maxOf(1, viewport[3] / divisor))
         rotationOnlyViewProj(scene.camera, viewProj)
         if (scene.bake) hasHistory = false else if (hasHistory && jumped(scene.camera)) resetHistory()
 
-        val blendWasOn = gl.glIsEnabled(GL20.GL_BLEND)
         try {
             bakeCoverage(scene)
             gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, framebuffer)
@@ -112,9 +107,7 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
                 resolveHistory(scene, if (scene.bake) 1f / (sample + 1) else HISTORY_BLEND)
             }
         } finally {
-            gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, previousFramebuffer)
-            gl.glViewport(viewport[0], viewport[1], viewport[2], viewport[3])
-            if (blendWasOn) gl.glEnable(GL20.GL_BLEND) else gl.glDisable(GL20.GL_BLEND)
+            state.restore()
         }
         val composite = checkNotNull(composite)
         withPremultipliedBlend {

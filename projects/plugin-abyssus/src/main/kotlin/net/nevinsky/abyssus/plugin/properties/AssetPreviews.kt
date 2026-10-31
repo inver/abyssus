@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
+import net.nevinsky.abyssus.plugin.ui.fitInside
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.panels.VerticalLayout
@@ -79,9 +80,7 @@ internal class Thumbnail(val image: BufferedImage?) : JComponent() {
             g.drawRect(0, 0, width - 1, height - 1)
             return
         }
-        val ratio = minOf(width.toDouble() / img.width, height.toDouble() / img.height)
-        val w = (img.width * ratio).toInt()
-        val h = (img.height * ratio).toInt()
+        val (w, h) = fitInside(img.width, img.height, width, height, upscale = true)
         g.drawImage(img, (width - w) / 2, (height - h) / 2, w, h, null)
     }
 }

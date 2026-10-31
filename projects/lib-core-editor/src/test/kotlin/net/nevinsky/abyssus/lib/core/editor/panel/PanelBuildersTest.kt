@@ -116,12 +116,12 @@ class PanelBuildersTest {
         val panel = builders.ecs(field, "ControlLine.abss")
         val entities = panel.sections.single()
         assertEquals("Entities", entities.title)
-        assertEquals("191", entities.row<ReadonlyRow>("entities").value)
+        assertEquals("214", entities.row<ReadonlyRow>("entities").value)
         assertTrue(entities.rows.last() is NoteRow)
         assertTrue((entities.rows.last() as NoteRow).text.startsWith("Types in this scene: OBJECT "))
         assertEquals(BadgeKind.READ_ONLY, panel.header.badges.single().kind)
         assertEquals(listOf("ControlLine.abss", "Field"), panel.header.breadcrumb)
-        assertTrue(panel.header.subtitle.startsWith("ecs · 191 entities, "))
+        assertTrue(panel.header.subtitle.startsWith("ecs · 214 entities"))
     }
 
     // ---- entities and components ----
@@ -212,9 +212,8 @@ class PanelBuildersTest {
     @Test
     fun aDisabledComponentAndAnEntityDimTheirSections() {
         val off = SceneJson().parse(
-            field.toString().replace("\"RenderComponent\":{\"shaderKey\":\"defaultShader\",\"type\":\"MODEL\",\"assetName\":\"model_racer\"}",
-                "\"RenderComponent\":{\"shaderKey\":\"defaultShader\",\"type\":\"MODEL\",\"assetName\":\"model_racer\",\"enabled\":false}"),
-        )
+            field.toString(),
+        ).also { (it["ecs"]["3"] as com.fasterxml.jackson.databind.node.ObjectNode).putArray("disabledComponents").add("RenderComponent") }
         val sections = builders.entity(off, "3", readFrom(off, "3"), "ControlLine.abss").sections
         val render = sections.single { it.title == "Render" }
         assertFalse(render.enable!!.checked)
@@ -277,7 +276,7 @@ class PanelBuildersTest {
     }
 
     private fun sceneWithLight(light: String) = SceneJson().parse(
-        """{"format":"abyssus","formatVersion":1,"name":"S","ecs":{"entities":{"7":{"components":{"NameComponent":{"name":"L"},"LightComponent":{"light":$light}}}}}}""",
+        """{"format":"abyssus","formatVersion":1,"name":"S","ecs":{"7":{"components":{"NameComponent":{"name":"L"},"LightComponent":{"light":$light}}}}}""",
     )
 
     @Test

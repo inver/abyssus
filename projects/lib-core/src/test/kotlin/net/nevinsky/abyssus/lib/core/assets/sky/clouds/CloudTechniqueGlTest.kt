@@ -31,6 +31,9 @@ import java.io.File
 
 private const val SIZE = 160
 
+/** The CRC of the volumetric cirrus image before heaped bands got their own shaping: it must not change. */
+private const val CIRRUS_CHECKSUM = 2430506748L
+
 /**
  * The three cloud techniques drawn over the fixture's procedural sky into an offscreen target and read back. Opt-in:
  * `-Dabyssus.glTests=true`.
@@ -433,12 +436,76 @@ class CloudTechniqueGlTest {
         assertTrue("mean covered luminance per technique $means", highest <= lowest * 1.25)
     }
 
+    /** Writes [image] to `build/cloud-images/[name].png` (flipped upright) so a person can look at what was drawn. */
+    private fun save(image: Image, name: String) {
+        val pixmap = Pixmap(image.width, image.height, Pixmap.Format.RGB888)
+        for (y in 0 until image.height) for (x in 0 until image.width) {
+            val i = image.at(x, image.height - 1 - y)
+            pixmap.drawPixel(x, y, (image.red(i) shl 24) or (image.green(i) shl 16) or (image.blue(i) shl 8) or 255)
+        }
+        val file = File("build/cloud-images/$name.png").apply { parentFile.mkdirs() }
+        PixmapIO.writePNG(com.badlogic.gdx.files.FileHandle(file), pixmap)
+        pixmap.dispose()
+    }
+
+    private fun volumetric(type: CloudType, level: CloudLevel, coverage: Float) =
+        clouds(CloudBand(type, level, coverage = coverage), technique = CloudTechnique.VOLUMETRIC)
+
+    @Test
+    fun heapedVolumetricCloudsHaveBrightSunlitTopsGreyBasesAndAWhiteRim() {
+        val heaped = volumetric(CloudType.CUMULUS, CloudLevel.LOW, 0.45f)
+        val clear = render(null)
+        val image = render(heaped, CloudTechnique.VOLUMETRIC, elevation = 40f, frames = 24)
+        save(image, "volumetric-heaped")
+        val (base, top) = deciles(image, clear)
+        assertTrue("a sunlit top is near white: $top", top > 205)
+        assertTrue("the base is a darker grey than the top: $base vs $top", base < top * 0.85)
+        // looking toward the sun, the rim of a cloud is clearly lighter than the sky behind it
+        val sunward = render(heaped, CloudTechnique.VOLUMETRIC, sun = noon, elevation = 55f, yaw = 0f, frames = 24)
+        val covered = mask(sunward, clear, 60)
+        val edge = covered.indices.filter { i ->
+            covered[i] && (i % SIZE in 1 until SIZE - 1) && (!covered[i - 1] || !covered[i + 1])
+        }
+        assertTrue("clouds with an edge: ${edge.size}", edge.size > 20)
+        val rim = edge.map { luminance(sunward, it) }.average()
+        val behind = edge.map { luminance(clear, it) }.average()
+        assertTrue("the rim shines: edge $rim against the sky behind it $behind", rim > behind + 25)
+    }
+
+    @Test
+    fun aVolumetricCirrusBandIsDrawnAsBefore() {
+        val image = render(volumetric(CloudType.CIRRUS, CloudLevel.HIGH, 0.5f), CloudTechnique.VOLUMETRIC, elevation = 70f, frames = 8)
+        val checksum = java.util.zip.CRC32().also { crc -> image.rgb.forEach { crc.update(it) } }.value
+        println("cirrus volumetric checksum $checksum")
+        assertEquals("the image of a cirrus band drawn volumetrically", CIRRUS_CHECKSUM, checksum)
+    }
+
+    @Test
+    fun cumulusHasBrightTopsGreyBasesAndABlueSky() {
+        val cumulus = clouds(
+            CloudBand(CloudType.CUMULUS, CloudLevel.LOW, coverage = 0.45f), technique = CloudTechnique.CUMULUS,
+        )
+        val clear = render(null)
+        val image = render(cumulus, CloudTechnique.CUMULUS, elevation = 40f)
+        save(image, "cumulus")
+        val covered = mask(image, clear, 60)
+        assertTrue("clouds are drawn", share(covered) > 0.05)
+        val (base, top) = deciles(image, clear)
+        assertTrue("a sunlit top is near white: $top", top > 215)
+        assertTrue("the base is a darker grey than the top: $base vs $top", base < top * 0.8)
+        val open = mask(image, clear, 24)
+        val sky = open.indices.filter { !open[it] }
+        assertTrue("clear sky remains: ${sky.size}", sky.size > 200)
+        assertTrue("the sky outside clouds is blue", sky.sumOf { image.blue(it) } > sky.sumOf { image.red(it) } * 1.3)
+    }
+
     @Test
     fun fallbackChain() {
         fun failing(vararg broken: CloudTechnique): (CloudTechnique) -> CloudRenderer = { technique ->
             if (technique in broken) throw IllegalStateException("$technique is broken")
             when (technique) {
                 CloudTechnique.LAYERED -> LayeredClouds(skyShaders(), CloudField())
+                CloudTechnique.CUMULUS -> CumulusClouds(skyShaders(), CloudField())
                 CloudTechnique.SHELLS -> ShellClouds(skyShaders(), CloudField())
                 CloudTechnique.VOLUMETRIC -> VolumetricClouds(skyShaders(), CloudField())
             }
@@ -447,8 +514,11 @@ class CloudTechniqueGlTest {
         val cases = listOf(
             arrayOf<CloudTechnique>() to CloudTechnique.VOLUMETRIC,
             arrayOf(CloudTechnique.VOLUMETRIC) to CloudTechnique.SHELLS,
-            arrayOf(CloudTechnique.VOLUMETRIC, CloudTechnique.SHELLS) to CloudTechnique.LAYERED,
-            arrayOf(CloudTechnique.VOLUMETRIC, CloudTechnique.SHELLS, CloudTechnique.LAYERED) to null,
+            arrayOf(CloudTechnique.VOLUMETRIC, CloudTechnique.SHELLS) to CloudTechnique.CUMULUS,
+            arrayOf(CloudTechnique.VOLUMETRIC, CloudTechnique.SHELLS, CloudTechnique.CUMULUS) to CloudTechnique.LAYERED,
+            arrayOf(
+                CloudTechnique.VOLUMETRIC, CloudTechnique.SHELLS, CloudTechnique.CUMULUS, CloudTechnique.LAYERED,
+            ) to null,
         )
         val cloudless = render(null)
         for ((broken, expected) in cases) {

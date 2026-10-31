@@ -350,20 +350,16 @@ class UiDocumentEdits {
     fun addResource(meta: JsonNode, id: String, kind: String, path: String): UiEditResult {
         val ui = ui(meta) ?: return UiEditResult.Rejected(UiEditError.NOT_EDITABLE)
         if (id.isBlank() || path.isBlank() || (kind != "image" && kind != "bitmapFont")) return UiEditResult.Rejected(UiEditError.BAD_VALUE, id)
-        val list = (ui.get("resources") as? ArrayNode) ?: ui.putArray("resources")
-        if (list.any { it.path("id").asText() == id }) return UiEditResult.Rejected(UiEditError.DUPLICATE_ID, id)
-        list.addObject().apply { put("id", id); put("kind", kind); put("path", path) }
+        val resources = NamedArray(ui, "resources", "id")
+        if (resources.indexOf(id) >= 0) return UiEditResult.Rejected(UiEditError.DUPLICATE_ID, id)
+        resources.list().addObject().apply { put("id", id); put("kind", kind); put("path", path) }
         return UiEditResult.Added(id)
     }
 
     /** Removes a resource declaration; the file stays and widgets naming it fall back to a placeholder. */
     fun deleteResource(meta: JsonNode, id: String): UiEditResult {
         val ui = ui(meta) ?: return UiEditResult.Rejected(UiEditError.NOT_EDITABLE)
-        val list = ui.get("resources") as? ArrayNode
-        val at = list?.indexOfFirst { it.path("id").asText() == id } ?: -1
-        if (list == null || at < 0) return UiEditResult.Rejected(UiEditError.UNKNOWN_NAME, id)
-        list.remove(at)
-        if (list.isEmpty) ui.remove("resources")
+        if (!NamedArray(ui, "resources", "id").remove(id)) return UiEditResult.Rejected(UiEditError.UNKNOWN_NAME, id)
         return UiEditResult.Changed
     }
 
@@ -373,21 +369,14 @@ class UiDocumentEdits {
     fun upsertStyle(meta: JsonNode, name: String, values: JsonNode): UiEditResult {
         val ui = ui(meta) ?: return UiEditResult.Rejected(UiEditError.NOT_EDITABLE)
         if (name.isBlank() || !values.isObject) return UiEditResult.Rejected(UiEditError.BAD_VALUE, name)
-        val list = (ui.get("styles") as? ArrayNode) ?: ui.putArray("styles")
         val entry = JsonNodeFactory.instance.objectNode().apply { put("name", name); (values as ObjectNode).properties().forEach { if (it.key != "name") set<JsonNode>(it.key, it.value) } }
-        val at = list.indexOfFirst { it.path("name").asText() == name }
-        if (at >= 0) { if (list[at] == entry) return UiEditResult.Unchanged; list.set(at, entry) } else list.add(entry)
-        return UiEditResult.Changed
+        return NamedArray(ui, "styles", "name").upsert(name, entry)
     }
 
     /** Deletes a style and clears the widgets' `style` that named it, as one edit. */
     fun deleteStyle(meta: JsonNode, name: String): UiEditResult {
         val ui = ui(meta) ?: return UiEditResult.Rejected(UiEditError.NOT_EDITABLE)
-        val list = ui.get("styles") as? ArrayNode
-        val at = list?.indexOfFirst { it.path("name").asText() == name } ?: -1
-        if (list == null || at < 0) return UiEditResult.Rejected(UiEditError.UNKNOWN_NAME, name)
-        list.remove(at)
-        if (list.isEmpty) ui.remove("styles")
+        if (!NamedArray(ui, "styles", "name").remove(name)) return UiEditResult.Rejected(UiEditError.UNKNOWN_NAME, name)
         forEachWidget(ui) { if (it.path("style").asText(null) == name) it.remove("style") }
         return UiEditResult.Changed
     }
@@ -397,21 +386,14 @@ class UiDocumentEdits {
         val ui = ui(meta) ?: return UiEditResult.Rejected(UiEditError.NOT_EDITABLE)
         if (name.isBlank()) return UiEditResult.Rejected(UiEditError.BAD_VALUE, "name")
         if (UiBindingType.entries.none { it.json == type }) return UiEditResult.Rejected(UiEditError.BAD_VALUE, "type")
-        val list = (ui.get("bindings") as? ArrayNode) ?: ui.putArray("bindings")
         val entry = JsonNodeFactory.instance.objectNode().apply { put("name", name); put("type", type); extra?.properties()?.forEach { if (it.key != "name" && it.key != "type") set<JsonNode>(it.key, it.value) } }
-        val at = list.indexOfFirst { it.path("name").asText() == name }
-        if (at >= 0) { if (list[at] == entry) return UiEditResult.Unchanged; list.set(at, entry) } else list.add(entry)
-        return UiEditResult.Changed
+        return NamedArray(ui, "bindings", "name").upsert(name, entry)
     }
 
     /** Deletes a binding and removes every widget binding that named it, as one edit. */
     fun deleteBinding(meta: JsonNode, name: String): UiEditResult {
         val ui = ui(meta) ?: return UiEditResult.Rejected(UiEditError.NOT_EDITABLE)
-        val list = ui.get("bindings") as? ArrayNode
-        val at = list?.indexOfFirst { it.path("name").asText() == name } ?: -1
-        if (list == null || at < 0) return UiEditResult.Rejected(UiEditError.UNKNOWN_NAME, name)
-        list.remove(at)
-        if (list.isEmpty) ui.remove("bindings")
+        if (!NamedArray(ui, "bindings", "name").remove(name)) return UiEditResult.Rejected(UiEditError.UNKNOWN_NAME, name)
         forEachWidget(ui) { widget ->
             val bindings = widget.get("bindings") as? ObjectNode ?: return@forEachWidget
             bindings.properties().filter { it.value.asText() == name }.map { it.key }.forEach(bindings::remove)
@@ -428,6 +410,32 @@ class UiDocumentEdits {
             action(widget)
             children(widget)?.forEach { if (it is ObjectNode) stack.addLast(it) }
             SUBTREES.forEach { f -> (widget.get(f) as? ObjectNode)?.let(stack::addLast) }
+        }
+    }
+
+    /** The array under [key] of [ui] whose entries are named by their [idField]; it is dropped when its last entry goes. */
+    private class NamedArray(private val ui: ObjectNode, private val key: String, private val idField: String) {
+        /** The array, created when missing. */
+        fun list(): ArrayNode = (ui.get(key) as? ArrayNode) ?: ui.putArray(key)
+
+        fun indexOf(name: String): Int = (ui.get(key) as? ArrayNode)?.indexOfFirst { it.path(idField).asText() == name } ?: -1
+
+        /** Replaces the entry called [name] with [entry], or appends it; unchanged when the same entry is already there. */
+        fun upsert(name: String, entry: JsonNode): UiEditResult {
+            val list = list()
+            val at = indexOf(name)
+            if (at >= 0) { if (list[at] == entry) return UiEditResult.Unchanged; list.set(at, entry) } else list.add(entry)
+            return UiEditResult.Changed
+        }
+
+        /** Removes the entry called [name]; false when there is none. */
+        fun remove(name: String): Boolean {
+            val at = indexOf(name)
+            if (at < 0) return false
+            val list = ui.get(key) as ArrayNode
+            list.remove(at)
+            if (list.isEmpty) ui.remove(key)
+            return true
         }
     }
 }

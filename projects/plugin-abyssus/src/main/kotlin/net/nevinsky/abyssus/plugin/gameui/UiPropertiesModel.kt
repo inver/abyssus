@@ -4,10 +4,15 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.lib.core.ui.model.propertyText
+import net.nevinsky.abyssus.lib.core.ui.model.propertyWhole
+import net.nevinsky.abyssus.lib.core.ui.model.propertyNumber
+import net.nevinsky.abyssus.lib.core.ui.model.propertyDisplay
+import net.nevinsky.abyssus.lib.core.editor.ui.UiTreeEdit
 import net.nevinsky.abyssus.lib.core.editor.util.uiNumberNode
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import net.nevinsky.abyssus.lib.core.editor.ui.uiActionNode
+import net.nevinsky.abyssus.lib.core.editor.ui.uiTextNode
 import net.nevinsky.abyssus.lib.core.editor.ui.UiEditResult
 import net.nevinsky.abyssus.lib.core.editor.ui.UiTree
 import net.nevinsky.abyssus.lib.core.ui.model.*
@@ -82,22 +87,22 @@ class UiPropertiesModel {
         val content = buildList {
             when (widget.type) {
                 UiWidgetType.LABEL -> {
-                    add(UiField.Text("property.text", widget.properties["text"]?.asText().orEmpty()))
-                    add(UiField.Text("property.prefix", widget.properties["prefix"]?.asText().orEmpty()))
-                    add(UiField.Text("property.suffix", widget.properties["suffix"]?.asText().orEmpty()))
-                    add(UiField.Number("property.precision", widget.properties["precision"]?.takeIf { it.isNumber }?.doubleValue(), 0.0))
+                    add(UiField.Text("property.text", widget.propertyDisplay("text")))
+                    add(UiField.Text("property.prefix", widget.propertyDisplay("prefix")))
+                    add(UiField.Text("property.suffix", widget.propertyDisplay("suffix")))
+                    add(UiField.Number("property.precision", widget.propertyNumber("precision"), 0.0))
                 }
-                UiWidgetType.LIST -> add(UiField.Number("property.maxRows", widget.properties["maxRows"]?.takeIf { it.isIntegralNumber }?.doubleValue(), 0.0))
+                UiWidgetType.LIST -> add(UiField.Number("property.maxRows", widget.propertyWhole("maxRows"), 0.0))
                 UiWidgetType.BUTTON, UiWidgetType.CHECKBOX, UiWidgetType.TEXT_FIELD ->
-                    add(UiField.Text("property.text", widget.properties["text"]?.asText().orEmpty()))
+                    add(UiField.Text("property.text", widget.propertyDisplay("text")))
                 UiWidgetType.IMAGE -> {
                     val images = collection.resources.filter { it.kind == UiResourceKind.IMAGE }.map { it.id }
-                    val chosen = widget.properties["image"]?.takeIf { it.isTextual }?.textValue()
+                    val chosen = widget.propertyText("image")
                     add(UiField.Choice("property.image", chosen, images, if (chosen != null && chosen !in images) UiFieldWarning.MISSING_RESOURCE else null))
                 }
                 UiWidgetType.PROGRESS_BAR -> {
-                    add(UiField.Number("property.value", widget.properties["value"]?.takeIf { it.isNumber }?.doubleValue(), null))
-                    add(UiField.Number("property.maximum", widget.properties["maximum"]?.takeIf { it.isNumber }?.doubleValue(), null))
+                    add(UiField.Number("property.value", widget.propertyNumber("value"), null))
+                    add(UiField.Number("property.maximum", widget.propertyNumber("maximum"), null))
                 }
                 else -> Unit
             }
@@ -150,7 +155,7 @@ class UiPropertiesModel {
     // ---- turning a field change into the document edit ----
 
     /** The tree edit for setting [key] of [widgetId] to text [input] (blank unsets), or null when [input] is not a valid value. */
-    fun edit(key: String, widgetId: String, input: String): ((net.nevinsky.abyssus.lib.core.editor.ui.UiDocumentEdits, JsonNode) -> UiEditResult)? {
+    fun edit(key: String, widgetId: String, input: String): UiTreeEdit? {
         val blank = input.isBlank()
         return when {
             key.startsWith("layout.") -> {
@@ -165,10 +170,10 @@ class UiPropertiesModel {
             }
             key.startsWith("property.") -> {
                 val name = key.removePrefix("property.")
-                val node: JsonNode? = when {
+                val node = when {
                     blank -> null
                     name == "precision" || name == "value" || name == "maximum" || name == "maxRows" -> input.trim().toDoubleOrNull()?.takeIf(Double::isFinite)?.let { number(it) } ?: return null
-                    else -> JsonNodeFactory.instance.textNode(input)
+                    else -> uiTextNode(input)
                 }
                 return { e, m -> e.setProperty(m, widgetId, name, node) }
             }
@@ -178,23 +183,12 @@ class UiPropertiesModel {
         }
     }
 
-    private fun number(v: Double): JsonNode =
+    private fun number(v: Double) =
         uiNumberNode(v)
 
     /** The edit that sets (or with a null [type] removes) the `click` action. [target] is a screen id, or an action name for `emitAction`. */
-    fun actionEdit(widgetId: String, type: UiActionType?, target: String?, assetName: String? = null): (net.nevinsky.abyssus.lib.core.editor.ui.UiDocumentEdits, JsonNode) -> UiEditResult {
-        val node = type?.let {
-            JsonNodeFactory.instance.objectNode().apply {
-                put("type", it.json)
-                if (assetName != null) put("assetName", assetName)
-                when (it) {
-                    UiActionType.OPEN_SCREEN, UiActionType.SHOW_OVERLAY -> target?.let { t -> put("screenId", t) }
-                    UiActionType.CLOSE_OVERLAY -> target?.let { t -> put("screenId", t) }
-                    UiActionType.EMIT_ACTION -> target?.let { t -> put("name", t) }
-                    UiActionType.BACK -> Unit
-                }
-            }
-        }
+    fun actionEdit(widgetId: String, type: UiActionType?, target: String?, assetName: String? = null): UiTreeEdit {
+        val node = type?.let { uiActionNode(it, target, assetName) }
         return { e, m -> e.setAction(m, widgetId, "click", node) }
     }
 }

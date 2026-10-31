@@ -16,7 +16,7 @@ class UnusedFilterTest : BasePlatformTestCase() {
         super.setUp()
         UnusedFilter.set(project, false)
         myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""")
-        myFixture.addFileToProject("p/scenes/S.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"used"}}}}}}}}""")
+        myFixture.addFileToProject("p/scenes/S.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"0":{"components":{"RenderComponent":{"type":"MODEL","assetName":"used"}}}}}""")
         for ((name, uuid) in listOf("used" to "u1", "dead1" to "u2", "dead2" to "u3", "dead3" to "u4")) {
             myFixture.addFileToProject("p/assets/$name/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"uuid":"${java.util.UUID.nameUUIDFromBytes(uuid.toByteArray())}","type":"MODEL","additional":{}}""")
         }
@@ -84,7 +84,7 @@ class UnusedFilterTest : BasePlatformTestCase() {
     fun testGroupWithoutUnusedAssetsIsHiddenAndCountsFollow() {
         val scene = myFixture.findFileInTempDir("p/scenes/S.scene")
         com.intellij.openapi.application.runWriteAction {
-            com.intellij.openapi.vfs.VfsUtil.saveText(scene, """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"used"}}}}},"1":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"TERRAIN","assetName":"hills"}}}}}}}}""")
+            com.intellij.openapi.vfs.VfsUtil.saveText(scene, """{"format":"abyssus","formatVersion":1,"ecs":{"0":{"components":{"RenderComponent":{"type":"MODEL","assetName":"used"}}},"1":{"components":{"RenderComponent":{"type":"TERRAIN","assetName":"hills"}}}}}""")
         }
         myFixture.addFileToProject("p/assets/hills/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"uuid":"${java.util.UUID.nameUUIDFromBytes("h1".toByteArray())}","type":"TERRAIN","additional":{}}""")
         assertEquals(listOf("Models  4", "Terrains  1"), groups().map { text(it) })

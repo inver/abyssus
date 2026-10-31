@@ -14,6 +14,7 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageModelMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.foliageChunkSize
+import net.nevinsky.abyssus.lib.core.assets.foliage.foliageChunksAcross
 import net.nevinsky.abyssus.lib.core.assets.foliage.fullMask
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import kotlin.math.PI
@@ -62,26 +63,7 @@ class ScatterOutcome(
  * straight up, from the exact gradient of the bilinear height field. The scatter rules use it for `maxSlope`; the
  * mesh normals come from central differences over the grid, so the two agree to within a cell's gradient.
  */
-fun terrainSlopeDegrees(terrain: TerrainData, x: Float, z: Float): Float {
-    val size = terrain.size.toFloat()
-    if (size <= 0f) return 0f
-    val cx = x.coerceIn(0f, size)
-    val cz = z.coerceIn(0f, size)
-    val cells = terrain.resolution - 1
-    val step = size / cells
-    val gx = minOf((cx / step).toInt(), cells - 1)
-    val gz = minOf((cz / step).toInt(), cells - 1)
-    val fx = cx / step - gx
-    val fz = cz / step - gz
-    val row = terrain.resolution
-    val h00 = terrain.heights[gz * row + gx]
-    val h10 = terrain.heights[gz * row + gx + 1]
-    val h01 = terrain.heights[(gz + 1) * row + gx]
-    val h11 = terrain.heights[(gz + 1) * row + gx + 1]
-    val slopeX = ((h10 - h00) * (1f - fz) + (h11 - h01) * fz) / step
-    val slopeZ = ((h01 - h00) * (1f - fx) + (h11 - h10) * fx) / step
-    return atan(sqrt(slopeX * slopeX + slopeZ * slopeZ)) * (180f / PI.toFloat())
-}
+fun terrainSlopeDegrees(terrain: TerrainData, x: Float, z: Float): Float = terrain.slopeDegreesAt(x, z)
 
 /** The SplitMix64 step: `0x9E3779B97F4A7C15`, written as its negative because Kotlin hex Longs stop at `0x7FF…`. */
 private const val GOLDEN_GAMMA = -0x61C8864680B583EBL
@@ -173,7 +155,7 @@ class FoliageScatter(private val fingerprints: FoliageFingerprint) {
         val resolution = settings.maskResolution
         val fingerprint = fingerprints.of(settings, terrain, masks)
         val chunkSize = foliageChunkSize(terrain.size)
-        val chunksX = max(1, ceil(terrain.size.toDouble() / chunkSize).toInt())
+        val chunksX = foliageChunksAcross(terrain.size, chunkSize)
         val grids = settings.layers.map { layer -> gridOf(terrain.size, layer) }
         val layerMasks = settings.layers.map { layer -> masks[layer.id] ?: fullMask(resolution) }
         for (mask in layerMasks) {

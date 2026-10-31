@@ -6,7 +6,6 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.lib.core.editor.pick.ScenePicker
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
@@ -26,7 +25,7 @@ import java.io.File
 class SceneWaterPassGlTest {
     @Before fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", GlHarness.enabled)
 
-    private val orbit get() = OrbitCamera(Vec3(0f, 0f, 0f), 25f, 0.6f, 0.35f)
+    private val orbit get() = OrbitCamera(Vector3(0f, 0f, 0f), 25f, 0.6f, 0.35f)
     private fun lake(level: Double = 0.0, tint: Triple<Double, Double, Double>? = null): WaterSettings = WaterGlScenes.lake(level, tint)
 
     private fun scene(

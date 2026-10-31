@@ -12,7 +12,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
 import net.nevinsky.abyssus.lib.core.editor.water.WaterEdit
@@ -54,7 +54,7 @@ class WaterActionTest : BasePlatformTestCase() {
     }
 
     fun testAddLakeAtThePlacementPointSelectsItAndKeepsTheRest() {
-        val group = AddWaterGroup(project, scene, { Vec3(5f, 1.5f, -2f) })
+        val group = AddWaterGroup(project, scene, { Vector3(5f, 1.5f, -2f) })
         group.addWater(WaterPreset.LAKE)
         val lake = surfaces().valid.single()
         assertEquals("Lake", lake.name)
@@ -66,8 +66,8 @@ class WaterActionTest : BasePlatformTestCase() {
     }
 
     fun testAddSeaFromTheTreeIsCentredAtTheOriginAndBiggerThanALake() {
-        AddWaterGroup(project, scene, { Vec3(0f, 0f, 0f) }).addWater(WaterPreset.LAKE)
-        AddWaterGroup(project, scene, { Vec3(0f, 0f, 0f) }).addWater(WaterPreset.SEA)
+        AddWaterGroup(project, scene, { Vector3(0f, 0f, 0f) }).addWater(WaterPreset.LAKE)
+        AddWaterGroup(project, scene, { Vector3(0f, 0f, 0f) }).addWater(WaterPreset.SEA)
         val (lake, sea) = surfaces().valid
         assertEquals("Sea", sea.name)
         assertEquals(Triple(0.0, 0.0, 0.0), Triple(sea.x, sea.level, sea.z))

@@ -11,16 +11,35 @@ import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
 import net.nevinsky.abyssus.lib.core.ui.model.UiMeta
 import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
 import net.nevinsky.abyssus.lib.core.ui.model.UiScreenKind
+import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectDto
 
 /** The two asset folders under a project row; `Scenes` stays the project's own `scenes` list. */
 enum class FolderKind { UI, ASSETS }
 
+/**
+ * A view-only tree row that lists its own [children] and [text], so a new row type is one class and the compiler
+ * does not let it miss either.
+ */
+sealed interface TreeSource {
+    fun children(): List<DtoRow>
+    fun text(): RowText
+}
+
 /** A view-only folder row (`UI` or `Assets`) holding [assets]. Nothing in a document names it. */
-data class FolderRow(val kind: FolderKind, val assets: List<Asset<Any>>)
+data class FolderRow(val kind: FolderKind, val assets: List<Asset<Any>>) : TreeSource {
+    override fun children() = folderRows(this)
+    override fun text() = RowText(
+        AbyssusBundle.message(if (kind == FolderKind.UI) "treeUi" else "treeAssets"),
+        assets.size.toString()
+    )
+}
 
 /** A view-only type group under `Assets`: every asset whose type falls in [group] (`SKYBOX` also holds the procedural and HDR skies). */
-data class TypeGroup(val group: String, val assets: List<Asset<Any>>)
+data class TypeGroup(val group: String, val assets: List<Asset<Any>>) : TreeSource {
+    override fun children() = groupRows(this)
+    override fun text() = RowText(groupLabel(group), assets.size.toString())
+}
 
 /** The group a [type] lists under: the three skybox types share one. */
 fun groupOf(type: MetaType): String = when (type) {
@@ -57,7 +76,13 @@ fun folderRows(folder: FolderRow): List<DtoRow> = when (folder.kind) {
 data class UiScreenEntry(val asset: Asset<*>, val screen: UiScreen)
 
 /** The screens of every UI asset that are of one [kind], listed under a `Screens` or `Overlays` row. */
-data class UiScreenGroup(val kind: UiScreenKind, val entries: List<UiScreenEntry>)
+data class UiScreenGroup(val kind: UiScreenKind, val entries: List<UiScreenEntry>) : TreeSource {
+    override fun children() = screenRows(this)
+    override fun text() = RowText(
+        AbyssusBundle.message(if (kind == UiScreenKind.OVERLAY) "treeOverlays" else "treeScreens"),
+        entries.size.toString()
+    )
+}
 
 /** The screens of [assets] of [kind], assets in name order and screens in document order. */
 private fun screenEntries(assets: List<Asset<Any>>, kind: UiScreenKind): List<UiScreenEntry> =

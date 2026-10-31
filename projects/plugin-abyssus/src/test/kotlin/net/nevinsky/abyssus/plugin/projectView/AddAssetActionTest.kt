@@ -17,7 +17,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import java.io.File
 
 /** Add Asset on a scene of a copy of the Untitled project. */
@@ -53,7 +53,7 @@ class AddAssetActionTest : BasePlatformTestCase() {
         return event.presentation.isEnabledAndVisible
     }
 
-    private fun group(selected: (String) -> Unit = {}, at: Vec3 = Vec3(0f, 0f, 0f)) = AddAssetGroup(project, scene(), testMetaFiles(), { at }, selected).getChildren(null)
+    private fun group(selected: (String) -> Unit = {}, at: Vector3 = Vector3(0f, 0f, 0f)) = AddAssetGroup(project, scene(), testMetaFiles(), { at }, selected).getChildren(null)
 
     fun testTheGroupListsTheProjectsModelsAndTerrainsOnly() {
         copyProject()
@@ -77,7 +77,7 @@ class AddAssetActionTest : BasePlatformTestCase() {
         val editor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
         val before = document().text
         var selected: String? = null
-        val tree = group({ selected = it }, Vec3(10f, 0f, -4f)).first { it.templatePresentation.text == "tree" }
+        val tree = group({ selected = it }, Vector3(10f, 0f, -4f)).first { it.templatePresentation.text == "tree" }
         tree.actionPerformed(TestActionEvent.createTestEvent(tree))
         assertEquals("9", selected)
         val entity = entities()["9"]["components"]
@@ -109,6 +109,6 @@ class AddAssetActionTest : BasePlatformTestCase() {
     fun testASceneOutsideAProjectHasNothingToAdd() {
         val loose = myFixture.addFileToProject("loose/Alone.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""").virtualFile
         assertFalse(hasRenderAssets(loose, testMetaFiles()))
-        assertTrue(AddAssetGroup(project, loose, testMetaFiles(), { Vec3(0f, 0f, 0f) }).getChildren(null).isEmpty())
+        assertTrue(AddAssetGroup(project, loose, testMetaFiles(), { Vector3(0f, 0f, 0f) }).getChildren(null).isEmpty())
     }
 }

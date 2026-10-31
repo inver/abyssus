@@ -8,7 +8,6 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.graphics.Pixmap
-import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.ControlLineGame
@@ -39,7 +38,7 @@ class PixelEvidenceGlTest {
     fun recordOrCompareTheFieldPixels() {
         assumeTrue("set -Dabyssus.perf.pixels=record|compare", mode == "record" || mode == "compare")
         assumeTrue("GL tests are opt-in", TestGl.enabled)
-        TestGl.run(1200) {
+        TestGl.run(1200, 1280, 720) {
             if (mode == "record") record() else compare()
         }
     }
@@ -70,8 +69,7 @@ class PixelEvidenceGlTest {
         val ctx = BaseCtx(project.path, "/shader", ControlLineGame::class.java, log)
             .also { it.componentRegistry.registerAll(CONTROL_LINE_COMPONENTS) }
         val loader = RuntimeSceneLoader(ctx.sceneLoader, ctx.ecsLoader, log)
-        val renderer = FieldRenderer(ctx)
-        val target = FrameBuffer(Pixmap.Format.RGBA8888, 1280, 720, true)
+        val renderer = FieldRenderer(ctx, requested = if (System.getProperty("abyssus.perf.pipeline") == "legacy") FieldRenderSettings.LEGACY else FieldRenderSettings())
         try {
             val field = FieldScene(requireNotNull(loader.load("Field.scene")) { messages.joinToString("\n") })
             val cameras = Cameras(1280f, 720f)
@@ -82,23 +80,25 @@ class PixelEvidenceGlTest {
             var frames = 0
             while (settled < 30) {
                 cameras.flying(pilot, plane)
-                target.begin(); renderer.draw(field, cameras.camera, seconds = 0f); target.end()
-                settled = if (renderer.loaded(field)) settled + 1 else 0
+                Gdx.gl.glViewport(0, 0, 1280, 720)
+                renderer.draw(field, cameras.camera, seconds = 0f)
+                // everything built and nothing still loading (textures arrive after the models and terrains)
+                settled = if (renderer.loaded(field) && !ctx.assetStorage.isLoading()) settled + 1 else 0
+                if (settled == 0) Thread.sleep(5)
                 check(++frames < 20_000) { "the field never loaded: $messages" }
             }
             repeat(FRAMES) {
                 cameras.flying(pilot, plane)
-                target.begin(); renderer.draw(field, cameras.camera, seconds = 1f / 60f); target.end()
+                Gdx.gl.glViewport(0, 0, 1280, 720)
+                renderer.draw(field, cameras.camera, seconds = 1f / 60f)
             }
-            target.begin()
+            // the game's own target is the default framebuffer, read bottom-up
             val pixmap = Pixmap.createFromFrameBuffer(0, 0, 1280, 720)
-            target.end()
             val image = BufferedImage(1280, 720, BufferedImage.TYPE_INT_RGB)
-            for (y in 0 until 720) for (x in 0 until 1280) image.setRGB(x, y, pixmap.getPixel(x, y) ushr 8)
+            for (y in 0 until 720) for (x in 0 until 1280) image.setRGB(x, y, pixmap.getPixel(x, 719 - y) ushr 8)
             pixmap.dispose()
             return image
         } finally {
-            target.dispose()
             renderer.dispose()
             ctx.executor.shutdownNow()
             project.deleteRecursively()

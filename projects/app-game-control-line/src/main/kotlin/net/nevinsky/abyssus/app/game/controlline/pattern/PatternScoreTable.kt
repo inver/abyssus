@@ -5,10 +5,9 @@
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import net.nevinsky.abyssus.app.game.controlline.io.RankedBoard
 import net.nevinsky.abyssus.app.game.controlline.score.TABLE_SIZE
 import java.nio.file.Files
 import java.nio.file.Path
@@ -67,6 +66,7 @@ class PatternScoreTable(
     val recordings: RecordingStore = RecordingStore(file.resolveSibling("f2b-flights")),
 ) {
     private val store = AtomicJsonStore()
+    private val ranking = RankedBoard<PatternScoreEntry>(TABLE_SIZE) { it.score }
 
     private var boards: Map<String, List<PatternScoreEntry>> = emptyMap()
 
@@ -76,13 +76,11 @@ class PatternScoreTable(
 
     init {
         if (Files.exists(file)) {
-            boards = store.read(file, {
-                val read = json.copy().configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, true)
-                    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-                    .readValue(it.toFile(), PatternScoresFile::class.java)
-                require(read.version == F2B_SCORES_VERSION) { "unknown version ${read.version}" }
-                read.boards.mapValues { ranked(it.value) }
-            }, { damaged = true }).orEmpty()
+            boards = store.readJson(
+                file, json, PatternScoresFile::class.java, lenient = true,
+                validate = { require(it.version == F2B_SCORES_VERSION) { "unknown version ${it.version}" } },
+                damaged = { damaged = true },
+            )?.boards?.mapValues { ranking.ranked(it.value) }.orEmpty()
             // a table that could not be read names nothing, but its recordings may still be wanted
             if (!damaged) prune()
         }
@@ -101,8 +99,7 @@ class PatternScoreTable(
 
     /** Whether a flight scoring [score] would enter [level]'s board. */
     fun qualifies(level: AssistLevel, score: Double): Boolean {
-        val board = board(level)
-        return board.size < TABLE_SIZE || score > board.last().score
+        return ranking.qualifies(board(level), score)
     }
 
     /**
@@ -121,7 +118,7 @@ class PatternScoreTable(
         }
         val named = if (id != null) entry.copy(flight = id) else entry
         val before = board(level)
-        val next = ranked(before + named)
+        val next = ranking.ranked(before + named)
         boards = boards + (level.key to next)
         try {
             save()
@@ -141,12 +138,5 @@ class PatternScoreTable(
         }
     }
 
-    private fun ranked(list: List<PatternScoreEntry>) = list.sortedByDescending { it.score }.take(TABLE_SIZE)
-
-    private fun save() {
-        store.save(file, "f2b-scores") { temp ->
-            Files.writeString(temp, json.copy().enable(SerializationFeature.INDENT_OUTPUT)
-                .writeValueAsString(PatternScoresFile(F2B_SCORES_VERSION, boards)).replace("\r\n", "\n") + "\n")
-        }
-    }
+    private fun save() = store.saveJson(file, "f2b-scores", json, PatternScoresFile(F2B_SCORES_VERSION, boards))
 }

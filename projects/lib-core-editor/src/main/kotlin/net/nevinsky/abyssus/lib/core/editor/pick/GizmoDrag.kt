@@ -9,14 +9,10 @@ import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.scene.toVec3
-import net.nevinsky.abyssus.lib.core.editor.scene.toVector3
 import kotlin.math.atan2
 
 /** What a drag has done to the object so far; [direction] is the turned direction for objects that have one. */
-data class DragResult(val transform: PlacementTransform, val direction: Vec3?)
+data class DragResult(val transform: PlacementTransform, val direction: Vector3?)
 
 internal class GizmoMath {
     /** The distance along [ray] to the plane through [point] with [normal], or null when parallel or behind. */
@@ -49,14 +45,18 @@ class GizmoDrag(
     private val axis: GizmoAxis,
     val start: PlacementTransform,
     startRay: Ray,
-    private val startDirection: Vec3? = null,
-    axisDirection: Vec3 = axis.direction,
+    private val startDirection: Vector3? = null,
+    axisDirection: Vector3 = axis.direction,
     private val snap: GizmoSnap? = null,
+    /** Two unit axes: a [GizmoMode.MOVE] drag then slides the object in their plane instead of along [axisDirection]. */
+    private val plane: Pair<Vector3, Vector3>? = null,
 ) {
-    private val origin = start.position.toVector3()
-    private val axisVector = axisDirection.toVector3()
+    private val origin = start.position.cpy()
+    private val axisVector = axisDirection.cpy()
+    private val planeNormal: Vector3? = plane?.let { Vector3(it.first).crs(it.second).nor() }
+    private val startPoint: Vector3? = planeNormal?.let { pointOn(startRay, it) }
     private val startParameter: Float? = when (mode) {
-        GizmoMode.MOVE -> GizmoMath().rayLine(startRay, origin, axisVector)
+        GizmoMode.MOVE -> if (planeNormal != null) null else GizmoMath().rayLine(startRay, origin, axisVector)
         GizmoMode.ROTATE, GizmoMode.SELECT -> null
     }
     private val startArm: Vector3? = when (mode) {
@@ -66,7 +66,7 @@ class GizmoDrag(
 
     /** Whether the press could be turned into a drag at all (the ray was not parallel to the axis or the ring). */
     val isUsable: Boolean get() = when (mode) {
-        GizmoMode.MOVE -> startParameter != null
+        GizmoMode.MOVE -> if (planeNormal != null) startPoint != null else startParameter != null
         GizmoMode.ROTATE -> startArm != null
         GizmoMode.SELECT -> false
     }
@@ -84,13 +84,30 @@ class GizmoDrag(
     }
 
     private fun move(ray: Ray): DragResult? {
+        if (plane != null) return moveInPlane(ray, plane)
         val from = startParameter ?: return null
         val to = GizmoMath().rayLine(ray, origin, axisVector) ?: return null
         val shift = Vector3(axisVector).scl(to - from)
         val p = Vector3(origin).add(shift)
         // Snapping rounds the coordinate along the axis, not the distance dragged.
         snap?.let { p.mulAdd(axisVector, it.move(p.dot(axisVector)) - p.dot(axisVector)) }
-        return DragResult(start.copy(position = p.toVec3()), startDirection)
+        return DragResult(start.copy(position = p.cpy()), startDirection)
+    }
+
+    /** Slides the object by how far the cursor's point on the plane through the object has travelled; snapping rounds both plane coordinates. */
+    private fun moveInPlane(ray: Ray, axes: Pair<Vector3, Vector3>): DragResult? {
+        val from = startPoint ?: return null
+        val to = pointOn(ray, planeNormal ?: return null) ?: return null
+        val p = Vector3(origin).add(to).sub(from)
+        snap?.let {
+            for (a in listOf(axes.first, axes.second)) p.mulAdd(a, it.move(p.dot(a)) - p.dot(a))
+        }
+        return DragResult(start.copy(position = p.cpy()), startDirection)
+    }
+
+    private fun pointOn(ray: Ray, normal: Vector3): Vector3? {
+        val t = GizmoMath().rayPlane(ray, origin, normal) ?: return null
+        return Vector3(ray.origin).mulAdd(ray.direction, t)
     }
 
     private fun rotate(ray: Ray): DragResult? {
@@ -100,8 +117,8 @@ class GizmoDrag(
         val degrees = Math.toDegrees(angle.toDouble()).toFloat()
         val delta = Quaternion(axisVector, snap?.rotate(degrees) ?: degrees)
         val q = Quaternion(start.rotation.x, start.rotation.y, start.rotation.z, start.rotation.w).mulLeft(delta).nor()
-        val direction = startDirection?.let { delta.transform(it.toVector3()).toVec3() }
-        return DragResult(start.copy(rotation = Quat(q.x, q.y, q.z, q.w)), direction)
+        val direction = startDirection?.let { delta.transform(it.cpy()).cpy() }
+        return DragResult(start.copy(rotation = Quaternion(q.x, q.y, q.z, q.w)), direction)
     }
 
     /** The vector from the object to where [ray] crosses the ring's plane. */

@@ -1,6 +1,6 @@
 package net.nevinsky.abyssus.lib.core.ecs.system
 
-import net.nevinsky.abyssus.lib.core.ecs.isActive
+import net.nevinsky.abyssus.lib.core.ecs.component.isActive
 import com.badlogic.ashley.core.ComponentMapper
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.Family

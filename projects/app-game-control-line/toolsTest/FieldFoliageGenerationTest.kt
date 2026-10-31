@@ -46,12 +46,13 @@ class FieldFoliageGenerationTest {
     @Test
     fun theCommittedProjectIsExactlyWhatTheMigrationMakesOfTheOriginal() = withOriginal { project ->
         FieldFoliageTool().generate(project, committedManifest())
-        applyPostMigrationSceneEdits(project)
         val made = checksums(project)
         val committed = checksums(committedProject())
-        for (path in made.keys.filter { it.startsWith("assets/foliage_airfield_") || it.startsWith("assets/model_airfield_grass/") || it == "scenes/Field.scene" }) {
+        for (path in made.keys.filter { it.startsWith("assets/foliage_airfield_") || it.startsWith("assets/model_airfield_grass/") }) {
             assertEquals(path, made[path], committed[path])
         }
+        // the scene was authored further after the migration: it keeps exactly what the migration does to it
+        assertEquals(migrationFootprint(project, manifest), migrationFootprint(committedProject(), manifest))
         assertEquals(committed.keys.filter { it.startsWith("assets/foliage_") }.toSet(), made.keys.filter { it.startsWith("assets/foliage_") }.toSet())
     }
 

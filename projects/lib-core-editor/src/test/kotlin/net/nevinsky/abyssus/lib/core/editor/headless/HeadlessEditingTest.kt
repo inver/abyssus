@@ -5,23 +5,22 @@
 
 package net.nevinsky.abyssus.lib.core.editor.headless
 
-import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
-import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
-import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
-import net.nevinsky.abyssus.lib.core.format.FormatProblem
-import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.meta.FieldValue
-import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
+import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.testProject
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
+import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
+import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
+import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
+import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.format.FormatProblem
+import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
 
@@ -43,7 +42,7 @@ class HeadlessEditingTest {
 
     @Test fun moveAnEntityChangesOnlyItsXPosition() {
         val model0 = SceneJson().parse(sceneText)["ecs"]["0"]["components"]["PositionComponent"]["localPosition"]
-        val edit = TransformEdit(position = Vec3(1f, model0["y"].floatValue(), model0["z"].floatValue()))
+        val edit = TransformEdit(position = Vector3(1f, model0["y"].floatValue(), model0["z"].floatValue()))
         val moved = editing.transform(sceneText, "0", edit) as HeadlessEdit.Edited
         assertEquals(listOf("\"x\": 1.0,"), changedLines(sceneText, moved.text))
         assertEquals(1.0, SceneJson().parse(moved.text)["ecs"]["0"]["components"]["PositionComponent"]["localPosition"]["x"].doubleValue(), 0.0)
@@ -58,7 +57,7 @@ class HeadlessEditingTest {
             ResourceEditorMessages().message("unsupportedFormat.LEGACY_FIELD", refusal.rejection!!.path),
             refusal.message,
         )
-        val edit = editing.transform(legacy, "0", TransformEdit(position = Vec3(1f, 0f, 0f)))
+        val edit = editing.transform(legacy, "0", TransformEdit(position = Vector3(1f, 0f, 0f)))
         assertEquals(HeadlessEdit.Refused(refusal), edit)
         assertNull(editing.validate(sceneText, DocumentKind.SCENE))
         assertNull(editing.validate(File(project, "Untitled.abss").readText(), DocumentKind.PROJECT))
@@ -68,12 +67,12 @@ class HeadlessEditingTest {
     @Test fun anAssetPropertyEditChangesOnlyThatKey() {
         // an unknown extension key, written as the file's own printer writes it
         val withExtension = terrainMeta.replaceFirst("\"type\": \"TERRAIN\",", "\"type\": \"TERRAIN\",\n  \"x-tool\": {\n    \"kept\": 1.50\n  },")
-        val edited = editing.setAssetProperty(withExtension, "size", FieldValue.Int(1600), FieldValue.Int(2048)) as HeadlessEdit.Edited
+        val edited = editing.setAssetProperty(withExtension, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(2048)) as HeadlessEdit.Edited
         assertEquals(listOf("\"size\": 2048,"), changedLines(withExtension, edited.text))
         assertTrue(edited.text.contains("\"kept\": 1.50"))
-        val refused = editing.setAssetProperty(withExtension, "size", FieldValue.Int(1600), FieldValue.Int(0)) as HeadlessEdit.Refused
+        val refused = editing.setAssetProperty(withExtension, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(0)) as HeadlessEdit.Refused
         assertEquals(ResourceEditorMessages().message("assetEditError.NOT_POSITIVE"), refused.refusal.message)
-        val conflict = editing.setAssetProperty(withExtension, "size", FieldValue.Int(999), FieldValue.Int(2048)) as HeadlessEdit.Refused
+        val conflict = editing.setAssetProperty(withExtension, "size", AssetFieldValue.Int(999), AssetFieldValue.Int(2048)) as HeadlessEdit.Refused
         assertEquals(ResourceEditorMessages().message("assetFieldConflict"), conflict.refusal.message)
     }
 
@@ -87,10 +86,10 @@ class HeadlessEditingTest {
 
     @Test fun movingAnArrangedCopyWritesTheSameTextAsTheSceneViewDoes() {
         val root = SceneJson().parse(sceneText)
-        val points = listOf(Vec3(0f, 0f, 0f), Vec3(40f, 0f, 0f))
-        ArrangementEdits(ResourceEditorMessages()).create(root, RenderAsset("MODEL", "tree"), points, false, LineHeights())
+        val points = listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f))
+        ArrangementEdits(ResourceEditorMessages()).create(root, BaseMeta(MetaType.MODEL, "tree"), points, false, LineHeights())
         val arranged = SceneJson().pretty(root)
-        val edit = TransformEdit(position = Vec3(20f, 0f, 4f))
+        val edit = TransformEdit(position = Vector3(20f, 0f, 4f))
         val headless = (editing.transform(arranged, "14", edit) as HeadlessEdit.Edited).text
         val plugin = DocumentTextEditor().edit(arranged, DocumentKind.SCENE) { SceneTransformWriter().apply(it, "14", edit) }
         assertEquals((plugin as TextEditOutcome.Edited).text, headless)

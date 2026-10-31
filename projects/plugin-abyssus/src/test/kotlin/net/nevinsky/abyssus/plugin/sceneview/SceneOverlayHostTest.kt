@@ -7,8 +7,8 @@ package net.nevinsky.abyssus.plugin.sceneview
 
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.graphics.Color
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.lib.core.editor.parseScene
@@ -26,17 +26,17 @@ class SceneOverlayHostTest {
 
     /** Draws a small cross at each entity position the view shows. */
     private class MarkerOverlay : SceneOverlay {
-        val seen = mutableListOf<Map<String, Vec3>>()
+        val seen = mutableListOf<Map<String, Vector3>>()
         override fun draw(view: OverlayView, lines: LineSink) {
             seen += view.content.entityPositions
-            for (p in view.content.entityPositions.values) lines.line(Vec3(p.x - 0.1f, p.y, p.z), Vec3(p.x + 0.1f, p.y, p.z), Rgba(1f, 1f, 1f, 1f))
+            for (p in view.content.entityPositions.values) lines.line(Vector3(p.x - 0.1f, p.y, p.z), Vector3(p.x + 0.1f, p.y, p.z), Color(1f, 1f, 1f, 1f))
         }
     }
 
     private class Recorder : LineSink {
-        val centres = mutableListOf<Vec3>()
-        override fun line(from: Vec3, to: Vec3, color: Rgba) {
-            centres += Vec3((from.x + to.x) / 2, (from.y + to.y) / 2, (from.z + to.z) / 2)
+        val centres = mutableListOf<Vector3>()
+        override fun line(from: Vector3, to: Vector3, color: Color) {
+            centres += Vector3((from.x + to.x) / 2, (from.y + to.y) / 2, (from.z + to.z) / 2)
         }
     }
 

@@ -11,6 +11,7 @@ import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 enum class CloudChoice(val technique: CloudTechnique?) {
     ASSET(null),
     LAYERED(CloudTechnique.LAYERED),
+    CUMULUS(CloudTechnique.CUMULUS),
     SHELLS(CloudTechnique.SHELLS),
     VOLUMETRIC(CloudTechnique.VOLUMETRIC),
 }

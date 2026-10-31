@@ -6,6 +6,9 @@ package net.nevinsky.abyssus.app.game.controlline.pattern
 
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.app.game.controlline.track.arcLength
+import net.nevinsky.abyssus.app.game.controlline.track.dropEnd
+import net.nevinsky.abyssus.app.game.controlline.track.dropStart
 import kotlin.math.abs
 import kotlin.math.acos
 import kotlin.math.atan2
@@ -106,27 +109,6 @@ private fun tangent(a: Vector3, b: Vector3): Vector3 {
     return chord.mulAdd(mid, -chord.dot(mid)).nor()
 }
 
-/** The points of [points] after dropping the first [length] radians of arc, with the first one replaced by the cut. */
-private fun dropStart(points: List<Vector3>, length: Float): List<Vector3> {
-    var travelled = 0f
-    for (i in 1 until points.size) {
-        val step = acos(points[i - 1].dot(points[i]).coerceIn(-1f, 1f))
-        if (travelled + step >= length) {
-            val t = if (step > 0f) (length - travelled) / step else 0f
-            val cut = Vector3(points[i - 1]).lerp(points[i], t).nor()
-            return listOf(cut) + points.subList(i, points.size)
-        }
-        travelled += step
-    }
-    return listOf(points.last())
-}
-
-private fun length(points: List<Vector3>): Float {
-    var sum = 0f
-    for (i in 1 until points.size) sum += acos(points[i - 1].dot(points[i]).coerceIn(-1f, 1f))
-    return sum
-}
-
 /** The points of a [rounded] path, with where each edge's corner begins: `junctionStart[j]` is the index of the first point of the corner before edge `j` (0 for the first edge). */
 class RoundedPath(val points: List<Pair<Vector3, Tag>>, val junctionStart: IntArray, val edgeStart: IntArray)
 
@@ -147,7 +129,7 @@ fun rounded(edges: List<Edge>, cornerRadius: Float, cornerTag: Tag = Tag.CORNER)
         val theta = abs(atan2(Vector3(tIn).crs(tOut).dot(vertex), tIn.dot(tOut)))
         if (theta < 3f * D2R || cornerRadius <= 0f) continue
         var d = cornerRadius * D2R * sin(theta / 2f) / (cos(theta / 2f) * cos(theta / 2f))
-        d = min(d, 0.45f * min(length(a), length(b)))
+        d = min(d, 0.45f * min(arcLength(a), arcLength(b)))
         val trimmedA = dropEnd(a, d)
         val trimmedB = dropStart(b, d)
         val p0 = trimmedA.last()
@@ -179,8 +161,6 @@ fun RoundedPath.trimmedToCorners(): RoundedPath {
     if (first < 0) return this
     return RoundedPath(points.subList(first, last + 1), IntArray(junctionStart.size) { max(0, junctionStart[it] - first) }, IntArray(edgeStart.size) { max(0, edgeStart[it] - first) })
 }
-
-private fun dropEnd(points: List<Vector3>, length: Float): List<Vector3> = dropStart(points.asReversed(), length).asReversed()
 
 /**
  * Collects an ideal track's points from edges and arcs, remembering the plane's orientation and the repeat each belongs

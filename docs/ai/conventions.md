@@ -76,7 +76,7 @@ Readers never write (`ConfigFileReader` implementations never write and never th
 - component add, edit and remove, and Add Light (`SceneComponentEdits`),
 - Add Foliage on a terrain entity,
 - saved ray settings and per-instance optical overrides (`SceneRayEdits`),
-- asset property edits in the properties panel (`AssetMetaEdits` in `properties/AssetMetaEdits.kt`): one `additional` key
+- asset property edits in the properties panel (`AssetMetaEdits` in `assetfiles/AssetMetaEdits.kt`): one `additional` key
   of an asset's `meta.json` per command, named Edit Asset Property. The rules (which keys, validation, defaults, stale
   values) are `lib-core-editor`'s `AssetMetaEditor`'s, which works on any JSON tree and never touches `version`, `uuid`, `type`,
   `lastModified` or unknown keys.

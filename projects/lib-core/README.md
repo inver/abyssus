@@ -20,7 +20,7 @@ code is in `net.nevinsky.abyssus.lib.core.assets`.
 
 | Package | What |
 |---|---|
-| `core.io`, `core.util` | `FileLoader` (an asset folder's files, refusing names that leave the assets folder), `AbyssusProjectLayout` (folder and file name constants), `JsonProcessor` (binds native JSON), `NativeJsonTree` (the lossless reader: key order, nulls and number text such as `2.50` and `1.0E-4` kept; `SceneJson` and `SceneLoader` both read through it), `SourceBackedComponent` (a component written back from the object it was read from), `createFullscreenTriangle` (GL-thread mesh factory), shared digest/angle helpers and GL constants |
+| `core.io`, `core.util` | `FileLoader` (an asset folder's files, refusing names that leave the assets folder), `AbyssusProjectLayout` (folder and file name constants), `JsonProcessor` (binds native JSON), `NativeJsonTree` (the lossless reader: key order, nulls and number text such as `2.50` and `1.0E-4` kept; `SceneJson` and `SceneLoader` both read through it), `createFullscreenTriangle` (GL-thread mesh factory), shared digest/angle helpers and GL constants |
 | `core.defaults` | Top-level `NO_ENTITY` reference sentinel |
 | `core.dto` | `ProjectDto`, `SceneDto`, camera, light and fog DTOs |
 | `project`, `scene` (under `lib-core`) | `ProjectLoader`, `SceneLoader`, `RuntimeSceneLoader`, `SceneContext` |
@@ -29,12 +29,12 @@ code is in `net.nevinsky.abyssus.lib.core.assets`.
 | `core.ui` | The native UI asset: `ui.model` holds the immutable screen, widget, binding and resource definitions, `UiMeta` (the typed `additional` of a `UI` asset) and `UiAdmission`; `ui.validation` holds `UiCollectionDecoder`, which admits a `meta.json` tree (native markers, schema version 1, ids, geometry, limits) without IO. `project.UiProjectRegistry` resolves the project's `uiAssetNames`; `ui.layout` is the pure layout engine; `ui.state` holds typed bindings, validated write-back and navigation; `ui.render` is the shared Scene2D presenter; `ui.style` resolves styles; `assets.ui` prepares and owns the GL resources. See *UI assets*, *UI host contract* and *UI renderer and resources* below |
 | `core.assets.loading` | `AssetLoader` (prepare / dependencies / upload / build / discard), `AssetStorage` (the cache and owner of built assets: load once, fail once, slice GPU work per frame, load dependencies first) with `BuiltAssets`, `TextureUploadQueue`, `LoadBook` (package-internal, GL-free: the current load and the replacement of each name, which generation owns a message, dependency satisfaction and failure, cycles, retain closure; `AssetStorage` keeps upload, build, discard and notifications), `ShaderStorage` (GLSL from a resource folder; `#pragma include` lines are expanded from `lib-gdx`'s shared GLSL) |
 | `core.assets.model` | `ModelLoader` (glTF and other formats through `lib-gdx`'s Assimp loader), `ModelMeta`, `ModelPreparationTap` |
-| `core.assets.terrain` | `TerrainLoader`, `TerrainData`, `TerrainMesh`, `TerrainMeta` |
+| `core.assets.terrain` | `TerrainLoader`, `TerrainData`, `TerrainMesh` (`splatTexture()` is the built splat map), `TerrainMeta`, `SplatTexture` (updates a rectangle of a built splat map `Texture` in place with `glTexSubImage2D` from RGBA bytes, so a live paint stroke re-sends only the changed texels; `packSplatRows` is its pure row packing) |
 | `core.assets.foliage` | `FoliageLoader` (`FOLIAGE` assets: reads the meta, the masks and the bake off the GL thread and declares the terrain and layer models as dependencies), `FoliageMeta` and the layer model types, `FoliageMaskFile` (`layer-<id>.mask`: `maskResolution²` bytes z-major, a missing file is a full mask), `FoliageDataFile` (the `ABFO` bake: `FoliageBake`, `FoliageLayerBake`, `FoliageCopy`, read as stale when it does not fit), `FoliageFingerprint` (SHA-256 of the generation inputs), `FoliageRuntimeLoad` (the read policy of games and physics: metadata, terrain, bake and masks as written, never generated or written; a stale or unverifiable bake keeps its saved copies, copies that cannot be placed are dropped, and problems are returned as bounded warnings), `FoliageCollider` / `FoliageColliderReader` (a layer's optional neutral BOX/SPHERE/CAPSULE `collider`, with the `ColliderComponent` defaults; absent is told apart from invalid) and `FoliageDrawable` (the instanced GL side, reused by the runtime) |
 | `core.assets.texture` | `TextureLoader` (`TEXTURE` and `PIXMAP_TEXTURE` assets: image decoded off the GL thread, uploaded as a mipmapped repeating texture), `PreparedTexture` (the decoded image; `release()` hands the `Pixmap` to a caller that uploads it itself) and `TextureMeta` |
 | `core.assets.sky` | `SkyRenderer` (a drawable background); `cube/` six-face skyboxes, `procedural/` skies drawn by the asset's own GLSL, `hdr/` OpenEXR skies and their lighting environment. Each has a `*Loader` |
 | `core.water` | Realistic water viewed from above, as plain constructor-wired classes with no IDE or editor imports: `WaterSettings` / `WaterPresets` / `WaterValidation` (the saved scalars, the Lake and Sea defaults and their range rules), the pure math the renderer and its tests share (`WaterWaves` and `WaterMeshPlanner` for the bounded wave grid, `WaterReflectionCamera`, `WaterDepthMath` for the packed linear depth, `WaterScreenArea`, `WaterPassPlanner` for the per-frame reflection budget), and `WaterDrawable` with its GLSL under `resources/shader/water` (`ShaderStorage.withWaterShaders()`). The scene view owns the offscreen targets and the pass order; see `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md` |
-| `core.assets.sky.clouds` | The clouds of a procedural sky: `CloudMeta`, nested `CloudMeta.CloudBand`, `CloudType` (level and defaults), `CloudLevel` with its `CloudBandLimits`, `CloudTechnique`; settings decode through `AssetMetaBinder` / `CloudSettingsReader`; `CloudsLoader` and `Clouds` (the `CLOUDS` asset: bands, technique and the volumetric 3D noise from `CloudNoiseGenerator`, built on FastNoiseLite), which a procedural sky names by `uuid` and loads as a dependency; `CloudField`, the cloud techniques and `SunOcclusion` |
+| `core.assets.sky.clouds` | The clouds of a procedural sky: `CloudMeta`, nested `CloudMeta.CloudBand`, `CloudType` (level and defaults), `CloudLevel` with its `CloudBandLimits`, `CloudTechnique`; settings decode through `AssetMetaBinder`; `CloudsLoader` and `Clouds` (the `CLOUDS` asset: bands, technique and the volumetric 3D noise from `CloudNoiseGenerator`, built on FastNoiseLite), which a procedural sky names by `uuid` and loads as a dependency; `CloudField`, the cloud techniques and `SunOcclusion` |
 
 `ExrLoader.dimensions` and `HdrPreview.dimensions` read the EXR data-window dimensions without decoding pixels.
 Header parsing is shared with decoding; native headers and images each have explicit cleanup. Chooser and panel
@@ -54,22 +54,28 @@ Sky shaders are in `src/main/resources/shader/sky/`: the defaults of `ShaderStor
 asset's own folder first (`withAssets`), then in classpath folders the host adds (`withResources(path, anchor)`), then in those defaults,
 and compiles programs from it. `projects/lib-core/src/main/resources/clouds/templates/` holds fair, overcast and
 storm examples of `CLOUDS` metas. The IDE does not create cloud assets from these templates.
+Cloud techniques are `CloudRenderer`s chosen by `CloudTechnique`: `layered` (one flat layer per band), `cumulus`
+(`clouds_cumulus.frag`: the same flat layer shaded as heaped cloud, with an eroded ragged edge, a dome from the coverage
+and a tap toward the sun that brightens the sun-facing side and greys the base; one pass per band), `shells` and
+`volumetric` (`clouds_volumetric.frag`: a ray-marched band; a heaped band gets a stronger lift from the base noise, a harder detail erosion, a sharpened edge, a higher extinction and a brightened sunlit side, so cumulus heads stand round on a flat base, while other profiles keep the soft shape). A technique that cannot be built falls back volumetric, shells, cumulus, layered, none.
 
 **Sky lighting and the cloudy-sky environment.** A procedural sky with `additional.lightsScene: true` owns a
 `ProceduralSkyLighting` (a linear 64²-per-face cube from `atmosphere_linear.frag` and the shell clouds, turned into specular
 and irradiance cubes by `HdrEnvironmentBuild` over a borrowed `CubeSource`, rebuilt as `LightingRefreshPolicy` says and faded
-in); the host advances it with `ProceduralSky.updateLighting` every frame and lights with `ProceduralSky.lightingState`.
+in); the host advances it with `ProceduralSky.updateLighting` every frame and lights with `ProceduralSky.lightingEnvironment`.
 Any other feature that needs to *see* the sky from a surface (water reflection fallbacks, ray tracing misses) can ask for the
 same cube without `lightsScene`:
 
-- Call `ProceduralSky.updateEnvironment(sun, timeSeconds)` once per frame while the feature needs it, on the GL thread. The
-  first call builds the cube; nothing is built for a sky nobody asks of, and the scene's ambient color is not replaced.
-- The returned `SkyEnvironment` holds the linear `RGBA16F` cube (mips filled, display tone mapping not applied: not a
-  picture of the sky) and a `revision` that grows with every rebuild. Rebuilds happen when the sun moves over a degree, every
+- Call `ProceduralSky.acquireEnvironment()` once when the feature needs the cube, on the GL thread, and keep the returned
+  `EnvironmentLease` open while it does; the host's per-frame `updateLighting` then keeps it current. Nothing is built for a
+  sky nobody leases, and the scene's ambient color is not replaced.
+- The lease's `environment` holds the linear `RGBA16F` cube (mips filled, display tone mapping not applied: not a
+  picture of the sky), or null until the first build is done, and its `revision` grows with every rebuild. Rebuilds happen when the sun moves over a degree, every
   two seconds of cloud time while a band has wind, and when the cloud asset is reloaded, replaced or removed. Compare
   revisions to know when to refresh whatever was taken from it (a CPU snapshot, an accumulation).
-- The cube belongs to the sky: do not dispose it, and do not keep it past the next update or `releaseEnvironment()`. It is
-  disposed with the sky and abandoned with the GL context.
+- The cube belongs to the sky: do not dispose it, and do not keep it past the next update. Close the lease before the sky is
+  disposed; closing the last lease releases the cube unless the asset opts in with `lightsScene`. It is disposed with the sky
+  and abandoned with the GL context.
 
 Terrain generation and `AssetMetaEditor` live in `lib-core-editor`; their dialogs and document commands live in the
 plugin. `BaseCtx` is the standalone composition root; the IDE builds its own graph through `AssetLoading`.
@@ -90,7 +96,7 @@ entity that renders no terrain is reported once.
 `slots`) is built in and data only: no system reads it. Its points and the copies it lists in `slots` are in world
 coordinates. Defaults are omitted when it is written.
 
-`EcsLoader(json, registry).loadToEngine(ecs, SceneEngine())` reads `ecs.entities` and returns `EcsLoadingWarns`,
+`EcsLoader().loadToEngine(scene.ecs, SceneEngine())` loads the typed `Map<Long, EntityDto>` that `SceneLoader(json, files, registry)` bound, and returns `EcsLoadingWarns`,
 including raw components that could not bind. `RuntimeSceneLoader(sceneLoader, ecsLoader, log)` combines native
 scene admission, an independent engine per load, and look-at/camera systems. `load(sceneName)` reads a file from
 `scenes/`; `loadFromText(text)` reads supplied text without writing it.
@@ -283,6 +289,13 @@ to copy what the loader already holds (the editor's ray snapshots do); the loade
 `offer` disposes the prepared model. A game passes none. The ray-tracing CPU snapshots themselves live in `lib-core-editor`
 (`editor.ray.snapshot`), not here.
 
+## Skies write display colour
+
+A sky draws display-referred colour: the stock procedural atmosphere, a custom `sky.frag` such as Control Line's, cube and
+HDR skies all tone map or encode inside their own shaders. A host that lights its models in linear space and ends them in
+an `OutputTransform` (`lib-gdx`) therefore draws the sky first, untouched, and the transform applies only to what is drawn over
+it; `SkyFrame` carries no transform. The sky's *lighting* cube is separate: it is linear radiance (see below).
+
 ## Procedural sky light and the cloudy environment
 
 A `SKYBOX_PROCEDURAL` asset with the boolean `additional.lightsScene: true` (anything else does not opt in) gives the
@@ -326,6 +339,6 @@ upstream implementation; see [model source provenance](../../docs/third-party/gd
 evidence, not a compatibility guarantee.
 
 Cloud metadata uses lowercase technique/type keys, container-inferred band levels and `wind: [x, z]`.
-`CloudSettingsReader` also accepts the existing enum-name and `windX`/`windZ` representation without rewriting it.
-It resolves type defaults, checks finite values and band limits, and logs/skips invalid bands independently.
+`AssetMetaBinder` also accepts the existing enum-name and `windX`/`windZ` representation without rewriting it.
+It resolves type defaults and logs/skips invalid bands independently; `CloudBandLimits` bound the built-in type defaults.
 The snapshot editor and runtime share this decoder; metadata reading generates no noise or GL resources.

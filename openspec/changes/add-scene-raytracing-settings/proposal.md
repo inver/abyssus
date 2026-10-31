@@ -13,7 +13,7 @@ Scene ray tracing exposes only an on/off switch: users cannot choose an image-qu
 - Add narrowly scoped per-instance material overrides for Transmission and IOR to the selected model entity/Render component's Properties section. Existing alpha transparency is not inferred to be glass.
 - Preserve unrelated scene text, omitted defaults, and key order; accepted edits are undoable and propagate to every open view of the scene.
 
-**Fields read/written:** add root `rayTracing.targetSamplesPerPixel`, `rayTracing.maxRaysPerFrame`, `rayTracing.maxReflectionBounces`, and `rayTracing.maxRefractionBounces`; add `ecs.entities.<id>.components.RenderComponent.rayTracingMaterials.<material-id>.transmission` and `.ior`. Continue reading existing renderable asset references, transforms, model material identifiers, lighting, sky and fog fields. No `.abss`, model source or asset `meta.json` writes are introduced.
+**Fields read/written:** add root `rayTracing.targetSamplesPerPixel`, `rayTracing.maxRaysPerFrame`, `rayTracing.maxReflectionBounces`, and `rayTracing.maxRefractionBounces`; add `ecs.<id>.components.RenderComponent.rayTracingMaterials.<material-id>.transmission` and `.ior`. Continue reading existing renderable asset references, transforms, model material identifiers, lighting, sky and fog fields. No `.abss`, model source or asset `meta.json` writes are introduced.
 
 **Format impact:** these are additive Abyssus scene fields, with defaults omitted. They are native Abyssus scene fields inside the version 1 contract. Implementation depends on `decouple-from-mundus` establishing the native document contract; this planning change does not modify workflow configuration or convert legacy files.
 

@@ -30,8 +30,8 @@ fun loadField(messages: MutableList<String> = mutableListOf()): SceneContext {
     val json = JsonProcessor(log)
     val registry = ComponentRegistry().also { it.registerAll(CONTROL_LINE_COMPONENTS) }
     val loader = RuntimeSceneLoader(
-        SceneLoader(json, FileLoader(bundledProject().toFile())),
-        EcsLoader(json, registry),
+        SceneLoader(json, FileLoader(bundledProject().toFile()), registry),
+        EcsLoader(),
         log,
     )
     return requireNotNull(loader.load("Field.scene")) { messages.joinToString("\n") }

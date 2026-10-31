@@ -8,16 +8,16 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.FoliagePlacement
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Matrix4
-import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.math.collision.Ray
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -47,7 +47,7 @@ class SnapshotSceneQueriesTest {
     }
 
     private fun placement(id: String, x: Float, y: Float, z: Float) =
-        AssetPlacement(id, "model", PlacementTransform(Vec3(x, y, z), Quat.IDENTITY, Vec3(1f, 1f, 1f)))
+        AssetPlacement(id, "model", PlacementTransform(Vector3(x, y, z), Quaternion(), Vector3(1f, 1f, 1f)))
 
     /** Looks down from above the origin terrain (local x 0..100, z 0..100, height 0), so the centre ray lands on it. */
     private fun descending() = PerspectiveCamera(67f, width.toFloat(), height.toFloat()).also {
@@ -76,6 +76,25 @@ class SnapshotSceneQueriesTest {
         val f = fixture(listOf(snapshotBoxOf("far", unit, at(0f, 0f, -6f)), snapshotBoxOf("near", unit, at(0f, 0f, 0f))))
         assertEquals("near", f.queries.pick(width / 2, height / 2, width, height))
         assertNull(f.queries.pick(2, 2, width, height))
+    }
+
+    @Test
+    fun theQueriesSeeThePathDraftCopies() {
+        val path = net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong(listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f))).also {
+            it.asset = BaseMeta(name = "post")
+            it.spacing = 10f
+            it.slots = mutableListOf(11, 12, 13)
+        }
+        val posts = listOf(11, 12, 13).map { placement(it.toString(), 0f, 0f, 0f) }
+        val content = SceneContent(
+            models = posts,
+            arrangements = listOf(net.nevinsky.abyssus.lib.core.editor.content.ArrangementPlacement("10", path)),
+        )
+        val f = fixture(emptyList(), content)
+        assertEquals(3, f.queries.content.models.size)
+        f.state.pathDraft = PathEdit("10", listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)))
+        assertEquals(5, f.queries.content.models.size)
+        assertEquals("the file's content is unchanged", 3, f.queries.sceneContent.models.size)
     }
 
     @Test
@@ -110,7 +129,7 @@ class SnapshotSceneQueriesTest {
     fun aPreviewMovesTheBoxForLaterQueries() {
         val f = fixture(listOf(snapshotBoxOf("floor", unit, at(0f, 0f, 0f)), snapshotBoxOf("a", unit, at(0f, 5f, 0f))), SceneContent(models = listOf(placement("a", 0f, 5f, 0f))))
         assertEquals(5f, f.queries.lowestPoint("a")!!, 1e-5f)
-        f.state.preview = mapOf("a" to DragResult(PlacementTransform(Vec3(0f, 9f, 0f), Quat.IDENTITY, Vec3(1f, 1f, 1f)), null))
+        f.state.preview = mapOf("a" to DragResult(PlacementTransform(Vector3(0f, 9f, 0f), Quaternion(), Vector3(1f, 1f, 1f)), null))
         assertEquals(9f, f.queries.lowestPoint("a")!!, 1e-5f)
     }
 
@@ -123,7 +142,7 @@ class SnapshotSceneQueriesTest {
             f.queries.pick(width / 2, height / 2, width, height)
         }
         assertEquals(1, f.queries.targetBuilds)
-        f.state.preview = mapOf("a" to DragResult(PlacementTransform(Vec3(0f, 6f, 0f), Quat.IDENTITY, Vec3(1f, 1f, 1f)), null))
+        f.state.preview = mapOf("a" to DragResult(PlacementTransform(Vector3(0f, 6f, 0f), Quaternion(), Vector3(1f, 1f, 1f)), null))
         f.queries.lowestPoint("a")
         f.queries.groundBelow("a")
         assertEquals(2, f.queries.targetBuilds)

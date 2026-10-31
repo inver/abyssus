@@ -16,6 +16,7 @@ import com.badlogic.gdx.utils.JsonWriter
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import net.nevinsky.abyssus.lib.gdx.model.ModelMesh
 import net.nevinsky.abyssus.lib.gdx.model.ModelMeshPart
+import net.nevinsky.abyssus.lib.gdx.model.VertexLayout
 import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
 import java.io.ByteArrayOutputStream
 import java.io.StringWriter
@@ -479,18 +480,12 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
     private class Layout(mesh: ModelMesh) {
         val attributes: Array<VertexAttribute> = mesh.attributes
         val vertices: FloatArray = mesh.vertices
-        val stride = attributes.sumOf { it.numComponents }
+        private val layout = VertexLayout(attributes)
+        val stride = layout.stride
         val count = if (stride == 0) 0 else vertices.size / stride
 
         /** @param unit the attribute's unit, or `null` for the first of that usage */
-        fun offset(usage: Int, unit: Int?): Int? {
-            var offset = 0
-            for (a in attributes) {
-                if (a.usage == usage && (unit == null || a.unit == unit)) return offset
-                offset += a.numComponents
-            }
-            return null
-        }
+        fun offset(usage: Int, unit: Int?): Int? = layout.offsetOf(usage, unit)
 
         fun units(usage: Int): List<Int> = attributes.filter { it.usage == usage }.map { it.unit }.distinct().sorted()
 

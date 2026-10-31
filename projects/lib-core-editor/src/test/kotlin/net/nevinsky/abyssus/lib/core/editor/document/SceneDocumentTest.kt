@@ -24,7 +24,7 @@ class SceneDocumentTest {
         assertEquals("Model 0", entity.name)
         assertEquals(-3.035308f, entity.component(PositionComponent::class.java)!!.localPosition.x, 0f)
         val content = sceneContentOf(parseScene(text))
-        assertEquals(content.models.first().assetName, document.renderAsset("0")!!.name)
+        assertEquals(content.models.first().assetName, document.BaseMeta("0")!!.name)
         assertEquals(content.skybox, document.skybox())
         assertEquals(listOf("ecs", "0", "components"), document.locate("0"))
         assertNotNull(document.lookAtTarget("4"))
@@ -33,10 +33,10 @@ class SceneDocumentTest {
     }
 
     @Test fun wrappedAddressAndExtensionPayloadAreRetained() {
-        val text = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"7":{"components":{"PositionComponent":{},"WindComponent":{"gain":1.2300}}}},"archetypes":{}}}"""
+        val text = """{"format":"abyssus","formatVersion":1,"ecs":{"7":{"components":{"PositionComponent":{},"WindComponent":{"gain":1.2300}}}}}"""
         val root = SceneJson().parse(text)
         val document = SceneDocument(root, decoder)
-        assertEquals(listOf("ecs", "entities", "7", "components"), document.locate("7"))
+        assertEquals(listOf("ecs", "7", "components"), document.locate("7"))
         assertEquals("7", document.entity("7")!!.name)
         assertEquals(0f, document.entity("7")!!.component(PositionComponent::class.java)!!.localPosition.x, 0f)
         assertNull(document.entity("missing"))

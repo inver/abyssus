@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.document
 
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaBinder
 import net.nevinsky.abyssus.lib.core.assets.MetaType
@@ -15,6 +16,7 @@ import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.scene.SceneParser
 import org.slf4j.Logger
 
 /**
@@ -25,7 +27,11 @@ class DocumentParsing(
     private val json: JsonProcessor,
     private val log: Logger,
     private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
+    registry: ComponentRegistry = ComponentRegistry(),
 ) {
+    /** Binds a scene with its components resolved through [registry]; what it does not know is kept raw. */
+    private val scenes = SceneParser(json, registry, format)
+
     fun requireSupported(text: String, kind: DocumentKind) {
         supported(text, kind)
     }
@@ -74,12 +80,8 @@ class DocumentParsing(
         reportedOrThrow("project $source") { uiAssetNames(readText()) }
 
     fun parse(text: String): SceneDto {
-        val root = json.readObject(text)
-        format.requireSupported(root, DocumentKind.SCENE)
-        return json.bind(root, SceneDto::class.java)
+        return scenes.parse(text)
     }
-
-    fun scene(text: String): SceneDto = parse(text)
 
     /** Includes failures obtaining the text (an editor's filesystem) in the same logging boundary. */
     fun parse(source: String, readText: () -> String): SceneDto = reportedOrThrow("scene $source") { parse(readText()) }

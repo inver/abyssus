@@ -10,8 +10,8 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.utils.BufferUtils
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.lib.core.water.WaterPassPlan
 import net.nevinsky.abyssus.lib.core.water.WaterPassPlanner
@@ -50,7 +50,7 @@ class SceneWaterResourcesGlTest {
     private fun inGl(block: () -> Unit) {
         val params = net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams.DEFAULT
         var failure: Throwable? = null
-        val result = GlHarness.render(params, 4, OrbitCamera(Vec3(0f, 0f, 0f), 10f, 0f, 0.5f), framebufferSize = 64 to 48) { _, index ->
+        val result = GlHarness.render(params, 4, OrbitCamera(Vector3(0f, 0f, 0f), 10f, 0f, 0.5f), framebufferSize = 64 to 48) { _, index ->
             if (index == 2) try { block() } catch (e: Throwable) { failure = e }
         }
         result.error?.let { throw it }
@@ -118,7 +118,7 @@ class SceneWaterResourcesGlTest {
             val binding = ints(0x8CA6, 1)[0]
             val viewport = ints(GL20.GL_VIEWPORT, 4)
             var inside = -1
-            val ok = resources.render(resources.reflection(0)!!, Rgba(0.2f, 0.4f, 0.6f, 1f)) {
+            val ok = resources.render(resources.reflection(0)!!, Color(0.2f, 0.4f, 0.6f, 1f)) {
                 inside = ints(0x8CA6, 1)[0]
                 Gdx.gl.glDisable(GL20.GL_BLEND)
                 Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
@@ -148,7 +148,7 @@ class SceneWaterResourcesGlTest {
             assertTrue(resources.ensure(plan(64, 48, levels = 1), 64, 48))
             val binding = ints(0x8CA6, 1)[0]
             Gdx.gl.glEnable(GL20.GL_BLEND)
-            val ok = resources.render(resources.reflection(0)!!, Rgba(0f, 0f, 0f, 1f)) {
+            val ok = resources.render(resources.reflection(0)!!, Color(0f, 0f, 0f, 1f)) {
                 Gdx.gl.glDisable(GL20.GL_BLEND)
                 error("boom")
             }

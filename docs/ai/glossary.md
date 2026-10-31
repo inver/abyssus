@@ -6,15 +6,15 @@
 | **Scene** | A `.scene` file: environment settings (ambient light, fog, skybox) plus an `ecs` block of entities. |
 | **Asset** | A folder under `assets/` described by its `meta.json` (`type`, `uuid`, `additional`). Scenes name assets by folder; asset references use `uuid` or, for foliage, terrain/model folder names. |
 | **Unused asset** | An asset no scene of its project reaches (see `docs/ai/file-formats.md`). Grayed and tagged `unused` in the tree. |
-| **ECS** | Entity-component-system. In a scene file, `ecs.entities.<id>.components.<Name>Component`. In code, the Ashley-based `core.ecs` package used by games and the Play host; the editor decodes scene JSON directly. |
-| **Entity id** | The key under `ecs.entities`. Picking, tree selection and transform writes all use it. |
+| **ECS** | Entity-component-system. In a scene file, `ecs.<id>.components.<Name>Component`. In code, the Ashley-based `core.ecs` package used by games and the Play host; the editor decodes scene JSON directly. |
+| **Entity id** | The key under `ecs`. Picking, tree selection and transform writes all use it. |
 | **Component class name** | The key of a component in a scene's `components`: the fully qualified class name or the short name of a built-in or registered component class. `EcsLoader` binds the value into that class with Jackson, `EcsWriter` writes it back. Any other key is carried raw. |
 | **Placement** | What the scene view draws for an entity (`AssetPlacement`, `FoliagePlacement`, `LightPlacement`, `CameraPlacement`, gathered in `SceneContent` in `lib-core-editor`), taken directly from the `ecs` JSON. |
 | **Abyssus view** | The Abyssus pane of the Project tool window: the project / scene / asset tree. |
 | **Abyssus Properties** | The tool window for asset metadata and supported asset edits, entity/component fields, and a selected scene's Ray Tracing switch and saved settings. |
 | **Scene view** | The second editor tab of a `.scene`: a libGDX render on an LWJGL3-AWT GL canvas. |
-| **Eye toggle** | The eye icon on a row gated by an `<x>Enabled` boolean, or by the `enabled` flag of an entity or togglable component. A click flips the flag in the file as one undoable edit; the Properties `Enabled` box is the same action. |
-| **Enabled flag** | The optional `enabled: false` on an `ecs` entity entry or component entry (`EnabledState` in `lib-core`). A disabled entity or component is present as data and absent as behavior. A missing key means enabled. Scene settings keep their own `<x>Enabled` booleans (see Eye toggle). |
+| **Eye toggle** | The eye icon on a row gated by an `<x>Enabled` boolean, or by the `flags` bit or `disabledComponents` entry of an entity or togglable component. A click flips the flag in the file as one undoable edit; the Properties `Enabled` box is the same action. |
+| **Enabled flag** | The `flags` bit `1` of an `ecs` entity entry, or the entity's `disabledComponents` list for a component (`HeaderComponent` in `lib-core`, which also holds the entity id and type). A disabled entity or component is present as data and absent as behavior. A missing key means enabled. Scene settings keep their own `<x>Enabled` booleans (see Eye toggle). |
 | **Skybox chooser** | The "Choose" button on a project scene's `skybox` row. It opens a dialog listing the project's `SKYBOX`, `SKYBOX_PROCEDURAL` and `SKYBOX_HDR` assets. |
 | **Gizmo** | The handles on the object selected in the scene view: X/Y/Z arrows (Move, key W) or rings (Rotate, key E). A drag previews live and writes on release. |
 | **Look-through camera** | Rendering the scene view from a camera entity, chosen in the view's camera selector, instead of the free orbit camera. |

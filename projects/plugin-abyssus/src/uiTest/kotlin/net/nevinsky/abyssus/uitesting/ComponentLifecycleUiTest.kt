@@ -76,7 +76,9 @@ class ComponentLifecycleUiTest : UiTestBase() {
     }
 
     private fun assertOnlyEntity7Changed(before: String, stage: String) =
-        assertTrue("$stage touched something outside entity 7", LifecycleHarness.sameExcept(before, Files.readString(scene), "/ecs/7"))
+        Files.readString(scene).let { after ->
+            assertTrue("$stage touched something outside entity 7: ${LifecycleHarness.lineDiff(before, after)}", LifecycleHarness.sameExcept(before, after, "/ecs/7"))
+        }
 
     /** Adds [kind] from the tree, edits [field] through Properties, removes the section with its button; every stage is checked. */
     private fun cycleWithPropertiesRemove(tree: AbyssusTree, label: String, kind: String, field: String, value: String, jsonField: String) {
@@ -175,5 +177,121 @@ class ComponentLifecycleUiTest : UiTestBase() {
         frame.clickMenuItem("Remove Component")
         awaitRemoved(kind)
         assertOnlyEntity7Changed(before, "Remove Component")
+    }
+
+    @Test
+    fun thePropertiesAddButtonAddsAKindWithOneUndoStep() {
+        val before = Files.readString(scene)
+        val tree = openEntity()
+        assertTrue("the Add button is enabled for an entity with kinds left", frame.properties().isEnabled("add-component"))
+        frame.properties().click("add-component")
+        frame.choosePopupItem("Parent")
+        awaitAdded("ParentComponent")
+        assertOnlyEntity7Changed(before, "Add from Properties")
+        assertEquals("the Undo the user sees names the addition", "_Undo Add Component | Undo Add Component", undoText())
+        LifecycleHarness.awaitState("the new section can be removed from Properties", true) { frame.properties().hasRemove("ParentComponent") }
+        val added = Files.readString(scene)
+        undoThroughSceneDocument(scene, before)
+        assertEquals("one Undo takes the whole addition back", before, Files.readString(scene))
+        redoThroughSceneDocument(added)
+        tree.focus()
+    }
+
+    /** Entity 7 with a path arrangement of the `tree` model: the one modeled kind with a boolean and a path asset, authored in Scene View. */
+    private fun prepareArrangement() {
+        val mapper = ObjectMapper()
+        val root = mapper.readTree(Files.readString(scene)) as com.fasterxml.jackson.databind.node.ObjectNode
+        val comps = root["ecs"]["7"]["components"] as com.fasterxml.jackson.databind.node.ObjectNode
+        comps.set<JsonNode>("PathArrangementComponent", mapper.readTree(
+            """{"points":[{"x":0,"y":0,"z":0},{"x":20,"y":0,"z":0}],"closed":false,"asset":{"type":"MODEL","assetName":"tree"},"spacing":10.0,"offset":0.0,"sides":"CENTER","alignToPath":true,"yawOffset":0.0,"slots":[]}"""))
+        // the fixture's own style (`"key": value`), so the first plugin edit has no reason to reformat the file
+        Files.writeString(scene, mapper.writerWithDefaultPrettyPrinter().writeValueAsString(root).replace("\" : ", "\": ") + "\n")
+        ide.refresh(scene.toString())
+    }
+
+    /** Every entity of [before] other than 7, and every scene-level member, is as it was: the arrangement's copies are new entities. */
+    private fun assertOthersUnchanged(before: String, stage: String) {
+        val mapper = ObjectMapper()
+        val old = mapper.readTree(before)
+        val now = mapper.readTree(Files.readString(scene))
+        for (id in old["ecs"].fieldNames().asSequence().filter { it != "7" }) {
+            assertEquals("$stage changed entity $id", old["ecs"][id], now["ecs"][id])
+        }
+        for (name in old.fieldNames().asSequence().filter { it != "ecs" }) assertEquals("$stage changed $name", old[name], now[name])
+    }
+
+    @Test
+    fun floatChoiceBooleanAndAssetEditorsCommitOmitDefaultsAndRefuseInvalidValues() {
+        prepareArrangement()
+        resetOpenDocumentsAfterPreparation()
+        val kind = "PathArrangementComponent"
+        openEntity()
+        LifecycleHarness.awaitState("the arrangement section is shown", true) { frame.properties().hasRemove(kind) }
+        if (frame.properties().isCollapsed("7.$kind")) frame.properties().clickChevron("7.$kind")
+        val prepared = Files.readString(scene)
+        val p = { frame.properties() }
+
+        // FLOAT with an exclusive minimum: zero and text are refused, a positive value is saved
+        for (bad in listOf("0", "-1", "abc")) {
+            p().enter("field-$kind-spacing", bad)
+            LifecycleHarness.awaitState("'$bad' is explained", true) { p().errorText(kind, "spacing").isNotBlank() }
+            assertEquals("a refused spacing writes nothing", prepared, Files.readString(scene))
+        }
+        p().enter("field-$kind-spacing", "5")
+        LifecycleHarness.awaitState("spacing is saved", 5.0) { component(kind)?.get("spacing")?.asDouble() }
+        assertOthersUnchanged(prepared, "spacing")
+
+        // FLOAT with an inclusive minimum: a negative offset is refused
+        p().enter("field-$kind-offset", "-2")
+        LifecycleHarness.awaitState("a negative offset is explained", true) { p().errorText(kind, "offset").isNotBlank() }
+        assertEquals(0.0, component(kind)?.get("offset")?.asDouble() ?: 0.0, 0.0)
+
+        // CHOICE
+        val choice = p().pickOther("field-$kind-sides")
+        LifecycleHarness.awaitState("the side is saved", choice) { component(kind)?.get("sides")?.asText() }
+
+        // BOOLEAN: unchecking writes false, checking again leaves the default (true) either absent or true
+        assertTrue("alignToPath starts checked", p().checked("field-$kind-alignToPath"))
+        p().clickCheck("field-$kind-alignToPath")
+        LifecycleHarness.awaitState("alignToPath false is saved", false) { component(kind)?.get("alignToPath")?.asBoolean(true) ?: true }
+        p().clickCheck("field-$kind-alignToPath")
+        LifecycleHarness.awaitState("the default is back and omitted from the file", true) { component(kind)?.get("alignToPath")?.asBoolean(true) ?: true }
+
+        // ASSET_NAME: another model asset; one Undo brings the previous one back
+        val beforeAsset = Files.readString(scene)
+        val asset = p().pickOther("field-$kind-asset.assetName")
+        LifecycleHarness.awaitState("the asset is saved", asset) { component(kind)?.get("asset")?.get("assetName")?.asText() }
+        assertEquals("the points are untouched", ObjectMapper().readTree(prepared)["ecs"]["7"]["components"][kind]["points"], component(kind)?.get("points"))
+        assertOthersUnchanged(prepared, "the editors")
+        undoThroughSceneDocument(scene, beforeAsset)
+        LifecycleHarness.awaitState("Undo restores the previous asset", "tree") { component(kind)?.get("asset")?.get("assetName")?.asText() }
+    }
+
+    /** The scene text changed on disk: no open buffer may keep the old text or history for the cases that follow. */
+    private fun resetOpenDocumentsAfterPreparation() {
+        reset.closeAllEditors()
+        reset.discardUnsavedDocuments()
+        ide.refresh(scene.toString())
+        reset.dropUndoHistory()
+        ide.refreshProjectView()
+    }
+
+    @Test
+    fun renderOffersTerrainAssetsAndPoint2PointTakesEntityReferences() {
+        val before = Files.readString(scene)
+        val tree = openEntity()
+
+        // a terrain asset is offered to Render beside the models
+        addFromTree(tree, "Render")
+        frame.choosePopupItem("terrain terrain")
+        awaitAdded("RenderComponent")
+        assertEquals("the terrain asset type is saved", "TERRAIN", component("RenderComponent")?.findValue("type")?.asText())
+        assertOnlyEntity7Changed(before, "Render with a terrain")
+        LifecycleHarness.awaitState("Render can be removed from Properties", true) { frame.properties().hasRemove("RenderComponent") }
+        frame.properties().clickRemove("RenderComponent")
+        awaitRemoved("RenderComponent")
+        assertEquals("entity 7 is as before", entity7(before), entity7(Files.readString(scene)))
+
+        assertEquals("entity 7 is as before", entity7(before), entity7(Files.readString(scene)))
     }
 }

@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.plugin.sceneview
 import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import org.junit.Assert.*
 
@@ -25,6 +25,11 @@ class SceneViewPanelAntialiasingTest : BasePlatformTestCase() {
         state.renderFailed(error, initialized = false)
         assertEquals(listOf(4, 2, 0), replacements)
         assertEquals(listOf(8), warnings)
+        assertTrue(failures.isEmpty())
+        assertTrue(state.swapControl)
+        state.renderFailed(error, initialized = false)
+        assertFalse("Off is retried once without swap interval", state.swapControl)
+        assertEquals(listOf(4, 2, 0, 0), replacements)
         assertTrue(failures.isEmpty())
         state.renderFailed(error, initialized = false)
         assertEquals(listOf(error), failures)
@@ -75,7 +80,7 @@ class SceneViewPanelAntialiasingTest : BasePlatformTestCase() {
             panel.selectEntity("selected")
             renderer.state.viewCamera = "camera"
             renderer.state.gizmoMode = net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode.ROTATE
-            panel.orbit.lookAlong(Vec3(1f, 0f, 0f))
+            panel.orbit.lookAlong(Vector3(1f, 0f, 0f))
             val target = panel.orbit.target
             panel.setAntialiasing(AntialiasingLevel.OFF)
             assertSame(original, canvas())

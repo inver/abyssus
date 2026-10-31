@@ -5,21 +5,22 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 /** The tree squashes the linked copies of a path arrangement into the arrangement's row. */
 class ArrangementTreeTest : BasePlatformTestCase() {
-    private val ecs = ObjectMapper().readTree(
+    private val ecs = parseDocument(
         """
-        {"entities": {
+        {
           "1": {"components": {"NameComponent": {"name": "Ground"}}},
-          "2": {"components": {"NameComponent": {"name": "Railway"}, "TypeComponent": {"type": "GROUP"},
-                "PathArrangementComponent": {"slots": [3, 4]}}},
+          "2": {"type": "GROUP","components": {"NameComponent": {"name": "Railway"}, "PathArrangementComponent": {"slots": [3, 4]}}},
           "3": {"components": {"NameComponent": {"name": "Path 2 #0"}, "ParentComponent": {"parentEntityId": 2}}},
           "4": {"components": {"NameComponent": {"name": "Path 2 #1"}, "ParentComponent": {"parentEntityId": 2}}},
           "5": {"components": {"NameComponent": {"name": "Detached"}}}
-        }}
+        }
         """,
     )
 
@@ -31,15 +32,15 @@ class ArrangementTreeTest : BasePlatformTestCase() {
         val rows = ecsRows(ecs)
         val entry = { id: String ->
             val row = rows.first { it.name == id }
-            DtoEntry("/ecs/$id", id, row.value, null, null, null, listOf("ecs", "entities"))
+            DtoEntry("/ecs/$id", id, row.value, null, null, null, listOf("ecs"))
         }
         assertEquals("Railway", rowText(entry("2")).label)
-        assertEquals("3 components, 2 copies", rowText(entry("2")).secondary)
+        assertEquals("2 components, 2 copies", rowText(entry("2")).secondary)
         assertEquals("1 component", rowText(entry("1")).secondary)
     }
 
     fun testASceneWithoutArrangementsListsEveryEntity() {
-        val plain = ObjectMapper().readTree("""{"entities": {"1": {"components": {}}, "2": {"components": {}}}}""")
+        val plain = parseDocument("""{"1": {"components": {}}, "2": {"components": {}}}""")
         assertEquals(listOf("1", "2"), ecsRows(plain).map { it.name })
     }
 }

@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
+import net.nevinsky.abyssus.lib.core.util.rawAt
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -15,10 +18,10 @@ import com.intellij.openapi.ui.Messages
 import net.nevinsky.abyssus.plugin.ui.showActionGroup
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
 import net.nevinsky.abyssus.lib.core.editor.water.WaterEdit
+import net.nevinsky.abyssus.plugin.water.reportWaterRejection
 import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
 import net.nevinsky.abyssus.lib.core.water.WaterPreset
 import net.nevinsky.abyssus.plugin.AbyssusBundle
@@ -42,19 +45,11 @@ fun waterTargetOf(node: Any?): WaterTarget? {
 
 /** Whether water can be added to [file]: a readable scene whose `abyssus` and `waterSurfaces` are objects when present. */
 internal fun canAddWater(file: VirtualFile, cache: SceneDocumentCache): Boolean =
-    cache.read(file)?.let { !WaterCodec().read(it.root.get("abyssus")).incompatible } ?: false
-
-internal fun reportWaterRejection(project: Project, edit: WaterEdit) {
-    if (edit is WaterEdit.Rejected) Messages.showErrorDialog(
-        project,
-        waterErrorText(edit.error),
-        AbyssusBundle.message("waterRejectedTitle")
-    )
-}
+    cache.read(file)?.let { !WaterCodec().read(it.root.at("abyssus")).incompatible } ?: false
 
 /** Select the new surface at once, then its row when the asynchronous tree refresh reaches it. */
 internal fun selectCreatedWater(project: Project, file: VirtualFile, id: String) {
-    val surface = runCatchingKeepingCancellation { WaterCodec().read(SceneJson().parse(textOf(file)).get("abyssus")) }
+    val surface = runCatchingKeepingCancellation { WaterCodec().read(parseDocument(textOf(file)).at("abyssus")) }
         .getOrNull()?.surfaces?.firstOrNull { it.id == id }
     if (surface != null) {
         val node = DtoEntryNode(
@@ -73,7 +68,7 @@ internal fun selectCreatedWater(project: Project, file: VirtualFile, id: String)
 class AddWaterGroup(
     private val project: Project,
     private val file: VirtualFile,
-    private val position: () -> Vec3,
+    private val position: () -> Vector3,
     private val select: (String) -> Unit = { selectCreatedWater(project, file, it) },
 ) : AddChildGroup<WaterPreset>(AbyssusBundle.message("addWaterTitle")) {
     init { for (preset in WaterPreset.entries) addChild(preset, waterPresetLabel(preset)) }
@@ -102,7 +97,7 @@ open class AddWaterAction : AbyssusTreeAction<VirtualFile>() {
         e.project?.let { canAddWater(target, SceneDocumentCache.of(it)) } ?: false
 
     override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
-        showActionGroup(e, AddWaterGroup(project, target, { Vec3(0f, 0f, 0f) }), AbyssusBundle.message("addWaterTitle"))
+        showActionGroup(e, AddWaterGroup(project, target, { Vector3(0f, 0f, 0f) }), AbyssusBundle.message("addWaterTitle"))
     }
 }
 

@@ -5,8 +5,9 @@
 
 package net.nevinsky.abyssus.lib.core.editor.arrange
 
+import com.badlogic.gdx.math.Quaternion
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.PathPoint
 import net.nevinsky.abyssus.lib.core.ecs.component.PathSides
 import net.nevinsky.abyssus.lib.core.util.azimuthOf
 import net.nevinsky.abyssus.lib.core.util.wrapDegrees
@@ -20,14 +21,27 @@ const val MAX_ARRANGEMENT_SLOTS = 1000
 private const val EPS = 1e-4
 
 /** One place for a copy: world [x] and [z], the line's height there as [fallbackY], and the turn about Y in degrees. */
-data class PathSlot(val x: Float, val z: Float, val fallbackY: Float, val yawDegrees: Float)
+data class PathSlot(val x: Float, val z: Float, val fallbackY: Float, val yawDegrees: Float) {
+    /** Where the copy stands on [heights]. */
+    fun position(heights: GroundHeight): Vector3 = Vector3(x, heights.heightAt(x, z, fallbackY), z)
+
+    /** The turn about Y by [yawDegrees] with `w` not negative; libGDX returns the negated, equal rotation for negative angles. */
+    fun rotation(): Quaternion {
+        val q = Quaternion().setFromAxis(0f, 1f, 0f, yawDegrees)
+        return if (q.w < 0f) {
+            q.set(-q.x, -q.y, -q.z, -q.w)
+        } else q
+    }
+}
 
 /**
  * Places the copies of an arrangement: a pure function of the line and the settings of a [PathArrangementComponent],
  * with no terrain, JSON or GL. Distances are measured on the ground plane (X and Z).
  */
 class PathLayout {
-    private data class Segment(val from: PathPoint, val to: PathPoint, val start: Double, val length: Double)
+    private val curve = PathCurve()
+
+    private data class Segment(val from: Vector3, val to: Vector3, val start: Double, val length: Double)
 
     /**
      * The slots of [arrangement] in slot order, or null when it would make more than [MAX_ARRANGEMENT_SLOTS]. A line
@@ -37,12 +51,15 @@ class PathLayout {
     fun slots(arrangement: PathArrangementComponent): List<PathSlot>? {
         val points = arrangement.points
         val spacing = arrangement.spacing.toDouble()
-        val usable = points.size >= 2 && spacing.isFinite() && spacing > 0.0 && arrangement.offset.isFinite() &&
-                arrangement.offset >= 0f && arrangement.yawOffset.isFinite() &&
-                points.all { it.x.isFinite() && it.y.isFinite() && it.z.isFinite() }
-        if (!usable) return emptyList()
+        if (!arrangement.isUsable()) return emptyList()
 
-        val segments = segments(points, arrangement.closed)
+        // the copies follow the smooth line through the control points, so they are where the view draws it
+        val sampled = curve.sample(pointsOf(arrangement), arrangement.closed)
+        // a closed line of two points goes there and back
+        val line = if (arrangement.closed && points.size == 2) {
+            sampled + sampled.first()
+        } else sampled
+        val segments = segments(line, false)
         val length = segments.sumOf { it.length }
         val perStation = if (arrangement.sides == PathSides.BOTH) 2 else 1
         val stations = if (length <= 0.0) 1.0 else if (arrangement.closed) {
@@ -59,7 +76,7 @@ class PathLayout {
         return out
     }
 
-    private fun segments(points: List<PathPoint>, closed: Boolean): List<Segment> {
+    private fun segments(points: List<Vector3>, closed: Boolean): List<Segment> {
         val out = ArrayList<Segment>()
         var start = 0.0
         val count = if (closed) points.size else points.size - 1
@@ -121,4 +138,14 @@ class PathLayout {
         }
     }
 
+}
+
+/**
+ * Whether the arrangement can make copies: a line of at least two finite points, a finite spacing above 0, a finite
+ * offset of at least 0 and a finite yaw offset. Every entry point that creates or changes an arrangement checks this.
+ */
+fun PathArrangementComponent.isUsable(): Boolean {
+    val spacing = spacing.toDouble()
+    return points.size >= 2 && spacing.isFinite() && spacing > 0.0 && offset.isFinite() && offset >= 0f &&
+            yawOffset.isFinite() && points.all { it.x.isFinite() && it.y.isFinite() && it.z.isFinite() }
 }

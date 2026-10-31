@@ -4,24 +4,22 @@
  */
 package net.nevinsky.abyssus.lib.raytracing
 
-import java.util.concurrent.CancellationException
-
-import org.slf4j.Logger
-import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.lib.raytracing.VulkanDeviceContext.Access
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil
 import org.lwjgl.vulkan.*
 import org.lwjgl.vulkan.KHRAccelerationStructure.*
 import org.lwjgl.vulkan.VK10.*
-import org.lwjgl.vulkan.VK12.vkGetBufferDeviceAddress
+import org.slf4j.Logger
+import org.slf4j.helpers.NOPLogger
 import java.nio.ByteBuffer
+import java.util.concurrent.CancellationException
 
 private const val MAX_RAYS_PER_DISPATCH = 1 shl 19
-private const val MAX_GEOMETRY_BYTES = 32L * 1024 * 1024
 private const val WAIT_TIMEOUT_NS = 10_000_000_000L
 private const val INSTANCE_BYTES = 96
 private const val TLAS_INSTANCE_BYTES = 64
+
 /** The most instances (and meshes) one Vulkan session holds; more fall back to raster. */
 internal const val VULKAN_MAX_INSTANCES = 4096
 
@@ -44,6 +42,7 @@ class VulkanRayBackendFactory(
     val validationErrors: List<String> get() = backend?.validationErrors ?: emptyList()
     val validationActive: Boolean get() = backend?.validationActive ?: false
     val probed: Boolean get() = backend != null
+
     /** The GPU the current backend runs on, without probing again. */
     val deviceName: String? get() = backend?.info?.gpu
 
@@ -83,9 +82,11 @@ class VulkanRayBackendFactory(
         measuredCandidate = null
         var context: VulkanDeviceContext? = null
         try {
-            fun shader(name: String) = checkNotNull(javaClass.getResourceAsStream("/native/vulkan/$name.spv")?.use { it.readBytes() }) {
-                "Packaged Vulkan shader $name is missing: the plugin was built without glslangValidator or glslc (see raytracing/README.md)"
-            }
+            fun shader(name: String) =
+                checkNotNull(javaClass.getResourceAsStream("/native/vulkan/$name.spv")?.use { it.readBytes() }) {
+                    "Packaged Vulkan shader $name is missing: the plugin was built without glslangValidator or glslc (see raytracing/README.md)"
+                }
+
             val slice = shader("slice")
             val scene = shader("scene")
             context = VulkanDeviceContext(instance, candidate)
@@ -107,7 +108,8 @@ class VulkanRayBackendFactory(
  * Descriptor layout, pipeline layout and the two compute pipelines, shared by every session on the device. The feasibility
  * slice and the full scene renderer use one layout: the slice shader ignores the scene-payload bindings 7 and 8.
  */
-internal class VulkanPipeline(private val context: VulkanDeviceContext, slice: ByteArray, scene: ByteArray) : AutoCloseable {
+internal class VulkanPipeline(private val context: VulkanDeviceContext, slice: ByteArray, scene: ByteArray) :
+    AutoCloseable {
     val descriptorLayout: Long
     val pipelineLayout: Long
     val pipeline: Long
@@ -123,7 +125,8 @@ internal class VulkanPipeline(private val context: VulkanDeviceContext, slice: B
                 // SPIR-V can exceed the 64 KB thread stack, so it goes on the heap.
                 val code = MemoryUtil.memAlloc(spirv.size).put(spirv).flip()
                 try {
-                    val info = VkShaderModuleCreateInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO).pCode(code)
+                    val info = VkShaderModuleCreateInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO)
+                        .pCode(code)
                     vkCheck(vkCreateShaderModule(device, info, null, out), "vkCreateShaderModule")
                 } finally {
                     MemoryUtil.memFree(code)
@@ -134,9 +137,15 @@ internal class VulkanPipeline(private val context: VulkanDeviceContext, slice: B
             sceneShader = module(scene)
 
             val types = intArrayOf(
-                VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
+                VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             )
             val bindings = VkDescriptorSetLayoutBinding.calloc(types.size, stack)
             types.forEachIndexed { i, type ->
@@ -148,17 +157,23 @@ internal class VulkanPipeline(private val context: VulkanDeviceContext, slice: B
             descriptorLayout = out[0]
 
             val push = VkPushConstantRange.calloc(1, stack).stageFlags(VK_SHADER_STAGE_COMPUTE_BIT).offset(0).size(16)
-            val pipelineLayoutInfo = VkPipelineLayoutCreateInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
-                .pSetLayouts(stack.longs(descriptorLayout)).pPushConstantRanges(push)
+            val pipelineLayoutInfo =
+                VkPipelineLayoutCreateInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
+                    .pSetLayouts(stack.longs(descriptorLayout)).pPushConstantRanges(push)
             vkCheck(vkCreatePipelineLayout(device, pipelineLayoutInfo, null, out), "vkCreatePipelineLayout")
             pipelineLayout = out[0]
 
             fun compute(module: Long): Long {
-                val stage = VkPipelineShaderStageCreateInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
+                val stage = VkPipelineShaderStageCreateInfo.calloc(stack)
+                    .sType(VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
                     .stage(VK_SHADER_STAGE_COMPUTE_BIT).module(module).pName(stack.UTF8("main"))
-                val pipelines = VkComputePipelineCreateInfo.calloc(1, stack).sType(VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO)
-                    .stage(stage).layout(pipelineLayout)
-                vkCheck(vkCreateComputePipelines(device, VK_NULL_HANDLE, pipelines, null, out), "vkCreateComputePipelines")
+                val pipelines =
+                    VkComputePipelineCreateInfo.calloc(1, stack).sType(VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO)
+                        .stage(stage).layout(pipelineLayout)
+                vkCheck(
+                    vkCreateComputePipelines(device, VK_NULL_HANDLE, pipelines, null, out),
+                    "vkCreateComputePipelines"
+                )
                 return out[0]
             }
             pipeline = compute(shader)
@@ -178,8 +193,11 @@ internal class VulkanPipeline(private val context: VulkanDeviceContext, slice: B
 
 /** All sessions share this device and queue; each keeps independent geometry, structures and output images. */
 class VulkanRayBackend internal constructor(
-    private val context: VulkanDeviceContext, private val pipeline: VulkanPipeline,
-    override val capabilities: RayCapabilities, private val health: RayDeviceHealth, private val log: Logger = NOPLogger.NOP_LOGGER,
+    private val context: VulkanDeviceContext,
+    private val pipeline: VulkanPipeline,
+    override val capabilities: RayCapabilities,
+    private val health: RayDeviceHealth,
+    private val log: Logger = NOPLogger.NOP_LOGGER,
 ) : RayBackend {
     override val info = RayBackendInfo("Vulkan", context.candidate.name)
     private val worker = Thread.currentThread()
@@ -194,7 +212,9 @@ class VulkanRayBackend internal constructor(
 
     /** True only after Vulkan itself reported `VK_ERROR_DEVICE_LOST`. A loss injected through `health` leaves the device healthy, so teardown still waits. */
     internal fun lost(): Boolean = lostFlag
-    internal fun markLost() { lostFlag = true }
+    internal fun markLost() {
+        lostFlag = true
+    }
 
     override fun openSession(viewId: String, limits: RayLimits): RaySession {
         check(Thread.currentThread() === worker && !closed) { "Vulkan backend is closed or used from another worker" }
@@ -221,13 +241,19 @@ class VulkanRayBackend internal constructor(
 
 private class Blas(val buffer: VulkanBuffer, val handle: Long)
 
-private class FrameResources(val width: Int, val height: Int, val color: VulkanImage, val depth: VulkanImage,
-    val colorReadback: VulkanBuffer, val depthReadback: VulkanBuffer)
+private class FrameResources(
+    val width: Int, val height: Int, val color: VulkanImage, val depth: VulkanImage,
+    val colorReadback: VulkanBuffer, val depthReadback: VulkanBuffer
+)
 
 /** Per-view state. Everything runs on the owner worker; `submit` and `poll` never wait for the GPU. */
 internal class VulkanRaySession(
-    private val context: VulkanDeviceContext, private val pipeline: VulkanPipeline,
-    private val limits: RayLimits, private val backend: VulkanRayBackend, private val log: Logger, private val onDisposed: () -> Unit,
+    private val context: VulkanDeviceContext,
+    private val pipeline: VulkanPipeline,
+    private val limits: RayLimits,
+    private val backend: VulkanRayBackend,
+    private val log: Logger,
+    private val onDisposed: () -> Unit,
 ) : RaySession {
     private val device = context.device
     private val worker = Thread.currentThread()
@@ -255,12 +281,13 @@ internal class VulkanRaySession(
     private var vertexCounts = emptyList<Int>()
     private var indexCounts = emptyList<Int>()
     private var builds = 0L
+
     /** The scene payload (floats, then RGBA8 texels). A small placeholder until a scene renders; the slice shader never reads it. */
     private var sceneBuffer: VulkanBuffer
     private var frame: FrameResources? = null
     private var pending: Pending? = null
-    private val accumulator=RayFrameAccumulator()
-    private var opticalRequest:RaySceneRequest?=null
+    private val accumulator = RayFrameAccumulator()
+    private var opticalRequest: RaySceneRequest? = null
     private var inFlightCommands: PointerBufferHolder? = null
 
     override val geometryBuilds: Long get() = builds
@@ -281,12 +308,14 @@ internal class VulkanRaySession(
             sizes[1].type(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER).descriptorCount(5)
             sizes[2].type(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE).descriptorCount(2)
             sizes[3].type(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER).descriptorCount(1)
-            val descriptorPoolInfo = VkDescriptorPoolCreateInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO)
-                .maxSets(1).pPoolSizes(sizes)
+            val descriptorPoolInfo =
+                VkDescriptorPoolCreateInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO)
+                    .maxSets(1).pPoolSizes(sizes)
             vkCheck(vkCreateDescriptorPool(device, descriptorPoolInfo, null, out), "vkCreateDescriptorPool")
             descriptorPool = out[0]
-            val setInfo = VkDescriptorSetAllocateInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO)
-                .descriptorPool(descriptorPool).pSetLayouts(stack.longs(pipeline.descriptorLayout))
+            val setInfo =
+                VkDescriptorSetAllocateInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO)
+                    .descriptorPool(descriptorPool).pSetLayouts(stack.longs(pipeline.descriptorLayout))
             vkCheck(vkAllocateDescriptorSets(device, setInfo, out), "vkAllocateDescriptorSets")
             descriptorSet = out[0]
 
@@ -296,17 +325,29 @@ internal class VulkanRaySession(
         }
         cameraBuffer = context.createBuffer(112, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, Access.HOST_WRITE)
         sceneBuffer = context.createBuffer(256, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, Access.HOST_WRITE)
-        instanceBuffer = context.createBuffer(limits.maxInstances.toLong() * INSTANCE_BYTES, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, Access.HOST_WRITE)
-        tlasInstances = context.createBuffer(limits.maxInstances.toLong() * TLAS_INSTANCE_BYTES,
-            VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR, Access.HOST_WRITE)
+        instanceBuffer = context.createBuffer(
+            limits.maxInstances.toLong() * INSTANCE_BYTES,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            Access.HOST_WRITE
+        )
+        tlasInstances = context.createBuffer(
+            limits.maxInstances.toLong() * TLAS_INSTANCE_BYTES,
+            VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR, Access.HOST_WRITE
+        )
 
         MemoryStack.stackPush().use { stack ->
             val geometry = instancesGeometry(stack, tlasInstances.address)
             val sizes = buildSizes(stack, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, geometry, limits.maxInstances)
-            tlasBuffer = context.createBuffer(sizes.accelerationStructureSize(),
-                VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR, Access.DEVICE)
+            tlasBuffer = context.createBuffer(
+                sizes.accelerationStructureSize(),
+                VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR, Access.DEVICE
+            )
             val alignment = context.candidate.scratchAlignment
-            tlasScratch = context.createBuffer(sizes.buildScratchSize() + alignment, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, Access.DEVICE)
+            tlasScratch = context.createBuffer(
+                sizes.buildScratchSize() + alignment,
+                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                Access.DEVICE
+            )
             tlasScratchAddress = alignUp(tlasScratch.address, alignment)
             tlas = createStructure(stack, tlasBuffer, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR)
         }
@@ -315,8 +356,7 @@ internal class VulkanRaySession(
     private fun alignUp(value: Long, alignment: Long) = (value + alignment - 1) / alignment * alignment
 
     private fun checkOwner() {
-        check(Thread.currentThread() === worker) { "Vulkan session must stay on its owner worker" }
-        check(!closed) { "Vulkan session is closed" }
+        checkSessionOwner("Vulkan", worker, !closed)
     }
 
     private inline fun <T> guarded(block: () -> T): T = try {
@@ -336,22 +376,31 @@ internal class VulkanRaySession(
         return geometry
     }
 
-    private fun buildSizes(stack: MemoryStack, type: Int, geometry: VkAccelerationStructureGeometryKHR.Buffer, primitives: Int):
-        VkAccelerationStructureBuildSizesInfoKHR {
+    private fun buildSizes(
+        stack: MemoryStack,
+        type: Int,
+        geometry: VkAccelerationStructureGeometryKHR.Buffer,
+        primitives: Int
+    ):
+            VkAccelerationStructureBuildSizesInfoKHR {
         val info = VkAccelerationStructureBuildGeometryInfoKHR.calloc(stack)
             .sType(VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR).type(type)
-            .flags(VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR).mode(VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR)
+            .flags(VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR)
+            .mode(VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR)
             .geometryCount(1).pGeometries(geometry)
         val sizes = VkAccelerationStructureBuildSizesInfoKHR.calloc(stack)
             .sType(VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR)
-        vkGetAccelerationStructureBuildSizesKHR(device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, info,
-            stack.ints(primitives), sizes)
+        vkGetAccelerationStructureBuildSizesKHR(
+            device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, info,
+            stack.ints(primitives), sizes
+        )
         return sizes
     }
 
     private fun createStructure(stack: MemoryStack, storage: VulkanBuffer, type: Int): Long {
         val info = VkAccelerationStructureCreateInfoKHR.calloc(stack)
-            .sType(VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR).buffer(storage.buffer).size(storage.size).type(type)
+            .sType(VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR).buffer(storage.buffer).size(storage.size)
+            .type(type)
         val out = stack.mallocLong(1)
         vkCheck(vkCreateAccelerationStructureKHR(device, info, null, out), "vkCreateAccelerationStructureKHR")
         return out[0]
@@ -361,18 +410,21 @@ internal class VulkanRaySession(
     fun setGeometry(meshes: List<RaySliceMesh>) {
         checkOwner()
         check(pending == null) { "Cannot replace geometry during a render" }
-        require(meshes.isNotEmpty() && meshes.size <= limits.maxInstances)
-        val vertices = meshes.map { it.vertices() }
-        val indices = meshes.map { it.indices() }
-        require(vertices.sumOf { it.size.toLong() * 4 } + indices.sumOf { it.size.toLong() * 4 } <= MAX_GEOMETRY_BYTES)
+        val (vertices, indices) = checkedGeometry(meshes, limits).let { it.vertices to it.indices }
         guarded {
             releaseGeometry()
             val vertexFloats = vertices.sumOf { it.size }
             val indexInts = indices.sumOf { it.size }
-            val vertexData = context.createBuffer(vertexFloats * 4L,
-                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT or VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR, Access.HOST_WRITE)
-            val indexData = context.createBuffer(indexInts * 4L,
-                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT or VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR, Access.HOST_WRITE)
+            val vertexData = context.createBuffer(
+                vertexFloats * 4L,
+                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT or VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
+                Access.HOST_WRITE
+            )
+            val indexData = context.createBuffer(
+                indexInts * 4L,
+                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT or VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
+                Access.HOST_WRITE
+            )
             vertexBuffer = vertexData
             indexBuffer = indexData
             val vertexView = vertexData.mapped!!.asFloatBuffer()
@@ -395,18 +447,26 @@ internal class VulkanRaySession(
             indexCounts = indices.map { it.size }
             val started = System.nanoTime()
             buildBottomLevel()
-            log.atDebug().log { "Vulkan built ${meshes.size} bottom-level structures (${vertexFloats / 3} vertices, ${indexInts / 3} triangles) in ${(System.nanoTime() - started) / 1_000_000} ms" }
+            log.atDebug()
+                .log { "Vulkan built ${meshes.size} bottom-level structures (${vertexFloats / 3} vertices, ${indexInts / 3} triangles) in ${(System.nanoTime() - started) / 1_000_000} ms" }
             geometryKey = meshes.toList()
             builds += meshes.size
         }
     }
 
-    private fun bottomGeometry(stack: MemoryStack, mesh: Int, vertexCount: Int, indexCount: Int): VkAccelerationStructureGeometryKHR.Buffer {
+    private fun bottomGeometry(
+        stack: MemoryStack,
+        mesh: Int,
+        vertexCount: Int,
+        indexCount: Int
+    ): VkAccelerationStructureGeometryKHR.Buffer {
         val geometry = VkAccelerationStructureGeometryKHR.calloc(1, stack)
             .sType(VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR).geometryType(VK_GEOMETRY_TYPE_TRIANGLES_KHR)
             .flags(VK_GEOMETRY_OPAQUE_BIT_KHR)
-        val triangles = geometry.geometry().triangles().sType(VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR)
-            .vertexFormat(VK_FORMAT_R32G32B32_SFLOAT).vertexStride(12).maxVertex(vertexCount - 1).indexType(VK_INDEX_TYPE_UINT32)
+        val triangles =
+            geometry.geometry().triangles().sType(VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR)
+                .vertexFormat(VK_FORMAT_R32G32B32_SFLOAT).vertexStride(12).maxVertex(vertexCount - 1)
+                .indexType(VK_INDEX_TYPE_UINT32)
         triangles.vertexData().deviceAddress(vertexBuffer!!.address + vertexOffsets[mesh] * 12L)
         triangles.indexData().deviceAddress(indexBuffer!!.address + indexOffsets[mesh] * 4L)
         return geometry
@@ -414,8 +474,12 @@ internal class VulkanRaySession(
 
     // The loops below run once per mesh (hundreds for a real scene), so each iteration gets its own stack frame.
     private fun scratchSize(stack: MemoryStack, mesh: Int) = stack.push().use {
-        buildSizes(stack, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, bottomGeometry(stack, mesh, vertexCounts[mesh], indexCounts[mesh]),
-            indexCounts[mesh] / 3).buildScratchSize()
+        buildSizes(
+            stack,
+            VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+            bottomGeometry(stack, mesh, vertexCounts[mesh], indexCounts[mesh]),
+            indexCounts[mesh] / 3
+        ).buildScratchSize()
     }
 
     /** Allocates one structure per mesh and builds them all. */
@@ -424,10 +488,19 @@ internal class VulkanRaySession(
         try {
             vertexCounts.indices.forEach { i ->
                 stack.push().use {
-                    val size = buildSizes(stack, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
-                        bottomGeometry(stack, i, vertexCounts[i], indexCounts[i]), indexCounts[i] / 3).accelerationStructureSize()
-                    val storage = context.createBuffer(size, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR, Access.DEVICE)
-                    built += Blas(storage, createStructure(stack, storage, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR))
+                    val size = buildSizes(
+                        stack, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+                        bottomGeometry(stack, i, vertexCounts[i], indexCounts[i]), indexCounts[i] / 3
+                    ).accelerationStructureSize()
+                    val storage = context.createBuffer(
+                        size,
+                        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR,
+                        Access.DEVICE
+                    )
+                    built += Blas(
+                        storage,
+                        createStructure(stack, storage, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR)
+                    )
                 }
             }
         } finally {
@@ -439,27 +512,35 @@ internal class VulkanRaySession(
     /** (Re)builds the listed structures in place from the current vertex and index data. */
     private fun buildStructures(stack: MemoryStack, meshes: List<Int>) {
         val alignment = context.candidate.scratchAlignment
-        val scratch = context.createBuffer(meshes.maxOf { scratchSize(stack, it) } + alignment, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, Access.DEVICE)
+        val scratch = context.createBuffer(meshes.maxOf { scratchSize(stack, it) } + alignment,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            Access.DEVICE)
         try {
             val command = allocateCommands(stack, 1)[0]
             beginCommands(stack, command, oneTime = true)
             val barrier = VkMemoryBarrier.calloc(1, stack).sType(VK_STRUCTURE_TYPE_MEMORY_BARRIER)
                 .srcAccessMask(VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR)
                 .dstAccessMask(VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR or VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR)
-            meshes.forEach { i -> stack.push().use {
-                val geometry = bottomGeometry(stack, i, vertexCounts[i], indexCounts[i])
-                val info = VkAccelerationStructureBuildGeometryInfoKHR.calloc(1, stack)
-                    .sType(VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR)
-                    .type(VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR).flags(VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR)
-                    .mode(VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR).dstAccelerationStructure(blas[i].handle)
-                    .geometryCount(1).pGeometries(geometry)
-                info.scratchData().deviceAddress(alignUp(scratch.address, alignment))
-                val range = VkAccelerationStructureBuildRangeInfoKHR.calloc(1, stack).primitiveCount(indexCounts[i] / 3)
-                vkCmdBuildAccelerationStructuresKHR(command, info, stack.pointers(range.address()))
-                // The scratch buffer is shared, so each build must finish before the next one starts.
-                vkCmdPipelineBarrier(command, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-                    VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, 0, barrier, null, null)
-            } }
+            meshes.forEach { i ->
+                stack.push().use {
+                    val geometry = bottomGeometry(stack, i, vertexCounts[i], indexCounts[i])
+                    val info = VkAccelerationStructureBuildGeometryInfoKHR.calloc(1, stack)
+                        .sType(VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR)
+                        .type(VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR)
+                        .flags(VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR)
+                        .mode(VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR).dstAccelerationStructure(blas[i].handle)
+                        .geometryCount(1).pGeometries(geometry)
+                    info.scratchData().deviceAddress(alignUp(scratch.address, alignment))
+                    val range =
+                        VkAccelerationStructureBuildRangeInfoKHR.calloc(1, stack).primitiveCount(indexCounts[i] / 3)
+                    vkCmdBuildAccelerationStructuresKHR(command, info, stack.pointers(range.address()))
+                    // The scratch buffer is shared, so each build must finish before the next one starts.
+                    vkCmdPipelineBarrier(
+                        command, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+                        VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, 0, barrier, null, null
+                    )
+                }
+            }
             vkCheck(vkEndCommandBuffer(command), "vkEndCommandBuffer")
             submitAndWait(stack, command)
             vkFreeCommandBuffers(device, pool, command)
@@ -487,7 +568,8 @@ internal class VulkanRaySession(
             context.destroyBuffer(sceneBuffer)
             sceneBuffer = context.createBuffer(maxOf(size, 256), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, Access.HOST_WRITE)
         }
-        log.atDebug().log { "Vulkan scene payload uploaded: ${data.floats.size} floats and ${data.bytes.size} texel bytes" }
+        log.atDebug()
+            .log { "Vulkan scene payload uploaded: ${data.floats.size} floats and ${data.bytes.size} texel bytes" }
         val mapped = sceneBuffer.mapped!!
         mapped.asFloatBuffer().put(data.floats)
         mapped.put(data.floats.size * 4, data.bytes)
@@ -510,7 +592,8 @@ internal class VulkanRaySession(
 
     private fun submitAndWait(stack: MemoryStack, command: VkCommandBuffer) {
         vkCheck(vkResetFences(device, fence), "vkResetFences")
-        val submit = VkSubmitInfo.calloc(1, stack).sType(VK_STRUCTURE_TYPE_SUBMIT_INFO).pCommandBuffers(stack.pointers(command))
+        val submit =
+            VkSubmitInfo.calloc(1, stack).sType(VK_STRUCTURE_TYPE_SUBMIT_INFO).pCommandBuffers(stack.pointers(command))
         vkCheck(vkQueueSubmit(context.queue, submit, fence), "vkQueueSubmit")
         waitForFence()
     }
@@ -540,9 +623,14 @@ internal class VulkanRaySession(
         frame?.takeIf { it.width == width && it.height == height }?.let { return it }
         releaseFrame()
         val pixels = width.toLong() * height
-        return FrameResources(width, height, context.createImage(width, height, COLOR_FORMAT), context.createImage(width, height, DEPTH_FORMAT),
+        return FrameResources(
+            width,
+            height,
+            context.createImage(width, height, COLOR_FORMAT),
+            context.createImage(width, height, DEPTH_FORMAT),
             context.createBuffer(pixels * 8, VK_BUFFER_USAGE_TRANSFER_DST_BIT, Access.READBACK),
-            context.createBuffer(pixels * 4, VK_BUFFER_USAGE_TRANSFER_DST_BIT, Access.READBACK)).also { frame = it }
+            context.createBuffer(pixels * 4, VK_BUFFER_USAGE_TRANSFER_DST_BIT, Access.READBACK)
+        ).also { frame = it }
     }
 
     private fun releaseFrame() {
@@ -556,8 +644,16 @@ internal class VulkanRaySession(
     }
 
     /** Writes the TLAS instances, records the build, bounded dispatches and readback copies, and submits without waiting. */
-    private fun enqueue(key: RayFrameKey, width: Int, height: Int, cameraSpec: RaySliceCamera, instances: List<RaySliceInstance>, scene: Boolean, nativeCamera: FloatArray = cameraSpec.uniforms(width,height)) {
-        require(width in 1..limits.maxDimension && height in 1..limits.maxDimension && width.toLong() * height <= limits.maxPixels)
+    private fun enqueue(
+        key: RayFrameKey,
+        width: Int,
+        height: Int,
+        cameraSpec: RaySliceCamera,
+        instances: List<RaySliceInstance>,
+        scene: Boolean,
+        nativeCamera: FloatArray = cameraSpec.uniforms(width, height)
+    ) {
+        requireFrameWithin(width, height, limits)
         require(instances.isNotEmpty() && instances.size <= limits.maxInstances && instances.all { it.mesh < blas.size })
         val target = ensureFrame(width, height)
         writeInstances(instances)
@@ -574,7 +670,15 @@ internal class VulkanRaySession(
             val commands = allocateCommands(stack, tiles + 2)
             recordSetup(stack, commands[0], target, instances.size)
             for (tile in 0 until tiles) {
-                recordTile(stack, commands[tile + 1], width, height, tile * rowsPerTile, minOf(rowsPerTile, height - tile * rowsPerTile), scene)
+                recordTile(
+                    stack,
+                    commands[tile + 1],
+                    width,
+                    height,
+                    tile * rowsPerTile,
+                    minOf(rowsPerTile, height - tile * rowsPerTile),
+                    scene
+                )
             }
             recordReadback(stack, commands[tiles + 1], target)
 
@@ -600,7 +704,10 @@ internal class VulkanRaySession(
                 .putInt(base + 88, 0).putInt(base + 92, 0)
             // Row-major 3x4 from the column-major 4x4.
             val out = i * TLAS_INSTANCE_BYTES
-            for (row in 0 until 3) for (col in 0 until 4) tlasData.putFloat(out + (row * 4 + col) * 4, values[col * 4 + row])
+            for (row in 0 until 3) for (col in 0 until 4) tlasData.putFloat(
+                out + (row * 4 + col) * 4,
+                values[col * 4 + row]
+            )
             // bit 1: seen by shadow and reflection rays; bit 2: seen by primary rays (blended surfaces have bit 2 only)
             tlasData.putInt(out + 48, i or ((if (instance.primaryOnly) 2 else 3) shl 24))
             tlasData.putInt(out + 52, VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR shl 24)
@@ -612,14 +719,16 @@ internal class VulkanRaySession(
 
     private fun blasAddress(structure: Blas): Long = MemoryStack.stackPush().use { stack ->
         val info = VkAccelerationStructureDeviceAddressInfoKHR.calloc(stack)
-            .sType(VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR).accelerationStructure(structure.handle)
+            .sType(VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR)
+            .accelerationStructure(structure.handle)
         vkGetAccelerationStructureDeviceAddressKHR(device, info)
     }
 
     private fun updateDescriptors(stack: MemoryStack, target: FrameResources) {
         val writes = VkWriteDescriptorSet.calloc(9, stack)
         val structure = VkWriteDescriptorSetAccelerationStructureKHR.calloc(stack)
-            .sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR).pAccelerationStructures(stack.longs(tlas))
+            .sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR)
+            .pAccelerationStructures(stack.longs(tlas))
         writes[0].sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET).dstSet(descriptorSet).dstBinding(0).descriptorCount(1)
             .descriptorType(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR).pNext(structure.address())
         fun buffer(slot: Int, binding: Int, type: Int, source: VulkanBuffer) {
@@ -627,8 +736,10 @@ internal class VulkanRaySession(
             writes[slot].sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET).dstSet(descriptorSet).dstBinding(binding)
                 .descriptorCount(1).descriptorType(type).pBufferInfo(info)
         }
+
         fun image(slot: Int, binding: Int, source: VulkanImage) {
-            val info = VkDescriptorImageInfo.calloc(1, stack).imageView(source.view).imageLayout(VK_IMAGE_LAYOUT_GENERAL)
+            val info =
+                VkDescriptorImageInfo.calloc(1, stack).imageView(source.view).imageLayout(VK_IMAGE_LAYOUT_GENERAL)
             writes[slot].sType(VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET).dstSet(descriptorSet).dstBinding(binding)
                 .descriptorCount(1).descriptorType(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE).pImageInfo(info)
         }
@@ -644,8 +755,10 @@ internal class VulkanRaySession(
     }
 
     private fun imageBarrier(stack: MemoryStack, image: VulkanImage, oldLayout: Int, newLayout: Int, dstAccess: Int) =
-        VkImageMemoryBarrier.calloc(stack).sType(VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER).oldLayout(oldLayout).newLayout(newLayout)
-            .srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED).dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED).image(image.image)
+        VkImageMemoryBarrier.calloc(stack).sType(VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER).oldLayout(oldLayout)
+            .newLayout(newLayout)
+            .srcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED).dstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+            .image(image.image)
             .dstAccessMask(dstAccess).also {
                 it.subresourceRange().aspectMask(VK_IMAGE_ASPECT_COLOR_BIT).levelCount(1).layerCount(1)
             }
@@ -655,8 +768,10 @@ internal class VulkanRaySession(
         val geometry = instancesGeometry(stack, tlasInstances.address)
         val info = VkAccelerationStructureBuildGeometryInfoKHR.calloc(1, stack)
             .sType(VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR)
-            .type(VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR).flags(VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR)
-            .mode(VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR).dstAccelerationStructure(tlas).geometryCount(1).pGeometries(geometry)
+            .type(VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR)
+            .flags(VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR)
+            .mode(VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR).dstAccelerationStructure(tlas).geometryCount(1)
+            .pGeometries(geometry)
         info.scratchData().deviceAddress(tlasScratchAddress)
         val range = VkAccelerationStructureBuildRangeInfoKHR.calloc(1, stack).primitiveCount(instanceCount)
         vkCmdBuildAccelerationStructuresKHR(command, info, stack.pointers(range.address()))
@@ -664,17 +779,56 @@ internal class VulkanRaySession(
             .srcAccessMask(VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR)
             .dstAccessMask(VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR or VK_ACCESS_SHADER_READ_BIT)
         val images = VkImageMemoryBarrier.calloc(2, stack)
-        images.put(0, imageBarrier(stack, target.color, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_WRITE_BIT))
-        images.put(1, imageBarrier(stack, target.depth, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_WRITE_BIT))
-        vkCmdPipelineBarrier(command, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR or VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, memory, null, images)
+        images.put(
+            0,
+            imageBarrier(
+                stack,
+                target.color,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_GENERAL,
+                VK_ACCESS_SHADER_WRITE_BIT
+            )
+        )
+        images.put(
+            1,
+            imageBarrier(
+                stack,
+                target.depth,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_GENERAL,
+                VK_ACCESS_SHADER_WRITE_BIT
+            )
+        )
+        vkCmdPipelineBarrier(
+            command, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR or VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, memory, null, images
+        )
         vkCheck(vkEndCommandBuffer(command), "vkEndCommandBuffer")
     }
 
-    private fun recordTile(stack: MemoryStack, command: VkCommandBuffer, width: Int, height: Int, firstRow: Int, rows: Int, scene: Boolean) {
+    private fun recordTile(
+        stack: MemoryStack,
+        command: VkCommandBuffer,
+        width: Int,
+        height: Int,
+        firstRow: Int,
+        rows: Int,
+        scene: Boolean
+    ) {
         beginCommands(stack, command, oneTime = true)
-        vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_COMPUTE, if (scene) pipeline.scenePipeline else pipeline.pipeline)
-        vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.pipelineLayout, 0, stack.longs(descriptorSet), null)
+        vkCmdBindPipeline(
+            command,
+            VK_PIPELINE_BIND_POINT_COMPUTE,
+            if (scene) pipeline.scenePipeline else pipeline.pipeline
+        )
+        vkCmdBindDescriptorSets(
+            command,
+            VK_PIPELINE_BIND_POINT_COMPUTE,
+            pipeline.pipelineLayout,
+            0,
+            stack.longs(descriptorSet),
+            null
+        )
         val push: ByteBuffer = stack.malloc(16)
         push.putInt(0, width).putInt(4, height).putInt(8, firstRow).putInt(12, rows)
         vkCmdPushConstants(command, pipeline.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, push)
@@ -686,7 +840,15 @@ internal class VulkanRaySession(
         beginCommands(stack, command, oneTime = true)
         val toTransfer = VkMemoryBarrier.calloc(1, stack).sType(VK_STRUCTURE_TYPE_MEMORY_BARRIER)
             .srcAccessMask(VK_ACCESS_SHADER_WRITE_BIT).dstAccessMask(VK_ACCESS_TRANSFER_READ_BIT)
-        vkCmdPipelineBarrier(command, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, toTransfer, null, null)
+        vkCmdPipelineBarrier(
+            command,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            0,
+            toTransfer,
+            null,
+            null
+        )
         fun copy(image: VulkanImage, buffer: VulkanBuffer) {
             val region = VkBufferImageCopy.calloc(1, stack)
             region.imageSubresource().aspectMask(VK_IMAGE_ASPECT_COLOR_BIT).layerCount(1)
@@ -703,7 +865,7 @@ internal class VulkanRaySession(
 
     override fun submit(request: RayRequest) {
         checkOwner()
-        opticalRequest=null;accumulator.clear()
+        opticalRequest = null; accumulator.clear()
         check(pending == null) { "A Vulkan frame is already in flight" }
         sceneGeometryKey = null
         lastScene = null
@@ -718,7 +880,7 @@ internal class VulkanRaySession(
         checkOwner()
         check(pending == null) { "A Vulkan frame is already in flight" }
         request.requireWithinBudget()
-        opticalRequest=request
+        opticalRequest = request
         val scene = request.scene
         require(scene.instances.isNotEmpty()) { "Empty ray scenes are not supported yet" }
         scene.unsupportedReason()?.let {
@@ -738,8 +900,10 @@ internal class VulkanRaySession(
                 uploadScene(RaySceneEncoding(scene).encode())
                 lastScene = scene
             }
-            enqueue(request.key, request.width, request.height, request.camera, request.instances(),
-                scene = true, nativeCamera = request.nativeCamera())
+            enqueue(
+                request.key, request.width, request.height, request.camera, request.instances(),
+                scene = true, nativeCamera = request.nativeCamera()
+            )
         }
     }
 
@@ -761,8 +925,8 @@ internal class VulkanRaySession(
             releaseCommands()
             pending = null
             requireNativeOpticalFrame(color)
-            val frame=RayFrame(request.key, request.width, request.height, color, depth)
-            opticalRequest?.let { accumulator.add(it,frame) } ?: frame
+            val frame = RayFrame(request.key, request.width, request.height, color, depth)
+            opticalRequest?.let { accumulator.add(it, frame) } ?: frame
         }
     }
 
@@ -793,7 +957,14 @@ internal class VulkanRaySession(
         releaseFrame()
         releaseGeometry()
         vkDestroyAccelerationStructureKHR(device, tlas, null)
-        listOf(tlasBuffer, tlasScratch, tlasInstances, instanceBuffer, cameraBuffer, sceneBuffer).forEach { context.destroyBuffer(it) }
+        listOf(
+            tlasBuffer,
+            tlasScratch,
+            tlasInstances,
+            instanceBuffer,
+            cameraBuffer,
+            sceneBuffer
+        ).forEach { context.destroyBuffer(it) }
         vkDestroyFence(device, fence, null)
         vkDestroyDescriptorPool(device, descriptorPool, null)
         vkDestroyCommandPool(device, pool, null)

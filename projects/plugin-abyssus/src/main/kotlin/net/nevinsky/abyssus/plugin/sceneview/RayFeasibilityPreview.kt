@@ -6,7 +6,7 @@ package net.nevinsky.abyssus.plugin.sceneview
 
 import net.nevinsky.abyssus.lib.core.editor.ray.RayFeasibilityLoop
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 
 import net.nevinsky.abyssus.lib.raytracing.*
 import org.lwjgl.opengl.GL32C.*
@@ -14,7 +14,7 @@ import kotlin.math.sin
 
 /** Developer-only synthetic scene for the runIde feasibility gate, independent of project assets and edits. */
 internal class RayFeasibilityPreview(private val report: (String) -> Unit) {
-    val orbit = OrbitCamera(Vec3(0f, 1f, 0f), 8f, 0f, 0.4f)
+    val orbit = OrbitCamera(Vector3(0f, 1f, 0f), 8f, 0f, 0.4f)
     private val geometry = listOf(
         floor(10f), floor(2f),
         RaySliceMesh(floatArrayOf(-1f, 0f, -2f, 1f, 0f, -2f, 0f, 3f, -2f), intArrayOf(0, 1, 2))

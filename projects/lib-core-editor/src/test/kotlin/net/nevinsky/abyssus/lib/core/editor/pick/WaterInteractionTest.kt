@@ -11,8 +11,7 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
@@ -39,17 +38,17 @@ class WaterInteractionTest {
 
     private class Fixture(val state: SceneViewState, val queries: SnapshotSceneQueries, val interaction: SceneInteraction, val camera: PerspectiveCamera) {
         val picked = mutableListOf<String>()
-        val moves = mutableListOf<Pair<String, Vec3>>()
+        val moves = mutableListOf<Pair<String, Vector3>>()
         var accept = true
         var content: SceneContent = SceneContent()
 
-        fun pixelOf(p: Vec3): Pair<Int, Int> {
+        fun pixelOf(p: Vector3): Pair<Int, Int> {
             val v = Vector3(p.x, p.y, p.z)
             camera.project(v, 0f, 0f, W.toFloat(), H.toFloat())
             return v.x.toInt() to (H - v.y.toInt())
         }
 
-        fun click(p: Vec3) = pixelOf(p).let { interaction.pressed(it.first, it.second, true); interaction.released(it.first, it.second, true) }
+        fun click(p: Vector3) = pixelOf(p).let { interaction.pressed(it.first, it.second, true); interaction.released(it.first, it.second, true) }
 
         fun tip(axis: GizmoAxis): Pair<Int, Int> = pixelOf(queries.gizmoHandles(H)!!.tip(axis))
 
@@ -79,7 +78,7 @@ class WaterInteractionTest {
         val frame = FrameSnapshot(camera, emptyList(), listOf(snapshotTerrainOf(terrain)), 1L)
         val content = SceneContent(terrains = listOf(AssetPlacement("1", "terrain", PlacementTransform.IDENTITY)), water = water)
         val queries = SnapshotSceneQueries({ frame }, state) { content }
-        val interaction = SceneInteraction(state, queries, OrbitCamera(Vec3(50f, 0f, 50f), 60f, 0f, 0.6f)).also { it.size = ViewSize(W, H, W, H) }
+        val interaction = SceneInteraction(state, queries, OrbitCamera(Vector3(50f, 0f, 50f), 60f, 0f, 0.6f)).also { it.size = ViewSize(W, H, W, H) }
         return Fixture(state, queries, interaction, camera).also { f ->
             f.content = content
             interaction.onPickWater = { f.picked += it }
@@ -87,11 +86,11 @@ class WaterInteractionTest {
         }
     }
 
-    private fun paramsOf(content: SceneContent) = SceneRenderParams(Rgba(0f, 0f, 0f, 1f), null, null, CameraParams.DEFAULT, content)
+    private fun paramsOf(content: SceneContent) = SceneRenderParams(Color(0f, 0f, 0f, 1f), null, null, CameraParams.DEFAULT, content)
 
     @Test fun clickingExposedWaterSelectsItAndReportsThePick() {
         val f = fixture(selected = null)
-        f.click(Vec3(50f, 2f, 50f))
+        f.click(Vector3(50f, 2f, 50f))
         assertEquals("lake", f.interaction.selectedWater)
         assertNull(f.interaction.selectedId)
         assertEquals(listOf("lake"), f.picked)
@@ -99,7 +98,7 @@ class WaterInteractionTest {
 
     @Test fun clickingOutsideTheWaterOrOnTerrainSelectsNothing() {
         val f = fixture(selected = null)
-        f.click(Vec3(5f, 0f, 90f))
+        f.click(Vector3(5f, 0f, 90f))
         assertNull(f.interaction.selectedWater)
         assertEquals(SceneTarget.Entity("1"), f.state.selection ?: SceneTarget.Entity("1"))
     }
@@ -116,7 +115,7 @@ class WaterInteractionTest {
     @Test fun theMoveGizmoSitsOnTheSurfaceCentre() {
         val f = fixture()
         val handles = f.queries.gizmoHandles(H)!!
-        assertEquals(Vec3(50f, 2f, 50f), handles.origin)
+        assertEquals(Vector3(50f, 2f, 50f), handles.origin)
         assertEquals(GizmoMode.MOVE, handles.mode)
     }
 
@@ -231,6 +230,15 @@ class WaterInteractionTest {
         f.interaction.selectWater("lake")
         assertEquals("lake", f.interaction.selectedWater)
         assertNotNull(f.queries.gizmoHandles(H))
+    }
+
+    @Test fun deleteKeyRemovesTheSelectedSurfaceThroughTheCallback() {
+        val f = fixture(selected = null)
+        val removed = mutableListOf<String>()
+        f.interaction.onWaterDelete = { removed += it; true }
+        f.interaction.selectWater("lake")
+        f.interaction.backspace()
+        assertEquals(listOf("lake"), removed)
     }
 
     @Test fun snappingRoundsTheDraggedCoordinate() {

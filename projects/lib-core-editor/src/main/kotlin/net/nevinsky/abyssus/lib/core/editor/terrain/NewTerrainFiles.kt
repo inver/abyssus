@@ -1,7 +1,7 @@
 package net.nevinsky.abyssus.lib.core.editor.terrain
 
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaDocument
+import net.nevinsky.abyssus.lib.core.editor.document.newAssetMetaText
 import net.nevinsky.abyssus.lib.core.editor.document.TerrainAssetAdditional
 
 import net.nevinsky.abyssus.lib.core.assets.MetaType
@@ -41,9 +41,8 @@ class TerrainAssetWriter(private val json: JsonProcessor, private val encoder: T
 
     fun meta(uuid: UUID, lastModified: Long, size: Int, uv: Float = NEW_TERRAIN_UV_DEFAULT): String {
         require(size > 0) { "size must be positive" }
-        return SceneJson().compact(AssetMetaDocument(
-            lastModified = lastModified, uuid = uuid.toString(), type = MetaType.TERRAIN,
-            additional = TerrainAssetAdditional(TERRAIN_META_FILE_NAME_DEFAULT, size, uv),
-        ))
+        return newAssetMetaText(
+            MetaType.TERRAIN, TerrainAssetAdditional(TERRAIN_META_FILE_NAME_DEFAULT, size, uv), uuid.toString(), lastModified,
+        )
     }
 }

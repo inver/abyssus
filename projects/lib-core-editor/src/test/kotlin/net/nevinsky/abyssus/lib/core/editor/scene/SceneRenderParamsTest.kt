@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
@@ -27,7 +27,7 @@ class SceneRenderParamsTest {
         for (fields in listOf("", "\"coneAngle\":60,\"edgeSoftness\":0.25,")) {
             val values = """{$fields"future":1.23400}"""
             val light = """{"light":$values}"""
-            val text = """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"4":{"components":{"TypeComponent":{"type":"LIGHT_SPOT"},"LightComponent":$light}}}}}"""
+            val text = """{"format":"abyssus","formatVersion":1,"ecs":{"4":{"type":"LIGHT_SPOT","components":{"LightComponent":$light}}}}"""
             val p = renderParamsOf(scene(text), CameraParams.DEFAULT).content.lights.single()
             assertEquals(LightKind.SPOT, p.kind)
             assertEquals(if (fields.isEmpty()) 45f else 60f, p.coneAngle, 0f)
@@ -42,13 +42,13 @@ class SceneRenderParamsTest {
     @Test
     fun ambientIsColorTimesIntensity() {
         val p = renderParamsOf(scene(full), CameraParams.DEFAULT)
-        assertEquals(Rgba(0.5f, 0.25f, 0f, 1f), p.ambient)
+        assertEquals(Color(0.5f, 0.25f, 0f, 1f), p.ambient)
     }
 
     @Test
     fun fogDrivesClearColorAndEquation() {
         val p = renderParamsOf(scene(full), CameraParams.DEFAULT)
-        assertEquals(Rgba(0.2f, 0.3f, 0.4f, 1f), p.clear)
+        assertEquals(Color(0.2f, 0.3f, 0.4f, 1f), p.clear)
         val fog = p.fog!!
         assertEquals(0.01f, fog.density, 0f)
         assertEquals(1.5f, fog.gradient, 0f)
@@ -88,7 +88,7 @@ class SceneRenderParamsTest {
     @Test
     fun missingIntensityDefaultsToOne() {
         val json = """{"format":"abyssus","formatVersion":1,"ambientLightEnabled":true,"ambientLight":{"color":{"r":0.4,"g":0.4,"b":0.4,"a":1}}}"""
-        assertEquals(Rgba(0.4f, 0.4f, 0.4f, 1f), renderParamsOf(scene(json), CameraParams.DEFAULT).ambient)
+        assertEquals(Color(0.4f, 0.4f, 0.4f, 1f), renderParamsOf(scene(json), CameraParams.DEFAULT).ambient)
     }
 
     @Test
@@ -96,7 +96,7 @@ class SceneRenderParamsTest {
         val abss = """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":-0.5,"y":0.0,"z":-0.5},"position":{"x":4.0,"y":3.0,"z":6.0},
             "far":100.0,"near":1.0,"fieldOfView":67.0},"name":"Untitled"}"""
         val cam = MainCamera().parse(abss)!!
-        assertEquals(Vec3(4f, 3f, 6f), cam.position)
+        assertEquals(Vector3(4f, 3f, 6f), cam.position)
         assertEquals(100f, cam.far, 0f)
         assertEquals(67f, cam.fieldOfView, 0f)
         val d = cam.direction
@@ -126,7 +126,7 @@ class SceneRenderParamsTest {
     @Test
     fun shaderCoefficientMatchesMundusFogAtCharacteristicDistance() {
         for (gradient in listOf(0.5f, 1f, 1.5f, 3f)) {
-            val fog = FogParams(Rgba(1f, 1f, 1f, 1f), 0.02f, gradient)
+            val fog = FogParams(Color(1f, 1f, 1f, 1f), 0.02f, gradient)
             val d = 1f / fog.density
             val expected = 1f - kotlin.math.exp(-1f)
             assertEquals(expected, fog.amount(d), 1e-5f)
@@ -136,7 +136,7 @@ class SceneRenderParamsTest {
 
     @Test
     fun fogAmountGrowsWithDistanceAndStaysInRange() {
-        val fog = FogParams(Rgba(1f, 1f, 1f, 1f), 0.01f, 1.5f)
+        val fog = FogParams(Color(1f, 1f, 1f, 1f), 0.01f, 1.5f)
         assertEquals(0f, fog.amount(0f), 0f)
         assertTrue(fog.amount(50f) < fog.amount(150f))
         assertTrue(fog.amount(1e9f) <= 1f)
@@ -146,7 +146,7 @@ class SceneRenderParamsTest {
     fun nullNearKeepsTheRestOfTheCamera() {
         val abss = """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":1,"y":2,"z":3},"near":null,"far":50.0}}"""
         val cam = MainCamera().parse(abss)!!
-        assertEquals(Vec3(1f, 2f, 3f), cam.position)
+        assertEquals(Vector3(1f, 2f, 3f), cam.position)
         assertEquals(CameraParams.DEFAULT.near, cam.near, 0f)
         assertEquals(50f, cam.far, 0f)
     }
@@ -163,8 +163,8 @@ class SceneRenderParamsTest {
 
     @Test
     fun contentAndProjectDirFlowThrough() {
-        val json = """{"format":"abyssus","formatVersion":1,"skyboxEnabled":true,"skyboxName":"sky","ecs":{"entities":{"1":{"components":
-            {"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"m"}}}}}}}}"""
+        val json = """{"format":"abyssus","formatVersion":1,"skyboxEnabled":true,"skyboxName":"sky","ecs":{"1":{"components":
+            {"RenderComponent":{"type":"MODEL","assetName":"m"}}}}}"""
         val dir = java.io.File("proj")
         val p = renderParamsOf(scene(json), CameraParams.DEFAULT, dir)
         assertEquals(listOf("m"), p.content.models.map { it.assetName })

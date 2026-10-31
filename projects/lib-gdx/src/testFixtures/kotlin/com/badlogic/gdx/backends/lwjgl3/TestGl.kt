@@ -22,17 +22,33 @@ import javax.swing.JFrame
 import javax.swing.SwingUtilities
 
 /**
- * Runs a block once with a GL 3.3 core context current (instanced drawing needs `glVertexAttribDivisor`, core in 3.3, as the game asks for) and libGDX's `Gdx.gl*` installed. Opens a small window, so
+ * Runs a block once with a GL 3.3 core context current (the game's own minimum: instancing needs `glVertexAttribDivisor`) and libGDX's `Gdx.gl*` installed. Opens a small window, so
  * tests using it only run with `-Dabyssus.glTests=true` (and a display). In libGDX's package because `Lwjgl3GL30` is
  * package-private.
  */
 object TestGl {
+    /** The default size of the test window, and so of the default framebuffer the tests can draw into. */
+    const val WINDOW_WIDTH = 320
+    const val WINDOW_HEIGHT = 240
+
+    /** The size of the window of the run in progress: what the stubbed back buffer reports. */
+    @Volatile
+    private var width = WINDOW_WIDTH
+
+    @Volatile
+    private var height = WINDOW_HEIGHT
+
     val enabled: Boolean get() = System.getProperty("abyssus.glTests") == "true" && !GraphicsEnvironment.isHeadless()
 
     fun <T> run(block: () -> T): T = run(30, block)
 
     /** [timeoutSeconds] bounds the whole block; a measurement run needs far more than the default. */
-    fun <T> run(timeoutSeconds: Long, block: () -> T): T {
+    fun <T> run(timeoutSeconds: Long, block: () -> T): T = run(timeoutSeconds, WINDOW_WIDTH, WINDOW_HEIGHT, block)
+
+    /** As above in a window whose default framebuffer is [windowWidth] x [windowHeight] pixels (a measurement draws at its own resolution). */
+    fun <T> run(timeoutSeconds: Long, windowWidth: Int, windowHeight: Int, block: () -> T): T {
+        width = windowWidth
+        height = windowHeight
         GdxNativesLoader.load()
         val done = CountDownLatch(1)
         var result: Result<T>? = null
@@ -56,8 +72,9 @@ object TestGl {
                 }
             }
             window = JFrame("gdx-model GL test").apply {
+                canvas.preferredSize = java.awt.Dimension(windowWidth, windowHeight)
                 add(canvas)
-                setSize(320, 240)
+                pack()
                 isVisible = true
             }
             // the canvas has a context only once it is shown: render from a later event
@@ -79,6 +96,9 @@ object TestGl {
             when (name) {
                 "getDeltaTime" -> 0f
                 "isGL30Available" -> true
+                // libGDX's FrameBuffer.end() sets the viewport to the back buffer: a 0 x 0 one would clip everything drawn after it
+                "getWidth", "getBackBufferWidth" -> width
+                "getHeight", "getBackBufferHeight" -> height
                 "getGL20", "getGL30" -> gl
                 else -> null
             }

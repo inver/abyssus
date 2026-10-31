@@ -19,7 +19,7 @@ class SceneRaySettingsPanelTest:BasePlatformTestCase() {
         if(c is JLabel && c.text!=null) add(c.text)
         if(c is Container) c.components.forEach { addAll(texts(it)) }
     }
-    private fun file(text:String="""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""")=myFixture.addFileToProject("settings.scene",text).virtualFile
+    private fun file(text:String="""{"format":"abyssus","formatVersion":1,"ecs":{}}""")=myFixture.addFileToProject("settings.scene",text).virtualFile
     private fun view(file:com.intellij.openapi.vfs.VirtualFile)=SceneDetailsView(SceneRayControls(project) { _,_->error("Settings must not open a view") },readSceneState(file,"Settings") as PanelState.UISceneState,testRootDisposable)
     fun testDefaultsAndValidEditsWorkWithoutAViewAndSelectionDoesNotWrite() {
         val file=file();val document=FileDocumentManager.getInstance().getDocument(file)!!;val original=document.text
@@ -71,12 +71,12 @@ class SceneRaySettingsPanelTest:BasePlatformTestCase() {
         }
     }
     fun testANonObjectSettingsBlockIsExplainedAndNotEditable() {
-        val view=view(file("""{"format":"abyssus","formatVersion":1,"rayTracing":[],"ecs":{"entities":{}}}"""))
+        val view=view(file("""{"format":"abyssus","formatVersion":1,"rayTracing":[],"ecs":{}}"""))
         assertTrue((named(view,"ray-settings-error") as JLabel).text.contains("settings object"))
         assertFalse((named(view,"ray-setting-maxRaysPerFrame") as JBTextField).isEnabled)
     }
     fun testMalformedSettingsAreVisibleAndExternalChangesAreRead() {
-        val file=file("""{"format":"abyssus","formatVersion":1,"rayTracing":{"maxRefractionBounces":null},"ecs":{"entities":{}}}""")
+        val file=file("""{"format":"abyssus","formatVersion":1,"rayTracing":{"maxRefractionBounces":null},"ecs":{}}""")
         val view=view(file)
         assertTrue((named(view,"ray-setting-maxRefractionBounces-error") as JLabel).text.isNotBlank())
         val field=named(view,"ray-setting-maxRefractionBounces") as JBTextField

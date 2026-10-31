@@ -58,9 +58,9 @@ class ScenePatchApplicationTest : BasePlatformTestCase() {
             "removeEntitiesWithAssets" -> {
                 val prefixes = operation.get("prefixes").map { it.asText() }
                 val keep = operation.path("keep").map { it.asText() }.toSet()
-                val entities = root.get("ecs").get("entities") as ObjectNode
+                val entities = root.get("ecs") as ObjectNode
                 entities.properties().filter { (id, entity) ->
-                    id !in keep && entity.path("components").path("RenderComponent").path("renderable").path("asset")
+                    id !in keep && entity.path("components").path("RenderComponent")
                         .path("assetName").asText().let { name -> prefixes.any(name::startsWith) }
                 }.map { it.key }.forEach(entities::remove)
             }

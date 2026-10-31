@@ -176,6 +176,16 @@ class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Te
             program.setUniformf("u_shadowTexel", shadow?.texelSize ?: 1f)
             program.setUniformf("u_shadowBias", shadow?.bias ?: 0f)
             program.setUniformi("u_shadowTexture", SHADOW_UNIT)
+            // 0 leaves the program writing what it always wrote; above 0 it lights in linear space and ends in the display transform
+            program.setUniformf("u_exposure", frame.output?.exposure ?: 0f)
+            // always on its own unit: a samplerCube left on unit 0 would share it with a 2D splat texture, which GL forbids
+            program.setUniformi("u_irradiance", IRRADIANCE_UNIT)
+            program.setUniformi("u_hasSky", if (sun.irradiance != null) 1 else 0)
+            sun.irradiance?.bind(IRRADIANCE_UNIT)
+            val fading = sun.irradiance != null && sun.fadeIrradiance != null && sun.fade > 0f
+            program.setUniformi("u_irradianceTo", IRRADIANCE_TO_UNIT)
+            program.setUniformf("u_skyFade", if (fading) sun.fade.coerceAtMost(1f) else 0f)
+            if (fading) sun.fadeIrradiance!!.bind(IRRADIANCE_TO_UNIT)
         }
 
         override fun bindTerrain(program: ShaderProgram, lighting: TerrainLighting, terrain: TerrainDraw) {

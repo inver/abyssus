@@ -26,13 +26,13 @@ class EntityRemovalTest {
 
     private fun scene(vararg entities: String, wrapped: Boolean = true): JsonNode {
         val body = entities.joinToString(",")
-        val ecs = if (wrapped) """{"entities":{$body},"archetypes":{"1":{"a":1}},"metadata":{"m":2}}""" else "{$body}"
+        val ecs = if (wrapped) """{$body}""" else "{$body}"
         return json.parse("""{"format":"abyssus","formatVersion":1,"ecs":$ecs}""")
     }
 
-    private fun entity(id: Int, components: String) = """"$id":{"archetype":1,"components":{$components}}"""
+    private fun entity(id: Int, components: String) = """"$id":{"components":{$components}}"""
 
-    private fun entities(root: JsonNode) = (root["ecs"]["entities"] ?: root["ecs"])
+    private fun entities(root: JsonNode) = (root["ecs"] ?: root["ecs"])
 
     private fun rejected(result: EditResult): String {
         assertTrue("expected Rejected, was $result", result is EditResult.Rejected)
@@ -45,15 +45,6 @@ class EntityRemovalTest {
         assertEquals(EditResult.Changed, removal.remove(root, "0"))
         assertFalse(root["ecs"].has("0"))
         assertTrue(root["ecs"].has("1"))
-    }
-
-    @Test
-    fun wrappedSceneKeepsArchetypesAndMetadata() {
-        val root = scene(entity(0, """"A":{}"""), entity(1, """"B":{}"""))
-        assertEquals(EditResult.Changed, removal.remove(root, "1"))
-        assertFalse(entities(root).has("1"))
-        assertEquals("""{"1":{"a":1}}""", json.compact(root["ecs"]["archetypes"]))
-        assertEquals("""{"m":2}""", json.compact(root["ecs"]["metadata"]))
     }
 
     @Test
@@ -83,11 +74,8 @@ class EntityRemovalTest {
     }
 
     @Test
-    fun parentAndBothPointEndpointsBlock() {
-        for ((component, member) in listOf(
-            "ParentComponent" to "parentEntityId", "Point2PointPositionComponent" to "entity1Id",
-            "Point2PointPositionComponent" to "entity2Id",
-        )) {
+    fun parentBlocks() {
+        for ((component, member) in listOf("ParentComponent" to "parentEntityId")) {
             val root = scene(entity(0, """"A":{}"""), entity(1, """"$component":{"$member":0}"""))
             val before = json.compact(root)
             assertTrue(rejected(removal.remove(root, "0")).contains("$component.$member"))
@@ -136,7 +124,7 @@ class EntityRemovalTest {
     fun clearingTheReferenceThenRemovingWorks() {
         val root = scene(entity(0, """"A":{}"""), entity(1, """"PositionComponent":{"lookAtId":0}"""))
         rejected(removal.remove(root, "0"))
-        (root["ecs"]["entities"]["1"]["components"]["PositionComponent"] as com.fasterxml.jackson.databind.node.ObjectNode).remove("lookAtId")
+        (root["ecs"]["1"]["components"]["PositionComponent"] as com.fasterxml.jackson.databind.node.ObjectNode).remove("lookAtId")
         assertEquals(EditResult.Changed, removal.remove(root, "0"))
     }
 

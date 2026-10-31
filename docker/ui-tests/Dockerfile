@@ -6,7 +6,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8 \
     TZ=UTC \
     DISPLAY=:99 \
-    ABYSSUS_UI_SCREEN=1920x1080x24
+    ABYSSUS_UI_SCREEN=1920x1080x24 \
+    LIBGL_ALWAYS_SOFTWARE=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates curl git rsync procps unzip locales tzdata \
@@ -14,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         xvfb x11-utils xauth openbox \
         fontconfig fonts-dejavu-core \
         libxtst6 libxrender1 libxi6 libxrandr2 libxext6 libx11-6 libxcursor1 libxinerama1 libxxf86vm1 \
-        libfreetype6 libgl1 libglx-mesa0 libgbm1 libasound2t64 libnss3 libgtk-3-0t64 \
+        libfreetype6 libgl1 libglx-mesa0 libgl1-mesa-dri libegl1 mesa-utils libgbm1 libasound2t64 libnss3 libgtk-3-0t64 \
     && locale-gen en_US.UTF-8 \
     && ln -sf /usr/share/zoneinfo/UTC /etc/localtime \
     && rm -rf /var/lib/apt/lists/*

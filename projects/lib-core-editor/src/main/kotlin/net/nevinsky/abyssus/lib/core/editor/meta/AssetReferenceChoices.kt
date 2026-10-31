@@ -12,6 +12,7 @@ import net.nevinsky.abyssus.lib.core.util.obj
 import net.nevinsky.abyssus.lib.core.util.text
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
+import net.nevinsky.abyssus.lib.core.io.confinedFile
 import java.io.File
 
 /**
@@ -42,7 +43,7 @@ class AssetReferenceChoices(private val json: JsonProcessor) {
     }
 
     /** The `uuid` of the texture asset in [folder], or null when it is not a texture, has no `uuid` or no readable image. */
-    private fun textureUuid(folder: File): String? {
+    internal fun textureUuid(folder: File): String? {
         val meta = runCatchingKeepingCancellation {
             File(folder, META_FILE).takeIf { it.isFile }?.let { AssetMetaReader(json).read(it.readText()).json }
         }.getOrNull() ?: return null
@@ -77,11 +78,6 @@ class AssetReferenceChoices(private val json: JsonProcessor) {
         return file.isFile && file.canRead()
     }
 
-    /** The file [name] under [folder] when its canonical path stays strictly inside the canonical [folder], else null. */
-    fun inside(folder: File, name: String): File? {
-        val root = runCatchingKeepingCancellation { folder.canonicalFile.toPath() }.getOrNull() ?: return null
-        val file = runCatchingKeepingCancellation { File(folder, name).canonicalFile }.getOrNull() ?: return null
-        // Path.startsWith compares whole path elements, so `skybox2` is not inside `skybox`
-        return file.takeIf { it.toPath() != root && it.toPath().startsWith(root) }
-    }
+    /** The file [name] under [folder] when it stays strictly inside it, else null. */
+    fun inside(folder: File, name: String): File? = confinedFile(folder, name)
 }

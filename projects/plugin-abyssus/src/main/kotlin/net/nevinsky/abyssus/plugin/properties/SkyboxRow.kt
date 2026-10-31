@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
@@ -49,7 +51,7 @@ internal class SkyboxRow(
                 preferredSize = Dimension(side, side)
             }
             button.addActionListener {
-                if (browse(file)) field.text = text(SceneJson().parse(textOf(file)).get("skyboxName")?.takeIf { it.isTextual }?.textValue())
+                if (browse(file)) field.text = text(parseDocument(textOf(file)).textAt("skyboxName"))
             }
             line.add(button, BorderLayout.EAST)
         }

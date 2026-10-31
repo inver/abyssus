@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.terrain
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
@@ -20,13 +22,13 @@ class NativeTerrainSourceTest : BasePlatformTestCase() {
         val core = service<AbyssusPluginCtx>()
         val choices = AssetReferenceChoices(core.json)
         for (text in listOf("{}", """{"format":"abyssus","formatVersion":2}""")) {
-            val rejected = readTerrainSource(File(folder.path), text, SceneJson().parse(text), choices, core.terrainRecipes)
+            val rejected = readTerrainSource(File(folder.path), text, parseDocument(text), choices, core.terrainRecipes, core.terrainSculpt.reader)
             assertTrue(rejected is TerrainSource.Unusable)
             val initial = TerrainSource.Ready("terrain", 400, 17, FileSnapshot.Bytes(ByteArray(17 * 17 * 4)),
                 FileSnapshot.Absent, RecipeStatus.Missing, SourceSnapshot("native", "hash", null, true), FileSnapshot.Bytes(byteArrayOf()))
             val queued = mutableListOf<Runnable>()
             val controller = TerrainGenerationController(project, folder, initial, core.terrainGenerator,
-                core.heightEncoder, core.terrainRecipes, queued::add, { it.run() }, { rejected })
+                core.heightEncoder, core.terrainRecipes, core.terrainSculpt, queued::add, { it.run() }, { rejected })
             controller.preview()
             assertTrue(queued.isEmpty())
             assertFalse(controller.canApply)

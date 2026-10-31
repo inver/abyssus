@@ -5,7 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.foliage
 
-import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.plugin.assetfiles.assetResultMessage
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.components.service
 import com.intellij.openapi.vfs.VirtualFile
@@ -19,8 +21,6 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.foliageMaskFileName
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_COLLIDER
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_MODELS
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageColliderEdits
@@ -62,6 +62,7 @@ class FoliageController(
     initial: FoliageSource.Ready,
     private val drafts: FoliageDrafts,
     private val json: JsonProcessor,
+    private val undoCache: FoliageUndoCache,
     private val background: (Runnable) -> Unit,
     private val ui: (Runnable) -> Unit,
     private val readCurrent: () -> FoliageSource,
@@ -246,9 +247,16 @@ class FoliageController(
         onChange()
     }
 
-    /** The panel re-read the asset: changed files invalidate the preview, an open draft keeps its settings. */
+    /**
+     * The panel re-read the asset: changed files invalidate the preview. An open draft keeps its settings while only the
+     * bake or the masks changed; when `meta.json` itself changed, the draft is dropped and the newer settings shown, because
+     * applying it would write its older values over the other edit.
+     */
     fun sourceRead(fresh: FoliageSource.Ready) {
         if (source.sameAs(fresh)) return
+        val metaChanged = fresh.metaText != source.metaText
+        val hadDraft = drafts.of(fresh.folderName) != null
+        if (metaChanged && hadDraft) drafts.discard(fresh.folderName)
         val keepDraft = drafts.of(fresh.folderName) != null
         source = fresh
         if (!keepDraft) {
@@ -256,7 +264,7 @@ class FoliageController(
             problems = fresh.read.problems
         }
         editedText = editedText()
-        message = null
+        message = if (metaChanged && hadDraft) AbyssusBundle.message("foliageSourceChanged") else null
         generate()
         onChange()
     }
@@ -325,7 +333,7 @@ class FoliageController(
             return AssetCommandResult.Done
         }
         val backup = runCatchingKeepingCancellation {
-            if (source.stale && source.dataSha256 != null) project.service<FoliageUndoCache>().preserve(
+            if (source.stale && source.dataSha256 != null) undoCache.preserve(
                 File(folder.path, source.settings.dataFileName()).toPath(), source.dataSha256!!,
             ) else null
         }.getOrElse {
@@ -367,29 +375,15 @@ class FoliageController(
         } finally {
             if (!committed) backup?.close()
         }
-        message = when (result) {
-            AssetCommandResult.Done -> null
-            is AssetCommandResult.Conflict -> AbyssusBundle.message(
-                "foliageApplyConflict",
-                result.path.substringAfterLast('/')
-            )
-
-            is AssetCommandResult.Collision -> AbyssusBundle.message(
-                "foliageApplyConflict",
-                result.path.substringAfterLast('/')
-            )
-
-            is AssetCommandResult.Blocked -> result.reason
-            AssetCommandResult.Cancelled -> AbyssusBundle.message("foliageApplyCancelled")
-            is AssetCommandResult.Failed -> AbyssusBundle.message(
-                "foliageApplyFailed",
-                result.cause.documentDisplayMessage()
-            ) +
-                    if (result.leftover.isEmpty()) "" else " " + AbyssusBundle.message(
-                        "foliageApplyLeftover",
-                        result.leftover.joinToString()
-                    )
-        }
+        message = assetResultMessage(
+            result, "foliageApplyCancelled",
+            conflict = { AbyssusBundle.message("foliageApplyConflict", it.substringAfterLast('/')) },
+            collision = { AbyssusBundle.message("foliageApplyConflict", it.substringAfterLast('/')) },
+            failed = {
+                AbyssusBundle.message("foliageApplyFailed", it.cause.documentDisplayMessage()) +
+                    if (it.leftover.isEmpty()) "" else " " + AbyssusBundle.message("foliageApplyLeftover", it.leftover.joinToString())
+            },
+        )
         if (result != AssetCommandResult.Done) onChange()
         return result
     }
@@ -489,8 +483,8 @@ class FoliageController(
         else -> source.metaText
     }
 
-    private fun additionalOf(text: String): JsonNode? =
-        runCatchingKeepingCancellation { SceneJson().parseObject(text).get("additional") }.getOrNull()
+    private fun additionalOf(text: String): Document? =
+        runCatchingKeepingCancellation { parseDocumentObject(text).at("additional") }.getOrNull()
 
     /** Counts the copies of the current settings off the EDT; the newest request wins. */
     private fun generate() {

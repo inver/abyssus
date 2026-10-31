@@ -5,12 +5,11 @@
 
 package net.nevinsky.abyssus.lib.core.editor.panel
 
+import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_FIELDS
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FAR
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_NEAR
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.core.format.isEnabled
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.meta.ComponentSection
 import net.nevinsky.abyssus.lib.core.editor.components.EnabledTarget
@@ -170,25 +169,21 @@ class PanelBuilders(
         )
     }
 
-    /** The `ecs` row: entity and archetype counts, read only, with the count of each entity type as a note. */
+    /** The `ecs` row: the entity count, read only, with the count of each entity type as a note. */
     fun ecs(scene: JsonNode, projectFile: String): PanelModel {
-        val ecs = scene.get("ecs")
         val entities = SceneDocument(scene).entitiesNode()?.properties().orEmpty().toList()
         val types = entities.groupingBy { (_, e) ->
-            e.get("components")?.get("TypeComponent")?.get("type")?.asText() ?: "OBJECT"
+            net.nevinsky.abyssus.lib.core.format.entityTypeOf(e) ?: "OBJECT"
         }
             .eachCount().entries.sortedWith(compareBy({ -it.value }, { it.key }))
-        val declared = ecs?.get("archetypes")?.takeIf { it.isObject }?.size()
-        val archetypes = declared ?: entities.mapNotNull { (_, e) -> e.get("archetype")?.asText() }.distinct().size
         val rows = listOf(
             ReadonlyRow("entities", entities.size.toString()),
-            ReadonlyRow("archetypes", archetypes.toString()),
             NoteRow(messages.message("panelNoteEcsTypes", types.joinToString(", ") { "${it.key} ${it.value}" })),
         )
         return PanelModel(
             Header(
                 listOf(projectFile, scene.text("name")), "ecs", "ecs",
-                messages.message("panelSubtitleEcs", entities.size, archetypes),
+                messages.message("panelSubtitleEcs", entities.size),
                 listOf(Badge(BadgeKind.READ_ONLY, messages.message("panelBadgeReadOnly"))),
             ),
             listOf(Section("ecs", messages.message("panelSectionEntities"), "ecs", rows)),
@@ -206,7 +201,7 @@ class PanelBuilders(
                 listOf(projectFile, scene.text("name"), "ecs"), entityIconKey(type), read.name,
                 messages.message("panelSubtitleEntity", entityId, type ?: "OBJECT"),
             ),
-            read.sections.filter { it.kind != TypeComponent::class.simpleName }
+            read.sections
                 .map { componentSection(scene, entityId, it, read.name, type, entityOn) },
             messages.message("panelFooterDefaults"),
         )
@@ -231,7 +226,7 @@ class PanelBuilders(
     }
 
     private fun typeOf(scene: JsonNode, entityId: String): String? =
-        SceneDocument(scene).components(entityId)?.get("TypeComponent")?.get("type")?.takeIf { it.isTextual }?.asText()
+        SceneDocument(scene).entity(entityId)?.type
 
     private fun entityEnabled(scene: JsonNode, entityId: String): Boolean =
         SceneDocument(scene).entity(entityId)?.enabled ?: true
@@ -245,7 +240,7 @@ class PanelBuilders(
         entityOn: Boolean,
     ): Section {
         val node = SceneDocument(scene).components(entityId)?.get(section.kind)
-        val componentOn = isEnabled(node)
+        val componentOn = SceneDocument(scene).entity(entityId)?.componentEnabled(section.kind) ?: true
         val togglable = toggles.isTogglable(section.kind)
         val rows = if (section.raw != null) rawRows(section) else rows(section, entityId, entityName, type)
         return Section(
@@ -498,7 +493,7 @@ class PanelBuilders(
         }
         val reference = ASSET_REFERENCES[type to key]
         return when {
-            reference != null -> AssetRow(
+            reference != null && (!value.isNull || key in editable) -> AssetRow(
                 key,
                 text,
                 assetIconKey(reference),
@@ -602,8 +597,8 @@ private val CAMEL = Regex("(?<=[a-z])(?=[A-Z])")
 private val EMPTY_OBJECT = Regex("\\s*\\{\\s*}\\s*")
 
 /** The `additional` keys that name another asset, with the type of asset they name. */
-private val ASSET_REFERENCES = mapOf(
-    ("TERRAIN" to "splatBase") to "TEXTURE",
-    ("FOLIAGE" to "terrain") to "TERRAIN",
-    ("SKYBOX_PROCEDURAL" to "clouds") to "CLOUDS",
-)
+private val ASSET_REFERENCES: Map<Pair<String, String>, String> =
+    (SPLAT_FIELDS + "splatBase").distinct().associate { ("TERRAIN" to it) to "TEXTURE" } + mapOf(
+        ("FOLIAGE" to "terrain") to "TERRAIN",
+        ("SKYBOX_PROCEDURAL" to "clouds") to "CLOUDS",
+    )

@@ -78,9 +78,9 @@ internal class SceneSkyPass(
     }
 
     fun draw(view: Camera, p: SceneRenderParams) {
-        skybox?.draw(view, p.content.skybox, p.projectDir, SunDirection.of(p.content.lights), skyClock.seconds, state.cloudTechnique)
+        skybox?.draw(view, p.content.skybox, SunDirection.of(p.content.lights), skyClock.seconds, state.cloudTechnique)
     }
-    private var lightsKey: Pair<List<LightPlacement>, Vec3>? = null
+    private var lightsKey: Pair<List<LightPlacement>, Vector3>? = null
     var lights = NO_LIGHTS
 
     /** [lights] with the sun dimmed by the clouds over it: what the environment and the terrain shader light with. */
@@ -131,7 +131,7 @@ internal class SceneSkyPass(
 
     /** Recomputed only when the scene's lights or the orbit target (which decides the nearest point lights) change. */
     fun applyLights(c: SceneContent, orbit: OrbitCamera) {
-        val target = Vec3(orbit.target.x, orbit.target.y, orbit.target.z)
+        val target = Vector3(orbit.target.x, orbit.target.y, orbit.target.z)
         val key = c.lights to target
         if (key == lightsKey) return
         lightsKey = key

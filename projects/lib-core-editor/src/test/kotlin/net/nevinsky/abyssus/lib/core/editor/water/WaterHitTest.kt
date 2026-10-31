@@ -7,7 +7,6 @@ package net.nevinsky.abyssus.lib.core.editor.water
 
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.pick.WaterOutline
 import net.nevinsky.abyssus.lib.core.water.WaterPreset
 import net.nevinsky.abyssus.lib.core.water.WaterPresets
@@ -91,7 +90,7 @@ class WaterHitTest {
         val other = lake.copy(id = "other")
         val invalid = InvalidWater("bad", "Bad", listOf("x"))
         val water = listOf(ValidWater(lake), ValidWater(other), invalid)
-        val shown = WaterPreview().apply(water, mapOf("lake" to Vec3(1f, 2.5f, 3f), "bad" to Vec3(9f, 9f, 9f)))
+        val shown = WaterPreview().apply(water, mapOf("lake" to Vector3(1f, 2.5f, 3f), "bad" to Vector3(9f, 9f, 9f)))
         val moved = (shown[0] as ValidWater).settings
         assertEquals(Triple(1.0, 2.5, 3.0), Triple(moved.x, moved.level, moved.z))
         assertEquals(lake.copy(x = 1.0, level = 2.5, z = 3.0), moved)
@@ -109,8 +108,8 @@ class WaterHitTest {
 
 class WaterOutlineTest {
     private class Lines : net.nevinsky.abyssus.lib.core.editor.pick.LineSink {
-        val segments = mutableListOf<Pair<Vec3, Vec3>>()
-        override fun line(from: Vec3, to: Vec3, color: net.nevinsky.abyssus.lib.core.editor.content.Rgba) { segments += from to to }
+        val segments = mutableListOf<Pair<Vector3, Vector3>>()
+        override fun line(from: Vector3, to: Vector3, color: com.badlogic.gdx.graphics.Color) { segments += from to to }
     }
 
     @Test fun theOutlineIsTheExtentRectangleAtTheMeanLevel() {
@@ -118,7 +117,7 @@ class WaterOutlineTest {
         val out = Lines().also { WaterOutline().draw(it, lake) }
         assertEquals(4, out.segments.size)
         val points = out.segments.flatMap { listOf(it.first, it.second) }
-        assertEquals(setOf(Vec3(-10f, 2f, -15f), Vec3(30f, 2f, -15f), Vec3(30f, 2f, 5f), Vec3(-10f, 2f, 5f)), points.toSet())
+        assertEquals(setOf(Vector3(-10f, 2f, -15f), Vector3(30f, 2f, -15f), Vector3(30f, 2f, 5f), Vector3(-10f, 2f, 5f)), points.toSet())
         // the segments form a closed loop
         for (i in out.segments.indices) assertEquals(out.segments[i].second, out.segments[(i + 1) % 4].first)
     }

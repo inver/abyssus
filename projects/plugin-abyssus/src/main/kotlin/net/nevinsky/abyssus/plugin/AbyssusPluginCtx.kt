@@ -45,6 +45,7 @@ class AbyssusPluginCtx : Disposable {
     val heightEncoder get() = terrain.heightEncoder
     val terrainWriter get() = terrain.writer
     val terrainRecipes get() = terrain.recipes
+    val terrainSculpt get() = terrain.sculpt
     val newTerrains get() = terrain.newTerrains
     val newFoliages get() = foliage.newFoliages
     val flightGearImport by lazy { FlightGearImport(json, CoreDocumentFormat()) }

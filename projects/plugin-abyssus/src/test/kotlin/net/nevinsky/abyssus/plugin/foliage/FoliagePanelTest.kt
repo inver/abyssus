@@ -1,5 +1,7 @@
 package net.nevinsky.abyssus.plugin.foliage
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.components.service
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
@@ -43,9 +45,9 @@ class FoliagePanelTest : BasePlatformTestCase() {
     }
     private fun source(): FoliageSource.Ready {
         val text = File(folder.path, "meta.json").readText()
-        return readFoliageSource(folder.name, disk, json, text, net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parseObject(text)["additional"]) as FoliageSource.Ready
+        return readFoliageSource(folder.name, disk, json, text, net.nevinsky.abyssus.lib.core.editor.document.parseDocumentObject(text).at("additional")) as FoliageSource.Ready
     }
-    private fun controller() = FoliageController(project, folder, source(), drafts, json,
+    private fun controller() = FoliageController(project, folder, source(), drafts, json, project.service<FoliageUndoCache>(),
         background = { it.run() }, ui = { it.run() }, readCurrent = { source() })
     private fun panel() = AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project),
         background = { it.run() }, ui = { it.run() }).also { it.showFolder(folder) }
@@ -73,6 +75,30 @@ class FoliagePanelTest : BasePlatformTestCase() {
             com.intellij.openapi.command.undo.UndoManager.getInstance(project).redo(editor)
             assertEquals(preview, bytes("foliage.data"))
         } finally { com.intellij.openapi.util.Disposer.dispose(editor) }
+        c.dispose()
+    }
+    fun testADraftIsDroppedWhenTheMetadataChangedUnderIt() {
+        val c = controller()
+        assertNull(c.edit { it.copy(layers = it.layers.map { l -> l.copy(density = l.density * 2) }) })
+        assertNotNull(drafts.of(folder.name))
+        val file = File(folder.path, "meta.json")
+        val newer = file.readText().replace("\"seed\": 7", "\"seed\": 8")
+        assertTrue(newer != file.readText())
+        file.writeText(newer)
+        c.sourceRead(source())
+        assertNull("applying the older draft would write its seed over the newer one", drafts.of(folder.name))
+        assertEquals(8, c.settings.layers.first().seed)
+        assertEquals("the draft's density is gone too", 0.0002f, c.settings.layers.first().density)
+        c.dispose()
+    }
+    fun testADraftSurvivesAChangeThatLeavesTheMetadataAlone() {
+        val c = controller()
+        assertNull(c.edit { it.copy(layers = it.layers.map { l -> l.copy(density = l.density * 2) }) })
+        val doubled = c.settings.layers.first().density
+        File(folder.path, "foliage.data").appendBytes(byteArrayOf(0))
+        c.sourceRead(source())
+        assertNotNull(drafts.of(folder.name))
+        assertEquals(doubled, c.settings.layers.first().density)
         c.dispose()
     }
     fun testSelectingAnotherAssetDiscardsTheDraft() {

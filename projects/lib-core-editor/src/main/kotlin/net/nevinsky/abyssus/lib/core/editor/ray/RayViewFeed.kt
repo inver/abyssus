@@ -78,9 +78,7 @@ class RayViewFeed(
     /** Render thread. The ray frame to present for [context], or null while raster should be shown. */
     fun frame(context: RayFrameContext): RaySceneDisplay? {
         if (closed.get()) return null
-        val overrides = net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs(context.params.ecs).entities().mapNotNull { entity ->
-            entity.componentNode("RenderComponent")?.get("rayTracingMaterials")?.let { entity.id to it }
-        }.toMap()
+        val overrides = rayOverridesOf(context.params.ecs)
         val signature = context.params.rayTracing to overrides
         if (settingsSignature != signature) {
             settingsSignature = signature

@@ -9,7 +9,7 @@ import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.assets.AssetIndex
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.MetaAssetLoader
+import net.nevinsky.abyssus.lib.core.assets.loading.StagedMetaAssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
 import java.nio.ByteBuffer
@@ -28,11 +28,9 @@ class TerrainLoader(
     private val fileLoader: FileLoader,
     metaLoader: AssetMetaLoader,
     private val index: AssetIndex = AssetIndex(fileLoader, metaLoader),
-) : MetaAssetLoader<Unit, PreparedTerrain, TerrainMesh>(metaLoader) {
+) : StagedMetaAssetLoader<PreparedTerrain, TerrainMesh>(metaLoader) {
 
-    override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedTerrain> = Prepared(read(meta))
-
-    private fun read(meta: AssetMeta<Any>): PreparedTerrain {
+    override fun read(meta: AssetMeta<Any>): PreparedTerrain {
         val additional = meta.typedAdditional<TerrainMeta>()
         val data = read(meta.name, additional)
         val folders = SPLAT_FIELDS.mapNotNull { additional.splat(it) }.takeIf { it.isNotEmpty() }

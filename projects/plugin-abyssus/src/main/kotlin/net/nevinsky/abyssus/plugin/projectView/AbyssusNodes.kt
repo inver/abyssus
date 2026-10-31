@@ -5,7 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.icons.AllIcons
 import com.intellij.ide.projectView.PresentationData
 import com.intellij.ide.projectView.ProjectViewNode
@@ -21,8 +23,7 @@ import com.intellij.openapi.vfs.VirtualFileVisitor
 import com.intellij.ui.SimpleTextAttributes
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.core.editor.document.scalarOf
+import net.nevinsky.abyssus.lib.core.dto.EntityType
 import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
 import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
 import net.nevinsky.abyssus.lib.core.water.WaterPreset
@@ -131,12 +132,10 @@ class DtoEntry(
 }
 
 /** Reads only the admitted row's JSON, without loading runtime components or assets. */
-private fun DtoEntry.entityType(): TypeComponent.Type? {
+private fun DtoEntry.entityType(): EntityType? {
     if (!isEntityEntry(this)) return null
-    val components = (value as? JsonNode)?.get("components") ?: return null
-    val component = components.get(TypeComponent::class.java.name) ?: components.get("TypeComponent")
-    val name = component?.get("type")?.takeIf { it.isTextual }?.textValue() ?: return null
-    return TypeComponent.Type.entries.firstOrNull { it.name == name }
+    val name = net.nevinsky.abyssus.lib.core.editor.host.entityTypeOf(value as? Document) ?: return null
+    return EntityType.entries.firstOrNull { it.name == name }
 }
 
 private fun entryIcon(entry: DtoEntry): Icon {
@@ -200,7 +199,7 @@ class DtoEntryNode(
     }
 
     private fun uiMetaFile(asset: Asset<*>): VirtualFile? =
-        LocalFileSystem.getInstance().findFileByIoFile(java.io.File(asset.baseDir, "meta.json"))
+        LocalFileSystem.getInstance().findFileByIoFile(java.io.File(asset.baseDir, META_FILE))
 
     override fun canNavigate() = uiTarget() != null
 
@@ -222,8 +221,10 @@ class DtoEntryNode(
         val v = value
         val dto = v.value
         val rows = when {
-            isEcsEntry(v) -> ecsRows(dto as JsonNode)
-            isEntityEntry(v) -> entityRows(dto as JsonNode)
+            isEcsEntry(v) -> ecsRows(dto as Document)
+            // a path arrangement is a plain line: its copies are squashed into it and its components are edited in Properties
+            isEntityEntry(v) && isArrangementEntity(dto as Document) -> emptyList()
+            isEntityEntry(v) -> entityRows(dto as Document)
             else -> childrenOf(dto)
         }.filterNot { sceneFileOf(v) != null && it.name in SCENE_HEADER }.foldToggles()
         return rows.mapIndexed { i, row ->

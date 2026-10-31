@@ -9,18 +9,16 @@ import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong
 import net.nevinsky.abyssus.lib.core.editor.content.ArrangementPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Test
 
 private const val W = 800
@@ -32,7 +30,7 @@ class SceneInteractionPathTest {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
     }
 
-    private val tree = RenderAsset("MODEL", "tree")
+    private val tree = BaseMeta(MetaType.MODEL, "tree")
 
     private fun camera() = PerspectiveCamera(67f, W.toFloat(), H.toFloat()).also {
         it.position.set(50f, 60f, 110f)
@@ -48,8 +46,8 @@ class SceneInteractionPathTest {
         val interaction: SceneInteraction,
         val camera: PerspectiveCamera,
     ) {
-        val created = mutableListOf<Triple<RenderAsset, List<Vec3>, Boolean>>()
-        val edits = mutableListOf<Pair<String, List<Vec3>>>()
+        val created = mutableListOf<Triple<BaseMeta, List<Vector3>, Boolean>>()
+        val edits = mutableListOf<Pair<String, List<Vector3>>>()
         var accept = true
 
         /** The Swing pixel of the world point ([x], [y], [z]). */
@@ -66,30 +64,48 @@ class SceneInteractionPathTest {
         }
     }
 
-    private fun fixture(arrangement: Boolean = false, copy: Boolean = false, closed: Boolean = false, points: List<Vec3> = line()): Fixture {
+    private fun fixture(
+        arrangement: Boolean = false,
+        copy: Boolean = false,
+        closed: Boolean = false,
+        points: List<Vector3> = line()
+    ): Fixture {
         val state = SceneViewState()
         val content = SceneContent(
             terrains = listOf(AssetPlacement("1", "terrain", PlacementTransform.IDENTITY)),
-            arrangements = if (arrangement) listOf(ArrangementPlacement("5", arrangementAlong(points, closed = closed))) else emptyList(),
+            arrangements = if (arrangement) {
+                listOf(
+                    ArrangementPlacement(
+                        "5",
+                        arrangementAlong(points, closed = closed).also { if (copy) it.slots = mutableListOf(12) })
+                )
+            } else emptyList(),
         )
         val boxes = if (copy) {
-            listOf(snapshotBoxOf("12", BoundingBox(Vector3(-2f, -2f, -2f), Vector3(2f, 2f, 2f)), Matrix4().setToTranslation(50f, 0f, 50f)))
+            listOf(
+                snapshotBoxOf(
+                    "12",
+                    BoundingBox(Vector3(-2f, -2f, -2f), Vector3(2f, 2f, 2f)),
+                    Matrix4().setToTranslation(50f, 0f, 50f)
+                )
+            )
         } else emptyList()
         val terrain = TerrainTarget("1", TerrainData(3, FloatArray(9), 100, 1f), Matrix4())
         val frame = FrameSnapshot(camera(), boxes, listOf(snapshotTerrainOf(terrain)), 7L)
         val queries = SnapshotSceneQueries({ frame }, state) { content }
-        val interaction = SceneInteraction(state, queries, OrbitCamera(Vec3(50f, 0f, 50f), 60f, 0f, 0.6f)).also {
+        val interaction = SceneInteraction(state, queries, OrbitCamera(Vector3(50f, 0f, 50f), 60f, 0f, 0.6f)).also {
             it.size = ViewSize(W, H, W, H)
         }
         return Fixture(state, queries, interaction, frame.camera).also { f ->
-            interaction.onArrangementCreate = { asset, p, closedLine -> f.created += Triple(asset, p, closedLine); f.accept }
+            interaction.onArrangementCreate =
+                { asset, p, closedLine -> f.created += Triple(asset, p, closedLine); f.accept }
             interaction.onArrangementEdit = { id, p -> f.edits += id to p; f.accept }
         }
     }
 
-    private fun line() = listOf(Vec3(20f, 0f, 50f), Vec3(80f, 0f, 50f))
+    private fun line() = listOf(Vector3(20f, 0f, 50f), Vector3(80f, 0f, 50f))
 
-    private fun assertNear(x: Float, z: Float, p: Vec3) {
+    private fun assertNear(x: Float, z: Float, p: Vector3) {
         assertEquals(x, p.x, 0.6f)
         assertEquals(0f, p.y, 0.01f)
         assertEquals(z, p.z, 0.6f)
@@ -216,47 +232,141 @@ class SceneInteractionPathTest {
         assertTrue(f.edits.isEmpty())
     }
 
+    private fun editing(points: List<Vector3> = line()): Fixture =
+        fixture(arrangement = true, points = points).also { it.interaction.setPathEditing("5") }
+
+    /** Presses the handle of point [index] and releases it: the click that gives the point its gizmo. */
+    private fun Fixture.selectPoint(x: Float, z: Float) {
+        val (px, py) = pixelOf(x, z)
+        interaction.pressed(px, py, true)
+        interaction.released(px, py, true)
+    }
+
     @Test
-    fun draggingAPointHandleMovesItAndWritesOnRelease() {
+    fun handlesAreNotGrabbedOutsideTheEditMode() {
         val f = fixture(arrangement = true)
         f.state.selectedId = "5"
-        val (x0, y0) = f.pixelOf(80f, 50f)
-        val (x1, y1) = f.pixelOf(60f, 40f)
+        val (x, y) = f.pixelOf(80f, 50f)
+        f.interaction.pressed(x, y, true)
+        f.interaction.released(x, y, true)
+        assertNull(f.state.selectedPathPoint)
+        assertTrue(f.edits.isEmpty())
+    }
+
+    @Test
+    fun clickingAControlPointInTheEditModeGivesItTheMoveGizmo() {
+        val f = editing()
+        f.selectPoint(80f, 50f)
+        assertEquals(1, f.state.selectedPathPoint)
+        val handles = f.queries.gizmoHandles(H)!!
+        assertEquals(GizmoMode.MOVE, handles.mode)
+        assertNear(80f, 50f, handles.origin)
+        assertEquals("5", f.interaction.selectedId)
+    }
+
+    @Test
+    fun draggingTheGizmoMovesThePointAndKeepsItAsADraftUntilApply() {
+        val f = editing()
+        f.selectPoint(80f, 50f)
+        val handles = f.queries.gizmoHandles(H)!!
+        val tip = handles.tip(GizmoAxis.X)
+        val (x0, y0) = f.pixelOf((handles.origin.x + tip.x) / 2f, (handles.origin.z + tip.z) / 2f)
+        val (x1, y1) = f.pixelOf((handles.origin.x + tip.x) / 2f - 10f, (handles.origin.z + tip.z) / 2f)
         f.interaction.pressed(x0, y0, true)
         f.interaction.dragged(x1, y1, true)
         val shown = f.state.pathEdit!!
         assertEquals("5", shown.entityId)
-        assertNear(60f, 40f, shown.points[1])
+        assertTrue(shown.points[1].x < 79f)
         assertNear(20f, 50f, shown.points[0])
         assertTrue(f.edits.isEmpty())
         f.interaction.released(x1, y1, true)
+        assertTrue(f.edits.isEmpty())
+        assertTrue(f.interaction.hasPathDraft)
+        assertTrue(f.state.pathDraft!!.points[1].x < 79f)
+        assertTrue(f.interaction.applyPathDraft())
         assertEquals(1, f.edits.size)
-        assertEquals("5", f.edits[0].first)
-        assertNear(60f, 40f, f.edits[0].second[1])
+        assertTrue(f.edits[0].second[1].x < 79f)
+        assertFalse(f.interaction.hasPathDraft)
     }
 
     @Test
-    fun draggingAMiddleHandleInsertsAPoint() {
-        val f = fixture(arrangement = true)
-        f.state.selectedId = "5"
-        val (x0, y0) = f.pixelOf(50f, 50f)
-        val (x1, y1) = f.pixelOf(50f, 70f)
-        f.interaction.pressed(x0, y0, true)
-        f.interaction.dragged(x1, y1, true)
-        f.interaction.released(x1, y1, true)
-        val points = f.edits.single().second
+    fun deleteKeyRemovesTheSelectedControlPointInTheEditMode() {
+        val f = editing(listOf(Vector3(20f, 0f, 50f), Vector3(50f, 0f, 50f), Vector3(80f, 0f, 50f)))
+        f.selectPoint(50f, 50f)
+        f.interaction.backspace()
+        assertTrue(f.edits.isEmpty())
+        val points = f.state.pathDraft!!.points
+        assertEquals(2, points.size)
+        assertNear(80f, 50f, points[1])
+        assertNull(f.state.selectedPathPoint)
+    }
+
+    @Test
+    fun closingTheEditDropsTheDraft() {
+        val f = editing(listOf(Vector3(20f, 0f, 50f), Vector3(50f, 0f, 50f), Vector3(80f, 0f, 50f)))
+        f.selectPoint(50f, 50f)
+        f.interaction.backspace()
+        f.interaction.setPathEditing(null)
+        assertFalse(f.interaction.hasPathDraft)
+        assertTrue(f.edits.isEmpty())
+    }
+
+    @Test
+    fun dropPutsEveryPointOnTheGround() {
+        val f = editing(listOf(Vector3(20f, 5f, 50f), Vector3(80f, 7f, 50f)))
+        f.interaction.groundHeights = { GroundHeight { _, _, _ -> 2f } }
+        assertTrue(f.interaction.dropPath())
+        assertEquals(listOf(2f, 2f), f.state.pathDraft!!.points.map { it.y })
+        assertTrue(f.edits.isEmpty())
+    }
+
+    @Test
+    fun dropPointPutsOnlyThatPointOnTheGround() {
+        val f = editing(listOf(Vector3(20f, 5f, 50f), Vector3(80f, 7f, 50f)))
+        f.interaction.groundHeights = { GroundHeight { _, _, _ -> 2f } }
+        assertTrue(f.interaction.dropPathPoint(1))
+        assertEquals(listOf(5f, 2f), f.state.pathDraft!!.points.map { it.y })
+    }
+
+    @Test
+    fun deleteKeyKeepsTheLastTwoControlPoints() {
+        val f = editing()
+        f.selectPoint(80f, 50f)
+        f.interaction.backspace()
+        assertTrue(f.edits.isEmpty())
+        assertEquals(1, f.state.selectedPathPoint)
+    }
+
+    @Test
+    fun clickingTheSplineInTheEditModeAddsAControlPointThere() {
+        val f = editing()
+        f.selectPoint(50f, 50f)
+        val points = f.state.pathDraft!!.points
         assertEquals(3, points.size)
-        assertNear(20f, 50f, points[0])
-        assertNear(50f, 70f, points[1])
-        assertNear(80f, 50f, points[2])
+        assertNear(50f, 50f, points[1])
+        assertEquals(1, f.state.selectedPathPoint)
+        assertTrue(f.edits.isEmpty())
     }
 
     @Test
-    fun escapeDuringAPointDragRestoresAndWritesNothing() {
-        val f = fixture(arrangement = true)
-        f.state.selectedId = "5"
-        val (x0, y0) = f.pixelOf(80f, 50f)
-        val (x1, y1) = f.pixelOf(60f, 40f)
+    fun aClickOffHandlesAndSplineLetsGoOfThePointButKeepsTheEditMode() {
+        val f = editing()
+        f.selectPoint(80f, 50f)
+        f.click(35f, 80f)
+        assertNull(f.state.selectedPathPoint)
+        assertEquals("5", f.interaction.pathEditing)
+        assertEquals("5", f.interaction.selectedId)
+    }
+
+    @Test
+    fun escapeDuringAGizmoDragRestoresAndWritesNothing() {
+        val f = editing()
+        f.selectPoint(80f, 50f)
+        val handles = f.queries.gizmoHandles(H)!!
+        val tip = handles.tip(GizmoAxis.X)
+        val mid = (handles.origin.x + tip.x) / 2f to (handles.origin.z + tip.z) / 2f
+        val (x0, y0) = f.pixelOf(mid.first, mid.second)
+        val (x1, y1) = f.pixelOf(mid.first - 10f, mid.second)
         f.interaction.pressed(x0, y0, true)
         f.interaction.dragged(x1, y1, true)
         f.interaction.escape()
@@ -266,14 +376,14 @@ class SceneInteractionPathTest {
     }
 
     @Test
-    fun pressingAHandleWithoutMovingWritesNothing() {
-        val f = fixture(arrangement = true)
-        f.state.selectedId = "5"
-        val (x0, y0) = f.pixelOf(80f, 50f)
-        f.interaction.pressed(x0, y0, true)
-        f.interaction.released(x0, y0, true)
-        assertTrue(f.edits.isEmpty())
-        assertNull(f.state.pathEdit)
+    fun selectingSomethingElseEndsTheEditMode() {
+        val f = editing()
+        var ended = 0
+        f.interaction.onPathEditEnded = { ended++ }
+        f.state.selectedId = "1"
+        f.interaction.selectionChanged()
+        assertNull(f.interaction.pathEditing)
+        assertEquals(1, ended)
     }
 
     @Test
@@ -281,17 +391,21 @@ class SceneInteractionPathTest {
         val two = fixture(arrangement = true)
         assertFalse(two.interaction.canRemovePoint("5"))
         assertFalse(two.interaction.removePoint("5", 0))
-        val three = fixture(arrangement = true, points = listOf(Vec3(20f, 0f, 50f), Vec3(50f, 0f, 60f), Vec3(80f, 0f, 50f)))
+        val three = fixture(
+            arrangement = true,
+            points = listOf(Vector3(20f, 0f, 50f), Vector3(50f, 0f, 60f), Vector3(80f, 0f, 50f))
+        )
         assertTrue(three.interaction.canRemovePoint("5"))
         assertTrue(three.interaction.removePoint("5", 1))
-        assertEquals(listOf(Vec3(20f, 0f, 50f), Vec3(80f, 0f, 50f)), three.edits.single().second)
+        assertEquals(listOf(Vector3(20f, 0f, 50f), Vector3(80f, 0f, 50f)), three.edits.single().second)
     }
 
     @Test
-    fun clickingTheLineSelectsTheArrangement() {
+    fun theLineIsNotClickableOutsideTheEditMode() {
         val f = fixture(arrangement = true)
         f.click(35f, 50f)
-        assertEquals("5", f.interaction.selectedId)
+        assertEquals("1", f.interaction.selectedId)
+        assertNull(f.interaction.pathEditing)
     }
 
     @Test
@@ -305,16 +419,25 @@ class SceneInteractionPathTest {
     fun aCopyWinsOverTheLine() {
         val f = fixture(arrangement = true, copy = true)
         f.click(50f, 50f)
-        assertEquals("12", f.interaction.selectedId)
+        assertEquals("5", f.interaction.selectedId)
     }
 
     @Test
-    fun selectingSomethingElseHidesTheHandles() {
-        val f = fixture(arrangement = true)
-        f.click(35f, 50f)
-        val (x, y) = f.pixelOf(80f, 50f)
-        assertTrue(f.queries.pathHandleAt(x, y, W, H) is PathHit.Point)
-        f.click(35f, 80f)
-        assertNull(f.queries.pathHandleAt(x, y, W, H))
+    fun aCopyOfAnArrangementSelectsTheWholeArrangementAndStaysSelectedOnTheNextCopyClick() {
+        val f = fixture(arrangement = true, copy = true)
+        val picked = mutableListOf<String>()
+        f.interaction.onPick = { picked += it }
+        f.click(50f, 50f)
+        f.click(50f, 50f)
+        assertEquals("5", f.interaction.selectedId)
+        assertEquals(listOf("5", "5"), picked)
+        assertEquals(listOf("12"), f.queries.content.copiesOf("5"))
+    }
+
+    @Test
+    fun aModelThatBelongsToNoArrangementSelectsItself() {
+        val f = fixture(arrangement = false, copy = true)
+        f.click(50f, 50f)
+        assertEquals("12", f.interaction.selectedId)
     }
 }

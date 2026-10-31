@@ -6,7 +6,7 @@
   "uuid": "c3797a9e-e833-5bcb-adf6-39c34853496e",
   "type": "CLOUDS",
   "additional": {
-    "technique": "SHELLS",
+    "technique": "VOLUMETRIC",
     "low": {
       "level": "LOW",
       "type": "CUMULUS",

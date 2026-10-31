@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.ashley.core.Component
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
 import net.nevinsky.abyssus.lib.core.dto.LightDto
@@ -15,9 +16,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PathSides
-import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentField
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentKind
@@ -58,16 +57,6 @@ internal class BuiltInComponentKinds(private val reader: ComponentReader, privat
                 )
             ),
         ) { NameComponent() },
-        kind<TypeComponent>(
-            "TypeComponent",
-            listOf(
-                ComponentField(
-                    "type", FieldKind.CHOICE, { it.type?.name.orEmpty() },
-                    { c, t -> c.type = TypeComponent.Type.entries.firstOrNull { e -> e.name == t } },
-                    choices = TypeComponent.Type.entries.map { it.name }, optional = true,
-                ),
-            ),
-        ) { TypeComponent() },
         kind<ParentComponent>("ParentComponent", listOf(refField("parentEntityId", { it.parentEntityId }, { c, v -> c.parentEntityId = v }))) { ParentComponent() },
         kind<PositionComponent>(
             "PositionComponent",
@@ -115,13 +104,6 @@ internal class BuiltInComponentKinds(private val reader: ComponentReader, privat
                 ),
             ),
         ) { LightComponent(LightDto()) },
-        kind<Point2PointPositionComponent>(
-            "Point2PointPositionComponent",
-            listOf(
-                refField("entity1Id", { it.entity1Id }, { c, v -> c.entity1Id = v }),
-                refField("entity2Id", { it.entity2Id }, { c, v -> c.entity2Id = v }),
-            ),
-        ) { Point2PointPositionComponent() },
         kind<RenderComponent>(
             "RenderComponent",
             listOf(
@@ -145,7 +127,7 @@ internal class BuiltInComponentKinds(private val reader: ComponentReader, privat
             "PathArrangementComponent",
             listOf(
                 ComponentField(
-                    "asset.assetName", FieldKind.ASSET_NAME, { it.asset.assetName }, { c, t -> c.asset.assetName = t.trim() },
+                    "asset.assetName", FieldKind.ASSET_NAME, { it.asset.name }, { c, t -> c.asset = BaseMeta(c.asset.type, t.trim()) },
                     label = "asset",
                 ),
                 ComponentField(

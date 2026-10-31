@@ -19,6 +19,8 @@ dependencies {
     implementation(kotlin("stdlib"))
     api(project(":lib-core"))
     api(project(":lib-gdx"))
+    implementation(libs.lwjgl)
+    implementation(libs.lwjgl.opengl)
     testImplementation(libs.junit4)
     // TestGl: the GL context of the opt-in GL tests
     testImplementation(testFixtures(project(":lib-gdx")))
@@ -36,3 +38,6 @@ extra["abyssusSingletonExcludes"] = listOf<String>()
 
 // Games ship this library: `checkNoEditorCode` keeps editor imports and ray-tracing snapshot types out of it.
 extra["abyssusShippedLibrary"] = true
+
+// No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in lib-core-editor (see gradle/checks.gradle.kts).
+extra["abyssusJacksonTreeAllowed"] = emptyList<String>()

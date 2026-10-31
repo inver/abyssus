@@ -11,8 +11,7 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageBrush
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageBrushMode
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
@@ -56,8 +55,8 @@ class SceneInteractionPaintTest {
     private fun terrainContent(transform: PlacementTransform = PlacementTransform.IDENTITY): SceneContent =
         SceneContent(terrains = listOf(AssetPlacement("1", "terrain_meadow", transform)))
 
-    /** A [FoliagePaint] that paints a real mask with a real brush, remembering the stroke's calls. */
-    private class RecordingPaint(private val resolution: Int) : FoliagePaint {
+    /** A [BrushStroke] that paints a real mask with a real brush, remembering the stroke's calls. */
+    private class RecordingPaint(private val resolution: Int) : BrushStroke {
         val begun = mutableListOf<Vector3>()
         val moved = mutableListOf<Vector3>()
         var released = 0
@@ -75,9 +74,9 @@ class SceneInteractionPaintTest {
             return true
         }
 
-        override fun dragged(to: Vector3, erase: Boolean) {
+        override fun dragged(to: Vector3, reversed: Boolean) {
             moved += Vector3(to)
-            val mode = if (erase) FoliageBrushMode.Erase else FoliageBrushMode.Paint
+            val mode = if (reversed) FoliageBrushMode.Erase else FoliageBrushMode.Paint
             brush!!.stroke(mask, last!!, Vector3(to), RADIUS, 1f, mode)
             last = Vector3(to)
         }
@@ -120,10 +119,10 @@ class SceneInteractionPaintTest {
         val frame = FrameSnapshot(camera(), emptyList(), terrains.map { snapshotTerrainOf(it) }, 7L)
         val queries = SnapshotSceneQueries({ frame }, state) { content }
         val paint = RecordingPaint(resolution)
-        val orbit = OrbitCamera(Vec3(50f, 0f, 50f), 60f, 0f, 0.6f)
+        val orbit = OrbitCamera(Vector3(50f, 0f, 50f), 60f, 0f, 0.6f)
         val interaction = SceneInteraction(state, queries, orbit).also {
             it.size = ViewSize(WIDTH, HEIGHT, WIDTH, HEIGHT)
-            it.foliagePaint = paint
+            it.setBrushStroke(FOLIAGE_BRUSH, paint)
         }
         return Fixture(state, queries, interaction, orbit, paint, frame.camera)
     }
@@ -131,7 +130,7 @@ class SceneInteractionPaintTest {
     /** The paint mode on the drawn terrain "1". */
     private fun Fixture.paintOn(erase: Boolean = false) {
         state.selectedId = "1"
-        state.paint = FoliagePaintMode("1", 1, RADIUS, 1f, erase)
+        state.brush = BrushMode(FOLIAGE_BRUSH, "1", RADIUS, 1f, erase)
     }
 
     /** Press at ([x0], [y0]) and drag to ([x1], [y1]) in [steps] drag events, like a real drag; the button stays down. */
@@ -167,9 +166,9 @@ class SceneInteractionPaintTest {
         val f = fixture()
         f.state.selectedId = "1"
         assertNotNull("the terrain shows its gizmo", f.queries.gizmoHandles(HEIGHT))
-        f.state.paint = FoliagePaintMode("1", 1, RADIUS, 1f)
+        f.state.brush = BrushMode(FOLIAGE_BRUSH, "1", RADIUS, 1f)
         assertNull(f.queries.gizmoHandles(HEIGHT))
-        f.state.paint = null
+        f.state.brush = null
         assertNotNull(f.queries.gizmoHandles(HEIGHT))
     }
 
@@ -177,7 +176,7 @@ class SceneInteractionPaintTest {
     fun aPaintModeOnAnotherEntityDoesNotPaint() {
         val f = fixture()
         f.state.selectedId = "1"
-        f.state.paint = FoliagePaintMode("missing", 1, RADIUS, 1f)
+        f.state.brush = BrushMode(FOLIAGE_BRUSH, "missing", RADIUS, 1f)
         val (x, y) = f.pixelOf(50f, 50f)
         f.interaction.pressed(x, y, true)
         f.interaction.dragged(x + 20, y, true)
@@ -197,7 +196,7 @@ class SceneInteractionPaintTest {
                 AssetPlacement(
                     "2",
                     "terrain_meadow",
-                    PlacementTransform(Vec3(0f, 0f, -size.toFloat()), Quat.IDENTITY, Vec3(1f, 1f, 1f)),
+                    PlacementTransform(Vector3(0f, 0f, -size.toFloat()), Quaternion(), Vector3(1f, 1f, 1f)),
                 ),
             ),
         )
@@ -211,7 +210,7 @@ class SceneInteractionPaintTest {
         assertTrue("the press is off the painted terrain", f.paint.begun.isEmpty())
         f.interaction.released(x, y, true)
         assertEquals("2", f.state.selectedId)
-        assertNull(f.state.paint)
+        assertNull(f.state.brush)
     }
 
     @Test
@@ -247,7 +246,7 @@ class SceneInteractionPaintTest {
     fun rightDragsAndTheWheelNavigateWithoutPainting() {
         val f = fixture()
         f.paintOn()
-        val target = Vec3(f.orbit.target.x, f.orbit.target.y, f.orbit.target.z)
+        val target = Vector3(f.orbit.target.x, f.orbit.target.y, f.orbit.target.z)
         val distance = f.orbit.distance
         val (x, y) = f.pixelOf(50f, 50f)
         f.interaction.pressed(x, y, false)
@@ -298,9 +297,9 @@ class SceneInteractionPaintTest {
         // yaw of 30 degrees, twice the size along x and z, moved off the origin
         val world = Matrix4().setToTranslation(10f, 0f, 30f).rotate(Vector3.Y, 30f).scale(2f, 1f, 2f)
         val transform = PlacementTransform(
-            Vec3(10f, 0f, 30f),
-            Quat(0f, 0.25881905f, 0f, 0.96592583f),
-            Vec3(2f, 1f, 2f),
+            Vector3(10f, 0f, 30f),
+            Quaternion(0f, 0.25881905f, 0f, 0.96592583f),
+            Vector3(2f, 1f, 2f),
         )
         val f = fixture(
             content = terrainContent(transform),

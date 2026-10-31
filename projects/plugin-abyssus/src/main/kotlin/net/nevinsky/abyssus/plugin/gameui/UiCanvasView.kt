@@ -5,8 +5,6 @@
 package net.nevinsky.abyssus.plugin.gameui
 
 import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.backends.lwjgl3.GdxGlBridge
-import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.g2d.BitmapFont
@@ -32,17 +30,18 @@ import net.nevinsky.abyssus.lib.core.ui.state.UiScreenRef
 import net.nevinsky.abyssus.lib.core.ui.state.UiWriteResult
 import net.nevinsky.abyssus.plugin.sceneview.CanvasOverlayHost
 import net.nevinsky.abyssus.plugin.sceneview.GdxContext
+import net.nevinsky.abyssus.plugin.sceneview.GlCanvasHooks
+import net.nevinsky.abyssus.plugin.sceneview.GlCanvasHost
+import net.nevinsky.abyssus.plugin.sceneview.GlFrameTimer
 import net.nevinsky.abyssus.plugin.sceneview.GdxFrame
 import net.nevinsky.abyssus.plugin.sceneview.GdxRuntime
 import net.nevinsky.abyssus.plugin.sceneview.GuardedGLCanvas
 import org.lwjgl.opengl.GL
-import org.lwjgl.opengl.GLCapabilities
 import org.lwjgl.opengl.awt.GLData
 import java.awt.BorderLayout
 import java.awt.event.KeyEvent
 import java.io.File
 import javax.swing.JPanel
-import javax.swing.Timer
 
 /**
  * The canvas of the UI editor: a GL surface that draws the asset through the shared [UiPresenter], so layout, text
@@ -61,9 +60,23 @@ class UiCanvasView(
     /** Makes the read-only scene drawn behind a preview, on the GL thread; null (or a throw) draws none. */
     private val backdropFactory: (String) -> UiBackdrop? = { null },
 ) : JPanel(BorderLayout()), Disposable {
-    private val frame = GdxFrame()
-    private var gdx: GdxContext? = null
-    private var capabilities: GLCapabilities? = null
+    private val glHost = GlCanvasHost(object : GlCanvasHooks {
+        override fun create() {
+            kit = UiGlKit()
+            defaultFont = bundled.acquire()
+        }
+
+        override fun paint(canvas: GuardedGLCanvas, ctx: GdxContext, frame: GdxFrame) = GdxRuntime.withContext(ctx) { drawFrame() }
+
+        override fun release() = releaseGl()
+
+        override fun abandoned() {
+            presenter = null; resources = null; kit = null; defaultFont = null; buffer = null; backdrop = null; backdropName = null
+            shownState = null
+            abandoned = true
+        }
+    }, "Failed to release UI editor GL resources")
+    private val frame get() = glHost.frame
     private var kit: UiGlKit? = null
     private val bundled = UiBundledFont()
     private var defaultFont: BitmapFont? = null
@@ -97,49 +110,13 @@ class UiCanvasView(
     var resourceReport: UiPreparedResources? = null
         private set
 
-    private fun newCanvas(): GuardedGLCanvas = object : GuardedGLCanvas(glData()) {
-        override fun initGL() {
-            capabilities = GL.createCapabilities()
-            val ctx = GdxRuntime.newContext(frame, GdxGlBridge.gl20(), GdxGlBridge.gl30(), Lwjgl3Files())
-            gdx = ctx
-            GdxRuntime.withContext(ctx) {
-                kit = UiGlKit()
-                defaultFont = bundled.acquire()
-            }
-        }
-
-        override fun disposeGL() {
-            val ctx = gdx ?: return
-            gdx = null
-            capabilities?.let { GL.setCapabilities(it) }
-            try {
-                GdxRuntime.withContext(ctx) { releaseGl() }
-            } catch (e: Throwable) {
-                thisLogger().warn("Failed to release UI editor GL resources", e)
-            }
-        }
-
-        override fun onContextAbandoned() {
-            presenter = null; resources = null; kit = null; defaultFont = null; buffer = null; backdrop = null; backdropName = null
-            shownState = null
-            gdx = null
-            abandoned = true
-        }
-
-        override fun paintGL() {
-            val ctx = gdx ?: return
-            capabilities?.let { GL.setCapabilities(it) }
-            frame.tick(framebufferWidth, framebufferHeight)
-            GdxRuntime.withContext(ctx) { drawFrame() }
-            swapBuffers()
-        }
-    }
+    private fun newCanvas(): GuardedGLCanvas = glHost.newCanvas(glData())
 
     private var canvas: GuardedGLCanvas = newCanvas()
     private fun newHost(): CanvasOverlayHost = CanvasOverlayHost(canvas) {
         try {
-            capabilities?.let { GL.setCapabilities(it) }
-            canvas.captureFrame { capabilities?.let { GL.setCapabilities(it) } }
+            glHost.capabilities?.let { GL.setCapabilities(it) }
+            canvas.captureFrame { glHost.capabilities?.let { GL.setCapabilities(it) } }
         } catch (e: Exception) {
             thisLogger().warn("Failed to capture the UI canvas beneath an IDE overlay", e)
             null
@@ -147,14 +124,9 @@ class UiCanvasView(
     }
     private var host: CanvasOverlayHost = newHost()
 
-    private val timer: Timer = Timer(FRAME_MILLIS) {
-        if (!canvas.glSafe()) return@Timer
-        try {
-            canvas.render()
-        } catch (e: Throwable) {
-            thisLogger().warn("UI render failed, stopping the canvas", e)
-            timer.stop()
-        }
+    private val timer: GlFrameTimer = GlFrameTimer({ canvas }) { e ->
+        thisLogger().warn("UI render failed, stopping the canvas", e)
+        timer.stop()
     }
 
     init {
@@ -306,7 +278,7 @@ class UiCanvasView(
     internal fun previewSnapshotScale(): Triple<Float, Float, Float> = Triple(fit.scale, fit.offsetX, fit.offsetY)
 
     /** The frame as displayed, for tests: read back after the canvas has drawn at least once. */
-    internal fun snapshot(): java.awt.image.BufferedImage? = canvas.captureFrame { capabilities?.let { GL.setCapabilities(it) } }
+    internal fun snapshot(): java.awt.image.BufferedImage? = canvas.captureFrame { glHost.capabilities?.let { GL.setCapabilities(it) } }
 
     // ---- lifecycle ----
 
@@ -342,7 +314,6 @@ class UiCanvasView(
     }
 
     private companion object {
-        const val FRAME_MILLIS = 16
 
         fun glData() = GLData().apply {
             majorVersion = 3

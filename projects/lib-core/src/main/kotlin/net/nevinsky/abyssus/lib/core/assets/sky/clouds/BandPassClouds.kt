@@ -22,10 +22,12 @@ open class BandPassClouds(
     linear: Boolean = false,
 ) : CloudRenderer() {
     private val program: ShaderProgram =
-        shaders.program("clouds.vert", *(
-            (if (linear) listOf("clouds_linear.glsl") else emptyList()) +
-                listOf("clouds_common.glsl", "clouds_light.glsl", fragment)
-            ).toTypedArray())
+        shaders.program(
+            "clouds.vert", *(
+                    (if (linear) listOf("clouds_linear.glsl") else emptyList()) +
+                            listOf("clouds_common.glsl", "clouds_light.glsl", fragment)
+                    ).toTypedArray()
+        )
     private val mesh: Mesh = createFullscreenTriangle()
 
     override fun draw(scene: CloudScene) {
@@ -47,6 +49,9 @@ open class BandPassClouds(
 
 /** The fast technique: each band a flat layer at its mid altitude, with 2D coverage. */
 class LayeredClouds(shaders: ShaderStorage, field: CloudField) : BandPassClouds(shaders, "clouds_layered.frag", field)
+
+/** Each band a flat layer shaded as heaped cumulus: bright sunlit tops, grey bases and ragged edges, in one pass. */
+class CumulusClouds(shaders: ShaderStorage, field: CloudField) : BandPassClouds(shaders, "clouds_cumulus.frag", field)
 
 /** Each band as eight stacked shells from base to top: thickness, parallax and darker bases. */
 class ShellClouds(shaders: ShaderStorage, field: CloudField) : BandPassClouds(shaders, "clouds_shells.frag", field)

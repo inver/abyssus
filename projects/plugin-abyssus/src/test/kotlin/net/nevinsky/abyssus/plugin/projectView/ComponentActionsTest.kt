@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.lib.core.assets.MetaType
+import com.badlogic.gdx.math.Vector3
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.actionSystem.ActionManager
@@ -71,7 +73,7 @@ class ComponentActionsTest : BasePlatformTestCase() {
         assertFalse(visible(LightOn(abss())))
         assertTrue(ActionManager.getInstance().getAction("Abyssus.AddLight") is AddLightAction)
         var selected: String? = null
-        val choices = AddLightGroup(project, scene(), { net.nevinsky.abyssus.lib.core.editor.content.Vec3(0f, 0f, 0f) }, { selected = it }).getChildren(null)
+        val choices = AddLightGroup(project, scene(), { com.badlogic.gdx.math.Vector3(0f, 0f, 0f) }, { selected = it }).getChildren(null)
         assertEquals(listOf("Directional", "Sun", "Spot"), choices.map { it.templatePresentation.text })
         choices[2].actionPerformed(TestActionEvent.createTestEvent(choices[2]))
         assertEquals("7", selected)
@@ -90,7 +92,7 @@ class ComponentActionsTest : BasePlatformTestCase() {
     fun testAddIsOfferedOnEntityRowsOnly() {
         copyProject()
         assertTrue(visible(AddOn(entity("0"))))
-        assertFalse(visible(AddOn(component("0", "TypeComponent"))))
+        assertFalse(visible(AddOn(component("0", "PositionComponent"))))
         assertFalse(visible(AddOn(abss())))
         assertFalse(visible(AddOn(descend(abss(), "scenes"))))
         assertFalse(visible(AddOn(descend(abss(), "assets"))))
@@ -120,18 +122,18 @@ class ComponentActionsTest : BasePlatformTestCase() {
             .filterIsInstance<com.intellij.openapi.actionSystem.ActionGroup>().single { it.templatePresentation.text == "Render" }
         val assets = SceneComponentEdits.renderAssets(scene(), testMetaFiles())
         assertTrue(assets.isNotEmpty())
-        assertTrue(assets.all { it.type == "MODEL" || it.type == "TERRAIN" })
+        assertTrue(assets.all { it.type == MetaType.MODEL || it.type == MetaType.TERRAIN })
         val items = render.getChildren(null)
-        assertEquals(assets.map { "${it.type.lowercase()} ${it.name}" }, items.map { it.templatePresentation.text })
+        assertEquals(assets.map { "${it.type.name.lowercase()} ${it.name}" }, items.map { it.templatePresentation.text })
         items.first().actionPerformed(TestActionEvent.createTestEvent(items.first()))
         val asset = components("6")["RenderComponent"]
         assertEquals(assets.first().name, asset["assetName"].asText())
-        assertEquals(assets.first().type, asset["type"].asText())
+        assertEquals(assets.first().type.name, asset["type"].asText())
     }
 
     fun testRemoveIsOfferedOnModeledComponentsOnly() {
         copyProject()
-        assertTrue(visible(RemoveOn(component("0", "TypeComponent"))))
+        assertTrue(visible(RemoveOn(component("0", "NameComponent"))))
         assertFalse(visible(RemoveOn(component("0", "PickableComponent"))))
         assertFalse(visible(RemoveOn(entity("0"))))
         assertFalse(visible(RemoveOn(abss())))
@@ -139,9 +141,9 @@ class ComponentActionsTest : BasePlatformTestCase() {
 
     fun testRemoveWritesTheFile() {
         copyProject()
-        val remove = RemoveOn(component("0", "TypeComponent"))
+        val remove = RemoveOn(component("0", "NameComponent"))
         remove.actionPerformed(TestActionEvent.createTestEvent(remove))
-        assertFalse(components("0").has("TypeComponent"))
+        assertFalse(components("0").has("NameComponent"))
         assertTrue(components("0").has("PickableComponent"))
     }
 
@@ -152,6 +154,6 @@ class ComponentActionsTest : BasePlatformTestCase() {
         light.actionPerformed(TestActionEvent.createTestEvent(light))
         val node = entity("0") as DtoEntryNode
         assertTrue(children(node).any { label(it) == "LightComponent" })
-        assertEquals(6, children(node).size)
+        assertEquals(5, children(node).size)
     }
 }

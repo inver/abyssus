@@ -5,8 +5,6 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
-import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
 

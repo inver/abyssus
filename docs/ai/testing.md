@@ -40,6 +40,8 @@ classpath, and `check` never runs it. Nothing under `uiTest` ships in the plugin
 | What | Command |
 |---|---|
 | Complete run in the canonical Linux/Xvfb container | `scripts/run-ui-tests-docker.sh [--tests '*UiStartupTest']` |
+| Fast iteration: the host's own platform (no emulation), screenshots off, container, Gradle daemon and sandbox IDE kept between runs | `scripts/run-ui-tests-docker.sh --fast --tests '*WaterLifecycleUiTest'` (a first run is cold; a repeat run reuses the IDE unless the plugin build changed; `--stop` removes the kept container) |
+| A run from an empty workspace (full runs that must start fresh) | `scripts/run-ui-tests-docker.sh --clean` |
 | A run on another project (a class runs only on its own project) | `ABYSSUS_UI_FIXTURE=projects/app-game-control-line/project/ControlLine scripts/run-ui-tests-docker.sh --tests '*ControlLineTreeUiTest'` |
 | Complete run on the host (needs a usable desktop) | `scripts/run-ui-tests.sh [--tests <pattern>]` |
 | Headless helper tests only (`...uitesting.headless`), part of `check` | `./gradlew :plugin-abyssus:uiHelperTest` |
@@ -51,7 +53,7 @@ classpath, and `check` never runs it. Nothing under `uiTest` ships in the plugin
   started (matched by its unique sandbox path) and copies the IDE logs to `projects/plugin-abyssus/build/reports/ui-tests/ide-logs`.
   One run per port: a lock directory in the temp folder refuses a second. It fails if the committed fixture's hashes changed.
 - **The container** (`docker/ui-tests`) is Ubuntu 24.04 with Xvfb 1920x1080x24, a minimal window manager, UTC and an
-  English locale. `scripts/run-ui-tests-docker.sh` copies the working tree in (host build directories are never shared),
+  English locale. The workspace is a Docker volume that keeps build outputs between runs (`--clean` empties it), and `--keep`/`--fast` keep the container and IDE running. A `--fast` run is for iteration only: it uses the arm64 image on Apple Silicon (HDR previews and screenshot comparison do not work there), so baselines and the final verification use the canonical amd64 container. `scripts/run-ui-tests-docker.sh` copies the working tree in (host build directories are never shared),
   keeps the Gradle cache and the downloaded IDE in the volume `abyssus-ui-gradle` (the first run downloads gigabytes and
   takes about an hour; later runs about a minute), and returns reports to `projects/plugin-abyssus/build/reports/ui-tests`.
   `ABYSSUS_UI_PLATFORM=linux/amd64` selects the platform. Pixel baselines must come from the canonical platform.
@@ -114,25 +116,42 @@ every test), checks disk bytes, and where it edits, presses Undo and checks the 
 | `UiStartupTest` | robot connection and project loaded; the header of a selected entity is readable (`PropertiesPanel.subtitle` / `breadcrumb`); Abyssus installed, no scene editor open; Properties window opens and closes; Abyssus tree, entity 0 and the Camera component of entity 4 are found; fixture reset restores the IDE document and the tree |
 | `AbyssusTreeUiTest` | Project, Scenes, type groups under Assets and ECS expand; the fog eye toggles only `fogEnabled` and Undo restores the bytes; switching views does not duplicate nodes |
 | `PropertiesLayoutUiTest` | the redesigned panel in the real IDE: label column 150 px, one field height (the look and feel's), section header 34 px, dim defaults in the secondary colour, collapse, breadcrumb / subtitle / badges for an entity, a folder, `ecs`, the project and a read-only unused asset (the `game` badge and the 26 px Browse are covered by plugin tests: the fixture has no game component). Scenarios `props-entity-design`, `props-folder`, `props-ecs`, `props-project` |
-| `PropertiesEnabledUiTest` | the section `Enabled` box writes `enabled: false` on one entry and one Undo restores the bytes; the tree eye on an entity writes and removes the flag. That a disabled entity is not picked needs the Scene view, which cannot draw in the container, so `SceneViewPanelTest` and the `lib-core-editor` content tests cover it |
+| `PropertiesEnabledUiTest` | the section `Enabled` box lists the component in the entity's `disabledComponents` and one Undo restores the bytes; the tree eye on an entity writes and removes the flag. That a disabled entity is not picked needs the Scene view, which cannot draw in the container, so `SceneViewPanelTest` and the `lib-core-editor` content tests cover it |
 | `PropertiesUiTest` | a scene row offers the skybox field with its Browse button; the Assets folder layout; model and terrain assets; cube (editable, previews loaded), procedural (editable) and HDR (read-only, preview loaded) skyboxes; entity 0 and Camera fields; entity name edit and Undo; an invalid Camera number shows a field error and leaves the scene unedited |
 | `TreeStructureUiTest` | Scenes, UI, Assets in that order under the project row and no `name` row; type groups with counts under Assets and every asset once; scene, ECS and entity rows; switching views does not duplicate rows (captures `tree-collapsed`, `tree-assets-groups`) |
 | `TreeIconsUiTest` | the icon resource of the project, folder, group, scene, ECS, skybox and asset rows, and that distinct kinds do not share an icon |
 | `TreeGeometryUiTest` | 24 px rows, 16 px level indent, the 14 px eye, painted row actions that never overlap |
 | `TreeHeaderUiTest` | the header's buttons in order, Collapse All, and the unused filter in the Options menu hiding used assets (captures `tree-header`, `tree-unused-filter`) |
 | `ControlLineTreeUiTest` | the tree on a copy of the Control Line project (186 entities, six type groups, a Game UI asset, the game's `Plane` / `Pilot` components): order, group counts from the metas, the `game` badge, grid geometry, the unused filter. Skipped unless the IDE opened that project (`ABYSSUS_UI_FIXTURE`, below); captures `controlline-tree-assets`, `controlline-tree-game` |
+| `LightGestureUiTest` | turning a directional light aimed at a direction handle on a copy of the Lights project (GES-04): the handle moves, the light does not, Undo restores the content. Runs only there: `ABYSSUS_UI_FIXTURE=projects/plugin-abyssus/src/test/testData/project/Lights scripts/run-ui-tests-docker.sh --tests '*LightGestureUiTest'` |
 | `TreeStatesUiTest` | the selected row, a disabled row (the fog eye off, grayed text; capture `tree-selected-disabled`), unused assets dimmed with the amber mark, and the `game` badge on a game component |
 | `RenameSceneUiTest` | Rename Scene opens from the scene's context menu; Cancel is byte-identical; applying changes only `name`, refreshes the tree, and Undo restores the bytes |
 | `SkyboxChooserUiTest` | the Browse button of the scene's skybox field in Abyssus Properties (the tree row has none) opens the chooser with None and the three fixture skyboxes; the `hdr` filter and the no-match state; Cancel is byte-identical; Assign `skybox_default` changes only `skyboxName`, leaves `skyboxEnabled`, updates the tree, and Undo restores the bytes |
-| `SceneViewUiTest` | the Scene View toolbar in the order `Select, Move, Rotate, Snap, Shadows, Fog, Grid, Frame selection` with Move pressed and `Move · World` in the tool status; it wraps without overlapping buttons at a 900 px editor; opening the view writes nothing. The container has no usable OpenGL, so the view shows the unavailable message and the toolbar is disabled above it: the tools' behavior is covered by the plugin tests, and the captures show layout and icons (dimmed) only |
-| `SceneViewSmokeUiTest` | whether the Scene View got an OpenGL context: skipped as environment-blocked when the view shows `scene-unavailable`, which is the state in the canonical container (a software GLX works there, `glxinfo` reports llvmpipe 4.5 core, but LWJGL's AWT canvas finds no framebuffer configuration in the IDE). Scenarios that need the viewport or an enabled toolbar are therefore not covered here |
+| `SceneViewUiTest` | the Scene View toolbar in the order `Select, Move, Rotate, Snap, Shadows, Fog, Grid, Frame selection` with Move pressed and `Move · World` in the tool status; it wraps without overlapping buttons at a 900 px editor; opening the view writes nothing; the view-only toggles (Shadows, Fog, Grid, Snap, World/Local, Lit/Unlit) flip, return and write nothing; Show FPS follows the project preference through a hide/show and a project reopen with no file written. The container renders the view with Mesa's software rasterizer (see `SceneViewSmokeUiTest`), so the toolbar is enabled; the captures show the toolbar component only (never the viewport) |
+| `NativeAdmissionUiTest` | Unsupported scenes, project files and asset metadata are never rewritten; an authoring edit keeps unknown data, number text and key order |
+| `WeatherPresetLifecycleUiTest` | New Weather Preset from Sky: snapshot with Undo/Redo, cancel and name collision, missing cloud source refusal |
+| `FoliageLifecycleUiTest` | New Foliage and Add Foliage, layers, weighted models, drafts and limits, rebake, collider-only Apply, collider validation on the Foliage project. Runs only there: `ABYSSUS_UI_FIXTURE=projects/plugin-abyssus/src/test/testData/project/Foliage scripts/run-ui-tests-docker.sh --fast --tests '*FoliageLifecycleUiTest'`; run `--stop` first when a kept container serves another project (the runner does not stop it) |
+| `ComponentRejectionUiTest` | refused values and references (parent self and cycle, unknown entity, light numbers), clearing a Parent, physics kinds hidden while physics is off |
+| `GameComponentUiTest` | read-only game components on a copy of the Custom project (`ABYSSUS_UI_FIXTURE=projects/plugin-abyssus/src/test/testData/project/Custom`) |
+| `PhysicsKindsUiTest` | physics kinds offered, added, removed and restored by Undo on a copy of the Physics project (`ABYSSUS_UI_FIXTURE=projects/plugin-abyssus/src/test/testData/project/Physics`) |
+| `EnvironmentLifecycleUiTest` | the Enabled boxes of the ambient light, fog and skybox settings (one flag line, Undo, Redo, byte-identical return), the procedural sky's atmosphere fields (refusals, commit, asset Undo and Redo, number text kept) and the read-only HDR sky |
+| `GameUiLifecycleUiTest` | New UI Asset (taken name, creation, registry), Unregister and Register, screens added with unique ids, an unsupported asset offering no screen |
+| `GameUiPreviewLifecycleUiTest` | the Preview mode of the Game UI editor: viewport size and its refusal of a bad size, a sample value, Reset, the way back to Edit, and nothing written to the asset |
+| `GameUiDeclarationLifecycleUiTest` | the Binding and Style forms (validation before OK, add, edit, remove), image and bitmap-font import from `import-inputs` through the chooser seam, and Undo of each |
+| `GameUiWidgetLifecycleUiTest` | the Game UI editor tab: all widget kinds from the Add popup, duplicate, reorder, delete, property and layout edits, screens menu, Undo and Redo, reopen |
+| `ImportLifecycleUiTest` | the model and FlightGear import dialogs, driven through IntelliJ's file chooser with the inputs of `import-inputs`: cancel, a taken name, a non-model file, create with Undo, Redo and reopen, placement in the open scene, aircraft settings; the chosen file is supplied through the `abyssus.test.chosenFile` seam (`IdeReset.chooseNextFile`) because IntelliJ's chooser confirms a typed path only intermittently; only the cancel case uses the real chooser (amd64 container: 8 passed) |
+| `ImportInputsTest` (`uiHelperTest`) | the local import inputs of `projects/plugin-abyssus/src/uiTest/resources/import-inputs` (crate OBJ with material and texture, a non-model file, a Game UI image and bitmap font) match `import-inputs.sha256`, the FlightGear archive built from `lib-core-editor`'s test fixtures is the same bytes every time, and the staged model facts are recorded; provenance in that folder's README |
+| `TerrainLifecycleUiTest` | New Terrain preview/create/cancel/refusals, regeneration of the fixture terrain with Undo and Redo, stale and superseded previews, malformed recipe |
+| `WaterLifecycleUiTest` | Lake and Sea creation from the tree Add menu, rename/resize/hide/move in Properties with Undo and Redo, removal, inline refusal of invalid extents, a prepared invalid surface, and the incompatible-extension block |
+| `SceneInteractionUiTest` | Scene View gestures with real pointer input at coordinates computed from the view camera (`ViewportDriver`): picks and clears, tool keys, orbit, World and Local moves, Y and Local rotation, move and angular snap, Escape cancel, framing and Drop, the camera chooser and orientation widget, and a Camera 4 move, each with Undo from the Scene View where it writes. Skipped, never passed, without a GL context |
+| `SceneViewSmokeUiTest` | whether the Scene View got an OpenGL context and completes one pick: a real mouse click on the viewport changes the Abyssus tree's selection and opening the view writes nothing. The container has Mesa's software rasterizer (`libgl1-mesa-dri`, `LIBGL_ALWAYS_SOFTWARE=1`; llvmpipe, core 4.5). Xvfb's GLX has no swap-control extension and no multisampled configurations, so the view falls back 4×, 2×, Off and then Off without swap interval (`CanvasAntialiasing.swapControl`); a view that still shows `scene-unavailable` skips this test as environment-blocked, so GL-dependent scenarios are never reported as covered without a context. Software GL runs interaction and state scenarios (picks, gestures, toolbar controls); exact 3D pixels and the hardware ray backends stay with the GL tests and recorded hardware checks |
 | `...uitesting.headless.*` | helper unit tests (`FixtureIsolationTest`), run by `uiHelperTest` |
 
 The tree page object (`AbyssusTree` in `PageObjects.kt`) reads rows without desktop coordinates: `rowInfo()` gives each visible row's text, depth below the project row, icon resource path, bounds and text colour; `actionBounds()` the painted eye and `unused` ranges; `expandAssets()` opens the type groups. The header buttons are read from the Project tool window header (`headerButtons()`); the unused filter sits in the Options menu, not in the header.
 
 The Scene View toolbar baselines (`scene-toolbar-default`, `scene-toolbar-narrow`) capture the toolbar component only. They are also the icon check: every toolbar icon is drawn in them, and `IconInventoryTest` (`:plugin-abyssus:test`) fails on a missing or unlisted icon resource. The orientation widget and stats strip are shown through GL, so their pixels are checked by `CornerPaintersTest` and, with `-Dabyssus.glTests=true`, `SceneRenderGlTest.cornerOverlaysPaintTheirCornersOnly`.
 
-Out of scope: exact 3D viewport pixels (rendering quality stays with the GL tests and separately recorded hardware checks; the container also has no GL context today, see `SceneViewSmokeUiTest`). Everything else the plugin implements is in scope and tracked in the coverage inventory below, as `unverified` until its test exists.
+Out of scope: exact 3D viewport pixels (rendering quality stays with the GL tests and separately recorded hardware checks; the container's software GL is for interaction and state, see `SceneViewSmokeUiTest`). Everything else the plugin implements is in scope and tracked in the coverage inventory below, as `unverified` until its test exists.
 
 The Abyssus tree is refreshed by the plugin's own edits (`AbyssusSceneEdited`), not by Undo or by changes made outside the IDE, so scenarios assert Undo through the document and disk bytes, and each test starts with a Project view refresh and the view shown again (the tree otherwise keeps a name that Undo has already reverted).
 
@@ -201,8 +220,9 @@ GL and native backend tests retain their usual opt-in flags. Control Line's asse
   and native packaging. Metal and Vulkan device tests opt in separately with `-Dabyssus.metalTests=true` and
   `-Dabyssus.vulkanTests=true`; these are not enabled by `abyssus.glTests`. See `projects/lib-raytracing/README.md` for toolchains
   and dedicated timing gates. Plugin ray integration tests live under `projects/plugin-abyssus/src/test/kotlin/`.
-- Shared test helpers live in `testFixtures` source sets: `lib-gdx`'s `TestGl` (a GL 3.2 core context for one
-  block), `lib-core`'s `HdrFixtures` (Radiance files from a pixel function) and `lib-core-editor`'s `parseScene`,
+- Shared test helpers live in `testFixtures` source sets: `lib-gdx`'s `TestGl` (a GL 3.3 core context, the game's own minimum, for one
+  block, in a window of 320 x 240 or of the size given; its default framebuffer is what a test draws into and reads back, and the
+  stubbed back buffer reports that size, which libGDX's `FrameBuffer.end()` resets the viewport to), `lib-core`'s `HdrFixtures` (Radiance files from a pixel function) and `lib-core-editor`'s `parseScene`,
   `testProject`, `testAsset`, `terrainData` and `rayTestModel` (used by the plugin's tests too). Plugin GL tests build their renderer with
   `testRenderer()` (`sceneview/TestRendering.kt`), wired the way `AbyssusCore` wires it in the IDE.
 - Plugin tests use JUnit 4 (`junit:junit:4.13.2`) and the IntelliJ test framework.
@@ -285,7 +305,7 @@ advance identically in every run), a 10 s warmup and five samples of 30 s, over 
 | editor | `animated` | `Animated`, `Main` (skinned, animated models) |
 | editor | `foliage` | `Foliage`, `Main Scene` (the fixture holds no model binaries, so this measures the terrain and an empty scene) |
 | editor | `stress` | the generated stress scene: 1,000 placements of one model, the 1600 m `Untitled` terrain and 5,000 foliage copies, seed `20261016` (`StressScene`; its SHA-256 over scene and bake is in the report) |
-| game | `control-line-field` | Control Line's `Field.scene` through `FieldRenderer` |
+| game | `control-line-field` | Control Line's `Field.scene` through `FieldRenderer`, into the default framebuffer of a 1280 x 720 window (the game's own target), with two control-line cables; `-Dabyssus.perf.pipeline=legacy` (flat ambient, no display transform) or `pbr` (the default) |
 
 Per workload the report holds: commit and dirty state, OS, JDK, GPU and driver (GL_RENDERER / GL_VERSION), backend, scene
 hash, the settings above, CPU frame time p50 / p95 / p99 (the p95 of each sample too), steady-state allocation per frame and
@@ -304,6 +324,8 @@ time**; `gpuMs` stays empty unless a timer query measured it on its own. A repor
 | Pixel tolerances | `./gradlew :plugin-abyssus:test --tests '*perf.PixelEvidenceGlTest' -Dabyssus.glTests=true -Dabyssus.perf.pixels=record -Dabyssus.perf.pixelsDir=<dir>` (and the game's `*render.PixelEvidenceGlTest`) |
 | Check pixels against a recording | the same with `-Dabyssus.perf.pixels=compare -Dabyssus.perf.pixelsReference=<dir>` |
 | Compare two reports | `./gradlew :lib-core:comparePerf -Pbaseline=<file.json> -Pcandidate=<file.json>` |
+
+The game workload and its pixel case were re-based by `openspec/changes/add-control-line-pbr-rendering`: they used to draw inside a `FrameBuffer` that the renderer's sun shadow pass unbinds, so everything after the sky was drawn outside the target. `docs/perf/baseline/game.json` and `docs/perf/baseline/pixels/control-line-field.*` predate that and are not comparable with a run made now (`MISMATCHED` by the `pipeline`/`target` settings); take a new Mac baseline before comparing the game workload.
 
 A run lasts about 3 minutes per workload at the full protocol (the editor's four take about 13 minutes, plus a reload each).
 
@@ -424,119 +446,119 @@ OpenGL), 5 skipped.
 | COV-01 | Complete a component cycle | CoverageInventoryTest / LifecycleHarnessUiTest | unverified | not implemented yet (task 1.1, 1.4, 11.x) |
 | COV-02 | Retain a demonstrated regression | CoverageInventoryTest / LifecycleHarnessUiTest | unverified | not implemented yet (task 1.1, 1.4, 11.x) |
 | COV-03 | Report actual coverage | CoverageInventoryTest / LifecycleHarnessUiTest | unverified | not implemented yet (task 1.1, 1.4, 11.x) |
-| JRN-01 | Model instance from placement to removal | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
-| JRN-02 | Edited component survives removal undo | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
+| JRN-01 | Model instance from placement to removal | CreatorJourneyUiTest.jrn01ModelInstanceFromPlacementToRemoval | passed | 2026-10-24, canonical amd64 container: add model `tree`, rename and move, two Undos and two Redos, editor reopen, remove, Undo restores the edited instance, Redo removes it, final reopen shows absence and the asset is untouched |
+| JRN-02 | Edited component survives removal undo | CreatorJourneyUiTest.jrn02EditedComponentSurvivesRemovalUndo | passed | 2026-10-24, canonical amd64 container: Light added to Model 0, intensity and range edited, an invalid range explained without a write, two Undos and two Redos, reopen, component removed, Undo restores both edited values and Redo removes only that component |
 | JRN-03 | Shared model instances remain independent | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
 | JRN-04 | Two water surfaces retain independent edits | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
 | JRN-05 | Generated terrain remains reusable after instance removal | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
 | JRN-06 | Foliage layer removal preserves the remaining composition | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
 | JRN-07 | Imported model remains reusable after its instance is removed | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
 | JRN-08 | Menu button retains its authored behavior through history | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
-| JRN-09 | Clear a dependency before removing its target | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
+| JRN-09 | Clear a dependency before removing its target | CreatorJourneyUiTest.jrn09ClearADependencyBeforeRemovingItsTarget | passed | 2026-10-24, canonical amd64 container: two new entities, Parent link, reopen, blocked removal writes nothing, removing the Parent component clears the link, the target is removed, Undo brings it back with the link still clear and Redo removes it again |
 | JRN-10 | Continue authoring after project reopen | CreatorJourneyUiTest | unverified | not implemented yet (task 10.1) |
-| CMP-01 | Add from both editing surfaces | ComponentLifecycleUiTest.parentCameraAndLightCyclesFromTheTree, ComponentLifecycleUiTest.renderChoiceTypeEditorAndTreeRowRemoval | passed | tree menu add of Parent, Camera, Light, Render on entity 7; the Properties Add button is not yet driven (task 4.1 open) |
-| CMP-02 | Choose a render asset | ComponentLifecycleUiTest.renderChoiceTypeEditorAndTreeRowRemoval | passed | Render on entity 7 with the `tree` model, then the asset type choice (task 4.1 open) |
+| CMP-01 | Add from both editing surfaces | ComponentLifecycleUiTest.parentCameraAndLightCyclesFromTheTree, ComponentLifecycleUiTest.renderChoiceTypeEditorAndTreeRowRemoval | passed | tree menu add of Parent, Camera, Light, Render, Point2Point on entity 7; the Properties Add button (`ComponentLifecycleUiTest.thePropertiesAddButtonAddsAKindWithOneUndoStep`, one Undo step) |
+| CMP-02 | Choose a render asset | ComponentLifecycleUiTest.renderChoiceTypeEditorAndTreeRowRemoval, ComponentLifecycleUiTest.renderOffersTerrainAssetsAndPoint2PointTakesEntityReferences | passed | Render on entity 7 with the `tree` model and with the terrain asset (type TERRAIN saved), then the asset type choice |
 | CMP-03 | Remove from both editing surfaces | ComponentLifecycleUiTest.parentCameraAndLightCyclesFromTheTree, ComponentLifecycleUiTest.renderChoiceTypeEditorAndTreeRowRemoval | passed | Properties Remove button (Parent, Camera, Light) and the tree row menu (Render); undo and redo through the scene document |
-| CMP-04 | Reject references and cycles | ComponentLifecycleUiTest | unverified | not implemented yet (task 4.1, 4.2) |
-| CMP-05 | Clear an optional reference | ComponentLifecycleUiTest | unverified | not implemented yet (task 4.1, 4.2) |
-| CMP-06 | Preserve read-only components | ComponentLifecycleUiTest | unverified | not implemented yet (task 4.1, 4.2) |
-| CMP-07 | Respect registered field constraints | ComponentLifecycleUiTest | unverified | not implemented yet (task 4.1, 4.2) |
+| CMP-04 | Reject references and cycles | ComponentRejectionUiTest.parentReferencesAndCyclesAreRefusedWithoutAChangeAndAValidOneIsSaved, ComponentLifecycleUiTest.renderOffersTerrainAssetsAndPoint2PointTakesEntityReferences | passed | an unknown entity, text, the default `-1`, a self reference and a parent cycle (4 -> 3 -> 4) leave the file and the undo text unchanged; Point2Point endpoints refuse an unknown entity and text |
+| CMP-05 | Clear an optional reference | ComponentRejectionUiTest.removingAParentComponentClearsTheReferenceAndUndoRestoresTheExactText | passed | removing entity 3's Parent clears its reference; Undo restores the exact text |
+| CMP-06 | Preserve read-only components | GameComponentUiTest.aGameComponentIsShownReadOnlyAndSurvivesEditsToItsEntity | passed | on the Custom project the plane component has no Remove and no editor, stays unchanged when Camera is added, and Undo restores the exact text |
+| CMP-07 | Respect registered field constraints | ComponentRejectionUiTest.invalidLightNumbersAreRefusedAndTheDocumentAndHistoryStayUnchanged, ComponentRejectionUiTest.physicsKindsAreNotOfferedWhilePhysicsIsOff, PhysicsKindsUiTest.physicsKindsAreOfferedAndEditedLikeBuiltInOnes, ComponentLifecycleUiTest.floatChoiceBooleanAndAssetEditorsCommitOmitDefaultsAndRefuseInvalidValues | passed | text for light intensity, range, cone angle, edge softness and colour is refused; a path spacing needs a positive value and an offset a non-negative one; physics kinds appear only with physics on, and a RigidBody added there is removed from its tree row and returns with Undo |
 | FLD-01 | Commit by Enter | FieldCommitUiTest.enterCommitsOnceAndOneUndoRestoresThePriorText, AssetPropertyLifecycleUiTest.sizeAndUvCommitOnEnterAndOnFocusLossWithAssetUndoAndRedo | passed | component fields of Model 0 and the terrain size and uv |
 | FLD-02 | Commit by leaving the field | FieldCommitUiTest.leavingTheFieldCommitsWithoutEnter, AssetPropertyLifecycleUiTest.sizeAndUvCommitOnEnterAndOnFocusLossWithAssetUndoAndRedo | passed | component fields of Model 0 and the terrain size and uv |
 | FLD-03 | Do not double-commit | FieldCommitUiTest.enterCommitsOnceAndOneUndoRestoresThePriorText, AssetPropertyLifecycleUiTest.invalidSizeAndUvAreRefusedWithAReasonAndWriteNothing | passed | component fields of Model 0 and the terrain size and uv |
 | FLD-04 | Reject and recover | FieldCommitUiTest.rejectionShowsTheReasonAndAValidValueRecovers, AssetPropertyLifecycleUiTest.invalidSizeAndUvAreRefusedWithAReasonAndWriteNothing | passed | component fields of Model 0 and the terrain size and uv |
 | FLD-05 | No-op and selection changes | FieldCommitUiTest.noOpSubmissionsAndSelectionChangesWriteNothing, AssetPropertyLifecycleUiTest.resubmittingTheStoredValuesWritesNothing | passed | component fields of Model 0 and the terrain size and uv |
 | ENT-01 | Create from ecs | EntityLifecycleUiTest.newCameraFromEcsEditedReopenedAndRemoved, EntityLifecycleUiTest.newRenderFromEcsKeepsTheModelAssetWhenRemoved | passed | 2026-10-21, canonical amd64 container: Camera and Render added through ecs (new id 11, `Entity 11`, entities 0 to 10 unchanged, new row selected); the selection assertion exposed a defect, fixed in `AbyssusTreeRefresh.selectAfterRebuild` (platform regression `AbyssusProjectViewPaneTest.testRowCreatedByAnEditWinsOverTheSelectionTheRebuildRestores`) |
-| ENT-02 | Add models and terrain | EntityLifecycleUiTest.modelAndTerrainFromTheAddMenuKeepTheirAssetsWhenRemoved | unverified | the tree entry passes (model `tree` and the fixture terrain, identity and removal with the assets intact); the Scene View toolbar entry is environment-blocked: no OpenGL context (task 1.5) |
-| ENT-03 | Add each light choice | EntityLifecycleUiTest.everyLightChoiceFromTheAddMenuCanBeRemoved | unverified | the tree entry passes for Directional, Sun and Spot (entity, row, removal back to the original scene); the toolbar entry is environment-blocked (task 1.5) and edit and reopen of a new light is not covered yet |
+| ENT-02 | Add models and terrain | EntityLifecycleUiTest.modelAndTerrainFromTheAddMenuKeepTheirAssetsWhenRemoved, EntityLifecycleUiTest.lightAndAssetFromTheSceneToolbarCreateEntitiesLikeTheTreeMenu | passed | the tree entry (model `tree` and the fixture terrain, identity and removal with the assets intact) and the Scene View toolbar's Add Asset (model `tree`) pass in the amd64 container, 2026-10-24 |
+| ENT-03 | Add each light choice | EntityLifecycleUiTest.everyLightChoiceFromTheAddMenuCanBeRemoved, EntityLifecycleUiTest.lightAndAssetFromTheSceneToolbarCreateEntitiesLikeTheTreeMenu | unverified | the tree entry passes for Directional, Sun and Spot (entity, row, removal back to the original scene) and the toolbar's Add Light passes for Directional; edit and reopen of a new light is not covered yet |
 | ENT-04 | Remove an instance | EntityLifecycleUiTest.modelAndTerrainFromTheAddMenuKeepTheirAssetsWhenRemoved | unverified | row, Properties and saved scene follow and the source assets stay intact (also `removeUndoRedoFromTreeClearsStaleSelection`); clearing the scene view selection needs the view, environment-blocked (task 1.5) |
 | ENT-05 | Guard referenced removal | EntityLifecycleUiTest.referencedEntitiesAreRefusedUntilTheReferencesAreCleared | passed | 2026-10-21, canonical amd64 container: entity 3 refused while Camera 4 looks at it (entity and field named, scene byte-identical), entity 4 refused as the parent of entity 3, entity 3 refused as an endpoint of entity 5 after the look-at is cleared through Properties; registered and arrangement relationships are covered by `EntityRemovalTest` |
 | ENT-06 | Undo from the initiating surface | EntityLifecycleUiTest.removeUndoRedoFromTreeClearsStaleSelection | passed | 2026-10-21, canonical amd64 container: Remove Entity from the tree menu, Undo and Redo with the tree focused (not a text editor); rows, Properties header, document and saved file follow; lower level `RemoveEntityActionTest.testUndoAndRedoReachTheRemovalWithoutAnEditor` |
 | AST-01 | Terrain metadata fields | AssetPropertyLifecycleUiTest.sizeAndUvCommitOnEnterAndOnFocusLossWithAssetUndoAndRedo | passed | terrain size and uv; the texture fields and reopen are not driven yet (task 4.5 open) |
-| AST-02 | Cube face choices | AssetPropertyLifecycleUiTest | unverified | not implemented yet (task 4.5) |
-| AST-03 | Omitted procedural defaults | AssetPropertyLifecycleUiTest | unverified | not implemented yet (task 4.5) |
-| AST-04 | Invalid combinations | AssetPropertyLifecycleUiTest.invalidSizeAndUvAreRefusedWithAReasonAndWriteNothing | passed | terrain size and uv; procedural radii are not driven yet (task 4.5 open) |
-| AST-05 | Unresolved and stale values | AssetPropertyLifecycleUiTest | unverified | not implemented yet (task 4.5) |
-| AST-06 | Preview and read-only states | AssetPropertyLifecycleUiTest | unverified | not implemented yet (task 4.5) |
+| AST-02 | Cube face choices | AssetPropertyLifecycleUiTest.cubeFaceChoicesFollowTheChosenFileAndNoneClearsOnlyThatFace | passed | choosing a second image for the top face changes only that member and keeps six previews; None clears it (or shows a reason and writes nothing); asset Undo restores the bytes |
+| AST-03 | Omitted procedural defaults | AssetPropertyLifecycleUiTest.omittedProceduralValuesShowTheirEffectiveDefaultAndRadiiNeedAnAtmosphereAbovethePlanet, EnvironmentLifecycleUiTest.proceduralSkyFieldsCommitRefuseInvalidValuesAndFollowAssetUndo | passed | an omitted `mieG` shows its default 0.76 before editing and looking writes nothing; editing and returning to the default leaves the default value |
+| AST-04 | Invalid combinations | AssetPropertyLifecycleUiTest.invalidSizeAndUvAreRefusedWithAReasonAndWriteNothing, AssetPropertyLifecycleUiTest.omittedProceduralValuesShowTheirEffectiveDefaultAndRadiiNeedAnAtmosphereAbovethePlanet | passed | terrain size and uv; an atmosphere radius at or below the planet radius, whichever one is edited |
+| AST-05 | Unresolved and stale values | AssetPropertyLifecycleUiTest.anUnresolvedFaceStaysVisibleAndLookingAtItWritesNothing, AssetPropertyLifecycleUiTest.aStaleCommitReportsAConflictAndKeepsTheNewerValue | passed | a missing face shows its file name with "(not found)" and survives another face edit; an older uncommitted value reports "changed elsewhere" and cannot replace the newer one |
+| AST-06 | Preview and read-only states | AssetPropertyLifecycleUiTest.aModelAssetShowsItsValuesReadOnlyAndSelectingItWritesNothing, EnvironmentLifecycleUiTest.anHdrSkyIsReadOnlyAndSaysWhyItsPreviewIsMissing | passed | model and HDR assets have no editors and selecting them writes nothing; a missing face shows its state; no cloud asset exists in the fixtures (not covered) |
 | OPT-01 | Percentage and IOR round trip | OpticalMaterialUiTest.transmissionPercentAndIorRoundTripWithUndoAndRedo | passed | Model 6 first material; two Undos restore the scene |
 | OPT-02 | Instance isolation and defaults | OpticalMaterialUiTest.editingOneInstanceLeavesAnotherInstanceOfTheModelAndTheModelFilesAlone | passed | a second instance is staged on disk (entity 9 pointed at entity 6's model) |
 | OPT-03 | Invalid optical values | OpticalMaterialUiTest.outOfRangeAndNonNumericValuesAreRefusedAndWriteNothing | passed | 101, -1, abc, IOR 0.5, 4, NaN |
-| OPT-04 | Material diagnostics | OpticalMaterialUiTest | unverified | not implemented yet (task 4.5) |
-| OPT-05 | Optical conflict | OpticalMaterialUiTest | unverified | not implemented yet (task 4.5) |
-| TRE-01 | Stable navigation and refresh | TreeLifecycleUiTest.switchingViewsAfterAnEditKeepsRowsSingleAndTheEditVisible | passed | a project close and reopen is JRN-10 (task 10.2) |
-| TRE-02 | Rename and visibility cycles | TreeLifecycleUiTest.fogEyeReturnCycle, TreeLifecycleUiTest.skyboxEyeReturnCycle, TreeLifecycleUiTest.renameRedoReopenAndCancelKeepTheHistoryHonest | passed | the ambient eye is not driven yet (task 4.3 open) |
-| TRE-03 | Unused filter and counts | TreeLifecycleUiTest.unusedFilterFollowsUsageWhileScenesStayAndFooterIsIndependent | passed | the filter is toggled with the fixture as is; usage changes while it is on are not driven yet (task 4.3 open) |
-| TRE-04 | Chooser filtering and None | AbyssusTreeUiTest, RenameSceneUiTest, SkyboxChooserUiTest | unverified | not implemented yet (task 4.3, 4.4) |
+| OPT-04 | Material diagnostics | OpticalMaterialUiTest.anOverrideNamingAMaterialThatIsGoneStaysVisibleAndSurvivesEditsToTheRealOne, OpticalMaterialUiTest.aModelThatCannotBeReadOffersNoOpticalEditsAndExplainsWhy | passed | in the amd64 container: a stored override for a missing material is named, kept and preserved by a real edit; a model that cannot be read offers no optical editor; duplicate and non-PBR materials have no fixture |
+| OPT-05 | Optical conflict | OpticalMaterialUiTest.anOlderUncommittedValueCannotOverwriteANewerOverride | passed | in the amd64 container: an uncommitted 40 does not replace a newer 0.3 written from outside |
+| TRE-01 | Stable navigation and refresh | TreeLifecycleUiTest.switchingViewsAfterAnEditKeepsRowsSingleAndTheEditVisible, TreeLifecycleUiTest.aSavedEyeEditSurvivesAProjectReopenWithSingleRows | passed | view switch and project close and reopen keep one row per node and the saved edit; continuing authoring after a reopen is JRN-10 (task 10.2) |
+| TRE-02 | Rename and visibility cycles | TreeLifecycleUiTest.fogEyeReturnCycle, TreeLifecycleUiTest.skyboxEyeReturnCycle, TreeLifecycleUiTest.ambientEyeReturnCycle, TreeLifecycleUiTest.renameRedoReopenAndCancelKeepTheHistoryHonest | passed | fog, skybox and ambient eyes return to the original bytes through Undo and Redo |
+| TRE-03 | Unused filter and counts | TreeLifecycleUiTest.unusedFilterFollowsUsageWhileScenesStayAndFooterIsIndependent, TreeLifecycleUiTest.aUsageChangeWhileTheUnusedFilterIsOnMovesTheAssetOutAndUndoBringsItBack | passed | adding an entity that uses `tree` while the filter is on drops it from the list and moves the footer, Undo returns both; `AbyssusTreeUiTest` (3) and `RenameSceneUiTest` (2) pass on their own |
+| TRE-04 | Chooser filtering and None | SkyboxChooserUiTest.chooserListsSkyboxesFiltersAndCancels, SkyboxChooserUiTest.noneClearsTheSkyboxAndUndoRestoresTheBytes, SkyboxChooserUiTest.cancelAfterSelectingARowChangesNothing | passed | None clears the name and Undo restores the bytes, Cancel after selecting a row writes nothing and leaves no history. `chooserListsSkyboxesFiltersAndCancels` waits for chooser thumbnails, which need LWJGL: it times out in the arm64 `--fast` container and in the canonical amd64 container on this machine (2026-10-23, together with `SceneViewSmokeUiTest`), so it is environment-blocked, not verified |
 | TRE-05 | Cancel and current selection | TreeLifecycleUiTest.renameRedoReopenAndCancelKeepTheHistoryHonest | passed | the skybox cancel half stays with task 4.4 |
-| GES-01 | Pick and clear | SceneInteractionUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.1 |
-| GES-02 | Mode and navigation | SceneInteractionUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.1 |
-| GES-03 | World and local transforms | SceneInteractionUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.1 |
-| GES-04 | Camera and look-at transforms | SceneInteractionUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.1 |
-| GES-05 | Snap and cancellation | SceneInteractionUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.1 |
-| GES-06 | Drop and framing | SceneInteractionUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.1 |
-| GES-07 | Camera chooser and orientation widget | SceneInteractionUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.1 |
-| PTH-01 | Draw and finish | ArrangementLifecycleUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.4 |
-| PTH-02 | Cancel and insufficient points | ArrangementLifecycleUiTest | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 5.4 |
+| GES-01 | Pick and clear | SceneInteractionUiTest.clickingAnObjectSelectsItAndClickingEmptySpaceClears | passed | a real click on Model 0 selects it in the view and the tree; a click on empty space clears the view's selection and leaves the tree's; nothing is written. Eligible lights and Camera 4 picks are not covered |
+| GES-02 | Mode and navigation | SceneInteractionUiTest.toolKeysAndButtonsSwitchTheToolAndNavigationLeavesTheSceneAlone | passed | toolbar buttons and the Q, W and E keys switch the tool; a drag away from handles orbits the camera and the document and file stay byte-identical. Zoom and pan are not covered |
+| GES-03 | World and local transforms | SceneInteractionUiTest.dragAlongTheWorldXHandleMovesOnlyXAndUndoFromTheSceneViewRestoresIt, SceneInteractionUiTest.rotatingAroundTheYRingChangesOnlyTheRotationAndUndoRestoresIt, SceneInteractionUiTest.theLocalGizmoFollowsTheObjectsOwnAxes, SceneInteractionUiTest.aLocalRotationTurnsAboutTheObjectsOwnAxis | passed | World X move (one changed line, Undo and Redo from the Scene View, saved), World Y rotate (only `localRotation` changes, Undo) and Local X move on the rotated `Model 2` (the move follows the object's own axis). a Local Y rotation of `Model 2` is a turn about the object's own Y axis only |
+| GES-04 | Camera and look-at transforms | SceneInteractionUiTest.movingCameraFourWritesBothPositionsAndItsRotateHandlesAreAbsent, LightGestureUiTest.turningADirectionalLightMovesItsHandleAndUndoRestoresIt | passed | Camera 4 move writes `localPosition.y` and `camera.position.y` together and a drag on its would-be rotate ring writes nothing; turning directional light 1 about X in the Lights project moves handle 0 on a 10-unit sphere around the light, leaves the light's own `PositionComponent` unchanged, and Undo restores the content (`LightGestureUiTest` runs only on the Lights project) |
+| GES-05 | Snap and cancellation | SceneInteractionUiTest.snapQuantizesTheMoveAndEscapeCancelsADragWithoutAnEdit, SceneInteractionUiTest.angularSnapQuantizesARotationToFifteenDegrees | passed | a snapped move lands on a multiple of 0.5, a snapped Y rotation is a multiple of 15 degrees, and an Escape-cancelled drag leaves the document unchanged with no edit |
+| GES-06 | Drop and framing | SceneInteractionUiTest.frameSelectionOnlyMovesTheViewAndDropOnlyChangesHeight | passed | Frame selection frames everything with no selection and the selected object otherwise, writing nothing; Drop on `Model 2` changes only its `y` and Undo restores the text. `Model 9` has no `PickableComponent`, so framing it does nothing (existing behavior) |
+| GES-07 | Camera chooser and orientation widget | SceneInteractionUiTest.theCameraChooserAndOrientationWidgetFollowTheCameraMode | passed | |
+| PTH-01 | Draw and finish | ArrangementLifecycleUiTest | unverified | not written yet; the canonical container has a software GL context (task 1.5); planned task 5.4 |
+| PTH-02 | Cancel and insufficient points | ArrangementLifecycleUiTest | unverified | not written yet; the canonical container has a software GL context (task 1.5); planned task 5.4 |
 | PTH-03 | Edit and regenerate | ArrangementLifecycleUiTest | unverified | not implemented yet (task 5.4) |
 | PTH-04 | Detach a copy | ArrangementLifecycleUiTest | unverified | not implemented yet (task 5.4) |
 | PTH-05 | Guard ownership on removal | ArrangementLifecycleUiTest | unverified | not implemented yet (task 5.4) |
-| DSP-01 | View-only toggles | SceneViewUiTest | unverified | not implemented yet (task 5.2) |
-| DSP-02 | Shared FPS preference | SceneViewUiTest | unverified | not implemented yet (task 5.2) |
-| DSP-03 | Remember and resume FPS | SceneViewUiTest | unverified | not implemented yet (task 5.2) |
-| DSP-04 | Narrow and unavailable views | SceneViewUiTest | unverified | not implemented yet (task 5.2) |
-| DSP-05 | Close and reopen the canvas | SceneViewUiTest | unverified | not implemented yet (task 5.2) |
-| RAY-01 | Request without an open view | RayControlsUiTest | unverified | not implemented yet (task 9.3) |
+| DSP-01 | View-only toggles | SceneViewUiTest.viewOnlyTogglesFollowTheirStateAndWriteNothing | passed | Shadows, Fog, Grid and Snap flip and return, World/Local and Lit/Unlit switch and return, the stats strip follows Local/World and Snap, and the scene and project files stay byte-identical |
+| DSP-02 | Shared FPS preference | SceneViewUiTest.showFpsIsOneProjectPreferenceThatSurvivesHidingAndReopeningAndWritesNoFile | unverified | the preference ticked in Properties reaches the open view and a view opened later; several simultaneously open views and an independent second IDE project are not covered |
+| DSP-03 | Remember and resume FPS | SceneViewUiTest.showFpsIsOneProjectPreferenceThatSurvivesHidingAndReopeningAndWritesNoFile | passed | the frame rate returns after the view is hidden (Text tab) and shown, and a view opened after a project reopen shows it; neither the scene nor the project file is written |
+| DSP-04 | Narrow and unavailable views | SceneViewUiTest.theToolbarWrapsAtANarrowEditor | unverified | the narrow toolbar wraps without overlaps and the enabled toolbar is captured; the unavailable-rendering diagnostic needs a GL-less environment and is not covered |
+| DSP-05 | Close and reopen the canvas | SceneViewUiTest.theIdeTabsSwitchBetweenTextAndSceneViewWithoutWritingOnTheirOwn | unverified | hiding and showing the view and closing and reopening it recover (tab and FPS cases); an unsafe-size resize and stale input capture are not covered |
+| RAY-01 | Request without an open view | RayControlsUiTest.requestingRayTracingWithNoViewOpensOneAndExplainsAnUnavailableBackendWithoutEditingTheScene | unverified | the switch with no view open shows a status or reason and the scene bytes stay unchanged; that a view opened is not asserted yet (task 9.3) |
 | RAY-02 | Cancel and close requests | RayControlsUiTest | unverified | not implemented yet (task 9.3) |
 | RAY-03 | Unavailable and failed modes | RayControlsUiTest | unverified | not implemented yet (task 9.3) |
-| RAY-04 | Five saved limits | RayControlsUiTest | unverified | not implemented yet (task 9.3) |
-| RAY-05 | Invalid and conflicting limits | RayControlsUiTest | unverified | not implemented yet (task 9.3) |
+| RAY-04 | Five saved limits | RayControlsUiTest.theFiveSavedLimitsAreEditedAndUndoneWithoutAViewOrHardware | unverified | all five limits are committed with Enter, saved as integers, and five Undos return the exact text; Redo and reopen are not covered yet (task 9.3) |
+| RAY-05 | Invalid and conflicting limits | RayControlsUiTest.invalidLimitsAreExplainedAndWriteNothing | unverified | fractional, text and out-of-range values show a reason and write nothing; a conflicting newer edit is not covered yet (task 9.3) |
 | RAY-06 | Malformed saved data and foliage note | RayControlsUiTest | unverified | not implemented yet (task 9.3) |
-| WAT-01 | Create both presets | WaterLifecycleUiTest | unverified | not implemented yet (task 5.3) |
-| WAT-02 | Edit and remove | WaterLifecycleUiTest | unverified | not implemented yet (task 5.3) |
-| WAT-03 | Invalid input and surface | WaterLifecycleUiTest | unverified | not implemented yet (task 5.3) |
-| WAT-04 | Incompatible extension | WaterLifecycleUiTest | unverified | not implemented yet (task 5.3) |
-| TER-01 | Matching preview before creation | TerrainLifecycleUiTest | unverified | not implemented yet (task 6.1) |
-| TER-02 | Invalidate and randomize | TerrainLifecycleUiTest | unverified | not implemented yet (task 6.1) |
-| TER-03 | Validate and cancel | TerrainLifecycleUiTest | unverified | not implemented yet (task 6.1) |
-| TER-04 | Regenerate existing terrain | TerrainLifecycleUiTest | unverified | not implemented yet (task 6.1) |
-| TER-05 | Source changes after preview | TerrainLifecycleUiTest | unverified | not implemented yet (task 6.1) |
-| TER-06 | Unusable or superseded work | TerrainLifecycleUiTest | unverified | not implemented yet (task 6.1) |
-| FOL-01 | Create and attach | FoliageLifecycleUiTest | unverified | not implemented yet (task 6.2) |
-| FOL-02 | Layer and model cycles | FoliageLifecycleUiTest | unverified | not implemented yet (task 6.2) |
-| FOL-03 | Drafts, limits and cancellation | FoliageLifecycleUiTest | unverified | not implemented yet (task 6.2) |
-| FOL-04 | Rebake stale data | FoliageLifecycleUiTest | unverified | not implemented yet (task 6.2) |
-| FOL-05 | Collider-only Apply | FoliageLifecycleUiTest | unverified | not implemented yet (task 6.2) |
-| FOL-06 | Collider availability and validation | FoliageLifecycleUiTest | unverified | not implemented yet (task 6.2) |
-| PNT-01 | Brush controls and availability | FoliageLifecycleUiTest (painting) | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 6.3 |
-| PNT-02 | Paint and erase | FoliageLifecycleUiTest (painting) | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 6.3 |
-| PNT-03 | Cancel and no-op strokes | FoliageLifecycleUiTest (painting) | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 6.3 |
-| PNT-04 | Selection, Play and concurrent changes | FoliageLifecycleUiTest (painting) | unverified | environment-blocked: no OpenGL context in the canonical container (task 1.5); planned task 6.3 |
-| IMP-01 | Model settings and preview | ImportLifecycleUiTest, WeatherPresetLifecycleUiTest | unverified | not implemented yet (task 7.2, 7.3, 6.4) |
-| IMP-02 | Model import and placement | ImportLifecycleUiTest, WeatherPresetLifecycleUiTest | unverified | not implemented yet (task 7.2, 7.3, 6.4) |
-| IMP-03 | Placement availability and cancellation | ImportLifecycleUiTest, WeatherPresetLifecycleUiTest | unverified | not implemented yet (task 7.2, 7.3, 6.4) |
-| IMP-04 | Aircraft import settings | ImportLifecycleUiTest, WeatherPresetLifecycleUiTest | unverified | not implemented yet (task 7.2, 7.3, 6.4) |
-| IMP-05 | Weather snapshot | ImportLifecycleUiTest, WeatherPresetLifecycleUiTest | unverified | not implemented yet (task 7.2, 7.3, 6.4) |
-| IMP-06 | Guarded asset history | ImportLifecycleUiTest, WeatherPresetLifecycleUiTest | unverified | not implemented yet (task 7.2, 7.3, 6.4) |
-| GUI-01 | Asset and screen cycles | GameUiLifecycleUiTest, GameUiWidgetLifecycleUiTest, GameUiDeclarationLifecycleUiTest | unverified | not implemented yet (task 8.1-8.3) |
-| GUI-02 | Every widget kind | GameUiLifecycleUiTest, GameUiWidgetLifecycleUiTest, GameUiDeclarationLifecycleUiTest | unverified | not implemented yet (task 8.1-8.3) |
-| GUI-03 | Ordering, parenting and canvas gestures | GameUiLifecycleUiTest, GameUiWidgetLifecycleUiTest, GameUiDeclarationLifecycleUiTest | unverified | not implemented yet (task 8.1-8.3) |
-| GUI-04 | Invalid hierarchy and stale gestures | GameUiLifecycleUiTest, GameUiWidgetLifecycleUiTest, GameUiDeclarationLifecycleUiTest | unverified | not implemented yet (task 8.1-8.3) |
-| GUI-05 | Bindings, styles and actions | GameUiLifecycleUiTest, GameUiWidgetLifecycleUiTest, GameUiDeclarationLifecycleUiTest | unverified | not implemented yet (task 8.1-8.3) |
-| GUI-06 | Image and font import | GameUiLifecycleUiTest, GameUiWidgetLifecycleUiTest, GameUiDeclarationLifecycleUiTest | unverified | not implemented yet (task 8.1-8.3) |
-| GUI-07 | List authoring | GameUiLifecycleUiTest, GameUiWidgetLifecycleUiTest, GameUiDeclarationLifecycleUiTest | unverified | not implemented yet (task 8.1-8.3) |
+| WAT-01 | Create both presets | WaterLifecycleUiTest.lakeAndSeaAreCreatedEditedAndRemovedWithoutTouchingOtherData, WaterLifecycleUiTest.eachCreationIsItsOwnUndoStep | passed | Lake and Sea from the tree Add menu get distinct ids under `abyssus.waterSurfaces`, appear as rows, change nothing else and each creation is one Undo step from the tree |
+| WAT-02 | Edit and remove | WaterLifecycleUiTest.lakeAndSeaAreCreatedEditedAndRemovedWithoutTouchingOtherData | passed | rename, width, visibility and x of one surface each change one value with Undo and Redo through the scene document (text editor reopened each time), the saved file matches, and removal clears its Properties and Undo from the tree restores it |
+| WAT-03 | Invalid input and surface | WaterLifecycleUiTest.anInvalidExtentIsRefusedInlineAndTheSceneKeepsItsValue, WaterLifecycleUiTest.aSurfaceWithInvalidSavedDataShowsItsStateAndStillAllowsRenameAndRemoval | passed | a negative and a non-numeric extent are refused inline with the document unchanged and a valid value recovers; a prepared surface with invalid saved data shows the invalid note and still allows rename and removal |
+| WAT-04 | Incompatible extension | WaterLifecycleUiTest.anIncompatibleWaterExtensionBlocksCreationAndIsNeverReplaced | passed | with `abyssus` not an object, Add Water is not offered and the saved value is untouched |
+| TER-01 | Matching preview before creation | TerrainLifecycleUiTest.aMatchingPreviewCreatesANativeTerrainWithUndoRedoAndReopen | passed | a matching preview creates a native terrain with Undo, Redo and reopen; unrelated assets keep their hashes |
+| TER-02 | Invalidate and randomize | TerrainLifecycleUiTest.changingAnInputOrTheSeedInvalidatesAPreviewButANameChangeDoesNot | passed | an input or seed change invalidates the preview, a name change does not |
+| TER-03 | Validate and cancel | TerrainLifecycleUiTest.invalidNamesGeometryAndSettingsAreExplainedAndCancelWritesNothing | passed | invalid names, geometry and settings are explained; cancel writes nothing |
+| TER-04 | Regenerate existing terrain | TerrainLifecycleUiTest.regeneratingTheFixtureTerrainChangesOnlyHeightsAndRecipeAndUndoRedoRestoreThem | passed | regeneration changes only heights and recipe; Undo and Redo restore them |
+| TER-05 | Source changes after preview | TerrainLifecycleUiTest.applyRefusesToOverwriteHeightsOrMetadataThatChangedAfterThePreview | passed | Apply refuses heights or metadata that changed after the preview |
+| TER-06 | Unusable or superseded work | TerrainLifecycleUiTest.anUnusableGridOrAMalformedRecipeShowsADiagnosticOrDefaults, TerrainLifecycleUiTest.aPreviewStartedBeforeTheSelectionChangedCannotBeAppliedToTheNewSelection | passed | an unusable grid or malformed recipe shows a diagnostic or defaults; a superseded preview cannot be applied |
+| FOL-01 | Create and attach | FoliageLifecycleUiTest.newFoliageCreatesAnEmptyAssetAddFoliageAttachesItAndItsUndoIsGuarded | passed | New Foliage refuses a taken name and a resolution out of range, creates an empty asset with its bake and selects it; Add Foliage on the terrain entity attaches it, it survives a project reopen and its creation Undo is refused while the scene refers to it |
+| FOL-02 | Layer and model cycles | FoliageLifecycleUiTest.layersAndWeightedModelsAreAddedReorderedEditedAndRemovedWithApplyUndoAndRedo | passed | layer add, reorder and removal, a weighted second model and an invalid weight; each Apply writes the bake the settings describe, and the panel Undo and Redo return the exact earlier bytes |
+| FOL-03 | Drafts, limits and cancellation | FoliageLifecycleUiTest.invalidValuesTheCopyLimitCancelAndSelectionChangesNeverWriteADraft | passed | invalid densities are explained, 0.5 copies per m2 is refused over the limit, Cancel and a selection change drop the draft, and a draft does not survive a newer `meta.json` |
+| FOL-04 | Rebake stale data | FoliageLifecycleUiTest.aStaleBakeIsRebakedFromTheCurrentSettingsAndUndoRestoresTheEarlierBytes | passed | a changed mask makes the bake stale; Re-bake writes the new bake, Undo restores the exact earlier bytes and Redo the same rebake |
+| FOL-05 | Collider-only Apply | FoliageLifecycleUiTest.aColliderOnlyApplyChangesOnlyMetadataAndLeavesTheBakeOrItsAbsenceAlone, FoliageLifecycleUiTest.aColliderOnlyApplyKeepsAMissingBakeMissing | passed | a Box collider applies without a preview, the bake bytes are unchanged through Undo and Redo, and a missing bake stays missing |
+| FOL-06 | Collider availability and validation | FoliageLifecycleUiTest.colliderControlsFollowTheLayerKindAndInvalidSizesAreRefusedKeepingExtensionData | passed | a DETAIL layer has no collider controls, invalid sizes are refused with the stored value kept, and replacing the shape keeps an extension member |
+| PNT-01 | Brush controls and availability | FoliageLifecycleUiTest (painting) | unverified | not written yet; the canonical container has a software GL context (task 1.5); planned task 6.3 |
+| PNT-02 | Paint and erase | FoliageLifecycleUiTest (painting) | unverified | not written yet; the canonical container has a software GL context (task 1.5); planned task 6.3 |
+| PNT-03 | Cancel and no-op strokes | FoliageLifecycleUiTest (painting) | unverified | not written yet; the canonical container has a software GL context (task 1.5); planned task 6.3 |
+| PNT-04 | Selection, Play and concurrent changes | FoliageLifecycleUiTest (painting) | unverified | not written yet; the canonical container has a software GL context (task 1.5); planned task 6.3 |
+| IMP-01 | Model settings and preview | ImportLifecycleUiTest.cancellingTheChooserOrTheSettingsWritesNothingAndLeavesTheSourceAlone, ImportLifecycleUiTest.aNameThatIsTakenIsRefusedBeforeCreateAndNothingIsWritten, ImportLifecycleUiTest.aFileThatIsNotAModelShowsWhyAndCannotBeCreated | passed | amd64 container: the chooser and the settings dialog, a taken folder name refused with a reason, a file that is not a model; the preview image itself is not asserted |
+| IMP-02 | Model import and placement | ImportLifecycleUiTest.aFreeNameCreatesTheAssetFolderWithUndoRedoAndReopen, ImportLifecycleUiTest.addToSceneCreatesTheAssetAndTheEntityAsOneUndoStep | passed | `crate.obj` stages the four expected files, the source folder is byte-identical, one Undo and one Redo, reopen; with Add to scene the entity places the new model and one Undo takes folder and entity back together |
+| IMP-03 | Placement availability and cancellation | ImportLifecycleUiTest.addToSceneCreatesTheAssetAndTheEntityAsOneUndoStep, ImportLifecycleUiTest.cancellingTheChooserOrTheSettingsWritesNothingAndLeavesTheSourceAlone | passed | Add to scene is offered with an open scene view; cancelling the chooser or the dialog writes nothing; no scene view or a playing view (Disabled placement reasons) is covered by the platform tests |
+| IMP-04 | Aircraft import settings | ImportLifecycleUiTest.aircraftSettingsAreValidatedAndCreateWritesOneUndoableModelAssetKeepingTheArchive, ImportLifecycleUiTest.cancellingTheAircraftDialogWritesNothingAndLeavesTheArchiveAlone, ImportLifecycleUiTest.aFileThatIsNotAnArchiveIsRefusedWithTheReasonAndWritesNothing | passed | the fixture plane's licence is shown, a taken name and a bad wingspan are refused, Create writes MODEL meta, `model.glb` and `source.json`, the archive is untouched, Undo and Redo return the same bytes, reopen; a file that is not an archive is refused with the reason |
+| IMP-05 | Weather snapshot | WeatherPresetLifecycleUiTest.aSnapshotIsCreatedLeavesTheSourcesAloneAndRedoKeepsItsBytes, WeatherPresetLifecycleUiTest.cancelAndANameCollisionCreateNothing, WeatherPresetLifecycleUiTest.aMissingCloudSourceIsRefusedWithAReasonAndNothingIsCreated | passed | 2026-10-23, canonical amd64 container: snapshot create with Undo/Redo keeping the same bytes and identity and the sky and cloud files byte-identical, cancel and a taken folder name create nothing, a missing cloud source is refused with a reason; the source is prepared in the cloud form `AssetMetaBinder` reads today (see the open defect in the change's task 11.1) |
+| IMP-06 | Guarded asset history | ImportLifecycleUiTest.aFreeNameCreatesTheAssetFolderWithUndoRedoAndReopen, ImportLifecycleUiTest.aircraftSettingsAreValidatedAndCreateWritesOneUndoableModelAssetKeepingTheArchive | passed | Undo removes the folder and Redo restores the same bytes for both imports; Undo of an import that a scene entity references is covered for placement by one step |
+| GUI-01 | Asset and screen cycles | GameUiLifecycleUiTest.aTakenNameIsRefusedAndAFreeOneCreatesTheRegisteredAssetWithUndoRedoAndReopen, GameUiLifecycleUiTest.unregisterAndRegisterChangeOnlyTheProjectRegistryAndKeepTheAssetFolder, GameUiLifecycleUiTest.screensAreAddedWithUniqueIdsAndOneUndoPerScreen, GameUiLifecycleUiTest.anUnsupportedVersionOffersNoScreenAndTheFileIsNotRewritten, GameUiWidgetLifecycleUiTest.aScreenIsAddedRenamedAndDeletedFromTheScreensMenuWithOneUndoPerStep | passed | amd64 container: a taken folder name keeps OK unavailable; creation registers the asset in `uiAssetNames`; Unregister and Register change only the project file; add, rename and delete of a screen each are one Undo; a second screen of the same name gets its own id; an unsupported asset offers no screen action; overlays and the entry-screen mark are not driven |
+| GUI-02 | Every widget kind | GameUiWidgetLifecycleUiTest.everySupportedWidgetKindIsAddedFromTheAddPopupAndEachAddIsOneUndoStep, GameUiWidgetLifecycleUiTest.duplicateReorderAndDeleteActOnTheSelectedWidgetWithUndoAndAReopenKeepsTheResult | passed | all eleven kinds are added from the Add popup and appear in the saved document; duplicate gives the copy its own id; delete, reorder, Undo and reopen follow; the kind-specific property fields of each kind are not asserted one by one |
+| GUI-03 | Ordering, parenting and canvas gestures | GameUiWidgetLifecycleUiTest.duplicateReorderAndDeleteActOnTheSelectedWidgetWithUndoAndAReopenKeepsTheResult, GameUiWidgetLifecycleUiTest.propertyAndLayoutEditsCommitRefuseInvalidValuesAndEachIsOneUndoStep | unverified | Up reorders the selected widget and layout edits commit with one Undo each; tree drag and drop, reparenting and canvas gestures are not driven (task 8.2 open) |
+| GUI-04 | Invalid hierarchy and stale gestures | GameUiWidgetLifecycleUiTest.propertyAndLayoutEditsCommitRefuseInvalidValuesAndEachIsOneUndoStep | unverified | a non-numeric layout value writes nothing; descendant drops and stale canvas gestures are not driven (task 8.2 open) |
+| GUI-05 | Bindings, styles and actions | GameUiDeclarationLifecycleUiTest.aBindingAndAStyleAreValidatedBeforeOkAndEachIsOneUndoStep, GameUiDeclarationLifecycleUiTest.aBindingIsEditedAndRemovedWithOneUndoStepEach | passed | the Binding and Style forms keep OK unavailable for an empty name, a sample that does not match the type and a colour that is not #rrggbb; add, edit and remove of a binding and the add of a style are one Undo step each; widget binding, style and action choices (`binding.*`, `style`, `action.*`) are not driven |
+| GUI-06 | Image and font import | GameUiDeclarationLifecycleUiTest.anImageAndABitmapFontAreImportedFromLocalFilesAsOneUndoableEditEach | passed | an image and a bitmap font with its page are imported from the local inputs through the file chooser seam; the same image twice gets its own id; Undo takes the imports back newest first and each step keeps declarations and copied files in agreement; the sources stay byte-identical; a font or image the importer refuses is covered by `UiAssetCommandTest` |
+| GUI-07 | List authoring | GameUiWidgetLifecycleUiTest.aListGetsAndLosesItsEmptyStateAndTheArrowSwitchIsOneUndoStepEach | passed | a list gets an empty state label that is distinct from the template and loses it again to the exact earlier document; Undo brings it back; the row limit and the arrow switch are not driven |
 | PRV-01 | Selection versus interaction | GameUiPreviewLifecycleUiTest | unverified | not implemented yet (task 8.4) |
-| PRV-02 | Typed samples and reset | GameUiPreviewLifecycleUiTest | unverified | not implemented yet (task 8.4) |
+| PRV-02 | Typed samples and reset | GameUiPreviewLifecycleUiTest.aSampleValueIsEditedInThePreviewWithoutChangingTheDocument | passed | a binding's declared sample is shown in its sample field, typing a new value changes neither the document nor the file; a typed sample that does not match the binding type and the reset of samples are not driven |
 | PRV-03 | Actions and focus | GameUiPreviewLifecycleUiTest | unverified | not implemented yet (task 8.4) |
 | PRV-04 | Lists and clickable rows | GameUiPreviewLifecycleUiTest | unverified | not implemented yet (task 8.4) |
-| PRV-05 | Sizes and backdrop | GameUiPreviewLifecycleUiTest | unverified | not implemented yet (task 8.4) |
+| PRV-05 | Sizes and backdrop | GameUiPreviewLifecycleUiTest.previewModeAndItsViewportDoNotWriteTheAssetAndABadSizeIsRefused | passed | a custom viewport 1280 x 720 is applied and shown in the size list, a size of 0 is explained and the last good size stays, Reset and the return to Edit leave the document and the file unchanged; the scene backdrop choice is not driven |
 | PRV-06 | Refresh, recovery and close | GameUiPreviewLifecycleUiTest | unverified | not implemented yet (task 8.4) |
-| PHY-01 | Project toggle and catalog | PhysicsPlayLifecycleUiTest | unverified | not implemented yet (task 9.1, 9.2) |
-| PHY-02 | Components and overlay | PhysicsPlayLifecycleUiTest | unverified | not implemented yet (task 9.1, 9.2) |
-| PHY-03 | Play control cycle | PhysicsPlayLifecycleUiTest | unverified | not implemented yet (task 9.1, 9.2) |
-| PHY-04 | Edit and physics-off transitions | PhysicsPlayLifecycleUiTest | unverified | not implemented yet (task 9.1, 9.2) |
-| PHY-05 | Input, failure and cleanup | PhysicsPlayLifecycleUiTest | unverified | not implemented yet (task 9.1, 9.2) |
-| DOC-01 | Reject unsupported documents | NativeAdmissionUiTest, LifecycleIsolationUiTest | unverified | not implemented yet (task 9.4, 1.3) |
-| DOC-02 | Preserve unrelated native data | NativeAdmissionUiTest, LifecycleIsolationUiTest | unverified | not implemented yet (task 9.4, 1.3) |
+| PHY-01 | Project toggle and catalog | PhysicsPlayLifecycleUiTest.theProjectToggleDecidesWhichKindsAreOfferedAndKeepsStoredPayloads | passed | the project Physics checkbox is saved to the `.abss`, the physics kinds disappear and return from Add Component, Model 0's stored RigidBody payload and the scene bytes survive, and on-off-on restores the project text; Undo/Redo of the toggle and unsaved project text are not covered yet (task 9.1) |
+| PHY-02 | Components and overlay | PhysicsPlayLifecycleUiTest.aPhysicsComponentFieldIsEditedRefusedAndUndoneLikeABuiltInOne, PhysicsKindsUiTest.physicsKindsAreOfferedAndEditedLikeBuiltInOnes | unverified | RigidBody mass is edited, text is refused with a reason and writes nothing, Undo restores the exact text; the Show Physics overlay toggle is not covered yet (task 9.1) |
+| PHY-03 | Play control cycle | PhysicsPlayLifecycleUiTest.playPauseStepAndStopFollowThePhaseAndNeverWriteTheScene | passed | 2026-10-24, canonical amd64 container (the sandbox IDE bundles the play host, `prepareSandbox_runIdeForUiTests`): Play, Pause, Step, resume and Stop follow the phase, control enablement matches each phase and the scene bytes never change |
+| PHY-04 | Edit and physics-off transitions | PhysicsPlayLifecycleUiTest.authoringControlsAreOffWhilePlayingAndRecoverAfterStopWithoutSavingSimulatedPoses | unverified | Add Light is off while the simulation runs, the scene bytes stay unchanged, and after Stop the control recovers and a later edit writes only the new light; physics turned off during Play or startup is not covered yet (task 9.2) |
+| PHY-05 | Input, failure and cleanup | PhysicsPlayLifecycleUiTest.stopAndRestartRecoverTheControlsAndLeaveNoHostProcess | unverified | two Play/Stop rounds each own one host process, recover the controls and leave none behind; keyboard focus routing, a failed start and the editor closing during Play are not covered yet (task 9.2) |
+| DOC-01 | Reject unsupported documents | NativeAdmissionUiTest.unsupportedScenesAreNeverRewrittenByOpeningViewingOrSaving, NativeAdmissionUiTest.unsupportedProjectAndAssetMetadataAreNeverRewritten | passed | 2026-10-23, canonical amd64 container: malformed, future-version, legacy-marker and similar scenes, an unsupported project file and unsupported asset metadata stay byte-identical through open, view and save, with a read error shown |
+| DOC-02 | Preserve unrelated native data | NativeAdmissionUiTest.anAuthoringEditKeepsUnknownDataNumberTextAndKeyOrder, NativeAdmissionUiTest.aPropertiesEditKeepsUnknownDataNumberTextKeyOrderAndOmittedDefaults, NativeAdmissionUiTest.anAssetPropertiesEditKeepsUnknownDataAndKeyOrder | passed | 2026-10-24, canonical amd64 container: Add Light from the tree, a scene Properties ray limit and an asset Properties terrain size change only the new entity, settings block or member; an unknown extension, number spelling and key order survive, and a default value for an omitted setting writes nothing (three write surfaces) |
 | DOC-03 | Text-tab formatting | NativeAdmissionUiTest, LifecycleIsolationUiTest | unverified | not implemented yet (task 9.4, 1.3) |
 | DOC-04 | Current unsaved text and read-only documents | NativeAdmissionUiTest, LifecycleIsolationUiTest | unverified | not implemented yet (task 9.4, 1.3) |
 | DOC-05 | Repeatable fresh scenarios | LifecycleIsolationUiTest.aSecondScenarioStartsPristineAfterContentAndAnOpenEditor | passed | 2026-10-21, canonical amd64 container: content created, an editor left open with unsaved text, then the reset leaves disk, document, editors, unsaved buffers, undo history and tree pristine; `everyScenarioStartsPristine` checks the start state |
@@ -553,6 +575,7 @@ Shared by every lifecycle scenario (`LifecycleHarness`, `IdeReset`, the page obj
 - **Bounded readiness only.** `LifecycleHarness.awaitState(stage, expected) { observe }` polls, then fails naming the stage with expected and observed values; no fixed sleeps, and a failing scenario is never retried until it passes.
 - **Preservation is checked twice.** `LifecycleHarness.lineDiff` shows exactly which lines an edit removed and added (byte level, for text that must stay as written); `LifecycleHarness.sameExcept(before, after, "/ecs/11")` compares the JSON semantically with one value left out, with number text compared as written. After Undo the exact original text is required.
 - **Remote queries stay read-only** (`IdeQueries`); `IdeReset` only closes, reloads and reopens, and never applies a plugin edit. All workflow writes come from the UI.
+- **File chooser seam:** the plugin opens IntelliJ's chooser through `chooseFileOrOverride` (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/ui/ChosenFile.kt`). A UI test calls `IdeReset.chooseNextFile(path)`, which sets the system property `abyssus.test.chosenFile`; the next pick (Import Model, Import FlightGear Aircraft, a Game UI image or font) returns that file without showing the chooser and clears the property. Nothing sets it in a user's IDE.
 - **Profiles:** `FixtureProject.switchTo(profileFolder)` turns the disposable copy into another committed project (Custom, Physics, Foliage) and `untouchedProfiles()` proves no committed profile changed; reset removes folders a scenario created.
 
 ### Entry points
@@ -562,19 +585,19 @@ Plugin actions (`plugin.xml`); the scenario IDs say where each is exercised.
 | Action | Scenarios | Status |
 |---|---|---|
 | `Abyssus.RenameScene` | TRE-02 | unverified |
-| `Abyssus.NewTerrain` | TER-01..06, JRN-05 | unverified |
-| `Abyssus.NewFoliage` | FOL-01 | unverified |
-| `Abyssus.NewWeatherPreset` | IMP-05 | unverified |
+| `Abyssus.NewTerrain` | TER-01..06, JRN-05 | passed (`TerrainLifecycleUiTest`; JRN-05 pending) |
+| `Abyssus.NewFoliage` | FOL-01 | passed (`FoliageLifecycleUiTest`) |
+| `Abyssus.NewWeatherPreset` | IMP-05 | passed |
 | `Abyssus.ImportFlightGear` | IMP-04 | unverified |
 | `Abyssus.ImportModel` | IMP-01..03, JRN-07 | unverified |
 | `Abyssus.AddLight` | ENT-03 | unverified |
-| `Abyssus.AddWater` | WAT-01, JRN-04 | unverified |
-| `Abyssus.RenameWater` | WAT-02 | unverified |
-| `Abyssus.RemoveWater` | WAT-02 | unverified |
+| `Abyssus.AddWater` | WAT-01, WAT-04, JRN-04 | passed (`WaterLifecycleUiTest`) |
+| `Abyssus.RenameWater` | WAT-02 | passed (rename through Properties, `WaterLifecycleUiTest`) |
+| `Abyssus.RemoveWater` | WAT-02 | passed (`WaterLifecycleUiTest`) |
 | `Abyssus.AddAsset` | ENT-02, JRN-01 | unverified |
 | `Abyssus.AddPathArrangement` | PTH-01, PTH-02 | unverified |
 | `Abyssus.RegenerateArrangement` | PTH-03 | unverified |
-| `Abyssus.AddFoliage` | FOL-01 | unverified |
+| `Abyssus.AddFoliage` | FOL-01 | passed (`FoliageLifecycleUiTest`) |
 | `Abyssus.AddComponent` | CMP-01, JRN-02 | unverified |
 | `Abyssus.AddComponentOnEcs` | ENT-01 | unverified |
 | `Abyssus.RemoveComponent` | CMP-03 | unverified |
@@ -586,62 +609,62 @@ Plugin actions (`plugin.xml`); the scenario IDs say where each is exercised.
 | `Abyssus.RegisterUiAsset` | GUI-01 | unverified |
 | `Abyssus.UnregisterUiAsset` | GUI-01 | unverified |
 
-Scene View toolbar controls (`SceneToolsToolbar`): all need a GL context for their enabled behavior (task 1.5, blocked).
+Scene View toolbar controls (`SceneToolsToolbar`): all need a GL context for their enabled behavior (available in the container since task 1.5; their tests are planned in 5.2).
 
 | Control | Scenarios | Status |
 |---|---|---|
-| `Select` | GES-01, GES-02 | unverified |
-| `Move` | GES-02, GES-03 | unverified |
-| `Rotate` | GES-02, GES-03 | unverified |
-| `Snap` | GES-05 | unverified |
-| `Space` | GES-03 | unverified |
-| `Shading` | DSP-01 | unverified |
-| `Shadows` | DSP-01 | unverified |
-| `Fog` | DSP-01 | unverified |
-| `Grid` | DSP-01 | unverified |
-| `Frame` | GES-06 | unverified |
+| `Select` | GES-01, GES-02 | passed (`SceneInteractionUiTest`) |
+| `Move` | GES-02, GES-03 | passed (`SceneInteractionUiTest`) |
+| `Rotate` | GES-02, GES-03 | passed (`SceneInteractionUiTest`) |
+| `Snap` | GES-05, DSP-01 | passed (`SceneInteractionUiTest`, `SceneViewUiTest`) |
+| `Space` | GES-03, DSP-01 | passed (`SceneInteractionUiTest`, `SceneViewUiTest`) |
+| `Shading` | DSP-01 | passed (`SceneViewUiTest.viewOnlyTogglesFollowTheirStateAndWriteNothing`) |
+| `Shadows` | DSP-01 | passed (`SceneViewUiTest.viewOnlyTogglesFollowTheirStateAndWriteNothing`) |
+| `Fog` | DSP-01 | passed (`SceneViewUiTest.viewOnlyTogglesFollowTheirStateAndWriteNothing`) |
+| `Grid` | DSP-01 | passed (`SceneViewUiTest.viewOnlyTogglesFollowTheirStateAndWriteNothing`) |
+| `Frame` | GES-06 | passed (`SceneInteractionUiTest.frameSelectionOnlyMovesTheViewAndDropOnlyChangesHeight`) |
 
 Modeled component kinds (`ComponentSchemas`: built-in, plus the physics kinds when the project enables physics).
 
 | Kind | Scenarios | Status |
 |---|---|---|
-| `NameComponent` | CMP-06 | unverified |
-| `TypeComponent` | CMP-07 | unverified |
-| `ParentComponent` | CMP-04, CMP-05 | unverified |
+| `NameComponent` | CMP-06 | shown in Properties as the entity name; read by every scenario (`SceneFacts`) |
+| `ParentComponent` | CMP-04, CMP-05 | add, edit, Properties remove and Undo passed (`ComponentLifecycleUiTest`); references and cycles: task 4.2 |
 | `PositionComponent` | CMP-04, GES-03, GES-04 | unverified |
-| `CameraComponent` | ENT-01, GES-04 | unverified |
-| `LightComponent` | ENT-03, CMP-07 | unverified |
-| `RenderComponent` | CMP-02, ENT-02 | unverified |
-| `PathArrangementComponent` | PTH-03 | unverified |
-| `RigidBodyComponent` | PHY-02 | unverified |
+| `CameraComponent` | ENT-01, GES-04 | add, edit, remove and Undo passed (`ComponentLifecycleUiTest`) |
+| `LightComponent` | ENT-03, CMP-07 | add, edit, remove and Undo passed; offered for a model (`ComponentLifecycleUiTest`) |
+| `RenderComponent` | CMP-02, ENT-02 | model and terrain asset, text and asset-type edits, tree and Properties removal passed (`ComponentLifecycleUiTest`) |
+| `PathArrangementComponent` | PTH-03 | fields (float, choice, boolean, asset) passed on a prepared entity (`ComponentLifecycleUiTest.floatChoiceBooleanAndAssetEditorsCommitOmitDefaultsAndRefuseInvalidValues`); Scene View authoring: task 5.4 |
+| `Point2PointPositionComponent` | CMP-04 | add, two entity references with refusals, remove passed (`ComponentLifecycleUiTest.renderOffersTerrainAssetsAndPoint2PointTakesEntityReferences`) |
+| `RigidBodyComponent` | PHY-02 | add, tree-row remove and Undo passed (`PhysicsKindsUiTest`); typed field `mass` edit, refusal and Undo passed (`PhysicsPlayLifecycleUiTest`) |
 | `ColliderComponent` | PHY-02 | unverified |
 | `ConstraintComponent` | PHY-02, CMP-04 | unverified |
 
-Field editor types (`FieldKind`); one case per type, with per-kind tables covering the catalog.
+Field editor types (`AssetFieldKind`); one case per type, with per-kind tables covering the catalog.
 
 | Type | Scenarios | Status |
 |---|---|---|
-| `FLOAT` | FLD-01..05, CMP-07 | unverified |
-| `INT` | FLD-01, CMP-07 | unverified |
-| `BOOLEAN` | FLD-01 | unverified |
-| `TEXT` | FLD-01, FLD-02 | unverified |
-| `CHOICE` | CMP-07, AST-02 | unverified |
-| `ENTITY_REF` | CMP-04, CMP-05 | unverified |
-| `ASSET_NAME` | CMP-02, AST-02 | unverified |
+| `FLOAT` | FLD-01..05, CMP-07 | passed (light intensity, arrangement spacing with an exclusive minimum and offset with an inclusive one) |
+| `INT` | FLD-01, CMP-07 | no modeled kind uses it: `ComponentEditor` handles it, but the catalog has no INT field, so it is covered by `ComponentEditorTest` only |
+| `BOOLEAN` | FLD-01 | passed (arrangement `alignToPath`: false is saved, the default is omitted again) |
+| `TEXT` | FLD-01, FLD-02 | passed (`Render.shaderKey`, `FieldCommitUiTest`) |
+| `CHOICE` | CMP-07, AST-02 | passed (Render asset type, arrangement sides) |
+| `ENTITY_REF` | CMP-04, CMP-05 | passed (Parent, Point2Point endpoints; unknown entity and text refused) |
+| `ASSET_NAME` | CMP-02, AST-02 | passed (Render asset at add, arrangement asset pick with Undo) |
 
 Game UI widget kinds (`UiWidgetType`).
 
 | Widget | Scenarios | Status |
 |---|---|---|
-| `PANEL` | GUI-02 | unverified |
-| `ROW` | GUI-02 | unverified |
-| `COLUMN` | GUI-02 | unverified |
-| `LABEL` | GUI-02 | unverified |
-| `IMAGE` | GUI-02 | unverified |
-| `BUTTON` | GUI-02 | unverified |
-| `PROGRESS_BAR` | GUI-02 | unverified |
-| `SLIDER` | GUI-02 | unverified |
-| `CHECKBOX` | GUI-02 | unverified |
-| `TEXT_FIELD` | GUI-02 | unverified |
-| `LIST` | GUI-02, GUI-07 | unverified |
+| `PANEL` | GUI-02 | added from the Add popup and saved (`GameUiWidgetLifecycleUiTest.everySupportedWidgetKindIsAddedFromTheAddPopupAndEachAddIsOneUndoStep`) |
+| `ROW` | GUI-02 | added from the Add popup and saved (`GameUiWidgetLifecycleUiTest.everySupportedWidgetKindIsAddedFromTheAddPopupAndEachAddIsOneUndoStep`) |
+| `COLUMN` | GUI-02 | added from the Add popup and saved (`GameUiWidgetLifecycleUiTest.everySupportedWidgetKindIsAddedFromTheAddPopupAndEachAddIsOneUndoStep`) |
+| `LABEL` | GUI-02 | added from the Add popup and saved (`GameUiWidgetLifecycleUiTest.everySupportedWidgetKindIsAddedFromTheAddPopupAndEachAddIsOneUndoStep`) |
+| `IMAGE` | GUI-02 | added from the Add popup and saved (`GameUiWidgetLifecycleUiTest.everySupportedWidgetKindIsAddedFromTheAddPopupAndEachAddIsOneUndoStep`) |
+| `BUTTON` | GUI-02 | added from the Add popup and saved (`GameUiWidgetLifecycleUiTest.everySupportedWidgetKindIsAddedFromTheAddPopupAndEachAddIsOneUndoStep`) |
+| `PROGRESS_BAR` | GUI-02 | added from the Add popup and saved (`GameUiWidgetLifecycleUiTest.everySupportedWidgetKindIsAddedFromTheAddPopupAndEachAddIsOneUndoStep`) |
+| `SLIDER` | GUI-02 | added from the Add popup and saved (`GameUiWidgetLifecycleUiTest.everySupportedWidgetKindIsAddedFromTheAddPopupAndEachAddIsOneUndoStep`) |
+| `CHECKBOX` | GUI-02 | added from the Add popup and saved (`GameUiWidgetLifecycleUiTest.everySupportedWidgetKindIsAddedFromTheAddPopupAndEachAddIsOneUndoStep`) |
+| `TEXT_FIELD` | GUI-02 | added from the Add popup and saved (`GameUiWidgetLifecycleUiTest.everySupportedWidgetKindIsAddedFromTheAddPopupAndEachAddIsOneUndoStep`) |
+| `LIST` | GUI-02, GUI-07 | added from the Add popup and saved (`GameUiWidgetLifecycleUiTest.everySupportedWidgetKindIsAddedFromTheAddPopupAndEachAddIsOneUndoStep`) ; list authoring: task 8.3 |
 <!-- ui-coverage:end -->

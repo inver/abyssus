@@ -19,7 +19,7 @@ class SceneDocumentCacheTest : BasePlatformTestCase() {
     private fun cache() = SceneDocumentCache(project) { text -> parses++; SceneDocumentCache.parsedScene(reader, text) }
         .also { Disposer.register(testRootDisposable, it) }
 
-    private fun scene(text: String = """{"format":"abyssus","formatVersion":1,"name":"a","ecs":{"entities":{}}}""") =
+    private fun scene(text: String = """{"format":"abyssus","formatVersion":1,"name":"a","ecs":{}}""") =
         myFixture.addFileToProject("c/Main.scene", text).virtualFile
 
     private fun setText(f: com.intellij.openapi.vfs.VirtualFile, text: String) {

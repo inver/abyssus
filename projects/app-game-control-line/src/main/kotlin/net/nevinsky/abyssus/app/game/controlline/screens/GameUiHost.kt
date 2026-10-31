@@ -8,7 +8,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputAdapter
 import com.badlogic.gdx.InputProcessor
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import net.nevinsky.abyssus.lib.core.ui.model.showOverlayAction
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
 import net.nevinsky.abyssus.app.game.controlline.controller.ControllerSettings
 import net.nevinsky.abyssus.app.game.controlline.controller.NoControllerSettings
@@ -61,7 +61,7 @@ class GameUiHost(
             shown = layers
             presenter.display(layers.screen, SCREENS_ASSET)
             layers.overlay?.let { overlay ->
-                presenter.navigator.activate(UiAction(UiActionType.SHOW_OVERLAY.json, UiActionType.SHOW_OVERLAY, screenId = overlay, raw = JsonNodeFactory.instance.objectNode()))
+                presenter.navigator.activate(showOverlayAction(overlay))
             }
         }
         presenter.publish(model.snapshot(session, judge, seconds, scaleJudge))

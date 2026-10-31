@@ -11,7 +11,7 @@ import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
@@ -30,7 +30,7 @@ class WaterSceneEditorTest : BasePlatformTestCase() {
         override var onFailure: ((Throwable) -> Unit)? = null
         override var onPick: ((String) -> Unit)? = null
         override var onPickWater: ((String) -> Unit)? = null
-        override var onWaterMove: ((String, Vec3) -> Boolean)? = null
+        override var onWaterMove: ((String, Vector3) -> Boolean)? = null
         override var onTransform: ((String, TransformEdit) -> Boolean)? = null
         override val view: javax.swing.JComponent get() = component
         override fun setParams(params: SceneRenderParams) { current = params }
@@ -48,8 +48,8 @@ class WaterSceneEditorTest : BasePlatformTestCase() {
         val host = object : SceneViewHost {
             override fun listen(file: VirtualFile, parent: Disposable, selected: (String) -> Unit) {}
             override fun select(file: VirtualFile, entityId: String) {}
-            override fun lightActions(file: VirtualFile, position: () -> Vec3) = DefaultActionGroup()
-            override fun assetActions(file: VirtualFile, position: () -> Vec3) = DefaultActionGroup()
+            override fun lightActions(file: VirtualFile, position: () -> Vector3) = DefaultActionGroup()
+            override fun assetActions(file: VirtualFile, position: () -> Vector3) = DefaultActionGroup()
             override fun canAddLight(file: VirtualFile) = false
             override fun canAddAsset(file: VirtualFile) = false
             override fun listenWater(file: VirtualFile, parent: Disposable, selected: (String) -> Unit) { treeSelection = selected }
@@ -83,7 +83,7 @@ class WaterSceneEditorTest : BasePlatformTestCase() {
             val before = textOf(scene)
             assertEquals(1, waters(view).size)
             // only the water level changes: x and z keep their saved number text
-            assertTrue(view.onWaterMove!!(id, Vec3(1.5f, 4f, 3.25f)))
+            assertTrue(view.onWaterMove!!(id, Vector3(1.5f, 4f, 3.25f)))
             val after = textOf(scene)
             assertEquals(listOf("Move Water"), commands)
             val water = before.indexOf("\"waterSurfaces\"")
@@ -107,11 +107,11 @@ class WaterSceneEditorTest : BasePlatformTestCase() {
         val editor = newSceneEditor(project, scene) { FakeView(it).also { v -> view = v } }
         try {
             val before = textOf(scene)
-            assertFalse(view.onWaterMove!!(id, Vec3(0f, 1f, 0f)))
-            assertFalse(view.onWaterMove!!("missing", Vec3(5f, 5f, 5f)))
+            assertFalse(view.onWaterMove!!(id, Vector3(0f, 1f, 0f)))
+            assertFalse(view.onWaterMove!!("missing", Vector3(5f, 5f, 5f)))
             assertEquals(before, textOf(scene))
             assertEquals(WaterEdit.Changed, WaterSceneEdits(project).remove(scene, id))
-            assertFalse(view.onWaterMove!!(id, Vec3(9f, 9f, 9f)))
+            assertFalse(view.onWaterMove!!(id, Vector3(9f, 9f, 9f)))
         } finally {
             Disposer.dispose(editor)
         }

@@ -48,7 +48,7 @@ class SceneEditFormattingTest : BasePlatformTestCase() {
     }
 
     fun testTogglingTwiceRestoresTheOriginalBytes() {
-        val original = """{"format":"abyssus","formatVersion":1,"id":0,"name":"Ololo","fogEnabled":true,"fog":{"density":0.001,"gradient":1.5},"skyboxName":null,"ecs":{"entities":{"0":{"x":-3.035308,"far":100,"fieldOfView":67}},"metadata":{"version":1}}}"""
+        val original = """{"format":"abyssus","formatVersion":1,"id":0,"name":"Ololo","fogEnabled":true,"fog":{"density":0.001,"gradient":1.5},"skyboxName":null,"ecs":{"0":{"x":-3.035308,"far":100,"fieldOfView":67}}}"""
         val file = myFixture.addFileToProject("p/Main Scene.scene", original).virtualFile
         val toggle = { enabled: Boolean ->
             toggleEnabled(

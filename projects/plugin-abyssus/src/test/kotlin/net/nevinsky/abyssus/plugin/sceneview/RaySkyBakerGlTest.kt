@@ -6,7 +6,7 @@ package net.nevinsky.abyssus.plugin.sceneview
 
 import net.nevinsky.abyssus.lib.core.editor.ray.RaySkyBaker
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
@@ -51,7 +51,7 @@ class RaySkyBakerGlTest {
             if (index != 0) return@render
             val sky = DirectionSky()
             try {
-                val snapshot = RaySkyBaker(faceSize = 128).bake(sky, Vec3(0f, 1f, 0f))
+                val snapshot = RaySkyBaker(faceSize = 128).bake(sky, Vector3(0f, 1f, 0f))
                 assertEquals("a baked sky is 2048 wide", 2048, snapshot.width); assertFalse(snapshot.hdr)
                 val pixels = snapshot.rgba()
                 fun at(u: Float, v: Float): FloatArray {
@@ -109,7 +109,7 @@ class RaySkyBakerGlTest {
             val sky = proceduralSky(fair)
             val baker = RaySkyBaker(faceSize = 64)
             try {
-                val sun = Vec3(0f, 1f, 0f)
+                val sun = Vector3(0f, 1f, 0f)
                 val bare = baker.bake(sky, sun)
                 val cloudy = baker.bake(sky, sun, 0.0, clouds = true)
                 val later = baker.bake(sky, sun, 600.0, clouds = true)

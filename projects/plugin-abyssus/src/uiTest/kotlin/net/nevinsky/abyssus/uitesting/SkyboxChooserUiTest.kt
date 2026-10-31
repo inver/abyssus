@@ -88,4 +88,34 @@ class SkyboxChooserUiTest : UiTestBase() {
 
         undoThroughSceneDocument(project.resolve(scenePath), original)
     }
+
+    @Test
+    fun noneClearsTheSkyboxAndUndoRestoresTheBytes() {
+        val original = Files.readString(project.resolve(scenePath))
+        val facts = SceneFacts(original)
+        val dialog = openChooser()
+        waitForTexts(dialog, "None is listed") { texts -> "None" in texts }
+        dialog.clickListRow(0)
+        dialog.click("Assign")
+        dialog.awaitClosed()
+        waitFor(Duration.ofSeconds(15), Duration.ofMillis(300), "the skybox name is cleared") {
+            !Files.readString(project.resolve(scenePath)).contains("\"skyboxName\": \"${facts.skyboxName}\"")
+        }
+        val cleared = Files.readString(project.resolve(scenePath))
+        assertEquals("the skybox stays as set, only its name left", facts.id, SceneFacts(cleared).id)
+        undoThroughSceneDocument(project.resolve(scenePath), original)
+        assertEquals(original, Files.readString(project.resolve(scenePath)))
+    }
+
+    @Test
+    fun cancelAfterSelectingARowChangesNothing() {
+        val original = Files.readString(project.resolve(scenePath))
+        val dialog = openChooser()
+        waitForTexts(dialog, "the skyboxes are listed") { texts -> skyboxAssets().all { it in texts } }
+        dialog.clickListRow(2)
+        dialog.click("Cancel")
+        dialog.awaitClosed()
+        assertEquals("a selection that was cancelled wrote nothing", original, Files.readString(project.resolve(scenePath)))
+        assertEquals("and left no history", "", reset.historyText(project.resolve(scenePath).toString()))
+    }
 }
