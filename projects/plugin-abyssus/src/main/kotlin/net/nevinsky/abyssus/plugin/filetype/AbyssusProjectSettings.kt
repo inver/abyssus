@@ -88,7 +88,7 @@ class AbyssusProjectSettings(private val project: Project) : Disposable {
     fun setPhysicsEnabled(abss: VirtualFile, on: Boolean): Boolean {
         if (!getSettings(abss).supported) return false
         val commandName = if (on) AbyssusBundle.message("commandTurnPhysicsOn") else AbyssusBundle.message("commandTurnPhysicsOff")
-        return editSceneJson(project, abss, commandName) { root ->
+        return editSceneDocument(project, abss, commandName) { root ->
             setBooleanMember(root, "physicsEnabled", on)
         }
     }
@@ -96,7 +96,7 @@ class AbyssusProjectSettings(private val project: Project) : Disposable {
     /** One native document edit; a default is omitted and unrelated project data stays intact. */
     fun setAntialiasing(abss: VirtualFile, level: AntialiasingLevel): Boolean {
         if (!getSettings(abss).supported) return false
-        return editSceneJson(project, abss, AbyssusBundle.message("commandSetProjectAntialiasing")) { root ->
+        return editSceneDocument(project, abss, AbyssusBundle.message("commandSetProjectAntialiasing")) { root ->
             setOrRemoveText(root, "sceneViewAntialiasing", level.name.takeUnless { level == AntialiasingLevel.DEFAULT })
         }
     }

@@ -10,7 +10,8 @@ import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
 import net.nevinsky.abyssus.lib.core.editor.ecs.floatNode
 
-enum class FieldKind { FLOAT, INT, BOOLEAN, TEXT, CHOICE, ENTITY_REF, ASSET_NAME }
+/** [MESH_ID] is a choice among the meshes of the model the component names; the choices come from the model, not the kind. */
+enum class FieldKind { FLOAT, INT, BOOLEAN, TEXT, CHOICE, ENTITY_REF, ASSET_NAME, MESH_ID }
 
 /** One editable value of a component, read and written as text. */
 class ComponentField<C : Component>(

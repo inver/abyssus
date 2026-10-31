@@ -42,7 +42,7 @@ object SceneRayEdits {
         if (file.extension != "scene") {
             return result
         }
-        editSceneJson(project, file, AbyssusBundle.message("commandEditSceneRaySettings")) { root ->
+        editSceneDocument(project, file, AbyssusBundle.message("commandEditSceneRaySettings")) { root ->
             result = mutate(root)
             result == RayDataEdit.Changed
         }

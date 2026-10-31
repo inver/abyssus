@@ -77,7 +77,7 @@ twice. Land or rebase the open changes that touch `sceneview/` before stage 3 (t
 - [x] 3.8 Add the headless API for spec `headless-scene-editing`: validate and edit by text in, text out (no `Project`,
   no VFS), using the shared `core.format` validator and rejection types. Verify with `HeadlessSceneEditingTest`:
   the move, the refusal (including the same rejection reason) and the asset-property scenarios of the
-  spec, each compared with the plugin's `editSceneJson` result on the same text.
+  spec, each compared with the plugin's `editSceneDocument` result on the same text.
 - [x] 3.9 Check the plugin zip and `physics-plugin`: `./gradlew buildPlugin` contains `editor-core` once; `:physics-plugin:test`
   and `:physics-plugin:checkNoJolt` pass; the physics plugin does not bundle it.
 

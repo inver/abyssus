@@ -39,4 +39,5 @@ extra["abyssusSingletonExcludes"] = listOf(
     "net/nevinsky/abyssus/lib/core/editor/scene/SceneRenderParams.kt",
 )
 
-// lib-core reads JSON into values and lib-core-editor writes it, so both may use Jackson tree types freely: no `abyssusJacksonTreeAllowed` here.
+// No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in lib-core-editor (see gradle/checks.gradle.kts).
+extra["abyssusJacksonTreeAllowed"] = emptyList<String>()

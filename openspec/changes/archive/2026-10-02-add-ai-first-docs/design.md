@@ -15,7 +15,7 @@ since-build 252, Java 21, Kotlin 2.4.10) in two Gradle modules:
 - root: the plugin, all Kotlin in `src/main/kotlin`; packages `dto` (readers, `ProjectLayout`,
   `ProjectAssets`, `JsonNodes`), `scene` (scene DTOs), `ecs` (Ashley components and systems, the scene
   ECS loader/writer and component codecs that carry unknown Mundus components through unchanged),
-  `filetype`, `projectView` (tree, eye toggle, rename, skybox chooser, and `editSceneJson`, the one
+  `filetype`, `projectView` (tree, eye toggle, rename, skybox chooser, and `editSceneDocument`, the one
   undoable, formatting-preserving write path for scene files), `properties` (Abyssus Properties tool
   window), `sceneview` (GL view: models, terrain, skybox, lights, cameras and look-through, picking,
   move/rotate gizmos written back by `SceneTransformWriter`), `language` (GLTF PSI); `src/main/java` holds only the
@@ -61,7 +61,7 @@ shims (`GdxRuntime`); tests in `src/test/kotlin` and `gdx-model/src/test/kotlin`
 5. **Hard rules are explicit and justified** (each with a one-line why): do not edit `src/main/gen`
    (regenerated from `.bnf`/`.flex`); `gdx-model` stays a plain JVM library (no IntelliJ or plugin
    imports, so other libGDX projects can use it); view code never writes files except the documented scene edit actions,
-   all through `editSceneJson` as undoable commands that keep the file's formatting; `Gdx.*` is process-global so install only while rendering and serialize
+   all through `editSceneDocument` as undoable commands that keep the file's formatting; `Gdx.*` is process-global so install only while rendering and serialize
    (see `GdxRuntime`); keep the `README.md` description markers; use OpenSpec for non-trivial changes.
    Each rule must be confirmed against code or an existing spec/README during writing.
 6. **Staleness check as `scripts/check-docs.sh`** (plain shell, no Gradle): extracts backtick-quoted
@@ -73,7 +73,7 @@ shims (`GdxRuntime`); tests in `src/test/kotlin` and `gdx-model/src/test/kotlin`
 7. **Package READMEs only for `sceneview`, `projectView` and `ecs`**: the places with non-obvious
    threading/lifecycle (`GuardedGLCanvas` stable-size gate, `GdxRuntime`, off-GL-thread asset
    loading and `AssetCache` release, picking, gizmo drags and their write-back), tree/eye-toggle/
-   entity-selection mechanics and the shared `editSceneJson`, and the ECS round trip (codecs, carried
+   entity-selection mechanics and the shared `editSceneDocument`, and the ECS round trip (codecs, carried
    unknown components, Mundus write-back order). Others are discoverable from code; `gdx-model` already
    has its README.
 

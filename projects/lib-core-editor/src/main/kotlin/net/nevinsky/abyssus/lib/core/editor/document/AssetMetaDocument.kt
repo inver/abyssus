@@ -4,57 +4,6 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.document
 
-import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.assets.META_VERSION_DEFAULT
-import net.nevinsky.abyssus.lib.core.assets.MetaType
-
-/** Write-only envelope: declaration order is native file order; additional data stays typed by asset kind. */
-data class AssetMetaDocument<A>(
-    val format: String = "abyssus",
-    val formatVersion: Int = 1,
-    val version: Int = META_VERSION_DEFAULT,
-    val lastModified: Long,
-    val uuid: String,
-    val type: MetaType,
-    val additional: A,
-)
-
-/** The `meta.json` text of a new [type] asset with [additional], compact or [pretty]. */
-fun newAssetMetaText(type: MetaType, additional: Any, uuid: String, lastModified: Long, pretty: Boolean = false): String {
-    val meta = AssetMetaDocument(lastModified = lastModified, uuid = uuid, type = type, additional = additional)
-    return SceneJson().let { if (pretty) it.pretty(meta) else it.compact(meta) }
-}
-
-/**
- * The header of a new asset `meta.json` as a tree: the markers, versions, [lastModified], [uuid] and [type] an
- * [AssetMetaDocument] declares, in file order, with an empty `additional` for the caller to replace. For kinds whose
- * `additional` is built from existing nodes, so their number text is kept.
- */
-fun newAssetMetaTree(json: SceneJson, type: MetaType, uuid: String, lastModified: Long): ObjectNode =
-    json.mapper.valueToTree(
-        AssetMetaDocument(lastModified = lastModified, uuid = uuid, type = type, additional = emptyMap<String, Any>()),
-    )
-
-data class TerrainAssetAdditional(
-    val terrainFile: String,
-    val size: Int,
-    val uv: Float,
-    val splatMap: String? = null,
-    val splatBase: String? = null,
-    val splatR: String? = null,
-    val splatG: String? = null,
-    val splatB: String? = null,
-    val splatA: String? = null,
-)
-
-data class FoliageAssetAdditional(val terrain: String, val maskResolution: Int)
-
-data class ModelAssetAdditional(
-    val file: String = "model.glb",
-    val format: String = "GLTF",
-    val binary: Boolean = true,
-    val materials: List<String> = emptyList(),
-)
 
 /** The deliberately sparse initial UI document, without the optional defaults of a bound runtime widget. */
 data class UiAssetAdditional(val ui: InitialUiCollection = InitialUiCollection())

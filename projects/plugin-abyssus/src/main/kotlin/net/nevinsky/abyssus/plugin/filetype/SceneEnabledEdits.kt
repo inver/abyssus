@@ -19,7 +19,7 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
  */
 fun setEnabled(project: Project, scene: VirtualFile, target: EnabledTarget, enabled: Boolean): Boolean {
     val action = SetEnabledAction()
-    return editSceneJson(project, scene, AbyssusBundle.message("commandSetEnabled")) { root ->
+    return editSceneDocument(project, scene, AbyssusBundle.message("commandSetEnabled")) { root ->
         action.apply(root, target, enabled)
     }
 }
@@ -29,6 +29,6 @@ fun setEnabled(project: Project, scene: VirtualFile, target: EnabledTarget, enab
  * command, adding the key when the file has none. Only that key changes. Returns whether anything was written.
  */
 fun setSceneToggle(project: Project, scene: VirtualFile, key: String, on: Boolean): Boolean =
-    editSceneJson(project, scene, AbyssusBundle.message("commandToggleEnabled")) { root ->
+    editSceneDocument(project, scene, AbyssusBundle.message("commandToggleEnabled")) { root ->
         setBooleanMember(root, key, on)
     }

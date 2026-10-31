@@ -188,7 +188,7 @@ class FieldRenderer(
      * failed. Foliage is optional, so a missing or unsupported one must not keep the game on its loading screen.
      */
     fun loaded(field: FieldScene): Boolean =
-        field.models.all { ctx.assetStorage.getAs<Model>(it.second) != null }
+        field.models.all { (entity, name) -> ctx.assetStorage.getAs<Model>(field.modelStorageName(entity, name)) != null }
                 && field.terrains.all { ctx.assetStorage.getAs<TerrainMesh>(it.second) != null }
                 && field.foliages.all { !ctx.assetStorage.isLoading(it.foliage) }
 
@@ -217,7 +217,7 @@ class FieldRenderer(
             settings.outputTransform?.let { environment.set(OutputTransformAttribute(it)) }
         }
         val wanted = buildSet {
-            addAll(field.models.map { it.second }.toSet())
+            field.models.mapTo(this) { (entity, name) -> field.modelStorageName(entity, name) }
             field.terrains.mapTo(this) { it.second }
             field.foliages.mapTo(this) { it.foliage }
             addAll(setOfNotNull(field.skyName))
@@ -376,7 +376,7 @@ class FieldRenderer(
     /** The scene's models that are built, each with its instance placed at the entity's transform. */
     private fun drawnModels(field: FieldScene): List<Pair<Entity, ModelInstance>> =
         field.models.mapNotNull { (entity, name) ->
-            val model = ctx.assetStorage.getAs<Model>(name) ?: return@mapNotNull null
+            val model = ctx.assetStorage.getAs<Model>(field.modelStorageName(entity, name)) ?: return@mapNotNull null
             val instance = instances[entity]?.takeIf { it.first === model }?.second
                 ?: ModelInstance(model).also {
                     instances[entity] = model to it

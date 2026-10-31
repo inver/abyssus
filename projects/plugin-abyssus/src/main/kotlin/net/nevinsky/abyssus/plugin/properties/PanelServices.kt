@@ -43,6 +43,11 @@ class PanelServices(
      * EDT; it may parse the model file and may throw.
      */
     val rayMaterials: (File, String) -> List<RayMaterialIdentity>? = { _, _ -> null },
+    /**
+     * The mesh ids of model [String] in project directory [File], or null when the model cannot be found or read. Called
+     * off the EDT; it may parse the model file.
+     */
+    val meshes: (File, String) -> List<String>? = { _, _ -> null },
 ) {
     val facts: SceneFacts<*> get() = rayControls
 }

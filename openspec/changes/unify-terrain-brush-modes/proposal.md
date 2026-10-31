@@ -43,7 +43,7 @@ are shared).
 
 Native file fields: none read or written differently. `terrain.data`, the sculpt delta and manifest, the foliage mask
 and bake, and `meta.json` keep their formats, validation and write paths (`AssetTransaction` for strokes,
-`editSceneJson` for scene documents).
+`editSceneDocument` for scene documents).
 
 ## Capabilities
 

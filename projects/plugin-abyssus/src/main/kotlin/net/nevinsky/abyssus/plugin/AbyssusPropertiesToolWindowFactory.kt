@@ -30,15 +30,17 @@ class AbyssusPropertiesToolWindowFactory : ToolWindowFactory, DumbAware {
             assets.metaFiles, assets.hdrPreviews, core.documents.json, assets.fields, assets.editor,
             terrain.generator, terrain.heightEncoder, terrain.recipes, terrain.sculpt, project.service<SceneRayControls>(),
             ComponentSchemas.of(project),
-        ) { dir, name ->
-            // the panel re-reads an entity on every scene edit; parse each model file once per modification
-            assets.loading.modelFile(dir, name)?.let { model ->
-                val stamp = model.lastModified()
-                tables[model.canonicalFile]?.takeIf { it.first == stamp }?.second
-                    ?: assets.loading.rayModelMaterials(dir, name)?.map { RayMaterialIdentity(it.id, it.pbr) }
-                        ?.also { tables[model.canonicalFile] = stamp to it }
-            }
-        }
+            rayMaterials = { dir, name ->
+                // the panel re-reads an entity on every scene edit; parse each model file once per modification
+                assets.loading.modelFile(dir, name)?.let { model ->
+                    val stamp = model.lastModified()
+                    tables[model.canonicalFile]?.takeIf { it.first == stamp }?.second
+                        ?: assets.loading.rayModelMaterials(dir, name)?.map { RayMaterialIdentity(it.id, it.pbr) }
+                            ?.also { tables[model.canonicalFile] = stamp to it }
+                }
+            },
+            meshes = { dir, name -> assets.loading.modelMeshes(dir, name)?.map { it.id } },
+        )
         val panel = AssetPropertiesPanel(project, toolWindow.disposable, services)
         toolWindow.contentManager.addContent(ContentFactory.getInstance().createContent(panel, "", false))
     }

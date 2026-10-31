@@ -19,7 +19,7 @@
 
 ## 4. The edit and the actions
 
-- [x] 4.1 Add `SceneComponentEdits.addLight` using `editSceneJson`, with a `commandAddLight` name in `AbyssusBundle.properties`; verify with a case in the existing `SceneComponentEdits` test that one add is one undo step restoring the exact file text, and that a scene that is not JSON is rejected with no write (`./gradlew :test --tests '*SceneComponentEditsTest'`).
+- [x] 4.1 Add `SceneComponentEdits.addLight` using `editSceneDocument`, with a `commandAddLight` name in `AbyssusBundle.properties`; verify with a case in the existing `SceneComponentEdits` test that one add is one undo step restoring the exact file text, and that a scene that is not JSON is rejected with no write (`./gradlew :test --tests '*SceneComponentEditsTest'`).
 - [x] 4.2 Add the `AddLightGroup` (choices Directional, Sun, Spot) and the tree right-click action registered in `plugin.xml`, shown only for a scene row and placing at the origin; verify with a case in `ComponentActionsTest` (or the nearest existing action test) that the choices are those three, the action is hidden on an entity row, and choosing Spot writes position `(0, 5, 0)` (`./gradlew :test --tests '*ComponentActionsTest'`).
 - [x] 4.3 Add the Add Light drop-down to the `SceneViewPanel` toolbar, passing the orbit target, disabled while the scene text is unreadable, and select the new entity afterwards; verify with a headless panel test that the target `(10, 0, -4)` yields that position and that the unreadable-scene state disables it (`./gradlew :test --tests '*SceneViewPanelTest'`).
 - [x] 4.4 Document the Add Light action in `src/main/kotlin/net/nevinsky/abyssus/sceneview/README.md` and the `projectView` README; verify with `scripts/check-docs.sh`.

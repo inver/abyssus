@@ -2,6 +2,9 @@ package net.nevinsky.abyssus.lib.core.editor.ray.snapshot
 
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.baseAssetName
+import net.nevinsky.abyssus.lib.core.assets.forVariant
+import net.nevinsky.abyssus.lib.core.assets.isModelVariant
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import java.util.concurrent.Executor
 
@@ -100,7 +103,10 @@ class RaySnapshotStore<S : RaySnapshot, D>(
     }
 
     private fun read(name: String): S {
-        val meta = checkNotNull(metaLoader.loadBaseMeta(name)) { "CPU $label '$name' is unreadable" }
+        // a model variant (one mesh, see ModelKey) reads its base asset's folder; the loader finds the mesh in the name
+        val meta = checkNotNull(
+            metaLoader.loadBaseMeta(baseAssetName(name))?.let { if (isModelVariant(name)) it.forVariant(name) else it }
+        ) { "CPU $label '$name' is unreadable" }
         return checkNotNull(loader.load(meta)) { "CPU $label '$name' is unreadable" }
     }
 

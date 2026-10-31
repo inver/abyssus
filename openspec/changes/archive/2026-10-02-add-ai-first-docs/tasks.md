@@ -2,7 +2,7 @@
 
 - [x] 1.0 Confirm the docs target HEAD: the working tree has no uncommitted code changes, and `show-project-assets` (still open) is described only where its code is committed
 - [x] 1.1 Confirm commands in `AGENTS.md` by running them: `./gradlew check` (or `test`), `./gradlew :gdx-model:test`, one test via `--tests`, `./gradlew runIde`, `./gradlew buildPlugin`; note `-PideProject=`, `-Dabyssus.openView=true` and `-Dabyssus.glTests=true` from the two `build.gradle.kts` files
-- [x] 1.2 Read `GdxRuntime.kt`, `GuardedGLCanvas.kt`, `SceneViewPanel.kt` and confirm the threading/global `Gdx.*` rules; read `JsonNodes.kt`, `SceneJson.kt`, `EnabledToggle.kt` (`editSceneJson`), `SceneTransformWriter.kt` and `SceneEditFormattingTest.kt` and confirm the single write path and its formatting-preservation and undoable-edit rules
+- [x] 1.2 Read `GdxRuntime.kt`, `GuardedGLCanvas.kt`, `SceneViewPanel.kt` and confirm the threading/global `Gdx.*` rules; read `JsonNodes.kt`, `SceneJson.kt`, `EnabledToggle.kt` (`editSceneDocument`), `SceneTransformWriter.kt` and `SceneEditFormattingTest.kt` and confirm the single write path and its formatting-preservation and undoable-edit rules
 - [x] 1.3 Read `ProjectLayout.kt`, `ProjectAssets.kt`, `AssetReader.kt` and `SceneDto.kt` to document project layout, asset reachability and the format fields accurately; read `gdx-model/README.md` and `gdx-model/build.gradle.kts` for the module boundary; read `ecs/scene/SceneEcsLoader.kt`, `SceneEcsWriter.kt` and `ComponentCodecs.kt` for the ECS round trip
 
 ## 2. Entry points

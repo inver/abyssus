@@ -35,7 +35,7 @@ Fixing these now, before more scene-editing features land, keeps each later chan
   file twice each time the IDE asks whether the action is enabled. What is enabled when does not change.
 - **No behavior change (refactor):**
   - Split `SceneRenderer` into view state, CPU-only scene queries and GL drawing.
-  - Move `editSceneJson` out of `EnabledToggle.kt` and stop it from refreshing the pane directly.
+  - Move `editSceneDocument` out of `EnabledToggle.kt` and stop it from refreshing the pane directly.
   - Pass collaborators through constructors instead of looking up services inside classes.
   - Replace `runCatching` with `runCatchingKeepingCancellation`, plus a build check that keeps it out.
     The current plugin/core tree contains eleven direct calls, including newer terrain, asset-editing and ray
@@ -101,7 +101,7 @@ when the `meta.json` readers are merged. Preserve the now-specified look-at ligh
   - `SceneModels` and `SceneTerrains`
   - `SceneFileEditor` and `SceneRenderParams`
 - **Plugin, `projectView/`:**
-  - `EnabledToggle` (`editSceneJson` moves out)
+  - `EnabledToggle` (`editSceneDocument` moves out)
   - `ComponentActions`, `AddLightAction`, `SceneComponentEdits`, `SkyboxChoices` and `DtoTree`
 - **Plugin, other packages:**
   - `dto/`: `ProjectReader`, `SceneReader`, `ConfigFileReader`, `ProjectAssetListing`, `ProjectLayout` and

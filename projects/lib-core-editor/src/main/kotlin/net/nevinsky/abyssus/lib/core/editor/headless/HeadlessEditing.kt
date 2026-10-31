@@ -15,7 +15,10 @@ import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
+import net.nevinsky.abyssus.lib.core.editor.components.AssetEntities
 import net.nevinsky.abyssus.lib.core.editor.components.EntityRemoval
+import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
@@ -61,6 +64,7 @@ class HeadlessEditing(
     private val foliageEdits = FoliageComponentEdits()
     private val enabledAction = SetEnabledAction()
     private val entityRemoval = EntityRemoval(messages)
+    private val assetEntities = AssetEntities(messages)
 
     /** Null when [text] is a supported native document of [kind], else why it is refused. */
     fun validate(text: String, kind: DocumentKind): Refusal? {
@@ -91,6 +95,30 @@ class HeadlessEditing(
                 EditResult.Changed -> true
                 EditResult.Unchanged -> false
                 is EditResult.Rejected -> false.also { rejected = result.reason }
+            }
+        }
+        return rejected?.let { HeadlessEdit.Refused(Refusal(it)) } ?: outcome
+    }
+
+    /**
+     * Adds the asset [asset] to [sceneText] as a new entity at ([x], [y], [z]), as Add Asset does. A model with [meshId]
+     * draws only that mesh; without it the whole model. [terrainSize] centres a terrain on the point.
+     */
+    fun placeAsset(
+        sceneText: String,
+        asset: BaseMeta,
+        x: Float,
+        y: Float,
+        z: Float,
+        meshId: String? = null,
+        terrainSize: Float? = null,
+    ): HeadlessEdit {
+        var rejected: String? = null
+        val outcome = edit(sceneText, DocumentKind.SCENE) { root ->
+            when (val added = assetEntities.add(root, asset, Vector3(x, y, z), terrainSize, meshId).result) {
+                EditResult.Changed -> true
+                EditResult.Unchanged -> false
+                is EditResult.Rejected -> false.also { rejected = added.reason }
             }
         }
         return rejected?.let { HeadlessEdit.Refused(Refusal(it)) } ?: outcome

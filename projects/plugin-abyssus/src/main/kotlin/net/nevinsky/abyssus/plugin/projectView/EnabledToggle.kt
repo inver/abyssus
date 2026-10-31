@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.lib.core.editor.document.setTextMember
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
-import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
 import net.nevinsky.abyssus.plugin.filetype.setEnabled
 import net.nevinsky.abyssus.lib.core.editor.components.EnabledTarget
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
@@ -28,7 +28,7 @@ fun toggleEnabled(project: Project, entry: DtoEntry): Boolean {
     val file = entry.source ?: return false
     val toggle = entry.toggleName ?: return false
     val current = entry.enabled ?: return false
-    return editSceneJson(project, file, AbyssusBundle.message("commandToggleEnabled")) { root ->
+    return editSceneDocument(project, file, AbyssusBundle.message("commandToggleEnabled")) { root ->
         flipToggle(root, entry.parentKeys, toggle, current)
     }
 }
@@ -53,7 +53,7 @@ fun sceneNameOf(project: Project, file: VirtualFile): String? = SceneDocumentCac
 
 /** Sets the scene's `skyboxName` to [name] (an asset folder, or null for none); false, writing nothing, when it already is. */
 fun setSkybox(project: Project, file: VirtualFile, name: String?): Boolean =
-    editSceneJson(project, file, AbyssusBundle.message("commandSetSkybox")) { root ->
+    editSceneDocument(project, file, AbyssusBundle.message("commandSetSkybox")) { root ->
         setTextMember(root, SKYBOX_KEY, name, skipIfSame = true)
     }
 
@@ -61,7 +61,7 @@ fun setSkybox(project: Project, file: VirtualFile, name: String?): Boolean =
 const val SKYBOX_KEY = "skyboxName"
 
 fun renameScene(project: Project, file: VirtualFile, newName: String): Boolean =
-    editSceneJson(project, file, AbyssusBundle.message("commandRenameScene")) { root ->
+    editSceneDocument(project, file, AbyssusBundle.message("commandRenameScene")) { root ->
         setTextMember(root, "name", newName)
     }
 

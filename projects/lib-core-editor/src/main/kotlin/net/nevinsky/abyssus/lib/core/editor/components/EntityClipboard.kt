@@ -4,15 +4,20 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.components
 
+import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.math.Vector3
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import jdk.internal.vm.ThreadContainers.root
+import net.nevinsky.abyssus.lib.core.dto.EntityDto
+import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.PlacementWrites
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
 /** A copied entity as clipboard text, or the reason it cannot be copied. */
 sealed interface CopyResult {
@@ -26,49 +31,64 @@ sealed interface CopyResult {
  * entity without a render component and a path arrangement and an entity with a parent are not copied, because their links to other
  * entities would not hold in a copy. Edits only the JSON tree, as [AssetEntities] does.
  */
-class EntityClipboard(private val messages: EditorMessages) {
-    // the scene parser keeps number text, so a pasted entity's numbers read as they were copied
-    private val json = SceneJson()
-    private val nodes = JsonNodeFactory.instance
+class EntityClipboard(
+    private val jsonProcessor: JsonProcessor,
+    private val messages: EditorMessages
+) {
     private val placements = PlacementWrites()
 
     /** The clipboard text for entity [entityId] of [root]. */
-    fun copy(root: JsonNode, entityId: String): CopyResult {
-        val components = SceneEntityTree(root).components(entityId)
+    fun copy(scene: SceneDto, entityId: Long): CopyResult {
         val refusal = CopyResult.Refused(messages.message("entityClipboardNotCopyable", entityId))
-        if (components == null || !components.has(RENDER) || KEEP_OUT.any(components::has)) return refusal
-        if (net.nevinsky.abyssus.lib.core.format.entityTypeOf(SceneEntityTree(root).entities()?.get(entityId)) == "TERRAIN") return refusal
-        val envelope = nodes.objectNode().put(MARKER, VERSION).set<JsonNode>("components", components.deepCopy())
-        return CopyResult.Copied(json.compact(envelope))
+
+        val entity = scene.ecs.values.filter { it.header().id == entityId }.single()
+        val components = entity.components
+        if (components.filterIsInstance<RenderComponent>().isEmpty()
+            || components.filterIsInstance<PathArrangementComponent>().isEmpty()
+            || components.filterIsInstance<ParentComponent>().isEmpty()
+        ) {
+            return refusal
+        }
+        if (entity.header().type == EntityType.TERRAIN) {
+            return refusal
+        }
+        return CopyResult.Copied(jsonProcessor.toString(CopyPasteEntityWrapper("abyssusEntity", components)))
     }
 
     /** Whether [text] is what [copy] makes. */
     fun holdsEntity(text: String?): Boolean = parse(text) != null
 
     /** Adds the entity [text] holds to [root] with its pivot at [point]; rejected, leaving [root] as it was, otherwise. */
-    fun paste(root: JsonNode, text: String?, point: Vector3): AddedEntity {
-        val components = parse(text)
-            ?: return AddedEntity(EditResult.Rejected(messages.message("entityClipboardNotEntity")))
+    fun paste(scene: SceneDto, text: String?, point: Vector3): AddedEntity {
+        var rejected = AddedEntity(EditResult.Rejected(messages.message("entityClipboardNotEntity")))
+        if (text.isNullOrBlank()) {
+            return rejected
+        }
         if (listOf(point.x, point.y, point.z).any { !it.isFinite() }) {
             return AddedEntity(EditResult.Rejected(messages.message("componentSceneUnreadable")))
         }
-        val id = SceneEntityTree(root).insert { components.deepCopy().also { place(it, point) } }
-            ?: return AddedEntity(EditResult.Rejected(messages.message("componentSceneUnreadable")))
-        return AddedEntity(EditResult.Changed, id)
-    }
+        val wrapper = jsonProcessor.parse(text, CopyPasteEntityWrapper::class.java)
+        val maxId = scene.ecs.keys.max()
+        val entity = EntityDto(wrapper.components)
+        scene.ecs[maxId + 1] = entity
 
-    /** Sets `PositionComponent.localPosition` of [components] to [point], keeping the component's other members. */
-    private fun place(components: ObjectNode, point: Vector3) {
-        val position = placements.placementOf(components) ?: return
+        var positionComponents = wrapper.components.filterIsInstance<PositionComponent>()
+        val position: PositionComponent
+        if (positionComponents.isEmpty()) {
+            position = PositionComponent()
+            entity.components.add(position)
+        } else {
+            position = positionComponents[0]
+        }
         placements.setVector(position, "localPosition", point)
+
+        return AddedEntity(EditResult.Changed, maxId + 1)
     }
 
-    private fun parse(text: String?): ObjectNode? {
-        val envelope = runCatchingKeepingCancellation { json.parse(text ?: return null) }.getOrNull() as? ObjectNode ?: return null
-        if (envelope.get(MARKER)?.asInt() != VERSION) return null
-        val components = envelope.get("components") as? ObjectNode ?: return null
-        return components.takeIf { it.has(RENDER) && KEEP_OUT.none(it::has) }
-    }
+    private data class CopyPasteEntityWrapper(
+        val marker: String,
+        val components: MutableList<Component>
+    )
 }
 
 private const val MARKER = "abyssusEntity"

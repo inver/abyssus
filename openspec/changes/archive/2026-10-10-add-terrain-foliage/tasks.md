@@ -269,7 +269,7 @@ need `-Dabyssus.glTests=true` on a machine with a display. Manual checks run in 
   - selecting another asset discards the draft;
   - an unsupported meta shows the reason and no editors.
 - [x] 7.3 Add Add Foliage... on terrain entities, in the tree context menu and the Scene view toolbar. It lists the
-  foliage assets of the entity's terrain and writes through `editSceneJson`. Verify with `AddFoliageActionTest` against
+  foliage assets of the entity's terrain and writes through `editSceneDocument`. Verify with `AddFoliageActionTest` against
   a temporary copy of the Foliage fixture, covering the spec scenarios "Add to the fixture terrain", "Replace",
   "Nothing to add" and "Not a terrain", plus Undo.
 - [x] 7.4 Add Paint Foliage in the Scene view toolbar. It needs the brush strip (layer, radius, strength, Paint/Erase),

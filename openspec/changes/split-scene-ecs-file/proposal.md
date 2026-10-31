@@ -18,7 +18,7 @@ loads with the whole entity list. Entities belong in their own document, as a pl
 - A missing ECS file is a scene with no entities; a malformed one (not an array, duplicate or non-integral `id`, an
   entity shape the existing rules reject) makes the scene unsupported for editing and leaves both files unchanged.
 - Loading (`SceneLoader`, `SceneParser`, the unsaved-buffer path, `RuntimeSceneLoader`, Play) reads both documents.
-- `editSceneJson` edits one or two documents of a scene as one undoable command, so a gizmo drag, an eye toggle, an
+- `editSceneDocument` edits one or two documents of a scene as one undoable command, so a gizmo drag, an eye toggle, an
   entity delete or Rename Scene is a single Undo. A document an edit does not change is not rewritten.
 - Rename Scene renames the ECS file together with the `.scene`.
 - Migrate Control Line (`Field.scene` and its constant, tests and Play export) and the other `.scene` fixtures with a

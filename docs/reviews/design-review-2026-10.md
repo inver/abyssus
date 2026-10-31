@@ -39,7 +39,7 @@ The problems are concentrated in three places:
 | **State** (sealed) | `AssetCache.State` (`Loading` / `Failed` / `Ready`), `EditResult`, `PanelState`, `AssetMeta` |
 | **Composition root / DI** | `AssetLoading` (in `core`) and `AbyssusCore` (in the plugin); `checkNoSingletons` enforces it |
 | **Observer** | `AbyssusSelectionListener.TOPIC` on the message bus; VFS and document listeners |
-| **Command** | Every write is a named `WriteCommandAction` through `editSceneJson`, so it can be undone |
+| **Command** | Every write is a named `WriteCommandAction` through `editSceneDocument`, so it can be undone |
 | **Template Method** | `GuardedGLCanvas` (`initGL` / `paintGL` / `disposeGL` / `onContextAbandoned`) |
 | **Testable core** | `ScenePicker`, `GizmoDrag`, `GizmoHit`, `SceneMarkers`, `PanelState`, `SkyboxPickerModel` have no Swing/GL |
 | **OCP extension points** | A new asset kind is a new `AssetLoader`; a new component is a new `ComponentCodec` |
@@ -88,7 +88,7 @@ They have already drifted apart:
 
 `AGENTS.md` asks for `runCatchingKeepingCancellation` instead of `runCatching`. These four places still use `runCatching`:
 
-- `src/main/kotlin/net/nevinsky/abyssus/projectView/EnabledToggle.kt:38` (inside `editSceneJson`, which every write goes through)
+- `src/main/kotlin/net/nevinsky/abyssus/projectView/EnabledToggle.kt:38` (inside `editSceneDocument`, which every write goes through)
 - `src/main/kotlin/net/nevinsky/abyssus/projectView/ComponentActions.kt:101`
 - `src/main/kotlin/net/nevinsky/abyssus/sceneview/SceneRenderParams.kt:92`
 - `src/main/kotlin/net/nevinsky/abyssus/filetype/SceneJson.kt:95`
@@ -141,12 +141,12 @@ the `groundBelow` lambda parameter that only exists for testing.
 
 ### M2. Writing a file also refreshes the tree (SRP, DIP)
 
-`editSceneJson` (in `projectView/EnabledToggle.kt`) parses, mutates, writes, saves, and then calls
+`editSceneDocument` (in `projectView/EnabledToggle.kt`) parses, mutates, writes, saves, and then calls
 `ProjectView…getProjectViewPaneById(AbyssusProjectViewPane.ID)?.updateFromRoot(true)` (line 45). So the low-level
 document writer depends on a UI pane. The file name also hides it: every writer in the plugin goes through a function
 in `EnabledToggle.kt`.
 
-**Recommendation.** Move `editSceneJson` to its own file (for example `filetype/SceneDocumentWriter.kt`). Publish an
+**Recommendation.** Move `editSceneDocument` to its own file (for example `filetype/SceneDocumentWriter.kt`). Publish an
 `AbyssusSceneChanged` message-bus topic (Observer), or let the pane react to the document/VFS change it already
 receives, and remove the direct pane call. Keep the toggle, skybox and rename helpers in `EnabledToggle.kt` or move
 them to `SceneEdits.kt`.

@@ -12,7 +12,7 @@ of `projects/plugin-abyssus/src/test/testData/project/{Untitled,Physics}` and
   `ProjectSettingsReaderTest` covers missing key, true, non-boolean, future version and missing marker.
 - [x] 1.2 Complete the existing `filetype/AbyssusProjectSettings` service: delegate admission/decoding to the reader,
   read unsaved documents, handle document/VFS changes and Undo/Redo, publish on EDT, deduplicate localized problems,
-  and retain undoable `editSceneJson` writes. Extend `dto/AbyssusProjectSettingsTest` to verify unsaved edits notify
+  and retain undoable `editSceneDocument` writes. Extend `dto/AbyssusProjectSettingsTest` to verify unsaved edits notify
   before Save, Undo/Redo updates the cache without Save, unsupported files with `physicsEnabled: true` stay off and
   unwritable, malformed values report once without rewriting, equal-value toggles create no edit, and independent
   native projects do not share settings. Keep the service in `filetype/` to respect current package boundaries.

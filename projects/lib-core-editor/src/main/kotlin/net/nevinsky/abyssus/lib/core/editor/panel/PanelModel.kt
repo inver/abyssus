@@ -91,10 +91,15 @@ data class Axis(val name: String, val value: String, val field: FieldRef? = null
 /** A vector with one labelled box per axis: `x y z`, or `x y z w` for a rotation. */
 data class VectorRow(override val label: String, val axes: List<Axis>, override val dim: Boolean = false) : Row
 
-/** A combo box over [choices]; [optional] adds the empty choice. */
+/**
+ * A combo box over [choices]; [optional] adds the empty choice, shown as [emptyLabel] when it has one. [unknown] marks a
+ * stored [value] that is not among the [choices] (a mesh the model no longer has): the row still shows it, with
+ * [unknownText] as the warning.
+ */
 data class ChoiceRow(
     override val label: String, val value: String, val choices: List<String>, override val dim: Boolean = false,
-    val field: FieldRef? = null, val optional: Boolean = false,
+    val field: FieldRef? = null, val optional: Boolean = false, val unknown: Boolean = false,
+    val emptyLabel: String? = null, val unknownText: String? = null,
 ) : Row
 
 data class CheckRow(

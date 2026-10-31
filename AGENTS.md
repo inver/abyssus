@@ -38,7 +38,7 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
 - `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/`: the plugin (Kotlin), registered in `projects/plugin-abyssus/src/main/resources/META-INF/plugin.xml`.
   The plugin is IDE glue; the editing logic is in `lib-core-editor`.
   - `dto/`: reads `.abss` / `.scene` files and asset folders through the VFS (`ProjectLayout`, `SceneReader`, `ProjectReader`, `ProjectAssetListing`).
-  - `projectView/`: the Abyssus tree, eye toggles, Rename Scene and the skybox chooser. `filetype/` holds `editSceneJson`.
+  - `projectView/`: the Abyssus tree, eye toggles, Rename Scene and the skybox chooser. `filetype/` holds `editSceneDocument`.
   - `properties/`: the Abyssus Properties tool window (Swing views over `lib-core-editor`'s panel model).
   - `sceneview/`: the scene view: GL canvas, renderer, shadows, fog, sky and gizmo drawing, the toolbar, Play, and the
     view's asset storage (`ViewAssets`). Picking, cameras, gizmo math and transform write-back are in `lib-core-editor`.
@@ -129,7 +129,7 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
   name, cast or check a Jackson tree type.
 - **No package cycles:** `./gradlew checkPackageCycles` (part of `check`) fails on a cycle between the packages of a
   module; its allowlist `gradle/package-cycles.allowlist` stays empty.
-- **Write scene files only through `editSceneJson`** (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`).
+- **Write scene files only through `editSceneDocument`** (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`).
   It edits the document as one undoable command and keeps the file's formatting and number text; the text transform
   itself is `lib-core-editor`'s `DocumentTextEditor`, which `HeadlessEditing` uses without the IDE. The only other
   writer is `SceneFormatListener`, which pretty-prints a `.scene` / `.abss` opened in the text editor.

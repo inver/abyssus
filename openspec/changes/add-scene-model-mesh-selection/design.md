@@ -8,7 +8,7 @@ draws models through `SceneModels`/`ModelEntity`/`SceneRenderer`; the game draws
 
 Module constraints: lib-core and lib-gdx are plain JVM libraries with no object/companion with behavior and no
 IntelliJ/Swing/AWT imports; lib-core-editor likewise has no platform imports. Scene document edits go through
-`editSceneJson` (one undoable command preserving formatting and number text).
+`editSceneDocument` (one undoable command preserving formatting and number text).
 
 ## Goals / Non-Goals
 
@@ -68,7 +68,7 @@ variants in use, otherwise variants would be disposed on every pass or never rel
 
 **5. The editor reads and writes `meshId` through the existing document layer.**
 `renderAssetOf` / `RenderAsset` gain `meshId`; `PlacementMapper` and `AssetPlacement` carry it; `PlacedEntities` and
-`ModelEntity` expose it. Writes go through `editSceneJson` (one undoable command, formatting and number text kept) and
+`ModelEntity` expose it. Writes go through `editSceneDocument` (one undoable command, formatting and number text kept) and
 through the headless API (`HeadlessEditing`), so a place-asset call can pass a `meshId` and a script can set or clear
 it. Clearing removes the key (default omission). `RenderComponent.rayTracingMaterials` is keyed by material id: after
 selecting a mesh, entries for materials the mesh does not use stay in the file but are unresolved (existing

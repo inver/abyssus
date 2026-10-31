@@ -59,7 +59,7 @@ class RayFieldPresenter(
 
         val drawnModels = field.models.filter { it.first !== hidden }
         assets.update(
-            drawnModels.map { it.second }.toSet(), field.terrains.map { it.second }.toSet(), field.skyName,
+            drawnModels.map { (entity, name) -> field.modelStorageName(entity, name) }.toSet(), field.terrains.map { it.second }.toSet(), field.skyName,
         )
         when (val state = assets.poll()) {
             is RayFieldAssetState.Preparing -> return
@@ -91,7 +91,7 @@ class RayFieldPresenter(
     ): RayFieldInputs {
         fun ray(c: Color) = RayColor(c.r, c.g, c.b)
         val placedModels = models.mapIndexedNotNull { index, (entity, name) ->
-            state.models[name]?.let { RayPlacedModel("m$index", it, Matrix4(field.position(entity).getTransform())) }
+            state.models[field.modelStorageName(entity, name)]?.let { RayPlacedModel("m$index", it, Matrix4(field.position(entity).getTransform())) }
         }
         val placedTerrains = field.terrains.mapIndexedNotNull { index, (entity, name) ->
             state.terrains[name]?.let { RayPlacedTerrain("t$index", it, Matrix4(field.position(entity).getTransform())) }

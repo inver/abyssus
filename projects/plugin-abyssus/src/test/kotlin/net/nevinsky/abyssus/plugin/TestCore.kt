@@ -16,11 +16,12 @@ internal fun testMetaFiles() = testCore.metaFiles
 
 internal fun testPanelServices(
     project: Project,
+    meshes: (java.io.File, String) -> List<String>? = { _, _ -> null },
     rayMaterials: (java.io.File, String) -> List<net.nevinsky.abyssus.lib.core.editor.document.RayMaterialIdentity>? = { _, _ -> null },
 ) = testCore.let {
     PanelServices(
         it.metaFiles, it.hdrPreviews, it.json, it.assetFields, it.assetEditor,
         it.terrainGenerator, it.heightEncoder, it.terrainRecipes, it.terrainSculpt, project.service<SceneRayControls>(),
-        net.nevinsky.abyssus.plugin.schema.ComponentSchemas.of(project), rayMaterials,
+        net.nevinsky.abyssus.plugin.schema.ComponentSchemas.of(project), rayMaterials, meshes,
     )
 }

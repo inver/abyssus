@@ -10,7 +10,7 @@ native Abyssus project. The user revised the original IDE-wide preference to a p
 - Scene views use 4× multisampling by default, with Off, 2×, 4× and 8× choices.
 - **Scene view antialiasing** appears in Abyssus Properties when a native project is selected. Remove the IDE Settings page.
 - Save the choice in that project's `.abss` as `sceneViewAntialiasing` (`OFF`, `X2`, `X4`, `X8`). Omit the default `X4`.
-- Validate native markers before reading or writing. Use `editSceneJson` for an isolated undoable edit, preserving unknown
+- Validate native markers before reading or writing. Use `editSceneDocument` for an isolated undoable edit, preserving unknown
   data, formatting, key order and unrelated number text. Scene and asset files remain unchanged.
 - Every open scene view belonging to that native project follows its setting, including unsaved text edits and Undo/Redo.
   Other native projects are independent, even within one IDE project. Standalone scenes use 4×.

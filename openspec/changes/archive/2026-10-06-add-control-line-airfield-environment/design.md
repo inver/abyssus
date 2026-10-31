@@ -138,7 +138,7 @@ editor shadows. The game's cameras stay as they are.
 
 Prepare a patch that removes the previous scenery entities (IDs 100-204), replaces the field and outer ground asset
 references, and appends the new entities from a fresh ID range. Check the expected scene SHA-256 and validate with
-`AbyssusDocumentFormat` first. Apply the patch through `editSceneJson`, from a plugin platform test
+`AbyssusDocumentFormat` first. Apply the patch through `editSceneDocument`, from a plugin platform test
 (`AirfieldPatchApplicationTest`, since generalised into `ScenePatchApplicationTest` by `import-flightgear-aircraft`). It
 does nothing unless its environment variable names the patch file, so normal test
 runs never touch the bundled project. The earlier offline direct edit is not a

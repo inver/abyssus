@@ -4,7 +4,7 @@
 
 - `decouple-from-mundus` is archived at `openspec/changes/archive/2026-10-04-decouple-from-mundus`; status on its former active name returns change-not-found. It retains tasks 5.2/5.3 open. Native validation is implemented in core and wired to runtime readers and plugin writes.
 - `extract-scene-runtime` is archived at `openspec/changes/archive/2026-10-04-extract-scene-runtime`, with manual/full-suite checks open. `runtime.scene.SceneDto` / `SceneParser` own raw parsing; plugin `sceneview/SceneRenderParams.kt` / `SceneParamsSource.kt` own view parameter conversion. Pure settings codec/editor stays in plugin sceneview alongside SceneJson-backed edits; raw optional JSON is carried by SceneDto.
-- Active `openspec/config.yaml` requires native version 1, short component identifiers, asset kinds and no migration. `editSceneJson` validates before and after edits.
+- Active `openspec/config.yaml` requires native version 1, short component identifiers, asset kinds and no migration. `editSceneDocument` validates before and after edits.
 - User scope decision: extend settings and optics on both Metal and Vulkan. VulkanRaySession.submit(RaySceneRequest), src/main/glsl/scene.comp and raytracing/README.md confirm the full Vulkan scene path exists. Corrected stale assumptions in this change and reconciled the original fixed-depth/refraction exclusions in add-scene-raytracing proposal/design/tasks/spec. Existing completion and platform evidence retained.
 - Strict validation passes for both changes.
 

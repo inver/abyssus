@@ -46,7 +46,7 @@ the native project from `ProjectLayout.abssFor(sceneFile)`; an IntelliJ project 
 Parse on change/cache population, never each render frame. Report a malformed boolean once per unchanged problem,
 using localized plugin text; repeated reads must not repeat the message or repair the file.
 
-Retain `setPhysicsEnabled` through `editSceneJson`. Append a missing key, write explicit `false` on disable and preserve
+Retain `setPhysicsEnabled` through `editSceneDocument`. Append a missing key, write explicit `false` on disable and preserve
 all unrelated text. Equal-value toggles create no edit. Unsupported documents cannot be written. Explicitly toggling
 a malformed boolean may replace that field; merely reading it leaves it untouched.
 

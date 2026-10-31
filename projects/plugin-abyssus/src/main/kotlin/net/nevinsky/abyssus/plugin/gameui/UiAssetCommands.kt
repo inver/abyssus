@@ -7,8 +7,6 @@ package net.nevinsky.abyssus.plugin.gameui
 import net.nevinsky.abyssus.lib.core.editor.document.*
 import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.lib.core.editor.ui.UiTreeEdit
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileDocumentManager
@@ -19,14 +17,12 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
 import net.nevinsky.abyssus.lib.core.editor.terrain.checkFolderName
 import net.nevinsky.abyssus.lib.core.editor.terrain.uniqueAssetUuid
 import net.nevinsky.abyssus.lib.core.editor.ui.UiAssetTemplate
 import net.nevinsky.abyssus.lib.core.editor.ui.UiEditError
 import net.nevinsky.abyssus.lib.core.editor.ui.UiEditResult
-import net.nevinsky.abyssus.lib.core.editor.ui.UiDocumentEdits
 import net.nevinsky.abyssus.lib.core.editor.ui.UiRegistryEdits
 import net.nevinsky.abyssus.lib.core.editor.ui.UiTextEditor
 import net.nevinsky.abyssus.lib.core.editor.ui.UiTransform
@@ -40,8 +36,7 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.textOf
-import net.nevinsky.abyssus.plugin.filetype.editSceneJson
-import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetInAbyssusView
+import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
 import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetLater
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import java.io.File
@@ -75,7 +70,7 @@ fun editUiMeta(
     if (!file.isWritable) return UiEditOutcome.ReadOnly
     if (baseText != null && document.text != baseText) return UiEditOutcome.Stale
     var transform: UiTransform = UiTransform.Unchanged
-    val written = editSceneJson(project, file, commandName) { root ->
+    val written = editSceneDocument(project, file, commandName) { root ->
         transform = editor.transform(root, op)
         transform is UiTransform.Changed
     }
@@ -88,11 +83,11 @@ fun editUiMeta(
 
 /** Adds [name] to the project file's `uiAssetNames` as one undoable command. Returns whether the file was written. EDT. */
 fun registerUiAsset(project: Project, abss: VirtualFile, name: String, registry: UiRegistryEdits = UiRegistryEdits()): Boolean =
-    abss.isWritable && editSceneJson(project, abss, AbyssusBundle.message("commandRegisterUiAsset")) { registry.register(it, name) }
+    abss.isWritable && editSceneDocument(project, abss, AbyssusBundle.message("commandRegisterUiAsset")) { registry.register(it, name) }
 
 /** Removes [name] from `uiAssetNames`; the asset folder is untouched. Returns whether the file was written. EDT. */
 fun unregisterUiAsset(project: Project, abss: VirtualFile, name: String, registry: UiRegistryEdits = UiRegistryEdits()): Boolean =
-    abss.isWritable && editSceneJson(project, abss, AbyssusBundle.message("commandUnregisterUiAsset")) { registry.unregister(it, name) }
+    abss.isWritable && editSceneDocument(project, abss, AbyssusBundle.message("commandUnregisterUiAsset")) { registry.unregister(it, name) }
 
 class StagedUiAsset(val name: String, val uuid: String, val transaction: AssetTransaction)
 

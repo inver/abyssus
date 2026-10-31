@@ -342,6 +342,8 @@ class ComponentEditor(
             )
 
             FieldKind.TEXT -> null
+            // the meshes of a model are read from the model; whether the id is among them is shown, not enforced
+            FieldKind.MESH_ID -> null
             FieldKind.CHOICE ->
                 if (value in field.choices || (field.optional && value.isEmpty())) null
                 else reject("componentNotAChoice", label, text, field.choices.joinToString(", "))

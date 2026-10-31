@@ -8,6 +8,7 @@ package net.nevinsky.abyssus.plugin.sceneview
 import net.nevinsky.abyssus.lib.core.editor.scene.PlacedEntities
 import net.nevinsky.abyssus.lib.core.editor.scene.PlacedEntity
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.storageName
 
 import com.badlogic.gdx.utils.Disposable
 import java.io.File
@@ -31,7 +32,7 @@ open class PlacedAssets<A : Disposable, E : PlacedEntity<A>>(
 
     /** Brings the entities in line with [placements]: loads the assets they name, drops the rest. */
     fun update(placements: List<AssetPlacement>, projectDir: File?) {
-        assets.update(projectDir, placements.mapTo(HashSet()) { it.assetName })
+        assets.update(projectDir, placements.mapTo(HashSet()) { it.storageName })
         placed = placements
         entities.update(placements, assets::get)
     }

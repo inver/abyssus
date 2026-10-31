@@ -37,7 +37,7 @@
   `viewPointPosition`; it returns false when nothing changed or the entity is missing. Verify with unit tests on the
   `Main Scene` JSON: moving entity 0 by +2 on X changes only `localPosition.x`; moving `Camera 4` by +1 on Y changes both
   positions' `y`; rotating an entity without `localRotation` adds `x`,`y`,`z`,`w`; an unknown entity returns false; an
-  edit equal to the current values returns false. Then verify through `editSceneJson` on a pretty file that the
+  edit equal to the current values returns false. Then verify through `editSceneDocument` on a pretty file that the
   indentation and every other value are kept
 
 ## 4. Rendering
@@ -69,7 +69,7 @@
   ends the drag; release with a change calls the new `SceneView.onTransform(entityId, edit)`. Verify with unit tests on
   a fake renderer and fake events: handle-press then drag then release emits one `onTransform` and does not touch the
   orbit; empty-space drag orbits; a press and release without movement emits nothing; Esc emits nothing
-- [x] 5.3 Wire `onTransform` in `SceneFileEditor` to `editSceneJson` with `SceneTransformWriter`, named "Move Entity" /
+- [x] 5.3 Wire `onTransform` in `SceneFileEditor` to `editSceneDocument` with `SceneTransformWriter`, named "Move Entity" /
   "Rotate Entity", and implement `DocumentReferenceProvider` returning the scene document. Verify with a
   `SceneFileEditorTest` case using a `FakeView`: invoking `onTransform` changes only that entity's position in the file
   and the fake view receives params with the moved placement; `UndoManager.getInstance(project).undo(editor)` restores

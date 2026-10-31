@@ -1,6 +1,7 @@
 package net.nevinsky.abyssus.lib.core.dto
 
 import com.badlogic.ashley.core.Component
+import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
 
 
 /**
@@ -14,5 +15,9 @@ data class EntityDto(
 ) {
     fun add(component: Component) {
         components.add(component)
+    }
+
+    fun header(): HeaderComponent {
+        return components.filterIsInstance<HeaderComponent>().first()
     }
 }

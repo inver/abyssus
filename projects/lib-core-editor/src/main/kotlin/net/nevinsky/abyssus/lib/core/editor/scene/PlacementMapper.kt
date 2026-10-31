@@ -23,8 +23,8 @@ import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.dto.EntityType
 
-/** The asset a `RenderComponent` shows: `renderable.asset.type` and `assetName`. */
-class DecodedAsset(val type: String, val name: String)
+/** The asset a `RenderComponent` shows: its `type` and `assetName`, and for a model the `meshId` of the one mesh drawn. */
+class DecodedAsset(val type: String, val name: String, val meshId: String? = null)
 
 /**
  * What the component codecs decoded from one entity; null where it lacks the component. [hasLocalPosition] tells
@@ -66,7 +66,7 @@ class PlacementMapper {
             val asset = entity.asset
             entity.arrangement?.let { arrangements += ArrangementPlacement(entity.id, it) }
             when {
-                asset != null && asset.type == "MODEL" -> models += AssetPlacement(entity.id, asset.name, transform)
+                asset != null && asset.type == "MODEL" -> models += AssetPlacement(entity.id, asset.name, transform, asset.meshId)
                 asset != null && asset.type == "TERRAIN" -> {
                     terrains += AssetPlacement(entity.id, asset.name, transform)
                     entity.foliage?.let { foliages += FoliagePlacement(entity.id, it, asset.name, transform) }

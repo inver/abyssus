@@ -17,7 +17,7 @@ the IDE glue: tabs, panels, the GL canvas and the commands that write files.
 
 ## Writing
 
-- **Existing metadata** is changed only through `editSceneJson` (`editUiMeta`): the pure edit runs in
+- **Existing metadata** is changed only through `editSceneDocument` (`editUiMeta`): the pure edit runs in
   `UiTextEditor.transform`, so the document must be admitted UI before and after, and one edit is one undo. A drag passes
   the text it began from and is refused when the document changed.
 - **Creation** (a new asset folder, imported files) cannot be a document edit. `NewUiAssetFactory` stages one

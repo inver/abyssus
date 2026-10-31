@@ -117,6 +117,10 @@ internal class BuiltInComponentKinds(private val reader: ComponentReader, privat
                     { c, t -> c.assetName = t },
                 ),
                 ComponentField(
+                    "meshId", FieldKind.MESH_ID, { it.meshId.orEmpty() },
+                    { c, t -> c.meshId = t.ifEmpty { null } }, optional = true, label = "mesh",
+                ),
+                ComponentField(
                     "shaderKey", FieldKind.TEXT, { it.shaderKey.orEmpty() },
                     { c, t -> c.shaderKey = t.ifEmpty { null } }, optional = true,
                 ),

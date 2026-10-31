@@ -54,7 +54,7 @@ Native fields:
 - The meta is validated as a native document before it is staged. The project's `.abss` is read only to validate it
   and find the `assets` folder.
 - `source.json` is an asset side file that loaders ignore. Its `importer` is `"model"`.
-- The placed entity is the same entity Add Asset writes (`scene-asset-placement`), written through `editSceneJson`.
+- The placed entity is the same entity Add Asset writes (`scene-asset-placement`), written through `editSceneDocument`.
 - There is no format version change, and no new model format value. Imported assets are glTF, like every other model.
 
 Out of scope:

@@ -23,6 +23,7 @@ import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.storageName
 import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import net.nevinsky.abyssus.lib.core.editor.pick.*
 import net.nevinsky.abyssus.lib.core.editor.ray.RayFrameContext
@@ -677,7 +678,7 @@ class SceneRenderer(
         height: Int
     ): Boolean {
         val metadata = display.metadata
-        fun keys(placements: List<AssetPlacement>) = placements.map { it.entityId to it.assetName }.toSet()
+        fun keys(placements: List<AssetPlacement>) = placements.map { it.entityId to it.storageName }.toSet()
         return metadata.width == width && metadata.height == height && metadata.viewCamera == state.viewCamera &&
                 metadata.projectDir == params.projectDir && keys(metadata.content.models) == keys(current.models) &&
                 keys(metadata.content.terrains) == keys(current.terrains)

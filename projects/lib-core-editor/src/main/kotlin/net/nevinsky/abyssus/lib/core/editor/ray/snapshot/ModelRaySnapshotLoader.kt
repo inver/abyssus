@@ -6,6 +6,8 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.decodeModelKey
+import net.nevinsky.abyssus.lib.core.assets.model.selectMesh
 import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
 import net.nevinsky.abyssus.lib.core.assets.model.ModelPreparationTap
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
@@ -22,8 +24,10 @@ class ModelRaySnapshotLoader(
     private val maxBytes: Long = RAY_SNAPSHOT_MAX_BYTES
 ) : RaySnapshotLoader<RayModelSnapshot, RayModelSource> {
     override fun load(meta: AssetMeta<Any>): RayModelSnapshot {
-        val file = FileHandle(fileLoader.loadAssetFile(meta.name, meta.typedAdditional<ModelMeta>().file))
+        val key = decodeModelKey(meta.name)
+        val file = FileHandle(fileLoader.loadAssetFile(key.name, meta.typedAdditional<ModelMeta>().file))
         val data = assimp.loadData(file)
+        key.meshId?.let { selectMesh(data, key.name, it) }
         val images = assimp.decodeTextures(data, file)
         return try {
             capture(RayModelSource(data, images))

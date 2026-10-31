@@ -16,7 +16,7 @@ import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
-import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
 
 /**
  * Writes path arrangements to a scene file, each edit as one undoable command through `editSceneJson`; the rules are
@@ -25,7 +25,7 @@ import net.nevinsky.abyssus.plugin.filetype.editSceneJson
 object ArrangementEditing {
     private fun run(project: Project, file: VirtualFile, command: String, edit: DocumentEdit<ArrangementResult>): ArrangementResult {
         var result: ArrangementResult = ArrangementResult.Rejected(EditorBundle.message("componentSceneUnreadable"))
-        val written = editSceneJson(project, file, command) { root ->
+        val written = editSceneDocument(project, file, command) { root ->
             result = edit(root)
             result is ArrangementResult.Changed
         }

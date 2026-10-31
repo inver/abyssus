@@ -90,7 +90,7 @@ private fun decode(id: String, entity: Entity): DecodedEntity {
     val type = header?.type
     val lightDisabled = type?.name?.startsWith("LIGHT") == true && LightComponent::class.java in disabled
     val render = active(RenderComponent::class.java)
-    val asset = render?.takeIf { it.type != null && it.assetName.isNotEmpty() }?.let { DecodedAsset(it.type!!.name, it.assetName) }
+    val asset = render?.takeIf { it.type != null && it.assetName.isNotEmpty() }?.let { DecodedAsset(it.type!!.name, it.assetName, it.meshId?.takeIf(String::isNotEmpty)) }
     return DecodedEntity(
         id,
         name,

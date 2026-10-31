@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.lib.core.editor.document
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.format.FormatRejection
@@ -88,7 +89,7 @@ class Document(internal val tree: JsonNode) {
 }
 
 /** The document [text] holds; throws when it is not JSON. */
-fun parseDocument(text: String): Document = Document(SceneJson().parse(text))
+fun parseDocument(text: String): SceneDto = Document(SceneJson().parse(text))
 
 /** The document [text] holds, checked as a supported native [kind]; throws [UnsupportedDocumentFormat] or on bad JSON. */
 fun parseSupportedDocument(text: String, kind: DocumentKind): Document = parseDocument(text).also { it.requireSupported(kind) }

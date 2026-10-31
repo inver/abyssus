@@ -12,6 +12,9 @@ import net.nevinsky.abyssus.app.game.controlline.components.VitrineTableComponen
 import net.nevinsky.abyssus.app.game.controlline.flow.PlaneChoice
 import net.nevinsky.abyssus.app.game.controlline.flow.planeChoices
 import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.ModelKey
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.activeComponent
 import net.nevinsky.abyssus.lib.core.ecs.SceneFoliage
 import net.nevinsky.abyssus.lib.core.ecs.SceneFoliageListing
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
@@ -69,6 +72,13 @@ class FieldScene(val loaded: SceneContext) {
     /** Entities drawn with a model: (entity, model asset folder). */
     val models: List<Pair<Entity, String>> =
         entities.values.mapNotNull { e -> assetName(e, MetaType.MODEL)?.let { e to it } }
+
+    /** The asset storage name the model [asset] of [entity] is built under: its folder, or with its mesh a `ModelKey`. */
+    fun modelStorageName(entity: Entity, asset: String): String {
+        val mesh = entity.activeComponent(RenderComponent::class.java)?.takeIf { it.type == MetaType.MODEL }
+            ?.meshId?.takeIf(String::isNotEmpty)
+        return ModelKey(asset, mesh).encode()
+    }
 
     /** Entities drawn as terrain: (entity, terrain asset folder). */
     val terrains: List<Pair<Entity, String>> =

@@ -25,5 +25,5 @@ data class SceneDto(
     @get:JsonProperty("abyssus")
     val water: JsonNode? = null,
 
-    val ecs: Map<Long, EntityDto> = emptyMap()
+    val ecs: MutableMap<Long, EntityDto> = mutableMapOf()
 )

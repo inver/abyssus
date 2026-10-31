@@ -30,7 +30,7 @@ Abyssus as if they were built in.
   contribute a bundled schema through it, for example the physics components in `add-jolt-physics`. Abyssus also
   reads the open project's exported schema file and refreshes when it changes.
 - **Editing in Abyssus.** The properties panel shows schema-declared components with editors per field type, offers
-  them in "Add component", and changes them through `ComponentEditor` and `editSceneJson`: one undoable command per
+  them in "Add component", and changes them through `ComponentEditor` and `editSceneDocument`: one undoable command per
   edit, same rules as built-in kinds. A component whose schema is unknown stays raw and read-only, as today.
 - **Native extension data.** Game-declared components are opaque, native extension payloads inside the Abyssus
   version 1 contract from `decouple-from-mundus`; the document validator does not inspect them. No compatibility with

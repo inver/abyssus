@@ -189,7 +189,7 @@ fun readEntityState(target: ComponentTarget, services: PanelServices): PanelStat
     val assets = EntityAssetChoices(
         SceneComponentEdits.renderAssets(target.file, services.metaFiles).map { it.name },
         SceneComponentEdits.assetsByType(target.file, services.metaFiles).orEmpty(),
-    )
+    ) { assetName -> ProjectLayout.projectDirFor(target.file)?.let { services.meshes(it, assetName) } }
     return when (val read = readEntitySections(
         root, target.entityId, target.kind, services.schemas.editorFor(target.file), assets,
         EditorBundle

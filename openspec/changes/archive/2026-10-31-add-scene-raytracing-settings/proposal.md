@@ -32,7 +32,7 @@ Scene ray tracing exposes only an on/off switch: users cannot choose an image-qu
 
 ## Impact
 
-- Properties `SceneDetailsView`, `PanelState`, `EntityDetailsView`, localized bundle text and document refresh/undo routing; scene edits continue through `editSceneJson` and `SceneJson`.
+- Properties `SceneDetailsView`, `PanelState`, `EntityDetailsView`, localized bundle text and document refresh/undo routing; scene edits continue through `editSceneDocument` and `SceneJson`.
 - Scene parameter decoding, `RaySceneSnapshots`, `RayViewFeed`, `RayViewRuntime`, `RayBackendService`, `RayRenderScheduler`, `RayQualityPolicy`, request/material/native payloads and the Metal scene shader; extend the CPU reference renderer and conformance kit.
 - Reuse model snapshot material identifiers without changing shared asset metadata. Keep native/GL work off panel actions and plain JVM boundaries intact. No new dependency is planned.
 - Depends on the implemented scene path in `add-scene-raytracing` and native format from `decouple-from-mundus`. During implementation, amend the former's refraction exclusion and fixed one-bounce planning language; coordinate parameter ownership with `extract-scene-runtime` if its classes have moved. Unsupported backend scene features must produce explicit raster fallback rather than ignored settings.

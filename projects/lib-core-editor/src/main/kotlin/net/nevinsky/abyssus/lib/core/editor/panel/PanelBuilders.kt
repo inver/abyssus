@@ -331,6 +331,14 @@ class PanelBuilders(
         return when {
             f.kind == FieldKind.BOOLEAN -> CheckRow(readable(f.label), f.value == "true", "", f.isDefault, ref)
             f.kind == FieldKind.CHOICE -> ChoiceRow(readable(f.label), f.value, f.choices, f.isDefault, ref, f.optional)
+            f.kind == FieldKind.MESH_ID -> {
+                val unknown = f.value.isNotEmpty() && f.value !in f.choices
+                ChoiceRow(
+                    readable(f.label), f.value, f.choices, f.isDefault, ref, true, unknown,
+                    messages.message("panelMeshWholeModel"),
+                    if (unknown) messages.message("panelMeshUnknown", f.value) else null,
+                )
+            }
             f.kind == FieldKind.ASSET_NAME ->
                 AssetRow(
                     readable(f.label),

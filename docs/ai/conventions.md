@@ -60,14 +60,14 @@ Don't copy a stock g3d class into the repository: subclass it, or wrap it as `Fi
 - **Wiring:** pass collaborators in through constructors. A `service<...>()` lookup belongs only in an action, a
   provider, a tool window factory, the Abyssus pane, or a deferred service accessor. Constructors must not look up other services;
   injected collaborators or lazy access keep unrelated service groups uninitialized.
-- **Writing a file:** use `editSceneJson` (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`); its text transform is
+- **Writing a file:** use `editSceneDocument` (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`); its text transform is
   `lib-core-editor`'s `DocumentTextEditor`, re-serialized with `SceneJson().inStyleOf`, so a pretty file stays pretty and a
   compact one stays compact. Address entities through `SceneDocument` / `SceneEntityTree`, never by `"ecs"` / `"components"` keys.
 
 ## Writing files
 
 Readers never write (`ConfigFileReader` implementations never write and never throw). Only these edit files, all through
-`editSceneJson` as named undoable commands:
+`editSceneDocument` as named undoable commands:
 
 - the eye toggle,
 - Rename Scene,
@@ -95,7 +95,7 @@ written. Cancellation is honoured only before the first write.
 
 **Foliage Apply combines document and binary edits.** `FoliageMetaEdits` computes a text-preserving metadata
 change. `applyFoliageFiles` checks the current document text, applies the binary `AssetFileCommand` transaction
-with its undo action handed back, then writes metadata through `editSceneJson` and registers the binary action
+with its undo action handed back, then writes metadata through `editSceneDocument` and registers the binary action
 in the same platform command. If the document edit fails, it reverts the binary transaction. VFS refresh happens
 after the command. The existing metadata is never a disk snapshot: it retains the platform's document Undo,
 with save actions that persist the restored document after Undo and Redo. Re-bake and strokes use binary
@@ -108,7 +108,7 @@ cleanup, and all remaining backups on project disposal. Strokes retain only the 
 whole-file hash checks so Undo refuses an externally replaced mask.
 
 `SceneFormatListener` is the one other writer: it pretty-prints a `.scene` / `.abss` document when it opens in the
-text editor. A new writer goes through `editSceneJson` (it publishes `AbyssusSceneEdited.TOPIC` when done) and gets a
+text editor. A new writer goes through `editSceneDocument` (it publishes `AbyssusSceneEdited.TOPIC` when done) and gets a
 command name in the message bundle.
 
 ## Errors and cancellation

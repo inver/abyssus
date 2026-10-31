@@ -11,14 +11,14 @@ import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import com.badlogic.gdx.math.Vector3
 import java.io.File
-import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
 
 class SceneTransformEditTest : BasePlatformTestCase() {
     private val original = File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()
 
     fun testMoveKeepsIndentationAndEveryOtherLine() {
         val file = myFixture.addFileToProject("p/Main Scene.scene", original).virtualFile
-        val moved = editSceneJson(project, file, "Move Entity") { root ->
+        val moved = editSceneDocument(project, file, "Move Entity") { root ->
             SceneTransformWriter().apply(root, "0", TransformEdit(position = Vector3(-1.035308f, 0.9123962f, -3.2570944f)))
         }
         assertTrue(moved)
@@ -35,7 +35,7 @@ class SceneTransformEditTest : BasePlatformTestCase() {
 
     fun testNothingIsWrittenWhenTheEditChangesNothing() {
         val file = myFixture.addFileToProject("p/Same.scene", original).virtualFile
-        assertFalse(editSceneJson(project, file, "Move Entity") { root ->
+        assertFalse(editSceneDocument(project, file, "Move Entity") { root ->
             SceneTransformWriter().apply(root, "0", TransformEdit(position = Vector3(-3.035308f, 0.9123962f, -3.2570944f)))
         })
         assertEquals(original, String(file.contentsToByteArray()))
@@ -53,7 +53,7 @@ class SceneTransformEditTest : BasePlatformTestCase() {
     fun testAWritePublishesExactlyOneEventForTheFile() {
         val file = myFixture.addFileToProject("p/Event.scene", original).virtualFile
         val events = eventsDuring {
-            assertTrue(editSceneJson(project, file, "Move Entity") { root ->
+            assertTrue(editSceneDocument(project, file, "Move Entity") { root ->
                 SceneTransformWriter().apply(root, "0", TransformEdit(position = Vector3(1f, 0.9123962f, -3.2570944f)))
             })
         }
@@ -62,7 +62,7 @@ class SceneTransformEditTest : BasePlatformTestCase() {
 
     fun testNoEventWhenNothingIsWritten() {
         val file = myFixture.addFileToProject("p/NoEvent.scene", original).virtualFile
-        val events = eventsDuring { assertFalse(editSceneJson(project, file, "Nothing") { false }) }
+        val events = eventsDuring { assertFalse(editSceneDocument(project, file, "Nothing") { false }) }
         assertTrue(events.isEmpty())
     }
 }

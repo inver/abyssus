@@ -4,7 +4,7 @@
 
 See proposal.md. Add Light is the model to follow:
 - `LightEntities` (`ecs/scene`) edits only the JSON tree.
-- `SceneComponentEdits.addLight` wraps it in `editSceneJson`.
+- `SceneComponentEdits.addLight` wraps it in `editSceneDocument`.
 - `AddLightGroup` lists the choices, used both by `AddLightAction` (tree, origin) and by `SceneViewPanel`'s toolbar
   button (orbit target).
 - `selectCreatedLight` selects the new row.
@@ -27,7 +27,7 @@ See proposal.md. Add Light is the model to follow:
 - **Terrain centring** reads `additional.size` from the terrain's `meta.json` through the project's `MetaFiles`. A
   terrain whose size cannot be read is placed with its corner at the point and the menu still offers it, so a broken
   meta does not hide the asset.
-- **`SceneComponentEdits.addAsset`** runs it in one `editSceneJson` command (`commandAddAsset`).
+- **`SceneComponentEdits.addAsset`** runs it in one `editSceneDocument` command (`commandAddAsset`).
 - **`AddAssetGroup`** (`projectView`) is a `DefaultActionGroup` with a "Models" and a "Terrains" separator, built from
   `renderAssets`. Each choice is enabled while the scene reads (the same `SceneDocumentCache` check as Add Light), and
   calls `addAsset` with the position supplier, then selects the row like `selectCreatedLight`. That helper is
@@ -39,7 +39,7 @@ See proposal.md. Add Light is the model to follow:
   Its enabled state follows the same editing rule as Add Light. `SceneFileEditor` passes
   `AddAssetGroup(project, file, position)`.
 - **Threads:** listing reads metas through the caching `MetaFiles` on the EDT / BGT as the existing render-asset listing
-  does; the write is the EDT write command of `editSceneJson`; no GL.
+  does; the write is the EDT write command of `editSceneDocument`; no GL.
 
 ## Risks / Trade-offs
 

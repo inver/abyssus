@@ -11,6 +11,7 @@ import net.nevinsky.abyssus.app.game.controlline.components.ScaleComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.app.game.controlline.flight.FieldFlight
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightEnd
+import net.nevinsky.abyssus.app.game.controlline.flight.Takeover
 import net.nevinsky.abyssus.app.game.controlline.loadField
 import net.nevinsky.abyssus.app.game.controlline.pattern.AssistLevel
 import net.nevinsky.abyssus.app.game.controlline.pattern.Figure
@@ -770,5 +771,121 @@ class GameFlowTest {
         other.freeFlight()
         other.settings()
         assertTrue("not from plane select", other.screen is Screen.PlaneSelect)
+    }
+
+    // the instructor
+
+    private val twoTakeovers = listOf(Takeover(10f, 12f), Takeover(20f, 21f))
+
+    @Test
+    fun theInstructorIsOffAtStartAndOnlyToggledOnPlaneSelect() {
+        val flow = flow()
+        assertFalse(flow.instructor)
+        assertFalse(flow.instructorOffered)
+        flow.toggleInstructor()
+        assertFalse(flow.instructor)
+        flow.freeFlight()
+        assertTrue(flow.instructorOffered)
+        flow.toggleInstructor()
+        assertTrue(flow.instructor)
+        flow.toggleInstructor()
+        assertFalse(flow.instructor)
+    }
+
+    @Test
+    fun theInstructorIsOfferedAtEveryModeAndKeptAcrossThem() {
+        val flow = flow()
+        flow.freeFlight()
+        flow.toggleInstructor()
+        flow.back()
+        for (level in OFFERED_LEVELS) {
+            flow.f2bPattern()
+            flow.chooseAssist(level)
+            assertTrue("$level", flow.instructorOffered && flow.instructor)
+            flow.back()
+            flow.back()
+        }
+        flow.scale()
+        assertTrue(flow.instructorOffered && flow.instructor)
+        flow.choosePlane()
+        assertTrue((flow.screen as Screen.Flying).instructor)
+    }
+
+    @Test
+    fun aFlightCarriesTheInstructorAndRetryKeepsItAndAnOffFlightStaysOff() {
+        val flow = flow()
+        assertFalse(flow.flyStunter().instructor)
+        flow.flightEnded(report(0))
+        flow.nameEntered("Ann")
+        flow.mainMenu()
+        flow.freeFlight()
+        flow.toggleInstructor()
+        flow.choosePlane()
+        assertTrue((flow.screen as Screen.Flying).instructor)
+        flow.flightEnded(report(0))
+        flow.nameEntered("Ann")
+        flow.retry()
+        assertTrue((flow.screen as Screen.Flying).instructor)
+    }
+
+    @Test
+    fun watchAiIgnoresTheInstructor() {
+        val flow = flow()
+        flow.f2bPattern()
+        flow.chooseAssist(AssistLevel.MID)
+        flow.toggleInstructor()
+        flow.watchAi()
+        val flying = flow.screen as Screen.Flying
+        assertEquals(Control.AI, flying.control)
+        assertFalse(flying.instructor)
+    }
+
+    @Test
+    fun anAssistedFreeFlightWithATopScoreIsNotSaved() {
+        val table = table()
+        val flow = flow(table)
+        flow.freeFlight()
+        flow.toggleInstructor()
+        flow.choosePlane()
+        flow.flightEnded(report(9999).copy(takeovers = twoTakeovers))
+        val over = flow.screen as Screen.GameOver
+        assertNull(over.rank)
+        assertEquals(2, over.report.takeovers.size)
+        assertTrue(table.entries.isEmpty())
+    }
+
+    @Test
+    fun anAssistedPatternFlightLeavesTheBoardAndTheRecordingsAlone() {
+        val patterns = patternTable()
+        val flow = flow(patternTable = patterns)
+        flow.f2bPattern()
+        flow.chooseAssist(AssistLevel.NOOB)
+        flow.toggleInstructor()
+        flow.choosePlane()
+        flow.flightEnded(patternReport(AssistLevel.NOOB, 95).copy(takeovers = twoTakeovers))
+        assertTrue(flow.screen is Screen.GameOver)
+        assertTrue(patterns.board(AssistLevel.NOOB).isEmpty())
+    }
+
+    @Test
+    fun anAssistedScaleFlightIsNotSaved() {
+        val scales = scaleTable()
+        val flow = flow(scaleTable = scales)
+        flow.scale()
+        flow.toggleInstructor()
+        flow.choosePlane()
+        flow.flightEnded(scaleReport().copy(takeovers = twoTakeovers))
+        assertTrue(flow.screen is Screen.GameOver)
+        assertTrue(scales.entries.isEmpty())
+    }
+
+    @Test
+    fun anInstructedFlightWithoutATakeoverEntersNameEntryAsBefore() {
+        val flow = flow()
+        flow.freeFlight()
+        flow.toggleInstructor()
+        flow.choosePlane()
+        flow.flightEnded(report(100))
+        assertTrue(flow.screen is Screen.NameEntry)
     }
 }

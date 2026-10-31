@@ -57,12 +57,12 @@ The plugin reads:
   (see *UI assets* below). Missing means none and is never inserted on read; entries that are not strings are skipped.
 
 Other members (`settings`, `activeSceneName`, `selectedCamera`, ...) are ignored. Changing Physics in project
-properties writes only `physicsEnabled` through `editSceneJson` as one undoable command; off is explicit `false`.
+properties writes only `physicsEnabled` through `editSceneDocument` as one undoable command; off is explicit `false`.
 Reads never insert the key or repair malformed values. `SceneFormatListener` may also format a supported `.abss`.
 
 `sceneViewAntialiasing` is an optional editor preference for this native project's scene views: `OFF`, `X2`, `X4`
 or `X8`. Missing means 4×; saving 4× removes the key. Invalid present values are reported and displayed as 4× without
-rewriting the file. Select the project in Abyssus Properties to edit it through `editSceneJson` as one undoable command.
+rewriting the file. Select the project in Abyssus Properties to edit it through `editSceneDocument` as one undoable command.
 Text edits and Undo/Redo update its open views; other projects are independent. Unsupported native documents cannot be
 edited. The runtime ignores this editor preference; `.scene` and asset metadata are unaffected.
 
@@ -114,7 +114,7 @@ The native component fields described by the specs and fixtures:
 |---|---|
 | `NameComponent.name` | Entity label (the id when missing) |
 | `PositionComponent` | `localPosition`, `localRotation` (quaternion `x y z w`) and `localScale`; plus `lookAtId` for cameras and lights |
-| `RenderComponent` | `type` (`MODEL` / `TERRAIN`), `assetName` and optional `shaderKey`; editor-only `rayTracingMaterials` (per-material optical overrides) is kept and ignored by games |
+| `RenderComponent` | `type` (`MODEL` / `TERRAIN`), `assetName`, optional `shaderKey` and, for a `MODEL`, optional `meshId` (see below); editor-only `rayTracingMaterials` (per-material optical overrides) is kept and ignored by games |
 | `CameraComponent.camera` | `position`, `viewPointPosition` (the view direction), `near`, `far`, `fieldOfView` |
 | `LightComponent` | `color`, `intensity`, `range` (positive reach, default 100 omitted), either directly or under `light` |
 | `Point2PointPositionComponent` | `entity1Id` / `entity2Id` |
@@ -158,6 +158,17 @@ built-in RenderComponent names are checked; unrelated extension components remai
 
 ```json
 { "shaderKey": "pbr", "type": "MODEL", "assetName": "tree" }
+```
+
+A `MODEL` render component may also carry a non-empty `meshId` beside `assetName`. It names one mesh of the model asset
+(the mesh `id` Assimp reads from the model file); only that mesh is drawn, with the materials its parts use, where the
+whole model sits otherwise. Without `meshId` the whole model is drawn. The mesh keeps its place inside the model: the
+node tree and animations stay. A `meshId` the model lacks is not repaired or replaced by the whole model: that entity
+is not drawn and the problem is logged, so a mesh id follows the model file (re-exporting a model can rename its
+meshes). A `meshId` on a `TERRAIN` is ignored and kept. Writers omit the key when it is cleared.
+
+```json
+{ "shaderKey": "defaultShader", "type": "MODEL", "assetName": "tree", "meshId": "glass" }
 ```
 
 Unknown components remain raw and round-trip unchanged. Their payloads are opaque:
@@ -614,7 +625,8 @@ Each model entity's `RenderComponent.rayTracingMaterials` is an optional map key
 IDs. A PBR material entry accepts finite `transmission` from 0 through 1 (default 0) and `ior` from 1 through 3
 (default 1.5). Default fields are omitted on reset. These overrides belong to the scene instance and never change
 model sources or asset metadata. Unresolved or ambiguous material IDs are preserved without retargeting; ray
-conversion refuses unsupported overrides. Geometry and textures stay shared while affected materials are copied.
+conversion refuses unsupported overrides. Geometry and textures stay shared while affected materials are copied. When
+the entity draws one mesh (`meshId`), overrides for materials that mesh does not use stay in the file and are ignored.
 
 ## Water surfaces
 
@@ -657,7 +669,7 @@ the wrong type, or an out-of-range value is invalid: it stays a removable row, i
 repaired. If `abyssus` or `waterSurfaces` is not an object, no water is read and an add is refused; an incompatible
 container is never replaced.
 
-Edits go through `editSceneJson` as one named undoable command and touch only the targeted `abyssus.waterSurfaces.<id>`
+Edits go through `editSceneDocument` as one named undoable command and touch only the targeted `abyssus.waterSurfaces.<id>`
 members. Unknown members, key order and number text elsewhere survive, and removing the last surface leaves an empty
 `waterSurfaces` object so unrelated `abyssus` members are undisturbed. Opening or reading a scene writes nothing, and a
 scene without the extension has no water. There is no migration: nothing adds, converts or rewrites the extension.

@@ -27,7 +27,7 @@ Introduce a small project service, `SceneViewSettings`, backed by project-scoped
 
 Assumption: "for project" means the IntelliJ project's view preference. When one IDE project contains several `.abss` files, each project row exposes the same checkbox and all scene views share it, including standalone scenes. Separate IDE projects have separate storage. This keeps the preference local to the user's IDE and avoids introducing a new document field. A per-`.abss` map adds unnecessary scope; per-view transient state would lose the user's project preference.
 
-This is an IDE settings write, not a scene/project file edit, so `editSceneJson` is not involved. No `.abss`, `.scene` or asset fields are newly read or written.
+This is an IDE settings write, not a scene/project file edit, so `editSceneDocument` is not involved. No `.abss`, `.scene` or asset fields are newly read or written.
 
 ### 2. Add the checkbox to the existing project properties view
 

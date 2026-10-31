@@ -5,16 +5,20 @@
 
 package net.nevinsky.abyssus.plugin.filetype
 
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentEdit
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
-import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
-
+import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.messages.Topic
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentEdit
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
+import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat
 
 /** Told after a plugin edit wrote [file] (a scene or project file), so views of it can refresh. */
 fun interface AbyssusSceneEdited {
@@ -33,14 +37,23 @@ fun interface AbyssusSceneEdited {
  *
  * The command is undone from the scene's own editor.
  */
-fun editSceneJson(project: Project, file: VirtualFile, commandName: String, mutate: DocumentEdit<Boolean>): Boolean =
-    editSceneJson(project, file, commandName, false, mutate)
+fun editSceneDocument(project: Project, file: VirtualFile, commandName: String, mutate: DocumentEdit<Boolean>): Boolean =
+    editSceneDocument(project, file, commandName, false, mutate)
+
+
+typealias SceneEdit<R> = (SceneDto) -> R
 
 /**
- * [editSceneJson] that, with [global], is also a project-level command: Undo and Redo reach it from any focus, such as
+ * [editSceneDocument] that, with [global], is also a project-level command: Undo and Redo reach it from any focus, such as
  * the Abyssus tree that started it, not only from the scene's editor.
  */
-fun editSceneJson(project: Project, file: VirtualFile, commandName: String, global: Boolean, mutate: DocumentEdit<Boolean>): Boolean {
+fun editSceneDocument(
+    project: Project,
+    file: VirtualFile,
+    commandName: String,
+    global: Boolean,
+    mutate: SceneEdit<Boolean>
+): Boolean {
     val document = FileDocumentManager.getInstance().getDocument(file) ?: return false
     val kind = documentKind(file) ?: return false
     val original = document.text

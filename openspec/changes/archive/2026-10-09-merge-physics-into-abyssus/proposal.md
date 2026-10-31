@@ -43,7 +43,7 @@ project.
 Native files:
 - **Reads:** `.abss` `physicsEnabled` (boolean), only after the document passes `AbyssusDocumentFormat` validation.
   An unsupported `.abss` counts as physics off and is never written.
-- **Writes:** `.abss` `physicsEnabled`, only through `editSceneJson`, and only when the user toggles the switch.
+- **Writes:** `.abss` `physicsEnabled`, only through `editSceneDocument`, and only when the user toggles the switch.
 - No version change: `physicsEnabled` is an optional member of native version 1. Readers that ignore it, such as the
   game runtime, keep working.
 

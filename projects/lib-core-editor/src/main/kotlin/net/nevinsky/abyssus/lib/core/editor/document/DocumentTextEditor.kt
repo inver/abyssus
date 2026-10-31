@@ -5,11 +5,10 @@
 
 package net.nevinsky.abyssus.lib.core.editor.document
 
-import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.scene.SceneParser
 
 /** What [DocumentTextEditor.edit] made of a document's text. */
 sealed interface TextEditOutcome {
@@ -28,13 +27,25 @@ sealed interface TextEditOutcome {
  * admit the document, let the mutation edit the tree, admit it again, and print it in the original's style. The
  * plugin's `editSceneJson` wraps it in one undoable command; a caller without the IDE uses it directly.
  */
-class DocumentTextEditor(private val format: AbyssusDocumentFormat = AbyssusDocumentFormat()) {
-    fun edit(text: String, kind: DocumentKind, mutate: (JsonNode) -> Boolean): TextEditOutcome {
-        val root = runCatchingKeepingCancellation { SceneJson().parse(text).also { format.requireSupported(it, kind) } }
-            .getOrElse { return TextEditOutcome.Refused(it) }
-        if (!mutate(root)) return TextEditOutcome.Unchanged
-        format.validate(root, kind)?.let { return TextEditOutcome.Refused(UnsupportedDocumentFormat(kind, it)) }
-        val edited = SceneJson().inStyleOf(text, root)
-        return if (edited == text) TextEditOutcome.Unchanged else TextEditOutcome.Edited(edited)
+class DocumentTextEditor(
+    private val jsonProcessor: JsonProcessor,
+    private val sceneParser: SceneParser,
+) {
+    fun edit(text: String, kind: DocumentKind, mutate: (Any) -> Boolean): TextEditOutcome {
+        val doc: Any
+        if (kind == DocumentKind.SCENE) {
+            doc = runCatchingKeepingCancellation { sceneParser.parse(text) }
+        } else {
+            throw NotImplementedError("Unknown kind: $kind")
+        }
+
+        if (!mutate(doc)) {
+            return TextEditOutcome.Unchanged
+        }
+
+        val edited = jsonProcessor.toString(doc)
+        return if (edited == text) {
+            TextEditOutcome.Unchanged
+        } else TextEditOutcome.Edited(edited)
     }
 }

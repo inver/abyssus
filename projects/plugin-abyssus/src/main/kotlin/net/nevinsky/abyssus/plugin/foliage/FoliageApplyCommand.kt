@@ -10,10 +10,9 @@ import com.intellij.openapi.command.UndoConfirmationPolicy
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.textOf
-import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
 import net.nevinsky.abyssus.plugin.undo.DocumentSaveUndoableAction
 
 /** Keeps the metadata document's native Undo and the binary transaction in the same command. */
@@ -38,7 +37,7 @@ internal fun applyFoliageFiles(
         val manager = UndoManager.getInstance(project)
         // Undo runs actions in reverse: this saves the document after its native text Undo has finished.
         manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = true))
-        val edited = editSceneJson(project, meta, txn.name) { root ->
+        val edited = editSceneDocument(project, meta, txn.name) { root ->
             replaceDocument(root, after)
             true
         }
@@ -67,7 +66,7 @@ internal fun applyFoliageMetadata(project: Project, meta: VirtualFile, name: Str
         if (textOf(meta) != before) return@executeCommand
         val manager = UndoManager.getInstance(project)
         manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = true))
-        done = editSceneJson(project, meta, name) { root ->
+        done = editSceneDocument(project, meta, name) { root ->
             replaceDocument(root, after)
             true
         }

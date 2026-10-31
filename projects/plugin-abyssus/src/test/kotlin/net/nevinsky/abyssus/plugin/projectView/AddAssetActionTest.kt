@@ -53,7 +53,9 @@ class AddAssetActionTest : BasePlatformTestCase() {
         return event.presentation.isEnabledAndVisible
     }
 
-    private fun group(selected: (String) -> Unit = {}, at: Vector3 = Vector3(0f, 0f, 0f)) = AddAssetGroup(project, scene(), testMetaFiles(), { at }, selected).getChildren(null)
+    private fun group(
+        selected: (String) -> Unit = {}, at: Vector3 = Vector3(0f, 0f, 0f), meshes: (String) -> List<String>? = { null },
+    ) = AddAssetGroup(project, scene(), testMetaFiles(), { at }, selected, meshes).getChildren(null)
 
     fun testTheGroupListsTheProjectsModelsAndTerrainsOnly() {
         copyProject()
@@ -110,5 +112,47 @@ class AddAssetActionTest : BasePlatformTestCase() {
         val loose = myFixture.addFileToProject("loose/Alone.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""").virtualFile
         assertFalse(hasRenderAssets(loose, testMetaFiles()))
         assertTrue(AddAssetGroup(project, loose, testMetaFiles(), { Vector3(0f, 0f, 0f) }).getChildren(null).isEmpty())
+    }
+
+    fun testAModelWithSeveralMeshesIsASubmenuOfItsMeshesAndTheWholeModel() {
+        copyProject()
+        val items = group(meshes = { if (it == "tree") listOf("body", "glass") else listOf("only") })
+        val submenu = items.filterIsInstance<com.intellij.openapi.actionSystem.ActionGroup>().single()
+        assertEquals("tree", submenu.templatePresentation.text)
+        assertTrue(submenu.isPopup)
+        val choices = submenu.getChildren(null).filter { it !is Separator }.map { it.templatePresentation.text }
+        assertEquals(listOf("Whole model", "body", "glass"), choices)
+        // a single-mesh model stays one plain entry
+        val flat = items.filter { it !is Separator && it !is com.intellij.openapi.actionSystem.ActionGroup }.map { it.templatePresentation.text }
+        assertFalse("tree" in flat)
+        assertTrue(flat.any { it.startsWith("model_") })
+    }
+
+    fun testChoosingAMeshRecordsItsIdAndTheWholeModelEntryDoesNot() {
+        copyProject()
+        myFixture.openFileInEditor(scene())
+        val editor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
+        val before = document().text
+        var selected: String? = null
+        val submenu = group({ selected = it }, meshes = { if (it == "tree") listOf("body", "glass") else null })
+            .filterIsInstance<com.intellij.openapi.actionSystem.ActionGroup>().single()
+        val glass = submenu.getChildren(null).first { it.templatePresentation.text == "glass" }
+        glass.actionPerformed(TestActionEvent.createTestEvent(glass))
+        assertEquals("9", selected)
+        val render = entities()["9"]["components"]["RenderComponent"]
+        assertEquals("tree", render["assetName"].asText())
+        assertEquals("glass", render["meshId"].asText())
+        UndoManager.getInstance(project).undo(editor)
+        assertEquals(before, document().text)
+
+        val whole = submenu.getChildren(null).first { it.templatePresentation.text == "Whole model" }
+        whole.actionPerformed(TestActionEvent.createTestEvent(whole))
+        assertFalse(entities()["9"]["components"]["RenderComponent"].has("meshId"))
+    }
+
+    fun testAModelWhoseMeshesAreUnknownIsOneEntry() {
+        copyProject()
+        val items = group(meshes = { null })
+        assertTrue(items.none { it is com.intellij.openapi.actionSystem.ActionGroup })
     }
 }

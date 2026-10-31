@@ -26,7 +26,7 @@ Reading and editing SHALL validate native markers first. Unsupported projects SH
 SHALL use 4×. Invalid present values SHALL report a localized problem and use 4× without rewriting the document.
 Opening a project SHALL NOT insert defaults or migrate an old application preference.
 
-Changing the value SHALL be one undoable edit through `editSceneJson`, touching only the setting and preserving
+Changing the value SHALL be one undoable edit through `editSceneDocument`, touching only the setting and preserving
 unknown data, key order, unrelated number text and formatting. `.scene` and asset `meta.json` files SHALL stay unchanged.
 
 #### Scenario: Default choice

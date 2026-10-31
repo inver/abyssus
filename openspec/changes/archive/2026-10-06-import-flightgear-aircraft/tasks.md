@@ -67,7 +67,7 @@
   byte-identical files.
 - [x] 4.2 Generalise `AirfieldPatchApplicationTest` into the env-gated `ScenePatchApplicationTest` (set / remove / append
   on any native document) and re-express the airfield patch in that form. Then apply the Trainer patch through
-  `editSceneJson`: `model_trainer/meta.json` gets `additional.file` = `model.glb`; `Field.scene` gets the Trainer
+  `editSceneDocument`: `model_trainer/meta.json` gets `additional.file` = `model.glb`; `Field.scene` gets the Trainer
   `localRotation` (level, same heading) and `localPosition.y` = 0. Verify: a diff against the pre-edit copies shows only
   those values, and `./gradlew :games:control-line:test` passes, including:
   - `BundledProjectTest` (no load warnings, parked planes at rest);

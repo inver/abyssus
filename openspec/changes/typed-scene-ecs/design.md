@@ -31,7 +31,7 @@ does not compile against `SceneLoader`/`RuntimeSceneLoader`.
 4. **Enabled.** `HeaderComponent.entityEnabled` comes from `EntityDto.flags`; component-level `enabled` is unchanged
    (`stripEnabled` and the reserved-field warning stay).
 5. **Writes keep the tree.** Token-exact number text and key order cannot come from re-serializing typed objects, so
-   `editSceneJson`, `DocumentTextEditor`, `SceneDocument` and `ComponentEditor` keep editing the `SceneJson` tree, adapted
+   `editSceneDocument`, `DocumentTextEditor`, `SceneDocument` and `ComponentEditor` keep editing the `SceneJson` tree, adapted
    to the new entity shape (entity enable toggling writes `flags` instead of `enabled`). `EcsWriter` is retired: new entries are written
    as name-keyed members built by the component codecs. Only reads move to the typed map; `SceneDto.ecs` is never the write source.
 6. **Reads.** `SceneContent`/`SceneRenderParams` take `Map<Long, EntityDto>`; the plugin overlay and `ProjectReader`

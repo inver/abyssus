@@ -91,7 +91,7 @@ written files. Picking uses each view's CPU `TerrainData`, no GL.
 **9. Commit.** On release, the plugin builds an `AssetTransaction` of `FileChange`s for `terrain.data`, the delta,
 manifest and (first stroke only) base, off the AWT thread, and applies it through the same `AssetTransactionEngine`
 path regeneration uses, as one undoable step with conflict detection on undo/redo. This is the only write path used (`terrain.data` is not a scene file, so
-`editSceneJson` does not apply, as for regeneration). A cache like `FoliageUndoCache` is not needed: before/after file
+`editSceneDocument` does not apply, as for regeneration). A cache like `FoliageUndoCache` is not needed: before/after file
 snapshots are at most ~260 KB per file. `FileSnapshot.Patch` is available if a delta or `terrain.data` rewrite proves
 too heavy per stroke, but whole-file bytes are the starting point.
 

@@ -22,7 +22,7 @@
 ## 4. Skybox Browse in Properties
 
 - [x] 4.1 Add the scene `skybox` row with an optional `browse` to the panel model in `lib-core-editor` and paint the field with a 26 px Browse button in the Properties view, calling `chooseSkybox` (D8); none for a standalone scene. Verify with a `lib-core-editor` panel-model test (`./gradlew :lib-core-editor:test --tests '*ScenePanelModelTest'`), a plugin `PropertiesPanelTest` (button present for a project scene, absent for a standalone one, tooltip and accessible name set) and `SkyboxPickerModelTest` unchanged and green.
-- [x] 4.2 Assignment from Browse updates the field and the tree row, one undo step, writes only `skyboxName` through `editSceneJson`. Verify with a `SkyboxAssignTest` case (bytes identical apart from `skyboxName`, Undo restores) and `scripts/check-docs.sh` after documenting Browse in `projectView/README.md`.
+- [x] 4.2 Assignment from Browse updates the field and the tree row, one undo step, writes only `skyboxName` through `editSceneDocument`. Verify with a `SkyboxAssignTest` case (bytes identical apart from `skyboxName`, Undo restores) and `scripts/check-docs.sh` after documenting Browse in `projectView/README.md`.
 
 ## 5. UI tests (Remote Robot, canonical container)
 

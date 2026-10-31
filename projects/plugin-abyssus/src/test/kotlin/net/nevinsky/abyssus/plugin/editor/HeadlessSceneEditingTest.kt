@@ -18,7 +18,7 @@ import net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEditing
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
-import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
 import net.nevinsky.abyssus.plugin.projectView.ComponentTarget
 import net.nevinsky.abyssus.plugin.assetfiles.AssetEditResult
 import net.nevinsky.abyssus.plugin.assetfiles.AssetMetaEdits
@@ -45,7 +45,7 @@ class HeadlessSceneEditingTest : BasePlatformTestCase() {
         val position = SceneJson().parse(sceneText)["ecs"]["0"]["components"]["PositionComponent"]["localPosition"]
         val edit = TransformEdit(position = Vector3(1f, position["y"].floatValue(), position["z"].floatValue()))
         // what SceneFileEditor.applyTransform runs for a drag of Model 0
-        assertTrue(editSceneJson(project, file, "Move Entity") { root -> SceneTransformWriter().apply(root, "0", edit) })
+        assertTrue(editSceneDocument(project, file, "Move Entity") { root -> SceneTransformWriter().apply(root, "0", edit) })
         assertEquals(HeadlessEdit.Edited(textOf(file)), headless.transform(sceneText, "0", edit))
     }
 
@@ -55,7 +55,7 @@ class HeadlessSceneEditingTest : BasePlatformTestCase() {
         val refusal = headless.validate(legacy, DocumentKind.SCENE)!!
         val shown = readEntityState(ComponentTarget(file, "0", null), testPanelServices(project)) as PanelState.Empty
         assertEquals(AbyssusBundle.message("propertiesSceneUnreadable", refusal.message), shown.message)
-        assertFalse(editSceneJson(project, file, "Move Entity") { root ->
+        assertFalse(editSceneDocument(project, file, "Move Entity") { root ->
             SceneTransformWriter().apply(root, "0", TransformEdit(position = Vector3(1f, 0f, 0f)))
         })
         assertEquals(legacy, textOf(file))

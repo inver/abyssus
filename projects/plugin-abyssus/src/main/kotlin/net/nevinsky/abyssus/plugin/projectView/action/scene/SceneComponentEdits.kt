@@ -6,8 +6,6 @@
 package net.nevinsky.abyssus.plugin.projectView.scene
 
 import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
-import net.nevinsky.abyssus.lib.core.util.numberTextAt
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -21,7 +19,7 @@ import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
-import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
 import net.nevinsky.abyssus.plugin.sceneview.ArrangementHeights
 import net.nevinsky.abyssus.plugin.schema.ComponentSchemas
 
@@ -62,7 +60,7 @@ object SceneComponentEdits {
         edit: DocumentEdit<EditResult>,
     ): EditResult {
         var result: EditResult = EditResult.Rejected(EditorBundle.message("componentSceneUnreadable"))
-        editSceneJson(project, file, command, global) { root ->
+        editSceneDocument(project, file, command, global) { root ->
             result = edit(root)
             result == EditResult.Changed
         }
@@ -77,8 +75,8 @@ object SceneComponentEdits {
         cache: SceneDocumentCache
     ): AddedLight {
         var added = AddedLight(EditResult.Rejected(EditorBundle.message("componentSceneUnreadable")))
-        editSceneJson(project, file, AbyssusBundle.message("commandAddLight")) { root ->
-            if (cache.read(file) == null) return@editSceneJson false
+        editSceneDocument(project, file, AbyssusBundle.message("commandAddLight")) { root ->
+            if (cache.read(file) == null) return@editSceneDocument false
             added = LightEntities(EditorBundle).add(root, preset, position)
             added.result == EditResult.Changed
         }
@@ -87,7 +85,7 @@ object SceneComponentEdits {
 
     /**
      * Adds [asset] of the project to the scene at [position] as one undoable command (a terrain centred on it, sized from
-     * its `meta.json`); the result names the new entity.
+     * its `meta.json`); the result names the new entity. A model with [meshId] draws only that mesh.
      */
     fun addAsset(
         project: Project,
@@ -95,15 +93,16 @@ object SceneComponentEdits {
         asset: BaseMeta,
         position: Vector3,
         cache: SceneDocumentCache,
-        metaFiles: MetaFiles
+        metaFiles: MetaFiles,
+        meshId: String? = null,
     ): AddedEntity {
         val size = if (asset.isTerrain()) {
             terrainSize(file, asset.name, metaFiles)
         } else null
         var added = AddedEntity(EditResult.Rejected(EditorBundle.message("componentSceneUnreadable")))
-        editSceneJson(project, file, AbyssusBundle.message("commandAddAsset")) { root ->
-            if (cache.read(file) == null) return@editSceneJson false
-            added = AssetEntities(EditorBundle).add(root, asset, position, size)
+        editSceneDocument(project, file, AbyssusBundle.message("commandAddAsset")) { root ->
+            if (cache.read(file) == null) return@editSceneDocument false
+            added = AssetEntities(EditorBundle).add(root, asset, position, size, meshId)
             added.result == EditResult.Changed
         }
         return added
@@ -129,10 +128,10 @@ object SceneComponentEdits {
         initial: Map<String, String> = emptyMap()
     ): AddedEntity {
         var added = AddedEntity(EditResult.Rejected(EditorBundle.message("componentSceneUnreadable")))
-        editSceneJson(project, file, AbyssusBundle.message("commandAddComponent")) { root ->
+        editSceneDocument(project, file, AbyssusBundle.message("commandAddComponent")) { root ->
             val id = SceneEntityTree(root).insert { id ->
                 nameOnlyComponents(AbyssusBundle.message("newEntityName", id))
-            } ?: return@editSceneJson false
+            } ?: return@editSceneDocument false
             val result = editor(project, file).add(
                 root,
                 id,

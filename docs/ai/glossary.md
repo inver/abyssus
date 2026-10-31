@@ -10,6 +10,8 @@
 | **Entity id** | The key under `ecs`. Picking, tree selection and transform writes all use it. |
 | **Component class name** | The key of a component in a scene's `components`: the fully qualified class name or the short name of a built-in or registered component class. `EcsLoader` binds the value into that class with Jackson, `EcsWriter` writes it back. Any other key is carried raw. |
 | **Placement** | What the scene view draws for an entity (`AssetPlacement`, `FoliagePlacement`, `LightPlacement`, `CameraPlacement`, gathered in `SceneContent` in `lib-core-editor`), taken directly from the `ecs` JSON. |
+| **Mesh id** | The optional `meshId` of a model `RenderComponent`: the `id` of one mesh of the model asset. The entity then draws only that mesh and its materials. |
+| **Model variant** | One model asset built for one mesh id, named in the asset storage by an encoded `ModelKey` (`ModelKey(asset, meshId)`; the bare asset name for the whole model). Variants of an asset are cached, invalidated and retained with it. |
 | **Abyssus view** | The Abyssus pane of the Project tool window: the project / scene / asset tree. |
 | **Abyssus Properties** | The tool window for asset metadata and supported asset edits, entity/component fields, and a selected scene's Ray Tracing switch and saved settings. |
 | **Scene view** | The second editor tab of a `.scene`: a libGDX render on an LWJGL3-AWT GL canvas. |
@@ -22,7 +24,7 @@
 | **Orbit camera** | The scene view's free camera (`OrbitCamera`): the left button orbits, the right button pans, the wheel zooms. It starts from the project's `mainCamera`. |
 | **Stable-size gate** | `StableGate` in `GuardedGLCanvas`: GL is used only after the canvas has been on screen with a non-zero size for 250 ms, because macOS resizes the native surface late. |
 | **`GdxRuntime` context** | The per-canvas `Gdx.*` shim installed only for the duration of `GdxRuntime.withContext`. |
-| **`editSceneJson`** | The single path for writing a scene file: one undoable command that keeps formatting and number text. |
+| **`editSceneDocument`** | The single path for writing a scene file: one undoable command that keeps formatting and number text. |
 | **Ray Tracing mode** | Optional GPU renderer, enabled per open view from scene Properties. The enable switch is transient; quality limits and per-instance optical overrides are scene data. |
 | **Play host** | A separate JVM process running physics and optional game systems, sending transient poses to the editor over a loopback socket. Jolt never loads in the IDE process. |
 | **OpenSpec change / capability** | A planned change under `openspec/changes/`; a capability is one behavior area under `openspec/specs/`. |

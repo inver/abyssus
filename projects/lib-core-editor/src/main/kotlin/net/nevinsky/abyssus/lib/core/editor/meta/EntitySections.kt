@@ -60,8 +60,16 @@ sealed interface EntitySections {
     data class Gone(val message: String) : EntitySections
 }
 
-/** The scene file's asset names offered by asset fields: [all] render assets, and [byType] those of each asset type. */
-class EntityAssetChoices(val all: List<String>, val byType: Map<String, Collection<String>>)
+/**
+ * The scene file's asset names offered by asset fields: [all] render assets, and [byType] those of each asset type.
+ * [meshes] lists the mesh ids of a model asset (it may parse the model, so the caller is off the UI thread); null when
+ * they are not known, which leaves a Render component's mesh field out.
+ */
+class EntityAssetChoices(
+    val all: List<String>,
+    val byType: Map<String, Collection<String>>,
+    val meshes: (String) -> List<String>? = { null },
+)
 
 private const val RENDER_COMPONENT = "RenderComponent"
 
@@ -91,7 +99,7 @@ fun readEntitySections(
             modeled == null || fields == null ->
                 ComponentSection(name, name.removeSuffix("Component").ifEmpty { name }, emptyList(), SceneJson().pretty(components[name]))
 
-            else -> ComponentSection(name, modeled.label, fields.map { field ->
+            else -> ComponentSection(name, modeled.label, withMeshChoices(fields, assets).map { field ->
                 when {
                     field.kind != FieldKind.ASSET_NAME -> field
                     field.assetType != null ->
@@ -104,6 +112,20 @@ fun readEntitySections(
     val addable = if (kind == null) editor.missingKinds(root, entityId).map { it.name } else emptyList()
     val render = if (kinds.contains(RENDER_COMPONENT)) components?.get(RENDER_COMPONENT) else null
     return EntitySections.Read(entity.name, sections, addable, render)
+}
+
+/**
+ * Fills the mesh field of a Render component with the meshes of the model it names. The field is left out unless the
+ * component draws a `MODEL` whose meshes are known: it has nothing to offer for a terrain or an unreadable model.
+ */
+private fun withMeshChoices(fields: List<FieldValue>, assets: EntityAssetChoices): List<FieldValue> {
+    if (fields.none { it.kind == FieldKind.MESH_ID }) return fields
+    val type = fields.firstOrNull { it.field == "assetType" }?.value
+    val asset = fields.firstOrNull { it.field == "assetName" }?.value.orEmpty()
+    val meshes = if (type == MetaType.MODEL.name && asset.isNotEmpty()) assets.meshes(asset) else null
+    return fields.mapNotNull { field ->
+        if (field.kind != FieldKind.MESH_ID) field else meshes?.let { field.copy(choices = it) }
+    }
 }
 
 /**

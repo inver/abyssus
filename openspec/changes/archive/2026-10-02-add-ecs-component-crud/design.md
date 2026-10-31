@@ -6,7 +6,7 @@ See proposal.md for motivation. Current state:
 
 - The Abyssus tree shows an entity's components straight from the scene file's JSON (`entityRows`,
   `DtoEntryNode`), and the Scene view re-reads the file whenever its document changes.
-- Writes to scene files already go through `editSceneJson` (parse the document, mutate the Jackson tree, save
+- Writes to scene files already go through `editSceneDocument` (parse the document, mutate the Jackson tree, save
   in the file's own style as one undoable command). `SceneTransformWriter` is the model for a targeted JSON edit.
 - `ComponentCodecs` knows the shape of the eight modeled components (read, write, defaults), and
   `SceneEcsLoader` already turns references to missing entities into `-1`.
@@ -26,7 +26,7 @@ See proposal.md for motivation. Current state:
 ## Decisions
 
 **1. Edit the JSON tree, not the engine.** A new `ComponentEditor` works on the parsed scene `JsonNode`, like
-`SceneTransformWriter`, and is run inside `editSceneJson`. Alternative: load into a `SceneEngine`, mutate
+`SceneTransformWriter`, and is run inside `editSceneDocument`. Alternative: load into a `SceneEngine`, mutate
 components and write the whole block with `SceneEcsWriter`. Rejected: it rewrites the entire `ecs` block, can
 change formatting and defaults of untouched entities, and makes every edit depend on asset resolution succeeding.
 Tradeoff: validation must reason about JSON shapes, so it reuses the codecs for them (decision 2).
@@ -51,7 +51,7 @@ references to the entity's position or parent component. Rejections show as a me
 **5. Panel and tree share one path.** Both call `editSceneJson(project, file, commandName) { ComponentEditor... }`.
 The command names are new bundle keys (`commandAddComponent`, `commandEditComponent`, `commandRemoveComponent`) so
 Undo history reads clearly. After the write, the Scene view reloads through its existing document listener and the
-tree refreshes through the pane update `editSceneJson` already triggers.
+tree refreshes through the pane update `editSceneDocument` already triggers.
 
 **6. Panel selection model.** `AbyssusSelection` already publishes the selected node. `PanelState` gains
 `EntityDetails(file, entityId)` and `ComponentDetails(file, entityId, kind)` for an entity row and a component row
@@ -72,7 +72,7 @@ assets (reusing the skybox chooser's asset listing approach) and shader key defa
   would drop data.
 - [Float rendering noise (`0.1` becoming `0.10000000149`)] → parse user input as decimal text and reuse `number()`
   so only the shortest float text is written.
-- [Concurrent text edits while the panel holds an edit] → `editSceneJson` re-parses the current document text on
+- [Concurrent text edits while the panel holds an edit] → `editSceneDocument` re-parses the current document text on
   each write, and a failed lookup of the entity or component is reported as "no longer exists".
 - [Reference checks cannot see unmodeled components that refer to entities (`DependenciesComponent`)] → document as
   a limit; the check covers modeled references only.

@@ -42,7 +42,7 @@ class ProjectSceneViewHost(
     override fun select(file: VirtualFile, entityId: String) = selectEntityInAbyssusView(project, file, entityId)
     override fun lightActions(file: VirtualFile, position: () -> Vector3) = AddLightGroup(project, file, position)
     override fun assetActions(file: VirtualFile, position: () -> Vector3) =
-        AddAssetGroup(project, file, metaFiles, position)
+        AddAssetGroup(project, file, metaFiles, position, meshes = projectModelMeshes(file))
 
     override fun pathActions(file: VirtualFile, start: (BaseMeta) -> Unit) =
         AddPathArrangementGroup(project, file, start)

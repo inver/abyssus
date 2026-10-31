@@ -4,7 +4,11 @@
  */
 package net.nevinsky.abyssus.app.game.controlline
 
+import net.nevinsky.abyssus.app.game.controlline.ai.DangerGauge
 import net.nevinsky.abyssus.app.game.controlline.ai.F2bBot
+import net.nevinsky.abyssus.app.game.controlline.ai.Handling
+import net.nevinsky.abyssus.app.game.controlline.ai.InstructorControl
+import net.nevinsky.abyssus.app.game.controlline.ai.rescuePilot
 import net.nevinsky.abyssus.app.game.controlline.ai.f2bBot
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightControlSource
@@ -63,6 +67,10 @@ class FlightRunner(
     var bot: F2bBot? = null
         private set
 
+    /** The instructor beside the player in an instructed flight, or null. */
+    var instructor: InstructorControl? = null
+        private set
+
     /** The flight being flown, or null. */
     var flying: Screen.Flying? = null
         private set
@@ -84,7 +92,7 @@ class FlightRunner(
             is Screen.Flying -> {
                 s.advance(seconds)
                 judge?.let { guide?.update(it) }
-                flying?.let { f -> reportOf(s, f.mode, judge, f.plane.name, scaleJudge)?.let(flow::flightEnded) }
+                flying?.let { f -> reportOf(s, f.mode, judge, f.plane.name, scaleJudge, instructor)?.let(flow::flightEnded) }
             }
             // the plane comes to rest; the flight itself is over
             is Screen.GameOver, is Screen.NameEntry -> s.advance(seconds)
@@ -123,7 +131,14 @@ class FlightRunner(
         guide = pattern?.takeIf { it.level.guided }?.let { GuidePlanner(screen.plane.lineLength) }
         input.reset()
         val control: FlightControlSource = when (screen.control) {
-            Control.HUMAN -> HumanControl(input)
+            Control.HUMAN -> HumanControl(input).let { human ->
+                if (!screen.instructor) human else {
+                    val settings = plane.getComponent(PlaneComponent::class.java)
+                    val mass = plane.getComponent(RigidBodyComponent::class.java)?.mass ?: screen.plane.mass
+                    val handling = Handling(settings, mass)
+                    InstructorControl(human, DangerGauge(handling), rescuePilot(settings.lineLength, handling)).also { instructor = it }
+                }
+            }
             Control.AI -> {
                 // the bot flies the plane's own settings, and only reads the judge
                 val settings = plane.getComponent(PlaneComponent::class.java)
@@ -143,6 +158,7 @@ class FlightRunner(
         scaleJudge = null
         guide = null
         bot = null
+        instructor = null
         scene = null
         flying = null
     }

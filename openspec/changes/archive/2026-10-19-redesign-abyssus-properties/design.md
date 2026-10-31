@@ -67,7 +67,7 @@ runtime uses.
 
 ### D6. Enabled in the UI
 The tree eye and the section check box are the same action: `SetEnabledAction(target, enabled)` in `lib-core-editor`
-(`HeadlessEditing` can run it) producing one `DocumentTextEditor` transform, called through `editSceneJson`. Togglable
+(`HeadlessEditing` can run it) producing one `DocumentTextEditor` transform, called through `editSceneDocument`. Togglable
 means: not `GROUP`, not `NameComponent` / `ParentComponent` / `PositionComponent` (the board shows no toggle on those).
 Scene settings keep their `<x>Enabled` keys and use the same check box widget.
 

@@ -16,6 +16,11 @@ abstract class AddChildGroup<T>(title: String) : DefaultActionGroup(title, true)
     protected abstract fun addTarget(target: T)
 
     protected fun addChild(target: T, label: String, literalName: Boolean = false) {
+        add(childAction(target, label, literalName))
+    }
+
+    /** The choice that adds [target]; a group that lists its choices when it opens builds them with this. */
+    protected fun childAction(target: T, label: String, literalName: Boolean = false): AnAction {
         val child = object : AnAction(label), DumbAware {
             override fun getActionUpdateThread() = ActionUpdateThread.BGT
             override fun update(e: AnActionEvent) {
@@ -25,6 +30,6 @@ abstract class AddChildGroup<T>(title: String) : DefaultActionGroup(title, true)
             override fun actionPerformed(e: AnActionEvent) = addTarget(target)
         }
         if (literalName) child.templatePresentation.setText(label, false)
-        add(child)
+        return child
     }
 }

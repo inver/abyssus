@@ -113,7 +113,7 @@ task runs. Infinite limits are not written.
 |---|---|---|
 | `ComponentSchemaReader`, `SchemaJson`, `SchemaFile`, registry, export | caller's; export runs in the game's own JVM | none |
 | `ComponentSchemas` parsing | pooled thread, triggered by VFS / extension events; publishes a snapshot read on the EDT | none |
-| `ComponentEditor` edits | inside `editSceneJson`, on the EDT, as today | none |
+| `ComponentEditor` edits | inside `editSceneDocument`, on the EDT, as today | none |
 
 ### 7. Testable without Swing, GL or the platform
 

@@ -7,14 +7,14 @@ import com.fasterxml.jackson.databind.node.DecimalNode
 import com.fasterxml.jackson.databind.node.IntNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.dto.ENTITY_DISABLED_FLAG
-import net.nevinsky.abyssus.lib.core.format.FLAGS_KEY
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.ecs.EcsLoadingWarns
 import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.FLAGS_KEY
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import java.math.BigDecimal
 import kotlin.math.abs
@@ -99,7 +99,9 @@ class EcsWriter(
             val flags = header.flags or if (header.entityEnabled) 0 else ENTITY_DISABLED_FLAG
             if (flags != 0) out.put(FLAGS_KEY, flags)
         }
-        if (disabled.isNotEmpty()) out.putArray("disabledComponents").also { list -> disabled.forEach(list::add) }
+        if (disabled.isNotEmpty()) {
+            out.putArray("disabledComponents").also { list -> disabled.forEach(list::add) }
+        }
         out.set<JsonNode>("components", components)
         return out
     }

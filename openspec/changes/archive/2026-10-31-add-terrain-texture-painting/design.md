@@ -111,14 +111,14 @@ warning; nothing here touches the UI.
 `assets/<name>/` (`createdDirs`) holding `meta.json` (`format`, `formatVersion`, `version`, `lastModified`, fresh `uuid`,
 `type: "TEXTURE"`, `additional.file: "splat.png"`, compact, built like `TerrainAssetWriter`) and `splat.png`, plus the
 terrain's `meta.json` with `splatMap` set. The folder name is `texture_<terrain>_splat`, or `_2`, `_3` while taken; the
-transaction's `Collision` check is the backstop. **Why not `editSceneJson`:** it makes one undoable command on one
+transaction's `Collision` check is the backstop. **Why not `editSceneDocument`:** it makes one undoable command on one
 document, and this step creates a folder and two files and changes a third, which must undo together. The terrain
 `meta.json` text for the transaction comes from lib-core-editor's `DocumentTextEditor` (the same transform
-`editSceneJson` uses), so formatting, key order and number text are kept; the transaction's `expectedFiles` and
+`editSceneDocument` uses), so formatting, key order and number text are kept; the transaction's `expectedFiles` and
 `before` bytes (the editors' current text, as `readTerrainFolder` reads it) refuse the step if the file changed since.
 Assigning or clearing one layer slot is a single-document edit and **does** use the existing meta editing path
-(`editSceneJson` with `AssetMetaEditor`), the same as the Properties panel's six pickers.
-*Alternative: create the texture asset first, then link it with `editSceneJson`.* Rejected: two undo steps, and an
+(`editSceneDocument` with `AssetMetaEditor`), the same as the Properties panel's six pickers.
+*Alternative: create the texture asset first, then link it with `editSceneDocument`.* Rejected: two undo steps, and an
 Undo of the second leaves an orphan asset with the first still applied.
 
 **10. Commit: encode off the AWT thread, apply on it.** On release, the stroke copies the draft pixels, encodes the PNG

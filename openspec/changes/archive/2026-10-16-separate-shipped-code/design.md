@@ -112,7 +112,7 @@ top-level `main` functions; they are not objects.
   its root node so the text is parsed once. Confirm the exact class names (`DocumentParsing`, `SceneParamsSource`) when
   implementing.
 - The game's scene loader ignores the two keys as unknown properties.
-- Writes don't change: ray settings are written through `editSceneJson` / `DocumentTextEditor` as today, never by
+- Writes don't change: ray settings are written through `editSceneDocument` / `DocumentTextEditor` as today, never by
   serializing the DTO.
 
 This also removes a subtle conversion. Today an omitted field reaches the codec as its default, through the

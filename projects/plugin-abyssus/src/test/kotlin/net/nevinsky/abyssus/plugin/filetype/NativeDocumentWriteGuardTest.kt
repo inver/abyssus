@@ -17,7 +17,7 @@ class NativeDocumentWriteGuardTest : BasePlatformTestCase() {
                 val file = myFixture.addFileToProject(path, text).virtualFile
                 val document = FileDocumentManager.getInstance().getDocument(file)!!
                 var called = false
-                assertFalse(editSceneJson(project, file, "Edit") { called = true; (it as ObjectNode).put("name", "Changed"); true })
+                assertFalse(editSceneDocument(project, file, "Edit") { called = true; (it as ObjectNode).put("name", "Changed"); true })
                 assertFalse(called)
                 if (extension != "json") {
                     val manager = FileEditorManager.getInstance(project)
@@ -35,9 +35,9 @@ class NativeDocumentWriteGuardTest : BasePlatformTestCase() {
         val text = """{"format":"abyssus","formatVersion":1,"name":"Native"}"""
         val file = myFixture.addFileToProject("Native.scene", text).virtualFile
         val document = FileDocumentManager.getInstance().getDocument(file)!!
-        assertFalse(editSceneJson(project, file, "Remove marker") { (it as ObjectNode).remove("format"); true })
+        assertFalse(editSceneDocument(project, file, "Remove marker") { (it as ObjectNode).remove("format"); true })
         assertEquals(text, document.text)
-        assertFalse(editSceneJson(project, file, "Legacy payload") { (it as ObjectNode).putObject("ecs").putObject("componentIdentifiers"); true })
+        assertFalse(editSceneDocument(project, file, "Legacy payload") { (it as ObjectNode).putObject("ecs").putObject("componentIdentifiers"); true })
         assertEquals(text, document.text)
         assertEquals(text, String(file.contentsToByteArray(), file.charset))
     }
@@ -48,7 +48,7 @@ class NativeDocumentWriteGuardTest : BasePlatformTestCase() {
         val editor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
         val document = FileDocumentManager.getInstance().getDocument(file)!!
         val before = document.text
-        assertTrue(editSceneJson(project, file, "Rename") { (it as ObjectNode).put("name", "Changed"); true })
+        assertTrue(editSceneDocument(project, file, "Rename") { (it as ObjectNode).put("name", "Changed"); true })
         assertTrue(document.text.contains("1.00"))
         com.intellij.openapi.command.undo.UndoManager.getInstance(project).undo(editor)
         assertEquals(before, document.text)

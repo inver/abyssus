@@ -192,7 +192,7 @@ Rule: code that **creates** a native document or **reads known fields** from one
 
 The tree stays in the places whose job is losslessness, and only there (these are the allowlist of the guard test):
 
-- the edit paths behind `editSceneJson`: `DocumentTextEditor`, `ComponentEditor`, `AssetMetaEditor`, `SceneDocument`,
+- the edit paths behind `editSceneDocument`: `DocumentTextEditor`, `ComponentEditor`, `AssetMetaEditor`, `SceneDocument`,
   `SceneEntityTree` and the transform writers (a DTO round trip would reformat numbers, reorder keys and drop unknown
   extension data, which the Hard rules forbid);
 - `WeatherPresetDraft`, which copies a source preset's number text and unknown keys into the new one;

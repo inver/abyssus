@@ -35,7 +35,7 @@ See proposal.md - Why. The code today:
 
 **Non-Goals:**
 
-- Moving the scene view onto the Ashley engine, or `ComponentEditor`, `LightEntities`, `SceneJson` and `editSceneJson`
+- Moving the scene view onto the Ashley engine, or `ComponentEditor`, `LightEntities`, `SceneJson` and `editSceneDocument`
   out of the plugin.
 - Changing what the loader reads or warns about.
 

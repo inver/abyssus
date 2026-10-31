@@ -34,7 +34,7 @@ terrains).
   any scale and rotation.
 - The whole decision in a plain class with no Swing, GL or platform, so it is unit-testable headlessly — the same reason
   `ScenePicker`, `GizmoDrag` and `SceneMarkers` are separated out (`docs/ai/conventions.md`).
-- No new write path: the same `editSceneJson` command, the same fields and the same formatting behaviour as a move drag.
+- No new write path: the same `editSceneDocument` command, the same fields and the same formatting behaviour as a move drag.
 
 **Non-Goals:**
 
@@ -152,7 +152,7 @@ GL-populated renderer into every unit test.
 The Y arithmetic uses Double before converting back to Float to avoid cancellation when dropping from a high origin.
 The drop produces a `TransformEdit(position = ...)` whose position is the entity's current position with only `y`
 changed, and hands it to the existing `SceneView.onTransform`, which reaches `SceneFileEditor.applyTransform` and
-`editSceneJson` unchanged. `SceneTransformWriter` writes only the fields that differ, so `x` and `z` keep their text.
+`editSceneDocument` unchanged. `SceneTransformWriter` writes only the fields that differ, so `x` and `z` keep their text.
 `applyTransform` names the undo command from `edit.rotation != null`, so a drop's undo reads as "Move Entity" beside a
 gizmo move's — correct, since it is one. No new command string, no new writer, and the preview the view already applies
 for drags is reused so the object does not jump back before the document listener re-reads the file.

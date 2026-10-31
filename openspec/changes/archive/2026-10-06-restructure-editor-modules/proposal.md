@@ -38,7 +38,7 @@ the work can stop after any stage.
   layer, components and schemas editing, terrain generation, asset meta editing, scene content, picking, gizmo math,
   transform edits and the ray tracing bridge. The module depends on `core`, `runtime`, `raytracing` and `gdx-model`
   and may not import IntelliJ, Swing or AWT (the Gradle classpath enforces it). The plugin keeps only IDE glue:
-  `editSceneJson`, tree, tool windows, dialogs, the canvas host, actions, file types and the VFS wiring.
+  `editSceneDocument`, tree, tool windows, dialogs, the canvas host, actions, file types and the VFS wiring.
 - **Stage 4 (decision gate, may be dropped): `editor-render`.** The libGDX rendering pass (`SceneRenderer`, shadows,
   fog, sky, gizmo drawing) is IDE-independent too. Extract it only if one of these holds: a standalone viewer or a
   headless render test is wanted, or GL tests need to run without the IDE test framework. Otherwise it stays.
@@ -52,7 +52,7 @@ slice carries its tests.
 ### Out of scope
 
 - Behavior and file formats (`format: "abyssus"`, `formatVersion: 1`) are unchanged; every scene, `.abss` and
-  `meta.json` write still goes through `editSceneJson`.
+  `meta.json` write still goes through `editSceneDocument`.
 - Replacing the editor's JSON-based read model with the Ashley engine, and the reverse (see design D3).
 - Renaming `gdx-model`'s own packages (`core.mesh`, `core.model`, …). Only the shared root package is cleaned up; a
   wider rename is recorded as an open decision.

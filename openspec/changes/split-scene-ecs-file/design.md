@@ -3,7 +3,7 @@
 ## Context
 
 Today one JSON document per scene carries settings and an id-keyed `ecs` map. Everything that edits a scene goes
-through `editSceneJson` (one document, one undoable command) and `DocumentTextEditor`; loading goes through
+through `editSceneDocument` (one document, one undoable command) and `DocumentTextEditor`; loading goes through
 `SceneParser`/`SceneLoader`, with an unsaved-buffer path. See proposal.md for motivation. `typed-scene-ecs` (16/17
 tasks) defines the id-keyed map and `EntityDto`; this change builds on it and must be applied after it is archived.
 
@@ -30,7 +30,7 @@ tasks) defines the id-keyed map and `EntityDto`; this change builds on it and mu
    binding (`SceneDto.ecs` keeps its typed form; only the source changes). Array order is load order and write order.
 4. **A scene document set.** Introduce one value in `lib-core-editor` holding the `.scene` tree and the ECS tree
    (`SceneJson` for each; the ECS root is an array). `DocumentTextEditor` edits either tree and reports which changed.
-   `editSceneJson` takes the pair, writes only changed documents inside one `WriteCommandAction` with a shared group id
+   `editSceneDocument` takes the pair, writes only changed documents inside one `WriteCommandAction` with a shared group id
    so Undo is one step. Alternative: two commands with a merged undo group. Rejected: easier to get half-undone.
 5. **Loading.** `SceneParser.parse(sceneText, ecsText?)` validates the scene, then the array, then binds once. The
    plugin supplies unsaved buffers for both files; `SceneLoader.load(name)` reads both files. The array is bound by the

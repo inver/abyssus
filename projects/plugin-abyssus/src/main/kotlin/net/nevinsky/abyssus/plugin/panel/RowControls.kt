@@ -19,6 +19,7 @@ import net.nevinsky.abyssus.plugin.filetype.TreeActionIcons
 import net.nevinsky.abyssus.plugin.projectView.DesignColors
 import net.nevinsky.abyssus.plugin.ui.CommitOutcome
 import net.nevinsky.abyssus.plugin.ui.checkEditor
+import com.intellij.ui.SimpleListCellRenderer
 import net.nevinsky.abyssus.plugin.ui.choiceEditor
 import net.nevinsky.abyssus.plugin.ui.textEditor
 import java.awt.*
@@ -99,9 +100,19 @@ fun rowComponent(row: Row, hooks: RowHooks): JComponent = (row as? TextRow)?.fie
 
     is VectorRow -> vectorRow(row.label, row.axes, row.dim, hooks)
     is ChoiceRow -> editable(row.label, row.field, row.dim, null, hooks) { ref, error ->
-        val choices = (if (row.optional) listOf("") else emptyList()) + row.choices
-        choiceEditor(choices.ifEmpty { listOf(row.value) }, row.value, error) { hooks.commit(ref, it) }
-            .also { it.pinFieldHeight(PanelMetrics.scaled(220)) }
+        // a stored value the choices lack (a mesh the model no longer has) stays selectable and shows as a warning
+        val choices = (if (row.optional) listOf("") else emptyList()) + row.choices +
+                (if (row.unknown) listOf(row.value) else emptyList())
+        val shown = { choice: String -> if (choice.isEmpty() && row.emptyLabel != null) row.emptyLabel else choice }
+        val renderer = SimpleListCellRenderer.create<String>("") { shown(it) }
+        choiceEditor(choices.ifEmpty { listOf(row.value) }, row.value, error, renderer) { hooks.commit(ref, it) }
+            .also {
+                it.pinFieldHeight(PanelMetrics.scaled(220))
+                if (row.unknown) {
+                    it.putClientProperty("JComponent.outline", "warning")
+                    it.toolTipText = row.unknownText
+                }
+            }
     } ?: fieldRow(row.label, readonlyValue(row.value, row.dim))
 
     is CheckRow -> editable(row.label, row.field, row.dim, null, hooks) { ref, error ->

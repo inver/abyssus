@@ -3,7 +3,7 @@
 ## Context
 
 Read `proposal.md` for S1–S6. Constraints that decide the shape:
-- Every document edit stays on `editSceneJson`: one undoable command, formatting and number text kept. The module
+- Every document edit stays on `editSceneDocument`: one undoable command, formatting and number text kept. The module
   split must not add a second writer. What moves is the *mutation of a JSON tree* (pure functions on `JsonNode`);
   the `WriteCommandAction` shell stays in the plugin.
 - Libraries stay plain JVM wired by constructors, no `object`/`companion object` (the `checkNoSingletons` rule applies
@@ -57,8 +57,8 @@ and rejection reasons stay unchanged. Neither `core` nor `runtime` depends on `e
 | `…editor.terrain` | generation, noise, recipe, new-terrain file logic |
 | `…editor.meta` | `AssetMetaEditor`, field descriptions, `MetaRows`, `AssetReferenceChoices`, `PanelState` (the part without Swing) |
 | `…editor.ray` | `RaySceneSnapshots`, `RayViewFeed`, `RayViewRuntime`, `RayBackendService`, `RayFeasibilityLoop`, `RayModeState`, `RaySkyBaker`, `RayBackendSelector`, `RayDiagnostics` and the other plain `Ray*` files; `RayIntegration` (wired from `CoreServices`) stays in the plugin |
-| `…editor.headless` | `HeadlessEditing`: validate and edit native documents as text (spec `headless-scene-editing`), over `DocumentTextEditor` in `editor.document`, the transform the plugin's `editSceneJson` also runs |
-| plugin (root) | `editSceneJson`, project view pane, tree nodes, actions, tool window factories, dialogs and forms (Swing), `SceneViewPanel`, `SceneFileEditor`, `GuardedGLCanvas`, file types, listeners, `AbyssusCore`, VFS wiring |
+| `…editor.headless` | `HeadlessEditing`: validate and edit native documents as text (spec `headless-scene-editing`), over `DocumentTextEditor` in `editor.document`, the transform the plugin's `editSceneDocument` also runs |
+| plugin (root) | `editSceneDocument`, project view pane, tree nodes, actions, tool window factories, dialogs and forms (Swing), `SceneViewPanel`, `SceneFileEditor`, `GuardedGLCanvas`, file types, listeners, `AbyssusCore`, VFS wiring |
 
 `content` stays a leaf (D5): the read model that depends on `document` and `components` lives in `editor.scene`, and
 `SceneRaySettings` is in `document` so that `scene` does not depend on `ray` while `ray` depends on `scene`. Both
@@ -79,7 +79,7 @@ only if the codec layer grows a second copy of component rules.
 Ashley `SceneEngine`; both bind components through the shared `runtime` codecs. The entity layout
 (`ecs[.entities].<id>.components`) is defined once, by the private `SceneEcsPaths` in
 `editor/document/SceneDocument.kt`: readers go through `SceneDocument` / `EntityView`, writers through
-`SceneEntityTree` (address lookup, entity insertion, archetype matching) on a tree that `editSceneJson` has already
+`SceneEntityTree` (address lookup, entity insertion, archetype matching) on a tree that `editSceneDocument` has already
 admitted. No other main source names `components` or the entity map.
 
 ### D4. `SceneDocument` (stage 2)

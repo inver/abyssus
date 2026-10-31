@@ -6,24 +6,20 @@
 package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.dto.ENTITY_DISABLED_FLAG
-import com.fasterxml.jackson.databind.node.ArrayNode
+import net.nevinsky.abyssus.lib.core.dto.EntityDto
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.format.entityTypeOf
-import net.nevinsky.abyssus.lib.core.format.isComponentEnabled
-import net.nevinsky.abyssus.lib.core.format.FLAGS_KEY
-import net.nevinsky.abyssus.lib.core.format.entityFlags
-import net.nevinsky.abyssus.lib.core.format.isEntityEnabled
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
 
 /** What an enable or disable edit addresses: a whole entity, or one component entry of it. */
 sealed interface EnabledTarget {
-    val entityId: String
+    val entityId: Long
 
-    data class Entity(override val entityId: String) : EnabledTarget
+    data class Entity(override val entityId: Long) : EnabledTarget
 
     /** [kind] is the component's key in the scene, short or fully qualified. */
-    data class Component(override val entityId: String, val kind: String) : EnabledTarget
+    data class Component(override val entityId: Long, val kind: String) : EnabledTarget
 }
 
 /**
@@ -32,6 +28,13 @@ sealed interface EnabledTarget {
  * `editSceneJson` or [net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEditing].
  */
 class SetEnabledAction {
+
+    private val FIXED = setOf(
+        NameComponent::class.java.simpleName,
+        ParentComponent::class.java.simpleName,
+        PositionComponent::class.java.simpleName
+    )
+
     /** True when [kind] can be switched: every component except Name, Parent and Position. */
     fun isTogglable(kind: String): Boolean = kind.substringAfterLast('.') !in FIXED
 
@@ -39,63 +42,25 @@ class SetEnabledAction {
     fun isTogglable(entity: JsonNode): Boolean =
         entityTypeOf(entity) != "GROUP"
 
-    /** True when the entry is currently enabled (no flag, or `true`). */
-    fun isEnabled(root: JsonNode, target: EnabledTarget): Boolean =
-        entry(root, target)?.let {
-            if (target is EnabledTarget.Entity) isEntityEnabled(it) else isComponentEnabled(entityEntry(root, target), (target as EnabledTarget.Component).kind)
-        } ?: true
 
     /**
-     * Sets the flag of [target] in the scene tree [root]. Returns false, with [root] untouched, when the entry is missing,
-     * cannot be switched, or already has that state.
+     * Sets the flag of [target] in the scene tree [root]. Returns false, with [root] untouched, when the entry is
+     * missing, cannot be switched, or already has that state.
      */
-    fun apply(root: JsonNode, target: EnabledTarget, enabled: Boolean): Boolean {
-        val entry = entry(root, target) as? ObjectNode ?: return false
-        when (target) {
-            is EnabledTarget.Entity -> if (!isTogglable(entry)) return false
-            is EnabledTarget.Component -> if (!isTogglable(target.kind)) return false
+    fun apply(entities: List<EntityDto>, target: EnabledTarget, enabled: Boolean): Boolean {
+        val entity = entities.single { it.header().id == target.entityId }
+        if (target is EnabledTarget.Entity) {
+            entity.header().entityEnabled = enabled
+            return true
         }
-        if (target is EnabledTarget.Entity) return setEntityFlag(entry, enabled)
-        return setComponentListed(entityEntry(root, target) as? ObjectNode ?: return false, (target as EnabledTarget.Component).kind, enabled)
-    }
 
-    /** Lists or unlists [kind] in the entity's `disabledComponents`; the key is inserted for the first name and removed with the last. */
-    private fun setComponentListed(entity: ObjectNode, kind: String, enabled: Boolean): Boolean {
-        val short = kind.substringAfterLast('.')
-        val listed = entity.get(DISABLED_KEY) as? ArrayNode
-        val index = listed?.indexOfFirst { it.isTextual && it.textValue().substringAfterLast('.') == short } ?: -1
-        if (enabled) {
-            if (listed == null || index < 0) return false
-            listed.remove(index)
-            if (listed.isEmpty) entity.remove(DISABLED_KEY)
-        } else {
-            if (index >= 0) return false
-            (listed ?: entity.putArray(DISABLED_KEY)).add(kind)
-        }
+        entity.header().disabledComponents.addAll(
+            entity.components
+                .filter { it.javaClass.simpleName == (target as EnabledTarget.Component).kind }
+                .map { it.javaClass }
+        )
         return true
     }
 
-    private fun entityEntry(root: JsonNode, target: EnabledTarget): JsonNode? =
-        SceneEntityTree(root).entities()?.get(target.entityId)?.takeIf { it.isObject }
 
-    /** Sets or clears the disabled bit of `flags`, keeping its other bits; `flags` is only inserted for a set bit. */
-    private fun setEntityFlag(entry: ObjectNode, enabled: Boolean): Boolean {
-        val flags = entityFlags(entry)
-        val next = if (enabled) flags and ENTITY_DISABLED_FLAG.inv() else flags or ENTITY_DISABLED_FLAG
-        if (next == flags) return false
-        if (next == 0) entry.remove(FLAGS_KEY) else entry.put(FLAGS_KEY, next)
-        return true
-    }
-
-    private fun entry(root: JsonNode, target: EnabledTarget): JsonNode? {
-        val tree = SceneEntityTree(root)
-        return when (target) {
-            is EnabledTarget.Entity -> tree.entities()?.get(target.entityId)?.takeIf { it.isObject }
-            is EnabledTarget.Component -> tree.components(target.entityId)?.get(target.kind)?.takeIf { it.isObject }
-        }
-    }
-
-    private val DISABLED_KEY = "disabledComponents"
-
-    private val FIXED = setOf("NameComponent", "ParentComponent", "PositionComponent")
 }

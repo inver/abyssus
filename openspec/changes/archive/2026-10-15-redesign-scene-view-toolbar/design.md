@@ -41,7 +41,7 @@ fields; it stays the single enabled-state function). It notifies one listener, `
 ### D3. Snap and local space are drag-math parameters
 `lib-core-editor` gets `SnapRound` (step rounding for translation along an axis, 15 degree rounding for angles) and
 `GizmoSpace` (axes from an object rotation; identity for World). `GizmoHandles` takes the axes, `GizmoDrag` applies
-`SnapRound` to its result before the preview and before the existing single `editSceneJson` write, so Escape and the
+`SnapRound` to its result before the preview and before the existing single `editSceneDocument` write, so Escape and the
 single-undo behavior are unchanged. Rotation in Local uses the object's own axis; the written value is converted to the
 same `localRotation` fields the World path writes. Unit tests cover rounding, local axes at 0 and 90 degrees, and that
 unchanged numbers keep their text.

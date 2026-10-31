@@ -6,10 +6,13 @@
 package net.nevinsky.abyssus.lib.core.ecs
 
 import com.badlogic.ashley.core.Entity
+import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import net.nevinsky.abyssus.lib.core.dto.EntityDto
 import net.nevinsky.abyssus.lib.core.dto.EntityType
 import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
@@ -34,6 +37,7 @@ import net.nevinsky.abyssus.lib.core.format.entityTypeOf
 class EntityDtoModule(registry: ComponentRegistry) : SimpleModule("AbyssusEntity") {
     init {
         addDeserializer(EntityDto::class.java, EntityDeserializer(registry))
+        addSerializer(EntityDto::class.java, EntitySerializer(registry))
     }
 }
 
@@ -43,6 +47,15 @@ private const val COMPONENTS = "components"
 
 const val ENTITY_DISABLED_FLAG = 1
 
+private class EntitySerializer(registry: ComponentRegistry) : StdSerializer<EntityDto>(EntityDto::class.java) {
+    override fun serialize(
+        value: EntityDto?,
+        gen: JsonGenerator?,
+        provider: SerializerProvider?
+    ) {
+        TODO("Not yet implemented")
+    }
+}
 
 private class EntityDeserializer(private val registry: ComponentRegistry) :
     StdDeserializer<EntityDto>(Entity::class.java) {

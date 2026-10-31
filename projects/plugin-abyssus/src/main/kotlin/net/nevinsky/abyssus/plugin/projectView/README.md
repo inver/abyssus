@@ -1,7 +1,7 @@
 # projectView
 
 The **Abyssus** pane of the Project tool window: the project / scene / entity / asset tree, its row actions, and
-the row actions that call `editSceneJson` (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`), the write path every scene edit uses. Required behavior: `openspec/specs/abyssus-project-view` and
+the row actions that call `editSceneDocument` (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`), the write path every scene edit uses. Required behavior: `openspec/specs/abyssus-project-view` and
 `openspec/specs/abyssus-scene-skybox`.
 
 ## Pieces
@@ -15,23 +15,23 @@ the row actions that call `editSceneJson` (`projects/plugin-abyssus/src/main/kot
 | `AbyssusTreeRefresh` | The pane's refresh coordinator, alive as long as the pane: plugin edits (`AbyssusSceneEdited`), document changes (typing, Undo/Redo, unsaved text) and this project's VFS create/delete/move/rename/content events for `.scene`, `.abss`, `meta.json` and folders under `assets` mark the tree stale; `lib-core-editor`'s `RefreshCoalescer` turns a burst into one `updateFromRoot`, plus one more when an event arrives during it; selection and expansion are captured on the EDT as row identities (`NavigationState`: the entry or asset path, never a label) and restored with `restoreNavigation`, so a removed selection stays cleared. Unrelated files do not rebuild; a refresh writes nothing and adds no undo entry; disposal cancels pending work `selectAfterRebuild` makes a selection requested right after a plugin edit (the row it just created) win over the selection the pending rebuild restores; `selectInAbyssusView` uses it while a rebuild is pending. |
 | `AssetReadCache` | Parsed files per project, re-read when the reader's `stamp` changes. It takes its readers by constructor; only the one-argument constructor the platform calls looks them up. `AddAssetGroup`, `addComponentGroup` and the add-component choices take `MetaFiles` the same way, resolved in the action's `perform` |
 | `RowActions.kt` | What a row paints at its right edge: eye, "View", the amber `unused` text; the `game` badge is painted by the row renderer (`GameBadge.kt`, decided by `isGameComponent`) |
-| `scene/SceneComponentEdits.kt` | Add, update and remove a component as undoable `editSceneJson` commands; also lists a project's model and terrain assets |
+| `scene/SceneComponentEdits.kt` | Add, update and remove a component as undoable `editSceneDocument` commands; also lists a project's model and terrain assets |
 | `ComponentActions.kt`, `ComponentTarget.kt` | The **Add Component...** / **Remove Component** / **Remove Entity** tree actions and the entity or component a row stands for; `RemoveEntityAction` (entity rows only) removes that one entity through `SceneComponentEdits.removeEntity` as one undoable command that is also a project-level (`global`) one, so Undo and Redo work with the tree focused, and shows the refusal of `EntityRemoval` when another entity still refers to it or an arrangement owns copies. It supersedes the archived `redesign-project-view-menus` statement that entity menus are unchanged; `AddComponentOnEcsAction` is Add Component... on a scene's `ecs` row, creating a new `Entity <id>` with the chosen component (`SceneComponentEdits.addAsNewEntity`, inserted by `SceneEntities`) |
-| `EnabledToggle.kt` | The writes built on `editSceneJson`: `toggleEnabled`, `renameScene`, `setSkybox` |
+| `EnabledToggle.kt` | The writes built on `editSceneDocument`: `toggleEnabled`, `renameScene`, `setSkybox` |
 | `AbyssusTreeAction` | The Template Method of a right-click action: `targetOf` (the node it applies to), `isEnabled`, `perform`; `update` and `actionPerformed` are final and read the one selection lookup, `selectedNode`. Rename Scene, New Terrain, New Foliage, Import Model, Import FlightGear, New UI Asset and the component and light actions extend it; tests replace `selected` |
 | `RenameSceneAction` | Right-click **Rename Scene...**: offered on any scene row — a standalone `.scene` at the top of the view and a scene listed under a project — starting from the scene's current `name` and editing only `name` in one undoable command. Right-click menus group creation/import actions under **Import Model** (Import FlightGear Aircraft, Import Model), **New** (New UI Asset, New Terrain, New Foliage) and **Add** (Add Asset, Add Path Arrangement, Add Light, Add Water); Rename Scene stays flat above **Add** on scene rows.
 | `ImportFlightGearAction.kt`, `FlightGearImportSettings.kt` | Right-click **Import FlightGear Aircraft...** on the Assets node: the dialog over a Swing-free settings model, `importFlightGear` (stage off the EDT through `lib-core-editor`'s `flightgear`, then one undoable `AssetFileCommand`), `importTransaction` and the shared `assetFolderTransaction` |
 | `ImportModelAction.kt`, `ModelImportForm.kt`, `ImportModelDialog.kt` | Right-click **Import Model...** on the Assets node: the source is read once off the EDT (`lib-core-editor`'s `modelimport`), the dialog binds the Swing-free `ModelImportForm` (settings, values read from the file, placement option, Create state), and `importModel` stages and writes the folder, with Add to scene also the entity, in one command |
 | `ImportRefusals.kt` | `projectRefusal`: both import actions refuse a project whose `.abss` is not a supported native document |
 | `preview/ModelPreviewCanvas.kt`, `preview/PreviewFraming.kt` | The dialog's live preview: a `GuardedGLCanvas` with its own `GdxRuntime` context (grid, 1 m post, orbit camera, looping animation) and its Swing-free framing math |
-| `SkyboxChoices.kt`, `SkyboxPickerModel`, `SkyboxChooserDialog` | The skybox list, its filter and selection logic, and the dialog. The dialog opens from the **Browse** button of the skybox field in Abyssus Properties (`SceneDetailsView`, `chooseSkyboxFor`, project scenes only; the tree row has only its eye). Assigning writes only `skyboxName` through `setSkybox` / `editSceneJson`, one undo step, and the tree row follows the `AbyssusSceneEdited` refresh |
+| `SkyboxChoices.kt`, `SkyboxPickerModel`, `SkyboxChooserDialog` | The skybox list, its filter and selection logic, and the dialog. The dialog opens from the **Browse** button of the skybox field in Abyssus Properties (`SceneDetailsView`, `chooseSkyboxFor`, project scenes only; the tree row has only its eye). Assigning writes only `skyboxName` through `setSkybox` / `editSceneDocument`, one undo step, and the tree row follows the `AbyssusSceneEdited` refresh |
 | `EntitySelection.kt` | Selects an entity's row when the scene view picks it |
 | `AbyssusSelection` | Publishes the selected node on `AbyssusSelectionListener.TOPIC` (the properties panel listens) |
 | `UnusedFilter`, `AbyssusFooter` | "Show Only Unused Assets" (per project; the first item of the Options menu, design glyph, amber icon while on; the platform header buttons stay as the platform draws them) and the counts footer |
 | `OpenAbyssusViewActivity` | Switches to this pane on startup only under `-Dabyssus.openView=true` (set by `runIde`) |
 
 Selecting a `.abss` root shows project settings in Abyssus Properties, including the built-in **Physics** checkbox.
-It writes only `physicsEnabled` through `editSceneJson`; missing means off. Scene roots retain their ray properties.
+It writes only `physicsEnabled` through `editSceneDocument`; missing means off. Scene roots retain their ray properties.
 Physics component add/edit choices follow the selected scene's native project settings, including unsaved edits.
 
 ## Icons
@@ -70,7 +70,7 @@ that is missing and for a file in `icons/tree/` that nothing lists; add a new gl
   types retain the generic ECS icon. Both short and fully qualified `TypeComponent` keys are recognized.
 - **After an edit the row is selected again.** An edit changes the row's identity, so the refresh drops the selection
   onto the parent. `reselect` walks back to the same path and restores its expansion.
-- **Every edit of an existing JSON document goes through `editSceneJson`.** It parses the document with `SceneJson`, lets the caller mutate the
+- **Every edit of an existing JSON document goes through `editSceneDocument`.** It parses the document with `SceneJson`, lets the caller mutate the
   tree (returning false writes nothing), re-serializes in the file's style, replaces the text in a named
   `WriteCommandAction`, saves, and publishes `AbyssusSceneEdited.TOPIC`; this pane refreshes on it, and equally on Undo/Redo and external changes, through `AbyssusTreeRefresh`. A new writer should use it and add a `command*` message.
 - **Where an entry writes back.** An entry knows its `source` file and the `parentKeys` leading to its container. A
@@ -86,7 +86,7 @@ that is missing and for a file in `icons/tree/` that nothing lists; add a new gl
 
 `AddLightAction` offers Directional, Sun and Spot on scene rows only, including standalone scene files.
 `AddLightGroup` is shared with the Scene view toolbar. Tree placement is the origin; Spot is 5 units above it.
-`SceneComponentEdits.addLight` writes through `editSceneJson` as one undoable Add Light command, then the action
+`SceneComponentEdits.addLight` writes through `editSceneDocument` as one undoable Add Light command, then the action
 selects the new entity through `selectEntityInAbyssusView`. Invalid scene text disables creation.
 
 ## Add Asset
@@ -158,7 +158,7 @@ their own connections and filters.
 An entity row (not a `GROUP`) and a togglable component row (everything except Name, Parent and Position, the rule of
 `SetEnabledAction`) carry the same eye as a scene setting, built into `DtoRow.enabled` by `ecsRows` / `entityRows`: on when the
 entry has no `enabled` key or `enabled: true`, off for `enabled: false`. A click calls `toggleRow`, which for these rows runs
-`setEnabled` (`filetype/SceneEnabledEdits.kt`): one undoable `editSceneJson` command that writes `enabled: false` on that entry or
+`setEnabled` (`filetype/SceneEnabledEdits.kt`): one undoable `editSceneDocument` command that writes `enabled: false` on that entry or
 removes the key, the same action as the `Enabled` box of the Properties section. A disabled entity grays its row, its component rows
 and their icons (`DtoEntryNode.isDisabled` passes the state down; the icon is `IconLoader.getDisabledIcon`). A merely unused asset
 keeps its normal icon.

@@ -20,7 +20,7 @@
   `RuntimeSceneLoader` is fed from `SceneDto`.
 - `lib-core-editor` (`SceneContent`, `SceneRenderParams`, ray snapshots, `PanelBuilders`, `EcsWriter`) and the plugin
   (`ProjectReader`, `PhysicsOverlayGeometry`, scene view) read entities from the typed map instead of `JsonNode`.
-- Text edits still go through `editSceneJson` and `DocumentTextEditor` on the `SceneJson` tree (the document, not a DTO)
+- Text edits still go through `editSceneDocument` and `DocumentTextEditor` on the `SceneJson` tree (the document, not a DTO)
   so number text and key order survive; they are adapted to the new entity shape.
 - Remove `SourceBackedComponent` (interface, its `EcsLoader`/`JsonProcessor.bindComponent`/`componentTree` hooks). Its only
   implementer, `FoliageComponent`, keeps unmodeled members through Jackson `@JsonAnySetter`/`@JsonAnyGetter`.

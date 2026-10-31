@@ -27,7 +27,7 @@
 
 - [x] 4.1 `SceneModels`/`ModelEntity` request, retain and cache per `ModelKey` through `ViewAssets` (its `invalidate` expands variants, its retain set holds encoded keys); test that two entities with different meshes of one asset get different models and an unknown id skips only that entity.
 - [ ] 4.2 `SceneRenderer`, picking and shadows need no change; verify with `runIde` that an entity naming `meshId` draws, picks and casts a shadow for only that mesh.
-- [x] 4.3 Properties panel: mesh chooser (lists meshes from `ModelMeshLister` off the EDT, a "whole model" entry, shows a stored unknown id in a warning state); choosing writes through `editSceneJson` as one undoable edit and the view redraws on the next frame.
+- [x] 4.3 Properties panel: mesh chooser (lists meshes from `ModelMeshLister` off the EDT, a "whole model" entry, shows a stored unknown id in a warning state); choosing writes through `editSceneDocument` as one undoable edit and the view redraws on the next frame.
 - [x] 4.4 Add Asset (toolbar and tree): a model with more than one mesh gets a mesh submenu plus a whole-model entry, a single-mesh model only the whole-model entry; chosen `meshId` is recorded on the new entity; one undoable edit.
 - [x] 4.5 User-facing strings in `AbyssusBundle.properties`; text produced by lib-core-editor in `AbyssusEditorBundle.properties`.
 

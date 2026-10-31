@@ -13,13 +13,13 @@ import net.nevinsky.abyssus.lib.core.editor.water.WaterEdits
 import net.nevinsky.abyssus.lib.core.water.WaterField
 import net.nevinsky.abyssus.lib.core.water.WaterPreset
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
 
 /** A finished [add]: the new surface's id when it was written. */
 data class WaterAdded(val id: String?, val edit: WaterEdit)
 
 /**
- * Platform adapter over [WaterEdits]: each accepted edit is one undoable scene command through [editSceneJson], the
+ * Platform adapter over [WaterEdits]: each accepted edit is one undoable scene command through [editSceneDocument], the
  * only writer. A rejected or no-op edit creates no undo step and writes nothing.
  */
 class WaterSceneEdits(private val project: Project, private val edits: WaterEdits = WaterEdits()) {
@@ -55,7 +55,7 @@ class WaterSceneEdits(private val project: Project, private val edits: WaterEdit
     /** [global]: the edit starts from the Abyssus tree, so Undo and Redo must reach it with the tree focused, not only from the scene's editor. */
     private fun run(file: VirtualFile, command: String, global: Boolean = false, edit: DocumentEdit<WaterEdit>): WaterEdit {
         var result: WaterEdit = WaterEdit.Unchanged
-        val written = editSceneJson(project, file, AbyssusBundle.message(command), global) { root ->
+        val written = editSceneDocument(project, file, AbyssusBundle.message(command), global) { root ->
             result = edit(root)
             result == WaterEdit.Changed
         }

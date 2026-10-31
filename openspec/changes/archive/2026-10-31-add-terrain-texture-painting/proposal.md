@@ -68,7 +68,7 @@ requirements; the new capability only adds a way to edit the splat map.
   bundle strings.
 - Write path: the PNG and the new asset folder are written as one `AssetTransaction` through `AssetFileCommand`, like
   sculpt strokes. Linking the splat map in the terrain's `meta.json` must keep the file's formatting and number text and
-  stay in the same undo step; how that meets `editSceneJson` is a design decision.
+  stay in the same undo step; how that meets `editSceneDocument` is a design decision.
 - Docs: `docs/ai/file-formats.md` (terrain splat note), `docs/ai/architecture.md`, `projects/lib-core-editor/README.md`,
   the sceneview README.
 - Sequencing: applies after `unify-terrain-brush-modes` (and so after `add-terrain-sculpting`) is archived. It needs the

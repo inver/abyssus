@@ -4,7 +4,7 @@
 
 ### Application
 
-`Field.scene` was edited once through `editSceneJson`, by the env-gated `AirfieldPatchApplicationTest`, with the
+`Field.scene` was edited once through `editSceneDocument`, by the env-gated `AirfieldPatchApplicationTest`, with the
 patch from `layout.py` (its expected SHA-256 matched). Compared with the pre-edit copy:
 
 - Entity 0 (`Field`) now uses `terrain_airfield_site` at (-150, 0, -150).
@@ -66,7 +66,7 @@ reproduces the original scene byte for byte. Pilot, plane, collider, lighting
 and sky data are unchanged.
 
 The user requested application after review of the direct edit. A temporary
-invocation of `editSceneJson` could not run because unrelated existing test
+invocation of `editSceneDocument` could not run because unrelated existing test
 sources failed compilation. That invocation was removed. The approved direct
 application used the actual compiled `AbyssusDocumentFormat` to validate both
 scene documents and all 19 asset metadata documents before writing.

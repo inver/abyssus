@@ -5,9 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
-import net.nevinsky.abyssus.lib.core.util.rawAt
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -43,18 +40,19 @@ import net.nevinsky.abyssus.lib.core.editor.components.AddedEntity
 import net.nevinsky.abyssus.lib.core.editor.components.CopyResult
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
 import net.nevinsky.abyssus.lib.core.editor.components.EntityClipboard
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
 import net.nevinsky.abyssus.lib.core.editor.water.WaterEdit
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.scene.SceneParser
 import net.nevinsky.abyssus.lib.core.water.WaterField
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.ui.AbyssusFileEditorBase
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.SceneRayControls
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
@@ -62,8 +60,9 @@ import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
 import net.nevinsky.abyssus.plugin.filetype.AbyssusSceneEdited
 import net.nevinsky.abyssus.plugin.filetype.ProjectSettingsListener
-import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
 import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
+import net.nevinsky.abyssus.plugin.ui.AbyssusFileEditorBase
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import net.nevinsky.abyssus.plugin.ui.reportRejection
 import net.nevinsky.abyssus.plugin.water.WaterSceneEdits
@@ -88,7 +87,8 @@ private const val RELOAD_PAUSE_MS = 200
 class SceneFileEditor(
     private val project: Project,
     private val file: VirtualFile,
-    private val json: JsonProcessor,
+    private val sceneParser: SceneParser,
+    private val jsonProcessor: JsonProcessor,
     private val rayControls: SceneRayControls,
     private val paramsSource: SceneParamsSource,
     private val host: SceneViewHost,
@@ -136,14 +136,18 @@ class SceneFileEditor(
 
     private fun projectInputs(text: String? = null): Document? = runCatchingKeepingCancellation {
         val abss = ProjectLayout.abssFor(file) ?: return@runCatchingKeepingCancellation null
-        withoutMembers(parseSupportedDocument(text ?: textOf(abss), DocumentKind.PROJECT), listOf("physicsEnabled", "sceneViewAntialiasing"))
+        withoutMembers(
+            parseSupportedDocument(text ?: textOf(abss), DocumentKind.PROJECT),
+            listOf("physicsEnabled", "sceneViewAntialiasing")
+        )
     }.getOrNull()
 
     private fun hasRenderChange(changed: VirtualFile, text: String? = null): Boolean =
         changed == file || projectInputs(text).let { it == null || it != projectInputs }
 
     init {
-        project.messageBus.connect(this).subscribe(ProjectSettingsListener.TOPIC,
+        project.messageBus.connect(this).subscribe(
+            ProjectSettingsListener.TOPIC,
             ProjectSettingsListener { abss, settings ->
                 if (!disposed && abss == ProjectLayout.abssFor(file)) view?.setAntialiasing(settings.antialiasing)
             })
@@ -292,7 +296,8 @@ class SceneFileEditor(
         created.onPaintTextureEnded = { project.service<PaintTextureRequests>().stop(file) }
         (created as? RayControlProvider)?.rayControl?.let { rayControls.register(file, it, created) }
         view = created
-        project.service<PathEditSession>().current?.takeIf { it.file == file }?.let { created.setPathEditing(it.entityId) }
+        project.service<PathEditSession>().current?.takeIf { it.file == file }
+            ?.let { created.setPathEditing(it.entityId) }
         statusText = null
         setContent(created.view)
     }
@@ -301,7 +306,7 @@ class SceneFileEditor(
     internal fun applyTransform(entityId: String, edit: TransformEdit): Boolean {
         val isRotate = edit.rotation != null || edit.target != null
         val command = AbyssusBundle.message(if (isRotate) "commandRotateEntity" else "commandMoveEntity")
-        return editSceneJson(project, file, command) { root -> SceneTransformWriter().apply(root, entityId, edit) }
+        return editSceneDocument(project, file, command) { root -> SceneTransformWriter().apply(root, entityId, edit) }
     }
 
     /**
@@ -323,8 +328,8 @@ class SceneFileEditor(
 
     /** Puts entity [entityId] on the clipboard as text; a refusal is shown to the user. */
     internal fun copyEntity(entityId: String) {
-        val root = runCatchingKeepingCancellation { parseDocument(textOf(file)) }.getOrNull() ?: return
-        when (val copied = EntityClipboard(EditorBundle).copy(root, entityId)) {
+        val sceneDto = runCatchingKeepingCancellation { sceneParser.parse(textOf(file)) }.getOrNull() ?: return
+        when (val copied = EntityClipboard(EditorBundle).copy(sceneDto, entityId)) {
             is CopyResult.Copied -> CopyPasteManager.getInstance().setContents(StringSelection(copied.text))
             is CopyResult.Refused -> reportRejection(project, EditResult.Rejected(copied.reason))
         }
@@ -335,12 +340,14 @@ class SceneFileEditor(
      * when the clipboard holds no copied entity.
      */
     internal fun pasteEntity(point: Vector3): Boolean {
-        val clipboard = EntityClipboard(EditorBundle)
+        val clipboard = EntityClipboard(jsonProcessor, EditorBundle)
         val text = CopyPasteManager.getInstance().getContents<String>(DataFlavor.stringFlavor)
-        if (!clipboard.holdsEntity(text)) return false
+        if (!clipboard.holdsEntity(text)) {
+            return false
+        }
         var added = AddedEntity(EditResult.Unchanged)
-        editSceneJson(project, file, AbyssusBundle.message("commandPasteEntity")) { root ->
-            added = clipboard.paste(root, text, point)
+        editSceneDocument(project, file, AbyssusBundle.message("commandPasteEntity")) { root ->
+            added = clipboard.paste(sceneParser.parse(), text, point)
             added.result == EditResult.Changed
         }
         reportRejection(project, added.result)

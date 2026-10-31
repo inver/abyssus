@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.scene
 
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.storageName
 
 
 /** An entity drawn from a loaded asset. */
@@ -27,7 +28,7 @@ class PlacedEntities<A : Any, E : PlacedEntity<A>>(private val place: (AssetPlac
     fun update(placements: List<AssetPlacement>, assetOf: (String) -> A?) {
         val next = LinkedHashMap<String, E>()
         for (p in placements) {
-            val asset = assetOf(p.assetName) ?: continue
+            val asset = assetOf(p.storageName) ?: continue
             val current = entities[p.entityId]?.takeIf { it.asset === asset }
             next[p.entityId] = if (current?.placement == p) current else place(p, asset, current)
         }

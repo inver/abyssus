@@ -3,6 +3,7 @@ package net.nevinsky.abyssus.lib.core.editor.content
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.assets.ModelKey
 import net.nevinsky.abyssus.lib.core.dto.LIGHT_CONE_ANGLE
 import net.nevinsky.abyssus.lib.core.dto.LIGHT_EDGE_SOFTNESS
 import net.nevinsky.abyssus.lib.core.dto.LIGHT_RANGE
@@ -24,7 +25,19 @@ data class PlacementTransform(val position: Vector3, val rotation: Quaternion, v
 }
 
 /** An entity showing the asset folder [assetName]. [entityId] is its key under `ecs/entities`; picking reports it back. */
-data class AssetPlacement(val entityId: String, val assetName: String, val transform: PlacementTransform)
+data class AssetPlacement(
+    val entityId: String,
+    val assetName: String,
+    val transform: PlacementTransform,
+    /** The one mesh of a model to draw, or null for the whole model. */
+    val meshId: String? = null,
+)
+
+/**
+ * The name this placement's asset has in the asset storage: the asset folder, or for one mesh of a model its encoded
+ * `ModelKey`. Entities showing different meshes of one model need different built models.
+ */
+val AssetPlacement.storageName: String get() = ModelKey(assetName, meshId).encode()
 
 /** A path arrangement entity: its [arrangement] component as the file holds it (read, never changed, by the view). */
 class ArrangementPlacement(val entityId: String, val arrangement: PathArrangementComponent)

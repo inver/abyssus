@@ -75,7 +75,7 @@ class ComponentEditorTest {
                 "edgeSoftness"
             ), names["LightComponent"]
         )
-        assertEquals(listOf("assetType", "assetName", "shaderKey"), names["RenderComponent"])
+        assertEquals(listOf("assetType", "assetName", "meshId", "shaderKey"), names["RenderComponent"])
         assertEquals(
             listOf("asset.assetName", "spacing", "offset", "sides", "alignToPath", "yawOffset"),
             names["PathArrangementComponent"]

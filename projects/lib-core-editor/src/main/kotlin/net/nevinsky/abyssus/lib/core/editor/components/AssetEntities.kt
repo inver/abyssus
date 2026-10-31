@@ -19,7 +19,7 @@ import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.slf4j.helpers.NOPLogger
 
 /** The result of adding an entity: [entityId] is the new entity's id when [result] is [EditResult.Changed]. */
-data class AddedEntity(val result: EditResult, val entityId: String? = null)
+data class AddedEntity(val result: EditResult, val entityId: Long? = null)
 
 /**
  * Adds a project's model or terrain to a scene as a new entity: a name (`Model <id>` / `Terrain <id>`), a type
@@ -35,9 +35,9 @@ class AssetEntities(private val messages: EditorMessages) {
 
     /**
      * Adds [asset] at [point]. A terrain of [terrainSize] (world units; null when unknown) is centred on [point]; without
-     * a size its corner is put there.
+     * a size its corner is put there. A model with [meshId] draws only that mesh; the id is ignored for a terrain.
      */
-    fun add(root: JsonNode, asset: BaseMeta, point: Vector3, terrainSize: Float? = null): AddedEntity {
+    fun add(root: JsonNode, asset: BaseMeta, point: Vector3, terrainSize: Float? = null, meshId: String? = null): AddedEntity {
         val rejected = AddedEntity(EditResult.Rejected(messages.message("componentSceneUnreadable")))
         if (asset.type !in setOf(MetaType.MODEL, MetaType.TERRAIN) || listOf(
                 point.x,
@@ -62,7 +62,7 @@ class AssetEntities(private val messages: EditorMessages) {
                         if (asset.isTerrain()) "terrain" else "defaultShader",
                         asset.type,
                         asset.name
-                    )
+                    ).also { if (!asset.isTerrain()) it.meshId = meshId?.takeIf(String::isNotEmpty) }
                 ),
             )
             components

@@ -97,7 +97,9 @@ sealed interface Screen {
      * Flying [plane] in [mode] with the handle held by [control]; [attempt] counts from 1 and grows with each retry, so a
      * retry is a new flight.
      */
-    data class Flying(val plane: PlaneChoice, val attempt: Int = 1, val mode: Mode = Mode.Free, val control: Control = Control.HUMAN) : Screen
+    data class Flying(val plane: PlaneChoice, val attempt: Int = 1, val mode: Mode = Mode.Free, val control: Control = Control.HUMAN,
+        val instructor: Boolean = false,
+    ) : Screen
 
     data class Paused(val flying: Flying) : Screen
 
@@ -138,6 +140,18 @@ class GameFlow(
     /** Whether the game should close (Quit). */
     var quit = false
         private set
+
+    /** Whether the Instructor is on for the flights to come: off when the game starts, kept for the session. */
+    var instructor = false
+        private set
+
+    /** Whether plane select offers the Instructor toggle: on any plane select. */
+    val instructorOffered: Boolean get() = screen is Screen.PlaneSelect
+
+    /** Turns the Instructor on or off, on plane select. */
+    fun toggleInstructor() {
+        if (instructorOffered) instructor = !instructor
+    }
 
     /** Whether Free flight can be chosen: there is a plane. */
     val freeEnabled: Boolean get() = planes.isNotEmpty()
@@ -251,7 +265,7 @@ class GameFlow(
     /** Enter on plane select: fly the shown plane. */
     fun choosePlane() {
         val s = screen as? Screen.PlaneSelect ?: return
-        screen = Screen.Flying(choices(s.mode)[s.index], 1, s.mode)
+        screen = Screen.Flying(choices(s.mode)[s.index], 1, s.mode, instructor = instructor)
     }
 
     /** Whether plane select offers Watch AI: an F2B pattern with a stunt plane shown. */
@@ -284,7 +298,8 @@ class GameFlow(
      */
     fun flightEnded(report: FlightReport) {
         val flying = screen as? Screen.Flying ?: return
-        if (flying.control == Control.AI) {
+        // an AI demonstration and an Assisted flight (the instructor took over) enter no table or board
+        if (flying.control == Control.AI || report.takeovers.isNotEmpty()) {
             screen = Screen.GameOver(flying, report, null)
             return
         }
@@ -323,7 +338,7 @@ class GameFlow(
     /** Retry on GAME OVER: the same plane again, in the same mode and level and by the same pilot, from takeoff. */
     fun retry() {
         val s = screen as? Screen.GameOver ?: return
-        screen = Screen.Flying(s.flying.plane, s.flying.attempt + 1, s.flying.mode, s.flying.control)
+        screen = Screen.Flying(s.flying.plane, s.flying.attempt + 1, s.flying.mode, s.flying.control, s.flying.instructor)
     }
 
     /** Main menu, from GAME OVER or the pause menu. */

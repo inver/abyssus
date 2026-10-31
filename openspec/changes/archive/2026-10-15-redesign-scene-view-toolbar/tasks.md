@@ -53,4 +53,4 @@
 ## 8. Integration
 
 - [ ] 8.1 Run `./gradlew check`, `./gradlew :plugin-abyssus:verifyPlugin` if available, and `scripts/check-docs.sh` after all edits; run `scripts/run-ui-tests-docker.sh` once in comparison mode. Verify all pass, `git status` shows no committed fixture changes, and report unrelated failures without fixing them silently.
-- [x] 8.2 Run `openspec validate redesign-scene-view-toolbar --strict`. Verify it passes, then confirm no `.scene`, `.abss` or `meta.json` writer was added (only `editSceneJson` and `SceneFormatListener` write scenes) and no IntelliJ or Swing import entered `lib-core-editor` (`NoPlatformClasspathTest`, `checkNoSingletons`).
+- [x] 8.2 Run `openspec validate redesign-scene-view-toolbar --strict`. Verify it passes, then confirm no `.scene`, `.abss` or `meta.json` writer was added (only `editSceneDocument` and `SceneFormatListener` write scenes) and no IntelliJ or Swing import entered `lib-core-editor` (`NoPlatformClasspathTest`, `checkNoSingletons`).

@@ -14,7 +14,7 @@ and forces authors to split content into many asset folders to show different pa
 - Thread `meshId` through the editor scene view (`SceneModels`/`ModelEntity`/`SceneRenderer`) and the game runtime
   (`FieldRenderer`) so both draw the selected mesh.
 - Add a mesh chooser to the model entity's Properties panel and a mesh choice to Add Asset, fed by a GL-free mesh lister.
-- Read/write `meshId` through `editSceneJson` and the headless editing API (one undoable command, preserving formatting and number text).
+- Read/write `meshId` through `editSceneDocument` and the headless editing API (one undoable command, preserving formatting and number text).
 - Invalidate (in `AssetStorage`, `ViewAssets` and the ray scene assets) and retain a model's variants together with the model; document the field in `docs/ai/file-formats.md`.
 
 ## Capabilities

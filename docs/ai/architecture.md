@@ -204,14 +204,14 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
   move drag. No surface or an already-resting object produces no edit. `drawnVersion` triggers an availability
   re-check after loading changes, outside the GL context. New scene params also invalidate the next frame's query
   so changed transforms and Undo update availability even when the drawn entity ids stay the same.
-- **On release:** `SceneFileEditor.applyTransform` calls `editSceneJson` with
+- **On release:** `SceneFileEditor.applyTransform` calls `editSceneDocument` with
   `SceneTransformWriter().apply`, which writes only the changed `localPosition` / `localRotation`, plus the camera's
   `position` / `viewPointPosition`. The document change triggers the re-read above.
 - **Path arrangements:** Add Path Arrangement (tree scene row and toolbar, `AddPathArrangementGroup`) puts the view in
   drawing mode: `SceneViewState.drawing` holds the model and the points, and `SceneInteraction` adds a point where a
   left click hits a terrain (`SceneQueries.groundHit`), closes on the first point, finishes on Enter or a double click,
   drops the last point on Backspace and cancels on Esc. A selected arrangement shows `PathHandles`: dragging a point handle is a `DraggingPathPoint` gesture whose points are shown through `SceneViewState.pathEdit` until the
-  release calls `SceneFileEditor.editArrangement`. Both write through `editSceneJson` with `ArrangementEdits`
+  release calls `SceneFileEditor.editArrangement`. Both write through `editSceneDocument` with `ArrangementEdits`
   (`lib-core-editor`, `editor.arrange`), one undoable command each. The copies' heights come from `GroundHeight`: the
   open view's `GroundHeights` over its drawn terrains, else `ArrangementHeights` (plugin `sceneview`), which reads the scene's
   terrains with `TerrainLoader` under a modal progress and keeps them until their files change.
@@ -222,7 +222,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
 ### Every write
 
 The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and component add, edit and remove (`SceneComponentEdits`) and asset property edits (`AssetMetaEdits`, over `lib-core-editor`'s
-`AssetMetaEditor`; reference and face choices come from `projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/meta/AssetReferenceChoices.kt`) all go through `editSceneJson`
+`AssetMetaEditor`; reference and face choices come from `projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/meta/AssetReferenceChoices.kt`) all go through `editSceneDocument`
 (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`):
 
 1. `DocumentTextEditor` (`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/document/DocumentTextEditor.kt`)
@@ -242,7 +242,7 @@ fail it between any two writes. No scene or project file is written that way.
 
 UI assets follow the same split (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/gameui/UiAssetCommands.kt`).
 Editing an existing UI `meta.json` (`editUiMeta`) and registering or unregistering a name in `uiAssetNames` are
-`editSceneJson` edits: the pure edit is `lib-core-editor`'s `UiDocumentEdits` run through `UiTextEditor.transform`
+`editSceneDocument` edits: the pure edit is `lib-core-editor`'s `UiDocumentEdits` run through `UiTextEditor.transform`
 (`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/ui/UiTextEditor.kt`), so the document must be admitted UI before and after, a
 gesture that began on older text is refused as stale, and one edit is one undo. Creating a UI asset cannot be a
 document edit (a new folder and file), so `NewUiAssetFactory` stages one `AssetTransaction` holding the new `meta.json`
@@ -272,7 +272,7 @@ changed. Nothing is written before the release; each command then commits throug
 the stroke from the draft meanwhile (`FoliageDrafts`, `SculptDrafts`).
 
 Foliage creation, Re-bake and stroke commits also use asset transactions for their new files, bake and masks.
-Apply combines its binary transaction with an `editSceneJson` metadata edit in one platform command
+Apply combines its binary transaction with an `editSceneDocument` metadata edit in one platform command
 (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/foliage/FoliageApplyCommand.kt`): the binary undo action is registered after the document edit, with document-save
 actions around them so Undo and Redo restore metadata on disk as well as in the editor. A failed metadata edit
 rolls back the binary transaction. Existing metadata never goes through a disk replacement. Valid bakes are rebuilt
@@ -294,7 +294,7 @@ are in `projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/ecs/syst
 `RuntimeSceneLoader` combines `SceneLoader` and `EcsLoader`, installs those systems and returns a `SceneContext`.
 The editor view reads JSON directly instead of updating an Ashley engine. `lib-core-editor` owns `EcsWriter`, which
 serializes registered components with Jackson into a wrapped `entities` map, and the built-in editing codecs.
-It is a serialization API, not an IDE file writer; plugin document edits still go through `editSceneJson`.
+It is a serialization API, not an IDE file writer; plugin document edits still go through `editSceneDocument`.
 
 ### The scene document layer
 
@@ -340,7 +340,7 @@ is a constructor-built validator over parsed `JsonNode`s with no Swing, IntelliJ
 
 `DocumentParsing` guards editor project/scene binding; `AssetMetaReader` guards editor metadata reads (both in
 `lib-core-editor`, `editor.document`, which also holds the editor-facing aliases of the `core.format` types).
-`editSceneJson` validates current and candidate document text on the EDT, and `SceneFormatListener` guards formatting.
+`editSceneDocument` validates current and candidate document text on the EDT, and `SceneFormatListener` guards formatting.
 Rejections surface through `documentDisplayMessage` and localized `unsupportedFormat.*` messages.
 
 `ProjectLoader`, `SceneLoader` and `AssetMetaLoader` validate parsed trees before binding.
@@ -392,7 +392,7 @@ collaborator may import: **plain** is a plain JVM class, **GL** needs a libGDX o
   When disposed while hidden, it drops the context without making it current, because on macOS that would abort the
   JVM.
 - **Scene antialiasing:** `AbyssusProjectSettings` reads `sceneViewAntialiasing` from each native `.abss`, and the
-  project's Properties combo writes through `editSceneJson`. `ProjectSettingsListener` delivers document/VFS changes
+  project's Properties combo writes through `editSceneDocument`. `ProjectSettingsListener` delivers document/VFS changes
   on EDT, scoped by the scene's owning `.abss`; Undo/Redo follows the same path. Antialiasing is excluded from the
   render-content comparison so changing it keeps Play running. Canvas replacement and fallback stay on EDT, and
   hidden views wait until shown. There is no application preference or IDE configurable.
@@ -458,7 +458,7 @@ quality policy falls back when the saved budget cannot fit a sample at its minim
 samples independently, and each session's `RayFrameAccumulator` merges batches of the same key, epoch, revision and limits.
 A frame that fails its per-path query bound or meets an unsupported dielectric medium is rejected whole at poll;
 `RayQueuedSession` then accepts new work at once. In Properties, `SceneDetailsView` edits the four settings and
-`EntityDetailsView` the per-material optics through `SceneRayEdits` (one `editSceneJson` command each); see the
+`EntityDetailsView` the per-material optics through `SceneRayEdits` (one `editSceneDocument` command each); see the
 scene view README.
 
 The properties panel reads live view state through the read-only `editor.facts.SceneFacts` interface. Its generic

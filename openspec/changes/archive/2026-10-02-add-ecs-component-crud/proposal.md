@@ -42,7 +42,7 @@ component all mean opening the text editor and keeping Mundus' component shapes 
   existing `ComponentCodecs`), `properties/` (entity and component states and an editable table in
   `AssetPropertiesPanel.kt` / `PanelState.kt`), `projectView/` (actions on `DtoEntryNode`, `plugin.xml`
   registration), commands and field labels in `AbyssusBundle.properties`.
-- Reuses `editSceneJson` for the undoable write, so the Scene view re-reads the file through its existing
+- Reuses `editSceneDocument` for the undoable write, so the Scene view re-reads the file through its existing
   document listener and shows changes without extra wiring.
 - No new dependencies and no change to the scene file format.
 - Tests: editor unit tests over `src/test/testData/project/Untitled/scenes/Main Scene.scene` (round trip of

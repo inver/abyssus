@@ -90,7 +90,7 @@ Follow the New Terrain pattern with a metadata-only staged asset:
 5. After successful VFS refresh, schedule `selectAssetInAbyssusView(project, abss, name)` as New Terrain does.
    Map collision, conflict, blocked, cancellation and failure results to localized messages.
 
-This deliberately reuses the existing write path for creating a previously absent folder. `editSceneJson` remains
+This deliberately reuses the existing write path for creating a previously absent folder. `editSceneDocument` remains
 required for edits to existing scene/project/metadata documents; this operation edits none of them.
 Undo removes only an unchanged, unreferenced created folder and refuses extra files or newer edits. Redo uses the
 same transaction, bytes, UUID and timestamp, and refuses a new collision. No automatic sky assignment is staged.

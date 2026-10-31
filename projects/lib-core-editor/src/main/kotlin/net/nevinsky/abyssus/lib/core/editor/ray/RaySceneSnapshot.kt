@@ -6,6 +6,7 @@ package net.nevinsky.abyssus.lib.core.editor.ray
 
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.editor.content.storageName
 import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import net.nevinsky.abyssus.lib.core.editor.pick.ScenePreview
 import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettings
@@ -139,14 +140,14 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         assets as RaySceneAssetState.Ready
         val content = ScenePreview().apply(params.content, preview)
         val missing =
-            content.models.mapNotNull { if (it.assetName !in assets.models) "model:${it.assetName}" else null } +
+            content.models.mapNotNull { if (it.storageName !in assets.models) "model:${it.storageName}" else null } +
                     content.terrains.mapNotNull { if (it.assetName !in assets.terrains) "terrain:${it.assetName}" else null }
         if (missing.isNotEmpty()) return RaySceneConversion.Preparing(missing.distinct())
         val result = runCatchingKeepingCancellation {
             val builder = Builder(limits.copy(maxInstances = minOf(limits.maxInstances, settings.maxInstances)), environmentTextures, deform) { shared.getOrPut(it) { HashMap() } }
             for (placement in content.models) {
                 val render = rayRenderNode(placement.entityId.toLongOrNull()?.let(params.ecs::get))
-                builder.model(placement, assets.models.getValue(placement.assetName), poses[placement.entityId], render)
+                builder.model(placement, assets.models.getValue(placement.storageName), poses[placement.entityId], render)
             }
             for (placement in content.terrains) builder.terrain(
                 placement,
@@ -226,11 +227,13 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
             val identities = asset.materials.map { RayMaterialIdentity(it.id, it.pbr) }
             val optics = render?.let(codec::read)
             require(optics?.errors.isNullOrEmpty()) { "Malformed optical overrides: ${optics?.errors?.keys?.joinToString()}" }
+            // A mesh keeps only its own materials: overrides for the others stay in the file but are ignored here.
             val unresolved = render?.let { codec.unresolved(it, identities) }.orEmpty()
+                .filter { id -> placement.meshId == null || identities.any { it.id == id } }
             require(unresolved.isEmpty()) { "Unresolved or ineligible optical material IDs: ${unresolved.joinToString()}" }
             val firstInstance = instances.size
             cache = cacheFor(asset)
-            val prefix = "model:${placement.assetName}"
+            val prefix = "model:${placement.storageName}"
             val textureIds =
                 asset.images.mapValues { (name, image) -> texture("$prefix:$name", image, RayTextureSampler()) }
 

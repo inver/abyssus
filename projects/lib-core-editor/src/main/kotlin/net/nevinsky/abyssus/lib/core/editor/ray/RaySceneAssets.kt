@@ -4,13 +4,18 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.ray
 
+import net.nevinsky.abyssus.lib.core.editor.content.storageName
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSnapshot
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RaySkySnapshot
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayTerrainSnapshot
 import java.io.File
 
-/** Per-view optional CPU interest. Reconciliation and polling never wait for asset preparation or touch GL. */
+/**
+ * Per-view optional CPU interest. Reconciliation and polling never wait for asset preparation or touch GL. A model drawn
+ * by one mesh is its own lease, keyed by its encoded `ModelKey`; invalidating the view drops every lease, variants with
+ * their model.
+ */
 class RaySceneAssets(
     private val acquireModel: (File, String) -> RayAssetLease<RayModelSnapshot>,
     private val acquireTerrain: (File, String) -> RayAssetLease<RayTerrainSnapshot>,
@@ -28,7 +33,7 @@ class RaySceneAssets(
         val key = projectDir?.absoluteFile?.toPath()?.normalize()?.toString()
         if (key != project) { close(); project = key }
         if (projectDir == null) return
-        reconcile(models, content.models.map { it.assetName }.toSet()) { acquireModel(projectDir, it) }
+        reconcile(models, content.models.map { it.storageName }.toSet()) { acquireModel(projectDir, it) }
         reconcile(terrains, content.terrains.map { it.assetName }.toSet()) { acquireTerrain(projectDir, it) }
         if (content.skybox != skyName) {
             sky?.close()

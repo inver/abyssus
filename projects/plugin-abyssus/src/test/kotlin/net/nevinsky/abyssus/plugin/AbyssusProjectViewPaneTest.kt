@@ -21,7 +21,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.assets.Asset
-import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
 import net.nevinsky.abyssus.plugin.projectView.AbyssusProjectViewPane
 import net.nevinsky.abyssus.plugin.projectView.AbyssusTreeRefresh
 import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
@@ -263,7 +263,7 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         pane.tree.selectionPath = entity
         pane.tree.expandPath(entity)
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
-        assertTrue(editSceneJson(project, file, "Rename entity 1") { root ->
+        assertTrue(editSceneDocument(project, file, "Rename entity 1") { root ->
             ((root.get("ecs").get("1").get("components").get("NameComponent")) as ObjectNode).put("name", "Renamed Terrain")
             true
         })
@@ -288,7 +288,7 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         val pane = open()
         pane.tree.selectionPath = entityPath(pane, "0")!!
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
-        assertTrue(editSceneJson(project, file, "Add entity 99") { root ->
+        assertTrue(editSceneDocument(project, file, "Add entity 99") { root ->
             val ecs = root.get("ecs") as ObjectNode
             ecs.set<ObjectNode>("99", ecs.get("0").deepCopy())
             true
@@ -310,7 +310,7 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         assertTrue("no rebuild is pending", pane.refresh.idle)
         val visitor = com.intellij.ui.tree.TreeVisitor { path -> net.nevinsky.abyssus.plugin.projectView.entityVisitAction(file, "99", path.path.map(TreeUtil::getUserObject)) }
         assertTrue("the request is kept although the tree is idle", pane.refresh.selectAfterRebuild(visitor, evenIfIdle = true))
-        assertTrue(editSceneJson(project, file, "Add entity 99") { root ->
+        assertTrue(editSceneDocument(project, file, "Add entity 99") { root ->
             val ecs = root.get("ecs") as ObjectNode
             ecs.set<ObjectNode>("99", ecs.get("0").deepCopy())
             true
@@ -333,7 +333,7 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         val pane = open()
         pane.tree.selectionPath = entityPath(pane, "0")!!
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
-        assertTrue(editSceneJson(project, file, "Remove entity 0") { root ->
+        assertTrue(editSceneDocument(project, file, "Remove entity 0") { root ->
             (root.get("ecs") as ObjectNode).remove("0")
             true
         })

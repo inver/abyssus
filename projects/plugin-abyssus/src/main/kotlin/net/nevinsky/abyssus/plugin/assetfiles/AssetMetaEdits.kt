@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.lib.core.editor.meta.EditError
 import net.nevinsky.abyssus.lib.core.editor.meta.EditOutcome
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
-import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetMetaEditor
 
@@ -32,7 +32,7 @@ sealed interface AssetEditResult {
 }
 
 /**
- * Commits one editable `additional` property of an asset's `meta.json` through [editSceneJson], so the edit is one
+ * Commits one editable `additional` property of an asset's `meta.json` through [editSceneDocument], so the edit is one
  * undoable command on the document that keeps the file's formatting and number text. The rules are the core
  * `AssetMetaEditor`'s; the document text (saved or not) is what is compared with the value the editor was filled from.
  */
@@ -40,7 +40,7 @@ object AssetMetaEdits {
     fun update(project: Project, assetFolder: VirtualFile, key: String, expected: AssetFieldValue, value: AssetFieldValue, editor: AssetMetaEditor): AssetEditResult {
         val file = assetFolder.takeIf { it.isValid }?.findChild(META_FILE) ?: return AssetEditResult.Unreadable
         var result: AssetEditResult = AssetEditResult.Unreadable
-        editSceneJson(project, file, AbyssusBundle.message("commandEditAssetMeta")) { root ->
+        editSceneDocument(project, file, AbyssusBundle.message("commandEditAssetMeta")) { root ->
             result = when (val outcome = editor.edit(root, key, expected, value)) {
                 EditOutcome.Changed -> AssetEditResult.Changed
                 EditOutcome.NoChange -> AssetEditResult.Unchanged

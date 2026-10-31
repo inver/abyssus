@@ -48,7 +48,7 @@ Keep the enum in a neutral plugin settings package so DTO parsing does not depen
 
 The root key `sceneViewAntialiasing` stores `OFF`, `X2`, `X4` or `X8`. Missing means `X4`; unsupported or wrongly typed
 values show a localized project-settings problem and render with `X4` without changing text. Unsupported native
-markers disable editing. `setAntialiasing` uses `editSceneJson`, removes only this key for the default, suppresses
+markers disable editing. `setAntialiasing` uses `editSceneDocument`, removes only this key for the default, suppresses
 unchanged writes, and preserves unrelated numbers, ordering, extension fields and formatting.
 
 `ProjectDetailsView` adds the localized **Scene view antialiasing** combo beside the existing project controls.

@@ -116,7 +116,7 @@ in a task. Phase 8 changes no behavior either, but ports `SceneInteractionTest` 
 
 ## 5. Writer, events and dependency injection (M2, M3)
 
-- [x] 5.1 Move `editSceneJson` to `filetype/SceneDocumentWriter.kt`. Have it publish `AbyssusSceneEdited.TOPIC`
+- [x] 5.1 Move `editSceneDocument` to `filetype/SceneDocumentWriter.kt`. Have it publish `AbyssusSceneEdited.TOPIC`
   instead of refreshing the pane, and make `AbyssusProjectViewPane` subscribe and call `updateFromRoot(true)`.
   Verify with `SceneComponentEditsTest`, `SceneTransformEditTest` and `RowActionsTest` (the tree refreshes after a
   toggle), plus a new test that a write publishes exactly one event for the file.
@@ -129,7 +129,7 @@ in a task. Phase 8 changes no behavior either, but ports `SceneInteractionTest` 
 - [x] 5.3 Update the threading, write-path and extension-point sections of `docs/ai/architecture.md` and
   `docs/ai/conventions.md` (the new writer location, the event topic and `checkNoRunCatching`). Verify with
   `scripts/check-docs.sh`.
-  Update AGENTS.md's writer path too; after `editSceneJson` moves it must point to `filetype/SceneDocumentWriter.kt`.
+  Update AGENTS.md's writer path too; after `editSceneDocument` moves it must point to `filetype/SceneDocumentWriter.kt`.
 
 ## 6. Live updates and the scene document cache (H3; specs `scene-model-rendering`, `scene-light-creation`)
 

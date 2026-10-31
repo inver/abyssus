@@ -10,15 +10,23 @@ import kotlin.math.atan2
 /** [degrees] wrapped into (-180, 180], retaining the caller's precision. */
 fun wrapDegrees(degrees: Float): Float {
     var d = degrees % 360f
-    if (d > 180f) d -= 360f
-    if (d <= -180f) d += 360f
+    if (d > 180f) {
+        d -= 360f
+    }
+    if (d <= -180f) {
+        d += 360f
+    }
     return d
 }
 
 fun wrapDegrees(degrees: Double): Double {
     var d = degrees % 360.0
-    if (d > 180.0) d -= 360.0
-    if (d <= -180.0) d += 360.0
+    if (d > 180.0) {
+        d -= 360.0
+    }
+    if (d <= -180.0) {
+        d += 360.0
+    }
     return d
 }
 

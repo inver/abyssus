@@ -49,7 +49,7 @@ lights from the plugin closes that gap.
   the scene JSON; a `LightPreset` table (kind, name, color, intensity, rotation, offset); `LightData` and `LightCodec`
   gain `range`; an `AddLightAction` group wired into `plugin.xml`, `AbyssusProjectViewPane`'s scene-row menu and
   `SceneViewPanel`'s toolbar; a command name and menu strings in `AbyssusBundle.properties`.
-- The write goes through `editSceneJson`, with the reasons given in design Decision 4 for why one more caller of it, not
+- The write goes through `editSceneDocument`, with the reasons given in design Decision 4 for why one more caller of it, not
   a new write path, is enough.
 - Docs: `docs/ai/file-formats.md` (light fields, new entity), `docs/ai/architecture.md` if the entity-creation function is
   listed, `src/main/kotlin/net/nevinsky/abyssus/ecs/README.md` and `sceneview/README.md`, then `scripts/check-docs.sh`.

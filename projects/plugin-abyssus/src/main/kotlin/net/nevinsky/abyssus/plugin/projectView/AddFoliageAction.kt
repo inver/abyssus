@@ -4,7 +4,6 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.lib.core.util.textAt
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
@@ -24,7 +23,7 @@ import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.plugin.dto.ProjectDto
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
-import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
 import net.nevinsky.abyssus.plugin.ui.showActionGroup
 
 internal fun foliageChoices(project: Project, file: VirtualFile, entityId: String, metas: MetaFiles): List<String> {
@@ -52,7 +51,7 @@ internal fun setFoliage(
     metas: MetaFiles
 ): Boolean {
     if (name !in foliageChoices(project, file, entityId, metas)) return false
-    return editSceneJson(project, file, AbyssusBundle.message("commandAddFoliage")) { root ->
+    return editSceneDocument(project, file, AbyssusBundle.message("commandAddFoliage")) { root ->
         FoliageComponentEdits().attach(root, entityId, name)
     }
 }

@@ -22,7 +22,7 @@
 
 ## 4. Plugin
 
-- [ ] 4.1 Make `editSceneJson` write the pair as one undoable command and skip unchanged documents; verify a test that one Undo restores both files.
+- [ ] 4.1 Make `editSceneDocument` write the pair as one undoable command and skip unchanged documents; verify a test that one Undo restores both files.
 - [ ] 4.2 Load the scene view, `ProjectReader` and physics overlay from the pair with unsaved buffers of both files; verify `SceneViewPanelTest` and an edit in the ECS buffer refreshing the view.
 - [ ] 4.3 Rename Scene renames both files; keep the ECS file out of the scene list, route opening it to its scene, and format it only beside a supported scene; verify project view tests.
 - [ ] 4.4 Update plugin READMEs (`sceneview`, `projectView`); verify `scripts/check-docs.sh`.
