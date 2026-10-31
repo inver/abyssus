@@ -261,7 +261,7 @@ class SceneInteractionPathTest {
         val handles = f.queries.gizmoHandles(H)!!
         assertEquals(GizmoMode.MOVE, handles.mode)
         assertNear(80f, 50f, handles.origin)
-        assertEquals("5", f.interaction.selectedId)
+        assertEquals(5L, f.interaction.selectedId)
     }
 
     @Test
@@ -275,7 +275,7 @@ class SceneInteractionPathTest {
         f.interaction.pressed(x0, y0, true)
         f.interaction.dragged(x1, y1, true)
         val shown = f.state.pathEdit!!
-        assertEquals("5", shown.entityId)
+        assertEquals(5L, shown.entityId)
         assertTrue(shown.points[1].x < 79f)
         assertNear(20f, 50f, shown.points[0])
         assertTrue(f.edits.isEmpty())
@@ -354,8 +354,8 @@ class SceneInteractionPathTest {
         f.selectPoint(80f, 50f)
         f.click(35f, 80f)
         assertNull(f.state.selectedPathPoint)
-        assertEquals("5", f.interaction.pathEditing)
-        assertEquals("5", f.interaction.selectedId)
+        assertEquals(5L, f.interaction.pathEditing)
+        assertEquals(5L, f.interaction.selectedId)
     }
 
     @Test
@@ -404,7 +404,7 @@ class SceneInteractionPathTest {
     fun theLineIsNotClickableOutsideTheEditMode() {
         val f = fixture(arrangement = true)
         f.click(35f, 50f)
-        assertEquals("1", f.interaction.selectedId)
+        assertEquals(1L, f.interaction.selectedId)
         assertNull(f.interaction.pathEditing)
     }
 
@@ -412,14 +412,14 @@ class SceneInteractionPathTest {
     fun clickingTheTerrainAwayFromTheLineSelectsTheTerrain() {
         val f = fixture(arrangement = true)
         f.click(35f, 80f)
-        assertEquals("1", f.interaction.selectedId)
+        assertEquals(1L, f.interaction.selectedId)
     }
 
     @Test
     fun aCopyWinsOverTheLine() {
         val f = fixture(arrangement = true, copy = true)
         f.click(50f, 50f)
-        assertEquals("5", f.interaction.selectedId)
+        assertEquals(5L, f.interaction.selectedId)
     }
 
     @Test
@@ -429,15 +429,15 @@ class SceneInteractionPathTest {
         f.interaction.onPick = { picked += it }
         f.click(50f, 50f)
         f.click(50f, 50f)
-        assertEquals("5", f.interaction.selectedId)
+        assertEquals(5L, f.interaction.selectedId)
         assertEquals(listOf(5L, 5L), picked)
-        assertEquals(listOf("12"), f.queries.content.copiesOf(5L))
+        assertEquals(listOf(12L), f.queries.content.copiesOf(5L))
     }
 
     @Test
     fun aModelThatBelongsToNoArrangementSelectsItself() {
         val f = fixture(arrangement = false, copy = true)
         f.click(50f, 50f)
-        assertEquals("12", f.interaction.selectedId)
+        assertEquals(12L, f.interaction.selectedId)
     }
 }

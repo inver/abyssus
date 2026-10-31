@@ -8,10 +8,11 @@ package net.nevinsky.abyssus.lib.core.editor.components
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEdit
-import net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEditing
 import net.nevinsky.abyssus.lib.core.editor.meta.EntityAssetChoices
 import net.nevinsky.abyssus.lib.core.editor.meta.EntitySections
 import net.nevinsky.abyssus.lib.core.editor.meta.readEntitySections
@@ -24,17 +25,15 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.slf4j.helpers.NOPLogger
 
 /** `meshId` on a model's render component: read, shown, edited and placed without the IDE. */
 class MeshIdEditingTest {
     private val messages = ResourceEditorMessages()
-    private val editing = HeadlessEditing()
     private val editor = ComponentEditor(messages)
+    private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
 
-    /** [text] as the editor prints it, so an edit changes only the edited lines. */
-    private fun canonical(text: String) = SceneJson().let { it.pretty(it.parse(text)) }
-
-    private fun scene(render: String) = canonical("""{
+    private fun scene(render: String): SceneDto = parseScene("""{
   "format": "abyssus",
   "formatVersion": 1,
   "ecs": {
@@ -51,64 +50,67 @@ class MeshIdEditingTest {
 }
 """)
 
-    private val glass = scene("""{ "type": "MODEL", "assetName": "duo", "meshId": "glass", "shaderKey": "defaultShader" }""")
-    private val whole = scene("""{ "type": "MODEL", "assetName": "duo", "shaderKey": "defaultShader" }""")
+    private val glass get() = scene("""{ "type": "MODEL", "assetName": "duo", "meshId": "glass", "shaderKey": "defaultShader" }""")
+    private val whole get() = scene("""{ "type": "MODEL", "assetName": "duo", "shaderKey": "defaultShader" }""")
 
     @Test
     fun theViewPlacesTheNamedMeshOnly() {
-        val models = sceneContentOf(parseScene(glass)).models.single()
+        val models = sceneContentOf(glass).models.single()
         assertEquals("duo", models.assetName)
         assertEquals("glass", models.meshId)
-        assertNull(sceneContentOf(parseScene(whole)).models.single().meshId)
+        assertNull(sceneContentOf(whole).models.single().meshId)
     }
 
     @Test
     fun aTerrainIgnoresMeshId() {
         val terrain = scene("""{ "type": "TERRAIN", "assetName": "t", "meshId": "glass" }""")
-        val content = sceneContentOf(parseScene(terrain))
+        val content = sceneContentOf(terrain)
         assertEquals(1, content.terrains.size)
         assertNull(content.terrains.single().meshId)
         assertTrue(content.models.isEmpty())
     }
 
+    private fun mesh(scene: SceneDto) = scene.component(1, RenderComponent::class.java)!!.meshId
+
     @Test
-    fun settingAndClearingTheFieldKeepsTheRestOfTheText() {
-        val set = editing.setComponentField(whole, 1L, "RenderComponent", "meshId", "glass") as HeadlessEdit.Edited
-        assertEquals(1, set.text.lines().size - whole.lines().size)
-        assertTrue(set.text.contains("\"meshId\": \"glass\""))
-        assertTrue("number text kept", set.text.contains("\"x\": 1.50"))
-        val cleared = editing.setComponentField(set.text, 1L, "RenderComponent", "meshId", "") as HeadlessEdit.Edited
-        assertEquals(whole, cleared.text)
-        assertFalse(cleared.text.contains("meshId"))
+    fun settingAndClearingTheField() {
+        val scene = whole
+        assertEquals(EditResult.Changed, editor.update(scene, 1L, "RenderComponent", "meshId", "glass"))
+        assertEquals("glass", mesh(scene))
+        assertEquals(EditResult.Changed, editor.update(scene, 1L, "RenderComponent", "meshId", ""))
+        assertNull(mesh(scene))
     }
 
     @Test
     fun theWholeModelEntryIsNoChangeWhenThereIsNoMesh() {
-        assertEquals(HeadlessEdit.Unchanged, editing.setComponentField(whole, 1L, "RenderComponent", "meshId", ""))
+        assertEquals(EditResult.Unchanged, editor.update(whole, 1L, "RenderComponent", "meshId", ""))
     }
 
     @Test
     fun placeAssetWithAMeshRecordsIt() {
         val duo = BaseMeta(MetaType.MODEL, "duo")
-        val placed = editing.placeAsset(scene("""{ "type": "MODEL", "assetName": "duo" }"""), duo, 4f, 0f, 5f, meshId = "glass") as HeadlessEdit.Edited
-        val added = SceneJson().parse(placed.text)["ecs"]["2"]
-        assertEquals("OBJECT", added["type"].asText())
-        assertEquals("glass", added["components"]["RenderComponent"]["meshId"].asText())
-        assertEquals("duo", added["components"]["RenderComponent"]["assetName"].asText())
+        val scene = scene("""{ "type": "MODEL", "assetName": "duo" }""")
+        val id = AssetEntities(messages).add(scene, duo, Vector3(4f, 0f, 5f), meshId = "glass").entityId!!
+        val added = scene.entity(id)!!
+        assertEquals(EntityType.OBJECT, added.header().type)
+        assertEquals("glass", added.component(RenderComponent::class.java)!!.meshId)
+        assertEquals("duo", added.component(RenderComponent::class.java)!!.assetName)
 
-        val wholeModel = editing.placeAsset(whole, duo, 4f, 0f, 5f) as HeadlessEdit.Edited
-        assertFalse(SceneJson().parse(wholeModel.text)["ecs"]["2"]["components"]["RenderComponent"].has("meshId"))
+        val wholeId = AssetEntities(messages).add(scene, duo, Vector3(4f, 0f, 5f)).entityId!!
+        assertNull(scene.entity(wholeId)!!.component(RenderComponent::class.java)!!.meshId)
     }
 
     @Test
     fun aTerrainIsPlacedWithoutMeshId() {
         val terrain = BaseMeta(MetaType.TERRAIN, "t")
-        val placed = AssetEntities(messages).add(SceneJson().parse(whole), terrain, Vector3(), meshId = "glass")
+        val scene = whole
+        val placed = AssetEntities(messages).add(scene, terrain, Vector3(), meshId = "glass")
         assertEquals(EditResult.Changed, placed.result)
+        assertNull(scene.entity(placed.entityId!!)!!.component(RenderComponent::class.java)!!.meshId)
     }
 
-    private fun sections(text: String, meshes: (String) -> List<String>?): EntitySections.Read =
-        readEntitySections(SceneJson().parse(text), 1L, "RenderComponent", editor, EntityAssetChoices(listOf("duo"), emptyMap(), meshes), messages) as EntitySections.Read
+    private fun sections(scene: SceneDto, meshes: (String) -> List<String>?): EntitySections.Read =
+        readEntitySections(scene, 1L, "RenderComponent", editor, EntityAssetChoices(listOf("duo"), emptyMap(), meshes), messages, json) as EntitySections.Read
 
     private fun meshField(read: EntitySections.Read) = read.sections.single().fields.firstOrNull { it.field == "meshId" }
 
@@ -130,9 +132,9 @@ class MeshIdEditingTest {
     @Test
     fun aStoredIdTheModelLacksIsShownAsUnknown() {
         val builders = PanelBuilders(messages) { false }
-        fun row(text: String, meshes: List<String>): ChoiceRow {
-            val read = sections(text) { meshes }
-            val panel = builders.entity(SceneJson().parse(text), 1L, read, "x.abss")
+        fun row(scene: SceneDto, meshes: List<String>): ChoiceRow {
+            val read = sections(scene) { meshes }
+            val panel = builders.entity(scene, 1L, read, "x.abss")
             return panel.sections.flatMap { it.rows }.filterIsInstance<ChoiceRow>().single { it.field?.field == "meshId" }
         }
         val known = row(glass, listOf("body", "glass"))

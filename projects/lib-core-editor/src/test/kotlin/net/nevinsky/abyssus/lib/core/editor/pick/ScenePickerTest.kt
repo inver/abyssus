@@ -36,7 +36,7 @@ class ScenePickerTest {
         val regenerated = TerrainTarget(1000L, TerrainData(3, FloatArray(9) { 10f }, 100, 1f), Matrix4())
         assertEquals(20f, ScenePicker().terrainDistance(down, old, 30f)!!, 1e-3f)
         assertEquals(10f, ScenePicker().terrainDistance(down, regenerated, 30f)!!, 1e-3f)
-        assertEquals(6L, ScenePicker().pick(down, emptyList(), listOf(regenerated), 30f))
+        assertEquals(1000L, ScenePicker().pick(down, emptyList(), listOf(regenerated), 30f))
     }
 
     @Test fun anIdentityMatrixLeavesTheCornersUnmoved() {
@@ -165,7 +165,7 @@ class ScenePickerTest {
     fun terrainIsHitWhereNoModelIsInFront() {
         val t = TerrainTarget(1001L, flat, Matrix4())
         val r = ray(Vector3(50f, 10f, 50f), Vector3(50f, 0f, 60f))
-        assertEquals(7L, ScenePicker().pick(r, listOf(box(5L, 80f, 1f, 80f)), listOf(t), 1000f))
+        assertEquals(1001L, ScenePicker().pick(r, listOf(box(5L, 80f, 1f, 80f)), listOf(t), 1000f))
     }
 
     @Test
@@ -194,7 +194,7 @@ class ScenePickerTest {
     fun terrainTransformIsHonoured() {
         val moved = TerrainTarget(1001L, flat, Matrix4().setToTranslation(1000f, 0f, 0f))
         assertNull(ScenePicker().pick(ray(Vector3(50f, 10f, 50f), Vector3(50f, 0f, 60f)), emptyList(), listOf(moved), 5000f))
-        assertEquals(7L, ScenePicker().pick(ray(Vector3(1050f, 10f, 50f), Vector3(1050f, 0f, 60f)), emptyList(), listOf(moved), 5000f))
+        assertEquals(1001L, ScenePicker().pick(ray(Vector3(1050f, 10f, 50f), Vector3(1050f, 0f, 60f)), emptyList(), listOf(moved), 5000f))
     }
 
     @Test
@@ -203,7 +203,7 @@ class ScenePickerTest {
         val heights = floatArrayOf(0f, 10f, 0f, 0f, 10f, 0f, 0f, 10f, 0f)
         val t = TerrainTarget(1002L, TerrainData(3, heights, 100, 1f), Matrix4())
         val r = ray(Vector3(-20f, 5f, 50f), Vector3(40f, 5f, 50f))
-        assertEquals(8L, ScenePicker().pick(r, emptyList(), listOf(t), 1000f))
+        assertEquals(1002L, ScenePicker().pick(r, emptyList(), listOf(t), 1000f))
         val d = ScenePicker().terrainDistance(r, t, 1000f)!!
         // the surface at height 5 is x = 25 (first slope reaches 10 at x = 50), so the hit is 45 away
         assertEquals(45f, d, 1.5f)
@@ -251,10 +251,10 @@ class PickRayTest {
         val afterHit = ScenePicker().terrainDistance(ray, TerrainTarget(1000L, high, Matrix4()), 1000f)!!
         assertEquals(99f, beforeHit, 0.05f)
         assertEquals(60f, afterHit, 0.05f)
-        assertEquals(6L, ScenePicker().pick(ray, emptyList(), listOf(TerrainTarget(1000L, high, Matrix4())), 1000f))
+        assertEquals(1000L, ScenePicker().pick(ray, emptyList(), listOf(TerrainTarget(1000L, high, Matrix4())), 1000f))
         // a ray that only reaches y 20 hits the new surface and missed the old one
         val short = Ray(Vector3(50f, 60f, 50f), Vector3(0f, -1f, 0f))
-        assertEquals(6L, ScenePicker().pick(short, emptyList(), listOf(TerrainTarget(1000L, high, Matrix4())), 30f))
+        assertEquals(1000L, ScenePicker().pick(short, emptyList(), listOf(TerrainTarget(1000L, high, Matrix4())), 30f))
         assertNull(ScenePicker().pick(short, emptyList(), listOf(TerrainTarget(1000L, low, Matrix4())), 30f))
     }
 

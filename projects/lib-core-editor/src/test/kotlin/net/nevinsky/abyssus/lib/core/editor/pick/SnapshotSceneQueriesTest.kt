@@ -74,7 +74,7 @@ class SnapshotSceneQueriesTest {
     @Test
     fun theNearestBoxUnderTheCursorIsPicked() {
         val f = fixture(listOf(snapshotBoxOf(1001L, unit, at(0f, 0f, -6f)), snapshotBoxOf(1000L, unit, at(0f, 0f, 0f))))
-        assertEquals("near", f.queries.pick(width / 2, height / 2, width, height))
+        assertEquals(1000L, f.queries.pick(width / 2, height / 2, width, height))
         assertNull(f.queries.pick(2, 2, width, height))
     }
 
@@ -191,9 +191,9 @@ class SnapshotSceneQueriesTest {
         )
         val terrain = listOf(TerrainTarget(1L, TerrainData(3, FloatArray(9), 100, 1f), Matrix4()))
         val f = fixture(emptyList(), content, terrain, descending())
-        assertEquals("the click passes the copies and picks the terrain they grow on", "1",
+        assertEquals("the click passes the copies and picks the terrain they grow on", 1L,
             f.queries.pick(width / 2, height / 2, width, height))
-        assertEquals("foliage adds no BoxTarget", emptyList<String>(),
+        assertEquals("foliage adds no BoxTarget", emptyList<Long>(),
             SceneMarkers().targets(content).map { it.entityId })
     }
 }

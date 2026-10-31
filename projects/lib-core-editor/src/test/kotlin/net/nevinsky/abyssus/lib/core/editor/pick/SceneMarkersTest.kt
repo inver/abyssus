@@ -44,14 +44,14 @@ class SceneMarkersTest {
         val p = c.cameras.single().position
         val targets = SceneMarkers().targets(c)
         val r = ray(Vector3(p.x, p.y, p.z + 10f), Vector3(p.x, p.y, p.z))
-        assertEquals("4", ScenePicker().pick(r, targets, emptyList(), 1000f))
+        assertEquals(4L, ScenePicker().pick(r, targets, emptyList(), 1000f))
     }
 
     @Test
     fun aRayThroughALightMarkerPicksTheLight() {
         val c = content(light("9", "LIGHT_POINT", x = 4f))
         val r = ray(Vector3(4f, 0f, 10f), Vector3(4f, 0f, 0f))
-        assertEquals("9", ScenePicker().pick(r, SceneMarkers().targets(c), emptyList(), 100f))
+        assertEquals(9L, ScenePicker().pick(r, SceneMarkers().targets(c), emptyList(), 100f))
     }
 
     @Test
@@ -59,14 +59,14 @@ class SceneMarkersTest {
         val c = content(light("9", "LIGHT_POINT"))
         val nearer = BoxTarget(1000L, BoundingBox(Vector3(-1f, -1f, 3f), Vector3(1f, 1f, 5f)))
         val r = ray(Vector3(0f, 0f, 10f), Vector3(0f, 0f, 0f))
-        assertEquals("model", ScenePicker().pick(r, SceneMarkers().targets(c) + nearer, emptyList(), 100f))
+        assertEquals(1000L, ScenePicker().pick(r, SceneMarkers().targets(c) + nearer, emptyList(), 100f))
     }
 
     @Test
     fun theViewCameraHasNoMarkerTarget() {
         val c = main()
         // only the scene's lights (7 and 8) remain pickable markers
-        assertEquals(listOf("7", "8"), SceneMarkers().targets(c, skipCamera = 4L).map { it.entityId })
+        assertEquals(listOf(7L, 8L), SceneMarkers().targets(c, skipCamera = 4L).map { it.entityId })
         assertNull(ScenePicker().pick(ray(Vector3(0f, 0f, 10f), Vector3(0f, 0f, 0f)), SceneMarkers().targets(c, 4L), emptyList(), 100f))
     }
 

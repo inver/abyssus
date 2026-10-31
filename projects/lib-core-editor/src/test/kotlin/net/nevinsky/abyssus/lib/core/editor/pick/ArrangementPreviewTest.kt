@@ -32,7 +32,7 @@ class ArrangementPreviewTest {
     fun copiesFollowTheDraftHeightAndKeepTheirIds() {
         val draft = PathEdit(10L, listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f)))
         val shown = ArrangementPreview().apply(scene(), draft) { _, _, _ -> 4f }
-        assertEquals(listOf("99", "11", "12", "13"), shown.models.map { it.entityId })
+        assertEquals(listOf(99L, 11L, 12L, 13L), shown.models.map { it.entityId })
         assertEquals(listOf(4f, 4f, 4f), shown.models.drop(1).map { it.transform.position.y })
     }
 
@@ -41,7 +41,7 @@ class ArrangementPreviewTest {
         val longer = ArrangementPreview().apply(scene(), PathEdit(10L, listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f))), LineHeights())
         assertEquals(5, longer.models.count { it.assetName == "post" })
         val shorter = ArrangementPreview().apply(scene(), PathEdit(10L, listOf(Vector3(0f, 0f, 0f), Vector3(10f, 0f, 0f))), LineHeights())
-        assertEquals(listOf("99", "11", "12"), shorter.models.map { it.entityId })
+        assertEquals(listOf(99L, 11L, 12L), shorter.models.map { it.entityId })
     }
 
     @Test

@@ -5,126 +5,104 @@
 package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.gdx.math.Vector3
-import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
-import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
+import net.nevinsky.abyssus.lib.core.dto.EntityDto
+import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.core.editor.sceneOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Test
-import org.slf4j.helpers.NOPLogger
 import java.io.File
 
+/** Text-level cases (the new entry's key order, the runtime loading it back) are deferred to Phase 6. */
 class AssetEntitiesTest {
     private val tree = BaseMeta(MetaType.MODEL, "tree")
     private val terrain = BaseMeta(MetaType.TERRAIN, "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b")
+    private val assets = AssetEntities(ResourceEditorMessages())
 
-    private fun mainScene() =
-        SceneJson().parse(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText())
+    private fun mainScene() = parseScene(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText())
 
-    private fun empty() = SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{}}""")
-
-    /** The entity's position; the writer leaves out zero coordinates. */
-    private fun position(entity: JsonNode) = entity["components"]["PositionComponent"]["localPosition"].let {
-        Vector3(it.path("x").floatValue(), it.path("y").floatValue(), it.path("z").floatValue())
-    }
+    private fun position(entity: EntityDto) = entity.component(PositionComponent::class.java)!!.localPosition
 
     @Test
     fun aModelBecomesTheNextEntityAndNothingElseChanges() {
-        val root = mainScene()
-        val before = root.deepCopy<JsonNode>()
-        val added = AssetEntities(ResourceEditorMessages()).add(root, tree, Vector3(10f, 0f, -4f))
+        val scene = mainScene()
+        val before = scene.ecs.toMap()
+        val added = assets.add(scene, tree, Vector3(10f, 0f, -4f))
+
         assertEquals(EditResult.Changed, added.result)
-        assertEquals("9", added.entityId)
-        val entities = root["ecs"]
-        val entity = entities["9"]["components"]
-        assertEquals("Model 9", entity["NameComponent"]["name"].asText())
-        assertEquals("OBJECT", entities["9"]["type"].asText())
-        val renderable = entity["RenderComponent"]
-        assertFalse(renderable.has("renderable"))
-        assertEquals("defaultShader", renderable["shaderKey"].asText())
-        assertEquals("MODEL", renderable["type"].asText())
-        assertEquals("tree", renderable["assetName"].asText())
-        assertEquals(Vector3(10f, 0f, -4f), position(entities["9"]))
-        for ((id, old) in before["ecs"].properties()) assertEquals(old.toString(), entities[id].toString())
-        for ((key, old) in before.properties()) if (key != "ecs") assertEquals(old, root[key])
+        assertEquals(9L, added.entityId)
+        val entity = scene.entity(9)!!
+        assertEquals("Model 9", entity.component(NameComponent::class.java)!!.name)
+        assertEquals(EntityType.OBJECT, entity.header().type)
+        val render = entity.component(RenderComponent::class.java)!!
+        assertEquals("defaultShader", render.shaderKey)
+        assertEquals(MetaType.MODEL, render.type)
+        assertEquals("tree", render.assetName)
+        assertEquals(Vector3(10f, 0f, -4f), position(entity))
+        for ((id, old) in before) assertEquals(old, scene.entity(id))
+        assertEquals(before.size + 1, scene.ecs.size)
     }
 
     @Test
     fun aTerrainIsCentredOnThePoint() {
-        val root = mainScene()
-        val added = AssetEntities(ResourceEditorMessages()).add(root, terrain, Vector3(0f, 0f, 0f), 1600f)
-        val entity = root["ecs"][added.entityId]
-        assertEquals("Terrain 9", entity["components"]["NameComponent"]["name"].asText())
-        assertEquals("TERRAIN", entity["type"].asText())
-        assertEquals("terrain", entity["components"]["RenderComponent"]["shaderKey"].asText())
+        val scene = mainScene()
+        val added = assets.add(scene, terrain, Vector3(0f, 0f, 0f), 1600f)
+        val entity = scene.entity(added.entityId!!)!!
+
+        assertEquals("Terrain 9", entity.component(NameComponent::class.java)!!.name)
+        assertEquals(EntityType.TERRAIN, entity.header().type)
+        assertEquals("terrain", entity.component(RenderComponent::class.java)!!.shaderKey)
         assertEquals(Vector3(-800f, 0f, -800f), position(entity))
     }
 
     @Test
     fun aTerrainOfUnknownSizePutsItsCornerAtThePoint() {
-        val root = mainScene()
-        val entity =
-            root["ecs"][AssetEntities(ResourceEditorMessages()).add(root, terrain, Vector3(3f, 1f, 2f), null).entityId]
-        assertEquals(Vector3(3f, 1f, 2f), position(entity))
+        val scene = mainScene()
+        val added = assets.add(scene, terrain, Vector3(3f, 1f, 2f), null)
+        assertEquals(Vector3(3f, 1f, 2f), position(scene.entity(added.entityId!!)!!))
     }
 
     @Test
-    fun anEmptySceneStartsAtZeroAndTheRuntimeLoadsItsWrappedEntityMap() {
-        val root = empty()
-        assertEquals("0", AssetEntities(ResourceEditorMessages()).add(root, tree, Vector3(1f, 2f, 3f)).entityId)
-        val engine = SceneEngine()
-        val document = net.nevinsky.abyssus.lib.core.testing.loadEcs(SceneJson().compact(root["ecs"]), engine)
-        assertEquals(emptyList<String>(), document.warnings)
-        assertEquals(1, engine.entities.size())
-        val render = engine.entities.first()
-            .getComponent(net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent::class.java)
-        assertEquals(net.nevinsky.abyssus.lib.core.assets.MetaType.MODEL, render.type)
-        assertEquals("tree", render.assetName)
+    fun anEmptySceneStartsAtOne() {
+        val scene = SceneDto()
+        assertEquals(1L, assets.add(scene, tree, Vector3(1f, 2f, 3f)).entityId)
+        assertEquals(setOf(1L), scene.ecs.keys)
     }
 
     @Test
-    fun aNewAssetEntityHasComponentsAndNoFlags() {
-        val root = SceneJson().parse(File("src/test/testData/project/Lights/scenes/Creation Baseline.scene").readText())
-        val first = AssetEntities(ResourceEditorMessages()).add(root, tree, Vector3(0f, 0f, 0f))
-        val second = AssetEntities(ResourceEditorMessages()).add(root, terrain, Vector3(0f, 0f, 0f), 100f)
-        val ecs = root["ecs"]
-        for (id in listOf(first.entityId, second.entityId)) {
-            assertEquals(listOf("type", "components"), ecs[id].fieldNames().asSequence().toList())
+    fun aNewAssetEntityHasExactlyTheThreeComponentsAndNoFlags() {
+        val scene = parseScene(File("src/test/testData/project/Lights/scenes/Creation Baseline.scene").readText())
+        val first = assets.add(scene, tree, Vector3(0f, 0f, 0f))
+        val second = assets.add(scene, terrain, Vector3(0f, 0f, 0f), 100f)
+
+        for (id in listOf(first.entityId!!, second.entityId!!)) {
+            val entity = scene.entity(id)!!
+            assertEquals(0, entity.header().flags)
+            assertEquals(
+                setOf(NameComponent::class.java, PositionComponent::class.java, RenderComponent::class.java),
+                entity.components.map { it.javaClass }.filter { it != entity.header().javaClass }.toSet(),
+            )
         }
-        assertEquals(
-            setOf("NameComponent", "PositionComponent", "RenderComponent"),
-            ecs[first.entityId]["components"].fieldNames().asSequence().toSet(),
-        )
     }
 
     @Test
-    fun aNonNativeSceneOrAnotherAssetTypeIsRejected() {
-        val legacy = SceneJson().parse("""{"ecs":{}}""")
-        assertFalse(
-            AssetEntities(ResourceEditorMessages()).add(
-                legacy,
-                tree,
-                Vector3(0f, 0f, 0f)
-            ).result == EditResult.Changed
-        )
-        assertFalse(
-            AssetEntities(ResourceEditorMessages()).add(
-                empty(),
-                BaseMeta(MetaType.SKYBOX, "sky"),
-                Vector3(0f, 0f, 0f)
-            ).result == EditResult.Changed
-        )
-        assertFalse(
-            AssetEntities(ResourceEditorMessages()).add(
-                empty(),
-                tree,
-                Vector3(Float.NaN, 0f, 0f)
-            ).result == EditResult.Changed
-        )
+    fun anotherAssetTypeOrANonFinitePointIsRejectedAndLeavesTheScene() {
+        val scene = sceneOf()
+        val skybox = assets.add(scene, BaseMeta(MetaType.SKYBOX, "sky"), Vector3(0f, 0f, 0f))
+        val nan = assets.add(scene, tree, Vector3(Float.NaN, 0f, 0f))
+
+        assertFalse(skybox.result == EditResult.Changed)
+        assertFalse(nan.result == EditResult.Changed)
+        assertNull(skybox.entityId)
+        assertEquals(emptySet<Long>(), scene.ecs.keys)
     }
 }

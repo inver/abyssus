@@ -12,7 +12,6 @@ import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.core.ObjectCodec
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.json.JsonMapper
@@ -26,6 +25,7 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import org.slf4j.Logger
 import java.math.BigDecimal
 import kotlin.math.abs
+import kotlin.math.round
 
 /**
  * Mixed into libGDX's `Vector3`, `Quaternion` and `Color`, whose many overloaded `set...` methods Jackson would otherwise
@@ -47,10 +47,18 @@ private class ComponentFloatSerializer : StdSerializer<Any>(Any::class.java) {
     override fun serialize(value: Any, gen: JsonGenerator, provider: SerializerProvider) {
         val v = (value as Number).toFloat().let { if (it.isFinite()) it else 0f }
         gen.writeTree(
-            if (v == Math.rint(v.toDouble()).toFloat() && abs(v) < 1e9f) IntNode.valueOf(v.toInt())
-            else DecimalNode(BigDecimal(v.toString()))
+            if (v == round(v.toDouble()).toFloat() && abs(v) < 1e9f) {
+                IntNode.valueOf(v.toInt())
+            } else DecimalNode(BigDecimal(v.toString()))
         )
     }
+}
+
+
+/** Binds parsed nodes with the rules of one [JsonProcessor.binderWith] call. */
+class NodeBinder internal constructor(private val reader: ObjectReader, private val codec: ObjectMapper) {
+    fun <T> bind(node: JsonNode, clazz: Class<T>): T =
+        TreeTraversingParser(node, codec).use { reader.readValue(it, clazz) }
 }
 
 /**
@@ -107,6 +115,21 @@ class JsonProcessor(internal val log: Logger) {
     fun readObject(text: String): JsonNode =
         mapper.readTree(text)?.takeIf { it.isObject } ?: throw IllegalArgumentException("expected a JSON object")
 
+    /**
+     * A binder that reads like [bind] (warnings injected, as the components expect) and also knows the deserializers of
+     * [module], for a document whose members need more than a class.
+     */
+    fun binderWith(module: Module): NodeBinder {
+        val objMapper = mapper.copy()
+            .setNodeFactory(JsonNodeFactory.withExactBigDecimals(true))
+            .registerModule(module)
+
+        return NodeBinder(
+            objMapper.reader(
+                InjectableValues.Std().addValue(EcsReadWarnings::class.java.name, EcsReadWarnings(log))
+            ), objMapper
+        )
+    }
 
     //todo add validation on parsing for formats
     fun <T> parse(text: String, clazz: Class<T>): T {

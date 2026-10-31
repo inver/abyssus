@@ -209,7 +209,7 @@ class SceneInteractionPaintTest {
         f.interaction.pressed(x, y, true)
         assertTrue("the press is off the painted terrain", f.paint.begun.isEmpty())
         f.interaction.released(x, y, true)
-        assertEquals("2", f.state.selectedId)
+        assertEquals(2L, f.state.selectedId)
         assertNull(f.state.brush)
     }
 
