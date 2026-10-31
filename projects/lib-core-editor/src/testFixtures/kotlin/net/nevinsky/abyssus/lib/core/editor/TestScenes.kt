@@ -3,6 +3,10 @@ package net.nevinsky.abyssus.lib.core.editor
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.dto.EntityDto
+import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
+import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
@@ -39,3 +43,11 @@ fun terrainData(projectDir: File, name: String): TerrainData {
     val files = FileLoader(projectDir)
     return checkNotNull(TerrainLoader(files, AssetMetaLoader(JsonProcessor(NOPLogger.NOP_LOGGER), files)).prepare(name)) { "no terrain $name" }.staged.data
 }
+
+/** An entity of [type] with the header for [id] followed by [parts], for tests that need no JSON. */
+fun entityOf(id: Long, type: EntityType, vararg parts: Component): EntityDto =
+    EntityDto(mutableListOf<Component>(HeaderComponent(id = id, type = type)).apply { addAll(parts) })
+
+/** A scene holding [entities], each keyed by the id of its header. */
+fun sceneOf(vararg entities: EntityDto): SceneDto =
+    SceneDto(ecs = entities.associateByTo(mutableMapOf()) { it.header().id })
