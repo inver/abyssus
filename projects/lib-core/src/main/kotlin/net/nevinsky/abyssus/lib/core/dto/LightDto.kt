@@ -24,4 +24,4 @@ data class LightDto(
     }
 }
 
-data class LightWrapper(val light: LightDto)
+data class LightWrapper(val light: LightDto = LightDto())

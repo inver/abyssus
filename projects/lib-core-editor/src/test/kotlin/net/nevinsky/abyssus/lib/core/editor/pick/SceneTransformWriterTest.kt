@@ -13,6 +13,7 @@ import net.nevinsky.abyssus.lib.core.dto.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
@@ -160,6 +161,7 @@ class SceneTransformWriterTest {
         assertEquals(lightBefore, snapshot(scene).getValue(1L))
         assertEquals(0, scene.component(1, PositionComponent::class.java)!!.lookAtId)
         assertEquals(Quaternion(), scene.component(1, PositionComponent::class.java)!!.localRotation)
+        assertNotNull(scene.component(1, LightComponent::class.java))
     }
 
     @Test

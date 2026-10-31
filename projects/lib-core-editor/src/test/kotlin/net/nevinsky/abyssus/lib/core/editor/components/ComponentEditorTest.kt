@@ -150,6 +150,14 @@ class ComponentEditorTest {
     }
 
     @Test
+    fun aLightWithoutItsWrapperBindsAsADefaultLightAndIsEditable() {
+        val scene = scene(entity(0, """"LightComponent":{}"""))
+        assertEquals(100f, scene.get(0, LightComponent::class.java).light.range, 0f)
+        assertEquals(EditResult.Changed, editor.update(scene, 0L, "LightComponent", "range", "40"))
+        assertEquals(40f, scene.get(0, LightComponent::class.java).light.range, 0f)
+    }
+
+    @Test
     fun addLightUsesDefaults() {
         val scene = scene(entity(0, """"NameComponent":{"name":"a"}"""))
         assertEquals(EditResult.Changed, editor.add(scene, 0L, "LightComponent"))
