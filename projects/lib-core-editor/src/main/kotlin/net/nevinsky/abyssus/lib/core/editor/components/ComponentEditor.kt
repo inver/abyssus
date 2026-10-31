@@ -44,7 +44,7 @@ class ComponentEditor(
     fun kindOf(name: String): ComponentKind<*>? = byName[name]
 
     private fun <C : Component> componentOf(entity: EntityDto, kind: ComponentKind<C>): C? =
-        entity.components.firstOrNull { kind.type.isInstance(it) }?.let(kind.type::cast)
+        entity.component(kind.type)
 
     /** The modeled kinds [entityId] lacks, in the order the view lists them; empty when the entity is missing. */
     fun missingKinds(scene: SceneDto, entityId: Long): List<ComponentKind<*>> {
@@ -314,7 +314,7 @@ class ComponentEditor(
             var current: Int = target
             val seen = HashSet<Int>()
             while (current != NO_ENTITY && seen.add(current)) {
-                val next = scene.entity(current.toLong())?.components?.filterIsInstance<ParentComponent>()?.firstOrNull()
+                val next = scene.entity(current.toLong())?.component(ParentComponent::class.java)
                     ?.parentEntityId ?: NO_ENTITY
                 if (next.toLong() == entityId) return reject("componentParentCycle", label, target, entityId)
                 current = next

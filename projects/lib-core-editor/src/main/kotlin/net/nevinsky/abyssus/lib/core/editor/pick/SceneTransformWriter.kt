@@ -48,7 +48,7 @@ class SceneTransformWriter(private val arrangements: ArrangementEdits = Arrangem
             edit.rotation?.let { changed = placements.setRotation(placement, it) or changed }
             if (changed) arrangements.detach(scene, entityId)
         }
-        entity.components.filterIsInstance<CameraComponent>().firstOrNull()?.camera?.let { camera ->
+        entity.component(CameraComponent::class.java)?.camera?.let { camera ->
             edit.position?.let { if (camera.position != it) { camera.position.set(it); changed = true } }
             edit.direction?.let { if (camera.direction != it) { camera.direction.set(it); changed = true } }
         }

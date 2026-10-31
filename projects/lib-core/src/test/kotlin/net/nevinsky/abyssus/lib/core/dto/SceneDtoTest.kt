@@ -34,4 +34,26 @@ class SceneDtoTest {
         assertNotNull(s.component(1, NameComponent::class.java))
         assertNull(s.component(2, NameComponent::class.java))
     }
+
+    @Test
+    fun addTakesTheNextIdAndPutsTheHeaderFirst() {
+        val s = scene(7L to emptyList())
+        val id = s.add(EntityType.OBJECT, NameComponent("x"))
+        assertEquals(8L, id)
+        val e = s.entity(id)!!
+        assertEquals(id, e.header().id)
+        assertEquals(EntityType.OBJECT, e.header().type)
+        assertSame(e.components[0], e.header())
+        assertEquals("x", s.nameOf(id))
+    }
+
+    @Test
+    fun addOnAnEmptySceneStartsAtOne() = assertEquals(1L, SceneDto().add(EntityType.GROUP))
+
+    @Test
+    fun addTellsTheBuilderTheNewId() {
+        val s = scene(4L to emptyList())
+        val id = s.add(EntityType.OBJECT) { listOf(NameComponent("entity $it")) }
+        assertEquals("entity 5", s.nameOf(id))
+    }
 }

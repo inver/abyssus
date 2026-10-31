@@ -49,7 +49,7 @@ class EntityRemoval(
 
     /** The ids of the copies [entityId] owns as an arrangement, joined for the message, or null. */
     private fun ownedCopies(scene: SceneDto, entityId: Long): String? {
-        val arrangement = scene.entity(entityId)?.components?.filterIsInstance<PathArrangementComponent>()?.firstOrNull()
+        val arrangement = scene.entity(entityId)?.component(PathArrangementComponent::class.java)
             ?: return null
         return arrangement.slots.filter { it != NO_ENTITY && scene.entity(it.toLong()) != null }
             .takeIf { it.isNotEmpty() }?.joinToString(", ")

@@ -76,16 +76,13 @@ fun sceneContentOf(scene: SceneDto): SceneContent {
  * disabled on its own is skipped.
  */
 private fun decode(id: Long, entity: EntityDto): DecodedEntity {
-    val header = entity.components.filterIsInstance<HeaderComponent>().firstOrNull()
-    val disabled = header?.disabledComponents.orEmpty()
-    fun <C : Component> any(type: Class<C>): C? = entity.components.firstOrNull { type.isInstance(it) }?.let(type::cast)
-    fun <C : Component> active(type: Class<C>): C? = any(type)?.takeIf { type !in disabled }
-    val name = any(NameComponent::class.java)?.name?.takeIf { it.isNotBlank() } ?: id.toString()
-    val position = any(PositionComponent::class.java)
-    if (header?.entityEnabled == false) return DecodedEntity(id, name, position, position != null, null, null, null, null)
-    val type = header?.type
-    val lightDisabled = type?.name?.startsWith("LIGHT") == true && LightComponent::class.java in disabled
-    val render = active(RenderComponent::class.java)
+    val name = entity.component(NameComponent::class.java)?.name?.takeIf { it.isNotBlank() } ?: id.toString()
+    val position = entity.component(PositionComponent::class.java)
+    if (!entity.isActive()) return DecodedEntity(id, name, position, position != null, null, null, null, null)
+    val type = entity.component(HeaderComponent::class.java)?.type
+    val lightDisabled = type?.name?.startsWith("LIGHT") == true &&
+        LightComponent::class.java in entity.header().disabledComponents
+    val render = entity.activeComponent(RenderComponent::class.java)
     val asset = render?.takeIf { it.type != null && it.assetName.isNotEmpty() }?.let { DecodedAsset(it.type!!.name, it.assetName, it.meshId?.takeIf(String::isNotEmpty)) }
     return DecodedEntity(
         id,
@@ -93,11 +90,11 @@ private fun decode(id: Long, entity: EntityDto): DecodedEntity {
         position,
         position != null,
         if (lightDisabled) null else type,
-        active(CameraComponent::class.java),
-        active(LightComponent::class.java),
+        entity.activeComponent(CameraComponent::class.java),
+        entity.activeComponent(LightComponent::class.java),
         asset,
-        active(FoliageComponent::class.java)?.assetName,
-        active(PathArrangementComponent::class.java),
+        entity.activeComponent(FoliageComponent::class.java)?.assetName,
+        entity.activeComponent(PathArrangementComponent::class.java),
     )
 }
 

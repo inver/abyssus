@@ -19,7 +19,7 @@ class FoliageComponentEdits {
      */
     fun attach(scene: SceneDto, entityId: Long, foliage: String): Boolean {
         val entity = scene.entity(entityId) ?: return false
-        val component = entity.components.filterIsInstance<FoliageComponent>().firstOrNull()
+        val component = entity.component(FoliageComponent::class.java)
             ?: FoliageComponent().also(entity::add)
         if (component.assetName == foliage) return false
         component.assetName = foliage

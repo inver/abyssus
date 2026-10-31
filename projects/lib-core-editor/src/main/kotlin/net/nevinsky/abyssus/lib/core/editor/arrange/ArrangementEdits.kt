@@ -19,7 +19,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.PlacementWrites
-import net.nevinsky.abyssus.lib.core.editor.scene.newEntity
+import com.badlogic.ashley.core.Component
 
 /** What an arrangement edit did to a scene. The scene is only touched for [Changed]. */
 sealed interface ArrangementResult {
@@ -61,14 +61,11 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         }
         val slots = layout.slots(component) ?: return tooMany()
 
-        val arrangementId = scene.nextId()
-        scene.ecs[arrangementId] = newEntity(
-            arrangementId, EntityType.GROUP, NameComponent(messages.message("arrangementName", arrangementId.toString())), component,
-        )
+        val arrangementId = scene.add(EntityType.GROUP) { id ->
+            listOf(NameComponent(messages.message("arrangementName", id.toString())), component)
+        }
         for ((k, slot) in slots.withIndex()) {
-            val copyId = scene.nextId()
-            scene.ecs[copyId] = copyOf(copyId, arrangementId, k, slot, component.asset, heights)
-            component.slots.add(copyId.toInt())
+            component.slots.add(scene.add(EntityType.OBJECT) { copyOf(arrangementId, k, slot, component.asset, heights) }.toInt())
         }
         return ArrangementResult.Changed(arrangementId)
     }
@@ -88,7 +85,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         before: PathArrangementComponent?,
         heights: GroundHeight,
     ): ArrangementResult {
-        val component = scene.entity(arrangementId)?.components?.filterIsInstance<PathArrangementComponent>()?.firstOrNull()
+        val component = scene.entity(arrangementId)?.component(PathArrangementComponent::class.java)
             ?: return ArrangementResult.Rejected(messages.message("arrangementMissing", arrangementId))
         if (!component.isUsable()) {
             return ArrangementResult.Rejected(messages.message("arrangementInvalid"))
@@ -109,10 +106,8 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
                 filled -> oldId.also { changed = place(scene, it.toLong(), slot, component.asset, heights) or changed }
                 k < oldSlots.size && !refill -> NO_ENTITY
                 else -> {
-                    val copyId = scene.nextId()
-                    scene.ecs[copyId] = copyOf(copyId, arrangementId, k, slot, component.asset, heights)
                     changed = true
-                    copyId.toInt()
+                    scene.add(EntityType.OBJECT) { copyOf(arrangementId, k, slot, component.asset, heights) }.toInt()
                 }
             }
         }
@@ -141,7 +136,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         points: List<Vector3>,
         heights: GroundHeight
     ): ArrangementResult {
-        val component = scene.entity(arrangementId)?.components?.filterIsInstance<PathArrangementComponent>()?.firstOrNull()
+        val component = scene.entity(arrangementId)?.component(PathArrangementComponent::class.java)
             ?: return ArrangementResult.Rejected(messages.message("arrangementMissing", arrangementId))
         if (points.size < 2 || points.any { !it.x.isFinite() || !it.y.isFinite() || !it.z.isFinite() }) {
             return ArrangementResult.Rejected(messages.message("arrangementInvalid"))
@@ -161,8 +156,8 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
     fun detach(scene: SceneDto, copyId: Long): Boolean {
         val id = copyId.toInt()
         val copy = scene.entity(copyId) ?: return false
-        val parent = copy.components.filterIsInstance<ParentComponent>().firstOrNull()?.parentEntityId ?: return false
-        val arrangement = scene.entity(parent.toLong())?.components?.filterIsInstance<PathArrangementComponent>()?.firstOrNull()
+        val parent = copy.component(ParentComponent::class.java)?.parentEntityId ?: return false
+        val arrangement = scene.entity(parent.toLong())?.component(PathArrangementComponent::class.java)
             ?: return false
         val at = arrangement.slots.indexOf(id)
         if (at < 0) return false
@@ -174,23 +169,21 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
     /** Whether [copyId] is linked to the arrangement: it exists and its `ParentComponent` points at [arrangementId]. */
     private fun isCopy(scene: SceneDto, copyId: Int, arrangementId: Long): Boolean {
         if (copyId < 0) return false
-        val parent = scene.entity(copyId.toLong())?.components?.filterIsInstance<ParentComponent>()?.firstOrNull()
+        val parent = scene.entity(copyId.toLong())?.component(ParentComponent::class.java)
         return parent != null && parent.parentEntityId.toLong() == arrangementId
     }
 
     private fun copyOf(
-        id: Long,
         arrangementId: Long,
         slotIndex: Int,
         slot: PathSlot,
         asset: BaseMeta,
         heights: GroundHeight,
-    ): EntityDto {
+    ): List<Component> {
         val at = slot.position(heights)
         val position = PositionComponent(at.x, at.y, at.z)
         position.localRotation.set(slot.rotation())
-        return newEntity(
-            id, EntityType.OBJECT,
+        return listOf(
             NameComponent(messages.message("arrangementCopyName", arrangementId, slotIndex.toString())),
             position,
             RenderComponent("defaultShader", asset.type, asset.name),
@@ -204,7 +197,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         val placement = placements.placementOf(copy)
         var changed = placements.setPosition(placement, slot.position(heights))
         changed = placements.setRotation(placement, slot.rotation()) or changed
-        val render = copy.components.filterIsInstance<RenderComponent>().firstOrNull() ?: return changed
+        val render = copy.component(RenderComponent::class.java) ?: return changed
         if (render.assetName != asset.name) { render.assetName = asset.name; changed = true }
         if (render.type != asset.type) { render.type = asset.type; changed = true }
         return changed

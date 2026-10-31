@@ -81,7 +81,7 @@ fun readEntitySections(
         }
     }
     val addable = if (kind == null) editor.missingKinds(scene, entityId).map { it.name } else emptyList()
-    return EntitySections.Read(entity.components.filterIsInstance<NameComponent>().firstOrNull()?.name?.takeIf { it.isNotBlank() } ?: entityId.toString(), sections, addable)
+    return EntitySections.Read(entity.component(NameComponent::class.java)?.name?.takeIf { it.isNotBlank() } ?: entityId.toString(), sections, addable)
 }
 
 /**

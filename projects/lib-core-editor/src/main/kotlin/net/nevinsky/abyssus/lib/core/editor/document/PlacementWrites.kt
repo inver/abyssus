@@ -31,6 +31,6 @@ class PlacementWrites {
 
     /** The [PositionComponent] of [entity], added when it has none. */
     fun placementOf(entity: EntityDto): PositionComponent =
-        entity.components.filterIsInstance<PositionComponent>().firstOrNull()
+        entity.component(PositionComponent::class.java)
             ?: PositionComponent().also(entity::add)
 }

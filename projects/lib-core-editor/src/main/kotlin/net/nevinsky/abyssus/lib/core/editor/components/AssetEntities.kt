@@ -13,7 +13,6 @@ import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.dto.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.lib.core.editor.scene.newEntity
 
 /** The result of adding an entity: [entityId] is the new entity's id when [result] is [EditResult.Changed]. */
 data class AddedEntity(val result: EditResult, val entityId: Long? = null)
@@ -34,14 +33,12 @@ class AssetEntities(private val messages: EditorMessages) {
         }
         val half =
             if (asset.isTerrain() && terrainSize != null && terrainSize.isFinite() && terrainSize > 0f) terrainSize / 2f else 0f
-        val id = scene.nextId()
         val render = RenderComponent(if (asset.isTerrain()) "terrain" else "defaultShader", asset.type, asset.name)
             .also { if (!asset.isTerrain()) it.meshId = meshId?.takeIf(String::isNotEmpty) }
-        val name = messages.message(if (asset.isTerrain()) "assetEntityTerrainName" else "assetEntityModelName", id.toString())
-        scene.ecs[id] = newEntity(
-            id, if (asset.isTerrain()) EntityType.TERRAIN else EntityType.OBJECT,
-            NameComponent(name), PositionComponent(point.x - half, point.y, point.z - half), render,
-        )
+        val id = scene.add(if (asset.isTerrain()) EntityType.TERRAIN else EntityType.OBJECT) { id ->
+            val name = messages.message(if (asset.isTerrain()) "assetEntityTerrainName" else "assetEntityModelName", id.toString())
+            listOf(NameComponent(name), PositionComponent(point.x - half, point.y, point.z - half), render)
+        }
         return AddedEntity(EditResult.Changed, id)
     }
 }

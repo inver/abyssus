@@ -9,6 +9,7 @@ import com.badlogic.ashley.core.Component
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import java.util.*
 
@@ -50,12 +51,26 @@ data class SceneDto(
     @JsonIgnore
     fun nameOf(id: Long): String? {
         val entity = entity(id) ?: return null
-        return entity.components.filterIsInstance<NameComponent>().firstOrNull()?.name
+        return entity.component(NameComponent::class.java)?.name
             ?.takeIf { it.isNotBlank() } ?: id.toString()
     }
 
     /** The first component of entity [id] that is an instance of [type], or null. */
     @JsonIgnore
-    fun <C : Component> component(id: Long, type: Class<C>): C? =
-        entity(id)?.components?.firstOrNull { type.isInstance(it) }?.let(type::cast)
+    fun <C : Component> component(id: Long, type: Class<C>): C? = entity(id)?.component(type)
+
+    /**
+     * Adds a new entity of [type] under the next free id and returns that id. Its header comes first, then the
+     * components [build] makes for it; [build] is told the id, which names or links the entity.
+     */
+    fun add(type: EntityType, build: (id: Long) -> List<Component>): Long {
+        val id = nextId()
+        val entity = EntityDto(mutableListOf<Component>(HeaderComponent(id = id, type = type)))
+        build(id).forEach(entity::add)
+        ecs[id] = entity
+        return id
+    }
+
+    /** Adds a new entity of [type] with [parts] under the next free id and returns that id. */
+    fun add(type: EntityType, vararg parts: Component): Long = add(type) { parts.toList() }
 }

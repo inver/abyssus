@@ -12,10 +12,10 @@ import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 
 /** The entries of the arrangement's `slots` that name an entity (not `-1`); empty for an entity that is no arrangement. */
 private fun slotIds(entity: EntityDto?): List<Int> =
-    entity?.components?.filterIsInstance<PathArrangementComponent>()?.firstOrNull()?.slots?.filter { it >= 0 }.orEmpty()
+    entity?.component(PathArrangementComponent::class.java)?.slots?.filter { it >= 0 }.orEmpty()
 
 private fun parentOf(entity: EntityDto?): Int? =
-    entity?.components?.filterIsInstance<ParentComponent>()?.firstOrNull()?.parentEntityId
+    entity?.component(ParentComponent::class.java)?.parentEntityId
 
 /**
  * How many copies the arrangement [entity] lists in its `slots` (`-1` marks an empty slot); 0 for an entity that has no
