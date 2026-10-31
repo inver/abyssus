@@ -22,6 +22,7 @@ import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.undo.DocumentSaveUndoableAction
 import java.io.File
+import net.nevinsky.abyssus.lib.core.editor.util.Util
 
 /** A resource file set staged for import into a UI asset: the new files as one transaction and the declaration to add. */
 class StagedUiResource(
@@ -99,21 +100,13 @@ class UiResourceImporter {
 
     private fun uniqueName(folder: File, subfolder: String, name: String): String {
         val dir = File(folder, subfolder)
-        fun taken(n: String) = File(dir, n).exists()
-        if (!taken(name)) return name
         val stem = name.substringBeforeLast('.', name)
         val ext = name.substringAfterLast('.', "").let { if (it.isEmpty() || it == name) "" else ".$it" }
-        var i = 2
-        while (taken("$stem-$i$ext")) i++
-        return "$stem-$i$ext"
+        return Util.uniqueName(stem, ext) { File(dir, it).exists() }
     }
 
     private fun uniqueId(existing: Set<String>, base: String): String {
-        val clean = base.ifBlank { "resource" }
-        if (clean !in existing) return clean
-        var i = 2
-        while ("$clean-$i" in existing) i++
-        return "$clean-$i"
+        return Util.uniqueName(base.ifBlank { "resource" }) { it in existing }
     }
 }
 

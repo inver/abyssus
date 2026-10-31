@@ -37,6 +37,8 @@ tasks.test {
 extra["abyssusSingletonExcludes"] = listOf(
     "net/nevinsky/abyssus/lib/core/editor/content/Placements.kt",
     "net/nevinsky/abyssus/lib/core/editor/scene/SceneRenderParams.kt",
+    // Stateless helper functions (uniqueName, isFinite) kept in one companion by decision; they take everything as arguments.
+    "net/nevinsky/abyssus/lib/core/editor/util/Util.kt",
 )
 
 // No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in lib-core-editor (see gradle/checks.gradle.kts).

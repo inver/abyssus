@@ -13,6 +13,7 @@ import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.PlacementWrites
+import net.nevinsky.abyssus.lib.core.editor.util.Util
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
 /** A copied entity as clipboard text, or the reason it cannot be copied. */
@@ -62,7 +63,7 @@ class EntityClipboard(
     fun paste(scene: SceneDto, text: String?, point: Vector3): AddedEntity {
         val copied =
             parse(text) ?: return AddedEntity(EditResult.Rejected(messages.message("entityClipboardNotEntity")))
-        if (listOf(point.x, point.y, point.z).any { !it.isFinite() }) {
+        if (!Util.isFinite(point)) {
             return AddedEntity(EditResult.Rejected(messages.message("componentSceneUnreadable")))
         }
         val typed = ArrayList<Component>()

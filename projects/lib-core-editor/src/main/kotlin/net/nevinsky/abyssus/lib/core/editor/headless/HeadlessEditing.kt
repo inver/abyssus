@@ -185,8 +185,7 @@ class HeadlessEditing(
         refusal?.let { return HeadlessEdit.Refused(it) }
         if (!changed) return HeadlessEdit.Unchanged
         // asset documents are still edited as a tree (gate G6)
-        val printed = if (metaText.contains('\n')) json.pretty(root).let { if (metaText.endsWith('\n')) it else it.removeSuffix("\n") }
-        else json.toString(root)
+        val printed = json.pretty(root)
         return if (printed == metaText) HeadlessEdit.Unchanged else HeadlessEdit.Edited(printed)
     }
 

@@ -40,13 +40,4 @@ class AssetMetaParserTest {
         assertEquals(meta.additional, parser.read("hills", parser.write(meta)).additional)
         assertEquals(meta.additional, parser.read("hills", parser.write(meta, pretty = true)).additional)
     }
-
-    @Test
-    fun writeLikeFollowsTheOriginalsStyle() {
-        val meta = parser.read("hills", text)
-        assertFalse(parser.writeLike(meta, text).contains('\n'))
-        val indented = parser.writeLike(meta, "{\n}\n")
-        assertTrue(indented.contains('\n') && indented.endsWith("\n"))
-        assertFalse(parser.writeLike(meta, "{\n}").endsWith("\n"))
-    }
 }

@@ -11,6 +11,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
+import net.nevinsky.abyssus.lib.core.editor.util.Util
 import net.nevinsky.abyssus.lib.core.dto.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 
@@ -28,7 +29,7 @@ class AssetEntities(private val messages: EditorMessages) {
      * a size its corner is put there. A model with [meshId] draws only that mesh; the id is ignored for a terrain.
      */
     fun add(scene: SceneDto, asset: BaseMeta, point: Vector3, terrainSize: Float? = null, meshId: String? = null): AddedEntity {
-        if (asset.type !in setOf(MetaType.MODEL, MetaType.TERRAIN) || listOf(point.x, point.y, point.z).any { !it.isFinite() }) {
+        if (asset.type !in setOf(MetaType.MODEL, MetaType.TERRAIN) || !Util.isFinite(point)) {
             return AddedEntity(EditResult.Rejected(messages.message("componentSceneUnreadable")))
         }
         val half =

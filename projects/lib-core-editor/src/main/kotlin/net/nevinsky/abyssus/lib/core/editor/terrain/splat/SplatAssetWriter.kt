@@ -13,6 +13,7 @@ import net.nevinsky.abyssus.lib.core.editor.document.newAssetMetaText
 import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaTextEditor
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
 import net.nevinsky.abyssus.lib.core.editor.terrain.uniqueAssetUuid
+import net.nevinsky.abyssus.lib.core.editor.util.Util
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import java.io.File
@@ -89,9 +90,6 @@ class SplatAssetWriter(
     private fun freeFolder(assetsDir: File, terrainFolder: String): String {
         val taken = assetsDir.list().orEmpty().map { it.lowercase() }.toSet()
         val base = "texture_${terrainFolder}_splat"
-        var name = base
-        var n = 2
-        while (name.lowercase() in taken) name = "${base}_${n++}"
-        return name
+        return Util.uniqueName(base, separator = "_") { it.lowercase() in taken }
     }
 }

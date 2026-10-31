@@ -12,6 +12,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.dto.EntityType
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
+import net.nevinsky.abyssus.lib.core.editor.util.Util
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 
 /** Sun is a directional light with different initial values, never a separate file type. */
@@ -50,7 +51,7 @@ data class AddedLight(val result: EditResult, val entityId: Long? = null)
 /** Edits only the [SceneDto]; callers write it through editSceneJson as a single undoable command. */
 class LightEntities(private val messages: EditorMessages) {
     fun add(scene: SceneDto, preset: LightPreset, position: Vector3): AddedLight {
-        if (listOf(position.x, position.y + preset.height, position.z).any { !it.isFinite() }) {
+        if (!Util.isFinite(position) || !(position.y + preset.height).isFinite()) {
             return AddedLight(EditResult.Rejected(messages.message("componentSceneUnreadable")))
         }
         val transform = PositionComponent(position.x, position.y + preset.height, position.z)

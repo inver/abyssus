@@ -11,7 +11,7 @@ import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 
 /**
  * The text transform behind every asset `meta.json` write: read the text with the [AssetMetaParser], let the caller
- * replace its typed `additional` block, and write the meta back in the style of the original.
+ * replace its typed `additional` block, and write the meta back pretty-printed.
  */
 class AssetMetaTextEditor(private val parser: AssetMetaParser) {
     /** Replaces the `additional` block of the [type] asset in [text] by what [change] makes of it. */
@@ -22,6 +22,6 @@ class AssetMetaTextEditor(private val parser: AssetMetaParser) {
         val before = meta.typedAdditional<T>()
         val after = change(before)
         if (after == before) return TextEditOutcome.Unchanged
-        return TextEditOutcome.Edited(parser.writeLike(parser.withAdditional(meta, after), text))
+        return TextEditOutcome.Edited(parser.write(parser.withAdditional(meta, after), pretty = true))
     }
 }

@@ -60,8 +60,7 @@ class UiTextEditor(
             is UiTransform.Rejected -> UiTextResult.Rejected(verdict.error, verdict.subject, verdict.issues)
             UiTransform.Unchanged -> UiTextResult.Unchanged
             is UiTransform.Changed -> {
-                val printed = if (text.contains('\n')) json.pretty(root).let { if (text.endsWith('\n')) it else it.removeSuffix("\n") }
-                else json.toString(root)
+                val printed = json.pretty(root)
                 if (printed == text) UiTextResult.Unchanged else UiTextResult.Edited(text, printed, verdict.result)
             }
         }

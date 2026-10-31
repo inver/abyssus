@@ -8,6 +8,7 @@ import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.editor.util.Util
 import java.util.*
 
 /**
@@ -36,12 +37,7 @@ class ModelAssetFiles(private val jsonProcessor: JsonProcessor) {
  * holds that path ignoring case, so two textures never overwrite one another on macOS or Windows.
  */
 fun uniqueTexturePath(taken: Collection<String>, name: String): String {
-    var candidate = "$TEXTURES_DIR/$name"
-    var n = 2
     val stem = name.substringBeforeLast('.')
-    val extension = name.substringAfterLast('.', "")
-    while (taken.any { it.equals(candidate, ignoreCase = true) }) {
-        candidate = "$TEXTURES_DIR/$stem-${n++}" + if (extension.isEmpty()) "" else ".$extension"
-    }
-    return candidate
+    val extension = name.substringAfterLast('.', "").let { if (it.isEmpty()) "" else ".$it" }
+    return Util.uniqueName("$TEXTURES_DIR/$stem", extension) { candidate -> taken.any { it.equals(candidate, ignoreCase = true) } }
 }

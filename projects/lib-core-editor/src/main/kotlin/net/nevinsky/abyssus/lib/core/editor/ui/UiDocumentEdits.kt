@@ -5,6 +5,7 @@
 package net.nevinsky.abyssus.lib.core.editor.ui
 
 import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.editor.util.Util
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.DoubleNode
 import com.fasterxml.jackson.databind.node.IntNode
@@ -87,10 +88,7 @@ class UiDocumentEdits {
     }
 
     private fun uniqueId(base: String, taken: Set<String>): String {
-        if (base !in taken) return base
-        var n = 2
-        while ("$base-$n" in taken) n++
-        return "$base-$n"
+        return Util.uniqueName(base) { it in taken }
     }
 
     private fun isDescendant(candidate: ObjectNode, ancestor: ObjectNode): Boolean {

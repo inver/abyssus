@@ -19,6 +19,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.PlacementWrites
+import net.nevinsky.abyssus.lib.core.editor.util.Util
 import com.badlogic.ashley.core.Component
 
 /** What an arrangement edit did to a scene. The scene is only touched for [Changed]. */
@@ -138,7 +139,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
     ): ArrangementResult {
         val component = scene.entity(arrangementId)?.component(PathArrangementComponent::class.java)
             ?: return ArrangementResult.Rejected(messages.message("arrangementMissing", arrangementId))
-        if (points.size < 2 || points.any { !it.x.isFinite() || !it.y.isFinite() || !it.z.isFinite() }) {
+        if (points.size < 2 || points.any { !Util.isFinite(it) }) {
             return ArrangementResult.Rejected(messages.message("arrangementInvalid"))
         }
         val before = arrangementAlong(component.points, component)
