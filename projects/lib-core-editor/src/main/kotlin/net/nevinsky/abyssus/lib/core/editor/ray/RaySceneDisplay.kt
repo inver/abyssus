@@ -23,7 +23,7 @@ import java.util.Collections
 class RayFrameContext(
     val params: SceneRenderParams, val content: SceneContent, val camera: PerspectiveCamera,
     val lights: LightSet, val models: Collection<ModelEntity>, val width: Int, val height: Int,
-    val viewCamera: String?,
+    val viewCamera: Long?,
     /** The built HDR sky's six axis irradiance colours (+X, -X, +Y, -Y, +Z, -Z), the same ones raster models use as ambient. */
     val hdrAmbient: FloatArray? = null,
     /** Bakes the scene's procedural sky (arbitrary asset GLSL) on the render thread; null for any other sky. Only asked in ray mode. */
@@ -55,7 +55,7 @@ data class RayDisplayCamera(
 /** Matched camera/content for overlays; mutable libGDX objects never enter a worker mailbox. */
 data class RayDisplayMetadata(
     val camera: RayDisplayCamera, val content: SceneContent,
-    val width: Int, val height: Int, val viewCamera: String?,
+    val width: Int, val height: Int, val viewCamera: Long?,
     val projectDir: File?, val ambient: Color?, val fog: FogParams?,
 )
 

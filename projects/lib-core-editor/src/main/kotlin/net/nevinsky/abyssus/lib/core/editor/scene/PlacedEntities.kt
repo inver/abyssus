@@ -21,12 +21,12 @@ interface PlacedEntity<A> {
  * it shows the same asset (so it can keep state such as a running animation).
  */
 class PlacedEntities<A : Any, E : PlacedEntity<A>>(private val place: (AssetPlacement, A, E?) -> E) {
-    private var entities = LinkedHashMap<String, E>()
+    private var entities = LinkedHashMap<Long, E>()
 
     val drawn: Collection<E> get() = entities.values
 
     fun update(placements: List<AssetPlacement>, assetOf: (String) -> A?) {
-        val next = LinkedHashMap<String, E>()
+        val next = LinkedHashMap<Long, E>()
         for (p in placements) {
             val asset = assetOf(p.storageName) ?: continue
             val current = entities[p.entityId]?.takeIf { it.asset === asset }

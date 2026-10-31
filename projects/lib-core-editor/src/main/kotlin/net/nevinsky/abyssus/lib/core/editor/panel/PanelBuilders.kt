@@ -16,7 +16,11 @@ import net.nevinsky.abyssus.lib.core.editor.components.EnabledTarget
 import net.nevinsky.abyssus.lib.core.editor.components.FieldKind
 import net.nevinsky.abyssus.lib.core.editor.components.FieldValue
 import net.nevinsky.abyssus.lib.core.editor.components.SetEnabledAction
-import net.nevinsky.abyssus.lib.core.editor.document.SceneDocument
+import com.badlogic.gdx.graphics.Color
+import net.nevinsky.abyssus.lib.core.dto.EntityDto
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.ecs.component.RawComponentsWrapper
+import net.nevinsky.abyssus.lib.core.editor.components.decimalText
 import net.nevinsky.abyssus.lib.core.editor.meta.EntitySections
 import java.time.Instant
 import java.time.ZoneId
@@ -112,13 +116,13 @@ class PanelBuilders(
     )
 
     /** A scene: its name and id, then ambient light, fog and skybox with their `Enabled` check boxes. */
-    fun scene(scene: JsonNode, projectFile: String, scenePath: String): PanelModel {
-        val name = scene.text("name")
+    fun scene(scene: SceneDto, projectFile: String, scenePath: String): PanelModel {
+        val name = scene.name.orEmpty()
         val main = Section(
             "scene.main", messages.message("panelSectionScene"), "scene",
             listOf(
-                TextRow("name", name, dim = !scene.has("name")),
-                ReadonlyRow("id", scene.get("id")?.asText() ?: ""),
+                TextRow("name", name, dim = scene.name == null),
+                ReadonlyRow("id", scene.id),
             ),
         )
         return PanelModel(
@@ -129,8 +133,8 @@ class PanelBuilders(
     }
 
     /** One scene setting row: its section only. */
-    fun setting(scene: JsonNode, setting: SceneSetting, projectFile: String): PanelModel {
-        val sceneName = scene.text("name")
+    fun setting(scene: SceneDto, setting: SceneSetting, projectFile: String): PanelModel {
+        val sceneName = scene.name.orEmpty()
         val section = settingSection(scene, setting)
         return PanelModel(
             Header(
@@ -141,28 +145,31 @@ class PanelBuilders(
         )
     }
 
-    private fun settingSection(scene: JsonNode, setting: SceneSetting): Section {
-        val node = scene.get(setting.key)
+    private fun settingSection(scene: SceneDto, setting: SceneSetting): Section {
         val rows: List<Row> = when (setting) {
             SceneSetting.AMBIENT -> listOf(
-                color("color", node?.get("color"), null),
-                number("intensity", node, "intensity", "", "", null),
+                colorRow("color", scene.ambientLight?.color),
+                numberRow("intensity", scene.ambientLight?.intensity, "", "", null),
             )
 
             SceneSetting.FOG -> listOf(
-                color("color", node?.get("color"), null),
-                number("density", node, "density", "", "", null),
-                number("gradient", node, "gradient", "", "", null),
+                colorRow("color", scene.fog?.color),
+                numberRow("density", scene.fog?.density, "", "", null),
+                numberRow("gradient", scene.fog?.gradient, "", "", null),
             )
 
             SceneSetting.SKYBOX -> listOf(
                 AssetRow(
-                    "skyboxName", scene.text("skyboxName"), "psky", browse = true, dim = !scene.has("skyboxName"),
+                    "skyboxName", scene.skyboxName.orEmpty(), "psky", browse = true, dim = scene.skyboxName == null,
                     field = FieldRef("scene", "skyboxName"),
                 ),
             )
         }
-        val on = scene.get(setting.toggleKey)?.let { !it.isBoolean || it.booleanValue() } ?: false
+        val on = when (setting) {
+            SceneSetting.AMBIENT -> scene.ambientLightEnabled
+            SceneSetting.FOG -> scene.fogEnabled
+            SceneSetting.SKYBOX -> scene.skyboxEnabled
+        }
         return Section(
             "scene.${setting.key}", messages.message(setting.titleKey), setting.iconKey, rows,
             classHint = setting.toggleKey, enable = EnableToggle(on, settingKey = setting.toggleKey), disabled = !on,
@@ -170,11 +177,9 @@ class PanelBuilders(
     }
 
     /** The `ecs` row: the entity count, read only, with the count of each entity type as a note. */
-    fun ecs(scene: JsonNode, projectFile: String): PanelModel {
-        val entities = SceneDocument(scene).entitiesNode()?.properties().orEmpty().toList()
-        val types = entities.groupingBy { (_, e) ->
-            net.nevinsky.abyssus.lib.core.format.entityTypeOf(e) ?: "OBJECT"
-        }
+    fun ecs(scene: SceneDto, projectFile: String): PanelModel {
+        val entities = scene.entities()
+        val types = entities.groupingBy { (_, e) -> e.header().type?.name ?: "OBJECT" }
             .eachCount().entries.sortedWith(compareBy({ -it.value }, { it.key }))
         val rows = listOf(
             ReadonlyRow("entities", entities.size.toString()),
@@ -182,7 +187,7 @@ class PanelBuilders(
         )
         return PanelModel(
             Header(
-                listOf(projectFile, scene.text("name")), "ecs", "ecs",
+                listOf(projectFile, scene.name.orEmpty()), "ecs", "ecs",
                 messages.message("panelSubtitleEcs", entities.size),
                 listOf(Badge(BadgeKind.READ_ONLY, messages.message("panelBadgeReadOnly"))),
             ),
@@ -193,12 +198,12 @@ class PanelBuilders(
     // ---- entities and components ----
 
     /** An entity: one section per component. [read] is what the entity's sections read as. */
-    fun entity(scene: JsonNode, entityId: String, read: EntitySections.Read, projectFile: String): PanelModel {
+    fun entity(scene: SceneDto, entityId: Long, read: EntitySections.Read, projectFile: String): PanelModel {
         val type = typeOf(scene, entityId)
         val entityOn = entityEnabled(scene, entityId)
         return PanelModel(
             Header(
-                listOf(projectFile, scene.text("name"), "ecs"), entityIconKey(type), read.name,
+                listOf(projectFile, scene.name.orEmpty(), "ecs"), entityIconKey(type), read.name,
                 messages.message("panelSubtitleEntity", entityId, type ?: "OBJECT"),
             ),
             read.sections
@@ -208,7 +213,7 @@ class PanelBuilders(
     }
 
     /** One component of an entity: its section only. */
-    fun component(scene: JsonNode, entityId: String, read: EntitySections.Read, projectFile: String): PanelModel {
+    fun component(scene: SceneDto, entityId: Long, read: EntitySections.Read, projectFile: String): PanelModel {
         val type = typeOf(scene, entityId)
         val section = read.sections.single()
         val game = isGame(section.kind)
@@ -217,7 +222,7 @@ class PanelBuilders(
         )
         return PanelModel(
             Header(
-                listOf(projectFile, scene.text("name"), "ecs", read.name), componentIconKey(section.kind),
+                listOf(projectFile, scene.name.orEmpty(), "ecs", read.name), componentIconKey(section.kind),
                 section.label, subtitle,
             ),
             listOf(componentSection(scene, entityId, section, read.name, type, entityEnabled(scene, entityId))),
@@ -225,22 +230,30 @@ class PanelBuilders(
         )
     }
 
-    private fun typeOf(scene: JsonNode, entityId: String): String? =
-        SceneDocument(scene).entity(entityId)?.type
+    private fun typeOf(scene: SceneDto, entityId: Long): String? =
+        scene.entity(entityId)?.header()?.type?.name
 
-    private fun entityEnabled(scene: JsonNode, entityId: String): Boolean =
-        SceneDocument(scene).entity(entityId)?.enabled ?: true
+    private fun entityEnabled(scene: SceneDto, entityId: Long): Boolean =
+        scene.entity(entityId)?.header()?.entityEnabled ?: true
+
+    /** Whether the component [kind] of [entity] is enabled: not named by the header's disabled components. */
+    private fun componentEnabled(entity: EntityDto?, kind: String): Boolean {
+        entity ?: return true
+        val component = entity.components.firstOrNull { it.javaClass.simpleName == kind }
+        if (component != null) return component.javaClass !in entity.header().disabledComponents
+        return entity.components.filterIsInstance<RawComponentsWrapper>().flatMap { it.entries }
+            .firstOrNull { it.name.substringAfterLast('.') == kind }?.disabled?.not() ?: true
+    }
 
     private fun componentSection(
-        scene: JsonNode,
-        entityId: String,
+        scene: SceneDto,
+        entityId: Long,
         section: ComponentSection,
         entityName: String,
         type: String?,
         entityOn: Boolean,
     ): Section {
-        val node = SceneDocument(scene).components(entityId)?.get(section.kind)
-        val componentOn = SceneDocument(scene).entity(entityId)?.componentEnabled(section.kind) ?: true
+        val componentOn = componentEnabled(scene.entity(entityId), section.kind)
         val togglable = toggles.isTogglable(section.kind)
         val rows = if (section.raw != null) rawRows(section) else rows(section, entityId, entityName, type)
         return Section(
@@ -278,7 +291,7 @@ class PanelBuilders(
         return words.first().replaceFirstChar { it.uppercase() } + words.drop(1).joinToString("") { " $it" }
     }
 
-    private fun rows(section: ComponentSection, entityId: String, entityName: String, type: String?): List<Row> {
+    private fun rows(section: ComponentSection, entityId: Long, entityName: String, type: String?): List<Row> {
         if (section.kind == "NameComponent") return nameRows(section)
         val out = mutableListOf<Row>()
         var group = ""
@@ -588,6 +601,16 @@ class PanelBuilders(
             channels.map { Axis(it, node?.get(it)?.asText() ?: "", kind?.let { k -> FieldRef(k, "$label.$it") }) }
         val rgb = listOf("r", "g", "b").map { node?.get(it)?.floatValue() ?: 0f }
         return ColorRow(label, if (node == null) "" else hex(rgb[0], rgb[1], rgb[2]), dim = node == null, axes = axes)
+    }
+
+    /** A number row for a typed value; it is dim while the value is absent. */
+    private fun numberRow(label: String, value: Float?, default: String, unit: String, kind: String?): NumberRow =
+        NumberRow(label, value?.let(::decimalText) ?: default, unit, value == null, kind?.let { FieldRef(it, label) })
+
+    private fun colorRow(label: String, color: Color?): ColorRow {
+        val axes = listOf("r" to color?.r, "g" to color?.g, "b" to color?.b, "a" to color?.a)
+            .map { (name, value) -> Axis(name, value?.let(::decimalText) ?: "", null) }
+        return ColorRow(label, if (color == null) "" else hex(color.r, color.g, color.b), dim = color == null, axes = axes)
     }
 
     private fun hex(r: Float, g: Float, b: Float): String {

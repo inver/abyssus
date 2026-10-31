@@ -21,7 +21,7 @@ class ScenePreviewLayers(
     private val heights: GroundHeight = LineHeights(),
 ) {
     private var posedBase: SceneContent? = null
-    private var posedPoses: Map<String, *>? = null
+    private var posedPoses: Map<Long, *>? = null
     private var posedOf: SceneContent? = null
 
     /** [base] with the simulated poses applied: [base] itself while nothing plays. */
@@ -37,7 +37,7 @@ class ScenePreviewLayers(
     }
 
     private var shownBase: SceneContent? = null
-    private var shownDrag: Map<String, DragResult>? = null
+    private var shownDrag: Map<Long, DragResult>? = null
     private var shownDraft: PathEdit? = null
     private var shownOf: SceneContent? = null
 

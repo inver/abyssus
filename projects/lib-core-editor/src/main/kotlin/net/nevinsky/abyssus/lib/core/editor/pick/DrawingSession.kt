@@ -18,7 +18,7 @@ internal class DrawingSession(
     private val queries: SceneQueries,
     private val size: () -> ViewSize,
     private val onCreate: () -> ((BaseMeta, List<Vector3>, Boolean) -> Boolean)?,
-    private val onEdit: () -> ((String, List<Vector3>) -> Boolean)?,
+    private val onEdit: () -> ((Long, List<Vector3>) -> Boolean)?,
     private val changed: () -> Unit,
 ) {
     /** Starts drawing a path arrangement of the model [asset]. */
@@ -86,10 +86,10 @@ internal class DrawingSession(
     }
 
     /** Whether a point of the arrangement [entityId] can be removed: at least two points must remain. */
-    fun canRemovePoint(entityId: String): Boolean = (queries.pathPoints(entityId)?.size ?: 0) > 2
+    fun canRemovePoint(entityId: Long): Boolean = (queries.pathPoints(entityId)?.size ?: 0) > 2
 
     /** Removes point [index] of the arrangement [entityId] through the edit callback; false when it cannot be removed or was not written. */
-    fun removePoint(entityId: String, index: Int): Boolean {
+    fun removePoint(entityId: Long, index: Int): Boolean {
         val points = queries.pathPoints(entityId) ?: return false
         if (points.size <= 2 || index !in points.indices) return false
         return onEdit()?.invoke(entityId, points.toMutableList().also { it.removeAt(index) }) ?: false

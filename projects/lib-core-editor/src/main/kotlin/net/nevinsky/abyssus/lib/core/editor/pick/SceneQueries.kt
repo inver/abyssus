@@ -31,7 +31,7 @@ interface SceneQueries {
     val drawnVersion: Long
 
     /** The entity under the pixel ([screenX], [screenY]) of a [width] x [height] view, or null. */
-    fun pick(screenX: Int, screenY: Int, width: Int, height: Int): String?
+    fun pick(screenX: Int, screenY: Int, width: Int, height: Int): Long?
 
     /**
      * What is under the pixel: the entity [pick] finds, or null.
@@ -43,19 +43,19 @@ interface SceneQueries {
     fun rayAt(screenX: Int, screenY: Int, width: Int, height: Int): Ray?
 
     /** The drawn terrain of [entityId]: its data and world matrix, or null when it is not drawn. */
-    fun terrainOf(entityId: String): TerrainTarget?
+    fun terrainOf(entityId: Long): TerrainTarget?
 
     /**
      * The nearest terrain hit along [ray], when it belongs to [entityId]; null when another terrain covers it.
      * Model boxes do not block the brush, and the camera's far plane limits the ray.
      */
-    fun terrainHit(entityId: String, ray: Ray): Vector3?
+    fun terrainHit(entityId: Long, ray: Ray): Vector3?
 
     /** The nearest point where [ray] meets any drawn terrain, or null when it meets none (a click in the sky). */
     fun groundHit(ray: Ray): Vector3?
 
     /** The points of the arrangement [entityId] as shown now: the ones being dragged, else the file's; null when it is none. */
-    fun pathPoints(entityId: String): List<Vector3>?
+    fun pathPoints(entityId: Long): List<Vector3>?
 
     /** The handle of the selected arrangement's line under the pixel, or null. */
     fun pathHandleAt(screenX: Int, screenY: Int, width: Int, height: Int): PathHit?
@@ -64,10 +64,10 @@ interface SceneQueries {
     fun screenDistance(at: Vector3, screenX: Int, screenY: Int, width: Int, height: Int): Float?
 
     /** The height of the highest surface under [entityId], or null when it cannot drop (terrain, the camera looked through, nothing below). */
-    fun groundBelow(entityId: String): Float?
+    fun groundBelow(entityId: Long): Float?
 
     /** The lowest world point of [entityId]'s box, or null when it is not drawn. */
-    fun lowestPoint(entityId: String): Float?
+    fun lowestPoint(entityId: Long): Float?
 
     /** The gizmo of the selected entity for a view [height] pixels tall, or null when nothing is selected or it has no handles. */
     fun gizmoHandles(height: Int): GizmoHandles?
@@ -98,7 +98,7 @@ class SnapshotSceneQueries(
 ) : SceneQueries {
     override val sceneContent: SceneContent get() = sceneContentOf()
 
-    private class DrawnBox(val id: String, val local: BoundingBox, val world: Matrix4) {
+    private class DrawnBox(val id: Long, val local: BoundingBox, val world: Matrix4) {
         fun oriented() = OrientedBox(local, world)
     }
 
@@ -107,8 +107,8 @@ class SnapshotSceneQueries(
     private class Built(
         val snapshot: FrameSnapshot,
         val content: SceneContent,
-        val viewCamera: String?,
-        val preview: Map<String, DragResult>,
+        val viewCamera: Long?,
+        val preview: Map<Long, DragResult>,
         val targets: Targets
     )
 
@@ -134,7 +134,7 @@ class SnapshotSceneQueries(
         return Targets(boxes, frame.terrains).also { built = Built(frame, c, state.viewCamera, state.preview, it) }
     }
 
-    override fun pick(screenX: Int, screenY: Int, width: Int, height: Int): String? {
+    override fun pick(screenX: Int, screenY: Int, width: Int, height: Int): Long? {
         if (width <= 0 || height <= 0) return null
         val frame = snapshot() ?: return null
         val targets = targets() ?: return null
@@ -172,10 +172,10 @@ class SnapshotSceneQueries(
         )
     }
 
-    override fun terrainOf(entityId: String): TerrainTarget? =
+    override fun terrainOf(entityId: Long): TerrainTarget? =
         snapshot()?.terrains?.firstOrNull { it.entityId == entityId }
 
-    override fun terrainHit(entityId: String, ray: Ray): Vector3? {
+    override fun terrainHit(entityId: Long, ray: Ray): Vector3? {
         val (nearest, distance) = nearestTerrain(ray) ?: return null
         return if (nearest.entityId == entityId) Vector3(ray.origin).mulAdd(ray.direction, distance) else null
     }
@@ -193,7 +193,7 @@ class SnapshotSceneQueries(
             .minByOrNull { it.second }
     }
 
-    override fun pathPoints(entityId: String): List<Vector3>? {
+    override fun pathPoints(entityId: Long): List<Vector3>? {
         return pathPointsIn(content, state, entityId)
     }
 
@@ -214,7 +214,7 @@ class SnapshotSceneQueries(
         return kotlin.math.hypot(s.x - screenX, s.y - screenY)
     }
 
-    override fun groundBelow(entityId: String): Float? {
+    override fun groundBelow(entityId: Long): Float? {
         if (entityId == state.viewCamera || content.terrains.any { it.entityId == entityId }) return null
         val targets = targets() ?: return null
         val footprint = targets.boxes.firstOrNull { it.id == entityId }?.oriented() ?: return null
@@ -225,7 +225,7 @@ class SnapshotSceneQueries(
         )
     }
 
-    override fun lowestPoint(entityId: String): Float? =
+    override fun lowestPoint(entityId: Long): Float? =
         targets()?.boxes?.firstOrNull { it.id == entityId }?.oriented()?.bottom
 
     override fun gizmoHandles(height: Int): GizmoHandles? {

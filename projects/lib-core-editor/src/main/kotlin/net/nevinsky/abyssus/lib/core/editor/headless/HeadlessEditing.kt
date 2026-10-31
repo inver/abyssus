@@ -7,10 +7,8 @@ package net.nevinsky.abyssus.lib.core.editor.headless
 
 import net.nevinsky.abyssus.lib.core.editor.components.EnabledTarget
 import net.nevinsky.abyssus.lib.core.editor.components.SetEnabledAction
-import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.format.FormatRejection
-import net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor
@@ -19,10 +17,13 @@ import net.nevinsky.abyssus.lib.core.editor.components.AssetEntities
 import net.nevinsky.abyssus.lib.core.editor.components.EntityRemoval
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentTextEditor
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.scene.SceneParser
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneEdit
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneSerializer
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneTextEditor
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageComponentEdits
 import net.nevinsky.abyssus.lib.core.editor.document.documentDisplayMessage
@@ -50,31 +51,33 @@ sealed interface HeadlessEdit {
 }
 
 /**
- * Validating and editing native `.scene`, `.abss` and asset `meta.json` documents as text, with no IDE: the same
- * admission, mutations and printing the plugin's writes use, so the same input gives byte-identical output and the
- * same refusal. Scene components are edited by the built-in kinds; reasons are read from [messages].
+ * Validating and editing `.scene`, `.abss` and asset `meta.json` documents as text, with no IDE: the same admission,
+ * mutations and printing the plugin's writes use, so the same input gives byte-identical output and the same refusal.
+ * Scene components are edited by the built-in kinds; reasons are read from [messages].
  */
 class HeadlessEditing(
+    private val json: JsonProcessor,
     private val messages: EditorMessages = ResourceEditorMessages(),
-    private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
+    registry: ComponentRegistry = ComponentRegistry(),
 ) {
-    private val documents = DocumentTextEditor(format)
+    private val scenes = SceneParser(json, registry)
+    private val sceneEditor = SceneTextEditor(scenes, SceneSerializer(json))
     private val components = ComponentEditor(messages)
-    private val assetMeta = AssetMetaEditor(AssetFieldDescriptions(), format)
+    private val assetMeta = AssetMetaEditor(AssetFieldDescriptions())
     private val foliageEdits = FoliageComponentEdits()
     private val enabledAction = SetEnabledAction()
     private val entityRemoval = EntityRemoval(messages)
     private val assetEntities = AssetEntities(messages)
 
-    /** Null when [text] is a supported native document of [kind], else why it is refused. */
-    fun validate(text: String, kind: DocumentKind): Refusal? {
-        val root = runCatchingKeepingCancellation { SceneJson().parse(text) }.getOrElse { return refusal(it) }
-        return format.validate(root, kind)?.let { refusal(UnsupportedDocumentFormat(kind, it)) }
-    }
+    /** Null when [text] is a readable document of [kind], else why it is refused. */
+    fun validate(text: String, kind: DocumentKind): Refusal? =
+        runCatchingKeepingCancellation {
+            if (kind == DocumentKind.SCENE) scenes.parse(text) else json.readObject(text)
+        }.exceptionOrNull()?.let(::refusal)
 
     /** Applies the transform a gizmo drag writes ([TransformEdit]) to entity [entityId] of [sceneText]. */
-    fun transform(sceneText: String, entityId: String, edit: TransformEdit): HeadlessEdit =
-        edit(sceneText, DocumentKind.SCENE) { root -> SceneTransformWriter().apply(root, entityId, edit) }
+    fun transform(sceneText: String, entityId: Long, edit: TransformEdit): HeadlessEdit =
+        editScene(sceneText) { scene -> SceneTransformWriter().apply(scene, entityId, edit) }
 
     /**
      * Sets [field] of component [kind] of entity [entityId] in [sceneText] to [value], as the Properties panel does.
@@ -82,7 +85,7 @@ class HeadlessEditing(
      */
     fun setComponentField(
         sceneText: String,
-        entityId: String,
+        entityId: Long,
         kind: String,
         field: String,
         value: String,
@@ -90,8 +93,8 @@ class HeadlessEditing(
         assetsByType: Map<String, Set<String>>? = null,
     ): HeadlessEdit {
         var rejected: String? = null
-        val outcome = edit(sceneText, DocumentKind.SCENE) { root ->
-            when (val result = components.update(root, entityId, kind, field, value, assets, assetsByType)) {
+        val outcome = editScene(sceneText) { scene ->
+            when (val result = components.update(scene, entityId, kind, field, value, assets, assetsByType)) {
                 EditResult.Changed -> true
                 EditResult.Unchanged -> false
                 is EditResult.Rejected -> false.also { rejected = result.reason }
@@ -114,8 +117,8 @@ class HeadlessEditing(
         terrainSize: Float? = null,
     ): HeadlessEdit {
         var rejected: String? = null
-        val outcome = edit(sceneText, DocumentKind.SCENE) { root ->
-            when (val added = assetEntities.add(root, asset, Vector3(x, y, z), terrainSize, meshId).result) {
+        val outcome = editScene(sceneText) { scene ->
+            when (val added = assetEntities.add(scene, asset, Vector3(x, y, z), terrainSize, meshId).result) {
                 EditResult.Changed -> true
                 EditResult.Unchanged -> false
                 is EditResult.Rejected -> false.also { rejected = added.reason }
@@ -125,25 +128,24 @@ class HeadlessEditing(
     }
 
     /**
-     * Disables or enables an entity or one of its components in [sceneText]: the disabled state is written on that entry
-     * only (the entity `flags` or its `disabledComponents`), and enabling removes it, as the Properties check box and the tree eye do. Unchanged when the target is
-     * missing, cannot be switched, or already has that state.
+     * Disables or enables an entity or one of its components in [sceneText], as the Properties check box and the tree
+     * eye do. Unchanged when the target is missing, cannot be switched, or already has that state.
      */
     fun setEnabled(sceneText: String, target: EnabledTarget, enabled: Boolean): HeadlessEdit =
-        edit(sceneText, DocumentKind.SCENE) { root -> enabledAction.apply(root, target, enabled) }
+        editScene(sceneText) { scene -> enabledAction.apply(scene, target, enabled) }
 
     /** Gives the terrain entity [entityId] of [sceneText] a foliage component naming [foliage], as Add Foliage does. */
-    fun setFoliage(sceneText: String, entityId: String, foliage: String): HeadlessEdit =
-        edit(sceneText, DocumentKind.SCENE) { root -> foliageEdits.attach(root, entityId, foliage) }
+    fun setFoliage(sceneText: String, entityId: Long, foliage: String): HeadlessEdit =
+        editScene(sceneText) { scene -> foliageEdits.attach(scene, entityId, foliage) }
 
     /**
      * Removes the entities [ids] from [sceneText]. Refused, with the reference named, when a remaining entity still
      * refers to one of them; ids the scene does not have are ignored.
      */
-    fun removeEntities(sceneText: String, ids: Set<String>): HeadlessEdit {
+    fun removeEntities(sceneText: String, ids: Set<Long>): HeadlessEdit {
         var blocked: String? = null
-        val outcome = edit(sceneText, DocumentKind.SCENE) { root ->
-            val removal = foliageEdits.remove(root, ids)
+        val outcome = editScene(sceneText) { scene ->
+            val removal = foliageEdits.remove(scene, ids)
             blocked = removal.blockedBy
             removal.changed
         }
@@ -154,10 +156,10 @@ class HeadlessEditing(
      * Removes the single entity [entityId] from [sceneText], as the tree's Remove Entity does. Refused, with the
      * relationship named, when the entity is missing, still referred to, or an arrangement that owns copies.
      */
-    fun removeEntity(sceneText: String, entityId: String): HeadlessEdit {
+    fun removeEntity(sceneText: String, entityId: Long): HeadlessEdit {
         var rejected: String? = null
-        val outcome = edit(sceneText, DocumentKind.SCENE) { root ->
-            when (val result = entityRemoval.remove(root, entityId)) {
+        val outcome = editScene(sceneText) { scene ->
+            when (val result = entityRemoval.remove(scene, entityId)) {
                 EditResult.Changed -> true
                 EditResult.Unchanged -> false
                 is EditResult.Rejected -> false.also { rejected = result.reason }
@@ -172,24 +174,28 @@ class HeadlessEditing(
      */
     fun setAssetProperty(metaText: String, key: String, expected: AssetFieldValue, value: AssetFieldValue): HeadlessEdit {
         var refusal: Refusal? = null
-        val outcome = edit(metaText, DocumentKind.ASSET) { root ->
-            when (val result = assetMeta.edit(root, key, expected, value)) {
-                EditOutcome.Changed -> true
-                EditOutcome.NoChange -> false
-                is EditOutcome.Rejected -> false.also { refusal = Refusal(result.error.message(messages)) }
-                is EditOutcome.Conflict -> false.also { refusal = Refusal(messages.message("assetFieldConflict")) }
-            }
+        val root = runCatchingKeepingCancellation { json.readObject(metaText) }
+            .getOrElse { return HeadlessEdit.Refused(refusal(it)) }
+        val changed = when (val result = assetMeta.edit(root, key, expected, value)) {
+            EditOutcome.Changed -> true
+            EditOutcome.NoChange -> false
+            is EditOutcome.Rejected -> false.also { refusal = Refusal(result.error.message(messages)) }
+            is EditOutcome.Conflict -> false.also { refusal = Refusal(messages.message("assetFieldConflict")) }
         }
-        return refusal?.let { HeadlessEdit.Refused(it) } ?: outcome
+        refusal?.let { return HeadlessEdit.Refused(it) }
+        if (!changed) return HeadlessEdit.Unchanged
+        // asset documents are still edited as a tree (gate G6)
+        val printed = if (metaText.contains('\n')) json.pretty(root).let { if (metaText.endsWith('\n')) it else it.removeSuffix("\n") }
+        else json.toString(root)
+        return if (printed == metaText) HeadlessEdit.Unchanged else HeadlessEdit.Edited(printed)
     }
 
-    private fun edit(text: String, kind: DocumentKind, mutate: (Any) -> Boolean): HeadlessEdit =
-        when (val outcome = documents.edit(text, kind, mutate)) {
+    private fun editScene(text: String, edit: SceneEdit): HeadlessEdit =
+        when (val outcome = sceneEditor.edit(text, edit)) {
             is TextEditOutcome.Edited -> HeadlessEdit.Edited(outcome.text)
             TextEditOutcome.Unchanged -> HeadlessEdit.Unchanged
             is TextEditOutcome.Refused -> HeadlessEdit.Refused(refusal(outcome.cause))
         }
 
-    private fun refusal(cause: Throwable): Refusal =
-        Refusal(cause.documentDisplayMessage(messages), (cause as? UnsupportedDocumentFormat)?.reason)
+    private fun refusal(cause: Throwable): Refusal = Refusal(cause.documentDisplayMessage(messages))
 }

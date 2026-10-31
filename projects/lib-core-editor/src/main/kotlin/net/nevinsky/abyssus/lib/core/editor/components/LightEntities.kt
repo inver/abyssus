@@ -6,18 +6,14 @@ package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import net.nevinsky.abyssus.lib.core.dto.LightDto
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.dto.EntityType
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import org.slf4j.helpers.NOPLogger
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.editor.scene.newEntity
 
 /** Sun is a directional light with different initial values, never a separate file type. */
 enum class LightPreset(
@@ -50,40 +46,19 @@ enum class LightPreset(
     SPOT("lightSpot", "lightSpotName", EntityType.LIGHT_SPOT, Color(1f, 1f, 1f, 1f), 1f, -90f, 5f),
 }
 
-data class AddedLight(val result: EditResult, val entityId: String? = null)
+data class AddedLight(val result: EditResult, val entityId: Long? = null)
 
-/** Edits only the JSON tree; callers write it through editSceneJson as a single undoable command. */
+/** Edits only the [SceneDto]; callers write it through editSceneJson as a single undoable command. */
 class LightEntities(private val messages: EditorMessages) {
-    private val nodes = JsonNodeFactory.instance
-    private val writer = EcsWriter(JsonProcessor(NOPLogger.NOP_LOGGER))
-
-    fun canAdd(root: JsonNode): Boolean = SceneEntityTree(root).canAdd()
-
-    fun add(root: JsonNode, preset: LightPreset, position: Vector3): AddedLight {
-        fun rejected() = AddedLight(EditResult.Rejected(messages.message("componentSceneUnreadable")))
-        if (!canAdd(root) || listOf(
-                position.x,
-                position.y + preset.height,
-                position.z
-            ).any { !it.isFinite() }
-        ) return rejected()
-        val id = SceneEntityTree(root).insert(preset.type.name) { id ->
-            val transform = PositionComponent(position.x, position.y + preset.height, position.z)
-            transform.localRotation.set(Vector3.X, preset.rotationDegrees)
-            nodes.objectNode().apply {
-                set<JsonNode>(
-                    "NameComponent",
-                    writer.writeComponent(NameComponent(messages.message(preset.nameKey, id)))
-                )
-                set<JsonNode>("PositionComponent", writer.writeComponent(transform))
-                set<JsonNode>(
-                    "LightComponent",
-                    writer.writeComponent(
-                        LightComponent(LightDto(intensity = preset.intensity).also { it.color.set(preset.color) }),
-                    )
-                )
-            }
-        } ?: return rejected()
+    fun add(scene: SceneDto, preset: LightPreset, position: Vector3): AddedLight {
+        if (listOf(position.x, position.y + preset.height, position.z).any { !it.isFinite() }) {
+            return AddedLight(EditResult.Rejected(messages.message("componentSceneUnreadable")))
+        }
+        val id = scene.nextId()
+        val transform = PositionComponent(position.x, position.y + preset.height, position.z)
+        transform.localRotation.set(Vector3.X, preset.rotationDegrees)
+        val light = LightComponent(LightDto(intensity = preset.intensity).also { it.color.set(preset.color) })
+        scene.ecs[id] = newEntity(id, preset.type, NameComponent(messages.message(preset.nameKey, id.toString())), transform, light)
         return AddedLight(EditResult.Changed, id)
     }
 }

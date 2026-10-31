@@ -39,8 +39,7 @@ fun arrangementCopyIds(scene: SceneDto): Set<String> {
 }
 
 /** The id of the arrangement that [entityId] is a linked copy of (see [arrangementCopyIds]), or null for any other entity. */
-fun arrangementOwnerOf(scene: SceneDto, entityId: String): String? {
-    val id = entityId.toLongOrNull() ?: return null
-    val parent = parentOf(scene.entity(id)) ?: return null
-    return parent.toString().takeIf { id.toInt() in slotIds(scene.entity(parent.toLong())) }
+fun arrangementOwnerOf(scene: SceneDto, entityId: Long): Long? {
+    val parent = parentOf(scene.entity(entityId)) ?: return null
+    return parent.toLong().takeIf { entityId.toInt() in slotIds(scene.entity(it)) }
 }

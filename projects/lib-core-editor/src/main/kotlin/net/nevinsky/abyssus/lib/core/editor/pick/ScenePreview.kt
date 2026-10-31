@@ -25,7 +25,7 @@ class ScenePreview {
      * times the start distance from the light to its handle (1 when that distance is 0). Null when [entityId] is not a
      * handle-aimed light or has no turned direction, so callers can leave the handle where it is.
      */
-    fun aimedTarget(content: SceneContent, entityId: String, result: DragResult): Vector3? {
+    fun aimedTarget(content: SceneContent, entityId: Long, result: DragResult): Vector3? {
         val light = content.light(entityId) ?: return null
         val handleId = content.aimHandleOf(light) ?: return null
         val handle = content.entityPositions[handleId] ?: return null
@@ -36,7 +36,7 @@ class ScenePreview {
     }
 
     /** [content] with the entity [entityId] shown at [result]; [content] itself when there is no such entity. */
-    fun apply(content: SceneContent, entityId: String, result: DragResult): SceneContent {
+    fun apply(content: SceneContent, entityId: Long, result: DragResult): SceneContent {
         val t = result.transform
         val light = content.light(entityId)
         // A rotate drag keeps the light's position and turns its direction; it moves the handle. A move drag changes the
@@ -73,14 +73,14 @@ class ScenePreview {
         )
     }
 
-    fun apply(content: SceneContent, preview: Map<String, DragResult>): SceneContent =
+    fun apply(content: SceneContent, preview: Map<Long, DragResult>): SceneContent =
         preview.entries.fold(content) { c, (id, result) -> apply(c, id, result) }
 
     /**
      * [content] with each entity of [poses] placed at its pose instead of its authored placement, keeping its authored
      * scale; a light faces along its posed rotation unless it looks at a target. Entities the scene lacks are ignored.
      */
-    fun withPoses(content: SceneContent, poses: Map<String, Pose>): SceneContent =
+    fun withPoses(content: SceneContent, poses: Map<Long, Pose>): SceneContent =
         poses.entries.fold(content) { c, (id, pose) ->
             val scale = c.model(id)?.transform?.scale
                 ?: c.terrain(id)?.transform?.scale ?: Vector3(1f, 1f, 1f)
@@ -88,7 +88,7 @@ class ScenePreview {
         }
 
     /** The transform of the model, terrain, camera or light [entityId], or null when the scene has no such entity. */
-    fun selected(content: SceneContent, entityId: String): Selected? {
+    fun selected(content: SceneContent, entityId: Long): Selected? {
         content.model(entityId)?.let { return Selected(it.transform, null) }
         content.terrain(entityId)?.let { return Selected(it.transform, null) }
         content.camera(entityId)?.let {
@@ -102,9 +102,9 @@ class ScenePreview {
         return null
     }
 
-    fun isCamera(content: SceneContent, entityId: String): Boolean = content.camera(entityId) != null
+    fun isCamera(content: SceneContent, entityId: Long): Boolean = content.camera(entityId) != null
 
     /** Whether the scene still has [entityId] as something the view can select. */
-    fun contains(content: SceneContent, entityId: String): Boolean =
+    fun contains(content: SceneContent, entityId: Long): Boolean =
         selected(content, entityId) != null || content.arrangements.any { it.entityId == entityId }
 }

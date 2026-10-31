@@ -8,7 +8,6 @@ package net.nevinsky.abyssus.lib.core.editor.components
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
 import net.nevinsky.abyssus.lib.core.dto.LightDto
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
@@ -20,9 +19,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentField
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentKind
-import net.nevinsky.abyssus.lib.core.editor.components.ComponentReader
 import net.nevinsky.abyssus.lib.core.editor.components.FieldKind
-import net.nevinsky.abyssus.lib.core.editor.components.RuntimeCodec
 import net.nevinsky.abyssus.lib.core.editor.components.decimalText
 
 private fun <C : Component> floatField(
@@ -35,14 +32,14 @@ private fun <C : Component> floatField(
 private fun <C : Component> refField(name: String, get: (C) -> Int, set: (C, Int) -> Unit) =
     ComponentField<C>(name, FieldKind.ENTITY_REF, { get(it).toString() }, { c, t -> set(c, t.trim().toInt()) })
 
-/** The built-in kinds the editor models, in the order the view lists them, bound through [reader] and [writer]. */
-internal class BuiltInComponentKinds(private val reader: ComponentReader, private val writer: EcsWriter) {
+/** The built-in kinds the editor models, in the order the view lists them. */
+internal class BuiltInComponentKinds {
     private inline fun <reified C : Component> kind(
         codecName: String,
         fields: List<ComponentField<C>>,
         noinline create: () -> C,
     ): ComponentKind<C> =
-        ComponentKind(codecName, RuntimeCodec(codecName, C::class.java, reader, writer), fields, create)
+        ComponentKind(codecName, C::class.java, fields, create)
 
     val kinds: List<ComponentKind<*>> = listOf(
         kind<NameComponent>(

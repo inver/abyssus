@@ -12,7 +12,6 @@ import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
 import net.nevinsky.abyssus.lib.core.editor.document.PlacementWrites
-import net.nevinsky.abyssus.lib.core.editor.scene.entityById
 
 /**
  * What a drag changes about an entity: any of its [position], its [rotation] and, for a camera, its view [direction].
@@ -26,7 +25,7 @@ data class TransformEdit(
 )
 
 /** A move of another entity's `PositionComponent.localPosition`: [entityId] is the target, [position] is its new position. */
-data class TargetMove(val entityId: String, val position: Vector3)
+data class TargetMove(val entityId: Long, val position: Vector3)
 
 /** Writes a [TransformEdit] into a scene, touching only the values that change. */
 class SceneTransformWriter(private val arrangements: ArrangementEdits = ArrangementEdits()) {
@@ -39,9 +38,9 @@ class SceneTransformWriter(private val arrangements: ArrangementEdits = Arrangem
      * in the same edit ([ArrangementEdits.detach]). Returns false, leaving [scene] as it was, when the entity or the
      * target is missing or no value differs.
      */
-    fun apply(scene: SceneDto, entityId: String, edit: TransformEdit): Boolean {
-        val entity = entityById(scene, entityId) ?: return false
-        val target = edit.target?.let { entityById(scene, it.entityId) ?: return false }
+    fun apply(scene: SceneDto, entityId: Long, edit: TransformEdit): Boolean {
+        val entity = scene.entity(entityId) ?: return false
+        val target = edit.target?.let { scene.entity(it.entityId) ?: return false }
         var changed = false
         if (edit.position != null || edit.rotation != null) {
             val placement = placements.placementOf(entity)

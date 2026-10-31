@@ -19,7 +19,7 @@ class PathDrawing(val asset: BaseMeta) {
 }
 
 /** The points of the arrangement [entityId] while one of its handles is dragged, shown over the file's. */
-data class PathEdit(val entityId: String, val points: List<Vector3>)
+data class PathEdit(val entityId: Long, val points: List<Vector3>)
 
 /** A handle of a selected arrangement's line, or the line itself. */
 sealed interface PathHit {

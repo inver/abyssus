@@ -22,14 +22,14 @@ internal interface GestureHost {
     /** The stroke of the brush [kind], or null when nothing implements it. */
     fun brushStroke(kind: BrushKind): BrushStroke?
 
-    val onTransform: ((String, TransformEdit) -> Boolean)?
-    val onArrangementEdit: ((String, List<Vector3>) -> Boolean)?
+    val onTransform: ((Long, TransformEdit) -> Boolean)?
+    val onArrangementEdit: ((Long, List<Vector3>) -> Boolean)?
 
     /** The selected entity, or null. */
-    val selectedId: String?
+    val selectedId: Long?
 
     /** The transform write for the end of a gizmo drag of [entityId]. */
-    fun editOf(entityId: String, result: DragResult): TransformEdit
+    fun editOf(entityId: Long, result: DragResult): TransformEdit
     fun stateChanged()
 }
 
@@ -39,7 +39,7 @@ internal sealed interface Gesture {
     data object Idle : Gesture
 
     /** A gizmo handle of [entityId] is being dragged; [result] is where it is now. */
-    class Dragging(val drag: GizmoDrag, val entityId: String) : Gesture {
+    class Dragging(val drag: GizmoDrag, val entityId: Long) : Gesture {
         var result: DragResult? = null
     }
 
@@ -47,13 +47,13 @@ internal sealed interface Gesture {
     data object Cancelled : Gesture
 
     /** A move handle of control point [index] of the arrangement [entityId] is dragged; [original] are its points before, [points] now. */
-    class DraggingPathPoint(val drag: GizmoDrag, val entityId: String, val index: Int, val original: List<Vector3>) : Gesture {
+    class DraggingPathPoint(val drag: GizmoDrag, val entityId: Long, val index: Int, val original: List<Vector3>) : Gesture {
         var points: List<Vector3> = original
         var moved = false
     }
 
     /** A terrain brush stroke of [kind] on the terrain of [entityId]; the caller's [BrushStroke] of that kind does the work. */
-    class Brushing(val entityId: String, val kind: BrushKind) : Gesture
+    class Brushing(val entityId: Long, val kind: BrushKind) : Gesture
 }
 
 /**
@@ -85,7 +85,7 @@ internal class GestureDriver(
     }
 
     /** The left press at ([x], [y]) with the selection [id]: starts the gesture that fits what is under the cursor, if any. */
-    fun press(id: String?, x: Int, y: Int) {
+    fun press(id: Long?, x: Int, y: Int) {
         val size = host.size
         if (id == null) return
         val at = size.toFramebuffer(x, y)
@@ -120,7 +120,7 @@ internal class GestureDriver(
     }
 
     /** The left press on a move handle of the gizmo of the selected control point of [id]. */
-    private fun startPathGizmoDrag(id: String, at: FramebufferPoint): Boolean {
+    private fun startPathGizmoDrag(id: Long, at: FramebufferPoint): Boolean {
         val index = state.selectedPathPoint ?: return false
         val size = host.size
         val points = queries.pathPoints(id) ?: return false
@@ -135,7 +135,7 @@ internal class GestureDriver(
      * gets a new control point where it was pressed, which gets the gizmo. The press is consumed, so it neither orbits
      * nor picks.
      */
-    private fun pressPathHandle(id: String, at: FramebufferPoint): Boolean {
+    private fun pressPathHandle(id: Long, at: FramebufferPoint): Boolean {
         val size = host.size
         val hit = queries.pathHandleAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return false
         when (hit) {
@@ -253,7 +253,7 @@ internal class GestureDriver(
     }
 
     /** New scene content arrived: cancels a drag whose entity or arrangement the scene no longer has. */
-    fun contentChanged(content: SceneContent, contains: (String) -> Boolean) {
+    fun contentChanged(content: SceneContent, contains: (Long) -> Boolean) {
         (current as? Gesture.Dragging)?.let { if (!contains(it.entityId)) current = Gesture.Cancelled }
         (current as? Gesture.DraggingPathPoint)?.let {
             if (!contains(it.entityId)) {

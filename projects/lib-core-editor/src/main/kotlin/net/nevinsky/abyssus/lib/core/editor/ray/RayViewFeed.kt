@@ -44,8 +44,8 @@ class RayViewFeed(
         val camera: PerspectiveCamera,
         val lights: LightSet,
         val state: RaySceneAssetState.Ready,
-        val poses: Map<String, RayModelPose>,
-        val activeCamera: String?,
+        val poses: Map<Long, RayModelPose>,
+        val activeCamera: Long?,
         val width: Int,
         val height: Int,
         val metadata: RayDisplayMetadata,
@@ -179,7 +179,7 @@ class RayViewFeed(
         )
         val conversion =
             snapshots.capture(
-                job.params, job.camera, job.lights, job.state, emptyMap(), job.activeCamera, environment,
+                job.params, job.camera, job.lights, job.state, emptyMap(), job.activeCamera?.toString(), environment,
                 listOfNotNull(texture), job.poses, { mesh, palette -> skinning.deform(mesh, palette) },
                 environmentRevision = sky?.let { (it.revision shl 32) xor System.identityHashCode(it).toLong() } ?: 0L,
                 sunVisibility = job.sunVisibility)
@@ -220,7 +220,7 @@ class RayViewFeed(
             RayWorkBudget().perCameraSample(scene, settings.maxReflectionBounces, settings.maxRefractionBounces).toInt()
         val input = RayRenderInput(
             request,
-            RayDisplayKey(job.width, job.height, job.activeCamera ?: "free"),
+            RayDisplayKey(job.width, job.height, job.activeCamera?.toString() ?: "free"),
             contentRevision,
             rays,
             job.metadata,

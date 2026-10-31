@@ -18,7 +18,7 @@ import net.nevinsky.abyssus.lib.core.editor.content.*
  * string, [terrainName] the terrain asset folder the entity shows, and [transform] the entity's own transform.
  */
 data class FoliagePlacement(
-    val entityId: String,
+    val entityId: Long,
     val foliageName: String,
     val terrainName: String,
     val transform: PlacementTransform,
@@ -35,9 +35,9 @@ data class SceneContent(
     val skybox: String? = null,
     val cameras: List<CameraPlacement> = emptyList(),
     /** `localPosition` of every entity with a `PositionComponent` (entity id to position), for look-at targets. */
-    val entityPositions: Map<String, Vector3> = emptyMap(),
+    val entityPositions: Map<Long, Vector3> = emptyMap(),
     /** The ids of entities whose `type` is `HANDLE` (the direction handles of look-at lights). */
-    val handleIds: Set<String> = emptySet(),
+    val handleIds: Set<Long> = emptySet(),
     /** The path arrangements: the lines the view shows handles on when one is selected. */
     val arrangements: List<ArrangementPlacement> = emptyList(),
 ) {
@@ -48,24 +48,24 @@ data class SceneContent(
     private val camerasById by lazy(LazyThreadSafetyMode.NONE) { cameras.associateBy { it.entityId } }
 
     /** The model placed as entity [id], or null. */
-    fun model(id: String): AssetPlacement? = modelsById[id]
+    fun model(id: Long): AssetPlacement? = modelsById[id]
 
     /** The terrain placed as entity [id], or null. */
-    fun terrain(id: String): AssetPlacement? = terrainsById[id]
+    fun terrain(id: Long): AssetPlacement? = terrainsById[id]
 
     /** The light placed as entity [id], or null. */
-    fun light(id: String): LightPlacement? = lightsById[id]
+    fun light(id: Long): LightPlacement? = lightsById[id]
 
     /** The camera placed as entity [id], or null. */
-    fun camera(id: String): CameraPlacement? = camerasById[id]
+    fun camera(id: Long): CameraPlacement? = camerasById[id]
 
     /** The id of the direction handle (a `HANDLE` entity) [light] looks at, or null when it looks at none. */
-    fun aimHandleOf(light: LightPlacement): String? = light.lookAtId?.takeIf { it in handleIds }
+    fun aimHandleOf(light: LightPlacement): Long? = light.lookAtId?.takeIf { it in handleIds }
 }
 
 /** What [scene] places, read from its typed entities. */
 fun sceneContentOf(scene: SceneDto): SceneContent {
-    val entities = scene.ecs.map { (id, entity) -> decode(id.toString(), entity) }
+    val entities = scene.ecs.map { (id, entity) -> decode(id, entity) }
     val skybox = scene.skyboxName?.takeIf { scene.skyboxEnabled && it.isNotBlank() }
     return PlacementMapper().map(entities, skybox)
 }
@@ -75,12 +75,12 @@ fun sceneContentOf(scene: SceneDto): SceneContent {
  * A disabled entity is present as data (its position still answers a look-at) and absent as behavior; a component
  * disabled on its own is skipped.
  */
-private fun decode(id: String, entity: EntityDto): DecodedEntity {
+private fun decode(id: Long, entity: EntityDto): DecodedEntity {
     val header = entity.components.filterIsInstance<HeaderComponent>().firstOrNull()
     val disabled = header?.disabledComponents.orEmpty()
     fun <C : Component> any(type: Class<C>): C? = entity.components.firstOrNull { type.isInstance(it) }?.let(type::cast)
     fun <C : Component> active(type: Class<C>): C? = any(type)?.takeIf { type !in disabled }
-    val name = any(NameComponent::class.java)?.name?.takeIf { it.isNotBlank() } ?: id
+    val name = any(NameComponent::class.java)?.name?.takeIf { it.isNotBlank() } ?: id.toString()
     val position = any(PositionComponent::class.java)
     if (header?.entityEnabled == false) return DecodedEntity(id, name, position, position != null, null, null, null, null)
     val type = header?.type

@@ -75,7 +75,7 @@ class EntityClipboard(
         } else {
             position = positionComponents[0]
         }
-        placements.setVector(position, "localPosition", point)
+        placements.setPosition(position, point)
 
         return AddedEntity(EditResult.Changed, maxId + 1)
     }

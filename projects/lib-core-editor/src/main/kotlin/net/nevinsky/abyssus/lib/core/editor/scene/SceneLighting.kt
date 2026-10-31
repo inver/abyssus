@@ -28,15 +28,15 @@ import kotlin.math.sqrt
 data class DirectionalSource(
     val direction: Vector3,
     val color: Color,
-    val entityId: String = "",
+    val entityId: Long = -1L,
     val position: Vector3 = Vector3(0f, 0f, 0f)
 )
 
 /** A point light: [color] already multiplied by the light's intensity. */
-data class PointSource(val position: Vector3, val color: Color, val range: Float = LIGHT_RANGE, val entityId: String = "")
+data class PointSource(val position: Vector3, val color: Color, val range: Float = LIGHT_RANGE, val entityId: Long = -1L)
 
 data class SpotSource(
-    val entityId: String,
+    val entityId: Long,
     val position: Vector3,
     val direction: Vector3,
     val color: Color,
@@ -59,14 +59,14 @@ class LightSet(
      * The index among [directional] (the order the shaders see them in) of the light of entity [entityId]; null when
      * there is no such entity or it did not make the [MAX_DIRECTIONAL] budget.
      */
-    fun directionalIndexOf(entityId: String?): Int? =
+    fun directionalIndexOf(entityId: Long?): Int? =
         entityId?.let { id -> directional.indexOfFirst { it.entityId == id }.takeIf { it >= 0 } }
 
     /**
      * This set with the color of the directional light of entity [entityId] (the sun) times [scale], as clouds over
      * the sun dim it; every other light is the same. This set itself when [scale] is 1 or the sun is not in it.
      */
-    fun withSunScale(entityId: String?, scale: Float): LightSet {
+    fun withSunScale(entityId: Long?, scale: Float): LightSet {
         if (entityId == null || scale == 1f || directional.none { it.entityId == entityId }) return this
         val scaled = directional.map {
             if (it.entityId != entityId) it else it.copy(

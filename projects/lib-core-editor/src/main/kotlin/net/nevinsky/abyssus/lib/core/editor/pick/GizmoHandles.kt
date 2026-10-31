@@ -74,7 +74,7 @@ class GizmoHandles(val origin: Vector3, val mode: GizmoMode, val worldPerPixel: 
  * handle (an entity whose `type` is `HANDLE`) only moves too; turning it would mean moving an
  * unrelated object. A light aimed at a handle, and one with no resolving `lookAtId`, keep their rings.
  */
-fun canRotate(content: SceneContent, entityId: String): Boolean {
+fun canRotate(content: SceneContent, entityId: Long): Boolean {
     val camera = content.cameras.firstOrNull { it.entityId == entityId }
     if (camera != null) return camera.lookAtId?.let(content.entityPositions::containsKey) != true
     val light = content.lights.firstOrNull { it.entityId == entityId } ?: return true

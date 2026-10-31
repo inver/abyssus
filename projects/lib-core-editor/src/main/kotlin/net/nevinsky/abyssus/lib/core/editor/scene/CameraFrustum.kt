@@ -22,7 +22,7 @@ private val FORWARD = Vector3(0f, 0f, -1f)
  * The unit direction the camera looks along: toward the position of its `lookAtId` entity in [positions] when
  * that resolves to somewhere other than the camera itself, else its own `direction`.
  */
-fun cameraDirectionOf(placement: CameraPlacement, positions: Map<String, Vector3>): Vector3 {
+fun cameraDirectionOf(placement: CameraPlacement, positions: Map<Long, Vector3>): Vector3 {
     val target = placement.lookAtId?.let(positions::get)
     if (target != null) aimDirection(placement.position, target)?.let { return it }
     return normalized(placement.direction) ?: FORWARD
@@ -36,7 +36,7 @@ internal fun cameraSideAxes(d: Vector3): Pair<Vector3, Vector3> {
 }
 
 /** The view volume of [placement] for a viewport of [aspect] (width over height). */
-fun cameraFrustumOf(placement: CameraPlacement, positions: Map<String, Vector3>, aspect: Float): CameraFrustum {
+fun cameraFrustumOf(placement: CameraPlacement, positions: Map<Long, Vector3>, aspect: Float): CameraFrustum {
     val direction = cameraDirectionOf(placement, positions)
     val d = direction.cpy()
     val (right, top) = cameraSideAxes(d)

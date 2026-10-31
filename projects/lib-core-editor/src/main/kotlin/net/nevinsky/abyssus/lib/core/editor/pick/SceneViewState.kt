@@ -31,7 +31,7 @@ interface BrushOptions
  */
 data class BrushMode(
     val kind: BrushKind,
-    val entityId: String,
+    val entityId: Long,
     val radius: Float,
     val strength: Float,
     val reversed: Boolean = false,
@@ -40,7 +40,7 @@ data class BrushMode(
 
 /** What the view has selected: an entity of the scene. */
 sealed interface SceneTarget {
-    data class Entity(val id: String) : SceneTarget
+    data class Entity(val id: Long) : SceneTarget
 }
 
 /**
@@ -52,7 +52,7 @@ sealed interface ViewMode {
 
     data class Brush(val brush: BrushMode) : ViewMode
 
-    data class PathEditing(val entityId: String, val point: Int?) : ViewMode
+    data class PathEditing(val entityId: Long, val point: Int?) : ViewMode
 
     data class Drawing(val drawing: PathDrawing) : ViewMode
 }
@@ -67,7 +67,7 @@ class SceneViewState {
     var selection: SceneTarget? = null
 
     /** The entity id the view highlights and shows a gizmo on, or null. */
-    var selectedId: String?
+    var selectedId: Long?
         get() = (selection as? SceneTarget.Entity)?.id
         set(value) {
             selection = value?.let(SceneTarget::Entity)
@@ -88,13 +88,13 @@ class SceneViewState {
     var hoveredPlane: GizmoPlane? = null
 
     /** The camera entity the viewport renders from instead of the orbit view, or null. */
-    var viewCamera: String? = null
+    var viewCamera: Long? = null
 
     /** Transforms shown over the scene's own while a gizmo drag or completed drop is previewed (entity id to where it is now). */
-    var preview: Map<String, DragResult> = emptyMap()
+    var preview: Map<Long, DragResult> = emptyMap()
 
     /** Simulated poses shown instead of the authored placements while playing (entity id to pose); empty otherwise. */
-    var poses: Map<String, Pose> = emptyMap()
+    var poses: Map<Long, Pose> = emptyMap()
 
     /** Whether gizmos are offered: off while a simulation plays. */
     var gizmosEnabled: Boolean = true
@@ -126,7 +126,7 @@ class SceneViewState {
     var pathDraft: PathEdit? = null
 
     /** The arrangement whose control points are being edited (Edit in the Properties panel until Apply or Close), or null. */
-    var pathEditing: String? = null
+    var pathEditing: Long? = null
 
     /** The control point of [pathEditing] that wears the move gizmo, or null. */
     var selectedPathPoint: Int? = null

@@ -31,7 +31,7 @@ class DecodedAsset(val type: String, val name: String, val meshId: String? = nul
  * whether the file's `PositionComponent` holds a `localPosition` at all (a camera then takes it over its own position).
  */
 class DecodedEntity(
-    val id: String,
+    val id: Long,
     val name: String,
     val position: PositionComponent?,
     val hasLocalPosition: Boolean,
@@ -57,8 +57,8 @@ class PlacementMapper {
         val lights = mutableListOf<LightPlacement>()
         val cameras = mutableListOf<CameraPlacement>()
         val arrangements = mutableListOf<ArrangementPlacement>()
-        val positions = linkedMapOf<String, Vector3>()
-        val handleIds = mutableSetOf<String>()
+        val positions = linkedMapOf<Long, Vector3>()
+        val handleIds = mutableSetOf<Long>()
         for (entity in entities) {
             val transform = entity.position?.let(::transformOf) ?: PlacementTransform.IDENTITY
             if (entity.position != null) positions[entity.id] = transform.position
@@ -111,8 +111,8 @@ class PlacementMapper {
     }
 
     /** The id of the entity [entity] looks at, as the file names it; null for none. */
-    private fun lookAtOf(entity: DecodedEntity): String? =
-        entity.position?.lookAtId?.takeIf { it != NO_ENTITY }?.toString()
+    private fun lookAtOf(entity: DecodedEntity): Long? =
+        entity.position?.lookAtId?.takeIf { it != NO_ENTITY }?.toLong()
 
     /** A `LIGHT_<KIND>` entity, or one that has a `LightComponent` and no other kind (a directional light). */
     private fun lightOf(entity: DecodedEntity, transform: PlacementTransform): LightPlacement? {

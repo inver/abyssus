@@ -118,9 +118,9 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         halved[texture] ?: texture.halved()?.also { halved[texture] = it }
     fun capture(
         params: SceneRenderParams, camera: PerspectiveCamera, lightSet: LightSet,
-        assets: RaySceneAssetState, preview: Map<String, DragResult> = emptyMap(), activeCameraId: String? = null,
+        assets: RaySceneAssetState, preview: Map<Long, DragResult> = emptyMap(), activeCameraId: String? = null,
         environment: RayEnvironment? = null, environmentTextures: List<RayTexture> = emptyList(),
-        poses: Map<String, RayModelPose> = emptyMap(),
+        poses: Map<Long, RayModelPose> = emptyMap(),
         deform: ((RayModelMesh, List<FloatArray>) -> FloatArray)? = null,
         environmentRevision: Long = 0,
         sunVisibility: RaySunVisibility? = null,
@@ -178,7 +178,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                 assets.models.mapKeys { "model:${it.key}" } + assets.terrains.mapKeys { "terrain:${it.key}" },
                 builder.topology.toList(),
                 builder.transforms.toMap(),
-                poses.mapValues { it.value.revision },
+                poses.entries.associate { it.key.toString() to it.value.revision },
                 environmentRevision,
                 settings
             )
@@ -291,7 +291,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
                 ); materials.lastIndex
             }
             instance(
-                placement.entityId,
+                placement.entityId.toString(),
                 mesh,
                 material,
                 placement.transform.toMatrix()
@@ -326,10 +326,10 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
     }
 
     private fun lights(set: LightSet): List<RayLight> = set.directional.map {
-        RayLight(it.entityId, RayLightKind.DIRECTIONAL, it.color.ray(), it.direction.ray(), it.position.ray())
+        RayLight(it.entityId.toString(), RayLightKind.DIRECTIONAL, it.color.ray(), it.direction.ray(), it.position.ray())
     } + set.point.map {
         RayLight(
-            it.entityId,
+            it.entityId.toString(),
             RayLightKind.POINT,
             it.color.ray(it.range),
             position = it.position.ray(),
@@ -337,7 +337,7 @@ class RaySceneSnapshots(private val limits: RaySnapshotLimits = RaySnapshotLimit
         )
     } + set.spot.map {
         RayLight(
-            it.entityId,
+            it.entityId.toString(),
             RayLightKind.SPOT,
             it.color.ray(it.range),
             it.direction.ray(),

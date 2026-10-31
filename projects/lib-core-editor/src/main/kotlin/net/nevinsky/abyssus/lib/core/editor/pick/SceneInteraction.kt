@@ -44,10 +44,10 @@ class SceneInteraction(
     var size = ViewSize(0, 0, 0, 0)
 
     /** Called with the entity id of a click that selected something. */
-    var onPick: ((String) -> Unit)? = null
+    var onPick: ((Long) -> Unit)? = null
 
     /** Called when a drag ends with a changed transform; returns whether it was written to the scene. */
-    var onTransform: ((String, TransformEdit) -> Boolean)? = null
+    var onTransform: ((Long, TransformEdit) -> Boolean)? = null
 
     /**
      * Called when a drawing is finished with the model, the points on the terrain and whether the line is closed;
@@ -56,7 +56,7 @@ class SceneInteraction(
     var onArrangementCreate: ((BaseMeta, List<Vector3>, Boolean) -> Boolean)? = null
 
     /** Called when a point drag, an insert or a removal ends with new points for the arrangement; returns whether it was written. */
-    var onArrangementEdit: ((String, List<Vector3>) -> Boolean)? = null
+    var onArrangementEdit: ((Long, List<Vector3>) -> Boolean)? = null
 
     /** Called when the edit of an arrangement's control points ended because the selection moved on or the arrangement went. */
     var onPathEditEnded: (() -> Unit)? = null
@@ -65,13 +65,13 @@ class SceneInteraction(
     var onStateChanged: (() -> Unit)? = null
 
     /** Called with the selected entity's id on Copy; the host puts the entity on the clipboard. */
-    var onCopy: ((String) -> Unit)? = null
+    var onCopy: ((Long) -> Unit)? = null
 
     /** Called on Paste with the point under the cursor; returns whether an entity was added. */
     var onPaste: ((Vector3) -> Boolean)? = null
 
     /** Called on Delete with the selected entity's id; returns whether it was removed. */
-    var onDelete: ((String) -> Boolean)? = null
+    var onDelete: ((Long) -> Boolean)? = null
 
     private val brushStrokes = EnumMap<BrushKind, BrushStroke>(BrushKind::class.java)
 
@@ -83,7 +83,7 @@ class SceneInteraction(
         if (stroke == null) brushStrokes.remove(kind) else brushStrokes[kind] = stroke
     }
 
-    var selectedId: String?
+    var selectedId: Long?
         get() = state.selectedId
         private set(value) {
             state.selectedId = value
@@ -96,7 +96,7 @@ class SceneInteraction(
             stateChanged()
         }
 
-    var viewCamera: String?
+    var viewCamera: Long?
         get() = state.viewCamera
         set(value) {
             state.viewCamera = value
@@ -110,10 +110,10 @@ class SceneInteraction(
     private val host = object : GestureHost {
         override val size: ViewSize get() = this@SceneInteraction.size
         override fun brushStroke(kind: BrushKind): BrushStroke? = this@SceneInteraction.brushStroke(kind)
-        override val onTransform: ((String, TransformEdit) -> Boolean)? get() = this@SceneInteraction.onTransform
-        override val onArrangementEdit: ((String, List<Vector3>) -> Boolean)? get() = this@SceneInteraction.stagedEdit
-        override val selectedId: String? get() = this@SceneInteraction.selectedId
-        override fun editOf(entityId: String, result: DragResult) = this@SceneInteraction.editOf(entityId, result)
+        override val onTransform: ((Long, TransformEdit) -> Boolean)? get() = this@SceneInteraction.onTransform
+        override val onArrangementEdit: ((Long, List<Vector3>) -> Boolean)? get() = this@SceneInteraction.stagedEdit
+        override val selectedId: Long? get() = this@SceneInteraction.selectedId
+        override fun editOf(entityId: Long, result: DragResult) = this@SceneInteraction.editOf(entityId, result)
         override fun stateChanged() = this@SceneInteraction.stateChanged()
     }
     private val gestures = GestureDriver(state, queries, host)
@@ -164,7 +164,7 @@ class SceneInteraction(
      * New points for an arrangement: while its control points are edited they are only kept as a draft that Apply writes
      * and Close drops; otherwise they go to [onArrangementEdit].
      */
-    private val stagedEdit: (String, List<Vector3>) -> Boolean = { id, points ->
+    private val stagedEdit: (Long, List<Vector3>) -> Boolean = { id, points ->
         if (state.pathEditing == id) {
             state.pathEdit = null
             state.pathDraft = PathEdit(id, points.toList())
@@ -204,10 +204,10 @@ class SceneInteraction(
     }
 
     /** The arrangement whose control points are being edited, or null. */
-    val pathEditing: String? get() = state.pathEditing
+    val pathEditing: Long? get() = state.pathEditing
 
     /** Starts (or, with null, ends) editing the control points of the arrangement [id], selecting it. */
-    fun setPathEditing(id: String?) {
+    fun setPathEditing(id: Long?) {
         state.pathEdit = null
         state.pathDraft = null
         state.selectedPathPoint = null
@@ -337,12 +337,12 @@ class SceneInteraction(
     }
 
     /** Whether point [index] of the arrangement [entityId] can be removed: at least two points must remain. */
-    fun canRemovePoint(entityId: String): Boolean = drawingSession.canRemovePoint(entityId)
+    fun canRemovePoint(entityId: Long): Boolean = drawingSession.canRemovePoint(entityId)
 
     /** Removes point [index] of the arrangement [entityId] through [onArrangementEdit]; false when it cannot be removed or was not written. */
-    fun removePoint(entityId: String, index: Int): Boolean = drawingSession.removePoint(entityId, index)
+    fun removePoint(entityId: Long, index: Int): Boolean = drawingSession.removePoint(entityId, index)
 
-    private fun editOf(id: String, result: DragResult): TransformEdit {
+    private fun editOf(id: Long, result: DragResult): TransformEdit {
         if (state.gizmoMode == GizmoMode.MOVE) return TransformEdit(position = result.transform.position)
         val content = queries.sceneContent
         val handleId = content.lights.firstOrNull { it.entityId == id }?.let(content::aimHandleOf)

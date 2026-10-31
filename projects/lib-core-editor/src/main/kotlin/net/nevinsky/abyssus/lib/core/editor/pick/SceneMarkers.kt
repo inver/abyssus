@@ -66,17 +66,17 @@ class SceneMarkers {
         BoundingBox(Vector3(p.x - half, p.y - half, p.z - half), Vector3(p.x + half, p.y + half, p.z + half))
 
     /** Pick targets for every camera and light except the camera [skipCamera] (the one being looked through). */
-    fun targets(content: SceneContent, skipCamera: String? = null): List<BoxTarget> =
+    fun targets(content: SceneContent, skipCamera: Long? = null): List<BoxTarget> =
         content.cameras.filter { it.entityId != skipCamera }.map { BoxTarget(it.entityId, cameraBounds(it.position)) } +
             content.lights.map { BoxTarget(it.entityId, lightBounds(it.position)) }
 
     /** The bounds of the camera or light [entityId], or null when it is neither. */
-    fun boundsOf(content: SceneContent, entityId: String): BoundingBox? =
+    fun boundsOf(content: SceneContent, entityId: Long): BoundingBox? =
         content.cameras.firstOrNull { it.entityId == entityId }?.let { cameraBounds(it.position) }
             ?: content.lights.firstOrNull { it.entityId == entityId }?.let { lightBounds(it.position) }
 
     /** Draws every marker of [content] into [out], for a viewport of [aspect], leaving out the camera [skipCamera]. */
-    fun draw(out: LineSink, content: SceneContent, aspect: Float, skipCamera: String? = null) {
+    fun draw(out: LineSink, content: SceneContent, aspect: Float, skipCamera: Long? = null) {
         for (camera in content.cameras) {
             if (camera.entityId == skipCamera) continue
             drawCamera(out, camera, content.entityPositions, aspect)
@@ -84,7 +84,7 @@ class SceneMarkers {
         for (light in content.lights) drawLight(out, light)
     }
 
-    fun drawCamera(out: LineSink, camera: CameraPlacement, positions: Map<String, Vector3>, aspect: Float) {
+    fun drawCamera(out: LineSink, camera: CameraPlacement, positions: Map<Long, Vector3>, aspect: Float) {
         val frustum = cameraFrustumOf(camera, positions, aspect)
         val c = frustum.corners
         for (ring in 0..1) for (i in 0 until 4) out.line(c[ring * 4 + i], c[ring * 4 + (i + 1) % 4], FRUSTUM_COLOR)

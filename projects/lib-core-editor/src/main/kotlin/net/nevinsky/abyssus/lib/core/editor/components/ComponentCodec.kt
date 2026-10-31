@@ -6,9 +6,8 @@
 package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.ashley.core.Component
-import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
-import net.nevinsky.abyssus.lib.core.editor.ecs.floatNode
+import java.math.BigDecimal
+import kotlin.math.abs
 
 /** [MESH_ID] is a choice among the meshes of the model the component names; the choices come from the model, not the kind. */
 enum class FieldKind { FLOAT, INT, BOOLEAN, TEXT, CHOICE, ENTITY_REF, ASSET_NAME, MESH_ID }
@@ -38,39 +37,17 @@ class ComponentField<C : Component>(
     val unit: String = "",
 )
 
-/** Reads and writes one kind of component as the native scene format holds it, under its short [name]. */
-interface ComponentCodec<C : Component> {
-    val name: String
-    val type: Class<C>
-
-    fun read(node: JsonNode): C
-
-    fun write(component: C): JsonNode
+/** A component decimal as the scene files spell it (`22`, not `22.0`). */
+internal fun decimalText(v: Float): String {
+    val finite = if (v.isFinite()) v else 0f
+    return if (finite == Math.rint(finite.toDouble()).toFloat() && abs(finite) < 1e9f) finite.toInt().toString()
+    else BigDecimal(finite.toString()).toString()
 }
 
-/** A component decimal as the scene file spells it (`22`, not `22.0`). */
-internal fun decimalText(v: Float) = floatNode(v).asText()
-
-/** The codec of the component [type], bound by the runtime's own reader and writer, for kinds a host supplies. */
-fun <C : Component> runtimeCodec(name: String, type: Class<C>, reader: ComponentReader, writer: EcsWriter): ComponentCodec<C> =
-    RuntimeCodec(name, type, reader, writer)
-
-/** A built-in component bound by the runtime's own loader and writer, so defaults and number text match a scene load. */
-internal class RuntimeCodec<C : Component>(
-    override val name: String,
-    override val type: Class<C>,
-    private val reader: ComponentReader,
-    private val writer: EcsWriter,
-) : ComponentCodec<C> {
-    override fun read(node: JsonNode): C = reader.read(type, node)
-
-    override fun write(component: C): JsonNode = writer.writeComponent(component)
-}
-
-/** A modeled kind of component: its file name, how to read and write it, how a new one starts and what it holds. */
+/** A modeled kind of component: its file name, its class, how a new one starts and what it holds. */
 class ComponentKind<C : Component>(
     val name: String,
-    internal val codec: ComponentCodec<C>,
+    val type: Class<C>,
     val fields: List<ComponentField<C>>,
     internal val create: () -> C,
     /** The name the view shows: by default the file name without the `Component` suffix. */

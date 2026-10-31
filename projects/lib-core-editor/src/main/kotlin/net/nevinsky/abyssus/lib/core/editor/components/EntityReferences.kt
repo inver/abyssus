@@ -5,41 +5,28 @@
 
 package net.nevinsky.abyssus.lib.core.editor.components
 
-import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import com.badlogic.ashley.core.Component
+import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 
 /**
  * Which component fields name another entity: the built-in `lookAtId` and `parentEntityId`, plus every
  * [FieldKind.ENTITY_REF] field of [kinds]. Component removal and entity removal both ask it, so a reference contributed
  * by a component schema is honoured by both.
  */
-class EntityReferences(kinds: List<ComponentKind<*>> = emptyList()) {
-    private val byName: Map<String, ComponentKind<*>> =
-        kinds.flatMap { listOf(it.name to it, it.codec.type.simpleName to it) }.toMap()
-
-    /** The first field of the component [kindName] ([node]) that names [entityId], or null. */
-    fun fieldNaming(kindName: String, node: JsonNode, entityId: String): String? {
-        BUILT_IN[kindName]?.firstOrNull {
-            node[it]?.takeIf(JsonNode::isIntegralNumber)?.asInt()?.toString() == entityId
+class EntityReferences(private val kinds: List<ComponentKind<*>> = emptyList()) {
+    /** The first field of [component] that names [entityId], or null. */
+    fun fieldNaming(component: Component, entityId: Long): String? {
+        when (component) {
+            is ParentComponent -> if (component.parentEntityId.toLong() == entityId) return "parentEntityId"
+            is PositionComponent -> if (component.lookAtId.toLong() == entityId) return "lookAtId"
         }
-            ?.let { return it }
-        val kind = byName[kindName] ?: return null
-        val fields = kind.fields.filter { it.kind == FieldKind.ENTITY_REF && it.name !in BUILT_IN[kindName].orEmpty() }
-        if (fields.isEmpty()) return null
-        return namedBy(kind, fields, node, entityId)
+        val kind = kinds.firstOrNull { it.type.isInstance(component) } ?: return null
+        return namedBy(kind, component, entityId)
     }
 
-    private fun <C : com.badlogic.ashley.core.Component> namedBy(
-        kind: ComponentKind<C>, fields: List<ComponentField<*>>, node: JsonNode, entityId: String,
-    ): String? {
-        val component = runCatchingKeepingCancellation { kind.codec.read(node) }.getOrNull() ?: return null
-        @Suppress("UNCHECKED_CAST")
-        return fields.firstOrNull { (it as ComponentField<C>).get(component).trim() == entityId }?.name
+    private fun <C : Component> namedBy(kind: ComponentKind<C>, component: Component, entityId: Long): String? {
+        val typed = kind.type.cast(component)
+        return kind.fields.firstOrNull { it.kind == FieldKind.ENTITY_REF && it.get(typed).trim() == entityId.toString() }?.name
     }
 }
-
-/** Built-in components and the integer members that name another entity. */
-private val BUILT_IN = mapOf(
-    "ParentComponent" to listOf("parentEntityId"),
-    "PositionComponent" to listOf("lookAtId"),
-)

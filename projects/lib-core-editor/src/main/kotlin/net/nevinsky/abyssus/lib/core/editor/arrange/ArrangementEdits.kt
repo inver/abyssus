@@ -12,7 +12,6 @@ import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.dto.EntityDto
 import net.nevinsky.abyssus.lib.core.dto.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
@@ -20,12 +19,12 @@ import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.PlacementWrites
-import net.nevinsky.abyssus.lib.core.editor.scene.entityById
+import net.nevinsky.abyssus.lib.core.editor.scene.newEntity
 
 /** What an arrangement edit did to a scene. The scene is only touched for [Changed]. */
 sealed interface ArrangementResult {
     /** The scene changed; [entityId] is the new arrangement for a create. */
-    data class Changed(val entityId: String? = null) : ArrangementResult
+    data class Changed(val entityId: Long? = null) : ArrangementResult
 
     data object Unchanged : ArrangementResult
 
@@ -63,15 +62,15 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         val slots = layout.slots(component) ?: return tooMany()
 
         val arrangementId = scene.nextId()
-        scene.ecs[arrangementId] = entity(
+        scene.ecs[arrangementId] = newEntity(
             arrangementId, EntityType.GROUP, NameComponent(messages.message("arrangementName", arrangementId.toString())), component,
         )
         for ((k, slot) in slots.withIndex()) {
             val copyId = scene.nextId()
-            scene.ecs[copyId] = copyOf(copyId, arrangementId.toString(), k, slot, component.asset, heights)
+            scene.ecs[copyId] = copyOf(copyId, arrangementId, k, slot, component.asset, heights)
             component.slots.add(copyId.toInt())
         }
-        return ArrangementResult.Changed(arrangementId.toString())
+        return ArrangementResult.Changed(arrangementId)
     }
 
     /**
@@ -85,11 +84,11 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
      */
     fun regenerate(
         scene: SceneDto,
-        arrangementId: String,
+        arrangementId: Long,
         before: PathArrangementComponent?,
         heights: GroundHeight,
     ): ArrangementResult {
-        val component = entityById(scene, arrangementId)?.components?.filterIsInstance<PathArrangementComponent>()?.firstOrNull()
+        val component = scene.entity(arrangementId)?.components?.filterIsInstance<PathArrangementComponent>()?.firstOrNull()
             ?: return ArrangementResult.Rejected(messages.message("arrangementMissing", arrangementId))
         if (!component.isUsable()) {
             return ArrangementResult.Rejected(messages.message("arrangementInvalid"))
@@ -107,7 +106,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
             val oldId = oldSlots.getOrNull(k)
             val filled = oldId != null && isCopy(scene, oldId, arrangementId)
             written += when {
-                filled -> oldId.also { changed = place(scene, it.toString(), slot, component.asset, heights) or changed }
+                filled -> oldId.also { changed = place(scene, it.toLong(), slot, component.asset, heights) or changed }
                 k < oldSlots.size && !refill -> NO_ENTITY
                 else -> {
                     val copyId = scene.nextId()
@@ -138,11 +137,11 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
      */
     fun setPoints(
         scene: SceneDto,
-        arrangementId: String,
+        arrangementId: Long,
         points: List<Vector3>,
         heights: GroundHeight
     ): ArrangementResult {
-        val component = entityById(scene, arrangementId)?.components?.filterIsInstance<PathArrangementComponent>()?.firstOrNull()
+        val component = scene.entity(arrangementId)?.components?.filterIsInstance<PathArrangementComponent>()?.firstOrNull()
             ?: return ArrangementResult.Rejected(messages.message("arrangementMissing", arrangementId))
         if (points.size < 2 || points.any { !it.x.isFinite() || !it.y.isFinite() || !it.z.isFinite() }) {
             return ArrangementResult.Rejected(messages.message("arrangementInvalid"))
@@ -159,9 +158,9 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
      * Makes the copy [copyId] an ordinary entity: removes its `ParentComponent` and writes `-1` for it in the slots of
      * its arrangement. False, leaving [scene] as it was, when the entity is not a linked copy.
      */
-    fun detach(scene: SceneDto, copyId: String): Boolean {
-        val id = copyId.toIntOrNull() ?: return false
-        val copy = entityById(scene, copyId) ?: return false
+    fun detach(scene: SceneDto, copyId: Long): Boolean {
+        val id = copyId.toInt()
+        val copy = scene.entity(copyId) ?: return false
         val parent = copy.components.filterIsInstance<ParentComponent>().firstOrNull()?.parentEntityId ?: return false
         val arrangement = scene.entity(parent.toLong())?.components?.filterIsInstance<PathArrangementComponent>()?.firstOrNull()
             ?: return false
@@ -173,18 +172,15 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
     }
 
     /** Whether [copyId] is linked to the arrangement: it exists and its `ParentComponent` points at [arrangementId]. */
-    private fun isCopy(scene: SceneDto, copyId: Int, arrangementId: String): Boolean {
+    private fun isCopy(scene: SceneDto, copyId: Int, arrangementId: Long): Boolean {
         if (copyId < 0) return false
         val parent = scene.entity(copyId.toLong())?.components?.filterIsInstance<ParentComponent>()?.firstOrNull()
-        return parent != null && parent.parentEntityId.toString() == arrangementId
+        return parent != null && parent.parentEntityId.toLong() == arrangementId
     }
-
-    private fun entity(id: Long, type: EntityType, vararg parts: com.badlogic.ashley.core.Component) =
-        EntityDto(mutableListOf<com.badlogic.ashley.core.Component>(HeaderComponent(id = id, type = type)).apply { addAll(parts) })
 
     private fun copyOf(
         id: Long,
-        arrangementId: String,
+        arrangementId: Long,
         slotIndex: Int,
         slot: PathSlot,
         asset: BaseMeta,
@@ -193,7 +189,7 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         val at = slot.position(heights)
         val position = PositionComponent(at.x, at.y, at.z)
         position.localRotation.set(slot.rotation())
-        return entity(
+        return newEntity(
             id, EntityType.OBJECT,
             NameComponent(messages.message("arrangementCopyName", arrangementId, slotIndex.toString())),
             position,
@@ -203,8 +199,8 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
     }
 
     /** Writes the slot's position and rotation and the arrangement's model into the copy; whether anything differed. */
-    private fun place(scene: SceneDto, copyId: String, slot: PathSlot, asset: BaseMeta, heights: GroundHeight): Boolean {
-        val copy = entityById(scene, copyId) ?: return false
+    private fun place(scene: SceneDto, copyId: Long, slot: PathSlot, asset: BaseMeta, heights: GroundHeight): Boolean {
+        val copy = scene.entity(copyId) ?: return false
         val placement = placements.placementOf(copy)
         var changed = placements.setPosition(placement, slot.position(heights))
         changed = placements.setRotation(placement, slot.rotation()) or changed

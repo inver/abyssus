@@ -26,7 +26,7 @@ data class PlacementTransform(val position: Vector3, val rotation: Quaternion, v
 
 /** An entity showing the asset folder [assetName]. [entityId] is its key under `ecs/entities`; picking reports it back. */
 data class AssetPlacement(
-    val entityId: String,
+    val entityId: Long,
     val assetName: String,
     val transform: PlacementTransform,
     /** The one mesh of a model to draw, or null for the whole model. */
@@ -40,13 +40,13 @@ data class AssetPlacement(
 val AssetPlacement.storageName: String get() = ModelKey(assetName, meshId).encode()
 
 /** A path arrangement entity: its [arrangement] component as the file holds it (read, never changed, by the view). */
-class ArrangementPlacement(val entityId: String, val arrangement: PathArrangementComponent)
+class ArrangementPlacement(val entityId: Long, val arrangement: PathArrangementComponent)
 
 enum class LightKind { DIRECTIONAL, POINT, SPOT }
 
 /** [direction] is the unit vector the light shines along (directional and spot); [position] matters for point and spot. */
 data class LightPlacement(
-    val entityId: String,
+    val entityId: Long,
     val kind: LightKind,
     val color: Color,
     val intensity: Float,
@@ -57,7 +57,7 @@ data class LightPlacement(
     val coneAngle: Float = LIGHT_CONE_ANGLE,
     val edgeSoftness: Float = LIGHT_EDGE_SOFTNESS,
     /** The `PositionComponent.lookAtId` of the light, or null when it does not name a target. */
-    val lookAtId: String? = null,
+    val lookAtId: Long? = null,
 )
 
 /**
@@ -66,11 +66,11 @@ data class LightPlacement(
  * or its id when unnamed.
  */
 data class CameraPlacement(
-    val entityId: String,
+    val entityId: Long,
     val name: String,
     val position: Vector3,
     val direction: Vector3,
-    val lookAtId: String?,
+    val lookAtId: Long?,
     val near: Float = CAMERA_NEAR,
     val far: Float = CAMERA_FAR,
     val fieldOfView: Float = CAMERA_FOV,
