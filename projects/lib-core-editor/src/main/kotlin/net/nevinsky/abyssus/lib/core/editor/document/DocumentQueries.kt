@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.lib.core.editor.document
 
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.scene.SceneParser
@@ -19,7 +20,7 @@ class DocumentQueries(
 ) {
     /**
      * The asset and sky names the scene [text] names (a render component's `assetName` and `shaderKey`, a foliage
-     * component's `assetName`, the scene's `skyboxName`), not counting the entity [ignoring]; null when [text] is not a
+     * component's `assetName`, a path arrangement's `asset.name`, the scene's `skyboxName`), not counting the entity [ignoring]; null when [text] is not a
      * readable scene.
      */
     fun sceneNamedAssets(text: String, ignoring: String? = null): Set<String>? = runCatchingKeepingCancellation {
@@ -34,6 +35,7 @@ class DocumentQueries(
                     }
 
                     is FoliageComponent -> component.assetName?.takeIf { it.isNotBlank() }?.let(::add)
+                    is PathArrangementComponent -> component.asset.name.takeIf { it.isNotBlank() }?.let(::add)
                 }
             }
             scene.skyboxName?.takeIf { it.isNotBlank() }?.let(::add)

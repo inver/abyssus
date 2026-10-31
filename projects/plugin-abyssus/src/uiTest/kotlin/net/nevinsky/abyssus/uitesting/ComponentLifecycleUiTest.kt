@@ -203,7 +203,7 @@ class ComponentLifecycleUiTest : UiTestBase() {
         val root = mapper.readTree(Files.readString(scene)) as com.fasterxml.jackson.databind.node.ObjectNode
         val comps = root["ecs"]["7"]["components"] as com.fasterxml.jackson.databind.node.ObjectNode
         comps.set<JsonNode>("PathArrangementComponent", mapper.readTree(
-            """{"points":[{"x":0,"y":0,"z":0},{"x":20,"y":0,"z":0}],"closed":false,"asset":{"type":"MODEL","assetName":"tree"},"spacing":10.0,"offset":0.0,"sides":"CENTER","alignToPath":true,"yawOffset":0.0,"slots":[]}"""))
+            """{"points":[{"x":0,"y":0,"z":0},{"x":20,"y":0,"z":0}],"closed":false,"asset":{"type":"MODEL","name":"tree"},"spacing":10.0,"offset":0.0,"sides":"CENTER","alignToPath":true,"yawOffset":0.0,"slots":[]}"""))
         // the fixture's own style (`"key": value`), so the first plugin edit has no reason to reformat the file
         Files.writeString(scene, mapper.writerWithDefaultPrettyPrinter().writeValueAsString(root).replace("\" : ", "\": ") + "\n")
         ide.refresh(scene.toString())

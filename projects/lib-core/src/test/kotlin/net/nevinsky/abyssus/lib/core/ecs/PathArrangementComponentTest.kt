@@ -25,7 +25,7 @@ class PathArrangementComponentTest {
     }
 
     private val example = """{"points":[{"x":0,"y":1.2,"z":0},{"x":40,"y":0.8,"z":0}],"closed":false,""" +
-        """"asset":{"type":"MODEL","assetName":"tree"},"spacing":10,"offset":0,"sides":"CENTER","alignToPath":true,""" +
+        """"asset":{"type":"MODEL","name":"tree"},"spacing":10,"offset":0,"sides":"CENTER","alignToPath":true,""" +
         """"yawOffset":0,"slots":[12,13,14,15,16]}"""
 
     @Test
@@ -52,7 +52,7 @@ class PathArrangementComponentTest {
     fun defaultsAreOmittedOnWrite() {
         val (component, _) = load(example)
         assertEquals(
-            """{"points":[{"x":0,"y":1.2,"z":0},{"x":40,"y":0.8,"z":0}],"asset":{"type":"MODEL","assetName":"tree"},""" +
+            """{"points":[{"x":0,"y":1.2,"z":0},{"x":40,"y":0.8,"z":0}],"asset":{"type":"MODEL","name":"tree"},""" +
                 """"slots":[12,13,14,15,16]}""",
             json.componentTree(component).toString(),
         )
@@ -61,7 +61,7 @@ class PathArrangementComponentTest {
     @Test
     fun nonDefaultSettingsWriteBackByteIdentical() {
         val text = """{"points":[{"x":0,"y":1.2,"z":0},{"x":40,"y":0.8,"z":0}],"closed":true,""" +
-            """"asset":{"type":"MODEL","assetName":"tree"},"spacing":5.5,"offset":3,"sides":"BOTH","alignToPath":false,""" +
+            """"asset":{"type":"MODEL","name":"tree"},"spacing":5.5,"offset":3,"sides":"BOTH","alignToPath":false,""" +
             """"yawOffset":90,"slots":[12,-1,14]}"""
         val (component, warns) = load(text)
         assertTrue(warns.warnings.isEmpty())

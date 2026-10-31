@@ -2896,7 +2896,7 @@
           ],
           "asset": {
             "type": "MODEL",
-            "assetName": "model_airfield_railway"
+            "name": "model_airfield_railway"
           },
           "slots": [
             635,
@@ -3295,7 +3295,7 @@
           ],
           "asset": {
             "type": "MODEL",
-            "assetName": "model_airfield_street_lamp"
+            "name": "model_airfield_street_lamp"
           },
           "slots": [
             648,
@@ -3709,7 +3709,7 @@
           ],
           "asset": {
             "type": "MODEL",
-            "assetName": "fence"
+            "name": "fence"
           },
           "slots": [
             718,

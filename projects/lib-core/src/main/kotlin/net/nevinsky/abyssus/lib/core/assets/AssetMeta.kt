@@ -2,7 +2,6 @@ package net.nevinsky.abyssus.lib.core.assets
 
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.annotation.JsonProperty
 import java.util.*
 
 const val META_VERSION_DEFAULT = 1
@@ -28,7 +27,7 @@ open class AssetMeta<T>(
 
 open class BaseMeta(
     val type: MetaType = MetaType.UNKNOWN,
-    @param:JsonProperty("assetName") @get:JsonProperty("assetName") val name: String = "",
+    val name: String = "",
 ) {
     @JsonIgnore
     fun isTerrain(): Boolean = type == MetaType.TERRAIN

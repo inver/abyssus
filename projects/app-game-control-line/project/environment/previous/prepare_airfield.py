@@ -110,7 +110,7 @@ def main():
                                   "localRotation": {"x": 0, "y": round(math.sin(angle), 7), "z": 0, "w": round(math.cos(angle), 7)},
                                   "localScale": dict(zip(("x", "y", "z"), [round(s, 5) for s in scale]))},
             "RenderComponent": {"renderable": {"kind": "asset", "shaderKey": "defaultShader" if model else "terrain",
-                                "asset": {"type": "MODEL" if model else "TERRAIN", "assetName": asset}}},
+                                "asset": {"type": "MODEL" if model else "TERRAIN", "name": asset}}},
         }
         entities[entity_id] = {"components": components}
         placements.append({"id": entity_id, "name": name, "asset": asset, "centerX": x, "centerZ": z,
