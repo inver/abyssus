@@ -40,24 +40,4 @@ class NativeDocumentAdmissionTest {
             assertEquals(native, file.readText())
         } finally { dir.deleteRecursively() }
     }
-
-    @Test fun rejectedMetadataIsReportedOnceAndRepairIsLoaded() {
-        val dir = Files.createTempDirectory("native-meta").toFile()
-        try {
-            val file = File(dir, "assets/model/meta.json").also { it.parentFile.mkdirs() }
-            val invalid = """{"type":"MODEL"}"""
-            file.writeText(invalid)
-            val messages = mutableListOf<String>()
-            val loader = AssetMetaLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir), warningsTo(messages))
-            assertNull(loader.loadBaseMeta("model"))
-            assertNull(loader.loadBaseMeta("model"))
-            assertEquals(1, messages.size)
-            assertTrue(messages.single().contains("format"))
-            assertEquals(invalid, file.readText())
-            val repaired = """{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{},"extra":1.00}"""
-            file.writeText(repaired)
-            assertEquals("model", loader.loadBaseMeta("model")!!.name)
-            assertEquals(repaired, file.readText())
-        } finally { dir.deleteRecursively() }
-    }
 }

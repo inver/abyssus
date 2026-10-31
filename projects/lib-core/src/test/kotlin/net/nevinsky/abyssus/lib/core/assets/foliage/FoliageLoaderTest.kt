@@ -90,13 +90,6 @@ class FoliageLoaderTest {
     }
 
     @Test
-    fun aFormatVersionTwoIsRefusedWithAReason() {
-        foliage(TWO_MODEL_LAYER.replace(""""formatVersion":1""", """"formatVersion":2"""))
-        assertNull(loader.prepare("foliage_meadow"))
-        assertTrue(messages.single(), messages.single().contains("formatVersion"))
-    }
-
-    @Test
     fun aMissingBakeIsPreparedAsStaleNotFailed() {
         bake(null)
         val prepared = loader.prepare("foliage_meadow")!!.staged

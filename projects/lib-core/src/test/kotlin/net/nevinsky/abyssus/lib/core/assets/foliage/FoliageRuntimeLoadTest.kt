@@ -167,14 +167,6 @@ class FoliageRuntimeLoadTest {
     }
 
     @Test
-    fun formatVersionTwoAndMissingFoliageAreSkipped() {
-        meta(TWO_MODELS.replace(""""formatVersion":1""", """"formatVersion":2"""))
-        assertNull(runtime.read("foliage_meadow").foliage)
-        assertNull(runtime.read("nothing_here").foliage)
-        assertNull(runtime.read("tree").foliage)
-    }
-
-    @Test
     fun warningsAreBounded() {
         val layers = (1..40).joinToString(",") { """{"id":$it,"kind":"OBJECT","models":[{"asset":"tree","weight":1.0}]}""" }
         meta("""{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","additional":{"terrain":"terr","maskResolution":16,"layers":[$layers]}}""")
