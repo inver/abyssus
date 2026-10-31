@@ -13,6 +13,16 @@ import net.nevinsky.abyssus.app.game.controlline.components.GAME_COMPONENTS
 import net.nevinsky.abyssus.app.game.controlline.flight.CONTROL_TENSION
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
 import net.nevinsky.abyssus.app.game.controlline.flow.GameFlow
+import net.nevinsky.abyssus.app.game.controlline.controller.ControllerProfiles
+import net.nevinsky.abyssus.app.game.controlline.controller.ControllerService
+import net.nevinsky.abyssus.app.game.controlline.controller.ControllerSource
+import net.nevinsky.abyssus.app.game.controlline.controller.drive
+import net.nevinsky.abyssus.app.game.controlline.display.DisplaySettings
+import net.nevinsky.abyssus.app.game.controlline.display.GdxDisplay
+import net.nevinsky.abyssus.app.game.controlline.controller.gdx.GdxControllers
+import net.nevinsky.abyssus.app.game.controlline.controller.glfw.GlfwJoysticks
+import net.nevinsky.abyssus.app.game.controlline.controller.CombinedControllerSource
+import net.nevinsky.abyssus.app.game.controlline.flow.Control
 import net.nevinsky.abyssus.app.game.controlline.flow.Screen
 import net.nevinsky.abyssus.app.game.controlline.render.*
 import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefModel
@@ -51,6 +61,9 @@ class ControlLineGame(
     private val patternScoresFile: Path = scoresFile.resolveSibling("f2b-scores.json"),
     private val fieldView: FieldView? = null,
     private val scaleScoresFile: Path = scoresFile.resolveSibling("scale-scores.json"),
+    private val controlsFile: Path = scoresFile.resolveSibling("controls.json"),
+    private val displayFile: Path = scoresFile.resolveSibling("display.json"),
+    private val controllerSource: ControllerSource = CombinedControllerSource(listOf(GdxControllers(), GlfwJoysticks())),
 ) : ApplicationAdapter() {
     /** Problems go to stderr through `physics`'s slf4j-simple binding. */
     private val log = LoggerFactory.getLogger("control-line")
@@ -69,6 +82,8 @@ class ControlLineGame(
     private lateinit var parked: FieldScene
 
     private lateinit var flights: FlightRunner
+    private lateinit var controllers: ControllerService
+    private lateinit var display: GdxDisplay
 
     // the debrief: its own load of the field, and what to draw for the selected manoeuvre
     private var debriefScene: FieldScene? = null
@@ -93,7 +108,9 @@ class ControlLineGame(
         parked = loadScene().also { it.standOnTables(PhysicsAssets(project.toFile())::modelPoints) }
         flow = GameFlow(parked.planes, ScoreTable(scoresFile), PatternScoreTable(patternScoresFile), ScaleScoreTable(scaleScoresFile))
         flights = FlightRunner(flow, ::loadScene, { PhysicsAssets(project.toFile()) }, log, natives)
-        ui = createGameUi(project, PROJECT_FILE, flow, log) { Gdx.app.exit() }
+        controllers = ControllerService(controllerSource, ControllerProfiles(controlsFile), flights.input)
+        display = GdxDisplay(DisplaySettings(displayFile))
+        ui = createGameUi(project, PROJECT_FILE, flow, log, controllers, display) { Gdx.app.exit() }
         cameras = Cameras(Gdx.graphics.width.toFloat(), Gdx.graphics.height.toFloat())
         Gdx.input.inputProcessor = InputMultiplexer(Keys(), ui.inputProcessor)
         ui.resize()
@@ -108,6 +125,8 @@ class ControlLineGame(
 
     override fun render() {
         val seconds = Gdx.graphics.deltaTime.coerceIn(0f, 0.1f)
+        display.applyPending()
+        controllers.drive(flow, seconds, ui::navigate)
         followFlow()
         flights.advance(seconds)
         val screen = flow.screen

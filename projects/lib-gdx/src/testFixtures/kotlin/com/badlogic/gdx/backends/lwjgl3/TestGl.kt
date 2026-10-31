@@ -22,7 +22,7 @@ import javax.swing.JFrame
 import javax.swing.SwingUtilities
 
 /**
- * Runs a block once with a GL 3.2 core context current and libGDX's `Gdx.gl*` installed. Opens a small window, so
+ * Runs a block once with a GL 3.3 core context current (instanced drawing needs `glVertexAttribDivisor`, core in 3.3, as the game asks for) and libGDX's `Gdx.gl*` installed. Opens a small window, so
  * tests using it only run with `-Dabyssus.glTests=true` (and a display). In libGDX's package because `Lwjgl3GL30` is
  * package-private.
  */
@@ -39,7 +39,7 @@ object TestGl {
         lateinit var window: JFrame
         SwingUtilities.invokeAndWait {
             val data = GLData().apply {
-                majorVersion = 3; minorVersion = 2; profile = GLData.Profile.CORE; forwardCompatible = true; depthSize = 24
+                majorVersion = 3; minorVersion = 3; profile = GLData.Profile.CORE; forwardCompatible = true; depthSize = 24
             }
             val canvas = object : AWTGLCanvas(data) {
                 override fun initGL() {

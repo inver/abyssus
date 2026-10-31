@@ -14,6 +14,7 @@ const val WATCH_AI_BUTTON = "ps-watch-ai"
 const val SCREEN_MAIN_MENU = "mainMenu"
 const val SCREEN_ASSIST = "assistSelect"
 const val SCREEN_PLANE = "planeSelect"
+const val SCREEN_SETTINGS = "settings"
 const val SCREEN_HUD_FREE = "hudFree"
 const val SCREEN_HUD_SCALE = "hudScale"
 const val SCREEN_HUD_PATTERN = "hudPattern"
@@ -24,7 +25,7 @@ const val SCREEN_SCORES = "scores"
 const val SCREEN_DEBRIEF = "debrief"
 
 val SCREEN_IDS = listOf(
-    SCREEN_MAIN_MENU, SCREEN_ASSIST, SCREEN_PLANE, SCREEN_HUD_FREE, SCREEN_HUD_SCALE, SCREEN_HUD_PATTERN, SCREEN_PAUSED,
+    SCREEN_MAIN_MENU, SCREEN_ASSIST, SCREEN_PLANE, SCREEN_SETTINGS, SCREEN_HUD_FREE, SCREEN_HUD_SCALE, SCREEN_HUD_PATTERN, SCREEN_PAUSED,
     SCREEN_NAME_ENTRY, SCREEN_GAME_OVER, SCREEN_SCORES, SCREEN_DEBRIEF,
 )
 
@@ -38,6 +39,13 @@ val PUBLISHED_BINDINGS: Map<String, String> = mapOf(
     // plane select
     "hasModeLabel" to "boolean", "modeLabel" to "string", "planeCount" to "string", "planeName" to "string", "planeFacts" to "string",
     "watchAiVisible" to "boolean", "hasScaleFacts" to "boolean", "scaleFacts" to "string",
+    // the controller settings
+    "hasDevice" to "boolean", "deviceName" to "string", "deviceCount" to "string", "axisName" to "string", "liveTilt" to "number",
+    "liveTiltText" to "string", "invert" to "boolean", "deadZone" to "number", "deadZoneText" to "string", "curve" to "number",
+    "curveText" to "string", "pauseName" to "string", "detecting" to "boolean", "detectStatus" to "string",
+    "hasControlsDamaged" to "boolean", "controlsDamaged" to "string",
+    // the display settings
+    "fullscreen" to "boolean", "hasDisplayDamaged" to "boolean", "displayDamaged" to "string",
     // who flies: an AI demonstration on the HUD, the pause menu, GAME OVER and the debrief, or the player
     "isAi" to "boolean", "isHuman" to "boolean",
     // the HUD
@@ -62,6 +70,6 @@ val PUBLISHED_BINDINGS: Map<String, String> = mapOf(
 
 /** The named actions the asset emits; `openRow` arrives as `openRow#<row>` from the board rows. */
 val ACTIONS = listOf(
-    "freeFlight", "f2bPattern", "scale", "scores", "quit", "assistPro", "assistMid", "assistNoob", "back", "previousPlane", "nextPlane",
-    "choosePlane", "watchAi", "resume", "mainMenu", "saveName", "retry", "debrief", "tabFree", "tabPro", "tabMid", "tabNoob", "tabScale", "openRow",
+    "freeFlight", "f2bPattern", "scale", "settings", "scores", "quit", "assistPro", "assistMid", "assistNoob", "back", "previousPlane", "nextPlane",
+    "choosePlane", "watchAi", "resume", "mainMenu", "saveName", "retry", "debrief", "tabFree", "tabPro", "tabMid", "tabNoob", "tabScale", "openRow", "devicePrevious", "deviceNext", "detectAxis", "detectPause", "cancelDetect", "resetProfile",
 )

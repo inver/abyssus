@@ -84,6 +84,9 @@ enum class Control { HUMAN, AI }
 sealed interface Screen {
     data object MainMenu : Screen
 
+    /** The controller settings, opened from the main menu. */
+    data object Settings : Screen
+
     /** Choosing the assist level of an F2B pattern. */
     data object AssistSelect : Screen
 
@@ -172,6 +175,10 @@ class GameFlow(
 
     fun scale() {
         if (screen == Screen.MainMenu && scaleEnabled) screen = Screen.PlaneSelect(0, Mode.Scale)
+    }
+
+    fun settings() {
+        if (screen == Screen.MainMenu) screen = Screen.Settings
     }
 
     fun scores() {
@@ -327,7 +334,7 @@ class GameFlow(
     /** Escape or Back: one screen back, or pause while flying. */
     fun back() {
         when (val s = screen) {
-            Screen.AssistSelect -> screen = Screen.MainMenu
+            Screen.AssistSelect, Screen.Settings -> screen = Screen.MainMenu
             is Screen.PlaneSelect -> screen = if (s.mode is Mode.Pattern) Screen.AssistSelect else Screen.MainMenu
             is Screen.Flying -> pause()
             is Screen.Paused -> resume()

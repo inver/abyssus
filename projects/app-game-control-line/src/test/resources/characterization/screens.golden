@@ -4,6 +4,7 @@ button|enabled|checked|Free flight
 button|enabled|F2B pattern
 button|enabled|Scale
 button|enabled|Scores
+button|enabled|Settings
 button|enabled|Quit
 == assist-select
 label|normal|F2B pattern
@@ -421,13 +422,14 @@ button|enabled|checked|Free flight
 button|enabled|F2B pattern
 button|enabled|Scale
 button|enabled|Scores
+button|enabled|Settings
 button|enabled|Quit
 == plane-select-free
 label|normal|Choose a plane  (1 of 4)
 button|enabled|<
 label|normal|Mig-3
 button|enabled|>
-label|normal|Scale    Lines 16 m    Mass 0.90 kg    Fuel 240 s
+label|normal|Scale    Lines 16 m    Mass 0.85 kg    Fuel 240 s
 label|normal|Replica of the MiG-3    First flight 1940    Span 10.3 m    Scale 1:10
 button|enabled|Fly  (Enter)
 button|enabled|Back  (Esc)
@@ -508,7 +510,7 @@ label|normal|Choose a plane  (1 of 1)
 button|enabled|<
 label|normal|Mig-3
 button|enabled|>
-label|normal|Scale    Lines 16 m    Mass 0.90 kg    Fuel 240 s
+label|normal|Scale    Lines 16 m    Mass 0.85 kg    Fuel 240 s
 label|normal|Replica of the MiG-3    First flight 1940    Span 10.3 m    Scale 1:10
 button|enabled|Fly  (Enter)
 button|enabled|Back  (Esc)
@@ -786,11 +788,57 @@ label|normal|360 s
 label|normal|Time
 label|normal|0:00 / 7:00
 label|highlight|AI demonstration: the bot holds the handle    Esc: pause
+== settings-none
+label|normal|Settings
+label|highlight|Display
+label|normal|Fullscreen
+label|highlight|Controller
+button|disabled|<
+label|normal|No controller found
+button|disabled|>
+label|normal|Handle axis
+button|disabled|Detect
+label|normal|Live
+bar|0.50
+label|normal|Invert
+label|normal|Dead zone
+label|normal|Curve
+label|normal|Pause button
+button|disabled|Detect
+button|disabled|Reset
+button|enabled|Back  (Esc)
+== main-menu-pad
+label|normal|Control Line
+button|enabled|checked|Free flight
+button|enabled|F2B pattern
+button|enabled|Scale
+button|enabled|Scores
+button|enabled|Settings
+button|enabled|Quit
+== main-menu-pad-down
+label|normal|Control Line
+button|enabled|Free flight
+button|enabled|checked|F2B pattern
+button|enabled|Scale
+button|enabled|Scores
+button|enabled|Settings
+button|enabled|Quit
+== assist-select-pad
+label|normal|F2B pattern
+label|normal|The 15 manoeuvres of the FAI schedule in 7 minutes. Choose the assist level.
+button|enabled|checked|Pro
+button|enabled|Mid
+button|enabled|Noob
+button|enabled|Back
+label|muted|Pro: no help: tension, fuel and the clock
+label|muted|Mid: the next manoeuvre, the pause count, a height warning and each mark as you fly
+label|muted|Noob: all of Mid's, and the ideal track drawn ahead of the plane
 == main-menu-no-planes
 label|normal|Control Line
 button|disabled|Free flight
 button|disabled|F2B pattern
 button|disabled|Scale
 button|enabled|checked|Scores
+button|enabled|Settings
 button|enabled|Quit
 label|highlight|No plane was found in the field scene

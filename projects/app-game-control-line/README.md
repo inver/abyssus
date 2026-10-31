@@ -14,7 +14,7 @@ behaviour: `control-line-flight`, `control-line-scoring`, `control-line-game-flo
 
 The `run` task points the game at the bundled project (system property `controlLine.project`). The main menu offers
 **Free flight** (the arcade game below), **F2B pattern** (practice for the real schedule, see [F2B pattern](#f2b-pattern)) and
-**Scale** (fly a replica of a real aircraft, see [Scale](#scale)).
+**Scale** (fly a replica of a real aircraft, see [Scale](#scale)); **Settings** holds [fullscreen](#settings-and-fullscreen) and the [controller](#controllers) setup.
 Free flight scores are kept in `<user-home>/.abyssus-control-line/scores.json`, F2B scores in
 `<user-home>/.abyssus-control-line/f2b-scores.json` and Scale scores in `<user-home>/.abyssus-control-line/scale-scores.json`; a file
 that cannot be read is renamed to `scores.json.bad`, `f2b-scores.json.bad` or `scale-scores.json.bad`.
@@ -135,14 +135,47 @@ the game falls back to the raster field and states the reason the same way.
 
 | Where | Keys and mouse |
 |---|---|
-| Menus | Up / Down and Enter, or the mouse; Escape goes back |
+| Menus | Up / Down and Enter, or the mouse; Escape goes back. A controller does the same: D-pad (or left stick) for the arrows, A for Enter, B for Escape |
 | Plane select (the vitrine) | Left / Right change the plane, Enter flies it, Escape returns to the screen before it (the main menu, or the assist level for an F2B pattern). For an F2B pattern, A or the **Watch AI** button (Tab to it, then Enter) has the AI fly the shown plane, see [Watch AI](#watch-ai) |
 | Scores | Left / Right change the tab (Free flight, Pro, Mid, Noob, Scale), Escape or Back returns. On the F2B tabs, Up / Down select a flight and Enter or a click opens its debrief |
 | Debrief | Up / Down: manoeuvre; Space: pause or resume; R: restart; 1 / 2 / 3: speed ½× / 1× / 2×; V: pilot view or outside view; Escape returns |
-| Flying | W or Up: handle up; S or Down: handle down (full tilt in 0.15 s, back to neutral on release). Moving the mouse up or down sets the tilt by its distance from the window's centre; whichever was used last wins. Escape pauses. In a Watch AI demonstration the keys and the mouse do not move the handle; Escape still pauses |
+| Flying | W or Up: handle up; S or Down: handle down (full tilt in 0.15 s, back to neutral on release). Moving the mouse up or down sets the tilt by its distance from the window's centre; whichever was used last wins. A controller's handle axis sets the tilt too (see [Controllers](#controllers)). Escape, or the controller's pause button (Start on a gamepad), pauses. In a Watch AI demonstration the keys, the mouse and the controller do not move the handle; Escape still pauses |
 
 In Free flight, laps score 10. Inside and outside loops score 50, an inverted lap 80, a wingover 100 and a figure 8 150, times the
 combo multiplier (up to x5 for maneuvers within 10 s of each other). A landing with the engine stopped adds 200.
+
+## Controllers
+
+A gamepad, flight stick or wheel can fly the plane and move through the menus. Devices are read through libGDX's gdx-controllers (SDL game controllers, natives
+bundled) and, for devices without a gamepad mapping, through GLFW's joystick API, so there is nothing to install; with no device connected the keyboard and the mouse work as always.
+
+- **Which devices.** A device with a gamepad mapping (Logitech F310 and F710, Xbox-style pads and so on) is a *gamepad*; any other
+  (a flight stick such as the Thrustmaster T.16000M or Logitech Extreme 3D Pro, a wheel, pedals) is a *joystick* with its raw axes and buttons.
+- **The handle.** The chosen axis sets the tilt directly: full travel either way is full tilt, a dead zone (10 % to start with) does nothing,
+  and a curve (0 linear to 100 % cubic) softens the middle. A gamepad starts on the left stick's vertical axis, pushed up for handle up,
+  and Start for pause. A joystick starts with no axis: choose one with **Detect**. The last device used wins, but a stick resting inside
+  its dead zone never takes the handle from the keys.
+- **Settings.** Main menu, **Settings**, Controller section: the device (Previous and Next when there are several), the handle axis with a live bar of the
+  tilt it sets, **Detect** (move the axis, or press the button, you want; it records the axis's rest value, so a pedal that rests at one
+  end works; Escape, Cancel or 10 s stops it, and the pad's B also stops an axis detect), Invert, Dead zone, Curve, the pause button and
+  Reset. Changes apply and save at once, to `<user-home>/.abyssus-control-line/controls.json` (a file that cannot be read is renamed to
+  `controls.json.bad`).
+- **Menus.** The D-pad or the left stick of a gamepad, or the first hat of a joystick , moves focus and changes the plane and the score tab,
+  repeating when held; A (button 0 of a joystick) presses, B (button 1) goes back. While flying only the pause button acts. There is no
+  on-screen keyboard: on name entry confirm saves the offered name.
+- **Limits.** A profile is kept per device by its GUID, so two identical devices share one. On Linux the user needs read access to the
+  device (`/dev/input/js*` or `event*`), or the game sees no device. Unplugging a device mid-flight leaves the flight running with the
+  handle at neutral.
+
+### Settings and fullscreen
+
+The **Settings** screen (main menu) has two sections. **Display** has a **Fullscreen** checkbox: turning it on switches the window to
+fullscreen at the display's current mode and turning it off returns to a 1280 x 720 window, at once and with no restart (the switch is made
+between frames). The choice is kept in `<user-home>/.abyssus-control-line/display.json` (`{"version": 1, "fullscreen": false}`; a file that
+cannot be read is renamed to `display.json.bad`, the game opens in a window and the screen says so), and the game starts in the mode it holds.
+It works with the keyboard, the mouse and a controller, and needs no controller connected. **Controller** is the section above.
+
+Controllers are read by `controller/gdx/GdxControllers` (the only class that imports gdx-controllers) and `controller/glfw/GlfwJoysticks` (the only one that imports GLFW, for unmapped devices); everything else runs against a fake device in the tests.
 
 ## Scale
 
@@ -473,7 +506,9 @@ Only the trainer's model has the clips; the other planes stay whole. Slack lines
 | `flow` | `GameFlow` (the screen state machine, with the mode, the assist level and who flies, `Control`), `FlightReport` | no |
 | `ai` | the Watch AI bot: `F2bBot`, `F2bRoutinePlanner`, `F2bPilot`, `Handling`, `Course`, `F2bFigures`, `Fillets` | no |
 | (the package itself) | `ControlLineGame`, `FlightRunner` (the flight lifecycle, without GL), `Main` | `ControlLineGame` |
-| `input` | `HandleInput` (keyboard and mouse tilt) | no |
+| `input` | `HandleInput` (keyboard, mouse and controller tilt) | no |
+| `display` | `DisplaySettings` (`display.json`), `DisplayOptions`, `GdxDisplay` (the fullscreen switch, applied at the top of the next frame over libGDX's window) | `GdxDisplay` |
+| `controller` | `ControllerService` (the per-frame drive), `ControllerProfile` / `ControllerProfiles` (`controls.json`), the axis mapping, `DetectSession`, `PadNavigator`, `ControllerSettings`; `gdx.GdxControllers` is the only gdx-controllers user | `gdx-controllers`, `glfw` |
 | `render`, `screens` | `FieldScene`, `FieldRenderer` (terrain through `lib-render`'s `TerrainPass`, variant `GAME_SINGLE_SUN`), `FieldShadows` (the sun's shadow map, drawn by `lib-render`'s `DepthSubmission`), `Cameras`, `GameUiHost` (the authored screens over `lib-core`'s `UiPresenter`), `GameUiModel` (what the screens show and the actions and keys they send; no GL), `GameUiContract` | yes |
 | `play` (own source set, `src/play`) | `ControlLinePlay : PlayModule` | no |
 

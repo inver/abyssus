@@ -73,4 +73,111 @@ class HandleInputTest {
         input.update(1f / 120f)
         assertEquals(0f, input.tilt, 0f)
     }
+
+    @Test
+    fun aStickSetsTheTiltAtOnceWithNoRamp() {
+        input.pad(0.6f)
+        run(1f / 120f)
+        assertEquals(0.6f, input.tilt, 0f)
+        input.pad(-1f)
+        run(1f / 120f)
+        assertEquals(-1f, input.tilt, 0f)
+    }
+
+    @Test
+    fun aKeyAfterTheStickTakesControlBack() {
+        input.pad(1f)
+        run(0.01f)
+        assertEquals(1f, input.tilt, 0f)
+        input.key("S", true)
+        run(0.3f)
+        assertEquals(-1f, input.tilt, 0f)
+    }
+
+    @Test
+    fun theStickAfterAKeyTakesControlWhenItLeavesTheDeadZone() {
+        input.key("S", true)
+        run(0.3f)
+        input.pad(0f)
+        run(0.01f)
+        assertEquals("a resting stick leaves the keys in control", -1f, input.tilt, 0f)
+        input.pad(0.5f)
+        run(0.01f)
+        assertEquals(0.5f, input.tilt, 0f)
+    }
+
+    @Test
+    fun aRestingStickNeverOverridesW() {
+        input.key("W", true)
+        repeat(30) { input.pad(0f); run(0.01f) }
+        assertEquals(1f, input.tilt, 0f)
+    }
+
+    @Test
+    fun theStickReturnedToCentreIsNeutralAndStaysInControl() {
+        input.pad(1f)
+        run(0.01f)
+        input.pad(0f)
+        run(0.01f)
+        assertEquals(0f, input.tilt, 0f)
+        // a held key is not seen until it is pressed again
+        input.key("W", true)
+        run(0.3f)
+        assertEquals(1f, input.tilt, 0f)
+    }
+
+    @Test
+    fun theStickAfterTheMouseTakesControlAndTheMouseTakesItBack() {
+        input.mouseMoved(100f, 720f)
+        run(0.01f)
+        input.pad(-0.4f)
+        run(0.01f)
+        assertEquals(-0.4f, input.tilt, 0f)
+        input.mouseMoved(0f, 720f)
+        run(0.01f)
+        assertEquals(1f, input.tilt, 0f)
+    }
+
+    @Test
+    fun unplugMidHoldGoesNeutralAndTheKeysWorkAgain() {
+        input.pad(1f)
+        run(0.01f)
+        input.padLost()
+        run(0.01f)
+        assertEquals(0f, input.tilt, 0f)
+        input.key("W", true)
+        run(0.3f)
+        assertEquals(1f, input.tilt, 0f)
+    }
+
+    @Test
+    fun losingAControllerThatWasNotControllingChangesNothing() {
+        input.key("W", true)
+        run(0.3f)
+        input.padLost()
+        run(0.01f)
+        assertEquals(1f, input.tilt, 0f)
+    }
+
+    @Test
+    fun resetAfterAStickFlightIsNeutralOnTheKeys() {
+        input.pad(1f)
+        run(0.01f)
+        input.reset()
+        run(0.01f)
+        assertEquals(0f, input.tilt, 0f)
+        input.pad(0f)
+        run(0.01f)
+        assertEquals(0f, input.tilt, 0f)
+    }
+
+    @Test
+    fun anOutOfRangeOrNanStickIsClampedOrNeutral() {
+        input.pad(5f)
+        run(0.01f)
+        assertEquals(1f, input.tilt, 0f)
+        input.pad(Float.NaN)
+        run(0.01f)
+        assertEquals(0f, input.tilt, 0f)
+    }
 }

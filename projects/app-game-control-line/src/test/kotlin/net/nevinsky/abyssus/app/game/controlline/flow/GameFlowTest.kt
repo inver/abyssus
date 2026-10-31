@@ -743,4 +743,32 @@ class GameFlowTest {
         assertEquals(1, scores.highlight)
         assertEquals(ScoreTab.SCALE, scores.highlightTab)
     }
+
+    @Test
+    fun settingsOpensFromTheMainMenuAndBackAndEscapeReturn() {
+        val flow = flow()
+        flow.settings()
+        assertEquals(Screen.Settings, flow.screen)
+        flow.back()
+        assertEquals(Screen.MainMenu, flow.screen)
+        flow.settings()
+        flow.back()
+        assertEquals(Screen.MainMenu, flow.screen)
+    }
+
+    @Test
+    fun settingsNeedsNoPlaneAndOpensOnlyFromTheMainMenu() {
+        val flow = flow(planes = emptyList())
+        flow.settings()
+        assertEquals(Screen.Settings, flow.screen)
+        flow.back()
+        flow.freeFlight()
+        flow.f2bPattern()
+        flow.settings()
+        assertEquals("opens again with no plane", Screen.Settings, flow.screen)
+        val other = flow()
+        other.freeFlight()
+        other.settings()
+        assertTrue("not from plane select", other.screen is Screen.PlaneSelect)
+    }
 }

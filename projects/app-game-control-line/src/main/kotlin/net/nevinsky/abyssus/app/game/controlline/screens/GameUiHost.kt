@@ -10,6 +10,11 @@ import com.badlogic.gdx.InputAdapter
 import com.badlogic.gdx.InputProcessor
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
+import net.nevinsky.abyssus.app.game.controlline.controller.ControllerSettings
+import net.nevinsky.abyssus.app.game.controlline.controller.NoControllerSettings
+import net.nevinsky.abyssus.app.game.controlline.controller.navigateKey
+import net.nevinsky.abyssus.app.game.controlline.display.DisplayOptions
+import net.nevinsky.abyssus.app.game.controlline.display.NoDisplayOptions
 import net.nevinsky.abyssus.app.game.controlline.flow.GameFlow
 import net.nevinsky.abyssus.app.game.controlline.flow.Screen
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
@@ -84,6 +89,16 @@ class GameUiHost(
         return presenter.keyDown(keycode, input != null && (input.isKeyPressed(Input.Keys.SHIFT_LEFT) || input.isKeyPressed(Input.Keys.SHIFT_RIGHT)))
     }
 
+    /**
+     * A key a controller sends to navigate (design decision 5 of `add-control-line-gamepad-support`): as [keyDown], then Tab
+     * or Shift-Tab for an Up or Down a tab-navigated screen did not take, and Space for an Enter nothing took (a checkbox).
+     */
+    fun navigate(keycode: Int): Boolean = navigateKey(
+        keycode, ::keyDown,
+        { shift -> presenter.keyDown(Input.Keys.TAB, shift) },
+        { presenter.keyDown(Input.Keys.SPACE) },
+    )
+
     /** Pointer and text input for the screens; the game puts it behind its own key processor. */
     val inputProcessor: InputProcessor = object : InputAdapter() {
         override fun touchDown(x: Int, y: Int, pointer: Int, button: Int) = presenter.touchDown(x.toFloat(), y.toFloat())
@@ -120,7 +135,10 @@ private fun UiPreparedResources.withHiDpiFonts(): UiPreparedResources = UiPrepar
  * Loads the `screens` asset of [project] (the folder of the native project) and builds the host for [flow]; the asset
  * must be registered in the project file and admitted. Needs the GL context, and the core-profile shader prefixes set.
  */
-fun createGameUi(project: Path, projectFile: String, flow: GameFlow, log: Logger, quit: () -> Unit): GameUiHost {
+fun createGameUi(
+    project: Path, projectFile: String, flow: GameFlow, log: Logger, controls: ControllerSettings = NoControllerSettings,
+    display: DisplayOptions = NoDisplayOptions, quit: () -> Unit,
+): GameUiHost {
     val json = JsonProcessor(log)
     val files = FileLoader(project.toFile())
     val dto = ProjectLoader(json, files).load(projectFile)
@@ -135,7 +153,7 @@ fun createGameUi(project: Path, projectFile: String, flow: GameFlow, log: Logger
     prepared.issues.forEach { log.warn("screens resource {}: {}", it.resourceId, it.problem) }
     val built = UiBuiltResources.Builder().build(prepared)
     val font = UiBundledFont()
-    val model = GameUiModel(flow, quit)
+    val model = GameUiModel(flow, controls, display, quit)
     val presenter = UiPresenter(
         SCREENS_ASSET, collection, { name -> (registry.lookup(dto, name) as? UiAdmission.Admitted)?.collection },
         UiBindingSession(collection, model::write), model::emit, built.forRenderer(font.acquire()), json,

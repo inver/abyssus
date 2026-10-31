@@ -43,6 +43,8 @@ class GameScreenshotsGlTest {
 
         override fun keyDown(keycode: Int) = inner.keyDown(keycode)
 
+        override fun navigate(keycode: Int) = inner.navigate(keycode)
+
         override fun click(screen: String, widget: String) = inner.click(screen, widget)
 
         override val focus: String? get() = inner.focus

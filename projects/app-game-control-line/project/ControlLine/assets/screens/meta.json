@@ -71,6 +71,111 @@
           "sample": "Replica of the MiG-3    First flight 1940    Span 10.3 m    Scale 1:8"
         },
         {
+          "name": "hasDevice",
+          "type": "boolean",
+          "sample": true
+        },
+        {
+          "name": "deviceName",
+          "type": "string",
+          "sample": "Logitech F310"
+        },
+        {
+          "name": "deviceCount",
+          "type": "string",
+          "sample": "1 of 1    gamepad"
+        },
+        {
+          "name": "axisName",
+          "type": "string",
+          "sample": "Left stick Y"
+        },
+        {
+          "name": "liveTilt",
+          "type": "number",
+          "sample": 1.4
+        },
+        {
+          "name": "liveTiltText",
+          "type": "string",
+          "sample": "+0.40"
+        },
+        {
+          "name": "invert",
+          "type": "boolean",
+          "access": "write",
+          "sample": false
+        },
+        {
+          "name": "deadZone",
+          "type": "number",
+          "access": "write",
+          "min": 0,
+          "max": 50,
+          "step": 1,
+          "sample": 10
+        },
+        {
+          "name": "deadZoneText",
+          "type": "string",
+          "sample": "10 %"
+        },
+        {
+          "name": "curve",
+          "type": "number",
+          "access": "write",
+          "min": 0,
+          "max": 100,
+          "step": 5,
+          "sample": 0
+        },
+        {
+          "name": "curveText",
+          "type": "string",
+          "sample": "linear"
+        },
+        {
+          "name": "pauseName",
+          "type": "string",
+          "sample": "Start"
+        },
+        {
+          "name": "detecting",
+          "type": "boolean",
+          "sample": false
+        },
+        {
+          "name": "detectStatus",
+          "type": "string",
+          "sample": "Move the axis you want to use    (10 s)"
+        },
+        {
+          "name": "hasControlsDamaged",
+          "type": "boolean",
+          "sample": false
+        },
+        {
+          "name": "controlsDamaged",
+          "type": "string",
+          "sample": "The old controller settings could not be read; they were kept as controls.json.bad."
+        },
+        {
+          "name": "fullscreen",
+          "type": "boolean",
+          "access": "write",
+          "sample": false
+        },
+        {
+          "name": "hasDisplayDamaged",
+          "type": "boolean",
+          "sample": false
+        },
+        {
+          "name": "displayDamaged",
+          "type": "string",
+          "sample": "The old display settings could not be read; they were kept as display.json.bad."
+        },
+        {
           "name": "tensionText",
           "type": "string",
           "sample": "12.0 N"
@@ -1013,6 +1118,24 @@
                     "style": "outline"
                   },
                   {
+                    "id": "mm-settings",
+                    "type": "button",
+                    "layout": {
+                      "width": 340,
+                      "height": 56
+                    },
+                    "properties": {
+                      "text": "Settings"
+                    },
+                    "actions": {
+                      "click": {
+                        "type": "emitAction",
+                        "name": "settings"
+                      }
+                    },
+                    "style": "outline"
+                  },
+                  {
                     "id": "mm-quit",
                     "type": "button",
                     "layout": {
@@ -1395,6 +1518,580 @@
                   }
                 ],
                 "style": "pane"
+              }
+            ]
+          }
+        },
+        {
+          "id": "settings",
+          "name": "Settings",
+          "navigation": "arrows",
+          "root": {
+            "id": "st-root-frame",
+            "type": "panel",
+            "children": [
+              {
+                "id": "settings-bg",
+                "type": "panel",
+                "style": "bg",
+                "layout": {
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              {
+                "id": "st-root",
+                "type": "column",
+                "layout": {
+                  "anchor": "center",
+                  "spacing": 10,
+                  "align": "center"
+                },
+                "children": [
+                  {
+                    "id": "st-title",
+                    "type": "label",
+                    "style": "title",
+                    "layout": {
+                      "height": 77
+                    },
+                    "properties": {
+                      "text": "Settings"
+                    }
+                  },
+                  {
+                    "id": "st-display-h",
+                    "type": "label",
+                    "style": "highlight",
+                    "layout": {
+                      "height": 19
+                    },
+                    "properties": {
+                      "text": "Display"
+                    }
+                  },
+                  {
+                    "id": "st-full",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-full-n",
+                        "type": "label",
+                        "style": "hudLabel",
+                        "layout": {
+                          "height": 19,
+                          "width": 150
+                        },
+                        "properties": {
+                          "text": "Fullscreen"
+                        }
+                      },
+                      {
+                        "id": "st-full-c",
+                        "type": "checkbox",
+                        "layout": {
+                          "width": 30,
+                          "height": 30
+                        },
+                        "bindings": {
+                          "checked": "fullscreen"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "st-display-damaged",
+                    "type": "label",
+                    "style": "highlight",
+                    "layout": {
+                      "height": 19
+                    },
+                    "bindings": {
+                      "text": "displayDamaged",
+                      "visible": "hasDisplayDamaged"
+                    }
+                  },
+                  {
+                    "id": "st-ctl-h",
+                    "type": "label",
+                    "style": "highlight",
+                    "layout": {
+                      "height": 19
+                    },
+                    "properties": {
+                      "text": "Controller"
+                    }
+                  },
+                  {
+                    "id": "st-device",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-prev",
+                        "type": "button",
+                        "style": "outline",
+                        "layout": {
+                          "width": 56,
+                          "height": 44
+                        },
+                        "properties": {
+                          "text": "<"
+                        },
+                        "actions": {
+                          "click": {
+                            "type": "emitAction",
+                            "name": "devicePrevious"
+                          }
+                        },
+                        "bindings": {
+                          "enabled": "hasDevice"
+                        }
+                      },
+                      {
+                        "id": "st-name",
+                        "type": "label",
+                        "style": "mid",
+                        "layout": {
+                          "height": 44,
+                          "width": 420
+                        },
+                        "bindings": {
+                          "text": "deviceName"
+                        }
+                      },
+                      {
+                        "id": "st-next",
+                        "type": "button",
+                        "style": "outline",
+                        "layout": {
+                          "width": 56,
+                          "height": 44
+                        },
+                        "properties": {
+                          "text": ">"
+                        },
+                        "actions": {
+                          "click": {
+                            "type": "emitAction",
+                            "name": "deviceNext"
+                          }
+                        },
+                        "bindings": {
+                          "enabled": "hasDevice"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "st-count",
+                    "type": "label",
+                    "style": "muted",
+                    "layout": {
+                      "height": 19
+                    },
+                    "bindings": {
+                      "text": "deviceCount",
+                      "visible": "hasDevice"
+                    }
+                  },
+                  {
+                    "id": "st-axis",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-axis-n",
+                        "type": "label",
+                        "style": "hudLabel",
+                        "layout": {
+                          "height": 19,
+                          "width": 150
+                        },
+                        "properties": {
+                          "text": "Handle axis"
+                        }
+                      },
+                      {
+                        "id": "st-axis-v",
+                        "type": "label",
+                        "style": "body",
+                        "layout": {
+                          "height": 22,
+                          "width": 200
+                        },
+                        "bindings": {
+                          "text": "axisName"
+                        }
+                      },
+                      {
+                        "id": "st-axis-d",
+                        "type": "button",
+                        "style": "outline",
+                        "layout": {
+                          "width": 120,
+                          "height": 44
+                        },
+                        "properties": {
+                          "text": "Detect"
+                        },
+                        "actions": {
+                          "click": {
+                            "type": "emitAction",
+                            "name": "detectAxis"
+                          }
+                        },
+                        "bindings": {
+                          "enabled": "hasDevice"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "st-live",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-live-n",
+                        "type": "label",
+                        "style": "hudLabel",
+                        "layout": {
+                          "height": 19,
+                          "width": 150
+                        },
+                        "properties": {
+                          "text": "Live"
+                        }
+                      },
+                      {
+                        "id": "st-live-bar",
+                        "type": "progressBar",
+                        "style": "bar",
+                        "layout": {
+                          "width": 260,
+                          "height": 14
+                        },
+                        "properties": {
+                          "maximum": 2
+                        },
+                        "bindings": {
+                          "value": "liveTilt"
+                        }
+                      },
+                      {
+                        "id": "st-live-v",
+                        "type": "label",
+                        "style": "body",
+                        "layout": {
+                          "height": 22,
+                          "width": 90
+                        },
+                        "bindings": {
+                          "text": "liveTiltText"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "st-invert",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-invert-n",
+                        "type": "label",
+                        "style": "hudLabel",
+                        "layout": {
+                          "height": 19,
+                          "width": 150
+                        },
+                        "properties": {
+                          "text": "Invert"
+                        }
+                      },
+                      {
+                        "id": "st-invert-c",
+                        "type": "checkbox",
+                        "layout": {
+                          "width": 30,
+                          "height": 30
+                        },
+                        "bindings": {
+                          "checked": "invert",
+                          "enabled": "hasDevice"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "st-dead",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-dead-n",
+                        "type": "label",
+                        "style": "hudLabel",
+                        "layout": {
+                          "height": 19,
+                          "width": 150
+                        },
+                        "properties": {
+                          "text": "Dead zone"
+                        }
+                      },
+                      {
+                        "id": "st-dead-s",
+                        "type": "slider",
+                        "layout": {
+                          "width": 260,
+                          "height": 24
+                        },
+                        "bindings": {
+                          "value": "deadZone",
+                          "enabled": "hasDevice"
+                        }
+                      },
+                      {
+                        "id": "st-dead-v",
+                        "type": "label",
+                        "style": "body",
+                        "layout": {
+                          "height": 22,
+                          "width": 110
+                        },
+                        "bindings": {
+                          "text": "deadZoneText"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "st-curve",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-curve-n",
+                        "type": "label",
+                        "style": "hudLabel",
+                        "layout": {
+                          "height": 19,
+                          "width": 150
+                        },
+                        "properties": {
+                          "text": "Curve"
+                        }
+                      },
+                      {
+                        "id": "st-curve-s",
+                        "type": "slider",
+                        "layout": {
+                          "width": 260,
+                          "height": 24
+                        },
+                        "bindings": {
+                          "value": "curve",
+                          "enabled": "hasDevice"
+                        }
+                      },
+                      {
+                        "id": "st-curve-v",
+                        "type": "label",
+                        "style": "body",
+                        "layout": {
+                          "height": 22,
+                          "width": 110
+                        },
+                        "bindings": {
+                          "text": "curveText"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "st-pause",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-pause-n",
+                        "type": "label",
+                        "style": "hudLabel",
+                        "layout": {
+                          "height": 19,
+                          "width": 150
+                        },
+                        "properties": {
+                          "text": "Pause button"
+                        }
+                      },
+                      {
+                        "id": "st-pause-v",
+                        "type": "label",
+                        "style": "body",
+                        "layout": {
+                          "height": 22,
+                          "width": 200
+                        },
+                        "bindings": {
+                          "text": "pauseName"
+                        }
+                      },
+                      {
+                        "id": "st-pause-d",
+                        "type": "button",
+                        "style": "outline",
+                        "layout": {
+                          "width": 120,
+                          "height": 44
+                        },
+                        "properties": {
+                          "text": "Detect"
+                        },
+                        "actions": {
+                          "click": {
+                            "type": "emitAction",
+                            "name": "detectPause"
+                          }
+                        },
+                        "bindings": {
+                          "enabled": "hasDevice"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "st-detect",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-detect-t",
+                        "type": "label",
+                        "style": "highlight",
+                        "layout": {
+                          "height": 22,
+                          "width": 520
+                        },
+                        "bindings": {
+                          "text": "detectStatus"
+                        }
+                      },
+                      {
+                        "id": "st-detect-c",
+                        "type": "button",
+                        "style": "outline",
+                        "layout": {
+                          "width": 120,
+                          "height": 44
+                        },
+                        "properties": {
+                          "text": "Cancel"
+                        },
+                        "actions": {
+                          "click": {
+                            "type": "emitAction",
+                            "name": "cancelDetect"
+                          }
+                        }
+                      }
+                    ],
+                    "bindings": {
+                      "visible": "detecting"
+                    }
+                  },
+                  {
+                    "id": "st-damaged",
+                    "type": "label",
+                    "style": "highlight",
+                    "layout": {
+                      "height": 19
+                    },
+                    "bindings": {
+                      "text": "controlsDamaged",
+                      "visible": "hasControlsDamaged"
+                    }
+                  },
+                  {
+                    "id": "st-buttons",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-reset",
+                        "type": "button",
+                        "style": "outline",
+                        "layout": {
+                          "width": 160,
+                          "height": 44
+                        },
+                        "properties": {
+                          "text": "Reset"
+                        },
+                        "actions": {
+                          "click": {
+                            "type": "emitAction",
+                            "name": "resetProfile"
+                          }
+                        },
+                        "bindings": {
+                          "enabled": "hasDevice"
+                        }
+                      },
+                      {
+                        "id": "st-back",
+                        "type": "button",
+                        "style": "primary",
+                        "layout": {
+                          "width": 180,
+                          "height": 44
+                        },
+                        "properties": {
+                          "text": "Back  (Esc)"
+                        },
+                        "actions": {
+                          "click": {
+                            "type": "emitAction",
+                            "name": "back"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
               }
             ]
           }

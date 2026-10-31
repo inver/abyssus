@@ -32,6 +32,9 @@ import java.nio.file.Path
 interface ScreenDriver {
     fun update(session: FlightSession?, judge: PatternJudge?, seconds: Float)
     fun keyDown(keycode: Int): Boolean
+
+    /** A key a controller sends to navigate: as [keyDown], then Tab for an Up or Down and Space for an Enter that nothing took. */
+    fun navigate(keycode: Int): Boolean
     fun dump(): List<String>
 
     /** A click in the middle of [widget] of [screen], as the mouse gives one. */
@@ -150,6 +153,12 @@ class ScreenWalk(private val scene: SceneContext, private val dir: Path) {
         ui.click(SCREEN_PLANE, WATCH_AI_BUTTON)
         flying("hud-pro-ai", AssistLevel.PRO) { _, _ -> }
         flow.pause(); flow.mainMenu()
+        // a controller: the settings screen with no device, and the menus moved by the keys a pad sends
+        flow.settings(); show("settings-none")
+        ui.navigate(Input.Keys.ESCAPE); show("main-menu-pad")
+        ui.navigate(Input.Keys.DOWN); show("main-menu-pad-down")
+        ui.navigate(Input.Keys.ENTER); show("assist-select-pad")
+        ui.navigate(Input.Keys.ESCAPE); flow.mainMenu()
         // a field without planes
         val empty = GameFlow(emptyList(), ScoreTable(dir.resolve("none.json")), PatternScoreTable(dir.resolve("none-f2b.json")), ScaleScoreTable(dir.resolve("none-scale.json")), clock)
         driver(empty).let { other -> other.update(null, null, 1f / 60f); steps["main-menu-no-planes"] = other.dump() }

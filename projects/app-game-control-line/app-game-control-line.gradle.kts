@@ -34,6 +34,8 @@ dependencies {
     implementation(project(":lib-physics"))
     implementation(project(":lib-render"))
     implementation(libs.gdx.backend.lwjgl3)
+    implementation(libs.gdx.controllers.core)
+    runtimeOnly(libs.gdx.controllers.desktop)
     runtimeOnly(libs.gdx.platform) {
         artifact {
             classifier = "natives-desktop"

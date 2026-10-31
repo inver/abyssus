@@ -2,6 +2,7 @@
 lwjgl = "3.4.3"
 lwjgl-awt = "0.2.5"
 gdx = "1.14.2"
+gdx-controllers = "2.2.4"
 jolt = "6.1.1"
 ashley = "1.7.4"
 
@@ -54,6 +55,8 @@ lwjgl-awt = { module = "org.lwjglx:lwjgl3-awt", version.ref = "lwjgl-awt" }
 gdx-platform = { module = "com.badlogicgames.gdx:gdx-platform", version.ref = "gdx" }
 gdx = { module = "com.badlogicgames.gdx:gdx" }
 gdx-backend-lwjgl3 = { module = "com.badlogicgames.gdx:gdx-backend-lwjgl3" }
+gdx-controllers-core = { module = "com.badlogicgames.gdx-controllers:gdx-controllers-core", version.ref = "gdx-controllers" }
+gdx-controllers-desktop = { module = "com.badlogicgames.gdx-controllers:gdx-controllers-desktop", version.ref = "gdx-controllers" }
 
 jolt-jni = { module = "com.github.stephengold:jolt-jni", version.ref = "jolt" }
 ashley = { module = "com.badlogicgames.ashley:ashley", version.ref = "ashley" }

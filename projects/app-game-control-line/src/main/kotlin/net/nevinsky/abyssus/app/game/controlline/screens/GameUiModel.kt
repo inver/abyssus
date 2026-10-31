@@ -6,6 +6,11 @@ package net.nevinsky.abyssus.app.game.controlline.screens
 
 import com.badlogic.gdx.Input
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneClass
+import net.nevinsky.abyssus.app.game.controlline.controller.ControllerSettings
+import net.nevinsky.abyssus.app.game.controlline.controller.DetectKind
+import net.nevinsky.abyssus.app.game.controlline.controller.NoControllerSettings
+import net.nevinsky.abyssus.app.game.controlline.display.DisplayOptions
+import net.nevinsky.abyssus.app.game.controlline.display.NoDisplayOptions
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
 import net.nevinsky.abyssus.app.game.controlline.flow.Control
 import net.nevinsky.abyssus.app.game.controlline.flow.FlightReport
@@ -40,6 +45,9 @@ private const val TENSION_SCALE = 60f
 /** A maneuver's name shows on the HUD this long (s). */
 private const val TOAST_TIME = 2.5f
 
+/** The settings screen offers a dead zone up to this percent of the travel. */
+private const val MAX_DEAD_ZONE_PERCENT = 50.0
+
 private val NO_REPLAY_KEYS = "Up / Down: manoeuvre    Esc: back"
 private val REPLAY_KEYS = "Up / Down: manoeuvre    Space: pause    R: restart    1 / 2 / 3: speed ½× 1× 2×    V: view    Esc: back"
 
@@ -51,7 +59,12 @@ data class GameLayers(val screen: String, val overlay: String? = null)
  * [flow], the [FlightSession] and the F2B [PatternJudge], the writes and named actions it accepts, and the game's own
  * keys. [GameUiHost] connects it to a presenter. Single-threaded, on the GL thread.
  */
-class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
+class GameUiModel(
+    private val flow: GameFlow,
+    private val controls: ControllerSettings = NoControllerSettings,
+    private val display: DisplayOptions = NoDisplayOptions,
+    private val quit: () -> Unit,
+) {
     /** The name field's value; it starts from the flow's offered name each time name entry opens. */
     var playerName = ""
         private set
@@ -77,6 +90,7 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
     fun layersOf(screen: Screen): GameLayers = when (screen) {
         Screen.MainMenu -> GameLayers(SCREEN_MAIN_MENU)
         Screen.AssistSelect -> GameLayers(SCREEN_ASSIST)
+        Screen.Settings -> GameLayers(SCREEN_SETTINGS)
         is Screen.PlaneSelect -> GameLayers(SCREEN_PLANE)
         is Screen.Flying -> GameLayers(hudOf(screen.mode))
         is Screen.Paused -> GameLayers(hudOf(screen.flying.mode), SCREEN_PAUSED)
@@ -109,6 +123,8 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
         val values = LinkedHashMap<String, UiValue>()
         menus(values)
         planeSelect(values, screen)
+        controllerSettings(values)
+        displaySettings(values)
         hudValues(values, modeOf(screen))
         val ai = demonstration(screen)
         values["isAi"] = flag(ai)
@@ -167,6 +183,46 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
             String.format(Locale.ROOT, "%s    Lines %.0f m    Mass %.2f kg    Fuel %.0f s",
                 it.planeClass.name.lowercase().replaceFirstChar { c -> c.uppercase() }, it.lineLength, it.mass, it.fuelTime)
         }.orEmpty())
+    }
+
+    /** The settings screen's display values: the mode the window is in, and whether the old file could not be read. */
+    private fun displaySettings(values: MutableMap<String, UiValue>) {
+        values["fullscreen"] = flag(display.fullscreen)
+        values["hasDisplayDamaged"] = flag(display.damaged)
+        values["displayDamaged"] = text(if (display.damaged) "The old display settings could not be read; they were kept as display.json.bad." else "")
+    }
+
+    /** The settings screen's values: the shown device, its live tilt, its profile and the detect that is going on. */
+    private fun controllerSettings(values: MutableMap<String, UiValue>) {
+        val d = controls.device
+        val profile = d?.profile
+        val tilt = d?.tilt ?: 0f
+        values["hasDevice"] = flag(d != null)
+        values["deviceName"] = text(d?.name ?: "No controller found")
+        values["deviceCount"] = text(d?.let { "${it.index + 1} of ${it.count}    ${if (it.gamepad) "gamepad" else "joystick"}" }.orEmpty())
+        values["axisName"] = text(d?.axisName.orEmpty())
+        // the bar runs from 0 (full down) through 1 (centre) to 2 (full up)
+        values["liveTilt"] = UiValue.Num((tilt + 1f).toDouble())
+        values["liveTiltText"] = text(if (d == null) "" else String.format(Locale.ROOT, "%+.2f", tilt))
+        values["invert"] = flag(profile?.invert == true)
+        values["deadZone"] = UiValue.Num(((profile?.deadZone ?: 0f) * 100f).toDouble())
+        values["deadZoneText"] = text(if (profile == null) "" else String.format(Locale.ROOT, "%.0f %%", profile.deadZone * 100f))
+        values["curve"] = UiValue.Num(((profile?.curve ?: 0f) * 100f).toDouble())
+        values["curveText"] = text(when {
+            profile == null -> ""
+            profile.curve <= 0f -> "linear"
+            else -> String.format(Locale.ROOT, "%.0f %% cubic", profile.curve * 100f)
+        })
+        values["pauseName"] = text(d?.pauseName.orEmpty())
+        val detecting = controls.detecting
+        values["detecting"] = flag(detecting != null)
+        values["detectStatus"] = text(when (detecting) {
+            DetectKind.AXIS -> String.format(Locale.ROOT, "Move the axis you want to use    (%.0f s)", controls.detectRemaining)
+            DetectKind.BUTTON -> String.format(Locale.ROOT, "Press the button you want to use    (%.0f s)", controls.detectRemaining)
+            null -> ""
+        })
+        values["hasControlsDamaged"] = flag(controls.damaged)
+        values["controlsDamaged"] = text(if (controls.damaged) "The old controller settings could not be read; they were kept as controls.json.bad." else "")
     }
 
     private fun hud(screen: Screen, session: FlightSession, judge: PatternJudge?, seconds: Float, scaleJudge: ScaleJudge?) {
@@ -369,13 +425,51 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
 
     // --- what the UI sends back ---
 
-    /** The only writable binding is the player's name; its length is the asset's `maxLength`, checked again here. */
+    /**
+     * The writable bindings are the player's name (its length is the asset's `maxLength`, checked again here) and, on the
+     * settings screen, `fullscreen` and the shown device's `invert`, `deadZone` (0 to 50 %) and `curve` (0 to 100 %).
+     */
     fun write(write: UiWrite): UiWriteResult {
+        when (write.binding) {
+            "invert", "deadZone", "curve" -> return writeSetting(write)
+            "fullscreen" -> {
+                val on = (write.value as? UiValue.Bool)?.value ?: return UiWriteResult.Rejected("fullscreen is on or off")
+                display.setFullscreen(on)
+                return UiWriteResult.Accepted(write.value)
+            }
+        }
         val value = write.value as? UiValue.Text
         if (write.binding != "playerName" || value == null) return UiWriteResult.Rejected("${write.binding} is read-only")
         if (value.value.length > NAME_LENGTH) return UiWriteResult.Rejected("A name has at most $NAME_LENGTH characters")
         playerName = value.value
         return UiWriteResult.Accepted(value)
+    }
+
+    private fun writeSetting(write: UiWrite): UiWriteResult {
+        if (controls.device == null) return UiWriteResult.Rejected("No controller is connected")
+        val value = write.value
+        when (write.binding) {
+            "invert" -> {
+                if (value !is UiValue.Bool) return UiWriteResult.Rejected("invert is on or off")
+                controls.setInvert(value.value)
+            }
+            "deadZone" -> {
+                val percent = (value as? UiValue.Num)?.value ?: return UiWriteResult.Rejected("deadZone is a number")
+                if (percent.isNaN() || percent < 0.0 || percent > MAX_DEAD_ZONE_PERCENT) return UiWriteResult.Rejected("The dead zone is 0 to ${MAX_DEAD_ZONE_PERCENT.toInt()} %")
+                controls.setDeadZone((percent / 100.0).toFloat())
+            }
+            else -> {
+                val percent = (value as? UiValue.Num)?.value ?: return UiWriteResult.Rejected("curve is a number")
+                if (percent.isNaN() || percent < 0.0 || percent > 100.0) return UiWriteResult.Rejected("The curve is 0 to 100 %")
+                controls.setCurve((percent / 100.0).toFloat())
+            }
+        }
+        return UiWriteResult.Accepted(value)
+    }
+
+    /** Back: leaves the screen, but on the settings screen first stops a detect that is going on. */
+    private fun back() {
+        if (flow.screen == Screen.Settings && controls.detecting != null) controls.cancelDetect() else flow.back()
     }
 
     /** A named action of the asset (`openRow#<row>` from a board row); false for a name the game does not know. */
@@ -394,7 +488,14 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
             "assistPro" -> flow.chooseAssist(AssistLevel.PRO)
             "assistMid" -> flow.chooseAssist(AssistLevel.MID)
             "assistNoob" -> flow.chooseAssist(AssistLevel.NOOB)
-            "back" -> flow.back()
+            "back" -> back()
+            "settings" -> flow.settings()
+            "devicePrevious" -> controls.previousDevice()
+            "deviceNext" -> controls.nextDevice()
+            "detectAxis" -> controls.detect(DetectKind.AXIS)
+            "detectPause" -> controls.detect(DetectKind.BUTTON)
+            "cancelDetect" -> controls.cancelDetect()
+            "resetProfile" -> controls.reset()
             "previousPlane" -> flow.previousPlane()
             "nextPlane" -> flow.nextPlane()
             "choosePlane" -> flow.choosePlane()
@@ -432,7 +533,7 @@ class GameUiModel(private val flow: GameFlow, private val quit: () -> Unit) {
         if (screen is Screen.Debrief) return debriefKey(screen.model, keycode)
         val board = (screen as? Screen.Scores)?.tab?.level != null
         when (keycode) {
-            Input.Keys.ESCAPE -> flow.back()
+            Input.Keys.ESCAPE -> back()
             Input.Keys.LEFT -> when (screen) {
                 is Screen.PlaneSelect -> flow.previousPlane()
                 is Screen.Scores -> flow.previousTab()
