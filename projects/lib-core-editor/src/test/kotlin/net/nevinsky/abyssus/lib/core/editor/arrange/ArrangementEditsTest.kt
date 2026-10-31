@@ -31,7 +31,7 @@ class ArrangementEditsTest {
     private val project = testProject("Untitled")
     private val terrain = terrainData(project, "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b")
     private val heights =
-        GroundHeights(listOf(TerrainTarget("1", terrain, Matrix4().setToTranslation(-38.25267f, 0f, -32.7754f))))
+        GroundHeights(listOf(TerrainTarget(1L, terrain, Matrix4().setToTranslation(-38.25267f, 0f, -32.7754f))))
 
     private fun mainScene() = SceneJson().parse(File(project, "scenes/Main Scene.scene").readText())
 
@@ -59,7 +59,7 @@ class ArrangementEditsTest {
     private fun drawn(): ObjectNode {
         val root = mainScene() as ObjectNode
         val result = edits.create(root, tree, listOf(point(0f, 0f), point(40f, 0f)), false, heights)
-        assertEquals(ArrangementResult.Changed("11"), result)
+        assertEquals(ArrangementResult.Changed(11L), result)
         return root
     }
 
@@ -196,7 +196,7 @@ class ArrangementEditsTest {
     @Test
     fun aSpacingChangeRefillsEmptySlotsAndLeavesADetachedCopyAlone() {
         val root = drawn()
-        assertTrue(edits.detach(root, "14"))
+        assertTrue(edits.detach(root, 14L))
         val detached = entity(root, 14).toString()
         edit(root) { _, node -> node.put("spacing", 5) }
         assertEquals(9, slots(root).size)
@@ -226,7 +226,7 @@ class ArrangementEditsTest {
     fun regeneratingWithoutAChangeWritesNothing() {
         val root = drawn()
         val text = root.toString()
-        val result = edits.regenerate(root, "11", null, heights)
+        val result = edits.regenerate(root, 11L, null, heights)
         assertEquals(ArrangementResult.Unchanged, result)
         assertEquals(text, root.toString())
     }
@@ -235,7 +235,7 @@ class ArrangementEditsTest {
     fun regenerateReplacesOnlyTheHeightsWhenTheGroundChanged() {
         val root = drawn()
         val flat = GroundHeight { _, _, _ -> 123f }
-        assertEquals(ArrangementResult.Changed(), edits.regenerate(root, "11", null, flat))
+        assertEquals(ArrangementResult.Changed(), edits.regenerate(root, 11L, null, flat))
         for (id in 12..16) assertEquals(123f, y(root, id), 0f)
         assertEquals(20f, x(root, 14), 1e-4f)
         assertEquals(listOf(12, 13, 14, 15, 16), slots(root))
@@ -245,7 +245,7 @@ class ArrangementEditsTest {
     fun emptySlotsAreWrittenAsMinusOne() {
         val root = drawn()
         components(root, 13)!!.remove("ParentComponent")
-        edits.regenerate(root, "11", null, heights)
+        edits.regenerate(root, 11L, null, heights)
         assertEquals(listOf(12, -1, 14, 15, 16), slots(root))
     }
 
@@ -254,29 +254,29 @@ class ArrangementEditsTest {
         val root = drawn()
         arrangement(root).put("spacing", 0)
         val text = root.toString()
-        assertTrue(edits.regenerate(root, "11", null, heights) is ArrangementResult.Rejected)
+        assertTrue(edits.regenerate(root, 11L, null, heights) is ArrangementResult.Rejected)
         assertEquals(text, root.toString())
         arrangement(root).put("spacing", 1).also { setPoints(it, point(0f, 0f), point(5000f, 0f)) }
         val text2 = root.toString()
-        assertTrue(edits.regenerate(root, "11", null, heights) is ArrangementResult.Rejected)
+        assertTrue(edits.regenerate(root, 11L, null, heights) is ArrangementResult.Rejected)
         assertEquals(text2, root.toString())
     }
 
     @Test
     fun detachRemovesTheParentAndEmptiesTheSlot() {
         val root = drawn()
-        assertTrue(edits.detach(root, "14"))
+        assertTrue(edits.detach(root, 14L))
         assertNull(components(root, 14)!!["ParentComponent"])
         assertEquals(listOf(12, 13, -1, 15, 16), slots(root))
-        assertFalse(edits.detach(root, "14"))
-        assertFalse(edits.detach(root, "0"))
-        assertFalse(edits.detach(root, "99"))
+        assertFalse(edits.detach(root, 14L))
+        assertFalse(edits.detach(root, 0L))
+        assertFalse(edits.detach(root, 99L))
     }
 
     @Test
     fun setPointsMovesTheEndAndRegeneratesInTheSameEdit() {
         val root = drawn()
-        val result = edits.setPoints(root, "11", listOf(point(0f, 0f), point(60f, 0f)), heights)
+        val result = edits.setPoints(root, 11L, listOf(point(0f, 0f), point(60f, 0f)), heights)
         assertEquals(ArrangementResult.Changed(), result)
         assertEquals(listOf(12, 13, 14, 15, 16, 17, 18), slots(root))
         assertEquals(60f, component(root).points[1].x, 0f)
@@ -285,10 +285,10 @@ class ArrangementEditsTest {
     @Test
     fun setPointsInsertsAndRemovesAPoint() {
         val root = drawn()
-        edits.setPoints(root, "11", listOf(point(0f, 0f), point(20f, 20f), point(40f, 0f)), heights)
+        edits.setPoints(root, 11L, listOf(point(0f, 0f), point(20f, 20f), point(40f, 0f)), heights)
         assertEquals(3, component(root).points.size)
         assertTrue(slots(root).size > 5)
-        edits.setPoints(root, "11", listOf(point(0f, 0f), point(40f, 0f)), heights)
+        edits.setPoints(root, 11L, listOf(point(0f, 0f), point(40f, 0f)), heights)
         assertEquals(2, component(root).points.size)
         assertEquals(5, slots(root).size)
     }
@@ -297,11 +297,11 @@ class ArrangementEditsTest {
     fun setPointsRefusesOnePointAndTooManyCopies() {
         val root = drawn()
         val text = root.toString()
-        assertTrue(edits.setPoints(root, "11", listOf(point(0f, 0f)), heights) is ArrangementResult.Rejected)
+        assertTrue(edits.setPoints(root, 11L, listOf(point(0f, 0f)), heights) is ArrangementResult.Rejected)
         assertTrue(
             edits.setPoints(
                 root,
-                "11",
+                11L,
                 listOf(point(0f, 0f), point(50000f, 0f)),
                 heights
             ) is ArrangementResult.Rejected
@@ -309,7 +309,7 @@ class ArrangementEditsTest {
         assertTrue(
             edits.setPoints(
                 root,
-                "99",
+                99L,
                 listOf(point(0f, 0f), point(5f, 0f)),
                 heights
             ) is ArrangementResult.Rejected
@@ -321,7 +321,7 @@ class ArrangementEditsTest {
     fun setPointsKeepsTheTextOfPointsThatDidNotMove() {
         val root = drawn()
         val first = component(root).points[0]
-        edits.setPoints(root, "11", listOf(Vector3(first.x, first.y, first.z), point(60f, 0f)), heights)
+        edits.setPoints(root, 11L, listOf(Vector3(first.x, first.y, first.z), point(60f, 0f)), heights)
         assertEquals(first.y, component(root).points[0].y, 0f)
     }
 }

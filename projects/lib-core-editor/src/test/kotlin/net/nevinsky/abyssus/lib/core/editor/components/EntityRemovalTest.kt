@@ -42,7 +42,7 @@ class EntityRemovalTest {
     @Test
     fun removesAnUnreferencedEntityFromADirectEcs() {
         val root = scene(entity(0, """"A":{"x":1.000}"""), entity(1, """"B":{}"""), wrapped = false)
-        assertEquals(EditResult.Changed, removal.remove(root, "0"))
+        assertEquals(EditResult.Changed, removal.remove(root, 0L))
         assertFalse(root["ecs"].has("0"))
         assertTrue(root["ecs"].has("1"))
     }
@@ -51,7 +51,7 @@ class EntityRemovalTest {
     fun missingTargetIsRejectedAndLeavesTheTree() {
         val root = scene(entity(0, """"A":{}"""))
         val before = json.compact(root)
-        assertTrue(rejected(removal.remove(root, "7")).contains("7"))
+        assertTrue(rejected(removal.remove(root, 7L)).contains("7"))
         assertEquals(before, json.compact(root))
     }
 
@@ -60,7 +60,7 @@ class EntityRemovalTest {
         for (key in listOf("PositionComponent", "net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent")) {
             val root = scene(entity(0, """"A":{}"""), entity(1, """"$key":{"lookAtId":0}"""))
             val before = json.compact(root)
-            val reason = rejected(removal.remove(root, "0"))
+            val reason = rejected(removal.remove(root, 0L))
             assertTrue(reason, reason.contains("entity 1") && reason.contains("PositionComponent.lookAtId"))
             assertEquals(before, json.compact(root))
         }
@@ -69,7 +69,7 @@ class EntityRemovalTest {
     @Test
     fun unknownPayloadsAreNotInterpretedAsReferences() {
         val root = scene(entity(0, """"A":{}"""), entity(1, """"Mystery":{"target":0,"lookAtId":0}"""))
-        assertEquals(EditResult.Changed, removal.remove(root, "0"))
+        assertEquals(EditResult.Changed, removal.remove(root, 0L))
         assertEquals(1, entities(root).size())
     }
 
@@ -78,7 +78,7 @@ class EntityRemovalTest {
         for ((component, member) in listOf("ParentComponent" to "parentEntityId")) {
             val root = scene(entity(0, """"A":{}"""), entity(1, """"$component":{"$member":0}"""))
             val before = json.compact(root)
-            assertTrue(rejected(removal.remove(root, "0")).contains("$component.$member"))
+            assertTrue(rejected(removal.remove(root, 0L)).contains("$component.$member"))
             assertEquals(before, json.compact(root))
         }
     }
@@ -100,9 +100,9 @@ class EntityRemovalTest {
             { Link() },
         )
         val root = scene(entity(0, """"A":{}"""), entity(1, """"LinkComponent":{"other":0}"""))
-        val reason = rejected(EntityRemoval(messages, listOf(kind)).remove(root, "0"))
+        val reason = rejected(EntityRemoval(messages, listOf(kind)).remove(root, 0L))
         assertTrue(reason, reason.contains("entity 1") && reason.contains("LinkComponent.other"))
-        assertEquals(EditResult.Changed, removal.remove(root, "0"))
+        assertEquals(EditResult.Changed, removal.remove(root, 0L))
     }
 
     @Test
@@ -112,25 +112,25 @@ class EntityRemovalTest {
             entity(1, """"B":{}"""), entity(2, """"B":{}"""),
         )
         val before = json.compact(root)
-        assertTrue(rejected(removal.remove(root, "1")).contains("slot"))
-        assertTrue(rejected(removal.remove(root, "0")).contains("1, 2"))
+        assertTrue(rejected(removal.remove(root, 1L)).contains("slot"))
+        assertTrue(rejected(removal.remove(root, 0L)).contains("1, 2"))
         assertEquals(before, json.compact(root))
         // an arrangement whose slots are all empty or dangling owns nothing
         val empty = scene(entity(0, """"PathArrangementComponent":{"slots":[-1,9]}"""))
-        assertEquals(EditResult.Changed, removal.remove(empty, "0"))
+        assertEquals(EditResult.Changed, removal.remove(empty, 0L))
     }
 
     @Test
     fun clearingTheReferenceThenRemovingWorks() {
         val root = scene(entity(0, """"A":{}"""), entity(1, """"PositionComponent":{"lookAtId":0}"""))
-        rejected(removal.remove(root, "0"))
+        rejected(removal.remove(root, 0L))
         (root["ecs"]["1"]["components"]["PositionComponent"] as com.fasterxml.jackson.databind.node.ObjectNode).remove("lookAtId")
-        assertEquals(EditResult.Changed, removal.remove(root, "0"))
+        assertEquals(EditResult.Changed, removal.remove(root, 0L))
     }
 
     @Test
     fun headlessRemovalOfUntitledModelUndoesByText() {
-        val edit = HeadlessEditing().removeEntity(untitled, "0") as HeadlessEdit.Edited
+        val edit = HeadlessEditing().removeEntity(untitled, 0L) as HeadlessEdit.Edited
         val tree = json.parse(edit.text)["ecs"]
         assertFalse(tree.has("0"))
         assertEquals(10, tree.size())
@@ -145,9 +145,9 @@ class EntityRemovalTest {
             val refused = editing.removeEntity(untitled, id)
             assertTrue("$id: $refused", refused is HeadlessEdit.Refused)
         }
-        val camera = editing.removeEntity(untitled, "3") as HeadlessEdit.Refused
+        val camera = editing.removeEntity(untitled, 3L) as HeadlessEdit.Refused
         assertTrue(camera.refusal.message, camera.refusal.message.contains("entity 4") && camera.refusal.message.contains("lookAtId"))
-        val missing = editing.removeEntity(untitled, "99")
+        val missing = editing.removeEntity(untitled, 99L)
         assertTrue(missing is HeadlessEdit.Refused)
     }
 }

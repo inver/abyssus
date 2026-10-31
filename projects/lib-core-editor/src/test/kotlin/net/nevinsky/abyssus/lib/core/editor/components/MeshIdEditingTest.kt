@@ -73,18 +73,18 @@ class MeshIdEditingTest {
 
     @Test
     fun settingAndClearingTheFieldKeepsTheRestOfTheText() {
-        val set = editing.setComponentField(whole, "1", "RenderComponent", "meshId", "glass") as HeadlessEdit.Edited
+        val set = editing.setComponentField(whole, 1L, "RenderComponent", "meshId", "glass") as HeadlessEdit.Edited
         assertEquals(1, set.text.lines().size - whole.lines().size)
         assertTrue(set.text.contains("\"meshId\": \"glass\""))
         assertTrue("number text kept", set.text.contains("\"x\": 1.50"))
-        val cleared = editing.setComponentField(set.text, "1", "RenderComponent", "meshId", "") as HeadlessEdit.Edited
+        val cleared = editing.setComponentField(set.text, 1L, "RenderComponent", "meshId", "") as HeadlessEdit.Edited
         assertEquals(whole, cleared.text)
         assertFalse(cleared.text.contains("meshId"))
     }
 
     @Test
     fun theWholeModelEntryIsNoChangeWhenThereIsNoMesh() {
-        assertEquals(HeadlessEdit.Unchanged, editing.setComponentField(whole, "1", "RenderComponent", "meshId", ""))
+        assertEquals(HeadlessEdit.Unchanged, editing.setComponentField(whole, 1L, "RenderComponent", "meshId", ""))
     }
 
     @Test
@@ -108,7 +108,7 @@ class MeshIdEditingTest {
     }
 
     private fun sections(text: String, meshes: (String) -> List<String>?): EntitySections.Read =
-        readEntitySections(SceneJson().parse(text), "1", "RenderComponent", editor, EntityAssetChoices(listOf("duo"), emptyMap(), meshes), messages) as EntitySections.Read
+        readEntitySections(SceneJson().parse(text), 1L, "RenderComponent", editor, EntityAssetChoices(listOf("duo"), emptyMap(), meshes), messages) as EntitySections.Read
 
     private fun meshField(read: EntitySections.Read) = read.sections.single().fields.firstOrNull { it.field == "meshId" }
 
@@ -132,7 +132,7 @@ class MeshIdEditingTest {
         val builders = PanelBuilders(messages) { false }
         fun row(text: String, meshes: List<String>): ChoiceRow {
             val read = sections(text) { meshes }
-            val panel = builders.entity(SceneJson().parse(text), "1", read, "x.abss")
+            val panel = builders.entity(SceneJson().parse(text), 1L, read, "x.abss")
             return panel.sections.flatMap { it.rows }.filterIsInstance<ChoiceRow>().single { it.field?.field == "meshId" }
         }
         val known = row(glass, listOf("body", "glass"))

@@ -57,7 +57,7 @@ class SceneMarkersTest {
     @Test
     fun theNearestTargetStillWins() {
         val c = content(light("9", "LIGHT_POINT"))
-        val nearer = BoxTarget("model", BoundingBox(Vector3(-1f, -1f, 3f), Vector3(1f, 1f, 5f)))
+        val nearer = BoxTarget(1000L, BoundingBox(Vector3(-1f, -1f, 3f), Vector3(1f, 1f, 5f)))
         val r = ray(Vector3(0f, 0f, 10f), Vector3(0f, 0f, 0f))
         assertEquals("model", ScenePicker().pick(r, SceneMarkers().targets(c) + nearer, emptyList(), 100f))
     }
@@ -66,8 +66,8 @@ class SceneMarkersTest {
     fun theViewCameraHasNoMarkerTarget() {
         val c = main()
         // only the scene's lights (7 and 8) remain pickable markers
-        assertEquals(listOf("7", "8"), SceneMarkers().targets(c, skipCamera = "4").map { it.entityId })
-        assertNull(ScenePicker().pick(ray(Vector3(0f, 0f, 10f), Vector3(0f, 0f, 0f)), SceneMarkers().targets(c, "4"), emptyList(), 100f))
+        assertEquals(listOf("7", "8"), SceneMarkers().targets(c, skipCamera = 4L).map { it.entityId })
+        assertNull(ScenePicker().pick(ray(Vector3(0f, 0f, 10f), Vector3(0f, 0f, 0f)), SceneMarkers().targets(c, 4L), emptyList(), 100f))
     }
 
     @Test
@@ -75,7 +75,7 @@ class SceneMarkersTest {
         val out = Recorder()
         SceneMarkers().draw(out, main(), 1.5f)
         val skipped = Recorder()
-        SceneMarkers().draw(skipped, main(), 1.5f, skipCamera = "4")
+        SceneMarkers().draw(skipped, main(), 1.5f, skipCamera = 4L)
         // the camera: 12 frustum edges, 12 body edges and 4 lens lines; the rest are the two lights' markers
         assertEquals(28, out.lines.size - skipped.lines.size)
         assertEquals(26, skipped.lines.size)
@@ -92,9 +92,9 @@ class SceneMarkersTest {
     @Test
     fun boundsOfFindsCamerasAndLightsOnly() {
         val c = content(light("1", "LIGHT_POINT") + "," + """"2":{"components":{"CameraComponent":{"camera":{}}}}""")
-        assertTrue(SceneMarkers().boundsOf(c, "1") != null)
-        assertTrue(SceneMarkers().boundsOf(c, "2") != null)
-        assertNull(SceneMarkers().boundsOf(c, "3"))
+        assertTrue(SceneMarkers().boundsOf(c, 1L) != null)
+        assertTrue(SceneMarkers().boundsOf(c, 2L) != null)
+        assertNull(SceneMarkers().boundsOf(c, 3L))
     }
 
     @Test

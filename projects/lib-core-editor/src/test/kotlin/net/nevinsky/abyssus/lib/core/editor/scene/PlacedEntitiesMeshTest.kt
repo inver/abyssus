@@ -28,12 +28,12 @@ class PlacedEntitiesMeshTest {
 
     private fun placed() = PlacedEntities<Built, Entity> { placement, asset, _ -> Entity(placement, asset) }
 
-    private fun at(id: String, mesh: String?) = AssetPlacement(id, "duo", PlacementTransform.IDENTITY, mesh)
+    private fun at(id: Long, mesh: String?) = AssetPlacement(id, "duo", PlacementTransform.IDENTITY, mesh)
 
     @Test
     fun eachMeshGetsItsOwnAssetAndTheWholeModelItsOwn() {
         val entities = placed()
-        entities.update(listOf(at("1", null), at("2", "body"), at("3", "glass"), at("4", "glass")), builtByKey::get)
+        entities.update(listOf(at(1, null), at(2, "body"), at(3, "glass"), at(4, "glass")), builtByKey::get)
         assertEquals(listOf("duo", "body", "glass", "glass"), entities.drawn.map { it.asset.key })
         assertSame(entities.drawn.toList()[2].asset, entities.drawn.toList()[3].asset)
         assertNotSame(entities.drawn.toList()[1].asset, entities.drawn.toList()[2].asset)
@@ -42,23 +42,23 @@ class PlacedEntitiesMeshTest {
     @Test
     fun anUnknownMeshSkipsOnlyItsEntity() {
         val entities = placed()
-        entities.update(listOf(at("1", "body"), at("2", "nope"), at("3", null)), builtByKey::get)
-        assertEquals(listOf("1", "3"), entities.drawn.map { it.placement.entityId })
+        entities.update(listOf(at(1, "body"), at(2, "nope"), at(3, null)), builtByKey::get)
+        assertEquals(listOf(1L, 3L), entities.drawn.map { it.placement.entityId })
     }
 
     @Test
     fun changingTheMeshReplacesTheEntity() {
         val entities = placed()
-        entities.update(listOf(at("1", "body")), builtByKey::get)
+        entities.update(listOf(at(1, "body")), builtByKey::get)
         val before = entities.drawn.single()
-        entities.update(listOf(at("1", "glass")), builtByKey::get)
+        entities.update(listOf(at(1, "glass")), builtByKey::get)
         assertEquals("glass", entities.drawn.single().asset.key)
         assertNotSame(before, entities.drawn.single())
     }
 
     @Test
     fun theStorageNameIsTheEncodedKey() {
-        assertEquals("duo", at("1", null).storageName)
-        assertEquals(ModelKey("duo", "body").encode(), at("1", "body").storageName)
+        assertEquals("duo", at(1, null).storageName)
+        assertEquals(ModelKey("duo", "body").encode(), at(1, "body").storageName)
     }
 }

@@ -54,21 +54,6 @@ private class ComponentFloatSerializer : StdSerializer<Any>(Any::class.java) {
 }
 
 /**
- * A tree parser that also hands out the node it is walking, so a deserializer can read an object's members as nodes
- * (keeping the spelling of a number [NativeJsonTree] read) instead of having them rebuilt from tokens.
- */
-private class ExactTreeParser(node: JsonNode, codec: ObjectCodec) : TreeTraversingParser(node, codec) {
-    /** The node the parser is at; at a field name, that field's value. At a start-object or start-array token, null. */
-    fun walkedNode(): JsonNode? = currentNode()
-}
-
-/** Binds parsed nodes with the rules of one [JsonProcessor.binderWith] call. */
-class NodeBinder internal constructor(private val reader: ObjectReader, private val codec: ObjectMapper) {
-    /** [node] bound into [clazz]; a number that [NativeJsonTree] read keeps its text wherever the binding keeps a node. */
-    fun <T> bind(node: JsonNode, clazz: Class<T>): T = ExactTreeParser(node, codec).use { reader.readValue(it, clazz) }
-}
-
-/**
  * Binds native JSON (`.abss`, `.scene`, asset `meta.json`) to Kotlin classes: unknown properties are skipped, unknown
  * enum values take their default, and properties keep declaration order. Create one and pass it to what needs it.
  */
@@ -122,18 +107,6 @@ class JsonProcessor(internal val log: Logger) {
     fun readObject(text: String): JsonNode =
         mapper.readTree(text)?.takeIf { it.isObject } ?: throw IllegalArgumentException("expected a JSON object")
 
-    /**
-     * A binder that reads like [bind] (warnings injected, as the components expect) and also knows the deserializers of
-     * [module], for a document whose members need more than a class.
-     */
-    fun binderWith(module: Module): NodeBinder {
-        val scene = mapper.copy().setNodeFactory(JsonNodeFactory.withExactBigDecimals(true)).registerModule(module)
-        return NodeBinder(
-            scene.reader(
-                InjectableValues.Std().addValue(EcsReadWarnings::class.java.name, EcsReadWarnings(log))
-            ), scene
-        )
-    }
 
     //todo add validation on parsing for formats
     fun <T> parse(text: String, clazz: Class<T>): T {

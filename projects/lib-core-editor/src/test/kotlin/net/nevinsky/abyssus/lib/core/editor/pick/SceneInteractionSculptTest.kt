@@ -53,11 +53,11 @@ class SceneInteractionSculptTest {
     private val sculpt = RecordingSculpt()
     private val paint = RecordingSculpt()
     private val content = SceneContent(
-        terrains = listOf(AssetPlacement("1", "terrain_meadow", PlacementTransform.IDENTITY)),
+        terrains = listOf(AssetPlacement(1L, "terrain_meadow", PlacementTransform.IDENTITY)),
     )
     private val orbit = OrbitCamera(Vector3(50f, 0f, 50f), 60f, 0f, 0.6f)
     private val interaction: SceneInteraction = run {
-        val frame = FrameSnapshot(camera, emptyList(), listOf(snapshotTerrainOf(TerrainTarget("1", TerrainData(3, FloatArray(9), 100, 1f), Matrix4()))), 7L)
+        val frame = FrameSnapshot(camera, emptyList(), listOf(snapshotTerrainOf(TerrainTarget(1L, TerrainData(3, FloatArray(9), 100, 1f), Matrix4()))), 7L)
         val queries = SnapshotSceneQueries({ frame }, state) { content }
         SceneInteraction(state, queries, orbit).also {
             it.size = ViewSize(W, H, W, H)
@@ -73,8 +73,8 @@ class SceneInteractionSculptTest {
     }
 
     private fun sculptOn(inverted: Boolean = false) {
-        state.selectedId = "1"
-        state.brush = BrushMode(SCULPT_BRUSH, "1", 10f, 1f, inverted)
+        state.selectedId = 1L
+        state.brush = BrushMode(SCULPT_BRUSH, 1L, 10f, 1f, inverted)
     }
 
     @Test
@@ -165,14 +165,14 @@ class SceneInteractionSculptTest {
 
     @Test
     fun `a second brush assignment replaces the first, and a stroke follows only the mode it began under`() {
-        state.selectedId = "1"
-        state.brush = BrushMode(FOLIAGE_BRUSH, "1", 10f, 1f)
+        state.selectedId = 1L
+        state.brush = BrushMode(FOLIAGE_BRUSH, 1L, 10f, 1f)
         val (x, y) = pixelOf(50f, 50f)
         interaction.pressed(x, y, true)
         assertEquals(1, paint.pressed.size)
         assertTrue(sculpt.pressed.isEmpty())
         // the other brush is switched on mid-stroke: one mode holds, and the open stroke gets no more drags
-        state.brush = BrushMode(SCULPT_BRUSH, "1", 10f, 1f)
+        state.brush = BrushMode(SCULPT_BRUSH, 1L, 10f, 1f)
         assertEquals(SCULPT_BRUSH, state.brush?.kind)
         interaction.dragged(x + 20, y, true)
         assertTrue(paint.dragged.isEmpty())

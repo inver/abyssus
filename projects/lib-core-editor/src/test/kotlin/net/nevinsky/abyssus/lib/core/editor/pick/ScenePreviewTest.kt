@@ -27,15 +27,15 @@ class ScenePreviewTest {
             PlacementTransform(Vector3(0f, 10f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
             Vector3(0f, 0f, -1f),
         )
-        val previewed = ScenePreview().apply(mundus, "1", turned)
+        val previewed = ScenePreview().apply(mundus, 1L, turned)
         // The light keeps facing the turned direction and stays where it is.
-        assertEquals(Vector3(0f, 0f, -1f), previewed.lights.first { it.entityId == "1" }.direction)
-        assertEquals(Vector3(0f, 10f, 0f), previewed.lights.first { it.entityId == "1" }.position)
+        assertEquals(Vector3(0f, 0f, -1f), previewed.lights.first { it.entityId == 1L }.direction)
+        assertEquals(Vector3(0f, 10f, 0f), previewed.lights.first { it.entityId == 1L }.position)
         // The handle moves to keep the same distance along the turned direction.
-        assertEquals(Vector3(0f, 10f, -10f), previewed.entityPositions["0"])
+        assertEquals(Vector3(0f, 10f, -10f), previewed.entityPositions[0L])
         // The other light and its handle are untouched.
-        assertEquals(Vector3(0f, -1f, 0f), previewed.lights.first { it.entityId == "4" }.direction)
-        assertEquals(Vector3(0f, 0f, 0f), previewed.entityPositions["3"])
+        assertEquals(Vector3(0f, -1f, 0f), previewed.lights.first { it.entityId == 4L }.direction)
+        assertEquals(Vector3(0f, 0f, 0f), previewed.entityPositions[3L])
     }
 
     @Test
@@ -44,12 +44,12 @@ class ScenePreviewTest {
             PlacementTransform(Vector3(0f, 20f, 0f), Quaternion(), Vector3(1f, 1f, 1f)),
             null,
         )
-        val previewed = ScenePreview().apply(mundus, "1", moved)
+        val previewed = ScenePreview().apply(mundus, 1L, moved)
         // The light is now above its handle and faces it, straight down.
-        assertEquals(Vector3(0f, 20f, 0f), previewed.lights.first { it.entityId == "1" }.position)
-        assertEquals(Vector3(0f, -1f, 0f), previewed.lights.first { it.entityId == "1" }.direction)
+        assertEquals(Vector3(0f, 20f, 0f), previewed.lights.first { it.entityId == 1L }.position)
+        assertEquals(Vector3(0f, -1f, 0f), previewed.lights.first { it.entityId == 1L }.direction)
         // The handle did not move with the light.
-        assertEquals(Vector3(0f, 0f, 0f), previewed.entityPositions["0"])
+        assertEquals(Vector3(0f, 0f, 0f), previewed.entityPositions[0L])
     }
 
     @Test
@@ -60,11 +60,11 @@ class ScenePreviewTest {
             PlacementTransform(Vector3(0f, 10f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
             Vector3(0f, 0f, -1f),
         )
-        val previewed = ScenePreview().apply(noTarget, "1", turned)
+        val previewed = ScenePreview().apply(noTarget, 1L, turned)
         assertEquals(Vector3(0f, 0f, -1f), previewed.lights.single().direction)
         // The light itself is in entityPositions and did not move.
         assertEquals(1, previewed.entityPositions.size)
-        assertEquals(Vector3(0f, 10f, 0f), previewed.entityPositions["1"])
+        assertEquals(Vector3(0f, 10f, 0f), previewed.entityPositions[1L])
     }
 
     @Test
@@ -73,7 +73,7 @@ class ScenePreviewTest {
             PlacementTransform(Vector3(0f, 10f, 0f), Quaternion(), Vector3(1f, 1f, 1f)),
             null,
         )
-        assertNull(ScenePreview().aimedTarget(mundus, "1", moved))
+        assertNull(ScenePreview().aimedTarget(mundus, 1L, moved))
     }
 
     @Test
@@ -86,7 +86,7 @@ class ScenePreviewTest {
             PlacementTransform(Vector3(5f, 0f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
             Vector3(-1f, 0f, 0f),
         )
-        assertNull(ScenePreview().aimedTarget(aimedAtModel, "1", turned))
+        assertNull(ScenePreview().aimedTarget(aimedAtModel, 1L, turned))
     }
 
     @Test
@@ -98,7 +98,7 @@ class ScenePreviewTest {
             PlacementTransform(Vector3(5f, 0f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
             Vector3(0f, 0f, -1f),
         )
-        val target = ScenePreview().aimedTarget(atLight, "1", turned)
+        val target = ScenePreview().aimedTarget(atLight, 1L, turned)
         assertNotNull(target)
         assertEquals(Vector3(5f, 0f, -1f), target!!)
     }
@@ -110,7 +110,7 @@ class ScenePreviewTest {
             "2":{"type":"HANDLE","components":{"PositionComponent":{}}}}}"""))
         val moved = DragResult(PlacementTransform(Vector3(5f, 10f, 0f), Quaternion(), Vector3(1f, 1f, 1f)), null)
         val before = point.lights.single().direction
-        assertEquals(before, ScenePreview().apply(point, "1", moved).lights.single().direction)
+        assertEquals(before, ScenePreview().apply(point, 1L, moved).lights.single().direction)
     }
 
     // ---- pose overrides (Play) ----
@@ -119,25 +119,25 @@ class ScenePreviewTest {
 
     @Test
     fun aPoseOverrideReplacesAPlacementAndKeepsItsScale() {
-        val authored = untitled.models.single { it.entityId == "0" }
+        val authored = untitled.models.single { it.entityId == 0L }
         val pose = Pose(Vector3(1f, 0.5f, 2f), Quaternion(0f, 0.70710677f, 0f, 0.70710677f))
-        val posed = ScenePreview().withPoses(untitled, mapOf("0" to pose))
-        val model = posed.models.single { it.entityId == "0" }
+        val posed = ScenePreview().withPoses(untitled, mapOf(0L to pose))
+        val model = posed.models.single { it.entityId == 0L }
         assertEquals(PlacementTransform(pose.position, pose.rotation, authored.transform.scale), model.transform)
-        assertEquals(pose.position, posed.entityPositions["0"])
+        assertEquals(pose.position, posed.entityPositions[0L])
         // the other entities keep their authored placements
-        assertEquals(untitled.models.filter { it.entityId != "0" }, posed.models.filter { it.entityId != "0" })
+        assertEquals(untitled.models.filter { it.entityId != 0L }, posed.models.filter { it.entityId != 0L })
         assertEquals(untitled.terrains, posed.terrains)
         // an entity the scene lacks is ignored
-        assertEquals(untitled, ScenePreview().withPoses(untitled, mapOf("99" to pose)))
+        assertEquals(untitled, ScenePreview().withPoses(untitled, mapOf(99L to pose)))
     }
 
     @Test
     fun aDragPreviewStillWorksOverPoses() {
-        val posed = ScenePreview().withPoses(untitled, mapOf("0" to Pose(Vector3(1f, 0.5f, 2f), Quaternion())))
+        val posed = ScenePreview().withPoses(untitled, mapOf(0L to Pose(Vector3(1f, 0.5f, 2f), Quaternion())))
         val dragged = DragResult(PlacementTransform(Vector3(5f, 5f, 5f), Quaternion(), Vector3(1f, 1f, 1f)), null)
-        val previewed = ScenePreview().apply(posed, mapOf("2" to dragged))
-        assertEquals(Vector3(5f, 5f, 5f), previewed.models.single { it.entityId == "2" }.transform.position)
-        assertEquals(Vector3(1f, 0.5f, 2f), previewed.models.single { it.entityId == "0" }.transform.position)
+        val previewed = ScenePreview().apply(posed, mapOf(2L to dragged))
+        assertEquals(Vector3(5f, 5f, 5f), previewed.models.single { it.entityId == 2L }.transform.position)
+        assertEquals(Vector3(1f, 0.5f, 2f), previewed.models.single { it.entityId == 0L }.transform.position)
     }
 }

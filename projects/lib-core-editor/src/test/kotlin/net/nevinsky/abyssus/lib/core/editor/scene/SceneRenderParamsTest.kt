@@ -9,10 +9,10 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.document.SceneRayField
-import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsState
 import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.core.editor.ray.SceneRaySettings
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import org.slf4j.helpers.NOPLogger
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -95,7 +95,7 @@ class SceneRenderParamsTest {
     fun parsesMainCamera() {
         val abss = """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":-0.5,"y":0.0,"z":-0.5},"position":{"x":4.0,"y":3.0,"z":6.0},
             "far":100.0,"near":1.0,"fieldOfView":67.0},"name":"Untitled"}"""
-        val cam = MainCamera().parse(abss)!!
+        val cam = MainCamera(JsonProcessor(NOPLogger.NOP_LOGGER)).parse(abss)!!
         assertEquals(Vector3(4f, 3f, 6f), cam.position)
         assertEquals(100f, cam.far, 0f)
         assertEquals(67f, cam.fieldOfView, 0f)
@@ -105,16 +105,16 @@ class SceneRenderParamsTest {
 
     @Test
     fun mainCameraParseIsNullForGarbageOrMissingCamera() {
-        assertNull(MainCamera().parse("not json"))
-        assertNull(MainCamera().parse("[]"))
-        assertNull(MainCamera().parse("""{"name":"x"}"""))
-        assertNull(MainCamera().parse("""{"format":"abyssus","formatVersion":1,"mainCamera":{"position":{"x":1,"y":2,"z":3}}}"""))
+        assertNull(MainCamera(JsonProcessor(NOPLogger.NOP_LOGGER)).parse("not json"))
+        assertNull(MainCamera(JsonProcessor(NOPLogger.NOP_LOGGER)).parse("[]"))
+        assertNull(MainCamera(JsonProcessor(NOPLogger.NOP_LOGGER)).parse("""{"name":"x"}"""))
+        assertNull(MainCamera(JsonProcessor(NOPLogger.NOP_LOGGER)).parse("""{"format":"abyssus","formatVersion":1,"mainCamera":{"position":{"x":1,"y":2,"z":3}}}"""))
     }
 
     @Test
     fun zeroLengthViewDirectionIsRejected() {
         val abss = """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":0},"position":{"x":1,"y":2,"z":3}}}"""
-        assertNull(MainCamera().parse(abss))
+        assertNull(MainCamera(JsonProcessor(NOPLogger.NOP_LOGGER)).parse(abss))
     }
 
     @Test
@@ -145,7 +145,7 @@ class SceneRenderParamsTest {
     @Test
     fun nullNearKeepsTheRestOfTheCamera() {
         val abss = """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":1,"y":2,"z":3},"near":null,"far":50.0}}"""
-        val cam = MainCamera().parse(abss)!!
+        val cam = MainCamera(JsonProcessor(NOPLogger.NOP_LOGGER)).parse(abss)!!
         assertEquals(Vector3(1f, 2f, 3f), cam.position)
         assertEquals(CameraParams.DEFAULT.near, cam.near, 0f)
         assertEquals(50f, cam.far, 0f)
@@ -155,7 +155,7 @@ class SceneRenderParamsTest {
     fun nearNotBelowFarFallsBackToDefaultClipRange() {
         for ((near, far) in listOf(10 to 10, 100 to 1)) {
             val abss = """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":1,"y":2,"z":3},"near":$near,"far":$far}}"""
-            val cam = MainCamera().parse(abss)!!
+            val cam = MainCamera(JsonProcessor(NOPLogger.NOP_LOGGER)).parse(abss)!!
             assertEquals(CameraParams.DEFAULT.near, cam.near, 0f)
             assertEquals(CameraParams.DEFAULT.far, cam.far, 0f)
         }
@@ -172,33 +172,10 @@ class SceneRenderParamsTest {
         assertEquals(dir, p.projectDir)
     }
 
-    /** The ray settings as the file holds them, through the same path the plugin takes: the scene and its root node. */
-    private fun rayOf(rayBlock: String?): SceneRaySettingsState {
-        val text = """{"format":"abyssus","formatVersion":1${rayBlock?.let { ",\"rayTracing\":$it" }.orEmpty()}}"""
-        return renderParamsOf(scene(text), CameraParams.DEFAULT, root = SceneJson().parse(text)).rayTracing
-    }
-
     @Test
-    fun aMissingAnEmptyAndADefaultsOnlyRayBlockGiveTheSameSettings() {
-        val missing = rayOf(null)
-        assertNotNull(missing.settings)
-        assertEquals(missing, rayOf("{}"))
-        assertEquals(256, missing.values.getValue(SceneRayField.SAMPLES))
-        assertEquals(1, missing.values.getValue(SceneRayField.REFLECTIONS))
-        assertEquals(0, missing.values.getValue(SceneRayField.REFRACTIONS))
-        // a scene without a root node (no document) sees the defaults too
-        assertEquals(missing, renderParamsOf(scene("""{"format":"abyssus","formatVersion":1}"""), CameraParams.DEFAULT).rayTracing)
-    }
-
-    @Test
-    fun anExplicitNullRayFieldIsReportedAsMalformedNotDefaulted() {
-        val state = rayOf("""{"maxRefractionBounces":null}""")
-        assertNull(state.settings)
-        assertTrue(state.errors.containsKey("maxRefractionBounces"))
-    }
-
-    @Test
-    fun explicitRayValuesReachTheParamsFromTheDocument() {
-        assertEquals(64, rayOf("""{"targetSamplesPerPixel":64}""").values.getValue(SceneRayField.SAMPLES))
+    fun rayTracingIsAlwaysTheDefaultSettings() {
+        val p = renderParamsOf(scene("""{"format":"abyssus","formatVersion":1}"""), CameraParams.DEFAULT)
+        assertEquals(SceneRaySettings(), p.rayTracing)
+        assertEquals(256, p.rayTracing.targetSamplesPerPixel)
     }
 }

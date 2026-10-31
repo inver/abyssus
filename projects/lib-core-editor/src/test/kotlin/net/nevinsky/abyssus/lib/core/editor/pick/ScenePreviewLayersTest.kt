@@ -14,9 +14,6 @@ import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.Pose
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
-import net.nevinsky.abyssus.lib.core.water.WaterPreset
-import net.nevinsky.abyssus.lib.core.water.WaterPresets
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -29,16 +26,14 @@ class ScenePreviewLayersTest {
             it.spacing = 10f
             it.slots = mutableListOf(11, 12, 13)
         }
-        val posts = listOf(11, 12, 13).map { AssetPlacement(it.toString(), "post", PlacementTransform.IDENTITY) }
-        val water = ValidWater(WaterPresets().defaults(WaterPreset.LAKE, "lake", "Lake", 5.0, 2.0, 5.0))
+        val posts = listOf(11, 12, 13).map { AssetPlacement(it.toLong(), "post", PlacementTransform.IDENTITY) }
         return SceneContent(
-            models = listOf(AssetPlacement("1", "rock", at(0f))) + posts,
-            arrangements = listOf(ArrangementPlacement("10", path)),
-            water = listOf(water),
+            models = listOf(AssetPlacement(1L, "rock", at(0f))) + posts,
+            arrangements = listOf(ArrangementPlacement(10L, path)),
         )
     }
 
-    private fun xOf(c: SceneContent, id: String) = c.models.first { it.entityId == id }.transform.position.x
+    private fun xOf(c: SceneContent, id: Long) = c.models.first { it.entityId == id }.transform.position.x
 
     @Test
     fun nothingPreviewedReturnsTheBaseItself() {
@@ -54,19 +49,15 @@ class ScenePreviewLayersTest {
         val state = SceneViewState()
         val layers = ScenePreviewLayers(state)
 
-        state.poses = mapOf("1" to Pose(Vector3(7f, 0f, 0f), Quaternion()))
-        assertEquals(7f, xOf(layers.posed(c), "1"), 0f)
+        state.poses = mapOf(1L to Pose(Vector3(7f, 0f, 0f), Quaternion()))
+        assertEquals(7f, xOf(layers.posed(c), 1L), 0f)
         state.poses = emptyMap()
 
-        state.preview = mapOf("1" to DragResult(at(3f), null))
-        assertEquals(3f, xOf(layers.apply(c), "1"), 0f)
+        state.preview = mapOf(1L to DragResult(at(3f), null))
+        assertEquals(3f, xOf(layers.apply(c), 1L), 0f)
         state.preview = emptyMap()
 
-        state.waterPreview = mapOf("lake" to Vector3(9f, 4f, 9f))
-        assertEquals(9.0, (layers.apply(c).water.single() as ValidWater).settings.x, 0.0)
-        state.waterPreview = emptyMap()
-
-        state.pathDraft = PathEdit("10", listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)))
+        state.pathDraft = PathEdit(10L, listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)))
         assertEquals(5, layers.apply(c).models.count { it.assetName == "post" })
     }
 
@@ -75,11 +66,11 @@ class ScenePreviewLayersTest {
         val c = base()
         val state = SceneViewState()
         val layers = ScenePreviewLayers(state)
-        state.poses = mapOf("1" to Pose(Vector3(7f, 0f, 0f), Quaternion()))
-        state.preview = mapOf("1" to DragResult(at(3f), null))
-        state.pathDraft = PathEdit("10", listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)))
+        state.poses = mapOf(1L to Pose(Vector3(7f, 0f, 0f), Quaternion()))
+        state.preview = mapOf(1L to DragResult(at(3f), null))
+        state.pathDraft = PathEdit(10L, listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)))
         val shown = layers.apply(layers.posed(c))
-        assertEquals("the drag wins over the pose", 3f, xOf(shown, "1"), 0f)
+        assertEquals("the drag wins over the pose", 3f, xOf(shown, 1L), 0f)
         assertEquals(5, shown.models.count { it.assetName == "post" })
     }
 
@@ -88,10 +79,10 @@ class ScenePreviewLayersTest {
         val c = base()
         val state = SceneViewState()
         val layers = ScenePreviewLayers(state)
-        state.preview = mapOf("1" to DragResult(at(3f), null))
+        state.preview = mapOf(1L to DragResult(at(3f), null))
         val first = layers.apply(c)
         assertSame(first, layers.apply(c))
-        state.preview = mapOf("1" to DragResult(at(4f), null))
+        state.preview = mapOf(1L to DragResult(at(4f), null))
         assertNotSame(first, layers.apply(c))
         assertNotSame(first, layers.apply(base()))
     }

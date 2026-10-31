@@ -12,8 +12,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class CameraFrustumTest {
-    private fun camera(direction: Vector3, lookAtId: String? = null, position: Vector3 = Vector3(0f, 0f, 0f)) =
-        CameraPlacement("c", "c", position, direction, lookAtId, near = 1f, far = 10f, fieldOfView = 90f)
+    private fun camera(direction: Vector3, lookAtId: Long? = null, position: Vector3 = Vector3(0f, 0f, 0f)) =
+        CameraPlacement(1L, "c", position, direction, lookAtId, near = 1f, far = 10f, fieldOfView = 90f)
 
     private fun assertVec(expected: Vector3, actual: Vector3) {
         assertEquals(expected.x, actual.x, 1e-4f)
@@ -45,19 +45,19 @@ class CameraFrustumTest {
 
     @Test
     fun aResolvableTargetOverridesTheDirection() {
-        val f = cameraFrustumOf(camera(Vector3(1f, 0f, 0f), lookAtId = "t"), mapOf("t" to Vector3(0f, 0f, -5f)), 1f)
+        val f = cameraFrustumOf(camera(Vector3(1f, 0f, 0f), lookAtId = 1L), mapOf(1L to Vector3(0f, 0f, -5f)), 1f)
         assertVec(Vector3(0f, 0f, -1f), f.direction)
     }
 
     @Test
     fun anUnknownTargetFallsBackToTheDirection() {
-        val f = cameraFrustumOf(camera(Vector3(2f, 0f, 0f), lookAtId = "missing"), mapOf("t" to Vector3(0f, 0f, -5f)), 1f)
+        val f = cameraFrustumOf(camera(Vector3(2f, 0f, 0f), lookAtId = 99L), mapOf(1L to Vector3(0f, 0f, -5f)), 1f)
         assertVec(Vector3(1f, 0f, 0f), f.direction)
     }
 
     @Test
     fun aTargetAtTheCameraFallsBackToTheDirection() {
-        val f = cameraFrustumOf(camera(Vector3(0f, 0f, 1f), lookAtId = "t"), mapOf("t" to Vector3(0f, 0f, 0f)), 1f)
+        val f = cameraFrustumOf(camera(Vector3(0f, 0f, 1f), lookAtId = 1L), mapOf(1L to Vector3(0f, 0f, 0f)), 1f)
         assertVec(Vector3(0f, 0f, 1f), f.direction)
     }
 

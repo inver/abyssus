@@ -47,7 +47,7 @@ class SceneInteractionPathTest {
         val camera: PerspectiveCamera,
     ) {
         val created = mutableListOf<Triple<BaseMeta, List<Vector3>, Boolean>>()
-        val edits = mutableListOf<Pair<String, List<Vector3>>>()
+        val edits = mutableListOf<Pair<Long, List<Vector3>>>()
         var accept = true
 
         /** The Swing pixel of the world point ([x], [y], [z]). */
@@ -72,11 +72,11 @@ class SceneInteractionPathTest {
     ): Fixture {
         val state = SceneViewState()
         val content = SceneContent(
-            terrains = listOf(AssetPlacement("1", "terrain", PlacementTransform.IDENTITY)),
+            terrains = listOf(AssetPlacement(1L, "terrain", PlacementTransform.IDENTITY)),
             arrangements = if (arrangement) {
                 listOf(
                     ArrangementPlacement(
-                        "5",
+                        5L,
                         arrangementAlong(points, closed = closed).also { if (copy) it.slots = mutableListOf(12) })
                 )
             } else emptyList(),
@@ -84,13 +84,13 @@ class SceneInteractionPathTest {
         val boxes = if (copy) {
             listOf(
                 snapshotBoxOf(
-                    "12",
+                    12L,
                     BoundingBox(Vector3(-2f, -2f, -2f), Vector3(2f, 2f, 2f)),
                     Matrix4().setToTranslation(50f, 0f, 50f)
                 )
             )
         } else emptyList()
-        val terrain = TerrainTarget("1", TerrainData(3, FloatArray(9), 100, 1f), Matrix4())
+        val terrain = TerrainTarget(1L, TerrainData(3, FloatArray(9), 100, 1f), Matrix4())
         val frame = FrameSnapshot(camera(), boxes, listOf(snapshotTerrainOf(terrain)), 7L)
         val queries = SnapshotSceneQueries({ frame }, state) { content }
         val interaction = SceneInteraction(state, queries, OrbitCamera(Vector3(50f, 0f, 50f), 60f, 0f, 0.6f)).also {
@@ -233,7 +233,7 @@ class SceneInteractionPathTest {
     }
 
     private fun editing(points: List<Vector3> = line()): Fixture =
-        fixture(arrangement = true, points = points).also { it.interaction.setPathEditing("5") }
+        fixture(arrangement = true, points = points).also { it.interaction.setPathEditing(5L) }
 
     /** Presses the handle of point [index] and releases it: the click that gives the point its gizmo. */
     private fun Fixture.selectPoint(x: Float, z: Float) {
@@ -245,7 +245,7 @@ class SceneInteractionPathTest {
     @Test
     fun handlesAreNotGrabbedOutsideTheEditMode() {
         val f = fixture(arrangement = true)
-        f.state.selectedId = "5"
+        f.state.selectedId = 5L
         val (x, y) = f.pixelOf(80f, 50f)
         f.interaction.pressed(x, y, true)
         f.interaction.released(x, y, true)
@@ -380,7 +380,7 @@ class SceneInteractionPathTest {
         val f = editing()
         var ended = 0
         f.interaction.onPathEditEnded = { ended++ }
-        f.state.selectedId = "1"
+        f.state.selectedId = 1L
         f.interaction.selectionChanged()
         assertNull(f.interaction.pathEditing)
         assertEquals(1, ended)
@@ -389,14 +389,14 @@ class SceneInteractionPathTest {
     @Test
     fun aPointCanBeRemovedOnlyWhileMoreThanTwoRemain() {
         val two = fixture(arrangement = true)
-        assertFalse(two.interaction.canRemovePoint("5"))
-        assertFalse(two.interaction.removePoint("5", 0))
+        assertFalse(two.interaction.canRemovePoint(5L))
+        assertFalse(two.interaction.removePoint(5L, 0))
         val three = fixture(
             arrangement = true,
             points = listOf(Vector3(20f, 0f, 50f), Vector3(50f, 0f, 60f), Vector3(80f, 0f, 50f))
         )
-        assertTrue(three.interaction.canRemovePoint("5"))
-        assertTrue(three.interaction.removePoint("5", 1))
+        assertTrue(three.interaction.canRemovePoint(5L))
+        assertTrue(three.interaction.removePoint(5L, 1))
         assertEquals(listOf(Vector3(20f, 0f, 50f), Vector3(80f, 0f, 50f)), three.edits.single().second)
     }
 
@@ -425,13 +425,13 @@ class SceneInteractionPathTest {
     @Test
     fun aCopyOfAnArrangementSelectsTheWholeArrangementAndStaysSelectedOnTheNextCopyClick() {
         val f = fixture(arrangement = true, copy = true)
-        val picked = mutableListOf<String>()
+        val picked = mutableListOf<Long>()
         f.interaction.onPick = { picked += it }
         f.click(50f, 50f)
         f.click(50f, 50f)
         assertEquals("5", f.interaction.selectedId)
-        assertEquals(listOf("5", "5"), picked)
-        assertEquals(listOf("12"), f.queries.content.copiesOf("5"))
+        assertEquals(listOf(5L, 5L), picked)
+        assertEquals(listOf("12"), f.queries.content.copiesOf(5L))
     }
 
     @Test

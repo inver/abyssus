@@ -28,11 +28,11 @@ fun arrangementCopyCount(entity: EntityDto): Int = slotIds(entity).size
  * and that point back to it with a `ParentComponent`. A detached copy (no `ParentComponent`, or one to another entity)
  * is an ordinary entity and is not in the set.
  */
-fun arrangementCopyIds(scene: SceneDto): Set<String> {
-    val copies = HashSet<String>()
+fun arrangementCopyIds(scene: SceneDto): Set<Long> {
+    val copies = HashSet<Long>()
     for ((id, entity) in scene.ecs) {
         for (slot in slotIds(entity)) {
-            if (parentOf(scene.entity(slot.toLong())) == id.toInt()) copies += slot.toString()
+            if (parentOf(scene.entity(slot.toLong())) == id.toInt()) copies += slot.toLong()
         }
     }
     return copies

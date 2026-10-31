@@ -53,7 +53,7 @@ class SceneInteractionPaintTest {
     private fun flat(): TerrainData = TerrainData(3, FloatArray(9), size, 1f)
 
     private fun terrainContent(transform: PlacementTransform = PlacementTransform.IDENTITY): SceneContent =
-        SceneContent(terrains = listOf(AssetPlacement("1", "terrain_meadow", transform)))
+        SceneContent(terrains = listOf(AssetPlacement(1L, "terrain_meadow", transform)))
 
     /** A [BrushStroke] that paints a real mask with a real brush, remembering the stroke's calls. */
     private class RecordingPaint(private val resolution: Int) : BrushStroke {
@@ -113,7 +113,7 @@ class SceneInteractionPaintTest {
 
     private fun fixture(
         content: SceneContent = terrainContent(),
-        terrains: List<TerrainTarget> = listOf(TerrainTarget("1", flat(), Matrix4())),
+        terrains: List<TerrainTarget> = listOf(TerrainTarget(1L, flat(), Matrix4())),
     ): Fixture {
         val state = SceneViewState()
         val frame = FrameSnapshot(camera(), emptyList(), terrains.map { snapshotTerrainOf(it) }, 7L)
@@ -129,8 +129,8 @@ class SceneInteractionPaintTest {
 
     /** The paint mode on the drawn terrain "1". */
     private fun Fixture.paintOn(erase: Boolean = false) {
-        state.selectedId = "1"
-        state.brush = BrushMode(FOLIAGE_BRUSH, "1", RADIUS, 1f, erase)
+        state.selectedId = 1L
+        state.brush = BrushMode(FOLIAGE_BRUSH, 1L, RADIUS, 1f, erase)
     }
 
     /** Press at ([x0], [y0]) and drag to ([x1], [y1]) in [steps] drag events, like a real drag; the button stays down. */
@@ -164,9 +164,9 @@ class SceneInteractionPaintTest {
     @Test
     fun enteringPaintModeHidesTheGizmo() {
         val f = fixture()
-        f.state.selectedId = "1"
+        f.state.selectedId = 1L
         assertNotNull("the terrain shows its gizmo", f.queries.gizmoHandles(HEIGHT))
-        f.state.brush = BrushMode(FOLIAGE_BRUSH, "1", RADIUS, 1f)
+        f.state.brush = BrushMode(FOLIAGE_BRUSH, 1L, RADIUS, 1f)
         assertNull(f.queries.gizmoHandles(HEIGHT))
         f.state.brush = null
         assertNotNull(f.queries.gizmoHandles(HEIGHT))
@@ -175,8 +175,8 @@ class SceneInteractionPaintTest {
     @Test
     fun aPaintModeOnAnotherEntityDoesNotPaint() {
         val f = fixture()
-        f.state.selectedId = "1"
-        f.state.brush = BrushMode(FOLIAGE_BRUSH, "missing", RADIUS, 1f)
+        f.state.selectedId = 1L
+        f.state.brush = BrushMode(FOLIAGE_BRUSH, 1000L, RADIUS, 1f)
         val (x, y) = f.pixelOf(50f, 50f)
         f.interaction.pressed(x, y, true)
         f.interaction.dragged(x + 20, y, true)
@@ -192,9 +192,9 @@ class SceneInteractionPaintTest {
         val beyond = Matrix4().setToTranslation(0f, 0f, -size.toFloat())
         val content = SceneContent(
             terrains = listOf(
-                AssetPlacement("1", "terrain_meadow", PlacementTransform.IDENTITY),
+                AssetPlacement(1L, "terrain_meadow", PlacementTransform.IDENTITY),
                 AssetPlacement(
-                    "2",
+                    2L,
                     "terrain_meadow",
                     PlacementTransform(Vector3(0f, 0f, -size.toFloat()), Quaternion(), Vector3(1f, 1f, 1f)),
                 ),
@@ -202,7 +202,7 @@ class SceneInteractionPaintTest {
         )
         val f = fixture(
             content = content,
-            terrains = listOf(TerrainTarget("1", flat(), Matrix4()), TerrainTarget("2", flat(), beyond)),
+            terrains = listOf(TerrainTarget(1L, flat(), Matrix4()), TerrainTarget(2L, flat(), beyond)),
         )
         f.paintOn()
         val (x, y) = f.pixelOf(50f, -50f)
@@ -303,7 +303,7 @@ class SceneInteractionPaintTest {
         )
         val f = fixture(
             content = terrainContent(transform),
-            terrains = listOf(TerrainTarget("1", flat(), world)),
+            terrains = listOf(TerrainTarget(1L, flat(), world)),
         )
         f.paintOn()
         val from = Vector3(40f, 0f, 70f)

@@ -43,10 +43,10 @@ class HeadlessEditingTest {
     @Test fun moveAnEntityChangesOnlyItsXPosition() {
         val model0 = SceneJson().parse(sceneText)["ecs"]["0"]["components"]["PositionComponent"]["localPosition"]
         val edit = TransformEdit(position = Vector3(1f, model0["y"].floatValue(), model0["z"].floatValue()))
-        val moved = editing.transform(sceneText, "0", edit) as HeadlessEdit.Edited
+        val moved = editing.transform(sceneText, 0L, edit) as HeadlessEdit.Edited
         assertEquals(listOf("\"x\": 1.0,"), changedLines(sceneText, moved.text))
         assertEquals(1.0, SceneJson().parse(moved.text)["ecs"]["0"]["components"]["PositionComponent"]["localPosition"]["x"].doubleValue(), 0.0)
-        assertEquals(HeadlessEdit.Unchanged, editing.transform(moved.text, "0", edit))
+        assertEquals(HeadlessEdit.Unchanged, editing.transform(moved.text, 0L, edit))
     }
 
     @Test fun aLegacySceneIsRefusedWithTheReasonAndNoText() {
@@ -57,7 +57,7 @@ class HeadlessEditingTest {
             ResourceEditorMessages().message("unsupportedFormat.LEGACY_FIELD", refusal.rejection!!.path),
             refusal.message,
         )
-        val edit = editing.transform(legacy, "0", TransformEdit(position = Vector3(1f, 0f, 0f)))
+        val edit = editing.transform(legacy, 0L, TransformEdit(position = Vector3(1f, 0f, 0f)))
         assertEquals(HeadlessEdit.Refused(refusal), edit)
         assertNull(editing.validate(sceneText, DocumentKind.SCENE))
         assertNull(editing.validate(File(project, "Untitled.abss").readText(), DocumentKind.PROJECT))
@@ -77,9 +77,9 @@ class HeadlessEditingTest {
     }
 
     @Test fun aComponentEditGoesThroughTheComponentEditor() {
-        val edited = editing.setComponentField(sceneText, "0", "PositionComponent", "localPosition.x", "1") as HeadlessEdit.Edited
+        val edited = editing.setComponentField(sceneText, 0L, "PositionComponent", "localPosition.x", "1") as HeadlessEdit.Edited
         assertEquals(listOf("\"x\": 1,"), changedLines(sceneText, edited.text))
-        val refused = editing.setComponentField(sceneText, "0", "PositionComponent", "localPosition.x", "abc") as HeadlessEdit.Refused
+        val refused = editing.setComponentField(sceneText, 0L, "PositionComponent", "localPosition.x", "abc") as HeadlessEdit.Refused
         assertEquals(ResourceEditorMessages().message("componentNotANumber", "Position localPosition.x", "abc"), refused.refusal.message)
     }
 
@@ -90,8 +90,8 @@ class HeadlessEditingTest {
         ArrangementEdits(ResourceEditorMessages()).create(root, BaseMeta(MetaType.MODEL, "tree"), points, false, LineHeights())
         val arranged = SceneJson().pretty(root)
         val edit = TransformEdit(position = Vector3(20f, 0f, 4f))
-        val headless = (editing.transform(arranged, "14", edit) as HeadlessEdit.Edited).text
-        val plugin = DocumentTextEditor().edit(arranged, DocumentKind.SCENE) { SceneTransformWriter().apply(it, "14", edit) }
+        val headless = (editing.transform(arranged, 14L, edit) as HeadlessEdit.Edited).text
+        val plugin = DocumentTextEditor().edit(arranged, DocumentKind.SCENE) { SceneTransformWriter().apply(it, 14L, edit) }
         assertEquals((plugin as TextEditOutcome.Edited).text, headless)
         val after = SceneJson().parse(headless)
         assertNull(after["ecs"]["14"]["components"]["ParentComponent"])

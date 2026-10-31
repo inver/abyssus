@@ -20,7 +20,7 @@ import java.io.File
 class SetEnabledActionTest {
     private val sceneText = File(testProject("Untitled"), "scenes/Main Scene.scene").readText()
     private val editing = HeadlessEditing()
-    private val collider = EnabledTarget.Component("0", "RenderComponent")
+    private val collider = EnabledTarget.Component(0L, "RenderComponent")
 
     private fun lines(text: String) = text.lines()
 
@@ -53,7 +53,7 @@ class SetEnabledActionTest {
 
     @Test
     fun disablingAnEntityWritesTheFlagBesideItsComponents() {
-        val edited = editing.setEnabled(sceneText, EnabledTarget.Entity("2"), false) as HeadlessEdit.Edited
+        val edited = editing.setEnabled(sceneText, EnabledTarget.Entity(2L), false) as HeadlessEdit.Edited
         val entity = SceneJson().parse(edited.text)["ecs"]["2"]
         assertEquals(1, entity["flags"].intValue())
         assertNull(entity["enabled"])
@@ -65,7 +65,7 @@ class SetEnabledActionTest {
     @Test
     fun enablingAnEntityKeepsTheOtherFlagBits() {
         val withBits = SceneJson().parse(sceneText).also { (it["ecs"]["2"] as com.fasterxml.jackson.databind.node.ObjectNode).put("flags", 5) }
-        val enabled = editing.setEnabled(SceneJson().compact(withBits), EnabledTarget.Entity("2"), true) as HeadlessEdit.Edited
+        val enabled = editing.setEnabled(SceneJson().compact(withBits), EnabledTarget.Entity(2L), true) as HeadlessEdit.Edited
         assertEquals(4, SceneJson().parse(enabled.text)["ecs"]["2"]["flags"].intValue())
     }
 
@@ -79,8 +79,8 @@ class SetEnabledActionTest {
     @Test
     fun fixedComponentsAndMissingTargetsAreNotSwitched() {
         for (kind in listOf("NameComponent", "PositionComponent", "ParentComponent"))
-            assertEquals(kind, HeadlessEdit.Unchanged, editing.setEnabled(sceneText, EnabledTarget.Component("0", kind), false))
-        assertEquals(HeadlessEdit.Unchanged, editing.setEnabled(sceneText, EnabledTarget.Component("0", "NoSuchComponent"), false))
+            assertEquals(kind, HeadlessEdit.Unchanged, editing.setEnabled(sceneText, EnabledTarget.Component(0L, kind), false))
+        assertEquals(HeadlessEdit.Unchanged, editing.setEnabled(sceneText, EnabledTarget.Component(0L, "NoSuchComponent"), false))
         assertEquals(HeadlessEdit.Unchanged, editing.setEnabled(sceneText, EnabledTarget.Entity("nope"), false))
         val action = SetEnabledAction()
         assertTrue(action.isTogglable("RenderComponent"))
@@ -99,7 +99,7 @@ class SetEnabledActionTest {
     @Test
     fun anUnsupportedDocumentIsRefusedAndUnchanged() {
         val legacy = """{"format":"abyssus","formatVersion":1,"ecs":{"0":{"enabled":false,"components":{"RenderComponent":{}}}}}"""
-        val result = editing.setEnabled(legacy, EnabledTarget.Entity("0"), false)
+        val result = editing.setEnabled(legacy, EnabledTarget.Entity(0L), false)
         assertTrue(result.toString(), result is HeadlessEdit.Refused)
         assertEquals(FormatProblem.LEGACY_FIELD, (result as HeadlessEdit.Refused).refusal.rejection?.problem)
     }
@@ -107,7 +107,7 @@ class SetEnabledActionTest {
     @Test
     fun unknownExtensionKeysSurviveTheRoundTrip() {
         val text = """{"format":"abyssus","formatVersion":1,"ecs":{"0":{"components":{"WindComponent":{"speed":1.50,"extra":{"a":1}}}}}}"""
-        val target = EnabledTarget.Component("0", "WindComponent")
+        val target = EnabledTarget.Component(0L, "WindComponent")
         val disabled = (editing.setEnabled(text, target, false) as HeadlessEdit.Edited).text
         val enabled = (editing.setEnabled(disabled, target, true) as HeadlessEdit.Edited).text
         assertEquals(SceneJson().compact(SceneJson().parse(text)), SceneJson().compact(SceneJson().parse(enabled)))

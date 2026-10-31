@@ -15,10 +15,10 @@ class SchemaMergeTest {
         val editor = ComponentEditor(ResourceEditorMessages())
         val root = SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{"0":{"components":{"MarkerComponent":{"size":1.000}}}}}""")
         assertNull(editor.kindOf("MarkerComponent"))
-        assertFalse(editor.missingKinds(root, "0").any { it.name == "MarkerComponent" })
-        assertNull(editor.read(root, "0", "MarkerComponent"))
+        assertFalse(editor.missingKinds(root, 0L).any { it.name == "MarkerComponent" })
+        assertNull(editor.read(root, 0L, "MarkerComponent"))
         val before = root.toString()
-        assertTrue(editor.update(root, "0", "MarkerComponent", "size", "2") is EditResult.Rejected)
+        assertTrue(editor.update(root, 0L, "MarkerComponent", "size", "2") is EditResult.Rejected)
         assertEquals(before, root.toString())
     }
 }

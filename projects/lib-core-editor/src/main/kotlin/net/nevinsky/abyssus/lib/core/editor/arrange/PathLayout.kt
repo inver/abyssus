@@ -67,7 +67,9 @@ class PathLayout {
         } else {
             floor((length + EPS) / spacing) + 1
         }
-        if (stations * perStation > MAX_ARRANGEMENT_SLOTS) return null
+        if (stations * perStation > MAX_ARRANGEMENT_SLOTS) {
+            return null
+        }
 
         val out = ArrayList<PathSlot>((stations * perStation).toInt())
         for (i in 0 until stations.toInt()) {

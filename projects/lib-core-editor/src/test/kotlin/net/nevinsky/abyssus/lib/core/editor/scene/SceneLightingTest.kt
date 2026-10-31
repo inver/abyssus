@@ -30,24 +30,24 @@ class SceneLightingTest {
 
     private fun light(
         kind: LightKind, intensity: Float = 1f, position: Vector3 = origin, color: Color = Color(1f, 0.5f, 0f, 1f),
-        direction: Vector3 = Vector3(0f, -1f, 0f), id: String = "1",
+        direction: Vector3 = Vector3(0f, -1f, 0f), id: Long = 1L,
     ) = LightPlacement(id, kind, color, intensity, position, direction)
 
     @Test
     fun onlyTheSunIsScaledByClouds() {
         val lights = listOf(
-            light(LightKind.DIRECTIONAL, intensity = 2f, id = "7"),
-            light(LightKind.DIRECTIONAL, intensity = 1f, id = "3", position = Vector3(5f, 0f, 0f)),
-            light(LightKind.POINT, id = "4"),
-            LightPlacement("8", LightKind.SPOT, Color(1f, 1f, 1f, 1f), 3f, origin, Vector3(0f, -1f, 0f), coneAngle = 40f),
+            light(LightKind.DIRECTIONAL, intensity = 2f, id = 7L),
+            light(LightKind.DIRECTIONAL, intensity = 1f, id = 3L, position = Vector3(5f, 0f, 0f)),
+            light(LightKind.POINT, id = 4L),
+            LightPlacement(8L, LightKind.SPOT, Color(1f, 1f, 1f, 1f), 3f, origin, Vector3(0f, -1f, 0f), coneAngle = 40f),
         )
         val set = lightSetOf(lights, origin)
-        val dimmed = set.withSunScale("7", 0.25f)
-        assertEquals(Color(0.5f, 0.25f, 0f, 1f), dimmed.directional.first { it.entityId == "7" }.color)
-        assertEquals(set.directional.first { it.entityId == "3" }, dimmed.directional.first { it.entityId == "3" })
+        val dimmed = set.withSunScale(7L, 0.25f)
+        assertEquals(Color(0.5f, 0.25f, 0f, 1f), dimmed.directional.first { it.entityId == 7L }.color)
+        assertEquals(set.directional.first { it.entityId == 3L }, dimmed.directional.first { it.entityId == 3L })
         assertEquals(set.point, dimmed.point)
         assertEquals(set.spot, dimmed.spot)
-        assertTrue("a full sun keeps the same set", set.withSunScale("7", 1f) === set)
+        assertTrue("a full sun keeps the same set", set.withSunScale(7L, 1f) === set)
         assertTrue("no sun keeps the same set", set.withSunScale(null, 0.5f) === set)
 
         val environment = Environment()
@@ -61,20 +61,20 @@ class SceneLightingTest {
     @Test
     fun theSunsDirectionalIndexFollowsTheBudgetedSet() {
         val lights = listOf(
-            light(LightKind.DIRECTIONAL, intensity = 1f, position = Vector3(5f, 0f, 0f), id = "far"),
-            light(LightKind.DIRECTIONAL, intensity = 3f, position = Vector3(1f, 0f, 0f), id = "near"),
-            light(LightKind.DIRECTIONAL, intensity = 9f, position = Vector3(9f, 0f, 0f), id = "bright but beyond the budget"),
-            light(LightKind.POINT, intensity = 2f, id = "point"),
+            light(LightKind.DIRECTIONAL, intensity = 1f, position = Vector3(5f, 0f, 0f), id = 10L),
+            light(LightKind.DIRECTIONAL, intensity = 3f, position = Vector3(1f, 0f, 0f), id = 11L),
+            light(LightKind.DIRECTIONAL, intensity = 9f, position = Vector3(9f, 0f, 0f), id = 12L),
+            light(LightKind.POINT, intensity = 2f, id = 13L),
         )
         val set = lightSetOf(lights, origin)
-        assertEquals(listOf("near", "far"), set.directional.map { it.entityId })
-        assertEquals(0, set.directionalIndexOf("near"))
-        assertEquals(1, set.directionalIndexOf("far"))
-        assertNull("beyond the directional budget", set.directionalIndexOf("bright but beyond the budget"))
-        assertNull("a point light is not directional", set.directionalIndexOf("point"))
-        assertNull(set.directionalIndexOf("missing"))
+        assertEquals(listOf(11L, 10L), set.directional.map { it.entityId })
+        assertEquals(0, set.directionalIndexOf(11L))
+        assertEquals(1, set.directionalIndexOf(10L))
+        assertNull("beyond the directional budget", set.directionalIndexOf(12L))
+        assertNull("a point light is not directional", set.directionalIndexOf(13L))
+        assertNull(set.directionalIndexOf(99L))
         assertNull(set.directionalIndexOf(null))
-        assertNull(NO_LIGHTS.directionalIndexOf("near"))
+        assertNull(NO_LIGHTS.directionalIndexOf(11L))
     }
 
     @Test
@@ -86,7 +86,7 @@ class SceneLightingTest {
 
     @Test
     fun directionalLightsAreCappedKeepingTheNearest() {
-        val lights = (1..5).map { light(LightKind.DIRECTIONAL, intensity = it.toFloat(), position = Vector3(it.toFloat(), 0f, 0f), id = "$it") }
+        val lights = (1..5).map { light(LightKind.DIRECTIONAL, intensity = it.toFloat(), position = Vector3(it.toFloat(), 0f, 0f), id = it.toLong()) }
         val set = lightSetOf(lights, origin)
         assertEquals(MAX_DIRECTIONAL, set.directional.size)
         assertEquals(listOf(1f, 2f), set.directional.map { it.color.r })
@@ -94,7 +94,7 @@ class SceneLightingTest {
 
     @Test
     fun pointLightsAreCappedKeepingTheNearest() {
-        val lights = (1..8).map { light(LightKind.POINT, position = Vector3(it.toFloat(), 0f, 0f), id = "$it") }
+        val lights = (1..8).map { light(LightKind.POINT, position = Vector3(it.toFloat(), 0f, 0f), id = it.toLong()) }
         val set = lightSetOf(lights, origin)
         assertEquals(MAX_POINT, set.point.size)
         assertEquals((1..5).map { it.toFloat() }, set.point.map { it.position.x })
@@ -102,8 +102,8 @@ class SceneLightingTest {
 
     @Test
     fun pointRangeReachesTheEnvironmentAndBadRangeIsSkipped() {
-        val good = LightPlacement("1", LightKind.POINT, Color(1f, 1f, 1f, 1f), 1f, origin, origin, range = 12f)
-        val bad = good.copy(entityId = "2", range = 0f)
+        val good = LightPlacement(1L, LightKind.POINT, Color(1f, 1f, 1f, 1f), 1f, origin, origin, range = 12f)
+        val bad = good.copy(entityId = 2L, range = 0f)
         val set = lightSetOf(listOf(good, bad), origin)
         assertEquals(listOf(12f), set.point.map { it.range })
         val env = Environment()
@@ -117,19 +117,19 @@ class SceneLightingTest {
         assertTrue(set.directional.isEmpty())
         assertTrue(set.point.isEmpty())
         assertEquals(Vector3(1f, 2f, 3f), set.spot.single().position)
-        assertEquals("1", set.spot.single().entityId)
+        assertEquals(1L, set.spot.single().entityId)
         assertEquals(45f, set.spot.single().cone.angle, 0f)
         assertEquals(0.2f, set.spot.single().cone.softness, 0f)
     }
 
     @Test
     fun localBudgetIsSharedWithStableIdentityTiesAndInvalidBeamsSkipped() {
-        val lights = (1..8).map { light(if (it % 2 == 0) LightKind.SPOT else LightKind.POINT, id = "$it") }
+        val lights = (1..8).map { light(if (it % 2 == 0) LightKind.SPOT else LightKind.POINT, id = it.toLong()) }
         val a = lightSetOf(lights, origin)
         val b = lightSetOf(lights.reversed(), origin)
         assertEquals(5, a.point.size + a.spot.size)
-        assertEquals(listOf("1", "3", "5"), a.point.map { it.entityId })
-        assertEquals(listOf("2", "4"), a.spot.map { it.entityId })
+        assertEquals(listOf(1L, 3L, 5L), a.point.map { it.entityId })
+        assertEquals(listOf(2L, 4L), a.spot.map { it.entityId })
         assertEquals(a.point, b.point)
         assertEquals(a.spot.map { it.entityId }, b.spot.map { it.entityId })
         val invalid = listOf(light(LightKind.SPOT).copy(coneAngle = 180f), light(LightKind.SPOT).copy(edgeSoftness = Float.NaN))
