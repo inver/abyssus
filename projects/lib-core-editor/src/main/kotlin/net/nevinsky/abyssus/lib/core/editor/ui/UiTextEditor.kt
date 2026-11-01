@@ -4,7 +4,6 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.ui
 
-import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
@@ -26,52 +25,26 @@ sealed interface UiTextResult {
 
 /**
  * One UI edit as a text transform: the document must be an admitted UI asset before the edit and again after it, the
- * edit is refused when the text changed since [apply]'s `expectedText` (a gesture's start), and the printed result keeps
- * the original's style and everything the edit did not touch. The plugin wraps it in one undoable command.
+ * edit is refused when the text changed since [apply]'s `expectedText` (a gesture's start), and the document is bound to
+ * [UiMetaDoc], edited and printed by `JsonProcessor`. Members the model does not name are kept; number spelling is not.
+ * The plugin wraps it in one undoable command.
  */
 class UiTextEditor(
     private val json: JsonProcessor,
-    private val edits: UiDocumentEdits = UiDocumentEdits(),
+    private val edits: UiDocumentEdits = UiDocumentEdits(json),
     private val decoder: UiCollectionDecoder = UiCollectionDecoder(),
 ) {
-    /**
-     * Runs [op] on the parsed `meta.json` [root] with the admission checks of [apply]: the tree must be an admitted UI asset
-     * before and after the edit. For callers that already hold the tree inside their own document write (the plugin's
-     * `editSceneJson`); [UiTransform.Changed] means the tree may be written.
-     */
-    fun transform(root: JsonNode, op: (UiDocumentEdits, JsonNode) -> UiEditResult): UiTransform {
-        (decoder.decode(root) as? UiAdmission.Refused)?.let {
-            return UiTransform.Rejected(UiEditError.NOT_EDITABLE, issues = it.issues)
-        }
-        return when (val result = op(edits, root)) {
-            is UiEditResult.Rejected -> UiTransform.Rejected(result.error, result.subject)
-            UiEditResult.Unchanged -> UiTransform.Unchanged
-            else -> (decoder.decode(root) as? UiAdmission.Refused)?.let {
-                UiTransform.Rejected(UiEditError.INVALID_RESULT, issues = it.issues)
-            } ?: UiTransform.Changed(result)
-        }
-    }
-
-    fun apply(text: String, expectedText: String? = null, op: (UiDocumentEdits, JsonNode) -> UiEditResult): UiTextResult {
+    fun apply(text: String, expectedText: String? = null, op: UiTreeEdit): UiTextResult {
         if (expectedText != null && expectedText != text) return UiTextResult.Rejected(UiEditError.STALE)
-        // UI documents are still edited as a tree: there is no typed UI DTO to edit (gate G6).
-        val root = runCatchingKeepingCancellation { json.readObject(text) }.getOrElse { return UiTextResult.Refused(it) }
-        return when (val verdict = transform(root, op)) {
-            is UiTransform.Rejected -> UiTextResult.Rejected(verdict.error, verdict.subject, verdict.issues)
-            UiTransform.Unchanged -> UiTextResult.Unchanged
-            is UiTransform.Changed -> {
-                val printed = json.pretty(root)
-                if (printed == text) UiTextResult.Unchanged else UiTextResult.Edited(text, printed, verdict.result)
-            }
-        }
+        val admitted = runCatchingKeepingCancellation { decoder.decode(text, json) }.getOrElse { return UiTextResult.Refused(it) }
+        (admitted as? UiAdmission.Refused)?.let { return UiTextResult.Rejected(UiEditError.NOT_EDITABLE, issues = it.issues) }
+        val doc = runCatchingKeepingCancellation { json.parse(text, UiMetaDoc::class.java) }.getOrElse { return UiTextResult.Refused(it) }
+        val result = op(edits, doc)
+        if (result is UiEditResult.Rejected) return UiTextResult.Rejected(result.error, result.subject)
+        if (result == UiEditResult.Unchanged) return UiTextResult.Unchanged
+        val printed = json.pretty(doc)
+        val after = runCatchingKeepingCancellation { decoder.decode(printed, json) }.getOrElse { return UiTextResult.Refused(it) }
+        (after as? UiAdmission.Refused)?.let { return UiTextResult.Rejected(UiEditError.INVALID_RESULT, issues = it.issues) }
+        return if (printed == text) UiTextResult.Unchanged else UiTextResult.Edited(text, printed, result)
     }
-}
-
-/** What [UiTextEditor.transform] made of a tree. */
-sealed interface UiTransform {
-    data class Changed(val result: UiEditResult) : UiTransform
-
-    data object Unchanged : UiTransform
-
-    data class Rejected(val error: UiEditError, val subject: String? = null, val issues: List<UiIssue> = emptyList()) : UiTransform
 }

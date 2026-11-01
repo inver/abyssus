@@ -60,7 +60,7 @@ class UiPreviewState private constructor(
         for (b in collection.bindings) values[b.name] = authoredValue(b)
     }
 
-    private fun authoredValue(b: UiBinding): UiValue = b.sample?.let { sampleOf(b.type, it, b.fields) } ?: zero(b.type)
+    private fun authoredValue(b: UiBinding): UiValue = b.sampleValue?.let { sampleOf(b.type, it, b.fields) } ?: zero(b.type)
 
     private fun zero(type: UiBindingType): UiValue = when (type) {
         UiBindingType.NUMBER -> UiValue.Num(0.0)
@@ -69,11 +69,14 @@ class UiPreviewState private constructor(
         UiBindingType.LIST -> UiValue.Rows(emptyList())
     }
 
-    private fun sampleOf(type: UiBindingType, node: com.fasterxml.jackson.databind.JsonNode, fields: List<net.nevinsky.abyssus.lib.core.ui.model.UiRecordField>): UiValue = when (type) {
-        UiBindingType.NUMBER -> UiValue.Num(node.doubleValue())
-        UiBindingType.BOOLEAN -> UiValue.Bool(node.booleanValue())
-        UiBindingType.STRING -> UiValue.Text(node.textValue())
-        UiBindingType.LIST -> UiValue.Rows(node.map { row -> fields.associate { f -> f.name to (row.get(f.name)?.let { sampleOf(f.type, it, emptyList()) } ?: zero(f.type)) } })
+    private fun sampleOf(type: UiBindingType, value: Any, fields: List<net.nevinsky.abyssus.lib.core.ui.model.UiRecordField>): UiValue = when (type) {
+        UiBindingType.NUMBER -> UiValue.Num((value as? Number)?.toDouble() ?: 0.0)
+        UiBindingType.BOOLEAN -> UiValue.Bool(value as? Boolean ?: false)
+        UiBindingType.STRING -> UiValue.Text(value as? String ?: "")
+        UiBindingType.LIST -> UiValue.Rows((value as? List<*>).orEmpty().map { row ->
+            val cells = row as? Map<*, *>
+            fields.associate { f -> f.name to (cells?.get(f.name)?.let { sampleOf(f.type, it, emptyList()) } ?: zero(f.type)) }
+        })
     }
 
     /** What the UI is shown now: every binding's current sample. */

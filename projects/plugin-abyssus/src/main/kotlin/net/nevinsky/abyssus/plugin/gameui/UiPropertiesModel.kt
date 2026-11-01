@@ -9,10 +9,9 @@ import net.nevinsky.abyssus.lib.core.ui.model.propertyWhole
 import net.nevinsky.abyssus.lib.core.ui.model.propertyNumber
 import net.nevinsky.abyssus.lib.core.ui.model.propertyDisplay
 import net.nevinsky.abyssus.lib.core.editor.ui.UiTreeEdit
-import net.nevinsky.abyssus.lib.core.editor.util.uiNumberNode
+import net.nevinsky.abyssus.lib.core.editor.util.uiNumber
 
-import net.nevinsky.abyssus.lib.core.editor.ui.uiActionNode
-import net.nevinsky.abyssus.lib.core.editor.ui.uiTextNode
+import net.nevinsky.abyssus.lib.core.editor.ui.uiActionDoc
 import net.nevinsky.abyssus.lib.core.editor.ui.UiEditResult
 import net.nevinsky.abyssus.lib.core.editor.ui.UiTree
 import net.nevinsky.abyssus.lib.core.ui.model.*
@@ -170,10 +169,10 @@ class UiPropertiesModel {
             }
             key.startsWith("property.") -> {
                 val name = key.removePrefix("property.")
-                val node = when {
+                val node: Any? = when {
                     blank -> null
                     name == "precision" || name == "value" || name == "maximum" || name == "maxRows" -> input.trim().toDoubleOrNull()?.takeIf(Double::isFinite)?.let { number(it) } ?: return null
-                    else -> uiTextNode(input)
+                    else -> input
                 }
                 return { e, m -> e.setProperty(m, widgetId, name, node) }
             }
@@ -183,12 +182,11 @@ class UiPropertiesModel {
         }
     }
 
-    private fun number(v: Double) =
-        uiNumberNode(v)
+    private fun number(v: Double) = uiNumber(v)
 
     /** The edit that sets (or with a null [type] removes) the `click` action. [target] is a screen id, or an action name for `emitAction`. */
     fun actionEdit(widgetId: String, type: UiActionType?, target: String?, assetName: String? = null): UiTreeEdit {
-        val node = type?.let { uiActionNode(it, target, assetName) }
+        val node = type?.let { uiActionDoc(it, target, assetName) }
         return { e, m -> e.setAction(m, widgetId, "click", node) }
     }
 }

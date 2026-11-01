@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.format.FormatProblem
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.ui.model.*
 
 /**
@@ -17,6 +18,9 @@ import net.nevinsky.abyssus.lib.core.ui.model.*
  * the affected controls).
  */
 class UiCollectionDecoder(private val format: AbyssusDocumentFormat = AbyssusDocumentFormat()) {
+
+    /** Admits the `meta.json` [text]; throws when it is not a JSON object. */
+    fun decode(text: String, json: JsonProcessor): UiAdmission = decode(json.readObject(text))
 
     fun decode(meta: JsonNode): UiAdmission {
         format.validate(meta, DocumentKind.ASSET)?.let {

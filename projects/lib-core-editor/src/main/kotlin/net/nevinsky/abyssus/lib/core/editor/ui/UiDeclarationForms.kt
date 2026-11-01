@@ -6,19 +6,14 @@ package net.nevinsky.abyssus.lib.core.editor.ui
 
 import net.nevinsky.abyssus.lib.core.editor.util.numberText
 import net.nevinsky.abyssus.lib.core.editor.util.NumberTextStyle
-import net.nevinsky.abyssus.lib.core.editor.util.uiNumberNode
+import net.nevinsky.abyssus.lib.core.editor.util.uiNumber
 
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.ui.model.UiBinding
 import net.nevinsky.abyssus.lib.core.ui.model.UiBindingAccess
 import net.nevinsky.abyssus.lib.core.ui.model.UiBindingType
 import net.nevinsky.abyssus.lib.core.ui.style.parseUiColor
-
-/** A number as a document would hold it: whole values without a fraction. */
-private fun jsonNumber(v: Double): com.fasterxml.jackson.databind.JsonNode =
-    uiNumberNode(v)
 
 /** What is wrong with one form field, as the key of its message (`uiFormError.<key>`). */
 data class FormError(val field: String, val message: String)
@@ -39,14 +34,14 @@ data class BindingForm(
 
 /** The form that shows the binding [b]. */
 fun bindingFormOf(b: UiBinding) = BindingForm(b.name, b.type.json, b.access.json,
-    b.sample?.let { if (b.type == UiBindingType.LIST) it.toString() else it.asText() }.orEmpty(),
+    b.sampleText.orEmpty(),
     trimmed(b.min), trimmed(b.max), trimmed(b.step), b.maxLength?.toString().orEmpty(),
     b.fields.joinToString(", ") { "${it.name}:${it.type.json}" })
 
 private fun trimmed(v: Double?) = v?.let { numberText(it, NumberTextStyle.UI) }.orEmpty()
 
 /** Validates a [BindingForm] and builds the member object (`access`, `sample`, `min`, ...) for `upsertBinding`. */
-fun bindingMembers(form: BindingForm): FormResult<ObjectNode> {
+fun bindingMembers(form: BindingForm, json: JsonProcessor): FormResult<UiBindingDoc> {
     val errors = mutableListOf<FormError>()
     val type = UiBindingType.entries.firstOrNull { it.json == form.type }
     if (form.name.isBlank()) errors += FormError("name", "name")
@@ -61,23 +56,21 @@ fun bindingMembers(form: BindingForm): FormResult<ObjectNode> {
     if (min != null && max != null && min > max) errors += FormError("min", "range")
     val maxLength = form.maxLength.takeIf { it.isNotBlank() }?.trim()?.toIntOrNull()?.takeIf { it >= 0 }
     if (form.maxLength.isNotBlank() && maxLength == null) errors += FormError("maxLength", "length")
-    val f = JsonNodeFactory.instance
-    if (type == UiBindingType.LIST) return listMembers(form, errors)
-    val sample = form.sample.takeIf { it.isNotBlank() }?.let {
+    if (type == UiBindingType.LIST) return listMembers(form, errors, json)
+    val sample: Any? = form.sample.takeIf { it.isNotBlank() }?.let {
         when (type) {
-            UiBindingType.NUMBER -> it.trim().toDoubleOrNull()?.takeIf(Double::isFinite)?.let { d -> jsonNumber(d) }
-            UiBindingType.BOOLEAN -> when (it.trim().lowercase()) { "true" -> f.booleanNode(true); "false" -> f.booleanNode(false); else -> null }
-            UiBindingType.STRING -> f.textNode(it)
+            UiBindingType.NUMBER -> it.trim().toDoubleOrNull()?.takeIf(Double::isFinite)?.let { d -> uiNumber(d) }
+            UiBindingType.BOOLEAN -> when (it.trim().lowercase()) { "true" -> true; "false" -> false; else -> null }
+            UiBindingType.STRING -> it
             UiBindingType.LIST, null -> null
-        }.also { node -> if (node == null) errors += FormError("sample", "sample") }
+        }.also { value -> if (value == null) errors += FormError("sample", "sample") }
     }
     if (errors.isNotEmpty()) return FormResult.Invalid(errors)
-    return FormResult.Valid(f.objectNode().apply {
-        if (form.access == UiBindingAccess.WRITE.json) put("access", form.access)
-        sample?.let { set<com.fasterxml.jackson.databind.JsonNode>("sample", it) }
-        min?.let { set<com.fasterxml.jackson.databind.JsonNode>("min", jsonNumber(it)) }; max?.let { set<com.fasterxml.jackson.databind.JsonNode>("max", jsonNumber(it)) }
-        step?.let { set<com.fasterxml.jackson.databind.JsonNode>("step", jsonNumber(it)) }
-        maxLength?.let { put("maxLength", it) }
+    return FormResult.Valid(UiBindingDoc().apply {
+        if (form.access == UiBindingAccess.WRITE.json) access = form.access
+        this.sample = sample
+        this.min = min?.let(::uiNumber); this.max = max?.let(::uiNumber); this.step = step?.let(::uiNumber)
+        this.maxLength = maxLength
     })
 }
 
@@ -95,22 +88,18 @@ fun parseRecord(spec: String): List<Pair<String, UiBindingType>>? {
     return result
 }
 
-// The sample is free-form user JSON (an array of rows), which JsonProcessor's object-only reader refuses: gate G6.
-private val sampleMapper = com.fasterxml.jackson.databind.json.JsonMapper()
-
 /** The members of a list binding: its `fields` and a `sample` array whose rows match them. A list is always read-only. */
-private fun listMembers(form: BindingForm, errors: MutableList<FormError>): FormResult<ObjectNode> {
-    val f = JsonNodeFactory.instance
+private fun listMembers(form: BindingForm, errors: MutableList<FormError>, json: JsonProcessor): FormResult<UiBindingDoc> {
     val record = parseRecord(form.fields)
     if (record == null) errors += FormError("fields", "fields")
-    val sample = form.sample.takeIf { it.isNotBlank() }?.let { text ->
-        val rows = runCatchingKeepingCancellation { sampleMapper.readTree(text) }.getOrNull()
-        val ok = rows != null && rows.isArray && record != null && rows.all { row ->
-            row.isObject && row.properties().all { (k, v) ->
+    val sample: List<*>? = form.sample.takeIf { it.isNotBlank() }?.let { text ->
+        val rows = runCatchingKeepingCancellation { json.parse(text, List::class.java) }.getOrNull()
+        val ok = rows != null && record != null && rows.all { row ->
+            row is Map<*, *> && row.all { (k, v) ->
                 when (record.firstOrNull { it.first == k }?.second) {
-                    UiBindingType.NUMBER -> v.isNumber
-                    UiBindingType.BOOLEAN -> v.isBoolean
-                    UiBindingType.STRING -> v.isTextual
+                    UiBindingType.NUMBER -> v is Number
+                    UiBindingType.BOOLEAN -> v is Boolean
+                    UiBindingType.STRING -> v is String
                     else -> false
                 }
             }
@@ -119,9 +108,9 @@ private fun listMembers(form: BindingForm, errors: MutableList<FormError>): Form
         rows
     }
     if (errors.isNotEmpty()) return FormResult.Invalid(errors)
-    return FormResult.Valid(f.objectNode().apply {
-        set<com.fasterxml.jackson.databind.JsonNode>("fields", f.arrayNode().also { a -> record!!.forEach { (n, t) -> a.addObject().put("name", n).put("type", t.json) } })
-        sample?.let { set<com.fasterxml.jackson.databind.JsonNode>("sample", it) }
+    return FormResult.Valid(UiBindingDoc().apply {
+        fields = record!!.map { (n, t) -> UiRecordFieldDoc().apply { name = n; type = t.json } }.toMutableList()
+        this.sample = sample
     })
 }
 
@@ -132,7 +121,7 @@ data class StyleForm(
 )
 
 /** Validates a [StyleForm] into the style's values (without its name) for `upsertStyle`. */
-fun styleValues(form: StyleForm): FormResult<ObjectNode> {
+fun styleValues(form: StyleForm): FormResult<Map<String, Any?>> {
     val errors = mutableListOf<FormError>()
     if (form.name.isBlank()) errors += FormError("name", "name")
     fun color(field: String, text: String): String? {
@@ -150,15 +139,14 @@ fun styleValues(form: StyleForm): FormResult<ObjectNode> {
     val c = color("color", form.color); val bg = color("background", form.background)
     val hover = color("hover", form.hover); val pressed = color("pressed", form.pressed); val disabled = color("disabled", form.disabled)
     if (errors.isNotEmpty()) return FormResult.Invalid(errors)
-    val f = JsonNodeFactory.instance
-    return FormResult.Valid(f.objectNode().apply {
-        size?.let { set<com.fasterxml.jackson.databind.JsonNode>("fontSize", jsonNumber(it)) }
-        c?.let { put("color", it) }; bg?.let { put("background", it) }; padding?.let { set<com.fasterxml.jackson.databind.JsonNode>("padding", jsonNumber(it)) }
-        form.font.takeIf { it.isNotBlank() }?.let { put("font", it) }
-        val states = f.objectNode()
-        hover?.let { states.putObject("hover").put("background", it) }
-        pressed?.let { states.putObject("pressed").put("background", it) }
-        disabled?.let { states.putObject("disabled").put("background", it) }
-        if (states.size() > 0) set<com.fasterxml.jackson.databind.JsonNode>("states", states)
-    })
+    val values = LinkedHashMap<String, Any?>()
+    size?.let { values["fontSize"] = uiNumber(it) }
+    c?.let { values["color"] = it }; bg?.let { values["background"] = it }; padding?.let { values["padding"] = uiNumber(it) }
+    form.font.takeIf { it.isNotBlank() }?.let { values["font"] = it }
+    val states = LinkedHashMap<String, Any?>()
+    hover?.let { states["hover"] = mapOf("background" to it) }
+    pressed?.let { states["pressed"] = mapOf("background" to it) }
+    disabled?.let { states["disabled"] = mapOf("background" to it) }
+    if (states.isNotEmpty()) values["states"] = states
+    return FormResult.Valid(values)
 }

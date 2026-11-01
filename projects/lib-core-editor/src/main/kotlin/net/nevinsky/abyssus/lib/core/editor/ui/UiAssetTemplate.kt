@@ -22,7 +22,7 @@ class UiAssetTemplate(
     fun create(uuid: UUID, lastModified: Long): String {
         val meta = AssetMeta(type = MetaType.UI, lastModified = lastModified, additional = UiAssetAdditional(), uuid = uuid)
         val text = parser.write(meta, pretty = true)
-        check(decoder.decode(json.readObject(text)) is UiAdmission.Admitted) { "the UI asset template is not valid UI" }
+        check(decoder.decode(text, json) is UiAdmission.Admitted) { "the UI asset template is not valid UI" }
         return text
     }
 }

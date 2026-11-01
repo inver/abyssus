@@ -4,7 +4,6 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.ui
 
-import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.ui.layout.UiLayoutResult
 import net.nevinsky.abyssus.lib.core.ui.layout.UiRect
 import net.nevinsky.abyssus.lib.core.ui.model.UiCollection
@@ -91,7 +90,7 @@ sealed interface UiGesturePreview {
 }
 
 /** The one edit a finished gesture makes, with the text it was started from, for stale detection. */
-class UiGestureCommit(val baseText: String, val preview: UiGesturePreview, val widgetId: String, val edit: (UiDocumentEdits, JsonNode) -> UiEditResult)
+class UiGestureCommit(val baseText: String, val preview: UiGesturePreview, val widgetId: String, val edit: UiTreeEdit)
 
 /**
  * A drag of one widget in the canvas. Pointer positions are in layout viewport units; `update` only computes a

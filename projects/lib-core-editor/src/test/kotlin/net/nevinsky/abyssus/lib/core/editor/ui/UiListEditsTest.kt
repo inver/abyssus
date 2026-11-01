@@ -1,8 +1,5 @@
 package net.nevinsky.abyssus.lib.core.editor.ui
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.IntNode
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
 import net.nevinsky.abyssus.lib.core.ui.model.UiIssueCode
 import net.nevinsky.abyssus.lib.core.ui.model.UiWidgetType
@@ -11,17 +8,17 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class UiListEditsTest {
-    private val editor = UiTextEditor()
+    private val editor = UiTextEditor(uiJson)
 
-    private val original: String = SceneJson().pretty("""{"format":"abyssus","formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main",
+    private val original: String = canonicalUi("""{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main",
         "styles":[{"name":"gold","color":"#ffd700"}],
         "screens":[{"id":"main","name":"Main","root":{"id":"root","type":"column","children":[{"id":"title","type":"label"}]}}]}}}""")!!
 
-    private fun edit(text: String = original, op: (UiDocumentEdits, JsonNode) -> UiEditResult) = editor.apply(text, null, op)
+    private fun edit(text: String = original, op: UiTreeEdit) = editor.apply(text, null, op)
     private fun edited(r: UiTextResult) = r as UiTextResult.Edited
-    private fun collection(text: String) = (UiCollectionDecoder().decode(SceneJson().parse(text)) as UiAdmission.Admitted)
+    private fun collection(text: String) = (admitUi(text) as UiAdmission.Admitted)
 
-    private val record = SceneJson().parseObject("""{"fields":[{"name":"rank","type":"number"},{"name":"name","type":"string"},{"name":"look","type":"string"}],"sample":[{"rank":1,"name":"Ace","look":"gold"}]}""")
+    private val record = uiJson.parse("""{"fields":[{"name":"rank","type":"number"},{"name":"name","type":"string"},{"name":"look","type":"string"}],"sample":[{"rank":1,"name":"Ace","look":"gold"}]}""", UiBindingDoc::class.java)
 
     /** A list with a bound record and one bound label in its row, built only through the edits. */
     private fun withList(): String {
@@ -62,7 +59,7 @@ class UiListEditsTest {
 
     @Test fun templateAndEmptyAreEditableSubtreesButCannotBeMovedOrDeleted() {
         val text = withList()
-        for (op in listOf<(UiDocumentEdits, JsonNode) -> UiEditResult>(
+        for (op in listOf<UiTreeEdit>(
             { e, m -> e.deleteWidget(m, "list-row") }, { e, m -> e.duplicateWidget(m, "list-row") },
             { e, m -> e.reorderWidget(m, "list-row", 0) }, { e, m -> e.reparentWidget(m, "list-row", "root") },
         )) assertEquals(UiEditError.ROOT_WIDGET, (edit(text, op) as UiTextResult.Rejected).error)
@@ -84,7 +81,7 @@ class UiListEditsTest {
         assertEquals(UiTextResult.Unchanged, edit(withEmpty.after) { e, m -> e.addListEmpty(m, "list") })
         assertEquals("removing it restores the text exactly", text, edited(edit(withEmpty.after) { e, m -> e.removeListEmpty(m, "list") }).after)
         assertEquals(UiEditError.BAD_VALUE, (edit(text) { e, m -> e.addListEmpty(m, "title") } as UiTextResult.Rejected).error)
-        val capped = edited(edit(text) { e, m -> e.setProperty(m, "list", "maxRows", IntNode.valueOf(10)) })
+        val capped = edited(edit(text) { e, m -> e.setProperty(m, "list", "maxRows", 10) })
         assertEquals(10, collection(capped.after).collection.screens[0].root.children[1].properties["maxRows"]!!.intValue())
     }
 
@@ -112,7 +109,7 @@ class UiListEditsTest {
     }
 
     @Test fun anInvalidRecordIsNotWrittenAndNavigationIsSetAndRestoredExactly() {
-        val badFields = SceneJson().parseObject("""{"fields":[]}""")
+        val badFields = uiJson.parse("""{"fields":[]}""", UiBindingDoc::class.java)
         val bad = edit { e, m -> e.upsertBinding(m, "scores", "list", badFields) } as UiTextResult.Rejected
         assertEquals(UiEditError.INVALID_RESULT, bad.error)
         val arrows = edited(edit { e, m -> e.setScreenNavigation(m, "main", "arrows") })

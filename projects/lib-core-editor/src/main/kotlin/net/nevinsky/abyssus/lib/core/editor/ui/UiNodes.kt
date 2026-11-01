@@ -5,24 +5,19 @@
 
 package net.nevinsky.abyssus.lib.core.editor.ui
 
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.ui.model.UiActionType
 
-/** A text value for a UI document member. */
-fun uiTextNode(value: String): JsonNode = JsonNodeFactory.instance.textNode(value)
-
-/** The action object a widget stores: [type] with the [target] member it needs (a screen id, or an action name for `emitAction`). */
-fun uiActionNode(type: UiActionType, target: String?, assetName: String?): JsonNode =
-    JsonNodeFactory.instance.objectNode().apply {
-        put("type", type.json)
-        if (assetName != null) put("assetName", assetName)
+/** The action a widget stores: [type] with the [target] member it needs (a screen id, or an action name for `emitAction`). */
+fun uiActionDoc(type: UiActionType, target: String?, assetName: String?): UiActionDoc =
+    UiActionDoc().apply {
+        this.type = type.json
+        this.assetName = assetName
         when (type) {
-            UiActionType.OPEN_SCREEN, UiActionType.SHOW_OVERLAY, UiActionType.CLOSE_OVERLAY -> target?.let { put("screenId", it) }
-            UiActionType.EMIT_ACTION -> target?.let { put("name", it) }
+            UiActionType.OPEN_SCREEN, UiActionType.SHOW_OVERLAY, UiActionType.CLOSE_OVERLAY -> screenId = target
+            UiActionType.EMIT_ACTION -> name = target
             UiActionType.BACK -> Unit
         }
     }
 
-/** An edit of a UI document: the host writes the lambda and passes the tree it receives to [UiDocumentEdits]. */
-typealias UiTreeEdit = (UiDocumentEdits, JsonNode) -> UiEditResult
+/** An edit of a UI document: the host writes the lambda and passes the document it receives to [UiDocumentEdits]. */
+typealias UiTreeEdit = (UiDocumentEdits, UiMetaDoc) -> UiEditResult

@@ -4,8 +4,6 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.util
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import java.math.BigDecimal
 import java.math.MathContext
 import kotlin.math.abs
@@ -43,10 +41,5 @@ fun isWholeNumber(value: Double): Boolean = value == Math.rint(value) && abs(val
 /** [value] as short as it reads: `3` for 3.0, the double spelling otherwise. */
 fun shortNumberText(value: Double): String = if (isWholeNumber(value)) value.toLong().toString() else value.toString()
 
-/** UI documents retain their existing integer-node threshold and double precision outside it. */
-fun uiNumberNode(value: Double): JsonNode {
-    val integer = numberText(value, NumberTextStyle.UI_DOCUMENT).toIntOrNull()
-    return if (integer != null) JsonNodeFactory.instance.numberNode(integer) else JsonNodeFactory.instance.numberNode(
-        value
-    )
-}
+/** A UI document number: whole values below 1e9 are `Int`, any other is `Double`, so a stored value never gains a fraction. */
+fun uiNumber(value: Double): Number = if (value == Math.rint(value) && abs(value) < 1e9) value.toInt() else value
