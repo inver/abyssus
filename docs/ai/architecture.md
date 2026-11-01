@@ -225,13 +225,13 @@ The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and componen
 `AssetMetaEditor`; reference and face choices come from `projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/meta/AssetReferenceChoices.kt`) all go through `editSceneDocument`
 (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`):
 
-1. `DocumentTextEditor` (`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/document/DocumentTextEditor.kt`)
-   parses the document with `SceneJson` and admits it, lets the caller mutate the tree, admits the result and
-   re-serializes it with `SceneJson().inStyleOf`, which keeps indentation, key order and number text.
+1. `SceneTextEditor` (`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/scene/SceneTextEditor.kt`)
+   admits and parses the text to a `SceneDto`, lets the caller's `SceneEdit` change it, and prints it with
+   `JsonProcessor.pretty` (always pretty-printed). `ProjectTextEditor`, `AssetMetaTextEditor` and `UiTextEditor` do the same for `.abss`, `meta.json` and UI assets.
 2. Unless the document changed meanwhile, replace the text in a `WriteCommandAction` and save.
 3. Publish `AbyssusSceneEdited.TOPIC` (the file). The Abyssus pane's `AbyssusTreeRefresh` listens and refreshes the tree; the writer knows no UI. The same coordinator also follows document changes (Undo/Redo, unsaved text) and project VFS events for native documents, asset `meta.json` and asset folders, coalescing them with `lib-core-editor`'s `RefreshCoalescer` and restoring selection and expansion by row identity.
 
-`HeadlessEditing` (`lib-core-editor`, `editor.headless`) runs the same `DocumentTextEditor` on text with no IDE, so a
+`HeadlessEditing` (`lib-core-editor`, `editor.headless`) runs the same `SceneTextEditor` on text with no IDE, so a
 caller without the plugin validates and edits a scene, project or `meta.json` with byte-identical results and the same
 refusals (spec `headless-scene-editing`).
 
@@ -287,20 +287,18 @@ short or fully qualified; scene data never triggers arbitrary class loading. `Ec
 typed entities into engine entities. Unregistered or unbindable component entries are bound as a `RawComponent`, carried as raw
 JSON in `EcsLoadingWarns`, with warnings. Entity ids are numeric; invalid references become
 `NO_ENTITY`. `FoliageComponent` is built in and keeps unmodeled members in an extras map (any-setter/any-getter), so a typed write keeps them. `SceneFoliageListing` lists a loaded engine's terrain-bound foliage without files or GL.
-`NativeJsonTree` in `core.io` is the one lossless JSON reader, used by `SceneJson` and by `SceneLoader`.
+`NativeJsonTree` in `core.io` is the one token-level JSON reader (exact number text and key order).
 `SceneEngine` and `SceneEntityIds` live in `core.ecs`; the look-at and camera synchronization systems
 are in `projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/ecs/system`.
 
 `RuntimeSceneLoader` combines `SceneLoader` and `EcsLoader`, installs those systems and returns a `SceneContext`.
-The editor view reads JSON directly instead of updating an Ashley engine. `lib-core-editor` owns `EcsWriter`, which
-serializes registered components with Jackson into a wrapped `entities` map, and the built-in editing codecs.
-It is a serialization API, not an IDE file writer; plugin document edits still go through `editSceneDocument`.
+The editor view reads the `SceneDto` directly instead of updating an Ashley engine. Components are edited in place on the
+`EntityDto`'s Ashley instances; there is no separate editing codec and no `EcsWriter`. Plugin document edits go through `editSceneDocument`.
 
 ### The scene document layer
 
-The editor keeps the parsed JSON tree as its model (unknown keys, key order and number text stay the file's);
-games and Play keep an Ashley `SceneEngine`. Both use Jackson binding to `lib-core`'s component classes. In the editor,
-document readers use `SceneDocument` / `EntityView` and writers use `SceneEntityTree`, both over the id-keyed `ecs` map.
+The editor keeps the parsed `SceneDto` as its model (an unbindable component stays a `RawComponent`); games and Play keep an
+Ashley `SceneEngine`. Both bind `lib-core`'s component classes with Jackson. Readers and edits use `scene.entity(id)`, `entities()`, `nextId()` and `component(id, type)` over the id-keyed `ecs` map.
 The read model (`SceneContent`, `SceneRenderParams`, ray snapshots, the physics overlay) takes the typed
 `SceneDto.ecs: Map<Long, EntityDto>` that `SceneLoader` and `DocumentParsing` bind; the runtime loader reads the same map.
 
@@ -335,7 +333,7 @@ and bounds, and `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/pl
 
 The shared `AbyssusDocumentFormat` (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/format/AbyssusDocumentFormat.kt`)
 is a constructor-built validator over parsed `JsonNode`s with no Swing, IntelliJ or GL dependencies. It checks the
-`.abss` / `.scene` / `meta.json` header (`format: "abyssus"`, integral `formatVersion: 1`) and reserved scene fields
+`.abss` / `.scene` / `meta.json` header (integral `formatVersion: 1`; a `format` marker is not required) and reserved scene fields
 (`ecs.componentIdentifiers`, renderable `class`), returning a `FormatRejection` or null. Extension payloads are opaque.
 
 `DocumentParsing` guards editor project/scene binding; `AssetMetaReader` guards editor metadata reads (both in

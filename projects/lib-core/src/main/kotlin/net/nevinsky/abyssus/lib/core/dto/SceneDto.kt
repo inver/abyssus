@@ -14,6 +14,8 @@ import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import java.util.*
 
 data class SceneDto(
+    /** The native document version; the parser requires 1 and the writer always prints it. */
+    val formatVersion: Int = 1,
     /** The scene's id as the file holds it: a UUID for a scene made now, a number in older files. */
     val id: String = UUID.randomUUID().toString(),
     val name: String? = null,

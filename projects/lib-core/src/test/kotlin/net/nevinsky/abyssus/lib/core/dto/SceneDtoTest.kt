@@ -10,6 +10,15 @@ class SceneDtoTest {
         SceneDto(ecs = entries.associate { (id, parts) -> id to EntityDto(parts.toMutableList()) }.toMutableMap())
 
     @Test
+    fun aPrintedSceneCarriesItsFormatVersionAndReadsBack() {
+        val registry = net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry()
+        val json = net.nevinsky.abyssus.lib.core.io.JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER, registry)
+        val text = json.pretty(SceneDto(name = "A"))
+        assertTrue(text, text.contains("\"formatVersion\": 1"))
+        assertEquals("A", net.nevinsky.abyssus.lib.core.scene.SceneParser(json, registry).parse(text).name)
+    }
+
+    @Test
     fun nextIdOnEmptySceneIsOne() = assertEquals(1L, SceneDto().nextId())
 
     @Test

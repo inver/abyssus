@@ -47,22 +47,19 @@ Don't copy a stock g3d class into the repository: subclass it, or wrap it as `Fi
 
 ## JSON
 
-- **Always use `SceneJson`** (`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/document/SceneJson.kt`), never a fresh
-  `ObjectMapper`. It keeps key order and `null` members, and keeps float text exactly (`RawNumberNode`). Reading and
-  writing a file therefore never changes numbers you didn't touch.
-- **Binding:** read-only DTO readers use `JsonProcessor.bind` / `SceneReader.parse`; edit transforms use the
-  original `SceneJson` tree. `JsonProcessor(log)` owns its Jackson mapper; `SceneJson` shares its formatting mapper.
-  Unknown fields are ignored during DTO binding, and property declaration order is the order the tree shows.
+- **Always use `JsonProcessor`**, never a fresh `ObjectMapper`. Documents are bound to DTOs (`SceneDto`, `ProjectDto`,
+  `AssetMeta<T>`, `UiMetaDoc`) with `parse` / `bind` and printed with `pretty`. The printer decides number spelling and key
+  order (declaration order); unknown members of a typed DTO are dropped, except where a DTO keeps them (`extras`).
+- **No tree types in `lib-core-editor`:** it never names `JsonNode`, `ObjectNode` or `ArrayNode` (`checkJacksonTreeUse`).
+  Free-form values are `Map<String, Any?>` read with `JsonValues` (`valuesOf`, `at`, `textAt`).
 - **Non-row fields:** mark them `@get:JsonIgnore` (for example `SceneEntry.file`, `AssetInfo.unused`) so the tree
   doesn't list them.
-- **Optional values:** read them from a `JsonNode` with the helpers in `projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/util/JsonNodeExt.kt`
-  (`opt`, `text`, `float`, `obj`), which treat absent and JSON `null` alike.
 - **Wiring:** pass collaborators in through constructors. A `service<...>()` lookup belongs only in an action, a
   provider, a tool window factory, the Abyssus pane, or a deferred service accessor. Constructors must not look up other services;
   injected collaborators or lazy access keep unrelated service groups uninitialized.
 - **Writing a file:** use `editSceneDocument` (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`); its text transform is
-  `lib-core-editor`'s `DocumentTextEditor`, re-serialized with `SceneJson().inStyleOf`, so a pretty file stays pretty and a
-  compact one stays compact. Address entities through `SceneDocument` / `SceneEntityTree`, never by `"ecs"` / `"components"` keys.
+  `lib-core-editor`'s `SceneTextEditor`, which parses the scene to a `SceneDto`, runs a `SceneEdit` and prints it with
+  `JsonProcessor.pretty`, so a scene is always written pretty-printed. Address entities with `scene.entity(id)`, never by `"ecs"` / `"components"` keys.
 
 ## Writing files
 

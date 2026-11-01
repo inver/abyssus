@@ -24,9 +24,8 @@ namespace, including extension providers that use editor value types, must updat
 | Package | Holds |
 |---|---|
 | (root) | `EditorMessages`, `ResourceEditorMessages` |
-| `document` | `SceneJson` (key order and number text kept, reading through `lib-core`'s `NativeJsonTree`), `JsonFormat`, `DocumentParsing`, `AssetMetaReader`, the format aliases, `SceneDocument` / `EntityView` / `SceneEntityTree` (the only code that knows `ecs[.entities].<id>.components`), `DocumentTextEditor` (parse, admit, mutate, admit, print in style), `SceneRaySettings` and `RayMaterialOverrides` (the `rayTracing` blocks) |
-| `components` | `ComponentEditor` (add, update, remove a modeled component), `ComponentCodec`, `BuiltInComponentKinds`, `ComponentReader`, `LightEntities`, `AssetEntities` |
-| `ecs` | `EcsWriter` (Jackson serialization of components and engines; `FoliageComponent` keeps its unmodeled members in an extras map) |
+| `document` | `DocumentParsing`, `AssetMetaReader`, `AssetMetaTextEditor`, `ProjectTextEditor`, `TextEditOutcome`, `MetaDocument` (plain-value asset reads), `JsonValues` readers |
+| `components` | `ComponentEditor` (add, update, remove a modeled component in place on the `EntityDto`), `BuiltInComponentKinds`, `LightEntities`, `AssetEntities` |
 | `content` | Leaf value types: `Vector3`, `Quaternion`, `Pose`, the placements, `RenderAsset`, `PlacementTransform.toMatrix` |
 | `scene` | The read model: `SceneContent` / `sceneContentOf`, `FoliagePlacement`, `SceneRenderParams` / `renderParamsOf`, `PlacementMapper`, `CameraFrustum`, `LightSet`, `ModelEntity`, `AssetRevisions` |
 | `pick` | `ScenePicker`, `ScenePreviewLayers`, `SnapshotSceneQueries` (incl. `terrainOf` / `terrainHit` for painting), `TerrainRestHeight`, `OrbitCamera`, gizmo math (`GizmoDrag`, `GizmoHit`, `GizmoHandles`), `SceneInteraction` (with `GestureDriver` for the press-drag-release gestures, incl. the one `Gesture.Brushing` stroke that calls the `BrushStroke` registered for the mode's kind (`SceneInteraction.setBrushStroke`), and `DrawingSession` for path drawing; both plain JVM), `BrushMode` (kind, entity, radius, strength, the resolved `reversed` flag and the kind's `BrushOptions`) in `SceneViewState.brush`, the one terrain brush a view holds, `ScenePreview`, `SceneTransformWriter`, `SceneMarkers` / `LineSink` |
@@ -171,7 +170,7 @@ no Swing, GL or platform classes.
 
 `HeadlessEditing` validates `.scene`, `.abss` and `meta.json` text and applies the transform, component-field and
 asset-property edits, returning the edited text or a `Refusal` with the reason the plugin shows. It runs the same
-`DocumentTextEditor` that `editSceneDocument` runs, so the same input gives byte-identical output
+`SceneTextEditor` that `editSceneDocument` runs, so the same input gives byte-identical output
 (`HeadlessSceneEditingTest` in the plugin compares them).
 
 ## Tests

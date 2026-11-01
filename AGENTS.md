@@ -48,8 +48,8 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
   - `terrain/`: the New Terrain dialog and the regeneration controls; generation itself is in `lib-core-editor`.
   - `foliage/`: the foliage properties section, shared drafts, document-aware Apply and the bake undo cache.
   - `filetype/`, `language/`: file types, icons, the GLTF PSI.
-- `projects/lib-core-editor/`: a plain JVM library, root package `net.nevinsky.abyssus.lib.core.editor`: scene documents (`SceneJson`,
-  `SceneDocument`, `DocumentTextEditor`), component editing (`ComponentEditor`, `LightEntities`), the scene read model
+- `projects/lib-core-editor/`: a plain JVM library, root package `net.nevinsky.abyssus.lib.core.editor`: scene editing on DTOs (`SceneTextEditor`,
+  `SceneEdit`, `ProjectTextEditor`, `AssetMetaTextEditor`, `UiTextEditor`), component editing (`ComponentEditor`, `LightEntities`), the scene read model
   (`SceneContent`), picking and gizmo math, terrain generation, foliage scattering and brush math, asset meta editing, the ray tracing bridge with its CPU snapshots (`RaySnapshotStore`), and the
   headless editing API (`HeadlessEditing`), and the FlightGear and model imports that stage new MODEL asset folders
   (`flightgear`, `modelimport`). Ashley components, registry, loader and systems live in `lib-core`;
@@ -93,10 +93,10 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
   reads from a tree, no string-built JSON). Bind to DTOs and write them back through the existing mapper (`JsonProcessor.bind`). `NativeJsonTree` is the only token-level reader (exact number text and key order); don't add another.
   Use only `JsonProcessor`. To extend it or add methods, ask first.
 
-- **Native documents only:** `.abss`, `.scene` and asset `meta.json` require `format: "abyssus"` and integral
-  `formatVersion: 1`. Validate with `AbyssusDocumentFormat` before binding, enumerating, editing or formatting.
+- **Native documents only:** `.abss`, `.scene` and asset `meta.json` require integral `formatVersion: 1` (there is no `format`
+  marker; one a file still has is ignored and not written back). Validate with `AbyssusDocumentFormat` before binding, enumerating, editing or formatting.
   Reject legacy `ecs.componentIdentifiers` and renderable `class`; a component entry is keyed by the class name of a built-in or registered component (fully qualified, or its short name), assets use `kind: "asset"`.
-  Keep unknown native extension data, unrelated numbers/key order and default omission. No importer or implicit migration.
+  Documents are edited as DTOs and printed by `JsonProcessor.pretty`: unknown members of typed DTOs are dropped (UI documents keep them in `extras`), and number spelling and key order are the printer's, not the file's. No importer or implicit migration.
 
 - **A shipped game carries no editor code.** `lib-gdx`, `lib-core`, `lib-render` and `lib-physics` hold no import of `lib-core-editor`,
   `lib-game-link`, `lib-raytracing` or the plugin, and no ray-tracing snapshot type (`./gradlew checkNoEditorCode`, part of
@@ -130,10 +130,10 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
 - **No package cycles:** `./gradlew checkPackageCycles` (part of `check`) fails on a cycle between the packages of a
   module; its allowlist `gradle/package-cycles.allowlist` stays empty.
 - **Write scene files only through `editSceneDocument`** (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`).
-  It edits the document as one undoable command and keeps the file's formatting and number text; the text transform
-  itself is `lib-core-editor`'s `DocumentTextEditor`, which `HeadlessEditing` uses without the IDE. The only other
+  It edits the scene as one undoable command and always writes it pretty-printed; the text transform
+  itself is `lib-core-editor`'s `SceneTextEditor`, which `HeadlessEditing` uses without the IDE. The only other
   writer is `SceneFormatListener`, which pretty-prints a `.scene` / `.abss` opened in the text editor.
-- **Never change numbers or key order you didn't mean to change.** Parse with `SceneJson`, which keeps both.
+- **Edit scenes as `SceneDto`.** A `SceneEdit` changes the DTO in place and returns whether it changed; `SceneRoundTripTest` pins that a printed scene reads back.
 - **`Gdx.*` is process-global inside the IDE.** Run libGDX code only inside `GdxRuntime.withContext`, on the AWT
   thread that renders the canvas (a Swing timer drives frames). Only the `prepare` step of `AssetStorage` runs off that
   thread, and it must not touch GL. Picking and gizmo hit tests use CPU data and need no context.

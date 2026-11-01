@@ -1,8 +1,8 @@
 # File formats
 
 Abyssus owns the JSON format of project `.abss`, scene `.scene` and asset `meta.json` documents.
-The plugin reads them with `SceneJson` (`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/document/SceneJson.kt`),
-which keeps key order, `null` members and the exact text of numbers. Writes must keep those, too. The user-facing
+The plugin binds them to DTOs with `JsonProcessor` and writes them back with `JsonProcessor.pretty`. Key order is the DTO's
+declaration order, number spelling is the printer's, and members a typed DTO does not model are dropped (UI documents keep them). The user-facing
 description of what the tree shows is in `README.md` ("Abyssus view"); this page is the format reference.
 
 Examples: `projects/plugin-abyssus/src/test/testData/project/Untitled/` (models, terrain, skybox, a camera) and
@@ -10,15 +10,16 @@ Examples: `projects/plugin-abyssus/src/test/testData/project/Untitled/` (models,
 
 ## Native document identity
 
-Version 1 requires these root members in each project, scene and asset metadata document:
+Version 1 requires this root member in each project, scene and asset metadata document (a `format` marker is no longer
+required; one a file has is ignored and not written back):
 
 ```json
-{ "format": "abyssus", "formatVersion": 1 }
+{ "formatVersion": 1 }
 ```
 
 `AbyssusDocumentFormat` (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/format/AbyssusDocumentFormat.kt`)
 validates document identity and reserved scene fields on the caller's thread, without GL or platform services.
-Only the exact string `abyssus` and integral JSON version `1` are supported. Missing/null/foreign markers, string
+Only integral JSON version `1` is supported. Missing/null versions, string
 or fractional versions (including `1.0`), negative versions and future versions are unsupported. Asset metadata's
 `version` has its own meaning; it is not the document `formatVersion`.
 
@@ -105,8 +106,8 @@ engine, which also holds the id): `type` is `GROUP`, `LIGHT_DIRECTIONAL`, `LIGHT
 `enabled` are not part of the format: a scene that has them is unsupported (no importer). `SceneLoader` binds the whole
 scene in one `JsonProcessor` step (`SceneDto.ecs`, `EntityDto.components` as `List<Component>` in file order); a
 component the registry does not know and one that cannot be bound are bound as a `RawComponent` that keeps the exact
-payload as JSON text (and whether the entity disables it), so the scene writes back unchanged. The editor's write path patches the
-document tree (`SceneJson`) so number text and key order survive; `SceneDto.ecs` is only the read model.
+payload as JSON text (and whether the entity disables it), so the scene writes back unchanged. The editor's write path edits the
+`SceneDto` and prints it with `JsonProcessor.pretty`; `SceneDto` carries `formatVersion` so a printed scene reads back.
 
 The native component fields described by the specs and fixtures:
 
@@ -632,9 +633,8 @@ the entity draws one mesh (`meshId`), overrides for materials that mesh does not
 
 A native scene may carry procedural water under the root `abyssus.waterSurfaces` object, keyed by a stable surface id
 (a UUID string). Water is not an ECS entity and not an asset. It is Abyssus-only extension data inside a version 1
-document: the loader keeps it, no other tool is promised to. The codec is `WaterCodec`
-(`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/water/WaterCodec.kt`); the edits are
-`WaterEdits` in the same package; the scalars and rules are `WaterSettings` / `WaterValidation`
+document: the loader keeps it, no other tool is promised to. The editor's water codec, edits and UI are
+removed for now (the Phase 4 decision, G7); the scene keeps the block as a raw value. The scalars and rules are `WaterSettings` / `WaterValidation`
 (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/water/WaterSettings.kt`).
 
 ```json
