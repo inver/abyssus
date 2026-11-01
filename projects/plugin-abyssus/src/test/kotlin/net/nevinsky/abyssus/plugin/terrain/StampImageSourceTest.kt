@@ -34,7 +34,7 @@ class StampImageSourceTest {
 
     private fun textureAsset(assets: File, name: String, type: String, writeImage: Boolean, pixels: IntArray = intArrayOf(0x000000ff, 0xffffffff.toInt())) {
         val folder = File(assets, name).apply { mkdirs() }
-        File(folder, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"type":"$type","uuid":"$name","additional":{"file":"image.png"}}""")
+        File(folder, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"type":"$type","uuid":"${java.util.UUID.nameUUIDFromBytes(name.toByteArray())}","additional":{"file":"image.png"}}""")
         if (!writeImage) return
         val pixmap = Pixmap(pixels.size, 1, Pixmap.Format.RGBA8888)
         try {

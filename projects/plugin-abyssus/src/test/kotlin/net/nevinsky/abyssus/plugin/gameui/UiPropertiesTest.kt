@@ -4,6 +4,11 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.plugin.uiDocJson
+
+import net.nevinsky.abyssus.plugin.canonicalUi
+import net.nevinsky.abyssus.plugin.admitUi
+
 import net.nevinsky.abyssus.lib.core.editor.ui.*
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.undo.UndoManager
@@ -15,7 +20,6 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.assets.ui.UiPreparedResource
 import net.nevinsky.abyssus.lib.core.assets.ui.UiResourcePreparer
 import net.nevinsky.abyssus.lib.core.assets.ui.UiResourceResolver
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.ui.model.UiActionType
 import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
 import net.nevinsky.abyssus.lib.core.ui.model.UiCollection
@@ -29,7 +33,7 @@ import javax.swing.JComboBox
 import javax.swing.JTextField
 
 class UiPropertiesTest : BasePlatformTestCase() {
-    private val source = SceneJson().pretty("""{"format":"abyssus","formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main",
+    private val source = canonicalUi("""{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main",
         "bindings":[
           {"name":"score","type":"number","sample":1},
           {"name":"volume","type":"number","access":"write","sample":0.5},
@@ -62,7 +66,7 @@ class UiPropertiesTest : BasePlatformTestCase() {
         file = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(dir, "assets/menus/meta.json"))!!
     }
 
-    private val collection: UiCollection get() = (UiCollectionDecoder().decode(SceneJson().parse(source)) as UiAdmission.Admitted).collection
+    private val collection: UiCollection get() = (admitUi(source) as UiAdmission.Admitted).collection
 
     private fun controller(): UiEditorController = UiEditorController(project, file, Executor { it.run() }, { it.run() }).also { it.reload() }
 
@@ -285,28 +289,29 @@ class UiPropertiesTest : BasePlatformTestCase() {
 
     // ---- declaration forms and panel ----
 
-    private fun valid(r: FormResult<com.fasterxml.jackson.databind.node.ObjectNode>) = (r as FormResult.Valid).value
+    private fun valid(r: FormResult<Any?>) = (r as FormResult.Valid).value
+    private fun js(v: Any?) = uiDocJson.toString(v!!)
     private fun errors(r: FormResult<*>) = (r as FormResult.Invalid).errors.map { it.field to it.message }
 
     fun testBindingFormsAreValidatedBeforeAnythingIsWritten() {
         assertEquals("""{"access":"write","sample":0.5,"min":0,"max":1,"step":0.05,"maxLength":12}""",
-            valid(bindingMembers(BindingForm("v", "number", "write", "0.5", "0", "1", "0.05", "12"))).toString())
-        assertEquals("""{}""", valid(bindingMembers(BindingForm("v", "number", "readOnly"))).toString())
-        assertEquals("""{"sample":true}""", valid(bindingMembers(BindingForm("m", "boolean", "readOnly", "TRUE"))).toString())
-        assertEquals("""{"sample":"hi"}""", valid(bindingMembers(BindingForm("s", "string", "readOnly", "hi"))).toString())
-        assertEquals(listOf("name" to "name"), errors(bindingMembers(BindingForm(" ", "number"))))
-        assertEquals(listOf("sample" to "sample"), errors(bindingMembers(BindingForm("v", "number", sample = "abc"))))
-        assertEquals(listOf("sample" to "sample"), errors(bindingMembers(BindingForm("m", "boolean", sample = "maybe"))))
-        assertEquals(listOf("min" to "range"), errors(bindingMembers(BindingForm("v", "number", min = "5", max = "1"))))
-        assertEquals(listOf("step" to "positive"), errors(bindingMembers(BindingForm("v", "number", step = "0"))))
-        assertEquals(listOf("maxLength" to "length"), errors(bindingMembers(BindingForm("s", "string", maxLength = "-1"))))
-        assertEquals(listOf("min" to "number"), errors(bindingMembers(BindingForm("v", "number", min = "NaN"))))
+            js(valid(bindingMembers(BindingForm("v", "number", "write", "0.5", "0", "1", "0.05", "12"), uiDocJson))))
+        assertEquals("""{}""", js(valid(bindingMembers(BindingForm("v", "number", "readOnly"), uiDocJson))))
+        assertEquals("""{"sample":true}""", js(valid(bindingMembers(BindingForm("m", "boolean", "readOnly", "TRUE"), uiDocJson))))
+        assertEquals("""{"sample":"hi"}""", js(valid(bindingMembers(BindingForm("s", "string", "readOnly", "hi"), uiDocJson))))
+        assertEquals(listOf("name" to "name"), errors(bindingMembers(BindingForm(" ", "number"), uiDocJson)))
+        assertEquals(listOf("sample" to "sample"), errors(bindingMembers(BindingForm("v", "number", sample = "abc"), uiDocJson)))
+        assertEquals(listOf("sample" to "sample"), errors(bindingMembers(BindingForm("m", "boolean", sample = "maybe"), uiDocJson)))
+        assertEquals(listOf("min" to "range"), errors(bindingMembers(BindingForm("v", "number", min = "5", max = "1"), uiDocJson)))
+        assertEquals(listOf("step" to "positive"), errors(bindingMembers(BindingForm("v", "number", step = "0"), uiDocJson)))
+        assertEquals(listOf("maxLength" to "length"), errors(bindingMembers(BindingForm("s", "string", maxLength = "-1"), uiDocJson)))
+        assertEquals(listOf("min" to "number"), errors(bindingMembers(BindingForm("v", "number", min = "NaN"), uiDocJson)))
     }
 
     fun testStyleFormsBuildStateOverridesAndRejectBadColours() {
         assertEquals("""{"fontSize":24,"color":"#ff0000","background":"#101010ff","padding":4,"font":"game","states":{"hover":{"background":"#202020"},"disabled":{"background":"#333333"}}}""",
-            valid(styleValues(StyleForm("s", "24", "#ff0000", "#101010ff", "4", "game", "#202020", "", "#333333"))).toString())
-        assertEquals("{}", valid(styleValues(StyleForm("s"))).toString())
+            js(valid(styleValues(StyleForm("s", "24", "#ff0000", "#101010ff", "4", "game", "#202020", "", "#333333")))))
+        assertEquals("{}", js(valid(styleValues(StyleForm("s")))))
         assertEquals(listOf("name" to "name", "color" to "color", "hover" to "color", "fontSize" to "number"),
             errors(styleValues(StyleForm("", "-3", "red", hover = "#12"))).sortedBy { listOf("name", "color", "hover", "fontSize").indexOf(it.first) })
     }

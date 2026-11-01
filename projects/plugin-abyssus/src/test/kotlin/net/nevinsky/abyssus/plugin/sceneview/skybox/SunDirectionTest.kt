@@ -12,7 +12,7 @@ class SunDirectionTest {
     private val white = Color(1f, 1f, 1f, 1f)
 
     private fun light(kind: LightKind, intensity: Float, direction: Vector3) =
-        LightPlacement("e", kind, white, intensity, Vector3(0f, 0f, 0f), direction)
+        LightPlacement(1L, kind, white, intensity, Vector3(0f, 0f, 0f), direction)
 
     @Test
     fun followsTheBrightestLight() {
@@ -49,13 +49,13 @@ class SunDirectionTest {
     @Test
     fun sunLightIsTheLightTheSkySunFollows() {
         val lights = listOf(
-            LightPlacement("7", LightKind.DIRECTIONAL, white, 5f, Vector3(0f, 0f, 0f), Vector3(0f, -1f, 0f)),
-            LightPlacement("3", LightKind.DIRECTIONAL, white, 1f, Vector3(0f, 0f, 0f), Vector3(1f, 0f, 0f)),
-            LightPlacement("9", LightKind.DIRECTIONAL, white, 50f, Vector3(0f, 0f, 0f), Vector3(0f, 0f, 0f)),
-            LightPlacement("8", LightKind.SPOT, white, 90f, Vector3(0f, 0f, 0f), Vector3(0f, -1f, 0f)),
+            LightPlacement(7L, LightKind.DIRECTIONAL, white, 5f, Vector3(0f, 0f, 0f), Vector3(0f, -1f, 0f)),
+            LightPlacement(3L, LightKind.DIRECTIONAL, white, 1f, Vector3(0f, 0f, 0f), Vector3(1f, 0f, 0f)),
+            LightPlacement(9L, LightKind.DIRECTIONAL, white, 50f, Vector3(0f, 0f, 0f), Vector3(0f, 0f, 0f)),
+            LightPlacement(8L, LightKind.SPOT, white, 90f, Vector3(0f, 0f, 0f), Vector3(0f, -1f, 0f)),
         )
         val sun = SunDirection.sunLight(lights)!!
-        assertEquals("7", sun.entityId)
+        assertEquals(7L, sun.entityId)
         val d = sun.direction
         assertEquals(SunDirection.of(lights), Vector3(0f - d.x, 0f - d.y, 0f - d.z))
         assertEquals(null, SunDirection.sunLight(emptyList()))

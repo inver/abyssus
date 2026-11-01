@@ -101,7 +101,7 @@ class PlayStateTest {
         provider.listener!!.started()
         assertEquals(Phase.PLAYING, play.phase)
         val sim = provider.started.single()
-        assertEquals(sim.poses, play.poses())
+        assertEquals(sim.poses!!.mapKeys { it.key.toLong() }, play.poses())
         play.pause()
         assertEquals(Phase.PAUSED, play.phase)
         play.step()

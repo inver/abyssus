@@ -10,7 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GameBadgeTest {
-    private fun component(name: String) = DtoEntry("/s/ecs/0/components/$name", name, null, null, null, null, listOf("ecs", "0", "components"))
+    private fun component(name: String) = DtoEntry("/s/ecs/0/components/$name", name, ComponentNode(net.nevinsky.abyssus.lib.core.dto.SceneDto(), 0, name), null, null, null, listOf("ecs", "0", "components"))
 
     @Test
     fun builtInComponentsCarryNoBadge() {

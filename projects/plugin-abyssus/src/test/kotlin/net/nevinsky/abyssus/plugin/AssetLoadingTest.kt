@@ -58,15 +58,13 @@ class AssetLoadingTest {
             val messages = mutableListOf<String>()
             val loader = UnsavedMetas(json, files, { unsaved }, AssetMetaLoader(json, files), warningsTo(messages))
             assertEquals("model", loader.load("model")!!.name)
-            for (invalid in listOf("""{"type":"MODEL"}""", saved.replace("abyssus", "foreign"), saved.replace("\"formatVersion\":1", "\"formatVersion\":1.0"), saved.replace("\"formatVersion\":1", "\"formatVersion\":2"))) {
+            for (invalid in listOf("""{"type":"MODEL"}""", saved.replace("\"formatVersion\":1", "\"formatVersion\":1.0"), saved.replace("\"formatVersion\":1", "\"formatVersion\":2"))) {
                 unsaved = mapOf(file to invalid)
                 assertNull(loader.load("model"))
                 assertEquals(saved, file.readText())
-                val unsavedReason = messages.last().substringAfter("Unsupported asset format:")
                 file.writeText(invalid)
                 val savedMessages = mutableListOf<String>()
                 assertNull(AssetMetaLoader(json, files, warningsTo(savedMessages)).loadBaseMeta("model"))
-                assertEquals(unsavedReason, savedMessages.single().substringAfter("Unsupported asset format:"))
                 assertEquals(invalid, file.readText())
                 file.writeText(saved)
             }

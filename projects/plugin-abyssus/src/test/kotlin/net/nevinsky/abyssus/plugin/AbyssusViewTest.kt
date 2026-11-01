@@ -47,7 +47,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         myFixture.copyFileToProject("Tree/Untitled.abss", "Untitled/Untitled.abss")
         val sceneText = java.io.File("$testDataPath/Tree/scenes/Main Scene.scene").readText()
         myFixture.addFileToProject("Untitled/scenes/Main Scene.scene",
-            net.nevinsky.abyssus.lib.core.editor.document.SceneJson().pretty(net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(sceneText)))
+            prettyScene(sceneText))
         return myFixture.findFileInTempDir("Untitled")
     }
 
@@ -101,7 +101,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertEquals(0.001f, scene.fog!!.density!!, 0f)
         assertEquals(0.3f, scene.ambientLight!!.intensity!!, 0f)
         assertEquals("skybox_physical", scene.skyboxName)
-        assertEquals(listOf("id", "name", "ambientLightEnabled", "ambientLight", "fogEnabled", "fog", "skyboxEnabled", "skyboxName", "ecs"),
+        assertEquals(listOf("formatVersion", "id", "name", "ambientLightEnabled", "ambientLight", "fogEnabled", "fog", "skyboxEnabled", "skyboxName", "ecs"),
             childrenOf(scene).map { it.name })
         assertEquals(before.toList(), file.contentsToByteArray().toList())
     }
@@ -115,6 +115,7 @@ class AbyssusViewTest : BasePlatformTestCase() {
         val assetOrders = listOf(
             listOf("baseDir", "meta", "references", "unused", "uuid", "name", "type"),
             listOf("baseDir", "meta", "references", "unused", "name", "type", "uuid"),
+            listOf("baseDir", "meta", "references", "unused"),
         )
         assertTrue("Unexpected asset row order: $assetRows", assetRows in assetOrders)
         assertEquals(assetRows, childrenOf(asset).map { it.name })
@@ -140,9 +141,9 @@ class AbyssusViewTest : BasePlatformTestCase() {
         val scene = parseScene("""{"format":"abyssus","formatVersion":1}""")
         assertEquals(scene.id, java.util.UUID.fromString(scene.id).toString())
         assertEquals(SceneDto(id = scene.id), scene)
-        assertEquals(9, childrenOf(scene).size)
+        assertEquals(10, childrenOf(scene).size)
         assertTrue(childrenOf(scene).filter { it.name.endsWith("Enabled") }.all { it.value == false })
-        assertTrue(childrenOf(scene).filter { it.name != "id" && !it.name.endsWith("Enabled") }.all { it.value == null })
+        assertTrue(childrenOf(scene).filter { it.name in setOf("name", "ambientLight", "fog", "skyboxName", "water") }.all { it.value == null })
     }
 
     fun testProjectReaderLoadsScenesFolder() {

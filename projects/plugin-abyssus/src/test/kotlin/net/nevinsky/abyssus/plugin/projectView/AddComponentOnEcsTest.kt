@@ -17,7 +17,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.ecs.component.*
 import java.io.File
 
 /** Add Component... on a scene's `ecs` row: a new entity holding the chosen component. */
@@ -42,7 +42,8 @@ class AddComponentOnEcsTest : BasePlatformTestCase() {
     private fun ecsRow() = children(sceneNode()).single { label(it) == "ecs" }
     private fun scene() = viewableSceneFile(sceneNode())!!
     private fun document() = FileDocumentManager.getInstance().getDocument(scene())!!
-    private fun root() = SceneJson().parse(document().text)
+    private fun root() = net.nevinsky.abyssus.plugin.parsedScene(document().text)
+    private fun text(e: net.nevinsky.abyssus.lib.core.dto.EntityDto) = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.json.toString(e)
 
     private class AddOn(val node: Any?) : AddComponentOnEcsAction() {
         override fun selected(e: AnActionEvent) = node
@@ -73,14 +74,14 @@ class AddComponentOnEcsTest : BasePlatformTestCase() {
         myFixture.openFileInEditor(scene())
         val editor = TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
         val before = document().text
-        val beforeEntities = root()["ecs"].deepCopy<com.fasterxml.jackson.databind.JsonNode>()
+        val beforeEntities = root().ecs.mapValues { text(it.value) }
         val camera = choices().first { it.templatePresentation.text == "Camera" }
         camera.actionPerformed(TestActionEvent.createTestEvent(camera))
-        val ecs = root()["ecs"]
-        val entity = ecs["9"]["components"]
-        assertEquals("Entity 9", entity["NameComponent"]["name"].asText())
-        assertTrue(entity.has("CameraComponent"))
-        for ((id, old) in beforeEntities.properties()) assertEquals(old.toString(), ecs[id].toString())
+        val ecs = root().ecs
+        val entity = ecs.getValue(9L)
+        assertEquals("Entity 9", entity.component(NameComponent::class.java)!!.name)
+        assertNotNull(entity.component(CameraComponent::class.java))
+        for ((id, old) in beforeEntities) assertEquals(old, text(ecs.getValue(id)))
         UndoManager.getInstance(project).undo(editor)
         assertEquals(before, document().text)
     }
@@ -90,20 +91,20 @@ class AddComponentOnEcsTest : BasePlatformTestCase() {
         val render = choices().filterIsInstance<ActionGroup>().single { it.templatePresentation.text == "Render" }
         val tree = render.getChildren(null).first { it.templatePresentation.text == "model tree" }
         tree.actionPerformed(TestActionEvent.createTestEvent(tree))
-        val asset = root()["ecs"]["9"]["components"]["RenderComponent"]
-        assertEquals("tree", asset["assetName"].asText())
-        assertEquals("MODEL", asset["type"].asText())
+        val asset = root().entity(9)!!.component(RenderComponent::class.java)!!
+        assertEquals("tree", asset.assetName)
+        assertEquals("MODEL", asset.type?.name)
     }
 
     fun testAnEntityRowStillAddsToThatEntity() {
         copyProject()
-        val entityRow = children(ecsRow()).first { componentTargetOf(it)?.entityId == "0" }
+        val entityRow = children(ecsRow()).first { componentTargetOf(it)?.entityId == 0L }
         val target = componentTargetOf(entityRow)!!
         val light = AddComponentAction().choices(project, target, testMetaFiles()).getChildren(null).first { it.templatePresentation.text == "Light" }
         light.actionPerformed(TestActionEvent.createTestEvent(light))
-        val ecs = root()["ecs"]
-        assertTrue(ecs["0"]["components"].has("LightComponent"))
-        assertNull("no new entity", ecs["9"])
+        val ecs = root().ecs
+        assertNotNull(ecs.getValue(0L).component(LightComponent::class.java))
+        assertNull("no new entity", ecs[9L])
     }
 
     fun testAnUnreadableSceneHidesIt() {

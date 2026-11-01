@@ -44,7 +44,7 @@ class RayViewFeedTest {
     }
 
     private val model = rayTestModel()
-    private val placement = AssetPlacement("entity", "model", PlacementTransform.IDENTITY)
+    private val placement = AssetPlacement(1L, "model", PlacementTransform.IDENTITY)
     private val camera = PerspectiveCamera(61f, 8f, 8f).apply { position.set(4f, 5f, 6f); direction.set(-1f, -1f, -1f).nor(); near = .2f; far = 500f; update() }
     private val device = RayFakeDevice()
     private val service = RayFakeDevice.service("metal" to device)
@@ -85,7 +85,7 @@ class RayViewFeedTest {
         val metadata = display.metadata
         assertEquals(8, metadata.width); assertEquals(8, metadata.height)
         assertEquals(camera.position.x, metadata.camera.position.x, 1e-5f)
-        assertEquals(setOf("entity"), metadata.content.models.map { it.entityId }.toSet())
+        assertEquals(setOf(1L), metadata.content.models.map { it.entityId }.toSet())
         assertTrue(display.frame.width in 1..8)
     }
 

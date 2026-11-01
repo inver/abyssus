@@ -27,7 +27,7 @@ class AbyssusPluginCtx : Disposable {
     }
 
     /** The built-in components and the physics ones, so a physics scene reads as typed components the Properties panel can edit. */
-    val registry by lazy { ComponentRegistry().also { it.registerAll(PHYSICS_COMPONENTS) } }
+    val registry by lazy { ComponentRegistry().also { r -> r.registerAll(PHYSICS_COMPONENTS); PHYSICS_COMPONENTS.values.forEach { r.register(it.name, it) } } }
     val json by lazy { JsonProcessor(loggers.getLogger("json"), registry) }
     val format by lazy { AbyssusDocumentFormat() }
     val documents by lazy { DocumentServices(json, format, loggers.getLogger("scenes"), registry) }

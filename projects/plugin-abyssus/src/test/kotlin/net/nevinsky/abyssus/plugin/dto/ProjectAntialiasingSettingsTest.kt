@@ -55,11 +55,13 @@ class ProjectAntialiasingSettingsTest : BasePlatformTestCase() {
         val before = text(a)
         assertFalse(settings.setAntialiasing(a, AntialiasingLevel.X4))
         assertTrue(settings.setAntialiasing(a, AntialiasingLevel.X8))
-        assertEquals(before.dropLast(1) + ",\"sceneViewAntialiasing\":\"X8\"}", text(a))
+        val json = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().json
+        fun project(t: String) = json.parse(t, net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java)
+        assertEquals(project(before).copy(sceneViewAntialiasing = "X8"), project(text(a)))
         assertFalse(settings.setAntialiasing(a, AntialiasingLevel.X8))
         assertEquals(AntialiasingLevel.OFF, settings.getSettings(b).antialiasing)
         assertTrue(settings.setAntialiasing(a, AntialiasingLevel.X4))
-        assertEquals(before, text(a))
+        assertNull("the default is omitted", project(text(a)).sceneViewAntialiasing)
     }
 
     fun testUndoRedoAndUnsavedTextNotifyWithTheCurrentValue() {
@@ -95,7 +97,7 @@ class ProjectAntialiasingSettingsTest : BasePlatformTestCase() {
         lateinit var f: com.intellij.openapi.vfs.VirtualFile
         WriteCommandAction.runWriteCommandAction(project) {
             f = dir.createChildData(this, "External.abss")
-            f.setBinaryContent("""{"format":"abyssus","formatVersion":1}""".toByteArray())
+            f.setBinaryContent("""{"formatVersion":1}""".toByteArray())
         }
         assertNull(FileDocumentManager.getInstance().getCachedDocument(f))
         assertEquals(AntialiasingLevel.X4, settings.getSettings(f).antialiasing)
@@ -103,7 +105,7 @@ class ProjectAntialiasingSettingsTest : BasePlatformTestCase() {
         project.messageBus.connect(testRootDisposable).subscribe(ProjectSettingsListener.TOPIC,
             ProjectSettingsListener { changed, value -> if (changed == f) seen += value.antialiasing })
         WriteCommandAction.runWriteCommandAction(project) {
-            f.setBinaryContent("""{"format":"abyssus","formatVersion":1,"sceneViewAntialiasing":"X8"}""".toByteArray())
+            f.setBinaryContent("""{"formatVersion":1,"sceneViewAntialiasing":"X8"}""".toByteArray())
         }
         assertNull(FileDocumentManager.getInstance().getCachedDocument(f))
         assertEquals(listOf(AntialiasingLevel.X8), seen)
@@ -111,7 +113,7 @@ class ProjectAntialiasingSettingsTest : BasePlatformTestCase() {
     }
 
     fun testUnsupportedNativeDocumentsCannotBeEdited() {
-        for ((index, header) in listOf("", "\"format\":\"abyssus\",\"formatVersion\":2,").withIndex()) {
+        for ((index, header) in listOf("", "\"formatVersion\":2,").withIndex()) {
             val f = myFixture.addFileToProject("bad$index/P.abss", "{$header\"sceneViewAntialiasing\":\"OFF\"}").virtualFile
             val before = text(f)
             assertFalse(settings.getSettings(f).supported)

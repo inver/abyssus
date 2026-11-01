@@ -62,7 +62,7 @@ class PaintTextureControlsTest : BasePlatformTestCase() {
         val terrain = File(disk, "assets/terrain_a").apply { mkdirs() }
         val ref = splatMap?.let { ""","splatMap":"$it"""" }.orEmpty()
         File(terrain, "meta.json").writeText(
-            """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"t","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":63,"uv":8.0$ref}}""",
+            """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"aaaaaaaa-0000-0000-0000-0000000000aa","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":63,"uv":8.0$ref}}""",
         )
         val texture = File(disk, "assets/texture_splat").apply { mkdirs() }
         File(texture, "meta.json").writeText(
@@ -96,14 +96,14 @@ class PaintTextureControlsTest : BasePlatformTestCase() {
             renderer, interaction, PlayState(null), BrushKinds(), { _, mode, ready -> splatMode = mode(); ready(session) },
             {}, onEnded, { reports += it },
         ).also {
-            renderer.state.selectedId = "1"
+            renderer.state.selectedId = 1L
             it.refreshSession(force = true)
-            it.begin("1")
+            it.begin(1L)
             it.show(session.snapshot())
         }
     }
 
-    private val target get() = TerrainTarget("1", TerrainData(3, FloatArray(9), 63, 1f), Matrix4())
+    private val target get() = TerrainTarget(1L, TerrainData(3, FloatArray(9), 63, 1f), Matrix4())
 
     fun testTheStripAppearsWithTheFirstLayerChosenAndExclusiveOn() {
         project(uuid)
@@ -228,14 +228,14 @@ class PaintTextureControlsTest : BasePlatformTestCase() {
             splatSession = { _, mode, ready -> splatMode = mode(); ready(session()) })
         panel.onPaintTextureEnded = { ended++ }
         try {
-            panel.selectEntity("1")
-            panel.setPaintingTexture("1")
+            panel.selectEntity(1L)
+            panel.setPaintingTexture(1L)
             assertEquals(SPLAT_BRUSH, renderer.state.brush?.kind)
-            panel.selectEntity("2")
+            panel.selectEntity(2L)
             assertNull(renderer.state.brush)
             assertEquals("the host is told when the view ends it", 1, ended)
-            panel.selectEntity("1")
-            panel.setPaintingTexture("1")
+            panel.selectEntity(1L)
+            panel.setPaintingTexture(1L)
             panel.setPaintingTexture(null)
             assertNull(renderer.state.brush)
             assertEquals("a host-requested end is not reported back", 1, ended)

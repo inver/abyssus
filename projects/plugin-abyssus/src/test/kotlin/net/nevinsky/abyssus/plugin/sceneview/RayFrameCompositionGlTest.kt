@@ -55,7 +55,7 @@ class RayFrameCompositionGlTest {
             renderer.rayFrameProvider = { context ->
                 val metadata = captureRayDisplay(context)
                 val stale = if (index == 0) metadata.copy(width = metadata.width + 1)
-                else metadata.copy(content = metadata.content.copy(models = listOf(AssetPlacement("deleted", "model", PlacementTransform.IDENTITY))))
+                else metadata.copy(content = metadata.content.copy(models = listOf(AssetPlacement(99L, "model", PlacementTransform.IDENTITY))))
                 RaySceneDisplay(RayFrame(RayFrameKey(1, 1, 1, 1), 1, 1, floatArrayOf(1f, 0f, 0f, 1f), floatArrayOf(0f)), stale)
             }
             if (index > 0) assertFalse(renderer.presentedRayFrame)

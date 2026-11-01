@@ -27,8 +27,8 @@ class SceneAssetRefreshEditorTest : BasePlatformTestCase() {
         val revisions = mutableListOf<AssetRevisionBatch>()
         override val view = JPanel()
         override var onFailure: ((Throwable) -> Unit)? = null
-        override var onPick: ((String) -> Unit)? = null
-        override var onTransform: ((String, TransformEdit) -> Boolean)? = null
+        override var onPick: ((Long) -> Unit)? = null
+        override var onTransform: ((Long, TransformEdit) -> Boolean)? = null
         override fun setParams(params: SceneRenderParams) {}
         override fun refreshAssets(revision: AssetRevisionBatch) { revisions += revision }
         override fun dispose() {}

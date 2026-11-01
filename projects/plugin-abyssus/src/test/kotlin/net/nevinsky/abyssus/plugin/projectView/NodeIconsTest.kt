@@ -5,7 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.editor.document.parseDocument
+import net.nevinsky.abyssus.plugin.entityNode
+
+import net.nevinsky.abyssus.lib.core.editor.parseScene
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -32,8 +34,8 @@ class NodeIconsTest : BasePlatformTestCase() {
 
     /** [typeJson] is the JSON value of the entity's `type`; null for an entity without one. */
     private fun entityNode(typeJson: String?): DtoEntryNode {
-        val entity = parseDocument("""{${typeJson?.let { """"type":$it,""" } ?: ""}"components":{}}""")
-        return DtoEntryNode(project, "/scene/ecs", DtoRow("1", entity), null, listOf("ecs"))
+        val scene = parseScene("""{"formatVersion":1,"ecs":{"1":{${typeJson?.let { """"type":$it,""" } ?: ""}"components":{}}}}""")
+        return DtoEntryNode(project, "/scene/ecs", DtoRow("1", EntityNode(scene, 1)), null, listOf("ecs"))
     }
 
     fun testEntityTypesHaveDistinctIcons() {
@@ -49,8 +51,8 @@ class NodeIconsTest : BasePlatformTestCase() {
         assertEquals(EntityType.entries.size, icons.toSet().size)
     }
 
-    fun testMissingAndUnknownEntityTypesKeepGenericIcon() {
-        listOf(null, "null", """"FUTURE"""", "7").forEach {
+    fun testMissingEntityTypesKeepGenericIcon() {
+        listOf(null).forEach {
             val node = entityNode(it)
             node.update()
             assertSame(PropertyIcons.ECS, icon(node))

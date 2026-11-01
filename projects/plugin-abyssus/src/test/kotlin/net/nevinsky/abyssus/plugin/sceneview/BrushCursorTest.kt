@@ -72,17 +72,17 @@ class BrushCursorTest {
             Vector3(50f, 3f, 30f), Quaternion(0f, 0.38268343f, 0f, 0.92387953f), Vector3(2f, 1f, 3f),
         ).toMatrix()
         val at = Vector3(30f, 0f, 20f).mul(world)
-        assertSameCircle(TerrainTarget("1", bumpy, world), at, 10f)
+        assertSameCircle(TerrainTarget(1L, bumpy, world), at, 10f)
     }
 
     @Test
     fun theCircleMatchesTheOldOneOnAnIdentityEntity() {
-        assertSameCircle(TerrainTarget("1", bumpy, Matrix4()), Vector3(50f, 0f, 50f), 12f)
+        assertSameCircle(TerrainTarget(1L, bumpy, Matrix4()), Vector3(50f, 0f, 50f), 12f)
     }
 
     @Test
     fun aCircleHangingOverTheEdgeDrawsOnlyTheSegmentsOnTheTerrain() {
-        val terrain = TerrainTarget("1", bumpy, Matrix4())
+        val terrain = TerrainTarget(1L, bumpy, Matrix4())
         val lines = Recording()
         BrushCursor(terrain, Vector3(2f, 0f, 50f), 20f).draw(lines)
         assertTrue(lines.segments.size in 1 until 64)
@@ -93,7 +93,7 @@ class BrushCursorTest {
     fun aDegenerateEntityMatrixDrawsNothingAndDoesNotThrow() {
         val flat = Matrix4().setToScaling(0f, 1f, 1f)
         val lines = Recording()
-        BrushCursor(TerrainTarget("1", bumpy, flat), Vector3(10f, 0f, 10f), 5f).draw(lines)
+        BrushCursor(TerrainTarget(1L, bumpy, flat), Vector3(10f, 0f, 10f), 5f).draw(lines)
         assertTrue(lines.segments.isEmpty())
     }
 }

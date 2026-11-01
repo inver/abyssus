@@ -4,8 +4,6 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.editor.document.parseDocument
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnAction
@@ -19,8 +17,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.plugin.sceneview.ArrangementEditing
 import net.nevinsky.abyssus.plugin.sceneview.ArrangementHeights
 import java.io.File
@@ -47,10 +44,7 @@ class RegenerateArrangementActionTest : BasePlatformTestCase() {
 
     private fun text() = FileDocumentManager.getInstance().getDocument(scene)!!.text
 
-    private fun rowOf(id: String): DtoEntryNode {
-        val tree = SceneEntityTree(SceneJson().parse(text()))
-        return DtoEntryNode(project, scene.path, DtoRow(id, parseDocument(text()).at("ecs", id)), scene, tree.entityKeys())
-    }
+    private fun rowOf(id: Long): DtoEntryNode = net.nevinsky.abyssus.plugin.entityNode(project, scene, text(), id)
 
     private class On(val node: Any?) : RegenerateArrangementAction() {
         override fun selected(e: AnActionEvent) = node
@@ -63,21 +57,21 @@ class RegenerateArrangementActionTest : BasePlatformTestCase() {
         assertTrue(
             ActionManager.getInstance().getAction("Abyssus.RegenerateArrangement") is RegenerateArrangementAction
         )
-        assertTrue(event(On(rowOf("11"))).presentation.isEnabledAndVisible)
-        assertFalse(event(On(rowOf("12"))).presentation.isEnabledAndVisible)
-        assertFalse(event(On(rowOf("0"))).presentation.isEnabledAndVisible)
+        assertTrue(event(On(rowOf(11L))).presentation.isEnabledAndVisible)
+        assertFalse(event(On(rowOf(12L))).presentation.isEnabledAndVisible)
+        assertFalse(event(On(rowOf(0L))).presentation.isEnabledAndVisible)
     }
 
     fun testItPlacesTheCopiesOnTheTerrainAndASecondRunWritesNothing() {
-        val action = On(rowOf("11"))
+        val action = On(rowOf(11L))
         val before = text()
         action.actionPerformed(event(action))
         val after = text()
         assertTrue("the copies stood at the line's height, not on the terrain", before != after)
-        val ecs = SceneJson().parse(after)["ecs"]
+        val scene2 = net.nevinsky.abyssus.plugin.parsedScene(after)
         assertEquals(
             ArrangementHeights.of(project).forScene(scene)!!.heightAt(20f, 0f, -99f),
-            ecs["14"]["components"]["PositionComponent"]["localPosition"].path("y").floatValue(),
+            scene2.entity(14)!!.component(PositionComponent::class.java)!!.localPosition.y,
             1e-3f
         )
         action.actionPerformed(event(action))

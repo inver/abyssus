@@ -1,3 +1,4 @@
+/* DISABLED (G7: scene water is no longer modeled); kept for reference, not compiled.
 /*
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
@@ -116,3 +117,5 @@ class SceneWaterFallbackGlTest {
         assertFalse("with every level reflected, nothing needs the cloudy cube", singleLease)
     }
 }
+
+*/

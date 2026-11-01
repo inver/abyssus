@@ -61,6 +61,7 @@ class RenameSceneActionTest : BasePlatformTestCase() {
         val original = String(standaloneFile.contentsToByteArray())
         assertTrue(renameScene(project, standaloneFile, "Renamed"))
         val updated = String(standaloneFile.contentsToByteArray())
-        assertEquals(original.replace("\"name\":\"Standalone\"", "\"name\":\"Renamed\""), updated)
+        val written = net.nevinsky.abyssus.plugin.parsedScene(updated)
+        assertEquals(net.nevinsky.abyssus.plugin.printScene(net.nevinsky.abyssus.plugin.parsedScene(original).copy(name = "Renamed", id = written.id)), updated)
     }
 }

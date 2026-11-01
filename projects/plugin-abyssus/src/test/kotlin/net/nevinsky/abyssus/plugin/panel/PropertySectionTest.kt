@@ -79,7 +79,7 @@ class PropertySectionTest : BasePlatformTestCase() {
     }
 
     fun testAnAccessibleNameDescribesTheChevronAndTheCheckBox() {
-        val section = frame(section(enable = EnableToggle(true, EnabledTarget.Component("3", "ColliderComponent"))))
+        val section = frame(section(enable = EnableToggle(true, EnabledTarget.Component(3L, "ColliderComponent"))))
         assertEquals("Collapse Collider", find<JBLabel>(section, "section-chevron-3.Collider").accessibleContext.accessibleName)
         assertEquals("Enable Collider", section.enabledBox!!.accessibleContext.accessibleName)
         section.setCollapsed(true)
@@ -88,7 +88,7 @@ class PropertySectionTest : BasePlatformTestCase() {
 
     fun testTheEnabledBoxReflectsTheFlagAndReportsAChange() {
         val changes = mutableListOf<Boolean>()
-        val section = frame(section(enable = EnableToggle(false, EnabledTarget.Component("3", "ColliderComponent")), disabled = true), onEnabled = { changes += it })
+        val section = frame(section(enable = EnableToggle(false, EnabledTarget.Component(3L, "ColliderComponent")), disabled = true), onEnabled = { changes += it })
         assertFalse(section.enabledBox!!.isSelected)
         section.enabledBox.doClick()
         assertEquals(listOf(true), changes)

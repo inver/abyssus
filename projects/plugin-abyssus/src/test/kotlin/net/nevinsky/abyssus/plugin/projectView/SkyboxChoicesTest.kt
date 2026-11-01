@@ -6,7 +6,6 @@
 package net.nevinsky.abyssus.plugin.projectView
 
 import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.plugin.ui.thumbnail
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -15,7 +14,7 @@ import net.nevinsky.abyssus.lib.core.editor.testAsset
 import net.nevinsky.abyssus.plugin.dto.ProjectDto
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
 import net.nevinsky.abyssus.lib.core.editor.parseScene
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaParser
 import net.nevinsky.abyssus.plugin.testMetaFiles
 import net.nevinsky.abyssus.plugin.testCore
 
@@ -26,6 +25,8 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
         val keys = listOf("top", "bottom", "left", "right", "front", "back")
         return """{"format":"abyssus","formatVersion":1,"type":"SKYBOX","additional":{${files.mapIndexed { i, f -> "\"${keys[i]}\":\"$f\"" }.joinToString(",")}}}"""
     }
+
+    private fun metaOf(text: String) = AssetMetaParser(testCore.json).read("m", text)
 
     private fun scene(sky: String?) = parseScene("""{"format":"abyssus","formatVersion":1,"skyboxName":${sky?.let { "\"$it\"" } ?: "null"}}""")
 
@@ -60,7 +61,7 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
         val dto = ProjectDto("P", emptyList(), listOf(testAsset("skybox_physical", "1", "SKYBOX_PROCEDURAL")))
         fun detail(clouds: String?): String {
             val meta = """{"format":"abyssus","formatVersion":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"sky.vert"${clouds?.let { ",\"clouds\":$it" } ?: ""}}}"""
-            return skyboxChoices(dto, mapOf("skybox_physical" to parseDocument(meta))).single().detail
+            return skyboxChoices(dto, mapOf("skybox_physical" to metaOf(meta))).single().detail
         }
         assertEquals("procedural sky \u00b7 clouds", detail("\"3f2a9c1e-7b4d-4e8a-9c6f-1d2e3b4a5c6d\""))
         assertEquals("procedural sky", detail("\"\""))
@@ -125,7 +126,7 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
 
     fun testDetailLineCountsFacesAndSortsFormats() {
         val dto = ProjectDto("P", emptyList(), listOf(testAsset("sky", "1", "SKYBOX")))
-        val meta = parseDocument(faces("a.png", "b.PNG", "c.jpg", "d.png", "e.jpg", "f.png"))
+        val meta = metaOf(faces("a.png", "b.PNG", "c.jpg", "d.png", "e.jpg", "f.png"))
         val choice = skyboxChoices(dto, mapOf("sky" to meta)).single()
         assertEquals(6, choice.faces)
         assertEquals(listOf("jpg", "png"), choice.formats)
@@ -134,7 +135,7 @@ class SkyboxChoicesTest : BasePlatformTestCase() {
 
     fun testMissingFacesAndMetaDoNotFail() {
         val dto = ProjectDto("P", emptyList(), listOf(testAsset("partial", "1", "SKYBOX"), testAsset("bare", "2", "SKYBOX")))
-        val choices = skyboxChoices(dto, mapOf("partial" to parseDocument(faces("a.png", "", "c.png")), "bare" to null))
+        val choices = skyboxChoices(dto, mapOf("partial" to metaOf(faces("a.png", "", "c.png")), "bare" to null))
         val partial = choices.first { it.name == "partial" }
         assertEquals(2, partial.faces)
         assertEquals("2 faces · png", partial.detail)

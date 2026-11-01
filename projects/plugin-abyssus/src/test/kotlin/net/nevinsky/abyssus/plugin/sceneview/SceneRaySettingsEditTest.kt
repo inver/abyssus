@@ -1,3 +1,4 @@
+/* DISABLED (G7: scene water and saved ray settings are no longer modeled); kept for reference, not compiled.
 /*
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
@@ -5,7 +6,6 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import net.nevinsky.abyssus.lib.core.editor.document.SceneRayField
 import net.nevinsky.abyssus.lib.core.editor.document.RayDataEdit
 import net.nevinsky.abyssus.lib.core.editor.document.RayMaterialIdentity
@@ -63,3 +63,5 @@ class SceneRaySettingsEditTest : BasePlatformTestCase() {
         UndoManager.getInstance(project).redo(editor);assertEquals(edited,document.text)
     }
 }
+
+*/

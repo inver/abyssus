@@ -94,9 +94,9 @@ class SceneViewPanelRayTest : BasePlatformTestCase() {
 
     fun testCameraSelectionAndDragStateSurviveEveryTransition() {
         val renderer = testRenderer()
-        renderer.state.selectedId = "selected-entity"
-        renderer.state.viewCamera = "camera-1"
-        renderer.state.preview = mapOf("selected-entity" to net.nevinsky.abyssus.lib.core.editor.pick.DragResult(
+        renderer.state.selectedId = 5L
+        renderer.state.viewCamera = 6L
+        renderer.state.preview = mapOf(5L to net.nevinsky.abyssus.lib.core.editor.pick.DragResult(
             PlacementTransform(Vector3(1f, 2f, 3f), Quaternion(), Vector3(1f, 1f, 1f)), null))
         val preview = renderer.state.preview
         val device = RayFakeDevice()
@@ -107,8 +107,8 @@ class SceneViewPanelRayTest : BasePlatformTestCase() {
         val feedFrame = renderer.rayFrameProvider!!
         waitFor("device loss to fail the mode") { feedFrame(context(renderer)); panel.rayMode!!.phase == RayModePhase.Failed }
         panel.rayControl!!.setRequested(false)
-        assertEquals("selected-entity", renderer.state.selectedId)
-        assertEquals("camera-1", renderer.state.viewCamera)
+        assertEquals(5L, renderer.state.selectedId)
+        assertEquals(6L, renderer.state.viewCamera)
         assertSame("a drag in progress keeps its preview", preview, renderer.state.preview)
     }
 

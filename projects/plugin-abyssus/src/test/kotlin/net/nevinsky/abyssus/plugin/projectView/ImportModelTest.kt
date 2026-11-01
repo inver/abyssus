@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.components.service
@@ -17,8 +16,7 @@ import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ImportSettings
 import net.nevinsky.abyssus.lib.core.editor.modelimport.LengthUnit
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelSource
@@ -69,10 +67,10 @@ class ImportModelTest : BasePlatformTestCase() {
     private fun placement(point: Vector3 = Vector3(10f, 0f, -4f), playing: Boolean = false) =
         ScenePlacement(scene, { point }, { playing })
 
-    private fun sceneRoot() = SceneJson().parse(FileDocumentManager.getInstance().getDocument(scene)!!.text)
+    private fun sceneRoot() = net.nevinsky.abyssus.plugin.parsedScene(FileDocumentManager.getInstance().getDocument(scene)!!.text)
+    private fun sceneText() = FileDocumentManager.getInstance().getDocument(scene)!!.text
 
-    private fun nextEntityId(): String =
-        (SceneEntityTree(sceneRoot()).entities()!!.properties().maxOf { it.key.toInt() } + 1).toString()
+    private fun nextEntityId(): Long = sceneRoot().nextId()
 
     /** Undo of the import is refused: the platform reports the reason (through the log in tests), naming [mentions]. */
     private fun assertUndoRefused(mentions: String) {
@@ -170,32 +168,32 @@ class ImportModelTest : BasePlatformTestCase() {
         val outcome = importModel(project, abss, source("crate.obj"), crate, placement()) { fail(it) }!!
         assertEquals(AssetCommandResult.Done, outcome.result)
         assertEquals(id, outcome.entityId)
-        val components = SceneEntityTree(sceneRoot()).components(id)!!
-        assertEquals("Model $id", components["NameComponent"]["name"].asText())
-        assertEquals("OBJECT", sceneRoot()["ecs"][id]["type"].asText())
-        val position = components["PositionComponent"]["localPosition"]
-        assertEquals(listOf(10.0, 0.0, -4.0), listOf("x", "y", "z").map { position[it]?.asDouble() ?: 0.0 })
-        val asset = components["RenderComponent"]
-        assertEquals("MODEL", asset["type"].asText())
-        assertEquals("model_crate", asset["assetName"].asText())
+        val entity = sceneRoot().entity(id)!!
+        assertEquals("Model $id", entity.component(NameComponent::class.java)!!.name)
+        assertEquals("OBJECT", entity.header().type?.name)
+        val position = entity.component(PositionComponent::class.java)!!.localPosition
+        assertEquals(listOf(10.0, 0.0, -4.0), listOf(position.x, position.y, position.z).map { it.toDouble() })
+        val asset = entity.component(RenderComponent::class.java)!!
+        assertEquals("MODEL", asset.type?.name)
+        assertEquals("model_crate", asset.assetName)
         assertTrue(File(projectDir, "assets/model_crate/model.glb").isFile)
     }
 
     fun testOneUndoRemovesTheEntityAndTheFolderAndRedoRestoresBoth() {
-        val sceneBefore = sceneRoot().toString()
+        val sceneBefore = sceneText()
         val id = importModel(project, abss, source("crate.obj"), crate, placement()) { fail(it) }!!.entityId!!
         val folder = File(projectDir, "assets/model_crate")
         val made = tree(folder)
-        val sceneAfter = sceneRoot().toString()
+        val sceneAfter = sceneText()
 
         UndoManager.getInstance(project).undo(null)
         assertFalse(folder.exists())
-        assertNull(SceneEntityTree(sceneRoot()).components(id))
-        assertEquals(sceneBefore, sceneRoot().toString())
+        assertNull(sceneRoot().entity(id))
+        assertEquals(sceneBefore, sceneText())
 
         UndoManager.getInstance(project).redo(null)
         assertEquals(made, tree(folder))
-        assertEquals(sceneAfter, sceneRoot().toString())
+        assertEquals(sceneAfter, sceneText())
     }
 
     fun testASceneMadeUnreadableBeforeCreateWritesNothing() {

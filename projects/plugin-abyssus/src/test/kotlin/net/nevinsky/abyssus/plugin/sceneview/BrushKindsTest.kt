@@ -71,8 +71,8 @@ class BrushKindsTest : BasePlatformTestCase() {
         var ended = 0
         val panel = panel(renderer) { ended++ }
         try {
-            panel.selectEntity("1")
-            panel.setSculpting("1")
+            panel.selectEntity(1L)
+            panel.setSculpting(1L)
             assertEquals(SCULPT_BRUSH, renderer.state.brush?.kind)
             assertEquals(0, ended)
             (named(panel, "paint-foliage") as JToggleButton).doClick()
@@ -86,12 +86,12 @@ class BrushKindsTest : BasePlatformTestCase() {
         val renderer = testRenderer()
         val panel = panel(renderer)
         try {
-            panel.selectEntity("1")
+            panel.selectEntity(1L)
             val button = named(panel, "paint-foliage") as JToggleButton
             button.doClick()
             assertEquals(FOLIAGE_BRUSH, renderer.state.brush?.kind)
             assertTrue(button.isSelected)
-            panel.setSculpting("1")
+            panel.setSculpting(1L)
             assertEquals(SCULPT_BRUSH, renderer.state.brush?.kind)
             assertFalse(button.isSelected)
             assertFalse(named(panel, "foliage-brush-strip")!!.isVisible)

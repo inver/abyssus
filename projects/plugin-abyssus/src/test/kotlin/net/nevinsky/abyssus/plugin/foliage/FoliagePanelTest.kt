@@ -1,7 +1,6 @@
 package net.nevinsky.abyssus.plugin.foliage
 
 import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.intellij.openapi.components.service
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
@@ -45,7 +44,7 @@ class FoliagePanelTest : BasePlatformTestCase() {
     }
     private fun source(): FoliageSource.Ready {
         val text = File(folder.path, "meta.json").readText()
-        return readFoliageSource(folder.name, disk, json, text, net.nevinsky.abyssus.lib.core.editor.document.parseDocumentObject(text).at("additional")) as FoliageSource.Ready
+        return readFoliageSource(folder.name, disk, json, text, service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing.foliageMeta(text)) as FoliageSource.Ready
     }
     private fun controller() = FoliageController(project, folder, source(), drafts, json, project.service<FoliageUndoCache>(),
         background = { it.run() }, ui = { it.run() }, readCurrent = { source() })
@@ -166,7 +165,7 @@ class FoliagePanelTest : BasePlatformTestCase() {
     private fun metaEditor() =
         com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().createEditor(project, folder.findChild("meta.json")!!)
 
-    private fun colliderOf(index: Int = 0) = net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(File(folder.path, "meta.json").readText())["additional"]["layers"][index]["collider"]
+    private fun colliderOf(index: Int = 0): Map<String, Any?> = service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing.foliageMeta(File(folder.path, "meta.json").readText()).layers[index].collider?.let { c -> @Suppress("UNCHECKED_CAST") (json.parse(c.toString(), Map::class.java) as Map<String, Any?>) } ?: emptyMap()
 
     fun testColliderOnlyApplyWritesMetadataOnlyAndUndoRedoRestoresIt() {
         val beforeMeta = bytes("meta.json")
@@ -180,9 +179,9 @@ class FoliagePanelTest : BasePlatformTestCase() {
         val editor = metaEditor()
         try {
             assertEquals(AssetCommandResult.Done, c.apply())
-            assertEquals("CAPSULE", colliderOf()["shape"].asText())
-            assertEquals(0.4, colliderOf()["radius"].asDouble(), 1e-6)
-            assertEquals(3.0, colliderOf()["halfHeight"].asDouble(), 0.0)
+            assertEquals("CAPSULE", colliderOf()["shape"])
+            assertEquals(0.4, (colliderOf()["radius"] as Number).toDouble(), 1e-6)
+            assertEquals(3.0, (colliderOf()["halfHeight"] as Number).toDouble(), 0.0)
             assertEquals(beforeFiles, stamps())
             assertNull(drafts.of(folder.name))
             val written = bytes("meta.json")
@@ -231,12 +230,13 @@ class FoliagePanelTest : BasePlatformTestCase() {
         assertNull(c.editCollider(0) { it!!.copy(radius = 2f) })
         assertNull(c.editCollider(0) { it })
         assertEquals(AssetCommandResult.Done, c.apply())
-        assertEquals("2.50", colliderOf()["vendor"]["k"].asText())
+        assertEquals("2.5", ((colliderOf()["vendor"] as Map<*, *>)["k"]).toString())
         val c2 = controller()
         assertNull(c2.editCollider(0) { null })
         assertEquals(AssetCommandResult.Done, c2.apply())
-        assertNull(colliderOf())
-        assertEquals(withCollider.replace(Regex(",\\s*\"collider\": \\{[^\n]*\\}\\}"), ""), file.readText())
+        assertTrue(colliderOf().isEmpty())
+        assertEquals(7, service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing.foliageMeta(file.readText()).layers[0].seed)
+        assertFalse(file.readText().contains("collider"))
         c.dispose(); c2.dispose()
     }
 
@@ -303,7 +303,7 @@ class FoliagePanelTest : BasePlatformTestCase() {
         assertTrue(c.problems.toString(), c.problems.isEmpty())
         assertNull(c.edit { it.copy(layers = it.layers.map { l -> if (l.id == 1) l.copy(density = 0.002f) else l }) })
         assertEquals(AssetCommandResult.Done.javaClass, c.apply(AssetFileCommand(project, LocalAssetFileStore(disk)))!!.javaClass)
-        assertEquals(0.0, colliderOf(1)["radius"].asDouble(), 0.0)
+        assertEquals(0.0, ((colliderOf(1)["radius"] as Number?)?.toDouble() ?: 0.0), 0.0)
         assertNull(find(panel(), "foliage-collider-1"))
         c.dispose()
     }

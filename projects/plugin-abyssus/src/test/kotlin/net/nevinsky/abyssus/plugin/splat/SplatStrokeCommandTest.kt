@@ -57,10 +57,10 @@ class SplatStrokeCommandTest : BasePlatformTestCase() {
         terrainDir.refresh(false, true)
     }
 
-    private val target get() = TerrainTarget("1", TerrainData(3, FloatArray(9), size, 1f), Matrix4())
+    private val target get() = TerrainTarget(1L, TerrainData(3, FloatArray(9), size, 1f), Matrix4())
 
     private fun mode(options: SplatBrushOptions = SplatBrushOptions(2, SplatMode.PAINT, true), reversed: Boolean = false) =
-        BrushMode(SPLAT_BRUSH, "1", 8f, 1f, reversed, options)
+        BrushMode(SPLAT_BRUSH, 1L, 8f, 1f, reversed, options)
 
     /** [inline] runs the encode and the apply at once; otherwise they wait in [queue]. */
     private fun command(

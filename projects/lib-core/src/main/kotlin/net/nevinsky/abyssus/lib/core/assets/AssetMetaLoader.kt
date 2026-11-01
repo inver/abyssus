@@ -1,5 +1,7 @@
 package net.nevinsky.abyssus.lib.core.assets
 
+import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.FileLoader
@@ -13,6 +15,7 @@ class AssetMetaLoader(
     private val fileLoader: FileLoader,
     private val log: Logger = NOPLogger.NOP_LOGGER,
     private val parser: AssetMetaParser = AssetMetaParser(json),
+    private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
 ) {
     private val metasCache = ConcurrentHashMap<File, CachedMeta>()
 
@@ -30,7 +33,10 @@ class AssetMetaLoader(
         if (cached != null && cached.text == text) {
             return cached.meta
         }
-        val result = runCatchingKeepingCancellation { parser.read(assetName, text) }
+        val result = runCatchingKeepingCancellation {
+            format.requireSupported(json.readObject(text), DocumentKind.ASSET)
+            parser.read(assetName, text)
+        }
         val meta = result.getOrNull()
         val error = result.exceptionOrNull()
         metasCache[dir] = CachedMeta(stamp, text, meta, error)

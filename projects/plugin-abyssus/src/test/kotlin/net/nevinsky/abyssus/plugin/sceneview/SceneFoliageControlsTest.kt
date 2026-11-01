@@ -27,14 +27,14 @@ class SceneFoliageControlsTest : BasePlatformTestCase() {
             override fun cancelled() {}
         }) { closed = true }
         val panel = SceneViewPanel(SceneRenderParams.DEFAULT, renderer,
-            paintSession = { id, _, ready -> ready(if (id == "1") session else null) })
+            paintSession = { id, _, ready -> ready(if (id == 1L) session else null) })
         try {
-            panel.selectEntity("1")
+            panel.selectEntity(1L)
             val button = named(panel, "paint-foliage") as JToggleButton
             button.doClick()
             assertEquals(7, renderer.state.brush!!.layerId)
             assertTrue(named(panel, "foliage-brush-strip")!!.isVisible)
-            panel.selectEntity("2")
+            panel.selectEntity(2L)
             assertNull(renderer.state.brush)
             assertTrue(closed)
             assertFalse(button.isSelected)
@@ -57,13 +57,13 @@ class SceneFoliageControlsTest : BasePlatformTestCase() {
         })
         fun params(name: String?) = SceneRenderParams.DEFAULT.copy(content =
             net.nevinsky.abyssus.lib.core.editor.scene.SceneContent(terrains = listOf(
-                net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement("1", "terrain",
+                net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement(1L, "terrain",
                     net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform.IDENTITY)), foliages = name?.let {
-                listOf(net.nevinsky.abyssus.lib.core.editor.scene.FoliagePlacement("1", it, "terrain",
+                listOf(net.nevinsky.abyssus.lib.core.editor.scene.FoliagePlacement(1L, it, "terrain",
                     net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform.IDENTITY))
             }.orEmpty()))
         try {
-            panel.selectEntity("1")
+            panel.selectEntity(1L)
             val button = named(panel, "paint-foliage") as JToggleButton
             assertFalse(button.isEnabled)
             panel.setParams(params("first"))
@@ -99,7 +99,7 @@ class SceneFoliageControlsTest : BasePlatformTestCase() {
         val panel = SceneViewPanel(SceneRenderParams.DEFAULT, renderer, play = play,
             paintSession = { _, _, ready -> ready(session) })
         try {
-            panel.selectEntity("1")
+            panel.selectEntity(1L)
             val button = named(panel, "paint-foliage") as JToggleButton
             button.doClick()
             assertNotNull(renderer.state.brush)

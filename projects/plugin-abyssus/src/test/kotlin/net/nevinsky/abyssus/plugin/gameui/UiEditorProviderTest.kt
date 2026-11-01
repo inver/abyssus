@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.plugin.uiDocJson
+
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
@@ -20,7 +22,7 @@ import javax.swing.JPanel
 
 class UiEditorProviderTest : BasePlatformTestCase() {
     private val provider = UiFileEditorProvider()
-    private val uiMeta = UiAssetTemplate().create(UUID.fromString("0b1c0f5e-7a2e-4d0b-9a0a-3a1f6d6e2b11"), 1L)
+    private val uiMeta = UiAssetTemplate(uiDocJson).create(UUID.fromString("0b1c0f5e-7a2e-4d0b-9a0a-3a1f6d6e2b11"), 1L)
 
     private fun project(meta: String = uiMeta, assetName: String = "menus"): VirtualFile {
         myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P","uiAssetNames":["$assetName"]}""")

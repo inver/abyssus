@@ -1,3 +1,4 @@
+/* DISABLED (a tree-path patch tool; scenes are edited as DTOs now); kept for reference, not compiled.
 /*
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
@@ -68,3 +69,5 @@ class ScenePatchApplicationTest : BasePlatformTestCase() {
         }
     }
 }
+
+*/

@@ -84,7 +84,6 @@ class NewFoliageActionTest : BasePlatformTestCase() {
         assertEquals("the asset is selected in the view", "foliage_meadow", selected)
 
         val meta = metaOf("foliage_meadow")
-        assertEquals("abyssus", meta["format"].asText())
         assertEquals(1, meta["formatVersion"].asInt())
         assertEquals(MetaType.FOLIAGE.name, meta["type"].asText())
         val uuid = meta["uuid"].asText()

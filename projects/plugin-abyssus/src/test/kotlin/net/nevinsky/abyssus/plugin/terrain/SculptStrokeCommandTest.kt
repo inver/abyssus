@@ -50,7 +50,7 @@ class SculptStrokeCommandTest : BasePlatformTestCase() {
     private fun bytes(name: String) = File(folder.path, name).takeIf { it.exists() }?.readBytes()
     private fun sculptFiles() = listOf("abyssus-terrain.base", "abyssus-terrain.sculpt", "abyssus-terrain.sculpt.json").filter { File(folder.path, it).exists() }
 
-    private val target get() = TerrainTarget("1", TerrainData(resolution, FloatArray(resolution * resolution), size, 1f), Matrix4())
+    private val target get() = TerrainTarget(1L, TerrainData(resolution, FloatArray(resolution * resolution), size, 1f), Matrix4())
 
     private fun command(
         store: AssetFileStore = LocalAssetFileStore(disk),
@@ -58,7 +58,7 @@ class SculptStrokeCommandTest : BasePlatformTestCase() {
     ) = SculptStrokeCommand(
         project, folder, drafts, testCore.terrainSculpt, store,
         { readTerrainFolder(folder, testCore.json, testCore.terrainRecipes, testCore.terrainSculpt) },
-        { BrushMode(SCULPT_BRUSH, "1", 30f, 1f) }, { tool }, { reports += it },
+        { BrushMode(SCULPT_BRUSH, 1L, 30f, 1f) }, { tool }, { reports += it },
     )
 
     private fun stroke(c: SculptStrokeCommand) {

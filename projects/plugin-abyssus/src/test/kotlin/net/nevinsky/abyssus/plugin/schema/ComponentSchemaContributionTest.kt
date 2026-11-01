@@ -8,7 +8,6 @@ package net.nevinsky.abyssus.plugin.schema
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 
 /** The `componentSchemas` extension point: a contribution is offered while its plugin is loaded, and only then. */
 class ComponentSchemaContributionTest : BasePlatformTestCase() {
@@ -23,13 +22,13 @@ class ComponentSchemaContributionTest : BasePlatformTestCase() {
         val scene = myFixture.copyFileToProject("Untitled/scenes/Main Scene.scene", "Untitled/scenes/Main Scene.scene")
         myFixture.copyFileToProject("Untitled/Untitled.abss", "Untitled/Untitled.abss")
         val schemas = ComponentSchemas.of(project)
-        val root = SceneJson().parse(String(scene.contentsToByteArray()))
+        val root = net.nevinsky.abyssus.plugin.parsedScene(String(scene.contentsToByteArray()))
         assertNull(schemas.editorFor(scene).kindOf("MarkerComponent"))
 
         val plugin = Disposer.newDisposable()
         try {
             contribute(plugin)
-            assertFalse("MarkerComponent" in schemas.editorFor(scene).missingKinds(root, "0").map { it.name })
+            assertFalse("MarkerComponent" in schemas.editorFor(scene).missingKinds(root, 0L).map { it.name })
             assertNull(schemas.editorFor(scene).kindOf("MarkerComponent"))
         } finally {
             Disposer.dispose(plugin)

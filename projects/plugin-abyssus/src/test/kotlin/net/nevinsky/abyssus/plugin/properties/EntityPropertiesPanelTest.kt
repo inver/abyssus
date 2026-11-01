@@ -15,7 +15,8 @@ import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.ecs.component.*
+import net.nevinsky.abyssus.plugin.editSceneText
 import net.nevinsky.abyssus.plugin.projectView.AbyssusAssetNode
 import net.nevinsky.abyssus.plugin.projectView.AbyssusRootNode
 import net.nevinsky.abyssus.plugin.projectView.AbyssusSelection
@@ -92,7 +93,8 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
 
     private fun text(f: VirtualFile) = FileDocumentManager.getInstance().getDocument(f)!!.text
 
-    private fun components(f: VirtualFile, id: String) = net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree(SceneJson().parse(text(f))).components(id)!!
+    private fun rawEntries(e: net.nevinsky.abyssus.lib.core.dto.EntityDto) = e.components.filterIsInstance<RawComponentsWrapper>().flatMap { it.entries }
+    private fun entityDto(f: VirtualFile, id: Long) = net.nevinsky.abyssus.plugin.parsedScene(text(f)).entity(id)!!
 
     fun testEntityShowsItsComponents() {
         copyProject()
@@ -100,7 +102,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         p.show(entity("0"))
         val state = p.state as PanelState.EntityDetails
         assertEquals("Model 0", state.name)
-        assertEquals(listOf("NameComponent", "PickableComponent", "PositionComponent", "RenderComponent"), state.sections.map { it.kind })
+        assertEquals(listOf("NameComponent", "PositionComponent", "RenderComponent", "PickableComponent"), state.sections.map { it.kind })
         assertEquals("Model 0", all(p, JBLabel::class.java).first { it.name == "entity-name" }.text)
         assertEquals("-3.035308", (named(p, "field-PositionComponent-localPosition.x") as JBTextField).text)
         assertTrue("LightComponent" in state.addable)
@@ -150,7 +152,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         val field = named(p, "field-LightComponent-intensity") as JBTextField
         field.text = "2"
         leave(field)
-        assertEquals(2, components(sceneFile(), "8")["LightComponent"]["light"]["intensity"].asInt())
+        assertEquals(2f, entityDto(sceneFile(), 8).component(LightComponent::class.java)!!.light.intensity, 0f)
         assertEquals("2", (named(p, "field-LightComponent-intensity") as JBTextField).text)
         assertEquals("", (named(p, "error-LightComponent-intensity") as JBLabel).text)
     }
@@ -190,7 +192,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         val field = named(p, "field-CameraComponent-camera.fieldOfView") as JBTextField
         field.text = "50"
         field.postActionEvent()
-        assertEquals(50, components(sceneFile(), "4")["CameraComponent"]["camera"]["fieldOfView"].asInt())
+        assertEquals(50f, entityDto(sceneFile(), 4).component(CameraComponent::class.java)!!.camera.fieldOfView, 0f)
         val shown = named(p, "field-CameraComponent-camera.fieldOfView") as JBTextField
         assertEquals("50", shown.text)
     }
@@ -213,10 +215,10 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         val p = panel()
         p.show(entity("0"))
         val state = p.state as PanelState.EntityDetails
-        val group = addComponentGroup(project, sceneFile(), "0", state.addable, testMetaFiles())
+        val group = addComponentGroup(project, sceneFile(), 0L, state.addable, testMetaFiles())
         val light: AnAction = group.getChildren(null).first { it.templatePresentation.text == "Light" }
         light.actionPerformed(TestActionEvent.createTestEvent(light))
-        assertTrue(components(sceneFile(), "0").has("LightComponent"))
+        assertTrue(entityDto(sceneFile(), 0).component(LightComponent::class.java) != null)
         val after = p.state as PanelState.EntityDetails
         assertTrue(after.sections.any { it.kind == "LightComponent" })
         assertNotNull(named(p, "field-LightComponent-intensity"))
@@ -230,7 +232,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         p.show(component("0", "PlaneComponent"))
         val section = (p.state as PanelState.EntityDetails).sections.single()
         assertEquals("PlaneComponent", section.kind)
-        assertEquals(components(sceneFile(), "0")["PlaneComponent"], SceneJson().parse(section.raw!!))
+        assertEquals(section.raw, rawEntries(entityDto(sceneFile(), 0)).single { it.name == "PlaneComponent" }.json)
         assertTrue(section.fields.isEmpty())
         assertNull(named(p, "field-PlaneComponent-lineLength"))
         assertNull(named(p, "remove-PlaneComponent"))
@@ -244,36 +246,34 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         p.show(entity("1"))
         val state = p.state as PanelState.EntityDetails
         assertFalse("PlaneComponent" in state.addable)
-        val group = addComponentGroup(project, sceneFile(), "1", state.addable, testMetaFiles())
+        val group = addComponentGroup(project, sceneFile(), 1L, state.addable, testMetaFiles())
         assertFalse(group.getChildren(null).any { it.templatePresentation.text == "Plane" })
-        assertFalse(components(sceneFile(), "1").has("PlaneComponent"))
+        assertTrue(rawEntries(entityDto(sceneFile(), 1)).none { it.name == "PlaneComponent" })
         assertEquals(before, text(sceneFile()))
     }
 
     fun testLightRangeEditorWritesThirty() {
         copyProject()
-        SceneComponentEdits.add(project, sceneFile(), "0", "LightComponent", testMetaFiles())
+        SceneComponentEdits.add(project, sceneFile(), 0L, "LightComponent", testMetaFiles())
         val p = panel()
         p.show(entity("0"))
         val field = named(p, "field-LightComponent-range") as JBTextField
         assertEquals("100", field.text)
         field.text = "30"
         field.postActionEvent()
-        assertEquals(30, components(sceneFile(), "0")["LightComponent"]["light"]["range"].asInt())
+        assertEquals(30f, entityDto(sceneFile(), 0).component(LightComponent::class.java)!!.light.range, 0f)
     }
 
     private fun setEntityType(type: String) {
         val doc = FileDocumentManager.getInstance().getDocument(sceneFile())!!
-        val root = SceneJson().parse(doc.text)
-        (root["ecs"]["0"] as com.fasterxml.jackson.databind.node.ObjectNode).put("type", type)
-        WriteCommandAction.runWriteCommandAction(project) { doc.setText(SceneJson().inStyleOf(doc.text, root)) }
+        editSceneText(project, doc) { it.entity(0)!!.header().type = net.nevinsky.abyssus.lib.core.dto.EntityType.valueOf(type) }
     }
 
     fun testBeamEditorsAreSpotlightOnlyAndUsePercent() {
         copyProject()
         val f = sceneFile()
         val edits = SceneComponentEdits
-        edits.add(project, f, "0", "LightComponent", testMetaFiles())
+        edits.add(project, f, 0L, "LightComponent", testMetaFiles())
         val p = panel()
         for (type in listOf("LIGHT_POINT", "LIGHT_DIRECTIONAL", "LIGHT_SPOT")) {
             setEntityType(type)
@@ -289,7 +289,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
                 val field = named(p, "field-LightComponent-edgeSoftness") as JBTextField
                 field.text = "25"
                 field.postActionEvent()
-                assertEquals(0.25f, components(f, "0")["LightComponent"]["light"]["edgeSoftness"].floatValue())
+                assertEquals(0.25f, entityDto(f, 0).component(LightComponent::class.java)!!.light.edgeSoftness, 0f)
                 val angle = named(p, "field-LightComponent-coneAngle") as JBTextField
                 val before = text(f)
                 angle.text = "180"
@@ -298,9 +298,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
                 assertEquals(before, text(f))
                 assertTrue((named(p, "error-LightComponent-coneAngle") as JBLabel).text.contains("180"))
                 val doc = FileDocumentManager.getInstance().getDocument(f)!!
-                val root = SceneJson().parse(doc.text)
-                (net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree(root).components("0")!!["LightComponent"]["light"] as com.fasterxml.jackson.databind.node.ObjectNode).put("coneAngle", 60)
-                WriteCommandAction.runWriteCommandAction(project) { doc.setText(SceneJson().inStyleOf(doc.text, root)) }
+                editSceneText(project, doc) { it.entity(0)!!.component(LightComponent::class.java)!!.light.coneAngle = 60f }
                 assertEquals("60", (named(p, "field-LightComponent-coneAngle") as JBTextField).text)
             }
         }
@@ -311,7 +309,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         val p = panel()
         p.show(entity("0"))
         (named(p, "remove-PositionComponent") as JButton).doClick()
-        assertFalse(components(sceneFile(), "0").has("PositionComponent"))
+        assertFalse(entityDto(sceneFile(), 0).component(PositionComponent::class.java) != null)
         assertFalse((p.state as PanelState.EntityDetails).sections.any { it.kind == "PositionComponent" })
         assertNull(named(p, "field-PositionComponent-localPosition.x"))
     }
@@ -331,9 +329,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         val p = panel()
         p.show(component("0", "NameComponent"))
         val doc = FileDocumentManager.getInstance().getDocument(sceneFile())!!
-        val root = SceneJson().parse(doc.text)
-        net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree(root).components("0")!!.remove("NameComponent")
-        WriteCommandAction.runWriteCommandAction(project) { doc.setText(SceneJson().inStyleOf(doc.text, root)) }
+        editSceneText(project, doc) { it.entity(0)!!.components.removeAll { c -> c is NameComponent } }
         val state = p.state as PanelState.Empty
         assertTrue(state.message, state.message.contains("no longer has"))
     }

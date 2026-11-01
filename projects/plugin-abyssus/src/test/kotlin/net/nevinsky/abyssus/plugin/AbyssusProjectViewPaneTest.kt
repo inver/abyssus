@@ -19,7 +19,6 @@ import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.TestDataPath
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.tree.TreeUtil
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
 import net.nevinsky.abyssus.plugin.projectView.AbyssusProjectViewPane
@@ -53,12 +52,12 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
     private fun fixture(): VirtualFile {
         myFixture.copyFileToProject("Tree/Untitled.abss", "Untitled/Untitled.abss")
         val sceneText = java.io.File("$testDataPath/Tree/scenes/Main Scene.scene").readText()
-        myFixture.addFileToProject("Untitled/scenes/Main Scene.scene", SceneJson().pretty(SceneJson().parse(sceneText)))
+        myFixture.addFileToProject("Untitled/scenes/Main Scene.scene", prettyScene(sceneText))
         return myFixture.findFileInTempDir("Untitled")
     }
 
     private val originalName: String by lazy {
-        SceneJson().parse(java.io.File("$testDataPath/Tree/scenes/Main Scene.scene").readText()).get("name").asText()
+        parsedScene(java.io.File("$testDataPath/Tree/scenes/Main Scene.scene").readText()).name!!
     }
 
     private val panes = mutableListOf<AbyssusProjectViewPane>()
@@ -188,8 +187,8 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         val dir = fixture()
         val file = sceneFile(dir)
         val pane = open()
-        val replaced = SceneJson().parse(String(file.contentsToByteArray())).also { (it as ObjectNode).put("name", "Replaced") }
-        WriteAction.runAndWait<Exception> { file.setBinaryContent(SceneJson().pretty(replaced).toByteArray()) }
+        val replaced = parsedScene(String(file.contentsToByteArray())).copy(name = "Replaced")
+        WriteAction.runAndWait<Exception> { file.setBinaryContent(printScene(replaced).toByteArray()) }
         settle(pane, 1)
         await("replaced label") { hasSceneLabeled(pane, "Replaced") }
     }
@@ -263,8 +262,8 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         pane.tree.selectionPath = entity
         pane.tree.expandPath(entity)
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
-        assertTrue(editSceneDocument(project, file, "Rename entity 1") { root ->
-            ((root.get("ecs").get("1").get("components").get("NameComponent")) as ObjectNode).put("name", "Renamed Terrain")
+        assertTrue(editSceneDocument(project, file, "Rename entity 1") { scene ->
+            scene.entity(1)!!.component(net.nevinsky.abyssus.lib.core.ecs.component.NameComponent::class.java)!!.name = "Renamed Terrain"
             true
         })
         settle(pane, 1)
@@ -288,12 +287,11 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         val pane = open()
         pane.tree.selectionPath = entityPath(pane, "0")!!
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
-        assertTrue(editSceneDocument(project, file, "Add entity 99") { root ->
-            val ecs = root.get("ecs") as ObjectNode
-            ecs.set<ObjectNode>("99", ecs.get("0").deepCopy())
+        assertTrue(editSceneDocument(project, file, "Add entity 99") { scene ->
+            scene.ecs[99L] = net.nevinsky.abyssus.lib.core.editor.entityOf(99, net.nevinsky.abyssus.lib.core.dto.EntityType.OBJECT, net.nevinsky.abyssus.lib.core.ecs.component.NameComponent("Copy 99"))
             true
         })
-        val visitor = com.intellij.ui.tree.TreeVisitor { path -> net.nevinsky.abyssus.plugin.projectView.entityVisitAction(file, "99", path.path.map(TreeUtil::getUserObject)) }
+        val visitor = com.intellij.ui.tree.TreeVisitor { path -> net.nevinsky.abyssus.plugin.projectView.entityVisitAction(file, 99L, path.path.map(TreeUtil::getUserObject)) }
         assertTrue("a rebuild is pending after the edit", pane.refresh.selectAfterRebuild(visitor))
         settle(pane, 1)
         PlatformTestUtil.waitWithEventsDispatching("the new entity is selected", { pane.tree.selectionPath?.let { keyOfEntity(it) } == "99" }, 30)
@@ -308,11 +306,10 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         pane.tree.selectionPath = entityPath(pane, "0")!!
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
         assertTrue("no rebuild is pending", pane.refresh.idle)
-        val visitor = com.intellij.ui.tree.TreeVisitor { path -> net.nevinsky.abyssus.plugin.projectView.entityVisitAction(file, "99", path.path.map(TreeUtil::getUserObject)) }
+        val visitor = com.intellij.ui.tree.TreeVisitor { path -> net.nevinsky.abyssus.plugin.projectView.entityVisitAction(file, 99L, path.path.map(TreeUtil::getUserObject)) }
         assertTrue("the request is kept although the tree is idle", pane.refresh.selectAfterRebuild(visitor, evenIfIdle = true))
-        assertTrue(editSceneDocument(project, file, "Add entity 99") { root ->
-            val ecs = root.get("ecs") as ObjectNode
-            ecs.set<ObjectNode>("99", ecs.get("0").deepCopy())
+        assertTrue(editSceneDocument(project, file, "Add entity 99") { scene ->
+            scene.ecs[99L] = net.nevinsky.abyssus.lib.core.editor.entityOf(99, net.nevinsky.abyssus.lib.core.dto.EntityType.OBJECT, net.nevinsky.abyssus.lib.core.ecs.component.NameComponent("Copy 99"))
             true
         })
         settle(pane, 1)
@@ -333,8 +330,8 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         val pane = open()
         pane.tree.selectionPath = entityPath(pane, "0")!!
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
-        assertTrue(editSceneDocument(project, file, "Remove entity 0") { root ->
-            (root.get("ecs") as ObjectNode).remove("0")
+        assertTrue(editSceneDocument(project, file, "Remove entity 0") { scene ->
+            scene.ecs.remove(0L)
             true
         })
         settle(pane, 1)

@@ -17,20 +17,21 @@ import java.io.File
 class PhysicsOverlayGeometryTest {
     private val project = File(checkNotNull(System.getProperty("abyssus.testData")), "project/Physics")
     private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
-    private val scene = net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing(json, org.slf4j.helpers.NOPLogger.NOP_LOGGER)
+    private val registry = net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry().also { r -> r.registerAll(net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS); net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS.values.forEach { r.register(it.name, it) } }
+    private val scene = net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER, registry), org.slf4j.helpers.NOPLogger.NOP_LOGGER, registry)
         .parse(File(project, "scenes/Main Scene.scene").readText())
     private val content = sceneContentOf(scene)
     private val metas = AssetMetaLoader(json, FileLoader(project))
     private val geometry = PhysicsOverlayGeometry { name -> metas.terrainSize(name) }
 
-    private fun ecsOf(text: String) = net.nevinsky.abyssus.lib.core.testing.sceneWithEcs(text).ecs
+    private fun ecsOf(text: String) = net.nevinsky.abyssus.lib.core.testing.sceneWithEcs(text, registry).ecs
 
     @Test fun physicsComponentsDrawAtShownPosesAndStayUnchanged() {
         val before = scene.ecs.toString()
-        for (selected in listOf(null, "0", "1", "2", "missing")) {
+        for (selected in listOf(null, 0L, 1L, 2L, 99L)) {
             val segments = geometry.segments(content, scene.ecs, selected)
             assertTrue(segments.isNotEmpty())
-            if (selected == "0") assertEquals(12, segments.count { it.color == PhysicsColors.brighter(PhysicsColors.DYNAMIC) })
+            if (selected == 0L) assertEquals(12, segments.count { it.color == PhysicsColors.brighter(PhysicsColors.DYNAMIC) })
             if (selected == null) {
                 val box = segments.filter { it.color == PhysicsColors.DYNAMIC }
                 assertEquals(12, box.size)
@@ -49,9 +50,9 @@ class PhysicsOverlayGeometryTest {
                 "net.nevinsky.abyssus.lib.physics.ColliderComponent":{"shape":"$shape","offset":{"x":1}},
                 "net.nevinsky.abyssus.lib.physics.RigidBodyComponent":{"motionType":"KINEMATIC"},
                 "PositionComponent":{"localScale":{"x":2,"y":2,"z":2}}}}}""")
-            val shown = net.nevinsky.abyssus.lib.core.editor.scene.SceneContent(entityPositions = mapOf("0" to
+            val shown = net.nevinsky.abyssus.lib.core.editor.scene.SceneContent(entityPositions = mapOf(0L to
                 com.badlogic.gdx.math.Vector3(10f,20f,30f)))
-            val lines = geometry.segments(shown, ecs, "0")
+            val lines = geometry.segments(shown, ecs, 0L)
             assertEquals(shape,count,lines.size)
             assertTrue(lines.all { it.selected && it.color == PhysicsColors.brighter(PhysicsColors.KINEMATIC) })
             if (shape == "BOX") {
@@ -64,7 +65,7 @@ class PhysicsOverlayGeometryTest {
 
     @Test fun constraintAnchorsUseLocalAndWorldFrames() {
         val ecs = ecsOf("""{"0":{"components":{"ConstraintComponent":{"anchor":{"x":1},"otherAnchor":{"y":4}}}}}""")
-        val shown = net.nevinsky.abyssus.lib.core.editor.scene.SceneContent(entityPositions = mapOf("0" to
+        val shown = net.nevinsky.abyssus.lib.core.editor.scene.SceneContent(entityPositions = mapOf(0L to
             com.badlogic.gdx.math.Vector3(2f,0f,0f)))
         val lines = geometry.segments(shown,ecs,null)
         assertTrue(lines.any { it.from == com.badlogic.gdx.math.Vector3(3f,0f,0f) })

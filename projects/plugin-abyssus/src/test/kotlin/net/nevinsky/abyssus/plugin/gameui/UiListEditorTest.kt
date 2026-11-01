@@ -4,11 +4,15 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.plugin.uiDocJson
+
+import net.nevinsky.abyssus.plugin.canonicalUi
+import net.nevinsky.abyssus.plugin.admitUi
+
 import net.nevinsky.abyssus.lib.core.editor.ui.*
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
 import net.nevinsky.abyssus.lib.core.ui.model.UiCollection
 import net.nevinsky.abyssus.lib.core.ui.model.UiWidgetType
@@ -21,7 +25,7 @@ import javax.swing.JTextField
 import javax.swing.tree.DefaultMutableTreeNode
 
 class UiListEditorTest : BasePlatformTestCase() {
-    private val source = SceneJson().pretty("""{"format":"abyssus","formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main",
+    private val source = canonicalUi("""{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main",
         "bindings":[
           {"name":"scores","type":"list","fields":[{"name":"rank","type":"number"},{"name":"name","type":"string"},{"name":"look","type":"string"}],
            "sample":[{"rank":1,"name":"Ace","look":"gold"},{"rank":2,"name":"Bo","look":"plain"}]},
@@ -42,7 +46,7 @@ class UiListEditorTest : BasePlatformTestCase() {
 
     private fun controller(): UiEditorController = UiEditorController(project, file, Executor { it.run() }, { it.run() }).also { it.reload() }
     private val doc get() = FileDocumentManager.getInstance().getDocument(file)!!.text
-    private val collection: UiCollection get() = (UiCollectionDecoder().decode(SceneJson().parse(doc)) as UiAdmission.Admitted).collection
+    private val collection: UiCollection get() = (admitUi(doc) as UiAdmission.Admitted).collection
     private val model = UiPropertiesModel()
 
     private fun find(root: java.awt.Container, name: String): java.awt.Component {
@@ -155,11 +159,11 @@ class UiListEditorTest : BasePlatformTestCase() {
     // ---- declarations ----
 
     fun testListBindingFormsValidateTheRecordAndTheSampleRows() {
-        fun members(form: BindingForm) = (bindingMembers(form) as? FormResult.Valid)?.value?.toString()
-        assertEquals("""{"fields":[{"name":"rank","type":"number"},{"name":"name","type":"string"}],"sample":[{"rank":1,"name":"A"}]}""",
+        fun members(form: BindingForm) = (bindingMembers(form, uiDocJson) as? FormResult.Valid)?.value?.let { uiDocJson.toString(it) }
+        assertEquals("""{"sample":[{"rank":1,"name":"A"}],"fields":[{"name":"rank","type":"number"},{"name":"name","type":"string"}]}""",
             members(BindingForm("l", "list", fields = "rank:number, name:string", sample = """[{"rank":1,"name":"A"}]""")))
         assertEquals("""{"fields":[{"name":"a","type":"boolean"}]}""", members(BindingForm("l", "list", access = "write", fields = "a:boolean")))
-        fun errors(form: BindingForm) = (bindingMembers(form) as FormResult.Invalid).errors.map { it.field }
+        fun errors(form: BindingForm) = (bindingMembers(form, uiDocJson) as FormResult.Invalid).errors.map { it.field }
         assertEquals(listOf("fields"), errors(BindingForm("l", "list", fields = "")))
         assertEquals(listOf("fields"), errors(BindingForm("l", "list", fields = "a:number, a:string")))
         assertEquals(listOf("fields"), errors(BindingForm("l", "list", fields = "a:list")))
@@ -170,13 +174,13 @@ class UiListEditorTest : BasePlatformTestCase() {
         val roundTrip = bindingFormOf(collection.binding("scores")!!)
         assertEquals("rank:number, name:string, look:string", roundTrip.fields)
         assertEquals("list", roundTrip.type)
-        assertTrue(bindingMembers(roundTrip) is FormResult.Valid)
+        assertTrue(bindingMembers(roundTrip, uiDocJson) is FormResult.Valid)
     }
 
     fun testADeclaredListGoesThroughTheEditsAndTheDeclarationsListShowsIt() {
         val c = controller()
         val form = BindingForm("times", "list", fields = "t:number", sample = """[{"t":1.5}]""")
-        val members = (bindingMembers(form) as FormResult.Valid).value
+        val members = (bindingMembers(form, uiDocJson) as FormResult.Valid).value
         assertTrue(c.edit("t") { e, m -> e.upsertBinding(m, "times", "list", members) })
         assertEquals(listOf("t"), collection.binding("times")!!.fields.map { it.name })
         val declarations = UiDeclarationsPanel(project, c)

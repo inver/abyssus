@@ -98,7 +98,7 @@ class NewTerrainActionTest : BasePlatformTestCase() {
         val file = assetsNodeProjectFile(assets)!!
         val document = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(file)!!
         com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) {
-            document.setText("""{"format":"abyssus","formatVersion":2}""")
+            document.setText("""{"formatVersion":2}""")
         }
         assertNull(assetsNodeProjectFile(assets))
         val errors = mutableListOf<String>()
@@ -195,8 +195,8 @@ class NewTerrainActionTest : BasePlatformTestCase() {
         assertEquals(abssBefore, bytes("P.abss").toList())
         assertEquals(sceneBefore, bytes("scenes/Main.scene").toList())
         val meta = File(projectDir, "assets/hills/meta.json").readText()
-        assertTrue(meta, meta.startsWith("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":"""))
-        assertTrue(meta.contains(""""type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":400,"uv":1.0,"splatMap":null"""))
+        assertTrue(meta, meta.startsWith("""{"formatVersion":1,"version":1,"lastModified":"""))
+        assertTrue(meta.contains(""""type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":400,"uv":1.0"""))
         assertEquals(17 * 17 * 4, bytes("assets/hills/terrain.data").size)
         assertTrue(File(projectDir, "assets/hills/abyssus-terrain.recipe.json").isFile)
     }

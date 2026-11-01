@@ -8,7 +8,6 @@ package net.nevinsky.abyssus.plugin.sceneview.perf
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import net.nevinsky.abyssus.lib.core.assets.testProject
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
@@ -67,7 +66,7 @@ class PixelEvidenceGlTest {
             case.workload.prepare(dir)
             case.patch(dir)
             val text = File(dir, case.workload.sceneFile).readText()
-            val params = renderParamsOf(parseScene(text), case.workload.camera(dir), dir, SceneJson().parse(text))
+            val params = renderParamsOf(parseScene(text), case.workload.camera(dir), dir)
             val result = GlHarness.render(
                 params, case.frames, OrbitCamera(params.camera), framebufferSize = 1280 to 720,
                 log = org.slf4j.helpers.NOPLogger.NOP_LOGGER, timeoutSeconds = 300, fixedDeltaSeconds = 1f / 60f,

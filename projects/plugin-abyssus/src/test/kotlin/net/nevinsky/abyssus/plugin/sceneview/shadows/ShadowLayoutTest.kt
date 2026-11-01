@@ -20,14 +20,20 @@ import org.junit.Test
 
 class ShadowLayoutTest {
     private val color = Color(1f,1f,1f,1f)
+    /** A stable numeric id for a readable light name: the kind letter picks the hundreds, a trailing digit the unit. */
+    private fun lid(name: String): Long = when {
+        name == "sun" -> 900L
+        name == "spot" -> 800L
+        else -> (when (name[0]) { 'd' -> 100L; 'p' -> 200L; else -> 300L }) + name.drop(1).toLong()
+    }
     private fun lights(points: List<String>, spots: List<String> = emptyList(), dirs: List<String> = emptyList()) = LightSet(
-        dirs.map { DirectionalSource(Vector3(0f,-1f,0f),color,it) },
-        points.map { PointSource(Vector3(0f,0f,0f),color,10f,it) },
-        spots.map { SpotSource(it,Vector3(0f,0f,0f),Vector3(0f,0f,-1f),color,10f,SpotCone(45f,0.2f)) })
+        dirs.map { DirectionalSource(Vector3(0f,-1f,0f),color,lid(it)) },
+        points.map { PointSource(Vector3(0f,0f,0f),color,10f,lid(it)) },
+        spots.map { SpotSource(lid(it),Vector3(0f,0f,0f),Vector3(0f,0f,-1f),color,10f,SpotCone(45f,0.2f)) })
 
     @Test fun budgetsAndUniqueTilesAreBounded() {
         val allocated = ShadowLayout().allocate(lights(listOf("p3","p1","p2"),listOf("s4","s3","s2","s1"),listOf("d2","d1")))
-        assertEquals(setOf("d1","p1","p2","s1","s2","s3"), allocated.map { it.entityId }.toSet())
+        assertEquals(setOf("d1","p1","p2","s1","s2","s3").map(::lid).toSet(), allocated.map { it.entityId }.toSet())
         val tiles=allocated.flatMap { it.tiles }
         assertEquals(16,tiles.size)
         assertEquals(16,tiles.map { it.index }.toSet().size)
@@ -52,8 +58,8 @@ class ShadowLayoutTest {
         val reorder=layout.allocate(lights(listOf("p2","p1"),listOf("s2","s1"),listOf("d1"))).associateBy { it.entityId }
         assertEquals(first,reorder)
         val removal=layout.allocate(lights(listOf("p2"),listOf("s2","s3"),listOf("d1"))).associateBy { it.entityId }
-        for(id in listOf("p2","s2","d1")) assertEquals(first[id],removal[id])
-        assertFalse(removal.containsKey("p1"))
+        for(name in listOf("p2","s2","d1")) assertEquals(first[lid(name)],removal[lid(name)])
+        assertFalse(removal.containsKey(lid("p1")))
         assertEquals(emptyList<ShadowAllocation>(),layout.allocate(NO_LIGHTS))
     }
 }

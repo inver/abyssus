@@ -182,7 +182,7 @@ class SceneFoliageTest {
     private fun placement(
         terrain: String = terrainName,
         foliage: String = foliageName,
-        entity: String = "1",
+        entity: Long = 1L,
     ): FoliagePlacement = FoliagePlacement(entity, foliage, terrain, PlacementTransform.IDENTITY)
 
     /** A drawable whose model folders are all built ([has] says which of them the storage managed to build). */

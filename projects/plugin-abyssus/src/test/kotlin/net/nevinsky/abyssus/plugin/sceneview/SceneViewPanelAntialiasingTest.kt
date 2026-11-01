@@ -77,16 +77,16 @@ class SceneViewPanelAntialiasingTest : BasePlatformTestCase() {
                 return find(panel)!!
             }
             val original = canvas()
-            panel.selectEntity("selected")
-            renderer.state.viewCamera = "camera"
+            panel.selectEntity(5L)
+            renderer.state.viewCamera = 6L
             renderer.state.gizmoMode = net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode.ROTATE
             panel.orbit.lookAlong(Vector3(1f, 0f, 0f))
             val target = panel.orbit.target
             panel.setAntialiasing(AntialiasingLevel.OFF)
             assertSame(original, canvas())
             assertEquals(4, panel.effectiveSampleCount)
-            assertEquals("selected", renderer.state.selectedId)
-            assertEquals("camera", renderer.state.viewCamera)
+            assertEquals(5L, renderer.state.selectedId)
+            assertEquals(6L, renderer.state.viewCamera)
             assertEquals(net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode.ROTATE, renderer.state.gizmoMode)
             assertEquals(target, panel.orbit.target)
         } finally { panel.dispose() }

@@ -1,3 +1,4 @@
+/* DISABLED (G7: scene water and saved ray settings are no longer modeled); kept for reference, not compiled.
 /*
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
@@ -55,3 +56,5 @@ class MirroredCameraTest {
         assertFalse("a point behind the mirrored camera is not", mirrored.frustum.pointInFrustum(Vector3(5f, 30f, 60f)))
     }
 }
+
+*/

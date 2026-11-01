@@ -18,11 +18,11 @@ import org.junit.Test
 class SceneToolbarStateTest {
     @Test fun freeCameraComesFirstThenTheSceneCamerasByName() {
         val content = SceneContent(cameras = listOf(
-            CameraPlacement("4", "Main", Vector3(0f, 0f, 0f), Vector3(0f, 0f, -1f), null),
-            CameraPlacement("9", "9", Vector3(0f, 0f, 0f), Vector3(0f, 0f, -1f), null),
+            CameraPlacement(4L, "Main", Vector3(0f, 0f, 0f), Vector3(0f, 0f, -1f), null),
+            CameraPlacement(9L, "9", Vector3(0f, 0f, 0f), Vector3(0f, 0f, -1f), null),
         ))
         assertEquals(
-            listOf(CameraChoice(null, "Free"), CameraChoice("4", "Main"), CameraChoice("9", "9")),
+            listOf(CameraChoice(null, "Free"), CameraChoice(4L, "Main"), CameraChoice(9L, "9")),
             cameraChoices(content, "Free"),
         )
     }

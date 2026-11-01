@@ -10,7 +10,7 @@ import org.junit.Test
 
 class ProjectSettingsReaderTest {
 
-    private val reader = ProjectSettingsReader()
+    private val reader = ProjectSettingsReader(com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing, com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().json)
 
     @Test
     fun committedProjectsDeclareTheirPhysicsChoice() {
@@ -53,8 +53,8 @@ class ProjectSettingsReaderTest {
     }
 
     @Test
-    fun missingFormatMarkerIsOff() {
-        val text = """{"name":"Test"}"""
+    fun unsupportedFormatVersionNineIsOff() {
+        val text = """{"formatVersion":9,"name":"Test"}"""
         val result = reader.read(text)
         assertFalse(result.physicsEnabled)
         assertFalse(result.problems.isEmpty())

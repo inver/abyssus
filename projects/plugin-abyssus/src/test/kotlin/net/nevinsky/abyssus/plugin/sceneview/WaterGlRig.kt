@@ -1,3 +1,4 @@
+/* DISABLED (G7: scene water and saved ray settings are no longer modeled); kept for reference, not compiled.
 /*
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
@@ -105,3 +106,5 @@ internal object WaterGlRig {
         return Triple((p shr 16) and 255, (p shr 8) and 255, p and 255)
     }
 }
+
+*/

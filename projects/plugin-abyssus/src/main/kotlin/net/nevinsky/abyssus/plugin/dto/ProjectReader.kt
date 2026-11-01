@@ -90,16 +90,9 @@ class ProjectReader(
             asset.references.forEach { visit(byUuid[it]) }
             ui.links(asset).forEach { visit(it) }
             if (asset.meta.type == MetaType.FOLIAGE) {
-                val additional = asset.meta.additional as? Map<*, *> ?: continue
-                (additional["terrain"] as? String)?.let { visit(byName[it]) }
-                val layers = additional["layers"] as? List<*> ?: continue
-                for (layer in layers) {
-                    val models = (layer as? Map<*, *>)?.get("models") as? List<*> ?: continue
-                    for (model in models) {
-                        val name = (model as? Map<*, *>)?.get("asset") as? String ?: continue
-                        visit(byName[name])
-                    }
-                }
+                val foliage = asset.meta.additional as? net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta ?: continue
+                foliage.terrain.takeIf { it.isNotEmpty() }?.let { visit(byName[it]) }
+                foliage.layers.flatMap { it.models }.forEach { visit(byName[it.asset]) }
             }
         }
         return AssetUsage(used, ui.issues(used))

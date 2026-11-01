@@ -35,10 +35,10 @@ class CloudShadowSceneGlTest {
     private val cloudsUuid = "3f2a9c1e-7b4d-4e8a-9c6f-1d2e3b4a5c6d"
     private val origin = Vector3(0f, 0f, 0f)
     private val sun = LightPlacement(
-        "sun", LightKind.DIRECTIONAL, Color(1f, 1f, 1f, 1f), 2f, origin, Vector3(-0.3f, -0.8f, -0.5f),
+        7L, LightKind.DIRECTIONAL, Color(1f, 1f, 1f, 1f), 2f, origin, Vector3(-0.3f, -0.8f, -0.5f),
     )
     private val spot = LightPlacement(
-        "8", LightKind.SPOT, Color(1f, 0.5f, 0f, 1f), 3f, Vector3(0f, 5f, 0f), Vector3(0f, -1f, 0f), coneAngle = 40f,
+        8L, LightKind.SPOT, Color(1f, 0.5f, 0f, 1f), 3f, Vector3(0f, 5f, 0f), Vector3(0f, -1f, 0f), coneAngle = 40f,
     )
 
     /** A project with the fixture's terrain and sky, the sky naming a fair cloud asset; deleted after [test]. */

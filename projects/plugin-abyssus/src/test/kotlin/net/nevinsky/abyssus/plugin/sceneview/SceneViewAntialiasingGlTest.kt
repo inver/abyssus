@@ -66,7 +66,7 @@ class SceneViewAntialiasingGlTest : BasePlatformTestCase() {
             val count = samples(panel)
             if (panel.effectiveSampleCount > 0) assertTrue("multisampled format: $count", count >= 1)
             else assertEquals(0, count) // no supported multisampled pixel format on this machine
-            panel.selectEntity("selected")
+            panel.selectEntity(5L)
             panel.orbit.lookAlong(Vector3(1f, 0f, 0f))
             val target = panel.orbit.target
             val original = canvas(panel)

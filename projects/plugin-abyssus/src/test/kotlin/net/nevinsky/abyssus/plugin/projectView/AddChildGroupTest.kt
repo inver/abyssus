@@ -25,7 +25,7 @@ class AddChildGroupTest : BasePlatformTestCase() {
             """{"format":"abyssus","formatVersion":1,"ecs":{}}""").virtualFile
         val position = { Vector3(0f, 0f, 0f) }
         val groups = listOf(AddLightGroup(project, file, position), AddAssetGroup(project, file, testMetaFiles(), position),
-            AddPathArrangementGroup(project, file) {}, AddWaterGroup(project, file, position))
+            AddPathArrangementGroup(project, file) {})
         val context = SimpleDataContext.getProjectContext(project)
         fun check(expected: Boolean) {
             for (group in groups) {

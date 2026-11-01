@@ -49,7 +49,7 @@ class AbyssusProjectSettings(private val project: Project) : Disposable {
     private val cache = ConcurrentHashMap<String, Cached>()
     private val watched = ConcurrentHashMap.newKeySet<VirtualFile>()
     private val reported = ConcurrentHashMap<String, List<String>>()
-    private val reader = ProjectSettingsReader(service<AbyssusPluginCtx>().documents.parsing)
+    private val reader = ProjectSettingsReader(service<AbyssusPluginCtx>().documents.parsing, service<AbyssusPluginCtx>().json)
     private val listeners = project.messageBus.syncPublisher(ProjectSettingsListener.TOPIC)
 
     init {

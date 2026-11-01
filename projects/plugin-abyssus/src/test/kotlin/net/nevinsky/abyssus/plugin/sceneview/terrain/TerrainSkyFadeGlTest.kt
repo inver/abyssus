@@ -50,7 +50,7 @@ class TerrainSkyFadeGlTest {
             val b = solid(0.6f, 0f, 0f)
             val shader = TerrainShader(ShaderStorage().withResources("/shader/scene", SceneRenderer::class.java))
             val mesh = TerrainMesh(PreparedTerrain(TerrainData(2, FloatArray(4), 10, 1f), emptyMap()), BuiltAssets { null })
-            val entity = TerrainEntity(AssetPlacement("1", "terrain", PlacementTransform.IDENTITY), mesh, Matrix4())
+            val entity = TerrainEntity(AssetPlacement(1L, "terrain", PlacementTransform.IDENTITY), mesh, Matrix4())
             val camera = PerspectiveCamera(60f, 32f, 32f).apply {
                 position.set(5f, 8f, 5f); lookAt(5f, 0f, 5.001f); near = 0.1f; far = 50f; update()
             }

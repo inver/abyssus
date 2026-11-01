@@ -123,13 +123,16 @@ fun readAssetState(folder: VirtualFile, services: PanelServices): PanelState {
     val meta = runReadAction { loadAssetMeta(folder, services.metaFiles) }
     return when (meta) {
         is AssetMeta.Failed -> PanelState.Empty(meta.message, null)
-        is AssetMeta.Loaded -> PanelState.Details(
+        is AssetMeta.Loaded -> runCatchingKeepingCancellation { readFieldStates(folder, meta.type, meta.document, services) }.fold(
+            onFailure = { PanelState.Empty(AbyssusBundle.message("propertiesMetaParseError", it.documentDisplayMessage()), null) },
+            onSuccess = { fields -> PanelState.Details(
             folder.name, meta,
             if (meta.type == MetaType.SKYBOX) faces(folder, meta) else null,
             if (meta.type == MetaType.SKYBOX_HDR) hdrCell(folder, meta, services.hdr) else null,
-            readFieldStates(folder, meta.type, meta.document, services),
+            fields,
             if (meta.type == MetaType.TERRAIN) readTerrainNow(folder, meta, services) else null,
             if (meta.type == MetaType.FOLIAGE) readFoliageNow(folder, meta, services) else null,
+        ) },
         )
     }
 }

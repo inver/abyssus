@@ -26,7 +26,7 @@ class SceneOverlayHostTest {
 
     /** Draws a small cross at each entity position the view shows. */
     private class MarkerOverlay : SceneOverlay {
-        val seen = mutableListOf<Map<String, Vector3>>()
+        val seen = mutableListOf<Map<Long, Vector3>>()
         override fun draw(view: OverlayView, lines: LineSink) {
             seen += view.content.entityPositions
             for (p in view.content.entityPositions.values) lines.line(Vector3(p.x - 0.1f, p.y, p.z), Vector3(p.x + 0.1f, p.y, p.z), Color(1f, 1f, 1f, 1f))
@@ -68,7 +68,7 @@ class SceneOverlayHostTest {
         val sink = Recorder()
         SceneOverlayHost(listOf(NamedOverlay("Test", overlay))) { m, e -> throw AssertionError(m, e) }.draw(view(), sink)
         assertEquals(content.entityPositions, overlay.seen.single())
-        for (id in listOf("0", "2", "6")) {
+        for (id in listOf(0L, 2L, 6L)) {
             val model = content.models.single { it.entityId == id }.transform.position
             assertTrue("no marker at entity $id", model in sink.centres)
         }

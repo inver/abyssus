@@ -58,7 +58,7 @@ class DocumentParsing(
     fun foliageMeta(text: String): FoliageMeta =
         values(text).objectAt("additional")?.let { FoliageSettingsBinding(json).read(it) } ?: FoliageMeta()
 
-    private fun supported(text: String, @Suppress("UNUSED_PARAMETER") kind: DocumentKind) = json.readObject(text)
+    private fun supported(text: String, kind: DocumentKind) = json.readObject(text).also { format.requireSupported(it, kind) }
 
     @Suppress("UNCHECKED_CAST")
     private fun values(text: String): JsonValues {

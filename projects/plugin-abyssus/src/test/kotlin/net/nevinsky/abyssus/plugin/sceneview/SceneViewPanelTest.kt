@@ -14,7 +14,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
@@ -40,7 +40,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
                 direction = Vector3(0f, 0f, -1f)
             )
         )
-        var selected: String? = null
+        var selected: Long? = null
         val panel = SceneViewPanel(
             params, testRenderer(),
             lightMenu = PlacementMenu({
@@ -57,7 +57,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             val choices = panel.lightChoices()!!.getChildren(null)
             assertEquals(listOf("Directional", "Sun", "Spot"), choices.map { it.templatePresentation.text })
             choices[1].actionPerformed(TestActionEvent.createTestEvent(choices[1]))
-            assertEquals("0", selected)
+            assertEquals(1L, selected)
             val document = FileDocumentManager.getInstance().getDocument(file)!!
             val light = sceneContentOf(net.nevinsky.abyssus.lib.core.editor.parseScene(document.text)).lights.single()
             assertEquals(Vector3(10f, 0f, -4f), light.position)
@@ -94,7 +94,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
                 direction = Vector3(0f, 0f, -1f)
             )
         )
-        var selected: String? = null
+        var selected: Long? = null
         val documents = net.nevinsky.abyssus.plugin.dto.SceneDocumentCache.of(project)
         val panel = SceneViewPanel(
             params, testRenderer(),
@@ -112,15 +112,13 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             val choices = panel.assetChoices()!!.getChildren(null).filter { it !is Separator }
             assertEquals(listOf("tree", "hills"), choices.map { it.templatePresentation.text })
             choices[0].actionPerformed(TestActionEvent.createTestEvent(choices[0]))
-            assertEquals("0", selected)
+            assertEquals(1L, selected)
             choices[1].actionPerformed(TestActionEvent.createTestEvent(choices[1]))
             val document = FileDocumentManager.getInstance().getDocument(file)!!
-            val ecs = SceneJson().parse(document.text)["ecs"]
-            fun at(id: String) = ecs[id]["components"]["PositionComponent"]["localPosition"].let {
-                Vector3(it.path("x").floatValue(), it.path("y").floatValue(), it.path("z").floatValue())
-            }
-            assertEquals(Vector3(10f, 0f, -4f), at("0"))
-            assertEquals(Vector3(-40f, 0f, -54f), at("1")) // the 100-unit terrain is centred on the orbit target
+            val scene = net.nevinsky.abyssus.plugin.parsedScene(document.text)
+            fun at(id: Long) = scene.entity(id)!!.component(PositionComponent::class.java)!!.localPosition.let { Vector3(it.x, it.y, it.z) }
+            assertEquals(Vector3(10f, 0f, -4f), at(1L))
+            assertEquals(Vector3(-40f, 0f, -54f), at(2L)) // the 100-unit terrain is centred on the orbit target
             WriteCommandAction.runWriteCommandAction(project) { document.setText("not json") }
             panel.setParams(params)
             assertFalse(button.isEnabled)
@@ -185,10 +183,10 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             assertTrue(
                 panel.onArrangementCreate!!(BaseMeta(MetaType.MODEL, "tree"), points, false)
             )
-            val ecs = SceneJson().parse(document.text)["ecs"]
-            assertEquals("Path 11", ecs["11"]["components"]["NameComponent"]["name"].asText())
-            assertEquals(5, ecs["11"]["components"]["PathArrangementComponent"]["slots"].size())
-            assertEquals("11", renderer.state.selectedId)
+            val path = net.nevinsky.abyssus.plugin.parsedScene(document.text).entity(11)!!
+            assertEquals("Path 11", path.component(NameComponent::class.java)!!.name)
+            assertEquals(5, path.component(PathArrangementComponent::class.java)!!.slots.size)
+            assertEquals(11L, renderer.state.selectedId)
             com.intellij.openapi.command.undo.UndoManager.getInstance(project)
                 .undo(
                     com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance()
@@ -211,11 +209,11 @@ class SceneViewPanelTest : BasePlatformTestCase() {
                 listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)),
                 false
             )
-            assertTrue(panel.onArrangementEdit!!("11", listOf(Vector3(0f, 0f, 0f), Vector3(60f, 0f, 0f))))
-            val slots = SceneJson().parse(
+            assertTrue(panel.onArrangementEdit!!(11L, listOf(Vector3(0f, 0f, 0f), Vector3(60f, 0f, 0f))))
+            val slots = net.nevinsky.abyssus.plugin.parsedScene(
                 FileDocumentManager.getInstance().getDocument(file)!!.text
-            )["ecs"]["11"]["components"]["PathArrangementComponent"]["slots"]
-            assertEquals(7, slots.size())
+            ).entity(11)!!.component(PathArrangementComponent::class.java)!!.slots
+            assertEquals(7, slots.size)
         } finally {
             editor.dispose()
         }

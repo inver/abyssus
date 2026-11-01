@@ -1,3 +1,4 @@
+/* DISABLED (G7: scene water and saved ray settings are no longer modeled); kept for reference, not compiled.
 /*
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
@@ -93,7 +94,7 @@ class SceneFrameSnapshotTest {
 
     @Test fun aTransformPreviewShowsTheSamePoseInTheViewAndTheReflection() {
         val base = withWater("Untitled", "Main Scene.scene", 0.0, 0.0, 0.0)
-        val model = base.content.models.first { it.entityId == "2" }
+        val model = base.content.models.first { it.entityId == 2L }
         val moved = Vector3(model.transform.position.x + 4f, model.transform.position.y, model.transform.position.z - 2f)
         val previewed = image(base) { renderer ->
             renderer.state.preview = mapOf("2" to DragResult(model.transform.copy(position = moved), null))
@@ -153,3 +154,5 @@ class SceneFrameSnapshotTest {
         assertTrue(identical(plain.image, under.image))
     }
 }
+
+*/

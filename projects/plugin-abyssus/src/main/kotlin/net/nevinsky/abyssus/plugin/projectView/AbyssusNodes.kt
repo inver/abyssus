@@ -31,7 +31,7 @@ import net.nevinsky.abyssus.plugin.filetype.*
 import javax.swing.Icon
 
 /** Shown in a scene entry's label (`name (id)`) and edited via Rename, so not repeated as rows. */
-private val SCENE_HEADER = setOf("id", "name")
+private val SCENE_HEADER = setOf("formatVersion", "id", "name")
 
 /** The `.scene` a project-view node can open in the scene view (a standalone scene or a project's scene entry), else null. */
 fun viewableSceneFile(node: Any?): VirtualFile? = when (node) {

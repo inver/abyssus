@@ -5,7 +5,6 @@
 package net.nevinsky.abyssus.plugin.foliage
 
 import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.host.*
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.command.undo.UndoManager
@@ -33,7 +32,7 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
     private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
     private val drafts get() = project.service<FoliageDrafts>()
     private val reports = mutableListOf<String>()
-    private var mode = BrushMode(FOLIAGE_BRUSH, "1", 100f, 1f, true, FoliageBrushOptions(1))
+    private var mode = BrushMode(FOLIAGE_BRUSH, 1L, 100f, 1f, true, FoliageBrushOptions(1))
     override fun setUp() {
         super.setUp()
         drafts.discardAll()
@@ -57,12 +56,12 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
     }
     private fun source(): FoliageSource.Ready {
         val text = File(folder.path, "meta.json").readText()
-        return readFoliageSource(folder.name, disk, json, text, net.nevinsky.abyssus.lib.core.editor.document.parseDocumentObject(text).at("additional")) as FoliageSource.Ready
+        return readFoliageSource(folder.name, disk, json, text, service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing.foliageMeta(text)) as FoliageSource.Ready
     }
     private fun command(background: (Runnable) -> Unit = { it.run() }, ui: (Runnable) -> Unit = { it.run() }) = FoliageStrokeCommand(
         project, scene, folder, source(), drafts, net.nevinsky.abyssus.plugin.testCore.documents, project.service<FoliageUndoCache>(), { mode }, background, ui, reports::add,
     )
-    private fun target() = TerrainTarget("1", source().terrain, Matrix4())
+    private fun target() = TerrainTarget(1L, source().terrain, Matrix4())
     private fun bytes(name: String) = File(folder.path, name).readBytes().toList()
     private fun press(c: FoliageStrokeCommand) = c.pressed(target(), Vector3(800f, 0f, 800f))
 
