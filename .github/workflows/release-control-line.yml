@@ -29,14 +29,15 @@ jobs:
     outputs:
       version: ${{ steps.tag.outputs.version }}
     steps:
-      # The .msi needs a numeric version, and the launcher orders releases by it: only cl-vX.Y.Z is accepted
+      # The .msi needs a numeric version, the .dmg a major version above 0 (jpackage rejects 0.y.z on macOS), and the
+      # launcher orders releases by it: only cl-vX.Y.Z with X >= 1 is accepted
       - name: Check tag
         id: tag
         env:
           TAG: ${{ github.ref_name }}
         run: |
-          if [[ ! "$TAG" =~ ^cl-v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
-            echo "::error::Tag '$TAG' is not cl-vX.Y.Z"
+          if [[ ! "$TAG" =~ ^cl-v([1-9][0-9]*\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "::error::Tag '$TAG' is not cl-vX.Y.Z with a major version X of 1 or more (macOS packages reject 0.y.z)"
             exit 1
           fi
           echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"

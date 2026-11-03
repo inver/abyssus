@@ -17,7 +17,12 @@ import java.util.Properties
 // jpackage cannot cross-build: run a package task on the OS it targets (see the game's README, "Packages").
 
 /** The package version: `.msi` needs numeric x.y.z and `.dmg` a major version above 0. */
-val controlLineVersion: Provider<String> = providers.gradleProperty("controlLineVersion").orElse("1.0.0")
+val controlLineVersion: Provider<String> = providers.gradleProperty("controlLineVersion").orElse("1.0.0").map {
+    require(Regex("""[1-9]\d*\.\d+\.\d+""").matches(it)) {
+        "controlLineVersion '$it' must be X.Y.Z with X >= 1: .msi needs a numeric version and .dmg a major version above 0"
+    }
+    it
+}
 
 val packagingBuild: Provider<Directory> = layout.buildDirectory.dir("packaging")
 val installDist = tasks.named<Sync>("installDist")
