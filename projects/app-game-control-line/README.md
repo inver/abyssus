@@ -97,22 +97,25 @@ Run on Windows with a JDK 21 and the WiX Toolset 3.x (`candle.exe` and `light.ex
 the player pick the folder. Its upgrade code is fixed in `abyssus.control-line-packaging`, so installing a higher
 `controlLineVersion` upgrades an installed Control Line in place, and the version must stay numeric (`x.y.z`).
 
-### Unsigned packages
+### Signing
 
-The packages are not code-signed or notarized, so the first start meets the operating system's warning.
-
-- **macOS:** the app is ad-hoc signed by `jpackage`, which Apple silicon requires, but not by a developer certificate, so Gatekeeper
-  refuses the first start ("cannot be opened because the developer cannot be verified"). On macOS 15 and later open
-  **System Settings > Privacy & Security**, scroll to *Security*, press **Open Anyway** beside Control Line and confirm. On
-  macOS 14 and earlier Control-click the app and choose **Open**. From Terminal, clear the download flag of the app (not
-  recursively: the bundled runtime's files are read-only, so `-r` prints permission errors, and Gatekeeper looks only at the
-  bundle):
+- **macOS:** the release workflow signs the app and the `.dmg` with a Developer ID Application certificate and notarizes the
+  `.dmg` with Apple, so Gatekeeper opens it without a warning. `scripts/sign-macos-app.sh` signs every Mach-O file of the app
+  and the native libraries inside its jars (the notarization service rejects an unsigned `.dylib` in an archive), with the
+  hardened runtime and `packaging/macos/entitlements.plist` (JIT and third-party native libraries, which a JVM needs). The
+  packaging build runs it when the environment variable `ABYSSUS_MAC_SIGN_IDENTITY` is set (the workflow sets it after
+  importing the certificate from the secrets `MAC_CERT_P12` and `MAC_CERT_PASSWORD`; notarization uses `APPLE_ID`,
+  `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID`). Without it, a local build is only ad-hoc signed by `jpackage`, which Apple
+  silicon requires, and Gatekeeper refuses the first start: on macOS 15 and later open **System Settings > Privacy & Security**,
+  press **Open Anyway** beside Control Line; on macOS 14 and earlier Control-click the app and choose **Open**. From Terminal,
+  clear the download flag of the app (not recursively: the bundled runtime's files are read-only, so `-r` prints permission
+  errors, and Gatekeeper looks only at the bundle):
 
   ```
   xattr -d com.apple.quarantine "/Applications/Control Line.app"
   ```
 
-- **Windows:** SmartScreen shows "Windows protected your PC" for the unsigned `.msi`. Press **More info**, then **Run anyway**.
+- **Windows:** the `.msi` is not code-signed, and SmartScreen shows "Windows protected your PC" for the unsigned `.msi`. Press **More info**, then **Run anyway**.
 
 
 ## Ray mode (development aid)

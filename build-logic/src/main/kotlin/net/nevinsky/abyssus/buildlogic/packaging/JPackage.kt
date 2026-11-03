@@ -82,6 +82,26 @@ abstract class JPackage @Inject constructor(private val exec: ExecOperations) : 
     @get:Input
     abstract val extraArgs: ListProperty<String>
 
+    /**
+     * A "Developer ID Application" identity (name or SHA-1 hash): the macOS app and the `.dmg` are signed with it for
+     * notarization. Unset, the app is only signed ad hoc, which Apple silicon requires.
+     */
+    @get:Input
+    @get:Optional
+    abstract val macSigningIdentity: Property<String>
+
+    /** The hardened-runtime entitlements of the signed app (needs [macSigningIdentity]). */
+    @get:InputFile
+    @get:Optional
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val macEntitlements: RegularFileProperty
+
+    /** `scripts/sign-macos-app.sh`, which signs the app, its native libraries and the jars' native libraries. */
+    @get:InputFile
+    @get:Optional
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val macSignScript: RegularFileProperty
+
     /** The installer's file name when it should not be jpackage's own (`Name-1.0.0.dmg`). */
     @get:Input
     @get:Optional
@@ -133,14 +153,17 @@ abstract class JPackage @Inject constructor(private val exec: ExecOperations) : 
         if (!isImage && outputName.isPresent) {
             val made = dest.listFiles()?.singleOrNull { it.isFile }
                 ?: throw GradleException("jpackage should have written exactly one file into $dest")
-            made.renameTo(java.io.File(dest, outputName.get()))
+            val named = java.io.File(dest, outputName.get())
+            made.renameTo(named)
+            if (type.get() == "dmg" && macSigningIdentity.isPresent) signDmg(named)
         }
     }
 
     /**
      * jpackage writes `NSMicrophoneUsageDescription` into every macOS app, which makes macOS ask the player for the
-     * microphone at first start. The game never records, so the key is removed and the app signed ad hoc again (editing
-     * `Info.plist` invalidates jpackage's own ad-hoc signature, which Apple silicon requires).
+     * microphone at first start. The game never records, so the key is removed and the app signed again, with
+     * [macSigningIdentity] or else ad hoc (editing `Info.plist` invalidates jpackage's own ad-hoc signature, which Apple
+     * silicon requires).
      */
     private fun dropMicrophonePrompt(dest: java.io.File) {
         dest.listFiles { f -> f.name.endsWith(".app") }?.forEach { app ->
@@ -148,7 +171,22 @@ abstract class JPackage @Inject constructor(private val exec: ExecOperations) : 
             // plutil fails when the key is absent, which is fine: nothing to remove
             ProcessBuilder("plutil", "-remove", "NSMicrophoneUsageDescription", plist.path).redirectErrorStream(true)
                 .start().waitFor()
-            exec.exec { commandLine("codesign", "--force", "--deep", "--sign", "-", app.path) }
+            if (macSigningIdentity.isPresent) {
+                check(macEntitlements.isPresent && macSignScript.isPresent) { "macSigningIdentity needs macEntitlements and macSignScript" }
+                exec.exec {
+                    commandLine(macSignScript.get().asFile.path, app.path, macSigningIdentity.get(), macEntitlements.get().asFile.path)
+                }
+            } else {
+                exec.exec { commandLine("codesign", "--force", "--deep", "--sign", "-", app.path) }
+            }
         }
+    }
+
+    /** The disk image carries its own signature (the notarization ticket is stapled to it later). */
+    private fun signDmg(dmg: java.io.File) {
+        val cmd = mutableListOf("codesign", "--force", "--timestamp", "--sign", macSigningIdentity.get())
+        System.getenv("MACOS_KEYCHAIN")?.takeIf { it.isNotEmpty() }?.let { cmd += listOf("--keychain", it) }
+        cmd += dmg.path
+        exec.exec { commandLine(cmd) }
     }
 }

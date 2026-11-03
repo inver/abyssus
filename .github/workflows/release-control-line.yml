@@ -10,7 +10,9 @@ name: Release Control Line
 #   `openssl pkeyutl -verify -pubin -inkey update-key.pub.pem -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig`.
 #
 # The private key is the secret UPDATE_SIGNING_KEY (PEM, `openssl genpkey -algorithm ED25519`), read only by the publish
-# job in the `release` environment. Installers are not code-signed (Authenticode, Developer ID) yet.
+# job in the `release` environment. The macOS .dmg files are signed with a Developer ID Application certificate and notarized by Apple; the secrets
+# MAC_CERT_P12 (base64 .p12), MAC_CERT_PASSWORD, APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID live in the
+# `release` environment, which the macOS build jobs use. Other installers are not code-signed yet (Authenticode).
 on:
   push:
     tags: ['cl-v*']
@@ -46,6 +48,8 @@ jobs:
     name: Build ${{ matrix.name }}
     needs: version
     runs-on: ${{ matrix.os }}
+    # the macOS jobs read the signing secrets of the `release` environment; other platforms leave it empty
+    environment: ${{ matrix.environment }}
     strategy:
       fail-fast: false
       matrix:
@@ -66,11 +70,13 @@ jobs:
           - name: macOS arm64 (dmg)
             os: macos-latest # Apple silicon
             artifact: macos-arm64
+            environment: release
             tasks: ":app-game-control-line:packageDmg"
             paths: projects/app-game-control-line/build/packaging/dmg/*.dmg
           - name: macOS Intel x64 (dmg)
             os: macos-15-intel # an Intel runner; check the label against GitHub's list if the job never starts
             artifact: macos-x64
+            environment: release
             tasks: ":app-game-control-line:packageDmg"
             paths: projects/app-game-control-line/build/packaging/dmg/*.dmg
     steps:
@@ -104,9 +110,73 @@ jobs:
             choco install wixtoolset --version=3.14.1 --no-progress -y
           fi
 
+      # The Developer ID certificate lives only in a temporary keychain of this job. The packaging build signs with the
+      # identity in ABYSSUS_MAC_SIGN_IDENTITY (the app, its native libraries, the jars' native libraries and the .dmg).
+      - name: Import macOS signing certificate
+        if: runner.os == 'macOS'
+        env:
+          MAC_CERT_P12: ${{ secrets.MAC_CERT_P12 }}
+          MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+        run: |
+          if [ -z "$MAC_CERT_P12" ] || [ -z "$MAC_CERT_PASSWORD" ]; then
+            echo "::error::Secrets MAC_CERT_P12 and MAC_CERT_PASSWORD are not set (Developer ID Application certificate, base64 .p12, and its password)"
+            exit 1
+          fi
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password="$(uuidgen)"
+          printf '%s' "$MAC_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$RUNNER_TEMP/cert.p12" -P "$MAC_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          rm -f "$RUNNER_TEMP/cert.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          identity="$(security find-identity -v -p codesigning "$keychain" | awk '/Developer ID Application/ {print $2; exit}')"
+          if [ -z "$identity" ]; then
+            echo "::error::No 'Developer ID Application' identity in the certificate (a missing private key or another certificate type?)"
+            security find-identity -v -p codesigning "$keychain"
+            exit 1
+          fi
+          echo "ABYSSUS_MAC_SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
+          echo "MACOS_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+
       - name: Build installers
         shell: bash
         run: ./gradlew ${{ matrix.tasks }} -PcontrolLineVersion=${{ needs.version.outputs.version }} --no-daemon
+
+      # Apple scans the .dmg and everything in it; the ticket is stapled so the app opens offline too
+      - name: Notarize macOS disk image
+        if: runner.os == 'macOS'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -z "$APPLE_ID" ] || [ -z "$APPLE_APP_SPECIFIC_PASSWORD" ] || [ -z "$APPLE_TEAM_ID" ]; then
+            echo "::error::Secrets APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID are not set"
+            exit 1
+          fi
+          dmgs=(projects/app-game-control-line/build/packaging/dmg/*.dmg)
+          [ "${#dmgs[@]}" -eq 1 ] || { echo "::error::Expected one .dmg, found: ${dmgs[*]}"; exit 1; }
+          dmg="${dmgs[0]}"
+          result="$(xcrun notarytool submit "$dmg" --apple-id "$APPLE_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" --wait --timeout 40m --output-format json)"
+          echo "$result"
+          status="$(jq -r '.status' <<< "$result")"
+          if [ "$status" != "Accepted" ]; then
+            xcrun notarytool log "$(jq -r '.id' <<< "$result")" --apple-id "$APPLE_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" || true
+            echo "::error::Notarization of $dmg ended with status $status"
+            exit 1
+          fi
+          xcrun stapler staple "$dmg"
+          xcrun stapler validate "$dmg"
+          spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
+
+      - name: Remove signing keychain
+        if: always() && runner.os == 'macOS'
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true
 
       - name: Smoke test Linux packages
         if: runner.os == 'Linux'
@@ -206,4 +276,4 @@ jobs:
           - \`control-line-$VERSION-update.zip\`: the update package the installed launcher downloads.
           - \`SHA256SUMS\` with its Ed25519 signature \`SHA256SUMS.sig\` and the public key \`update-key.pub.pem\`: \`openssl pkeyutl -verify -pubin -inkey update-key.pub.pem -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig\`, then \`sha256sum --check SHA256SUMS\`.
 
-          The installers are not code-signed, so Windows SmartScreen and macOS Gatekeeper warn on first start; see the game's README."
+          The macOS .dmg files are signed and notarized. The other installers are not code-signed, so Windows SmartScreen warns on first start; see the game's README."

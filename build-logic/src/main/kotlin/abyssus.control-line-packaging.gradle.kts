@@ -45,6 +45,9 @@ val buildJdkHome: Provider<String> = providers.systemProperty("java.home")
 val osName: String = System.getProperty("os.name").lowercase()
 val isMac: Boolean = osName.contains("mac")
 val isWindows: Boolean = osName.contains("win")
+/** Set by the release workflow after it imports the Developer ID certificate; unset, macOS packages are signed ad hoc. */
+val developerIdentity: Provider<String> = providers.environmentVariable("ABYSSUS_MAC_SIGN_IDENTITY").filter { it.isNotBlank() }
+
 /** The OS and architecture the package is built on, as they appear in a package's file name. */
 val platformName: String = if (isMac) "macos" else if (isWindows) "windows" else "linux"
 val archName: String = System.getProperty("os.arch").let { if (it == "aarch64" || it == "arm64") "arm64" else "x64" }
@@ -73,6 +76,13 @@ val launcherOptions: List<String> = buildList {
     if (isMac) add("-XstartOnFirstThread")
 }
 
+/** The macOS signing inputs of a jpackage run; without [developerIdentity] nothing changes. */
+fun JPackage.macSigning() {
+    macSigningIdentity.set(developerIdentity)
+    macEntitlements.set(layout.projectDirectory.file("packaging/macos/entitlements.plist"))
+    macSignScript.set(rootProject.layout.projectDirectory.file("scripts/sign-macos-app.sh"))
+}
+
 /** Defaults shared by every jpackage run of the game. */
 fun JPackage.controlLine(packageType: String) {
     group = "packaging"
@@ -95,7 +105,10 @@ val packageApplication by tasks.registering(JPackage::class) {
     mainClass.set("net.nevinsky.abyssus.app.game.controlline.MainKt")
     javaOptions.set(launcherOptions)
     icon.set(iconFile)
-    if (isMac) extraArgs.addAll("--mac-package-identifier", "net.nevinsky.abyssus.controlline", "--mac-package-name", "Control Line")
+    if (isMac) {
+        extraArgs.addAll("--mac-package-identifier", "net.nevinsky.abyssus.controlline", "--mac-package-name", "Control Line")
+        macSigning()
+    }
 }
 
 // A shipped game carries no editor code: the payload every installer is built from is checked after it is made, and an
@@ -135,6 +148,7 @@ if (isMac) {
     tasks.register<JPackage>("packageDmg") {
         description = "Builds the macOS disk image for this Mac's architecture."
         installer("dmg", "dmg")
+        macSigning()
         extraArgs.addAll("--mac-package-identifier", "net.nevinsky.abyssus.controlline", "--mac-package-name", "Control Line")
     }
 }
