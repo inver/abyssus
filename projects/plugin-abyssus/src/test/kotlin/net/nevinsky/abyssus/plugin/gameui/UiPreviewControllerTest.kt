@@ -4,13 +4,14 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.plugin.canonicalUi
+
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.ui.SampleProblem
 import net.nevinsky.abyssus.lib.core.editor.ui.SampleResult
 import net.nevinsky.abyssus.lib.core.ui.state.UiValue
@@ -21,7 +22,7 @@ import javax.swing.JPanel
 import javax.swing.JTextField
 
 class UiPreviewControllerTest : BasePlatformTestCase() {
-    private val source = SceneJson().pretty("""{"format":"abyssus","formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main",
+    private val source = canonicalUi("""{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main",
         "bindings":[{"name":"volume","type":"number","access":"write","sample":0.5,"min":0,"max":1},{"name":"name","type":"string","access":"write","sample":"Pilot"}],
         "screens":[{"id":"main","name":"Main","root":{"id":"root","type":"panel","children":[{"id":"vol","type":"slider","bindings":{"value":"volume"}}]}},
                    {"id":"pause","name":"Pause","kind":"overlay","root":{"id":"p","type":"panel"}}]}}}""")!!
@@ -33,7 +34,7 @@ class UiPreviewControllerTest : BasePlatformTestCase() {
     override fun setUp() {
         super.setUp()
         myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1}""")
-        myFixture.addFileToProject("p/scenes/Main.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""")
+        myFixture.addFileToProject("p/scenes/Main.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""")
         file = myFixture.addFileToProject("p/assets/menus/meta.json", source).virtualFile
     }
 
@@ -150,7 +151,7 @@ class UiPreviewControllerTest : BasePlatformTestCase() {
         c.setBackdropScene(null)
         assertNull(controller(prefs).backdropScene)
         assertEquals(text, document.text)
-        assertEquals("the scene is untouched", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""",
+        assertEquals("the scene is untouched", """{"format":"abyssus","formatVersion":1,"ecs":{}}""",
             String(file.parent.parent.parent.findChild("scenes")!!.findChild("Main.scene")!!.contentsToByteArray()))
     }
 

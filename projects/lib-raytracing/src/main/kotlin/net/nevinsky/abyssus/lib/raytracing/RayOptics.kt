@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.lib.raytracing
 
+import com.badlogic.gdx.math.Vector3
+
 import kotlin.math.sqrt
 
 enum class RayOpticalEvent { REFLECTION, TRANSMISSION }
@@ -36,7 +38,7 @@ class RayOpticalMedium {
 
 /** Geometric boundary math independent of traversal, graphics APIs and material textures. */
 class RayOptics {
-    fun refract(incident: RayVec3,opposingNormal: RayVec3,incidentIor: Float,targetIor: Float): RayVec3? {
+    fun refract(incident: Vector3,opposingNormal: Vector3,incidentIor: Float,targetIor: Float): Vector3? {
         val eta=incidentIor/targetIor
         val cosine=(-incident.dot(opposingNormal)).coerceIn(0f,1f)
         val k=1f-eta*eta*(1f-cosine*cosine)
@@ -54,7 +56,7 @@ class RayOptics {
         val rp=(targetIor*c-incidentIor*transmitted)/(targetIor*c+incidentIor*transmitted)
         return ((rs*rs+rp*rp)*.5f).coerceIn(0f,1f)
     }
-    fun offset(position: RayVec3,geometricNormal: RayVec3,direction: RayVec3): RayVec3 =
+    fun offset(position: Vector3,geometricNormal: Vector3,direction: Vector3): Vector3 =
         position+geometricNormal*(if(direction.dot(geometricNormal)>=0f) .001f else -.001f)
 
     /** Integer hash shared with native kernels; exactly representable 24-bit fraction. */

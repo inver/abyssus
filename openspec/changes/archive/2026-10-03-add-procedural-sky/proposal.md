@@ -25,7 +25,7 @@ from atmospheric scattering needs no images, has no cube, and responds to where 
 **File format.** `SKYBOX_PROCEDURAL` is a type Mundus does not define, so Mundus will not load such an asset.
 This is a deliberate, user-approved departure from "write only values Mundus writes", limited to the new asset
 folder the plugin's fixture ships. Existing `.scene`, `.abss` and `SKYBOX` / `MODEL` / `TERRAIN` `meta.json`
-files are unchanged, and the plugin still writes scene files only through `editSceneJson` (choosing the sky
+files are unchanged, and the plugin still writes scene files only through `editSceneDocument` (choosing the sky
 writes only `skyboxName`).
 
 ## Capabilities

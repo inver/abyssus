@@ -7,6 +7,8 @@ package net.nevinsky.abyssus.app.game.controlline
 import net.nevinsky.abyssus.app.game.controlline.render.FieldView
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration
+import net.nevinsky.abyssus.app.game.controlline.display.DisplaySettings
+import net.nevinsky.abyssus.app.game.controlline.display.defaultDisplayFile
 import net.nevinsky.abyssus.app.game.controlline.pattern.defaultPatternScoresFile
 import net.nevinsky.abyssus.app.game.controlline.score.defaultScoresFile
 import org.slf4j.LoggerFactory
@@ -34,6 +36,8 @@ fun main() {
         setBackBufferConfig(8, 8, 8, 8, 24, 0, 4)
         // foliage is drawn instanced, which needs glVertexAttribDivisor, core in OpenGL 3.3: a 3.3 core context (forward compatible on macOS)
         setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.GL30, 3, 3)
+        // the mode the player last chose on the settings screen: the window opens in it, with no windowed flash
+        if (DisplaySettings(defaultDisplayFile()).fullscreen) setFullscreenMode(Lwjgl3ApplicationConfiguration.getDisplayMode())
     }
     val fieldView = resolveFieldView(project)
     val reason = if (fieldView is RayFieldResult.Unavailable) fieldView.reason else null

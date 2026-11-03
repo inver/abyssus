@@ -1,9 +1,9 @@
 package net.nevinsky.abyssus.lib.core.editor.terrain
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaDocument
-import net.nevinsky.abyssus.lib.core.editor.document.TerrainAssetAdditional
+import net.nevinsky.abyssus.lib.core.editor.document.newAssetMetaText
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
 
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaParser
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.editor.meta.NEW_TERRAIN_UV_DEFAULT
@@ -31,19 +31,21 @@ class TerrainHeightEncoder {
 class NewTerrainFiles(val metaText: String, val heightBytes: ByteArray)
 
 /**
- * Builds native terrain asset files: one compact line of `format`, `formatVersion`, `version`, `lastModified`,
- * `uuid`, `type` and `additional` (`terrainFile`, `size`, `uv`, then the six splat references, null while unset), with
+ * Builds native terrain asset files: one compact line holding the asset meta (`additional` is a [TerrainMeta]), with
  * no trailing newline.
  */
-class TerrainAssetWriter(private val json: JsonProcessor, private val encoder: TerrainHeightEncoder) {
+class TerrainAssetWriter(
+    private val json: JsonProcessor,
+    private val encoder: TerrainHeightEncoder,
+    private val parser: AssetMetaParser = AssetMetaParser(json),
+) {
     fun create(uuid: UUID, lastModified: Long, size: Int, heights: FloatArray): NewTerrainFiles =
         NewTerrainFiles(meta(uuid, lastModified, size), encoder.encode(heights))
 
     fun meta(uuid: UUID, lastModified: Long, size: Int, uv: Float = NEW_TERRAIN_UV_DEFAULT): String {
         require(size > 0) { "size must be positive" }
-        return SceneJson().compact(AssetMetaDocument(
-            lastModified = lastModified, uuid = uuid.toString(), type = MetaType.TERRAIN,
-            additional = TerrainAssetAdditional(TERRAIN_META_FILE_NAME_DEFAULT, size, uv),
-        ))
+        return newAssetMetaText(
+            parser, MetaType.TERRAIN, TerrainMeta(terrainFile = TERRAIN_META_FILE_NAME_DEFAULT, size = size, uv = uv), uuid, lastModified,
+        )
     }
 }

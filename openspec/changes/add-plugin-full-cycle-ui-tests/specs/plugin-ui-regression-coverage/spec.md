@@ -229,7 +229,7 @@ The suite SHALL cover discovery, row actions, selection/expansion refresh, unuse
 
 ### Requirement: Scene gesture coverage
 
-The suite SHALL cover actual selection, navigation and authoring gestures, including mode/space/snap changes, Drop, framing and orientation-widget input. A completed authoring gesture SHALL be one edit; view navigation and cancelled/no-op gestures SHALL not write scene content. Gesture scenarios SHALL run where the Scene View actually renders: the canonical container's provisioned software GL, or a separately recorded GL-capable host. A scenario that cannot obtain a GL context SHALL be recorded as unverified rather than passed.
+The suite SHALL cover actual selection, navigation and authoring gestures, including mode/space/snap changes, Drop, framing and orientation-widget input. A completed authoring gesture SHALL be one edit; view navigation and cancelled/no-op gestures SHALL not write scene content. A scenario that cannot obtain a GL context SHALL be recorded as unverified rather than passed.
 
 #### Scenario: GES-01 Pick and clear
 - **WHEN** Model 0, Camera 4 or an eligible light is clicked and then empty space is clicked

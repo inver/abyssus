@@ -78,14 +78,14 @@ internal class SceneSkyPass(
     }
 
     fun draw(view: Camera, p: SceneRenderParams) {
-        skybox?.draw(view, p.content.skybox, p.projectDir, SunDirection.of(p.content.lights), skyClock.seconds, state.cloudTechnique)
+        skybox?.draw(view, p.content.skybox, SunDirection.of(p.content.lights), skyClock.seconds, state.cloudTechnique)
     }
-    private var lightsKey: Pair<List<LightPlacement>, Vec3>? = null
+    private var lightsKey: Pair<List<LightPlacement>, Vector3>? = null
     var lights = NO_LIGHTS
 
     /** [lights] with the sun dimmed by the clouds over it: what the environment and the terrain shader light with. */
     var frameLights = NO_LIGHTS
-    private var frameLightsKey: Triple<LightSet, String?, Pair<Float, Int?>>? = null
+    private var frameLightsKey: Triple<LightSet, Long?, Pair<Float, Int?>>? = null
     private val sunOcclusion = SunOcclusion()
 
     /** The cloud shadow map of this view; created with the first clouds that cast shadows, null when it could not be. */
@@ -97,7 +97,7 @@ internal class SceneSkyPass(
 
     // what the last applySunScale decided, for the ray tracing copy of the clouds' shade on the sun
     private var frameSky: ProceduralSky? = null
-    private var frameSunId: String? = null
+    private var frameSunId: Long? = null
     private var frameSunDirection = SunDirection.DEFAULT
     private var frameTargetX = 0f
     private var frameTargetZ = 0f
@@ -131,7 +131,7 @@ internal class SceneSkyPass(
 
     /** Recomputed only when the scene's lights or the orbit target (which decides the nearest point lights) change. */
     fun applyLights(c: SceneContent, orbit: OrbitCamera) {
-        val target = Vec3(orbit.target.x, orbit.target.y, orbit.target.z)
+        val target = Vector3(orbit.target.x, orbit.target.y, orbit.target.z)
         val key = c.lights to target
         if (key == lightsKey) return
         lightsKey = key
@@ -196,7 +196,7 @@ internal class SceneSkyPass(
         val clouds = sky.cloudAsset
         val drifting = clouds?.settings?.bandsFarToNear()?.any { it.windX != 0f || it.windZ != 0f } == true
         val key = raySunVisibilityKey(
-            sunId, frameSunDirection, clouds, drifting, attribute != null, scale, frameTargetX, frameTargetZ, skyClock.seconds,
+            sunId.toString(), frameSunDirection, clouds, drifting, attribute != null, scale, frameTargetX, frameTargetZ, skyClock.seconds,
         )
         publishedSunVisibility?.takeIf { it.key == key }?.let { return it.value }
         val revision = ++sunVisibilityRevision
@@ -204,14 +204,14 @@ internal class SceneSkyPass(
             cloudShadowMap?.readback(RAY_SUN_VISIBILITY_SIZE)?.let { texels ->
                 val m = shade.worldToMap.`val`
                 RaySunVisibility(
-                    sunId, RAY_SUN_VISIBILITY_SIZE, texels,
+                    sunId.toString(), RAY_SUN_VISIBILITY_SIZE, texels,
                     floatArrayOf(m[Matrix4.M00], m[Matrix4.M01], m[Matrix4.M02], m[Matrix4.M03],
                         m[Matrix4.M10], m[Matrix4.M11], m[Matrix4.M12], m[Matrix4.M13]),
                     shade.edgeFade, shade.outside, revision,
                 )
             }
         }
-        val value = mapped ?: if (scale < 1f) RaySunVisibility.uniform(sunId, scale, revision) else null
+        val value = mapped ?: if (scale < 1f) RaySunVisibility.uniform(sunId.toString(), scale, revision) else null
         publishedSunVisibility = PublishedSunVisibility(key, value)
         return value
     }
@@ -220,7 +220,7 @@ internal class SceneSkyPass(
      * The map to shade the sun with this frame: the view's, made on first need, when the sky draws clouds some technique
      * can still draw and the sun is among the rendered directional lights; null otherwise or when the map failed.
      */
-    private fun cloudShadowMapFor(sky: ProceduralSky?, sunId: String?): CloudShadowMap? {
+    private fun cloudShadowMapFor(sky: ProceduralSky?, sunId: Long?): CloudShadowMap? {
         if (sky == null || !sky.hasClouds || lights.directionalIndexOf(sunId) == null) return null
         val map = cloudShadowMap ?: CloudShadowMap(shaders, log).also { cloudShadowMap = it }
         return map.takeUnless { it.failed }

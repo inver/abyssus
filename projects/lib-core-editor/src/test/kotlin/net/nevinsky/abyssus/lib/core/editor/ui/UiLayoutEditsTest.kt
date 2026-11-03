@@ -1,6 +1,5 @@
 package net.nevinsky.abyssus.lib.core.editor.ui
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.ui.layout.UiLayoutEngine
 import net.nevinsky.abyssus.lib.core.ui.layout.UiLayoutResult
 import net.nevinsky.abyssus.lib.core.ui.layout.UiMeasurer
@@ -12,11 +11,10 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class UiLayoutEditsTest {
-    private val json = SceneJson()
-    private val editor = UiTextEditor()
+    private val editor = UiTextEditor(uiJson)
     private val hits = UiHitTest()
 
-    private val text: String = json.pretty("""{"format":"abyssus","formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"screens":[{"id":"main","root":
+    private val text: String = canonicalUi("""{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"screens":[{"id":"main","root":
         {"id":"root","type":"panel","children":[
           {"id":"free","type":"button","layout":{"x":50,"y":40,"width":100,"height":40}},
           {"id":"list","type":"column","layout":{"x":400,"y":100,"width":200,"height":300,"spacing":10},"children":[
@@ -27,7 +25,7 @@ class UiLayoutEditsTest {
             {"id":"clipped","type":"button","layout":{"x":40,"y":0,"width":60,"height":50}}]}]}}]}}}""")!!
 
     private fun collection(source: String = text): UiCollection =
-        (UiCollectionDecoder().decode(json.parse(source)) as UiAdmission.Admitted).collection
+        (admitUi(source) as UiAdmission.Admitted).collection
 
     private fun layout(c: UiCollection, width: Float = 1280f, height: Float = 720f): UiLayoutResult =
         UiLayoutEngine(UiMeasurer { UiSizeF(100f, 20f) }).resolve(c.screens[0], width, height)
@@ -43,10 +41,13 @@ class UiLayoutEditsTest {
         return result as UiTextResult.Edited
     }
 
+    private fun root(source: String): UiWidgetDoc =
+        uiJson.parse(source, UiMetaDoc::class.java).additional!!.ui!!.screens!![0].root!!
+
     private fun ids(source: String): List<String> {
         val out = mutableListOf<String>()
-        fun walk(n: com.fasterxml.jackson.databind.JsonNode) { n.get("id")?.takeIf { it.isTextual }?.let { out += it.asText() }; n.get("children")?.forEach(::walk) }
-        walk(json.parse(source).path("additional").path("ui").path("screens").get(0).get("root"))
+        fun walk(w: UiWidgetDoc) { w.id?.let { out += it }; w.children?.forEach(::walk) }
+        walk(root(source))
         return out
     }
 
@@ -80,8 +81,8 @@ class UiLayoutEditsTest {
         val preview = gesture.update(sx + 80f, sy + 40f) as UiGesturePreview.Move // the last position wins: 100 and 50 units
         assertEquals(150f, preview.x, 1e-3f); assertEquals(90f, preview.y, 1e-3f)
         val edited = applied(gesture.commit())
-        val node = json.parse(edited.after).path("additional").path("ui").path("screens").get(0).path("root").path("children").get(0).path("layout")
-        assertEquals(150, node.path("x").asInt()); assertEquals(90, node.path("y").asInt())
+        val node = root(edited.after).children!![0].layout!!
+        assertEquals(150, node.x); assertEquals(90, node.y)
         assertEquals("one drag is one edit with the exact text to undo to", text, edited.before)
         assertNotNull(g)
     }
@@ -105,9 +106,9 @@ class UiLayoutEditsTest {
         assertNotNull(b)
         val edited = applied(g.commit())
         assertEquals(listOf("root", "free", "list", "b", "c", "a", "box", "inner", "hidden", "clipped"), ids(edited.after))
-        val moved = json.parse(edited.after).path("additional").path("ui").path("screens").get(0).path("root").path("children").get(1).path("children").get(2)
-        assertEquals("a", moved.path("id").asText())
-        assertEquals("""{"height":30}""", moved.path("layout").toString()) // no numeric offsets are written for a flow child
+        val moved = root(edited.after).children!![1].children!![2]
+        assertEquals("a", moved.id)
+        assertEquals("""{"height":30}""", uiJson.toString(moved.layout!!)) // no numeric offsets are written for a flow child
         // dropping above everything puts it first
         val (up, ul) = gesture("c", 410f, ul(l, "c"))
         assertEquals(UiGesturePreview.Reorder("list", 0), up.update(410f, ul.nodes.getValue("a").bounds.y + 1))
@@ -123,8 +124,8 @@ class UiLayoutEditsTest {
         assertEquals(UiGesturePreview.Reparent("list", 1), preview)
         val edited = applied(g.commit())
         assertEquals(listOf("root", "list", "a", "free", "b", "c", "box", "inner", "hidden", "clipped"), ids(edited.after))
-        val free = json.parse(edited.after).path("additional").path("ui").path("screens").get(0).path("root").path("children").get(0).path("children").get(1).path("layout")
-        assertEquals("""{"width":100,"height":40}""", free.toString()) // anchor / x / y gone under a column
+        val free = root(edited.after).children!![0].children!![1].layout!!
+        assertEquals("""{"width":100,"height":40}""", uiJson.toString(free)) // anchor / x / y gone under a column
 
         // a flow child dropped into a panel loses grow and keeps its id
         val (g2, l2) = gesture("b", 410f, ul(l, "b"))

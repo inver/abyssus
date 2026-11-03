@@ -10,7 +10,6 @@ import net.nevinsky.abyssus.lib.core.editor.meta.metaRowsOf
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import java.io.File
 import java.time.ZoneOffset
 import net.nevinsky.abyssus.plugin.testMetaFiles
@@ -20,11 +19,14 @@ private fun load(folder: com.intellij.openapi.vfs.VirtualFile) = loadAssetMeta(f
 class MetaRowsTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
 
-    private fun sample(folder: String) = SceneJson().parseObject(File("$testDataPath/Untitled/assets/$folder/meta.json").readText())
+    private val processor get() = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().json
+    @Suppress("UNCHECKED_CAST")
+    private fun valuesOfText(text: String) = processor.parse(text, Map::class.java) as Map<String, Any?>
+    private fun sample(folder: String) = valuesOfText(File("$testDataPath/Untitled/assets/$folder/meta.json").readText())
 
     private fun terrainFolder() = File("$testDataPath/Untitled/assets").listFiles { f -> f.name.startsWith("terrain_") }!!.single().name
 
-    private fun rows(json: String) = metaRowsOf(SceneJson().parseObject(json), ResourceEditorMessages(), ZoneOffset.UTC)
+    private fun rows(json: String) = metaRowsOf(valuesOfText(json), ResourceEditorMessages(), ZoneOffset.UTC)
 
     fun testSkyboxListsTopLevelFieldsThenAdditionalFacesInFileOrder() {
         val rows = metaRowsOf(sample("skybox_default"), ResourceEditorMessages(), ZoneOffset.UTC)

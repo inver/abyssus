@@ -12,7 +12,7 @@ the scene row's menu and the Scene view toolbar. Assets need the same.
   the Scene view toolbar.
   - It lists the project's MODEL assets under "Models" and its TERRAIN assets under "Terrains", by folder name, with
     speed search.
-  - Choosing one adds one entity to the scene as a single undoable `editSceneJson` command, then selects it.
+  - Choosing one adds one entity to the scene as a single undoable `editSceneDocument` command, then selects it.
   - The entity has `NameComponent` (`Model <id>` / `Terrain <id>`), `TypeComponent` (`OBJECT` / `TERRAIN`),
     `PositionComponent`, and a `RenderComponent` asset renderable (`shaderKey` `defaultShader` / `terrain`).
 - **Placement:** like a light, at the Scene view's orbit point or at the scene origin from the tree. A terrain is centred

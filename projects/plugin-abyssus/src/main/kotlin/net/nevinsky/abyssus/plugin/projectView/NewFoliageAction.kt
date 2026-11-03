@@ -37,6 +37,7 @@ import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.ui.documentChanges
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.DocumentServices
 import net.nevinsky.abyssus.plugin.FoliageServices
@@ -49,7 +50,7 @@ import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.projectView.action.asset.assetsNodeProjectFile
-import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetInAbyssusView
+import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetLater
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import java.io.File
 import javax.swing.JComponent
@@ -130,10 +131,10 @@ internal class NewFoliageDialog(
     private val terrains: List<String>,
     private val writer: FoliageAssetWriter,
 ) : DialogWrapper(project) {
-    val terrainCombo = ComboBox(terrains.toTypedArray())
-    val nameField = JBTextField(foliageFolderName(terrains.first()))
-    val resolutionField = JBTextField(FOLIAGE_MASK_RESOLUTION_DIALOG_DEFAULT.toString(), 8)
-    val reason = JBLabel()
+    val terrainCombo = ComboBox(terrains.toTypedArray()).apply { name = "new-foliage-terrain" }
+    val nameField = JBTextField(foliageFolderName(terrains.first())).apply { name = "new-foliage-name" }
+    val resolutionField = JBTextField(FOLIAGE_MASK_RESOLUTION_DIALOG_DEFAULT.toString(), 8).apply { name = "new-foliage-resolution" }
+    val reason = JBLabel().apply { name = "new-foliage-reason" }
 
     private var suggested = foliageFolderName(terrains.first())
 
@@ -145,8 +146,8 @@ internal class NewFoliageDialog(
         title = AbyssusBundle.message("newFoliageTitle")
         setOKButtonText(AbyssusBundle.message("newFoliageCreate"))
         init()
-        nameField.document.addDocumentListener(changes(::revalidate))
-        resolutionField.document.addDocumentListener(changes(::revalidate))
+        nameField.document.addDocumentListener(documentChanges(::revalidate))
+        resolutionField.document.addDocumentListener(documentChanges(::revalidate))
         terrainCombo.addActionListener {
             val fresh = foliageFolderName(terrain)
             // the name is still the one this dialog suggested: follow the terrain it was suggested for
@@ -155,12 +156,6 @@ internal class NewFoliageDialog(
             revalidate()
         }
         revalidate()
-    }
-
-    private fun changes(block: () -> Unit) = object : DocumentListener {
-        override fun insertUpdate(e: DocumentEvent) = block()
-        override fun removeUpdate(e: DocumentEvent) = block()
-        override fun changedUpdate(e: DocumentEvent) = block()
     }
 
     private fun revalidate() {
@@ -194,11 +189,7 @@ fun createFoliage(
     documents: DocumentServices,
     foliage: FoliageServices,
     report: (String) -> Unit = { Messages.showErrorDialog(project, it, AbyssusBundle.message("newFoliageTitle")) },
-    select: (String) -> Unit = { created ->
-        ApplicationManager.getApplication().invokeLater(
-            { if (!project.isDisposed) selectAssetInAbyssusView(project, abss, created) }, ModalityState.nonModal(),
-        )
-    },
+    select: (String) -> Unit = selectAssetLater(project, abss),
 ): AssetCommandResult? {
     val projectDir = File(abss.parent.path)
     val accepted = runCatchingKeepingCancellation {

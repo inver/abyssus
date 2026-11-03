@@ -25,7 +25,7 @@ class SceneSkyboxBrowseTest : BasePlatformTestCase() {
         myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""")
         return myFixture.addFileToProject(
             path,
-            """{"format":"abyssus","formatVersion":1,"name":"Main","skyboxName":"skybox_physical","ecs":{"entities":{}}}""",
+            """{"format":"abyssus","formatVersion":1,"name":"Main","skyboxName":"skybox_physical","ecs":{}}""",
         ).virtualFile
     }
 
@@ -52,7 +52,7 @@ class SceneSkyboxBrowseTest : BasePlatformTestCase() {
     }
 
     fun testNullSkyboxReadsNone() {
-        val file = myFixture.addFileToProject("alone/N.scene", """{"format":"abyssus","formatVersion":1,"skyboxName":null,"ecs":{"entities":{}}}""").virtualFile
+        val file = myFixture.addFileToProject("alone/N.scene", """{"format":"abyssus","formatVersion":1,"skyboxName":null,"ecs":{}}""").virtualFile
         assertEquals("none", (named(view(file), "scene-skybox") as JBTextField).text)
     }
 

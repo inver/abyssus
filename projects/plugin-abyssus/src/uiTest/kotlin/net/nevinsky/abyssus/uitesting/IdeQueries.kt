@@ -91,6 +91,16 @@ class IdeQueries(private val robot: RemoteRobot) {
         )
     }
 
+    /** Opens [absolutePath] (a UI asset's `meta.json`) and selects its Game UI editor tab. Navigation only; edits nothing. */
+    fun openUiEditor(absolutePath: String) {
+        robot.runJs(
+            js("var p = ProjectManager.getInstance().getOpenProjects()[0];" +
+                "var vf = LocalFileSystem.getInstance().findFileByPath(${quote(absolutePath)});" +
+                "var m = FileEditorManager.getInstance(p); m.openFile(vf, true); m.setSelectedEditor(vf, 'abyssus-ui-editor')"),
+            runInEdt = true,
+        )
+    }
+
     /** True when the keyboard focus is in a text editor, so a shortcut reaches that editor's document. */
     fun editorHasFocus(): Boolean = robot.callJs(
         "var o = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();" +

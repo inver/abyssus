@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
+import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -13,11 +14,10 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.plugin.sceneview.ArrangementEditing
 import net.nevinsky.abyssus.plugin.sceneview.ArrangementHeights
 import java.io.File
@@ -32,37 +32,48 @@ class RegenerateArrangementActionTest : BasePlatformTestCase() {
         FileUtil.copyDir(File("src/test/testData/project/Untitled"), dir)
         scene = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(dir, "scenes/Main Scene.scene"))!!
         // drawn at height 0 over a terrain that is not flat: Regenerate has work to do
-        ArrangementEditing.create(project, scene, RenderAsset("MODEL", "tree"), listOf(Vec3(0f, 0f, 0f), Vec3(40f, 0f, 0f)), false, LineHeights())
+        ArrangementEditing.create(
+            project,
+            scene,
+            BaseMeta(MetaType.MODEL, "tree"),
+            listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)),
+            false,
+            LineHeights()
+        )
     }
 
     private fun text() = FileDocumentManager.getInstance().getDocument(scene)!!.text
 
-    private fun rowOf(id: String): DtoEntryNode {
-        val tree = SceneEntityTree(SceneJson().parse(text()))
-        return DtoEntryNode(project, scene.path, DtoRow(id, tree.entities()!![id]), scene, tree.entityKeys())
-    }
+    private fun rowOf(id: Long): DtoEntryNode = net.nevinsky.abyssus.plugin.entityNode(project, scene, text(), id)
 
     private class On(val node: Any?) : RegenerateArrangementAction() {
         override fun selected(e: AnActionEvent) = node
     }
 
-    private fun event(action: AnAction): AnActionEvent = TestActionEvent.createTestEvent(action).also { action.update(it) }
+    private fun event(action: AnAction): AnActionEvent =
+        TestActionEvent.createTestEvent(action).also { action.update(it) }
 
     fun testItIsOfferedOnAnArrangementRowOnly() {
-        assertTrue(ActionManager.getInstance().getAction("Abyssus.RegenerateArrangement") is RegenerateArrangementAction)
-        assertTrue(event(On(rowOf("11"))).presentation.isEnabledAndVisible)
-        assertFalse(event(On(rowOf("12"))).presentation.isEnabledAndVisible)
-        assertFalse(event(On(rowOf("0"))).presentation.isEnabledAndVisible)
+        assertTrue(
+            ActionManager.getInstance().getAction("Abyssus.RegenerateArrangement") is RegenerateArrangementAction
+        )
+        assertTrue(event(On(rowOf(11L))).presentation.isEnabledAndVisible)
+        assertFalse(event(On(rowOf(12L))).presentation.isEnabledAndVisible)
+        assertFalse(event(On(rowOf(0L))).presentation.isEnabledAndVisible)
     }
 
     fun testItPlacesTheCopiesOnTheTerrainAndASecondRunWritesNothing() {
-        val action = On(rowOf("11"))
+        val action = On(rowOf(11L))
         val before = text()
         action.actionPerformed(event(action))
         val after = text()
         assertTrue("the copies stood at the line's height, not on the terrain", before != after)
-        val ecs = SceneJson().parse(after)["ecs"]
-        assertEquals(ArrangementHeights.of(project).forScene(scene)!!.heightAt(20f, 0f, -99f), ecs["14"]["components"]["PositionComponent"]["localPosition"].path("y").floatValue(), 1e-3f)
+        val scene2 = net.nevinsky.abyssus.plugin.parsedScene(after)
+        assertEquals(
+            ArrangementHeights.of(project).forScene(scene)!!.heightAt(20f, 0f, -99f),
+            scene2.entity(14)!!.component(PositionComponent::class.java)!!.localPosition.y,
+            1e-3f
+        )
         action.actionPerformed(event(action))
         assertEquals(after, text())
     }

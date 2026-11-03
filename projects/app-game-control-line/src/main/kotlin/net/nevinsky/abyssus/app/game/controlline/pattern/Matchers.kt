@@ -181,17 +181,8 @@ class Matchers(radius: Float) {
     }
 
     /** Where the great circle of [straight] crosses the base, as an azimuth (degrees), or null. */
-    private fun equatorCrossing(straight: Straight?, points: List<PathPoint>): Float? {
-        if (straight == null) return null
-        val a = points[straight.from].u
-        val b = points[straight.to].u
-        val normal = Vector3(a).crs(b)
-        if (normal.len2() < 1e-8f) return null
-        val d = normal.crs(Vector3(0f, 1f, 0f))
-        if (d.len2() < 1e-8f) return null
-        if (d.dot(a) < 0f) d.scl(-1f)
-        return geometry.azimuth(d.nor())
-    }
+    private fun equatorCrossing(straight: Straight?, points: List<PathPoint>): Float? =
+        straight?.let { geometry.equatorCrossing(points[it.from].u, points[it.to].u) }
 
     /** The unit direction of the centre of the circle that [arc] goes round: the mean of its points. */
     private fun centre(arc: Arc, points: List<PathPoint>): Vector3 {

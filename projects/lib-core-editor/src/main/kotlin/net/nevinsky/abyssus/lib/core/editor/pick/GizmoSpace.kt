@@ -7,14 +7,12 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 
 /** The axes a gizmo follows: the world's, or the selected object's own. */
 enum class GizmoSpace { WORLD, LOCAL }
 
 /** The three unit axes of a gizmo, by [GizmoAxis]. */
-typealias GizmoAxes = Map<GizmoAxis, Vec3>
+typealias GizmoAxes = Map<GizmoAxis, Vector3>
 
 /** The world axes. */
 val WORLD_AXES: GizmoAxes = GizmoAxis.entries.associateWith { it.direction }
@@ -23,12 +21,12 @@ val WORLD_AXES: GizmoAxes = GizmoAxis.entries.associateWith { it.direction }
  * The axes a gizmo uses in [space] for an object turned by [rotation]: the world axes, or those axes turned with the
  * object. An object with no rotation has the same axes in both. No GL needed.
  */
-fun gizmoAxes(space: GizmoSpace, rotation: Quat): GizmoAxes {
+fun gizmoAxes(space: GizmoSpace, rotation: Quaternion): GizmoAxes {
     if (space == GizmoSpace.WORLD) return WORLD_AXES
     val q = Quaternion(rotation.x, rotation.y, rotation.z, rotation.w).nor()
     return GizmoAxis.entries.associateWith { axis ->
         val v = q.transform(Vector3(axis.direction.x, axis.direction.y, axis.direction.z)).nor()
-        Vec3(v.x, v.y, v.z)
+        Vector3(v.x, v.y, v.z)
     }
 }
 

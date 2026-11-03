@@ -27,8 +27,12 @@ import kotlin.math.sqrt
  * judge: what the tests of the bot read. [change] edits the plane first; [schedule] is what the bot flies.
  */
 class AiFlight(
-    planeName: String = "Stunter", schedule: List<Figure> = SCHEDULE, change: PlaneComponent.() -> Unit = {},
+    planeName: String = "Stunter", schedule: List<Figure> = SCHEDULE, instruct: Boolean = false, change: PlaneComponent.() -> Unit = {},
 ) : AutoCloseable {
+    /** The instructor around the bot when [instruct] is set, else null. */
+    var instructor: InstructorControl? = null
+        private set
+
     lateinit var judge: PatternJudge
         private set
     lateinit var bot: F2bBot
@@ -58,7 +62,7 @@ class AiFlight(
         judge = PatternJudge(plane.lineLength)
         bot = f2bBot(plane, mass, judge::guideInput, schedule)
         val inner = bot
-        judge to FlightControlSource { o ->
+        val student = FlightControlSource { o ->
             val tilt = inner.tilt(o)
             val planner = inner.planner
             if (phases.lastOrNull()?.let { it.first != planner.phase || it.second != planner.figure } != false) {
@@ -75,6 +79,12 @@ class AiFlight(
             last = o
             tilt
         }
+        if (instruct) {
+            val handling = Handling(plane, mass)
+            val instructed = InstructorControl(student, DangerGauge(handling), rescuePilot(plane.lineLength, handling))
+            instructor = instructed
+            judge to instructed
+        } else judge to student
     }
 
     val result: FlightEnd? get() = session.flight.result

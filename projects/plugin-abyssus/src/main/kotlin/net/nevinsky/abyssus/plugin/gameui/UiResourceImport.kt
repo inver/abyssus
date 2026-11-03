@@ -4,11 +4,10 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
 import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.command.UndoConfirmationPolicy
-import com.intellij.openapi.command.undo.DocumentReferenceManager
 import com.intellij.openapi.command.undo.UndoManager
-import com.intellij.openapi.command.undo.UndoableAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -19,7 +18,9 @@ import net.nevinsky.abyssus.lib.core.ui.model.uiImageWithinLimits
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.plugin.undo.DocumentSaveUndoableAction
 import java.io.File
+import net.nevinsky.abyssus.lib.core.editor.util.Util
 
 /** A resource file set staged for import into a UI asset: the new files as one transaction and the declaration to add. */
 class StagedUiResource(
@@ -87,8 +88,7 @@ class UiResourceImporter {
         require(!FileDocumentManager.getInstance().isFileModified(meta)) { AbyssusBundle.message("uiImportMetaUnsaved") }
         val text = textOf(meta)
         val ids = runCatchingKeepingCancellation {
-            net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(text)["additional"]["ui"]["resources"]
-                .mapNotNull { it["id"]?.textValue() }.toSet()
+            (com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.let { docs -> net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder().decode(docs.json.readObject(text)) } as? net.nevinsky.abyssus.lib.core.ui.model.UiAdmission.Admitted)?.collection?.resources?.map { it.id }.orEmpty().toSet()
         }.getOrDefault(emptySet())
         return Context(File(meta.parent.path), ids, text)
     }
@@ -98,21 +98,13 @@ class UiResourceImporter {
 
     private fun uniqueName(folder: File, subfolder: String, name: String): String {
         val dir = File(folder, subfolder)
-        fun taken(n: String) = File(dir, n).exists()
-        if (!taken(name)) return name
         val stem = name.substringBeforeLast('.', name)
         val ext = name.substringAfterLast('.', "").let { if (it.isEmpty() || it == name) "" else ".$it" }
-        var i = 2
-        while (taken("$stem-$i$ext")) i++
-        return "$stem-$i$ext"
+        return Util.uniqueName(stem, ext) { File(dir, it).exists() }
     }
 
     private fun uniqueId(existing: Set<String>, base: String): String {
-        val clean = base.ifBlank { "resource" }
-        if (clean !in existing) return clean
-        var i = 2
-        while ("$clean-$i" in existing) i++
-        return "$clean-$i"
+        return Util.uniqueName(base.ifBlank { "resource" }) { it in existing }
     }
 }
 
@@ -130,27 +122,15 @@ fun importUiResource(project: Project, meta: VirtualFile, staged: StagedUiResour
         result = command.execute(staged.transaction, affected = { listOf(meta) }, handBack = { undo = it })
         if (result != AssetCommandResult.Done) return@executeCommand
         val manager = UndoManager.getInstance(project)
-        manager.undoableActionPerformed(ImportSaveAction(meta, onUndo = true))
+        manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = true))
         val edited = editUiMeta(project, meta, staged.transaction.name, baseText = staged.metaBefore) { e, m -> e.addResource(m, staged.id, staged.kind, staged.path) }
         if (edited !is UiEditOutcome.Edited || edited.result !is UiEditResult.Added) {
             result = command.revert(staged.transaction).let { if (it == AssetCommandResult.Done) AssetCommandResult.Conflict(meta.path) else it }
             return@executeCommand
         }
         manager.undoableActionPerformed(undo!!)
-        manager.undoableActionPerformed(ImportSaveAction(meta, onUndo = false))
+        manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = false))
     }, staged.transaction.name, null, UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION)
     command.flush()
     return result
-}
-
-private class ImportSaveAction(private val file: VirtualFile, private val onUndo: Boolean) : UndoableAction {
-    private val reference = DocumentReferenceManager.getInstance().create(FileDocumentManager.getInstance().getDocument(file)!!)
-    override fun getAffectedDocuments() = arrayOf(reference)
-    override fun isGlobal() = false
-    override fun undo() { if (onUndo) save() }
-    override fun redo() { if (!onUndo) save() }
-    private fun save() {
-        val manager = FileDocumentManager.getInstance()
-        manager.getCachedDocument(file)?.let(manager::saveDocument)
-    }
 }

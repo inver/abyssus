@@ -13,7 +13,6 @@ import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.plugin.projectView.AbyssusAssetNode
 import net.nevinsky.abyssus.plugin.projectView.AbyssusRootNode
 import net.nevinsky.abyssus.plugin.projectView.AbyssusSelection
@@ -157,9 +156,8 @@ class PropertiesPanelTest : BasePlatformTestCase() {
         val editor = TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
         val opened = sceneText()
         box.doClick()
-        val after = SceneJson().parse(sceneText())
-        assertEquals(false, after["ecs"]["0"]["components"]["RenderComponent"]["enabled"].booleanValue())
-        assertNull(after["ecs"]["0"]["components"]["PositionComponent"]["enabled"])
+        val after = net.nevinsky.abyssus.plugin.parsedScene(sceneText())
+        assertEquals(listOf("RenderComponent"), after.entity(0)!!.header().disabledComponents.map { it.simpleName })
         assertFalse((find(p, "section-enabled-0.RenderComponent") as JBCheckBox).isSelected)
         UndoManager.getInstance(project).undo(editor)
         assertEquals(opened, sceneText())
@@ -171,13 +169,11 @@ class PropertiesPanelTest : BasePlatformTestCase() {
         copyProject("Untitled")
         val p = panel()
         p.show(sceneNode())
-        val before = SceneJson().parse(sceneText())
+        val before = net.nevinsky.abyssus.plugin.parsedScene(sceneText())
         (find(p, "section-enabled-scene.fog") as JBCheckBox).doClick()
-        val after = SceneJson().parse(sceneText())
-        assertEquals(false, after["fogEnabled"].booleanValue())
-        assertEquals(before["fog"], after["fog"])
-        assertEquals(before["ambientLightEnabled"], after["ambientLightEnabled"])
-        assertEquals(before["ecs"], after["ecs"])
+        val after = net.nevinsky.abyssus.plugin.parsedScene(sceneText())
+        assertEquals(false, after.fogEnabled)
+        assertEquals(net.nevinsky.abyssus.plugin.printScene(before.copy(fogEnabled = false)), net.nevinsky.abyssus.plugin.printScene(after))
     }
 
     /** True when [c] and every ancestor up to [root] is visible (a hidden section body hides what is inside it). */

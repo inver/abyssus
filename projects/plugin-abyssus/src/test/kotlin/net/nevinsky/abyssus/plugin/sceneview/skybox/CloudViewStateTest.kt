@@ -14,6 +14,13 @@ import org.junit.Test
 
 class CloudViewStateTest {
     @Test
+    fun cumulusOverridesTheAssetsTechniqueInThisViewOnly() {
+        val state = CloudViewState()
+        assertTrue(state.choose(CloudChoice.CUMULUS))
+        assertEquals(CloudTechnique.CUMULUS, state.effective(CloudTechnique.SHELLS))
+    }
+
+    @Test
     fun assetResolvesToTheAssetsTechnique() {
         val state = CloudViewState()
         assertEquals(CloudChoice.ASSET, state.choice)

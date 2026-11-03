@@ -77,3 +77,6 @@ tasks.test {
 
 // Games ship this library: `checkNoEditorCode` keeps editor imports and ray-tracing snapshot types out of it.
 extra["abyssusShippedLibrary"] = true
+
+// No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in lib-core-editor (see gradle/checks.gradle.kts).
+extra["abyssusJacksonTreeAllowed"] = emptyList<String>()

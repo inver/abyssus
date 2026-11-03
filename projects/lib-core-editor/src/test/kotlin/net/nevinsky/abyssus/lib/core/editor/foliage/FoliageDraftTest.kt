@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.foliage
 
+import net.nevinsky.abyssus.lib.core.editor.brush.GridRect
+import net.nevinsky.abyssus.lib.core.editor.brush.emptyGridRect
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
@@ -30,7 +32,7 @@ class FoliageDraftTest {
     private fun mask(value: Int): ByteArray = ByteArray(resolution * resolution) { value.toByte() }
 
     /** The chunks a mask rectangle [rect] touches: its texel centres in terrain-local units, chunked like the scatter. */
-    private fun covering(rect: MaskRect): Set<FoliageChunk> {
+    private fun covering(rect: GridRect): Set<FoliageChunk> {
         val i0 = (rect.minX * cell / chunkSize).toInt()
         val i1 = (rect.maxX * cell / chunkSize).toInt()
         val j0 = (rect.minZ * cell / chunkSize).toInt()
@@ -42,7 +44,7 @@ class FoliageDraftTest {
     fun stampMarksOnlyTheChunksItOverlaps() {
         val draft = FoliageDraft(terrain(), resolution)
         draft.editableMask(1, mask(0))
-        val rect = MaskRect(10, 20, 30, 40)
+        val rect = GridRect(10, 20, 30, 40)
         draft.stamped(1, rect)
         assertEquals(covering(rect), draft.dirtyChunks)
         // the chunks beside the rectangle stay clean
@@ -58,7 +60,7 @@ class FoliageDraftTest {
         val draft = FoliageDraft(terrain(), resolution)
         draft.editableMask(1, mask(0))
         val revision = draft.revision
-        draft.stamped(1, emptyMaskRect())
+        draft.stamped(1, emptyGridRect())
         assertEquals(revision, draft.revision)
         assertTrue(draft.dirtyChunks.isEmpty())
     }
@@ -71,10 +73,10 @@ class FoliageDraftTest {
         val atPress = painted.copyOf()
         draft.beginStroke()
         for (index in 1000 until 2000) painted[index] = (painted[index].toInt() + 40).toByte()
-        draft.stamped(1, MaskRect(3, 3, 8, 8))
+        draft.stamped(1, GridRect(3, 3, 8, 8))
         // a layer first edited during the stroke disappears again on revert
         draft.editableMask(2, stored)
-        draft.stamped(2, MaskRect(1, 1, 2, 2))
+        draft.stamped(2, GridRect(1, 1, 2, 2))
         val revision = draft.revision
         draft.revertStroke()
         assertArrayEquals(atPress, draft.masks[1])
@@ -91,7 +93,7 @@ class FoliageDraftTest {
         val painted = draft.editableMask(1, stored)
         draft.beginStroke()
         painted[5] = 99
-        draft.stamped(1, MaskRect(0, 0, 5, 5))
+        draft.stamped(1, GridRect(0, 0, 5, 5))
         draft.endStroke()
         draft.revertStroke()
         // the released stroke is kept

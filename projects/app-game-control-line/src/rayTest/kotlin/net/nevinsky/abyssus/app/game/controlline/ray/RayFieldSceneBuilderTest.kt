@@ -6,6 +6,7 @@ package net.nevinsky.abyssus.app.game.controlline.ray
 
 import com.badlogic.gdx.math.Matrix4
 import net.nevinsky.abyssus.lib.core.editor.ray.rayTestModel
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.raytracing.*
 import org.junit.Assert.*
 import org.junit.Test
@@ -13,7 +14,7 @@ import org.junit.Test
 class RayFieldSceneBuilderTest {
     private val model = rayTestModel()
     private val camera = RayFieldCamera(listOf(0f, 2f, 5f), listOf(0f, 0f, -1f), listOf(0f, 1f, 0f), 60f, .1f, 100f)
-    private val sun = RayLight("sun", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), RayVec3(0f, -1f, 0f))
+    private val sun = RayLight("sun", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), Vector3(0f, -1f, 0f))
 
     private fun inputs(x: Float = 0f, camera: RayFieldCamera = this.camera, asset: net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSnapshot = model) =
         RayFieldInputs(

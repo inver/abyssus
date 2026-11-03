@@ -57,7 +57,7 @@ None. This is a code-level refactor with no spec-level behavior change, so `.ope
 existing tests and GL parity checks.
 
 Native documents: this change reads and writes **no** new or changed `.abss`, `.scene` or `meta.json` fields. It adds
-no format version, no migration and no write path: existing edits still go through `editSceneJson`, and document
+no format version, no migration and no write path: existing edits still go through `editSceneDocument`, and document
 validation stays exactly `AbyssusDocumentFormat` with `format: "abyssus"` and integral `formatVersion: 1`. Where a
 helper is shared, it preserves the current number text, key order, omitted defaults and unknown-payload rules. Moving
 writers from `ObjectNode` building to DTO mapping must leave every produced file byte-identical.

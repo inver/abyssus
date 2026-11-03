@@ -74,10 +74,10 @@ class UiProjectRegistryTest {
 
     @Test fun nativeAdmissionRefusesAForeignOrFutureAsset() {
         asset("future", uiMeta(version = 2))
-        asset("foreign", """{"format":"other","formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1}}}""")
+        asset("foreign", """{"formatVersion":7,"type":"UI","additional":{"ui":{"schemaVersion":1}}}""")
         val entries = registry().entries(project("future", "foreign")).map { (it as UiRegistryEntry.Registered).admission as UiAdmission.Refused }
         assertEquals(UiIssueCode.UI_VERSION, entries[0].issues.single().code)
-        assertEquals(UiIssueCode.FORMAT_MARKER, entries[1].issues.single().code)
+        assertEquals(UiIssueCode.FORMAT_VERSION, entries[1].issues.single().code)
     }
 
     @Test fun theProjectFileItselfStillNeedsNativeAdmission() {

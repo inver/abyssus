@@ -29,7 +29,8 @@ class AbyssusProjectSettingsTest : BasePlatformTestCase() {
         val originalText = String(abss.contentsToByteArray(), abss.charset)
         assertTrue(settings.setPhysicsEnabled(abss, true))
         val newText = String(abss.contentsToByteArray(), abss.charset)
-        assertEquals(originalText.dropLast(1) + ",\"physicsEnabled\":true}", newText)
+        val json = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().json
+        assertEquals(json.pretty(json.parse(originalText, net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java).copy(physicsEnabled = true)), newText)
         assertTrue(settings.getSettings(abss).physicsEnabled)
     }
 
@@ -56,7 +57,7 @@ class AbyssusProjectSettingsTest : BasePlatformTestCase() {
         })
         val document = FileDocumentManager.getInstance().getDocument(abss)!!
         WriteCommandAction.runWriteCommandAction(project) {
-            document.setText(document.text.dropLast(1) + ",\"physicsEnabled\":true}")
+            document.setText(document.text.trimEnd().dropLast(1) + ",\"physicsEnabled\":true}")
         }
         assertTrue(notifications.any { (file, value) -> file == abss && value.physicsEnabled && value.problems.isEmpty() })
         assertTrue(settings.getSettings(abss).physicsEnabled)
@@ -69,7 +70,7 @@ class AbyssusProjectSettingsTest : BasePlatformTestCase() {
             object : com.intellij.notification.Notifications {
                 override fun notify(notification: com.intellij.notification.Notification) { notices += notification }
             })
-        val abss = myFixture.addFileToProject("p/Test.abss", """{"format":"abyssus","formatVersion":1,"name":"Test","physicsEnabled":"yes"}""").virtualFile
+        val abss = myFixture.addFileToProject("p/Test.abss", """{"formatVersion":1,"name":"Test","physicsEnabled":"yes"}""").virtualFile
         val originalText = String(abss.contentsToByteArray(), abss.charset)
         val result = settings.getSettings(abss)
         assertFalse(result.physicsEnabled)
@@ -84,7 +85,7 @@ class AbyssusProjectSettingsTest : BasePlatformTestCase() {
     }
 
     fun testUnsupportedProjectCannotEnablePhysics() {
-        for (header in listOf("", "\"format\":\"abyssus\",\"formatVersion\":2,")) {
+        for (header in listOf("", "\"formatVersion\":2,")) {
             val abss = myFixture.addFileToProject("p${header.length}/Test.abss", "{$header\"physicsEnabled\":true}").virtualFile
             val before = String(abss.contentsToByteArray(), abss.charset)
             assertFalse(settings.getSettings(abss).physicsEnabled)

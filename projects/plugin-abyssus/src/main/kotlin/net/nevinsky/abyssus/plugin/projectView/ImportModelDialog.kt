@@ -28,6 +28,7 @@ import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.core.editor.modelimport.LengthUnit
 import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.ui.documentChanges
 import net.nevinsky.abyssus.plugin.projectView.preview.ModelPreviewCanvas
 import net.nevinsky.abyssus.plugin.projectView.preview.PreviewModel
 import java.awt.BorderLayout
@@ -46,22 +47,23 @@ import javax.swing.event.DocumentListener
  * preview's GL is released before the window closes, whichever way it closes.
  */
 internal class ImportModelDialog(project: Project, private val form: ModelImportForm) : DialogWrapper(project) {
-    private val name = JBTextField(form.folderName)
-    private val problems = JBLabel().apply { foreground = JBColor.RED }
+    private val name = JBTextField(form.folderName).apply { this.name = "import-model-name" }
+    private val problems = JBLabel().apply { foreground = JBColor.RED; name = "import-model-problems" }
     private val unit = ComboBox(LengthUnit.entries.toTypedArray()).apply {
         renderer = SimpleListCellRenderer.create("") { it.id }
+        name = "import-model-unit"
     }
     private val unitMark = JBLabel().apply { foreground = JBColor.GRAY }
-    private val upAxis = ComboBox(arrayOf(UpAxis.Y, UpAxis.Z))
+    private val upAxis = ComboBox(arrayOf(UpAxis.Y, UpAxis.Z)).apply { name = "import-model-up-axis" }
     private val upMark = JBLabel().apply { foreground = JBColor.GRAY }
-    private val original = JBRadioButton(AbyssusBundle.message("importModelSizeOriginal"))
-    private val largest = JBRadioButton(AbyssusBundle.message("importModelSizeLargest"))
-    private val height = JBRadioButton(AbyssusBundle.message("importModelSizeHeight"))
-    private val size = JBTextField(form.sizeText, 6)
-    private val addToScene = JBCheckBox()
+    private val original = JBRadioButton(AbyssusBundle.message("importModelSizeOriginal")).apply { name = "import-model-fit-original" }
+    private val largest = JBRadioButton(AbyssusBundle.message("importModelSizeLargest")).apply { name = "import-model-fit-largest" }
+    private val height = JBRadioButton(AbyssusBundle.message("importModelSizeHeight")).apply { name = "import-model-fit-height" }
+    private val size = JBTextField(form.sizeText, 6).apply { name = "import-model-size" }
+    private val addToScene = JBCheckBox().apply { name = "import-model-add-to-scene" }
     private val animation = ComboBox<String>()
-    private val status = JBLabel()
-    private val notes = JBLabel()
+    private val status = JBLabel().apply { name = "import-model-status" }
+    private val notes = JBLabel().apply { name = "import-model-notes" }
     private val preview = ModelPreviewCanvas()
     private var generation = 0
     private var closed = false
@@ -93,8 +95,8 @@ internal class ImportModelDialog(project: Project, private val form: ModelImport
         form.animation?.let { animation.selectedItem = it }
         notes.text = notesText()
 
-        name.document.addDocumentListener(changes { form.folderName = name.text; refresh(previewChanged = false) })
-        size.document.addDocumentListener(changes { form.sizeText = size.text; refresh() })
+        name.document.addDocumentListener(documentChanges { form.folderName = name.text; refresh(previewChanged = false) })
+        size.document.addDocumentListener(documentChanges { form.sizeText = size.text; refresh() })
         unit.addActionListener { (unit.selectedItem as? LengthUnit)?.let { form.unit = it }; refresh() }
         upAxis.addActionListener { (upAxis.selectedItem as? UpAxis)?.let { form.upAxis = it }; refresh() }
         original.addActionListener { form.fitMode = FitMode.ORIGINAL; refresh() }
@@ -108,12 +110,6 @@ internal class ImportModelDialog(project: Project, private val form: ModelImport
         preview.play(form.animation)
         init()
         refresh()
-    }
-
-    private fun changes(block: () -> Unit) = object : DocumentListener {
-        override fun insertUpdate(e: DocumentEvent) = block()
-        override fun removeUpdate(e: DocumentEvent) = block()
-        override fun changedUpdate(e: DocumentEvent) = block()
     }
 
     /** Shows the form's state; with [previewChanged], recomputes the transform for the preview. */

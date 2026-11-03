@@ -85,7 +85,7 @@ class SceneShadowsTest {
                 // one caster list, as the view builds it: the parts of a model and the parts of the foliage
                 val model = checkNotNull(models["tree"]) { "the tree model" }
                 val entity = ModelEntity(
-                    AssetPlacement("2", treeAsset, PlacementTransform.IDENTITY), model, ModelInstance(model), null,
+                    AssetPlacement(2L, treeAsset, PlacementTransform.IDENTITY), model, ModelInstance(model), null,
                 )
                 val casters = shadowCasters(listOf(entity), emptyList(), scene, Array(), RenderablePool(), ShadowCasterBounds())
                 val modelCasters = casters.filter { mesh(it.renderable)?.isInstanced == false }
@@ -206,7 +206,7 @@ class SceneShadowsTest {
         return SceneFoliage(assets, FoliageDrafts(), RecordingLogger()) { it.run() }
     }
 
-    private fun placement() = FoliagePlacement("1", foliageName, terrainName, PlacementTransform.IDENTITY)
+    private fun placement() = FoliagePlacement(1L, foliageName, terrainName, PlacementTransform.IDENTITY)
 
     private fun camera(): PerspectiveCamera = PerspectiveCamera(60f, 4f, 3f).apply {
         position.set(10f, 5f, 10f)

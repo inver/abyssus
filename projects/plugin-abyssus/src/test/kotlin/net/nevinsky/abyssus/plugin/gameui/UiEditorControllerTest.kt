@@ -4,13 +4,16 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.plugin.canonicalUi
+import net.nevinsky.abyssus.plugin.uiRoot
+import net.nevinsky.abyssus.plugin.uiWidgetIds
+
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.ui.UiEditError
 import net.nevinsky.abyssus.lib.core.editor.ui.UiGesturePreview
 import net.nevinsky.abyssus.lib.core.ui.layout.UiLayoutEngine
@@ -20,7 +23,7 @@ import java.util.concurrent.Executor
 import javax.swing.JPanel
 
 class UiEditorControllerTest : BasePlatformTestCase() {
-    private val source = SceneJson().pretty("""{"format":"abyssus","formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main","screens":[
+    private val source = canonicalUi("""{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main","screens":[
         {"id":"main","name":"Main","root":{"id":"root","type":"panel","children":[
           {"id":"free","type":"button","layout":{"x":50,"y":40,"width":100,"height":40}},
           {"id":"list","type":"column","layout":{"x":400,"y":100,"width":200,"height":300,"spacing":10},"children":[
@@ -50,10 +53,7 @@ class UiEditorControllerTest : BasePlatformTestCase() {
     private fun text() = FileDocumentManager.getInstance().getDocument(file)!!.text
 
     private fun ids(): List<String> {
-        val out = mutableListOf<String>()
-        fun walk(n: com.fasterxml.jackson.databind.JsonNode) { n.get("id")?.takeIf { it.isTextual }?.let { out += it.asText() }; n.get("children")?.forEach(::walk) }
-        SceneJson().parse(text()).path("additional").path("ui").path("screens").get(0).get("root").let(::walk)
-        return out
+        return uiWidgetIds(text())
     }
 
     private fun setDocument(newText: String) = ApplicationManager.getApplication().runWriteAction { FileDocumentManager.getInstance().getDocument(file)!!.setText(newText) }
@@ -120,8 +120,8 @@ class UiEditorControllerTest : BasePlatformTestCase() {
         assertTrue(c.updateGesture(x + 50, y + 30) is UiGesturePreview.Move)
         assertTrue(c.endGesture(x + 50, y + 30))
         assertFalse(c.gestureActive)
-        val layoutNode = SceneJson().parse(text()).path("additional").path("ui").path("screens").get(0).path("root").path("children").get(0).path("layout")
-        assertEquals(100, layoutNode.path("x").asInt()); assertEquals(70, layoutNode.path("y").asInt())
+        val moved = uiRoot(text()).children!![0].layout!!
+        assertEquals(100, moved.x); assertEquals(70, moved.y)
         val editor = UiFileEditor(project, file, Executor { it.run() }) { JPanel() }
         UndoManager.getInstance(project).undo(editor)
         assertEquals(before, text())

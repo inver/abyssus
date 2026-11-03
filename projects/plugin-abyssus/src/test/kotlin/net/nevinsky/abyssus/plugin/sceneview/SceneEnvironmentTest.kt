@@ -1,16 +1,16 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
+import com.badlogic.gdx.graphics.Color
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /** Which light replaces the ambient color, by the scene's skybox and the state of its HDR sky. */
 class SceneEnvironmentTest {
-    private val grey = Rgba(0.3f, 0.3f, 0.3f, 1f)
+    private val grey = Color(0.3f, 0.3f, 0.3f, 1f)
 
     /** Built environments by sky name; a sky missing from the map is another kind, still building or failed. */
-    private fun ambient(skybox: String?, ambient: Rgba?, built: Map<String, String> = mapOf("sky_hdr" to "environment")) =
+    private fun ambient(skybox: String?, ambient: Color?, built: Map<String, String> = mapOf("sky_hdr" to "environment")) =
         SceneAmbient.of(skybox, ambient) { built[it] }
 
     @Test

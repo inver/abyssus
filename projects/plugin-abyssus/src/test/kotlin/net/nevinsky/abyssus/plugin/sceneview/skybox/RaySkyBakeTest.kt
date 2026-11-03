@@ -5,13 +5,13 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.skybox
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
 
 class RaySkyBakeTest {
-    private val sun = Vec3(0f, 1f, 0f)
+    private val sun = Vector3(0f, 1f, 0f)
     private val project = File("project")
     private val clouds = Any()
 
@@ -37,7 +37,7 @@ class RaySkyBakeTest {
         val base = raySkyBakeKey("sky", project, sun, clouds, false, 0.0)
         assertNotEquals(base, raySkyBakeKey("sky", project, sun, Any(), false, 0.0))
         assertNotEquals(base, raySkyBakeKey("sky", project, sun, null, false, 0.0))
-        assertNotEquals(base, raySkyBakeKey("sky", project, Vec3(1f, 0f, 0f), clouds, false, 0.0))
+        assertNotEquals(base, raySkyBakeKey("sky", project, Vector3(1f, 0f, 0f), clouds, false, 0.0))
         assertNotEquals(base, raySkyBakeKey("other", project, sun, clouds, false, 0.0))
         assertNotEquals(base, raySkyBakeKey("sky", File("elsewhere"), sun, clouds, false, 0.0))
     }

@@ -14,7 +14,12 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
+import net.nevinsky.abyssus.lib.core.editor.scene.DocumentFormatter
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
+import net.nevinsky.abyssus.lib.core.editor.document.ProjectTextEditor
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneTextEditor
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
+import net.nevinsky.abyssus.lib.core.scene.SceneParser
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.plugin.projectView.HdrPreviewService
@@ -22,22 +27,38 @@ import net.nevinsky.abyssus.lib.raytracing.MetalRayBackendFactory
 import net.nevinsky.abyssus.lib.raytracing.VulkanRayBackendFactory
 import net.nevinsky.abyssus.lib.core.editor.ray.RayBackendService
 import net.nevinsky.abyssus.plugin.terrain.NewTerrainFactory
+import net.nevinsky.abyssus.plugin.terrain.SculptServices
+import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptManifestCodec
+import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptPlanner
+import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptStateReader
 import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainAssetWriter
 import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainHeightEncoder
 import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainGenerator
 import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainRecipeCodec
 import net.nevinsky.abyssus.lib.core.editor.terrain.FastNoiseSamplerFactory
+import net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS
 import org.slf4j.Logger
 import java.util.concurrent.Executors
 
-class DocumentServices(val json: JsonProcessor, val format: AbyssusDocumentFormat, log: Logger) {
-    val parsing = DocumentParsing(json, log, format)
+class DocumentServices(
+    val json: JsonProcessor,
+    val format: AbyssusDocumentFormat,
+    log: Logger,
+    /** The registry [json] writes component names with. */
+    val registry: ComponentRegistry,
+) {
+    val parsing = DocumentParsing(json, log, registry)
+
+    /** Scene, project and format writes: the text transforms the editing library shares with callers that have no IDE. */
+    val scenes = SceneTextEditor(SceneParser(json, registry), json)
+    val projects = ProjectTextEditor(parsing, json)
+    val formatter = DocumentFormatter(parsing, json)
 }
 
 class AssetServices(json: JsonProcessor, format: AbyssusDocumentFormat, log: Logger) {
-    val metaFiles = MetaFiles(AssetMetaReader(json, format))
+    val metaFiles = MetaFiles(AssetMetaReader(json))
     val fields = AssetFieldDescriptions()
-    val editor = AssetMetaEditor(fields)
+    val editor = AssetMetaEditor(fields, json)
     val sceneShaders = ShaderStorage().withResources("/shader/scene", AbyssusPluginCtx::class.java)
     val loading = AssetLoading(json, log, AppExecutorUtil.getAppExecutorService(), ShaderStorage())
     val hdrPreviews: HdrPreviewService get() = loading.hdrPreviews
@@ -49,6 +70,11 @@ class TerrainServices(json: JsonProcessor) {
     val writer = TerrainAssetWriter(json, heightEncoder)
     val recipes = TerrainRecipeCodec(json)
     val newTerrains = NewTerrainFactory(json, writer, heightEncoder, recipes)
+    private val sculptManifests = SculptManifestCodec(json)
+    val sculpt = SculptServices(
+        SculptStateReader(generator, recipes, sculptManifests),
+        SculptPlanner(generator, heightEncoder, recipes, sculptManifests),
+    )
 }
 
 /** Foliage services: the writer that plans a new foliage asset's files before any command writes them. */

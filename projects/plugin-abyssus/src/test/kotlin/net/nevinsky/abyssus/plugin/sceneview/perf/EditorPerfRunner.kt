@@ -8,8 +8,7 @@ package net.nevinsky.abyssus.plugin.sceneview.perf
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.utils.GdxNativesLoader
 import net.nevinsky.abyssus.lib.core.assets.testProject
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
@@ -86,7 +85,7 @@ class EditorPerfRunner(private val options: PerfOptions = PerfOptions.fromProper
             workload.source().copyRecursively(dir, overwrite = true)
             workload.prepare(dir)
             val sceneText = File(dir, workload.sceneFile).readText()
-            val params = renderParamsOf(parseScene(sceneText), workload.camera(dir), dir, SceneJson().parse(sceneText))
+            val params = renderParamsOf(parseScene(sceneText), workload.camera(dir), dir)
             val hash = sha256(sceneText, File(dir, "assets"))
             return measure(workload, params, hash)
         } finally {
@@ -200,15 +199,15 @@ class EditorPerfRunner(private val options: PerfOptions = PerfOptions.fromProper
 
         /** The camera the project's `.abss` holds, or the editor's default when it has none. */
         fun projectCamera(dir: File): CameraParams =
-            dir.listFiles { f -> f.extension == "abss" }?.firstOrNull()?.let { MainCamera().parse(it.readText()) } ?: CameraParams.DEFAULT
+            dir.listFiles { f -> f.extension == "abss" }?.firstOrNull()?.let { MainCamera(net.nevinsky.abyssus.lib.core.io.JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)).parse(it.readText()) } ?: CameraParams.DEFAULT
 
         /** High over the middle of the 1600 m stress terrain, looking at it. */
         fun stressCamera(@Suppress("UNUSED_PARAMETER") dir: File): CameraParams {
-            val from = Vec3(0f, 450f, -1100f)
-            val to = Vec3(0f, 0f, 0f)
-            val d = Vec3(to.x - from.x, to.y - from.y, to.z - from.z)
+            val from = Vector3(0f, 450f, -1100f)
+            val to = Vector3(0f, 0f, 0f)
+            val d = Vector3(to.x - from.x, to.y - from.y, to.z - from.z)
             val len = sqrt(d.x * d.x + d.y * d.y + d.z * d.z)
-            return CameraParams(from, Vec3(d.x / len, d.y / len, d.z / len), 1f, 6000f, 60f)
+            return CameraParams(from, Vector3(d.x / len, d.y / len, d.z / len), 1f, 6000f, 60f)
         }
 
         fun workloads(): List<EditorWorkload> = listOf(

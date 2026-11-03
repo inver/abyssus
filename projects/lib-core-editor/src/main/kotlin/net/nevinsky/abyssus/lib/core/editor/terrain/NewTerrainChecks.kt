@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.terrain
 
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetCatalog
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
@@ -62,13 +63,7 @@ fun checkGeometry(size: Int?, resolution: Int?): GeometryError? = when {
 
 /** A random `uuid` (from [random]) that no asset folder in [assetsDir] already uses. Reads every `meta.json`. */
 fun uniqueAssetUuid(json: JsonProcessor, assetsDir: File, random: () -> UUID = { UUID.randomUUID() }): UUID {
-    val used = assetsDir.listFiles { f -> f.isDirectory }.orEmpty().mapNotNull { dir ->
-        runCatchingKeepingCancellation {
-            File(dir, META_FILE).takeIf { it.isFile }?.let {
-                AssetMetaReader(json).read(it.readText()).json.text("uuid")
-            }
-        }.getOrNull()
-    }.toSet()
+    val used = AssetCatalog(json).uuids(assetsDir)
     var uuid = random()
     while (uuid.toString() in used) uuid = random()
     return uuid

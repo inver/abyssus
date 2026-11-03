@@ -12,9 +12,9 @@ problems come from `AbyssusProjectSettings`. Unsupported files disable editing. 
 controls without saving or reselection, and the panel supplies a text editor for platform Undo/Redo of the `.abss`.
 Scene properties retain the ray settings controls. The foliage section (`plugin/foliage`) offers collider controls on
 OBJECT layers; a change that touches only colliders (`FoliageColliderEdits.onlyColliders`) is applied by
-`FoliageController.applyColliders` through `editSceneJson` as one command with the document-save actions that keep Undo
+`FoliageController.applyColliders` through `editSceneDocument` as one command with the document-save actions that keep Undo
 and Redo saved, with no preview, scatter or bake involved, and it is dropped when the document text changed since the
-edit was made, when the document is read-only or when the controller was disposed. Asset and entity writes use `editSceneJson`; UI state changes and
+edit was made, when the document is read-only or when the controller was disposed. Asset and entity writes use `editSceneDocument`; UI state changes and
 document listeners run on the EDT. Asset previews decode in the background and publish through the panel's UI executor.
 
 ## Layout (the design board)
@@ -36,7 +36,7 @@ antialiasing, show FPS, Rendering) and the links.
   it. The footer says so. Showing a panel writes nothing.
 - **Enabled.** A togglable component section (everything except Name, Parent and Position) and a scene setting have an `Enabled`
   check box. A component's writes `enabled: false` on its entry through `setEnabled` (the same action as the tree eye); a setting's
-  writes `<x>Enabled` through `setSceneToggle`. Both are one undoable `editSceneJson` command. A disabled section is drawn at 55 %
+  writes `<x>Enabled` through `setSceneToggle`. Both are one undoable `editSceneDocument` command. A disabled section is drawn at 55 %
   opacity and its fields stay editable.
 - **Collapse.** Each section's collapsed state is kept in `AssetPropertiesPanel.collapsedSections` by section key. A rebuild of the
   same node (a file change, a toggle) keeps it; selecting another node clears it.

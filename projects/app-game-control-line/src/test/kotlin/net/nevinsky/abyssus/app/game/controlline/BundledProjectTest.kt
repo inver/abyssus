@@ -24,7 +24,7 @@ class BundledProjectTest {
         assertEquals(emptyList<String>(), messages)
 
         val planes = scene.engine.entities.filter { it.getComponent(PlaneComponent::class.java) != null }
-        assertEquals(listOf("Racer", "Stunter", "Trainer"), planes.map { it.getComponent(NameComponent::class.java).name.orEmpty() }.sorted())
+        assertEquals(listOf("Mig-3", "Racer", "Stunter", "Trainer"), planes.map { it.getComponent(NameComponent::class.java).name.orEmpty() }.sorted())
         for (plane in planes) {
             assertEquals(MotionType.DYNAMIC, plane.getComponent(RigidBodyComponent::class.java).motionType)
             assertEquals(ColliderShape.CONVEX_HULL, plane.getComponent(ColliderComponent::class.java).shape)
@@ -38,7 +38,7 @@ class BundledProjectTest {
         val messages = mutableListOf<String>()
         val scene = loadField(messages)
         fieldWorld(scene, messages).use { world ->
-            assertEquals(setOf("Field", "Pilot", "Racer", "Stunter", "Trainer"),
+            assertEquals(setOf("Field", "Pilot", "Mig-3", "Racer", "Stunter", "Trainer"),
                 world.entities.map { it.getComponent(NameComponent::class.java).name.orEmpty() }.toSet())
         }
         assertEquals(emptyList<String>(), messages)
@@ -47,7 +47,7 @@ class BundledProjectTest {
     @Test
     fun parkedPlanesRestOnTheGround() {
         val scene = loadField()
-        val before = listOf("Racer", "Stunter", "Trainer").associateWith { scene.named(it).position().localPosition.cpy() }
+        val before = listOf("Mig-3", "Racer", "Stunter", "Trainer").associateWith { scene.named(it).position().localPosition.cpy() }
         fieldWorld(scene).use { world -> repeat(120) { world.advance(1f / 60f) } }
         for ((name, start) in before) {
             val end = scene.named(name).position().localPosition

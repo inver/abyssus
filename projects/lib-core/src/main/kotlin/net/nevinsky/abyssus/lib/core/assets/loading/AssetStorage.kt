@@ -12,6 +12,9 @@ import net.nevinsky.abyssus.lib.core.assets.loading.exception.CyclicDependencyEx
 import net.nevinsky.abyssus.lib.core.assets.loading.exception.DependencyFailedException
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.baseAssetName
+import net.nevinsky.abyssus.lib.core.assets.forVariant
+import net.nevinsky.abyssus.lib.core.assets.isModelVariant
 import org.slf4j.Logger
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicLong
@@ -50,6 +53,11 @@ private class AbsentLoader : AssetLoader<Unit, Unit, Disposable> {
     override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, Unit>? = null
     override fun prepare(name: String): Prepared<Unit, Unit>? = null
     override fun build(staged: Unit, assets: BuiltAssets): Disposable = error("nothing to build")
+}
+
+private fun resolveBase(name: String, read: (String) -> AssetMeta<Any>?): AssetMeta<Any>? {
+    if (!isModelVariant(name)) return read(name)
+    return read(baseAssetName(name))?.forVariant(name)
 }
 
 /** A storage with [loader] registered for every name, for assets that need no `meta.json` to pick their loader. */
@@ -105,8 +113,19 @@ class AssetStorage(
      * [register]) and the loader then prepares from that meta. Null when there is none. Without it a loader can
      * only be chosen by name.
      */
-    private val metas: ((String) -> AssetMeta<Any>?)? = null,
+    metas: ((String) -> AssetMeta<Any>?)? = null,
 ) : Disposable, BuiltAssets {
+    /**
+     * [metas] for storage names: a name that encodes a model variant (see `ModelKey`) is read from its base asset's
+     * folder, and the meta handed on carries the encoded name so the loader can tell which mesh is wanted. Every path
+     * that turns a name into a folder or a `meta.json` goes through here: the loader choice in `DependencyResolver.route`
+     * and the revision/reload route (`startRevision`) use this wrapper, and `MetaAssetLoader.prepare` does the same
+     * decoding for the name-only path.
+     */
+    private val variantMetas: ((String) -> AssetMeta<Any>?)? = metas?.let { read ->
+        { name -> resolveBase(name, read) }
+    }
+
     private val executor: Executor
     private val ownedExecutor: ExecutorService?
 
@@ -141,7 +160,7 @@ class AssetStorage(
 
     /** Stands in for a name nothing can load: it prepares to nothing, so the asset fails as absent. */
     private val absent = LoaderRegistration(AbsentLoader(), { _, _ -> false })
-    private val dependencies = DependencyResolver(metas, registrations, absent) { registration, name, type ->
+    private val dependencies = DependencyResolver(variantMetas, registrations, absent) { registration, name, type ->
         registration.handles(name, type)
     }
 
@@ -283,13 +302,14 @@ class AssetStorage(
     /**
      * Marks [names] as changed. A loaded asset is replaced once the next [request] has loaded and built its new
      * revision (the old one is disposed then); a loading request is dropped and a failed name forgotten, so the next
-     * [request] loads it again from the current files. Unknown names and every other asset are untouched.
+     * [request] loads it again from the current files. Unknown names and every other asset are untouched. Invalidating
+     * a model asset also marks every loaded variant of it (one mesh, see `ModelKey`) changed.
      */
     fun invalidate(names: Set<String>) {
         onGl {
             check(!disposed) { "AssetStorage is disposed" }
             val errors = ArrayList<Throwable>()
-            for (name in names) {
+            for (name in withVariants(names)) {
                 val live = lives[name] ?: continue
                 if (live.phase == Phase.Ready) {
                     errors += dropRevision(name)
@@ -301,6 +321,15 @@ class AssetStorage(
             propagateFailures()
             throwIfAny(errors, "invalidate")
         }
+    }
+
+    /** [names] and every loaded model variant (see `ModelKey`) of an asset among them: a changed model changes them all. */
+    private fun withVariants(names: Set<String>): Set<String> {
+        val result = LinkedHashSet(names)
+        for (loaded in lives.keys) {
+            if (isModelVariant(loaded) && baseAssetName(loaded) in names) result += loaded
+        }
+        return result
     }
 
     /** Disposes every asset neither in [names] nor needed by one that is, and forgets it (a later request loads it again). */
@@ -340,8 +369,7 @@ class AssetStorage(
                 builtMap.clear()
                 versions.clear()
                 all.forEach { cancelledIds.add(it.id) }
-                val queued = ArrayList<Inbound>()
-                while (true) queued += inbound.poll() ?: break
+                val queued = drainInbound()
                 // A worker that has not published yet removes its own id; for the rest we own it.
                 val queuedIds = queued.mapTo(HashSet()) { it.id }
                 all.filter { it.phase != Phase.Preparing || it.id in queuedIds }.forEach { cancelledIds.remove(it.id) }
@@ -353,9 +381,7 @@ class AssetStorage(
                 live.staged?.let { errors += discardStagedQuiet(live.registration, it) }
                 live.staged = null
             }
-            for (message in queued) {
-                if (message is Inbound.Staged) errors += discardStagedQuiet(message.registration, message.staged)
-            }
+            errors += discardQueued(queued)
             errors.forEach { log.warn("Abandoning assets: a discard failed", it) }
         }
     }
@@ -372,17 +398,13 @@ class AssetStorage(
                     revisions.clear()
                     builtMap.clear()
                     snapshot.forEach { cancelledIds.add(it.id) }
-                    val queued = ArrayList<Inbound>()
-                    while (true) queued += inbound.poll() ?: break
-                    snapshot to queued
+                    snapshot to drainInbound()
                 }
             }
             val errors = ArrayList<Throwable>()
             if (work != null) {
                 for (live in work.first) errors += releaseLive(live, notifyDiscarded = live.asset != null)
-                for (message in work.second) {
-                    if (message is Inbound.Staged) errors += discardStagedQuiet(message.registration, message.staged)
-                }
+                errors += discardQueued(work.second)
                 ownedExecutor?.shutdown()
             }
             errors += strayErrors.toList()
@@ -422,7 +444,21 @@ class AssetStorage(
         }
         val errors = ArrayList<Throwable>()
         errors += releaseLive(live, notifyDiscarded)
-        for (message in dropped) {
+        errors += discardQueued(dropped)
+        return errors
+    }
+
+    /** Takes every queued message off [inbound]; the caller holds [publishLock]. */
+    private fun drainInbound(): List<Inbound> {
+        val drained = ArrayList<Inbound>()
+        while (true) drained += inbound.poll() ?: break
+        return drained
+    }
+
+    /** Discards what the staged messages among [messages] hold; returns what that threw. */
+    private fun discardQueued(messages: List<Inbound>): List<Throwable> {
+        val errors = ArrayList<Throwable>()
+        for (message in messages) {
             if (message is Inbound.Staged) errors += discardStagedQuiet(message.registration, message.staged)
         }
         return errors
@@ -833,10 +869,24 @@ class AssetStorage(
         ) : Inbound
     }
 
+    /** The lifecycle hooks of one loader: each kind has a loader-wide overload and a per-name overload. */
+    interface HookSink<P : Any, U : Any, T : Disposable> {
+        fun onPrepared(handler: (name: String, model: P) -> Unit): Subscription
+        fun onPrepared(name: String, handler: (model: P) -> Unit): Subscription
+        fun onUploaded(handler: (name: String, staged: U) -> Unit): Subscription
+        fun onUploaded(name: String, handler: (staged: U) -> Unit): Subscription
+        fun onBuilt(handler: (name: String, asset: T) -> Unit): Subscription
+        fun onBuilt(name: String, handler: (asset: T) -> Unit): Subscription
+
+        /** Runs on the GL thread when a built asset is unloaded or the storage is disposed, before [T.dispose]. */
+        fun onDiscarded(handler: (name: String, asset: T) -> Unit): Subscription
+        fun onDiscarded(name: String, handler: (asset: T) -> Unit): Subscription
+    }
+
     inner class LoaderRegistration<P : Any, U : Any, T : Disposable> internal constructor(
         internal val loader: AssetLoader<P, U, T>,
         internal val handles: (String, MetaType?) -> Boolean,
-    ) {
+    ) : HookSink<P, U, T> {
         private val preparedHooks = HookRegistry<P>(::bindThread)
         private val uploadedHooks = HookRegistry<U>(::bindThread)
         private val builtHooks = HookRegistry<T>(::bindThread)
@@ -852,59 +902,27 @@ class AssetStorage(
             HookScope().block()
         }
 
-        fun onPrepared(handler: (name: String, model: P) -> Unit): Subscription = preparedHooks.add(handler)
+        override fun onPrepared(handler: (name: String, model: P) -> Unit): Subscription = preparedHooks.add(handler)
 
-        fun onPrepared(name: String, handler: (model: P) -> Unit): Subscription =
+        override fun onPrepared(name: String, handler: (model: P) -> Unit): Subscription =
             preparedHooks.add(name, handler)
 
-        fun onUploaded(handler: (name: String, staged: U) -> Unit): Subscription = uploadedHooks.add(handler)
+        override fun onUploaded(handler: (name: String, staged: U) -> Unit): Subscription = uploadedHooks.add(handler)
 
-        fun onUploaded(name: String, handler: (staged: U) -> Unit): Subscription =
+        override fun onUploaded(name: String, handler: (staged: U) -> Unit): Subscription =
             uploadedHooks.add(name, handler)
 
-        fun onBuilt(handler: (name: String, asset: T) -> Unit): Subscription = builtHooks.add(handler)
+        override fun onBuilt(handler: (name: String, asset: T) -> Unit): Subscription = builtHooks.add(handler)
 
-        fun onBuilt(name: String, handler: (asset: T) -> Unit): Subscription = builtHooks.add(name, handler)
+        override fun onBuilt(name: String, handler: (asset: T) -> Unit): Subscription = builtHooks.add(name, handler)
 
-        /** Runs on the GL thread when a built asset is unloaded or the storage is disposed, before [T.dispose]. */
-        fun onDiscarded(handler: (name: String, asset: T) -> Unit): Subscription = discardedHooks.add(handler)
+        override fun onDiscarded(handler: (name: String, asset: T) -> Unit): Subscription = discardedHooks.add(handler)
 
-        fun onDiscarded(name: String, handler: (asset: T) -> Unit): Subscription =
+        override fun onDiscarded(name: String, handler: (asset: T) -> Unit): Subscription =
             discardedHooks.add(name, handler)
 
-        inner class HookScope {
-            fun onPrepared(handler: (name: String, model: P) -> Unit) {
-                this@LoaderRegistration.onPrepared(handler)
-            }
-
-            fun onPrepared(name: String, handler: (model: P) -> Unit) {
-                this@LoaderRegistration.onPrepared(name, handler)
-            }
-
-            fun onUploaded(handler: (name: String, staged: U) -> Unit) {
-                this@LoaderRegistration.onUploaded(handler)
-            }
-
-            fun onUploaded(name: String, handler: (staged: U) -> Unit) {
-                this@LoaderRegistration.onUploaded(name, handler)
-            }
-
-            fun onBuilt(handler: (name: String, asset: T) -> Unit) {
-                this@LoaderRegistration.onBuilt(handler)
-            }
-
-            fun onBuilt(name: String, handler: (asset: T) -> Unit) {
-                this@LoaderRegistration.onBuilt(name, handler)
-            }
-
-            fun onDiscarded(handler: (name: String, asset: T) -> Unit) {
-                this@LoaderRegistration.onDiscarded(handler)
-            }
-
-            fun onDiscarded(name: String, handler: (asset: T) -> Unit) {
-                this@LoaderRegistration.onDiscarded(name, handler)
-            }
-        }
+        /** The hook overloads of this registration, for use inside [hooks]. */
+        inner class HookScope : HookSink<P, U, T> by this@LoaderRegistration
 
         internal fun prepareNew(name: String): Prepared<Any, Any>? {
             @Suppress("UNCHECKED_CAST")

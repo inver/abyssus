@@ -158,3 +158,6 @@ class FoliageDataFile {
  * bake at 64 by 64.
  */
 fun foliageChunkSize(size: Int): Float = max(32f, size / 64f)
+
+/** How many chunks of [chunkSize] world units span a terrain [size] units wide, at least one, along each axis. */
+fun foliageChunksAcross(size: Int, chunkSize: Float): Int = max(1, kotlin.math.ceil(size.toDouble() / chunkSize).toInt())

@@ -69,7 +69,7 @@ in the platform toolbar is rebuilt by hand.
 ### D8. Skybox Browse in Properties
 The scene section of Abyssus Properties (Swing view over `lib-core-editor`'s panel model) gets a `skybox` row model with
 `browse: (() -> Unit)?`, null for a standalone scene. The Swing view paints the field plus a 26 px Browse button that calls
-`chooseSkybox` (same dialog, same `setSkybox` write through `editSceneJson`). The tree's `skybox` row refreshes through the
+`chooseSkybox` (same dialog, same `setSkybox` write through `editSceneDocument`). The tree's `skybox` row refreshes through the
 existing `AbyssusSceneEdited` topic, so no new listener is needed. The panel model stays free of Swing; its `skybox` row is
 unit-tested in `lib-core-editor`.
 

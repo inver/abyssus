@@ -86,6 +86,10 @@ data class UiAction(
     val raw: JsonNode,
 )
 
+/** The action that shows the overlay screen [screenId], as code (not a document) builds it. */
+fun showOverlayAction(screenId: String): UiAction =
+    UiAction(UiActionType.SHOW_OVERLAY.json, UiActionType.SHOW_OVERLAY, screenId = screenId, raw = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode())
+
 /**
  * A widget. [type] is null for a kind this build does not know ([rawType] keeps the authored name); such a widget is an
  * inert placeholder and [raw] keeps its whole object, children included.
@@ -128,7 +132,22 @@ data class UiBinding(
     val maxLength: Int? = null,
     /** For a `list` binding: the typed fields of one item. */
     val fields: List<UiRecordField> = emptyList(),
-)
+) {
+    /** [sample] as plain values (`String`, `Number`, `Boolean`, `List`, `Map`, or null), for readers that hold no tree. */
+    val sampleValue: Any? get() = sample?.let(::plainValue)
+
+    /** [sample] as text: a scalar as its value, a list as compact JSON. */
+    val sampleText: String? get() = sample?.let { if (it.isContainerNode) it.toString() else it.asText() }
+}
+
+private fun plainValue(node: JsonNode): Any? = when {
+    node.isNull || node.isMissingNode -> null
+    node.isTextual -> node.textValue()
+    node.isBoolean -> node.booleanValue()
+    node.isNumber -> node.numberValue()
+    node.isArray -> node.map(::plainValue)
+    else -> LinkedHashMap<String, Any?>().also { out -> node.properties().forEach { (k, v) -> out[k] = plainValue(v) } }
+}
 
 data class UiResource(val id: String, val kind: UiResourceKind, val path: String)
 

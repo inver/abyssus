@@ -96,6 +96,52 @@ class TreeLifecycleUiTest : UiTestBase() {
     fun skyboxEyeReturnCycle() = eyeCycle("skybox", "skyboxEnabled")
 
     @Test
+    fun ambientEyeReturnCycle() = eyeCycle("ambientLight", "ambientLightEnabled")
+
+    @Test
+    fun aSavedEyeEditSurvivesAProjectReopenWithSingleRows() {
+        val tree = openHierarchy()
+        tree.clickRowEye("fog")
+        LifecycleHarness.awaitState("fog is off in the tree", "off") { tree.eye("fog") }
+        frame.saveAll()
+        LifecycleHarness.awaitState("the edit is saved", true) { Regex("\"fogEnabled\": false").containsMatchIn(Files.readString(scene)) }
+        val saved = Files.readString(scene)
+
+        reset.reopenProject()
+        val again = openHierarchy()
+        LifecycleHarness.awaitState("the reopened tree shows fog off", "off") { again.eye("fog") }
+        val rows = again.rows()
+        assertEquals("no duplicate rows after the reopen: $rows", rows.size, rows.toSet().size)
+        assertEquals("one scene row", 1, rows.count { it == SceneFacts.read(scene).treeLabel })
+        assertEquals("reopening wrote nothing", saved, Files.readString(scene))
+    }
+
+    @Test
+    fun aUsageChangeWhileTheUnusedFilterIsOnMovesTheAssetOutAndUndoBringsItBack() {
+        val original = Files.readString(scene)
+        val tree = openHierarchy()
+        val sceneRow = SceneFacts.read(scene).treeLabel
+        toggleUnusedFilter()
+        val filtered = frame.tree().also { it.expandAssets() }
+        assertTrue("the unused model `tree` is listed: ${filtered.rows()}", filtered.rows().any { it == "tree" })
+        val unusedBefore = footer()
+
+        // a scene entity starts to use it: it is no longer unused, so the filter drops it
+        filtered.rightClickRow(sceneRow)
+        frame.clickMenuPath("Add", "Add Asset")
+        frame.choosePopupItem("tree")
+        LifecycleHarness.awaitState("the filter no longer lists `tree`", false) { frame.tree().rows().any { it == "tree" } }
+        assertTrue("the scene row stays: ${frame.tree().rows()}", sceneRow in frame.tree().rows())
+        LifecycleHarness.awaitState("the footer follows the usage", false) { footer() == unusedBefore }
+
+        undoThroughSceneDocument(scene, original)
+        LifecycleHarness.awaitState("Undo lists `tree` again", true) { frame.tree().also { it.expandAssets() }.rows().any { it == "tree" } }
+        LifecycleHarness.awaitState("the footer returns", unusedBefore) { footer() }
+        assertEquals("the scene is as it was", original, Files.readString(scene))
+        tree.focus()
+    }
+
+    @Test
     fun switchingViewsAfterAnEditKeepsRowsSingleAndTheEditVisible() {
         val tree = openHierarchy()
         tree.clickRowEye("fog")

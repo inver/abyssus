@@ -5,7 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.util.smooth01
+import com.badlogic.gdx.math.Vector3
 
 import kotlin.math.cos
 import kotlin.math.sqrt
@@ -19,7 +20,7 @@ data class SpotCone(val angle: Float, val softness: Float) {
     val outerCos = cos(Math.toRadians(angle.toDouble() / 2)).toFloat()
     val innerCos = cos(Math.toRadians(angle.toDouble() / 2 * (1 - softness))).toFloat()
 
-    fun attenuation(axis: Vec3, ray: Vec3): Float {
+    fun attenuation(axis: Vector3, ray: Vector3): Float {
         val a2 = axis.x * axis.x + axis.y * axis.y + axis.z * axis.z
         val r2 = ray.x * ray.x + ray.y * ray.y + ray.z * ray.z
         if (!a2.isFinite() || !r2.isFinite() || a2 <= 0f || r2 <= 0f) return 0f
@@ -33,5 +34,5 @@ data class SpotCone(val angle: Float, val softness: Float) {
         return 1f - smooth((distance - 0.75f * range) / (0.25f * range))
     }
 
-    private fun smooth(value: Float): Float = value.coerceIn(0f, 1f).let { it * it * (3f - 2f * it) }
+    private fun smooth(value: Float): Float = smooth01(value.coerceIn(0f, 1f))
 }

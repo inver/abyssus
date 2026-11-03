@@ -14,10 +14,10 @@ import com.badlogic.gdx.math.collision.Ray
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 
 /** A model entity as seen by picking: its world-space bounds. */
-class BoxTarget(val entityId: String, val bounds: BoundingBox)
+class BoxTarget(val entityId: Long, val bounds: BoundingBox)
 
 /** A terrain entity as seen by picking: its height field and its world transform. */
-class TerrainTarget(val entityId: String, val data: TerrainData, val world: Matrix4)
+class TerrainTarget(val entityId: Long, val data: TerrainData, val world: Matrix4)
 
 /** How far above a surface a box may sit and still count as resting on it. */
 const val REST_EPS = 0.0001f
@@ -54,12 +54,12 @@ class ScenePicker {
     }
 
     /** [maxDistance] limits how far a terrain is searched along the ray (the camera's far plane). */
-    fun pick(ray: Ray, boxes: List<BoxTarget>, terrains: List<TerrainTarget>, maxDistance: Float): String? =
+    fun pick(ray: Ray, boxes: List<BoxTarget>, terrains: List<TerrainTarget>, maxDistance: Float): Long? =
         nearest(ray, boxes, terrains, maxDistance)?.first
 
     /** Like [pick], with the distance along [ray] to the hit. */
-    fun nearest(ray: Ray, boxes: List<BoxTarget>, terrains: List<TerrainTarget>, maxDistance: Float): Pair<String, Float>? {
-        var best: String? = null
+    fun nearest(ray: Ray, boxes: List<BoxTarget>, terrains: List<TerrainTarget>, maxDistance: Float): Pair<Long, Float>? {
+        var best: Long? = null
         var bestDistance = Float.MAX_VALUE
         val hit = Vector3()
         for (b in boxes) {

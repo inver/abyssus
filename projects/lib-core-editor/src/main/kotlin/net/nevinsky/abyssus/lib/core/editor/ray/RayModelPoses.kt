@@ -22,10 +22,10 @@ class RayModelPoses {
         val bones: Map<String, List<FloatArray>>
     )
 
-    private var previous = emptyMap<String, Last>()
+    private var previous = emptyMap<Long, Last>()
 
-    fun capture(entities: Collection<ModelEntity>): Map<String, RayModelPose> {
-        val captured = LinkedHashMap<String, Last>()
+    fun capture(entities: Collection<ModelEntity>): Map<Long, RayModelPose> {
+        val captured = LinkedHashMap<Long, Last>()
         for (entity in entities) {
             val roots = entity.instance.nodes
             if (entity.animation == null && roots.none(::skinned)) continue

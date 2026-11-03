@@ -5,10 +5,10 @@
 
 package net.nevinsky.abyssus.lib.core.ecs
 
+import net.nevinsky.abyssus.lib.core.ecs.component.RawComponent
 import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Engine
 import com.badlogic.ashley.core.Entity
-import com.fasterxml.jackson.databind.JsonNode
 
 /** The entities of a scene by the id they have in the file. */
 class SceneEntityIds {
@@ -34,13 +34,12 @@ class SceneEngine : Engine() {
 }
 
 /**
- * What the loader keeps of the `ecs` block besides the entities: every other top-level member (`metadata`, in file
- * order) as raw JSON, the components it could not bind (by entity id, then the key the file gave them, in file order),
- * and the problems met while loading. [carried] is what lets a scene be written back without losing a component this
+ * What the loader keeps of the `ecs` block besides the entities: the components it could not bind (by entity id, then the
+ * key the file gave them, in file order, as [RawComponent]s holding their JSON text), and the problems met while loading. [carried] is what lets a scene be written back without losing a component this
  * program does not model; the writer adds it to the entity of the same id.
  */
 //todo use this object instead of EcsReadWarnings
 class EcsLoadingWarns(
     val warnings: List<String>,
-    val carried: Map<Long, Map<String, JsonNode>> = emptyMap(),
+    val carried: Map<Long, Map<String, RawComponent>> = emptyMap(),
 )

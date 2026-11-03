@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.command.undo.UndoManager
@@ -12,23 +13,26 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.openapi.util.IconLoader
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
+import net.nevinsky.abyssus.lib.core.editor.parseScene
 import java.io.File
 
 /** The eye on entity and component rows (spec `abyssus-project-view`): which rows have one, what it writes, how a disabled subtree looks. */
 class EntityEyeTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
 
-    private fun json(text: String) = SceneJson().parse(text)
+    private fun scene(text: String) = net.nevinsky.abyssus.plugin.parsedScene(text)
+    private fun componentTexts(entity: net.nevinsky.abyssus.lib.core.dto.EntityDto) =
+        entity.components.filterNot { it is HeaderComponent }.map { com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.json.toString(it) }
 
     // ---- which rows have an eye ----
 
     fun testEntityRowsHaveAnEyeExceptGroups() {
-        val ecs = json(
-            """{"entities":{
-              "0":{"components":{"TypeComponent":{"type":"OBJECT"}}},
-              "1":{"enabled":false,"components":{"TypeComponent":{"type":"OBJECT"}}},
-              "2":{"components":{"TypeComponent":{"type":"GROUP"}}}}}""",
+        val ecs = parseScene(
+            """{"formatVersion":1,"ecs":{
+              "0":{"type":"OBJECT","components":{}},
+              "1":{"flags":1,"type":"OBJECT","components":{}},
+              "2":{"type":"GROUP","components":{}}}}""",
         )
         val rows = ecsRows(ecs).associateBy { it.name }
         assertEquals(true, rows.getValue("0").enabled)
@@ -37,12 +41,10 @@ class EntityEyeTest : BasePlatformTestCase() {
     }
 
     fun testComponentRowsFollowTheTogglableMatrix() {
-        val entity = json(
-            """{"components":{"NameComponent":{},"PositionComponent":{},"ParentComponent":{},"RenderComponent":{},
-              "RigidBodyComponent":{},"ColliderComponent":{"enabled":false},"LightComponent":{},"FoliageComponent":{},
-              "PlaneComponent":{},"PilotComponent":{}}}""",
+        val entity = parseScene(
+            """{"formatVersion":1,"ecs":{"0":{"disabledComponents":["ColliderComponent"],"components":{"NameComponent":{},"PositionComponent":{},"ParentComponent":{},"RenderComponent":{},"RigidBodyComponent":{},"ColliderComponent":{},"LightComponent":{},"FoliageComponent":{},"PlaneComponent":{},"PilotComponent":{}}}}}""",
         )
-        val rows = entityRows(entity).associateBy { it.name }
+        val rows = entityRows(net.nevinsky.abyssus.plugin.projectView.EntityNode(entity, 0)).associateBy { it.name }
         for (name in listOf("NameComponent", "PositionComponent", "ParentComponent")) assertNull(name, rows.getValue(name).enabled)
         for (name in listOf("RenderComponent", "RigidBodyComponent", "LightComponent", "FoliageComponent", "PlaneComponent", "PilotComponent"))
             assertEquals(name, true, rows.getValue(name).enabled)
@@ -77,9 +79,9 @@ class EntityEyeTest : BasePlatformTestCase() {
         val row = entry(entity("0"))
         assertEquals(true, row.enabled)
         assertTrue(toggleRow(project, row))
-        val written = json(sceneText())
-        assertEquals(false, written["ecs"]["0"]["enabled"].booleanValue())
-        assertEquals(json(before)["ecs"]["0"]["components"], written["ecs"]["0"]["components"])
+        val written = scene(sceneText())
+        assertFalse(written.entity(0)!!.header().entityEnabled)
+        assertEquals(componentTexts(scene(before).entity(0)!!), componentTexts(written.entity(0)!!))
         assertEquals(false, entry(entity("0")).enabled)
         UndoManager.getInstance(project).undo(editor)
         assertEquals(before, sceneText())
@@ -90,15 +92,14 @@ class EntityEyeTest : BasePlatformTestCase() {
         copyProject()
         val render = children(entity("0")).single { label(it) == "RenderComponent" }
         assertTrue(toggleRow(project, entry(render)))
-        val written = json(sceneText())["ecs"]["0"]["components"]
-        assertEquals(false, written["RenderComponent"]["enabled"].booleanValue())
-        assertNull(written["PositionComponent"]["enabled"])
-        assertNull(json(sceneText())["ecs"]["0"]["enabled"])
+        val written = scene(sceneText()).entity(0)!!.header()
+        assertEquals(listOf("RenderComponent"), written.disabledComponents.map { it.simpleName })
+        assertTrue(written.entityEnabled)
         // turning it on again removes the key
         val again = children(entity("0")).single { label(it) == "RenderComponent" }
         assertEquals(false, entry(again).enabled)
         assertTrue(toggleRow(project, entry(again)))
-        assertNull(json(sceneText())["ecs"]["0"]["components"]["RenderComponent"]["enabled"])
+        assertTrue(scene(sceneText()).entity(0)!!.header().disabledComponents.isEmpty())
     }
 
     fun testADisabledEntityDimsItsRowAndItsComponentRowsWithGrayIcons() {

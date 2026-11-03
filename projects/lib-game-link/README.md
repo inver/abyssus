@@ -1,7 +1,7 @@
 # lib-game-link
 
 Everything a game links only so that Abyssus can talk to it. A plain JVM library (package
-`net.nevinsky.abyssus.lib.gamelink`, no IntelliJ imports) wired by constructors, on `lib-physics` and `lib-core`.
+`net.nevinsky.abyssus.lib.gamelink`, no IntelliJ imports) wired by constructors, on `lib-physics`, `lib-core` and `lib-core-editor` (which writes the play frames' JSON).
 
 A shipped game never depends on it from its main code: `./gradlew :app-game-control-line:checkShippedClasspath` fails
 the build if it does. A game that supports Play puts its `PlayModule` in a source set of its own (Control Line:

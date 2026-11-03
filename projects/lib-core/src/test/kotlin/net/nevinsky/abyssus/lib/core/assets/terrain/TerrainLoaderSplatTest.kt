@@ -7,10 +7,13 @@ import com.badlogic.gdx.utils.GdxNativesLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.texture.TextureLoader
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import javax.imageio.ImageIO
 import java.io.DataOutputStream
+import java.awt.image.BufferedImage
 import java.io.File
 import java.nio.file.Files
 
@@ -84,6 +87,40 @@ class TerrainLoaderSplatTest {
     @Test
     fun aTerrainWithoutTexturesNeedsNothing() {
         assertEquals(emptySet<String>(), loader.dependencies(loader.prepare("terr")!!.staged))
+    }
+
+    /**
+     * The splat map an editor stroke writes is an 8-bit RGBA PNG (written through `ImageIO` from an ARGB image, as the editor's
+     * codec does). The game decodes it through [TextureLoader]; every channel, including colour under a zero alpha, must arrive intact.
+     */
+    @Test
+    fun aStrokeWrittenSplatImageDecodesToTheSamePixels() {
+        val side = 64
+        val rgba = ByteArray(side * side * 4) { ((it * 37 + it / 7) and 0xFF).toByte() }
+        for (t in 0 until side * side step 5) rgba[t * 4 + 3] = 0 // weights for the A layer at zero beside non-zero R, G, B
+        val image = BufferedImage(side, side, BufferedImage.TYPE_INT_ARGB)
+        for (t in 0 until side * side) {
+            val r = rgba[t * 4].toInt() and 0xFF
+            val g = rgba[t * 4 + 1].toInt() and 0xFF
+            val b = rgba[t * 4 + 2].toInt() and 0xFF
+            val a = rgba[t * 4 + 3].toInt() and 0xFF
+            image.setRGB(t % side, t / side, (a shl 24) or (r shl 16) or (g shl 8) or b)
+        }
+        File(dir, "assets/splat").mkdirs()
+        ImageIO.write(image, "png", File(dir, "assets/splat/splat.png"))
+        File(dir, "assets/splat/meta.json").writeText(
+            """{"format":"abyssus","formatVersion":1,"uuid":"$BASE","type":"TEXTURE","additional":{"file":"splat.png"}}"""
+        )
+        val pixmap = TextureLoader(files, metas).prepare("splat")!!.staged.release()
+        try {
+            assertEquals(side, pixmap.width)
+            assertEquals(side, pixmap.height)
+            val bytes = ByteArray(side * side * 4)
+            pixmap.pixels.apply { rewind(); get(bytes) }
+            assertEquals(rgba.toList(), bytes.toList())
+        } finally {
+            pixmap.dispose()
+        }
     }
 
     private companion object {

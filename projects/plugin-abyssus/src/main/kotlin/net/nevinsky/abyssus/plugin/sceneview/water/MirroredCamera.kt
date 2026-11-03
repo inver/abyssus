@@ -1,3 +1,4 @@
+/* DISABLED (G7: scene water is no longer modeled by lib-core-editor); kept for reference, not compiled.
 /*
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
@@ -67,3 +68,4 @@ internal class MirroredCamera(
         }
     }
 }
+*/

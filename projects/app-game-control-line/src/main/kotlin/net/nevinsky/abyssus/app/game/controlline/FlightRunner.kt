@@ -4,7 +4,11 @@
  */
 package net.nevinsky.abyssus.app.game.controlline
 
+import net.nevinsky.abyssus.app.game.controlline.ai.DangerGauge
 import net.nevinsky.abyssus.app.game.controlline.ai.F2bBot
+import net.nevinsky.abyssus.app.game.controlline.ai.Handling
+import net.nevinsky.abyssus.app.game.controlline.ai.InstructorControl
+import net.nevinsky.abyssus.app.game.controlline.ai.rescuePilot
 import net.nevinsky.abyssus.app.game.controlline.ai.f2bBot
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightControlSource
@@ -19,6 +23,7 @@ import net.nevinsky.abyssus.app.game.controlline.input.HandleInput
 import net.nevinsky.abyssus.app.game.controlline.pattern.GuidePlanner
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
 import net.nevinsky.abyssus.app.game.controlline.render.FieldScene
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleJudge
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
 import net.nevinsky.abyssus.lib.physics.RigidBodyComponent
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
@@ -46,6 +51,10 @@ class FlightRunner(
     var judge: PatternJudge? = null
         private set
 
+    /** The realism judge of a Scale flight, or null at the other modes. */
+    var scaleJudge: ScaleJudge? = null
+        private set
+
     /** The Noob guide of the flight, or null at the other levels. */
     var guide: GuidePlanner? = null
         private set
@@ -56,6 +65,10 @@ class FlightRunner(
 
     /** The bot holding the handle in an AI demonstration, or null. */
     var bot: F2bBot? = null
+        private set
+
+    /** The instructor beside the player in an instructed flight, or null. */
+    var instructor: InstructorControl? = null
         private set
 
     /** The flight being flown, or null. */
@@ -79,7 +92,7 @@ class FlightRunner(
             is Screen.Flying -> {
                 s.advance(seconds)
                 judge?.let { guide?.update(it) }
-                flying?.let { f -> reportOf(s, f.mode, judge, f.plane.name)?.let(flow::flightEnded) }
+                flying?.let { f -> reportOf(s, f.mode, judge, f.plane.name, scaleJudge, instructor)?.let(flow::flightEnded) }
             }
             // the plane comes to rest; the flight itself is over
             is Screen.GameOver, is Screen.NameEntry -> s.advance(seconds)
@@ -113,10 +126,19 @@ class FlightRunner(
         val pattern = screen.mode as? Mode.Pattern
         val judge = pattern?.let { PatternJudge(screen.plane.lineLength) }
         this.judge = judge
+        val scaleJudge = if (screen.mode == Mode.Scale) ScaleJudge() else null
+        this.scaleJudge = scaleJudge
         guide = pattern?.takeIf { it.level.guided }?.let { GuidePlanner(screen.plane.lineLength) }
         input.reset()
         val control: FlightControlSource = when (screen.control) {
-            Control.HUMAN -> HumanControl(input)
+            Control.HUMAN -> HumanControl(input).let { human ->
+                if (!screen.instructor) human else {
+                    val settings = plane.getComponent(PlaneComponent::class.java)
+                    val mass = plane.getComponent(RigidBodyComponent::class.java)?.mass ?: screen.plane.mass
+                    val handling = Handling(settings, mass)
+                    InstructorControl(human, DangerGauge(handling), rescuePilot(settings.lineLength, handling)).also { instructor = it }
+                }
+            }
             Control.AI -> {
                 // the bot flies the plane's own settings, and only reads the judge
                 val settings = plane.getComponent(PlaneComponent::class.java)
@@ -124,7 +146,7 @@ class FlightRunner(
                 f2bBot(settings, mass, checkNotNull(judge) { "Watch AI flies an F2B pattern" }::guideInput).also { bot = it }
             }
         }
-        session = FlightSession(loaded.engine, pilot, plane, assets(), log, natives, judge, control)
+        session = FlightSession(loaded.engine, pilot, plane, assets(), log, natives, judge ?: scaleJudge, control)
         scene = loaded
         flying = screen
     }
@@ -133,8 +155,10 @@ class FlightRunner(
         session?.close()
         session = null
         judge = null
+        scaleJudge = null
         guide = null
         bot = null
+        instructor = null
         scene = null
         flying = null
     }

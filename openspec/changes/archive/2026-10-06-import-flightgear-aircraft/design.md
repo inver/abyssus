@@ -111,7 +111,7 @@ It is documented in `docs/ai/file-formats.md` as an asset side file that the loa
   - `source.json` records the licence as `GPL-2.0-or-later`, with the note "FlightGear aircraft licence; the archive
     states none", following the user's decision. `COPYING` holds the GPL-2.0 text.
 - The meta's `additional.file` (`model.gltf` → `model.glb`) and the Trainer's pose in `Field.scene` are edited through
-  `editSceneJson`. The env-gated `AirfieldPatchApplicationTest` is generalised into `ScenePatchApplicationTest`, which
+  `editSceneDocument`. The env-gated `AirfieldPatchApplicationTest` is generalised into `ScenePatchApplicationTest`, which
   applies a JSON patch of `set` / `remove` / `append` operations to any native document. The airfield patch is
   re-expressed in that form. The Trainer patch:
   - `localRotation` = the old parking yaw only. The old value was a yaw with a 13° nose-up pitch. The new one is the

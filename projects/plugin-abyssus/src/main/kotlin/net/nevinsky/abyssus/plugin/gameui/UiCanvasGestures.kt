@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
-import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.editor.ui.UiTreeEdit
 import net.nevinsky.abyssus.lib.core.editor.ui.UiDocumentEdits
 import net.nevinsky.abyssus.lib.core.editor.ui.UiEditResult
 import net.nevinsky.abyssus.lib.core.editor.ui.UiGesturePreview
@@ -24,7 +24,7 @@ internal class UiCanvasGestures(
     private val layoutOf: (screenId: String) -> UiLayoutResult?,
     private val select: (widgetId: String) -> Unit,
     /** Writes the drag as one command against [baseText]; true when it was written. */
-    private val commit: (baseText: String, edit: (UiDocumentEdits, JsonNode) -> UiEditResult) -> Boolean,
+    private val commit: (baseText: String, edit: UiTreeEdit) -> Boolean,
 ) {
     private var gesture: UiLayoutGesture? = null
 

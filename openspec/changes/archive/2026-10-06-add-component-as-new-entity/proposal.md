@@ -14,7 +14,7 @@ is where users look for "add something here".
     entity row.
   - Choosing one creates a new entity, with the next numeric id and a `NameComponent` `Entity <id>`, holding that
     component. Defaults or the chosen asset are applied the same way as adding to an existing entity.
-  - This is one undoable edit through `editSceneJson`, and the new entity's row is selected.
+  - This is one undoable edit through `editSceneDocument`, and the new entity's row is selected.
 - Add Component on an entity row is unchanged.
 
 Native fields:

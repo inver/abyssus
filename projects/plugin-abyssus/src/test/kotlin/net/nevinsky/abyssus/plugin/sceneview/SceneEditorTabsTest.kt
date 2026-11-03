@@ -14,7 +14,7 @@ import net.nevinsky.abyssus.plugin.SceneFileEditorProvider
  * only creates text editors, so the tab switching itself is checked by `SceneViewUiTest`; this pins what the provider owes it.
  */
 class SceneEditorTabsTest : BasePlatformTestCase() {
-    private val minified = """{"format":"abyssus","formatVersion":1,"name":"tabs","ecs":{"entities":{}}}"""
+    private val minified = """{"format":"abyssus","formatVersion":1,"name":"tabs","ecs":{}}"""
     private val provider = SceneFileEditorProvider()
 
     fun testTheSceneViewEditorReadsTheSameDocumentAsTheTextEditor() {

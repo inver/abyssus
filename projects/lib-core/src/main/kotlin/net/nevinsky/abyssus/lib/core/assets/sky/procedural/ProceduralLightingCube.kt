@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 
+import net.nevinsky.abyssus.lib.core.util.GlStateScope
+import net.nevinsky.abyssus.lib.core.util.OFFSCREEN_CAPS
 import net.nevinsky.abyssus.lib.core.util.checkFramebufferComplete
 
 import net.nevinsky.abyssus.lib.core.util.GL_HALF_FLOAT
@@ -54,15 +56,9 @@ class ProceduralLightingCube(
         checkNotNull(Gdx.gl30) { "Procedural sky lighting needs OpenGL 3" }
         if (!allocated) allocate()
         val gl = Gdx.gl
-        val ints = BufferUtils.newIntBuffer(16)
-        gl.glGetIntegerv(0x8CA6, ints)
-        val previous = ints.get(0)
-        gl.glGetIntegerv(GL20.GL_VIEWPORT, ints)
-        val viewport = IntArray(4) { ints.get(it) }
-        val caps = listOf(GL20.GL_BLEND, GL20.GL_DEPTH_TEST, GL20.GL_CULL_FACE, GL20.GL_SCISSOR_TEST)
-        val enabled = caps.map(gl::glIsEnabled)
+        val state = GlStateScope(OFFSCREEN_CAPS)
         try {
-            caps.forEach(gl::glDisable)
+            state.disableCaps()
             gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, fbo)
             gl.glViewport(0, 0, PROCEDURAL_LIGHTING_SIZE, PROCEDURAL_LIGHTING_SIZE)
             val atmosphere = program ?: shaders.program("clouds.vert", "atmosphere_linear.frag").also { program = it }
@@ -75,16 +71,7 @@ class ProceduralLightingCube(
                 inverse.set(camera.combined).inv()
                 atmosphere.bind()
                 atmosphere.setUniformMatrix("u_invViewProj", inverse)
-                atmosphere.setUniformf("u_sunDir", sun)
-                atmosphere.setUniformf("u_cameraHeight", SKY_CAMERA_HEIGHT)
-                atmosphere.setUniformf("u_planetRadius", params.planetRadius)
-                atmosphere.setUniformf("u_atmosphereRadius", params.atmosphereRadius)
-                atmosphere.setUniformf("u_betaRayleigh", params.betaRayleigh[0], params.betaRayleigh[1], params.betaRayleigh[2])
-                atmosphere.setUniformf("u_betaMie", params.betaMie)
-                atmosphere.setUniformf("u_heightRayleigh", params.heightRayleigh)
-                atmosphere.setUniformf("u_heightMie", params.heightMie)
-                atmosphere.setUniformf("u_mieG", params.mieG)
-                atmosphere.setUniformf("u_sunIntensity", params.sunIntensity)
+                params.bindTo(atmosphere, sun)
                 triangle.render(atmosphere, GL20.GL_TRIANGLES)
                 if (clouds?.settings?.visible == true) {
                     val renderer = shells ?: LinearShellClouds(shaders, CloudField()).also { shells = it }
@@ -94,9 +81,7 @@ class ProceduralLightingCube(
             texture.bind(0)
             gl.glGenerateMipmap(GL20.GL_TEXTURE_CUBE_MAP)
         } finally {
-            gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, previous)
-            gl.glViewport(viewport[0], viewport[1], viewport[2], viewport[3])
-            caps.zip(enabled).forEach { (cap, on) -> if (on) gl.glEnable(cap) else gl.glDisable(cap) }
+            state.restore()
             gl.glActiveTexture(GL20.GL_TEXTURE0)
             gl.glBindTexture(GL20.GL_TEXTURE_CUBE_MAP, 0)
         }

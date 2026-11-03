@@ -130,8 +130,6 @@ only when the user changes the switch, leaving every other member, key order and
 - **WHEN** a game or external play host loads a native project with `physicsEnabled: false`
 - **THEN** its physics configuration remains controlled by the game or host rather than the editor switch
 
-## ADDED Requirements
-
 ### Requirement: Optional enabled flag
 
 An entity entry and a component entry of a scene's `ecs` block MAY carry an `enabled` boolean. A missing flag SHALL mean enabled, and writers SHALL add the flag only as `false` and remove it when the entity or component is enabled again. A flag that is not a boolean SHALL make the scene unsupported for editing and leave it unchanged. `formatVersion` SHALL remain `1`, and documents that do not use the flag SHALL be unchanged by any edit.

@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 
 /**
  * Drawing a path arrangement and editing its points: each click on the terrain adds a point, a click on the first point
@@ -17,14 +17,14 @@ internal class DrawingSession(
     private val state: SceneViewState,
     private val queries: SceneQueries,
     private val size: () -> ViewSize,
-    private val onCreate: () -> ((RenderAsset, List<Vec3>, Boolean) -> Boolean)?,
-    private val onEdit: () -> ((String, List<Vec3>) -> Boolean)?,
+    private val onCreate: () -> ((BaseMeta, List<Vector3>, Boolean) -> Boolean)?,
+    private val onEdit: () -> ((Long, List<Vector3>) -> Boolean)?,
     private val changed: () -> Unit,
 ) {
     /** Starts drawing a path arrangement of the model [asset]. */
-    fun start(asset: RenderAsset) {
+    fun start(asset: BaseMeta) {
         state.drawing = PathDrawing(asset)
-        state.paint = null
+        state.endBrush()
         changed()
     }
 
@@ -40,7 +40,13 @@ internal class DrawingSession(
         }
         val at = view.toFramebuffer(x, y)
         if (drawing.points.size >= 3) {
-            val distance = queries.screenDistance(drawing.points.first(), at.x, at.y, view.framebufferWidth, view.framebufferHeight)
+            val distance = queries.screenDistance(
+                drawing.points.first(),
+                at.x,
+                at.y,
+                view.framebufferWidth,
+                view.framebufferHeight
+            )
             if (distance != null && distance <= PATH_HANDLE_PX) {
                 finish(closed = true)
                 return
@@ -48,7 +54,7 @@ internal class DrawingSession(
         }
         val ray = queries.rayFrom(view, x, y) ?: return
         val hit = queries.groundHit(ray) ?: return
-        drawing.points += Vec3(hit.x, hit.y, hit.z)
+        drawing.points += Vector3(hit.x, hit.y, hit.z)
         changed()
     }
 
@@ -80,10 +86,10 @@ internal class DrawingSession(
     }
 
     /** Whether a point of the arrangement [entityId] can be removed: at least two points must remain. */
-    fun canRemovePoint(entityId: String): Boolean = (queries.pathPoints(entityId)?.size ?: 0) > 2
+    fun canRemovePoint(entityId: Long): Boolean = (queries.pathPoints(entityId)?.size ?: 0) > 2
 
     /** Removes point [index] of the arrangement [entityId] through the edit callback; false when it cannot be removed or was not written. */
-    fun removePoint(entityId: String, index: Int): Boolean {
+    fun removePoint(entityId: Long, index: Int): Boolean {
         val points = queries.pathPoints(entityId) ?: return false
         if (points.size <= 2 || index !in points.indices) return false
         return onEdit()?.invoke(entityId, points.toMutableList().also { it.removeAt(index) }) ?: false

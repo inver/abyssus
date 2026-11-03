@@ -42,10 +42,10 @@ class SceneRayControls @JvmOverloads constructor(
         owners[parent] = content to owners[parent]?.second
     }
 
-    internal fun selected(file: VirtualFile, parent: Disposable, entityId: String) {
+    internal fun selected(file: VirtualFile, parent: Disposable, entityId: Long) {
         val owners = sceneFacts[file] ?: return
         val old = owners[parent] ?: return
-        owners[parent] = old.first to entityId
+        owners[parent] = old.first to entityId.toString()
     }
 
     internal fun forgetFacts(file: VirtualFile, parent: Disposable) {

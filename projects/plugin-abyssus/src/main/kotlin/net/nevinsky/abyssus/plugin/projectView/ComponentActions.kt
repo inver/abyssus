@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.lib.core.editor.document.*
 import com.intellij.ide.projectView.ProjectView
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -22,14 +23,8 @@ import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.schema.ComponentSchemas
+import net.nevinsky.abyssus.plugin.ui.reportRejection
 import net.nevinsky.abyssus.plugin.ui.showActionGroup
-
-/** Tells the user why an edit was refused; anything else needs no word. */
-internal fun reportRejection(project: Project, result: EditResult) {
-    if (result is EditResult.Rejected) {
-        Messages.showErrorDialog(project, result.reason, AbyssusBundle.message("componentRejectedTitle"))
-    }
-}
 
 /**
  * The choices for adding a component to [entityId] of [file]: one action per modeled kind the entity lacks, a Render
@@ -38,7 +33,7 @@ internal fun reportRejection(project: Project, result: EditResult) {
 fun addComponentGroup(
     project: Project,
     file: VirtualFile,
-    entityId: String,
+    entityId: Long,
     kinds: List<String>,
     metaFiles: MetaFiles
 ): DefaultActionGroup =
@@ -73,11 +68,11 @@ fun addComponentGroup(
                 // asset folders have underscores, which the menu would take for mnemonics
                 sub.add(object : AnAction() {
                     init {
-                        templatePresentation.setText("${asset.type.lowercase()} ${asset.name}", false)
+                        templatePresentation.setText("${asset.type.name.lowercase()} ${asset.name}", false)
                     }
 
                     override fun actionPerformed(e: AnActionEvent) =
-                        add(name, mapOf("assetType" to asset.type, "assetName" to asset.name))
+                        add(name, mapOf("assetType" to asset.type.name, "assetName" to asset.name))
                 })
             }
             group.add(sub)
@@ -103,7 +98,7 @@ open class AddComponentAction : AbyssusTreeAction<ComponentTarget>() {
 
     /** What can be added to the entity [target] stands for: the modeled kinds it lacks in the scene's current text. */
     internal fun choices(project: Project, target: ComponentTarget, metaFiles: MetaFiles): DefaultActionGroup {
-        val root = SceneDocumentCache.of(project).read(target.file)?.root ?: return DefaultActionGroup()
+        val root = SceneDocumentCache.of(project).read(target.file)?.scene ?: return DefaultActionGroup()
         val kinds =
             ComponentSchemas.of(project).editorFor(target.file).missingKinds(root, target.entityId).map { it.name }
         return addComponentGroup(project, target.file, target.entityId, kinds, metaFiles)

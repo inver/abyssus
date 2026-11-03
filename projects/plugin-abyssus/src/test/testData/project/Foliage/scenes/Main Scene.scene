@@ -27,7 +27,7 @@
   "skyboxEnabled": false,
   "ecs": {
     "1": {
-      "archetype": 1,
+      "type": "TERRAIN",
       "components": {
         "NameComponent": {
           "name": "Terrain"
@@ -48,22 +48,14 @@
           }
         },
         "RenderComponent": {
-          "renderable": {
-            "kind": "asset",
-            "shaderKey": "terrain",
-            "asset": {
-              "type": "TERRAIN",
-              "assetName": "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
-            }
-          }
-        },
-        "TypeComponent": {
-          "type": "TERRAIN"
+          "shaderKey": "terrain",
+          "type": "TERRAIN",
+          "assetName": "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
         }
       }
     },
     "2": {
-      "archetype": 1,
+      "type": "OBJECT",
       "components": {
         "NameComponent": {
           "name": "Model 2"
@@ -84,17 +76,9 @@
           }
         },
         "RenderComponent": {
-          "renderable": {
-            "kind": "asset",
-            "shaderKey": "defaultShader",
-            "asset": {
-              "type": "MODEL",
-              "assetName": "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"
-            }
-          }
-        },
-        "TypeComponent": {
-          "type": "OBJECT"
+          "shaderKey": "defaultShader",
+          "type": "MODEL",
+          "assetName": "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"
         }
       }
     }

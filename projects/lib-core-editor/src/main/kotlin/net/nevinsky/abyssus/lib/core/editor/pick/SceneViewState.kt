@@ -5,28 +5,56 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.editor.content.Pose
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+
+/** Which terrain brush a [BrushMode] holds; each kind has its own [BrushStroke]. */
+enum class BrushKind { FOLIAGE, SCULPT, SPLAT }
+
+/** The kind of the Paint Foliage brush in [BrushMode.kind]. */
+val FOLIAGE_BRUSH = BrushKind.FOLIAGE
+
+/** The kind of the Sculpt Terrain brush in [BrushMode.kind]. */
+val SCULPT_BRUSH = BrushKind.SCULPT
+
+/** The kind of the Paint Texture brush in [BrushMode.kind]. */
+val SPLAT_BRUSH = BrushKind.SPLAT
+
+/** What a brush kind keeps beside the shared fields of its [BrushMode] (the foliage layer, say); nothing reads it but the kind itself. */
+interface BrushOptions
 
 /**
- * The Paint Foliage mode of a view: the terrain [entityId] (the selected entity) whose layer [layerId] mask is
- * painted, the brush [radius] in world units, the [strength] from 0 through 1, and whether the brush [erase]s
- * instead of painting (the strip's choice, flipped while Shift is held).
+ * The terrain brush mode of a view: the brush [kind] (which [BrushStroke] strokes), the terrain [entityId] (the
+ * selected entity) it works on, the brush [radius] in world units, the [strength] from 0 through 1, and whether the
+ * brush is [reversed] (erasing, or an inverted tool; the strip resolves it, Shift included). One mode holds at a time.
  */
-data class FoliagePaintMode(
-    val entityId: String,
-    val layerId: Int,
+data class BrushMode(
+    val kind: BrushKind,
+    val entityId: Long,
     val radius: Float,
     val strength: Float,
-    val erase: Boolean = false,
+    val reversed: Boolean = false,
+    val options: BrushOptions? = null,
 )
 
-/** What the view has selected: an entity of the scene, or a water surface (separate namespaces, so an id is never confused). */
+/** What the view has selected: an entity of the scene. */
 sealed interface SceneTarget {
-    data class Entity(val id: String) : SceneTarget
+    data class Entity(val id: Long) : SceneTarget
+}
 
-    data class Water(val id: String) : SceneTarget
+/**
+ * What the left button does in the view, read from the fields that hold the modes. The precedence lives here and
+ * nowhere else: drawing beats editing a path's points, which beats a terrain brush, which beats plain selection.
+ */
+sealed interface ViewMode {
+    data object Select : ViewMode
+
+    data class Brush(val brush: BrushMode) : ViewMode
+
+    data class PathEditing(val entityId: Long, val point: Int?) : ViewMode
+
+    data class Drawing(val drawing: PathDrawing) : ViewMode
 }
 
 /**
@@ -38,22 +66,12 @@ class SceneViewState {
     /** What the view highlights and shows a gizmo on, or null. */
     var selection: SceneTarget? = null
 
-    /** The entity id the view highlights and shows a gizmo on, or null (also when a water surface is selected). */
-    var selectedId: String?
+    /** The entity id the view highlights and shows a gizmo on, or null. */
+    var selectedId: Long?
         get() = (selection as? SceneTarget.Entity)?.id
         set(value) {
             selection = value?.let(SceneTarget::Entity)
         }
-
-    /** The water surface the view highlights and shows a move gizmo on, or null. */
-    var selectedWater: String?
-        get() = (selection as? SceneTarget.Water)?.id
-        set(value) {
-            selection = value?.let(SceneTarget::Water)
-        }
-
-    /** The new centre of each water surface while it is dragged or just dropped, shown over the file's (water id to where it is now). */
-    var waterPreview: Map<String, Vec3> = emptyMap()
 
     var gizmoMode: GizmoMode = GizmoMode.MOVE
 
@@ -66,14 +84,17 @@ class SceneViewState {
     /** The gizmo handle under the cursor, drawn brighter. */
     var hoveredAxis: GizmoAxis? = null
 
+    /** The plane handle under the cursor, drawn brighter. */
+    var hoveredPlane: GizmoPlane? = null
+
     /** The camera entity the viewport renders from instead of the orbit view, or null. */
-    var viewCamera: String? = null
+    var viewCamera: Long? = null
 
     /** Transforms shown over the scene's own while a gizmo drag or completed drop is previewed (entity id to where it is now). */
-    var preview: Map<String, DragResult> = emptyMap()
+    var preview: Map<Long, DragResult> = emptyMap()
 
     /** Simulated poses shown instead of the authored placements while playing (entity id to pose); empty otherwise. */
-    var poses: Map<String, Pose> = emptyMap()
+    var poses: Map<Long, Pose> = emptyMap()
 
     /** Whether gizmos are offered: off while a simulation plays. */
     var gizmosEnabled: Boolean = true
@@ -82,14 +103,40 @@ class SceneViewState {
     var cloudTechnique: CloudTechnique? = null
 
     /**
-     * The Paint Foliage mode this view is in, or null; gizmos are hidden and the left button paints while it is set.
-     * Selecting another entity (or nothing) ends it.
+     * The terrain brush mode this view is in, or null; gizmos are hidden and the left button strokes the terrain while it
+     * is set. Selecting another entity (or nothing) ends it. Only one brush holds at a time.
      */
-    var paint: FoliagePaintMode? = null
+    var brush: BrushMode? = null
+
+    /** Whether a terrain brush is on the view. */
+    val brushing: Boolean get() = brush != null
+
+    /** Ends the terrain brush on the view. */
+    fun endBrush() {
+        brush = null
+    }
 
     /** The path arrangement being drawn (the model and the points clicked so far), or null; the left click adds points. */
     var drawing: PathDrawing? = null
 
     /** The points of an arrangement while a handle is dragged or just dropped, shown over the file's; null otherwise. */
     var pathEdit: PathEdit? = null
+
+    /** The points of [pathEditing] edited so far and not yet written; Apply writes them, Close drops them. Null before the first change. */
+    var pathDraft: PathEdit? = null
+
+    /** The arrangement whose control points are being edited (Edit in the Properties panel until Apply or Close), or null. */
+    var pathEditing: Long? = null
+
+    /** The control point of [pathEditing] that wears the move gizmo, or null. */
+    var selectedPathPoint: Int? = null
+
+    /** The mode the view is in; see [ViewMode] for which of the independent fields wins. */
+    val mode: ViewMode
+        get() {
+            drawing?.let { return ViewMode.Drawing(it) }
+            pathEditing?.let { return ViewMode.PathEditing(it, selectedPathPoint) }
+            brush?.let { return ViewMode.Brush(it) }
+            return ViewMode.Select
+        }
 }

@@ -9,7 +9,6 @@ import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
 import net.nevinsky.abyssus.lib.core.editor.scene.MainCamera
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
@@ -33,11 +32,12 @@ fun interface SceneParamsSource {
         fun editorText(reader: SceneReader) = SceneParamsSource { file ->
             val camera = ProjectLayout.abssFor(file)?.let { abss ->
                 val text = textOf(abss)
-                com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing.requireSupported(text, net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT)
-                MainCamera().parse(text)
+                val documents = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents
+                documents.parsing.requireSupported(text, net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT)
+                MainCamera(documents.json).parse(text)
             } ?: CameraParams.DEFAULT
             val parsed = SceneDocumentCache.parsedScene(reader, textOf(file))
-            renderParamsOf(parsed.scene, camera, ProjectLayout.projectDirFor(file), parsed.root)
+            renderParamsOf(parsed.scene, camera, ProjectLayout.projectDirFor(file))
         }
     }
 }

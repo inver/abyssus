@@ -289,7 +289,7 @@ def entity(item):
         },
         "RenderComponent": {"renderable": {
             "kind": "asset", "shaderKey": "terrain" if terrain else "defaultShader",
-            "asset": {"type": "TERRAIN" if terrain else "MODEL", "assetName": item["asset"]},
+            "asset": {"type": "TERRAIN" if terrain else "MODEL", "name": item["asset"]},
         }},
     }}
 
@@ -304,7 +304,7 @@ def arrangement_entities(layout, name, first_id):
         "TypeComponent": {"type": "GROUP"},
         "PathArrangementComponent": {
             "points": [{k: round(v, 3) for k, v in p.items()} for p in arrangement["points"]],
-            "asset": {"type": "MODEL", "assetName": arrangement["asset"]},
+            "asset": {"type": "MODEL", "name": arrangement["asset"]},
             "slots": ids,
             "spacing": arrangement["spacing"],
         },

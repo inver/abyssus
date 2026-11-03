@@ -33,6 +33,8 @@ sealed interface TerrainLighting {
 
     /**
      * A game's: one sun ([towardSun] unit vector, linear RGB [sunR]/[sunG]/[sunB]) that shadows through [shadow], when set.
+     * A built sky's [irradiance] cube, when set, replaces the frame's flat ambient; while a newer one fades in, [fadeIrradiance]
+     * is it and [fade] (0 to 1) how far it has replaced [irradiance]. The host keeps and disposes the cubes.
      */
     class Sun(
         val towardSun: Vector3,
@@ -40,6 +42,9 @@ sealed interface TerrainLighting {
         val sunG: Float,
         val sunB: Float,
         val shadow: SunShadowInput? = null,
+        val irradiance: GLTexture? = null,
+        val fadeIrradiance: GLTexture? = null,
+        val fade: Float = 0f,
     ) : TerrainLighting
 }
 

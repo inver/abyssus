@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
+import net.nevinsky.abyssus.lib.core.util.mix
+import net.nevinsky.abyssus.lib.core.util.smoothstep
 import kotlin.math.floor
 
 /** The noise repeats every this many lattice cells of the first octave, so a wrapped wind offset never jumps. */
@@ -137,11 +139,4 @@ private fun mod(x: Float, y: Float): Float = x - y * floor(x / y)
 
 private fun fade(t: Float): Float = t * t * t * (t * (t * 6f - 15f) + 10f)
 
-private fun mix(a: Float, b: Float, t: Float): Float = a + (b - a) * t
-
 internal fun saturate(x: Float): Float = x.coerceIn(0f, 1f)
-
-internal fun smoothstep(e0: Float, e1: Float, x: Float): Float {
-    val t = saturate((x - e0) / (e1 - e0))
-    return t * t * (3f - 2f * t)
-}

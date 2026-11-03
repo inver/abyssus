@@ -11,17 +11,19 @@ const val TILT_TIME = 0.15f
 const val MOUSE_FULL_TILT = 0.25f
 
 /**
- * The handle's tilt from the keyboard and the mouse (design decision 9): W or Up tilts up, S or Down down, ramping at
- * 1 / [TILT_TIME] per second; the mouse's height sets it by its distance from the window's centre. Whichever was used
+ * The handle's tilt from the keyboard, the mouse and a controller (design decision 9 of `add-control-line-game`, decision 4 of
+ * `add-control-line-gamepad-support`): W or Up tilts up, S or Down down, ramping at 1 / [TILT_TIME] per second; the mouse's
+ * height sets it by its distance from the window's centre; a controller's axis sets it as [pad] says. Whichever was used
  * last controls the handle. Key names are matched without case, so libGDX's (`Up`) and the play protocol's (`UP`)
  * both work.
  */
 class HandleInput {
-    private enum class Device { KEYS, MOUSE }
+    private enum class Device { KEYS, MOUSE, PAD }
 
     private var up = false
     private var down = false
     private var mouse = 0f
+    private var pad = 0f
     private var device = Device.KEYS
 
     /** -1 (full down) .. 1 (full up). */
@@ -46,8 +48,31 @@ class HandleInput {
         device = Device.MOUSE
     }
 
+    /**
+     * The tilt a controller's handle axis gives now, -1..1 after its dead zone. A tilt of 0 does not take control, so an
+     * axis resting inside its dead zone never overrides the keys; once the controller controls, its value (0 included) is
+     * the tilt until a key or the mouse is used.
+     */
+    fun pad(tilt: Float) {
+        pad = if (tilt.isNaN()) 0f else tilt.coerceIn(-1f, 1f)
+        if (pad != 0f) device = Device.PAD
+    }
+
+    /** The controller that was controlling the handle went away: neutral, and the keys control it again. */
+    fun padLost() {
+        pad = 0f
+        if (device == Device.PAD) {
+            device = Device.KEYS
+            tilt = 0f
+        }
+    }
+
     /** Advances the keys' ramp by [seconds]. */
     fun update(seconds: Float) {
+        if (device == Device.PAD) {
+            tilt = pad
+            return
+        }
         if (device == Device.MOUSE) {
             tilt = mouse
             return
@@ -66,6 +91,7 @@ class HandleInput {
     fun reset() {
         up = false
         down = false
+        pad = 0f
         tilt = 0f
         device = Device.KEYS
     }

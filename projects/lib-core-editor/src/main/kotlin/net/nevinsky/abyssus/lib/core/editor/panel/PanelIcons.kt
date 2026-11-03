@@ -22,7 +22,7 @@ fun componentIconKey(kind: String): String = when (kind.substringAfterLast('.').
     else -> "generic"
 }
 
-/** The icon of an entity row by its `TypeComponent.type`. */
+/** The icon of an entity row by its `type`. */
 fun entityIconKey(type: String?): String = when {
     type == null -> "object"
     type == "GROUP" -> "group"

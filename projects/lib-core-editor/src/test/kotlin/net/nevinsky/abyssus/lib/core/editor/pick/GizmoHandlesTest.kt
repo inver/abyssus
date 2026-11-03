@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -17,7 +17,7 @@ import java.io.File
 
 class GizmoHandlesTest {
     private fun handles(eyeZ: Float) =
-        GizmoHandles(Vec3(0f, 0f, 0f), GizmoMode.MOVE, Vec3(0f, 0f, eyeZ), 60f, 600)
+        GizmoHandles(Vector3(0f, 0f, 0f), GizmoMode.MOVE, Vector3(0f, 0f, eyeZ), 60f, 600)
 
     @Test
     fun handleLengthDoublesWhenTheEyeDistanceDoubles() {
@@ -37,46 +37,45 @@ class GizmoHandlesTest {
     @Test
     fun lookAtCameraAndPointLightCannotRotate() {
         val main = content(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
-        assertFalse(canRotate(main, "4"))
-        assertTrue(canRotate(main, "0"))
-        val lights = content("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-            "1":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{"light":{}}}},
-            "2":{"components":{"TypeComponent":{"type":"LIGHT_SPOT"},"LightComponent":{"light":{}}}},
-            "3":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{"light":{}}}},
+        assertFalse(canRotate(main, 4L))
+        assertTrue(canRotate(main, 0L))
+        val lights = content("""{"format":"abyssus","formatVersion":1,"ecs":{
+            "1":{"type":"LIGHT_POINT","components":{"LightComponent":{"light":{}}}},
+            "2":{"type":"LIGHT_SPOT","components":{"LightComponent":{"light":{}}}},
+            "3":{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{"light":{}}}},
             "4":{"components":{"CameraComponent":{"camera":{}},"PositionComponent":{"lookAtId":-1}}},
-            "5":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"TERRAIN","assetName":"t"}}}}}}}}""")
-        assertFalse(canRotate(lights, "1"))
-        assertTrue(canRotate(lights, "2"))
-        assertTrue(canRotate(lights, "3"))
-        assertTrue(canRotate(lights, "4"))
-        assertTrue(canRotate(lights, "5"))
+            "5":{"components":{"RenderComponent":{"type":"TERRAIN","assetName":"t"}}}}}""")
+        assertFalse(canRotate(lights, 1L))
+        assertTrue(canRotate(lights, 2L))
+        assertTrue(canRotate(lights, 3L))
+        assertTrue(canRotate(lights, 4L))
+        assertTrue(canRotate(lights, 5L))
     }
 
     @Test
     fun cameraWhoseTargetIsMissingCanRotate() {
-        val c = content("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"4":{"components":{"CameraComponent":{"camera":{}},"PositionComponent":{"lookAtId":99}}}}}}""")
-        assertTrue(canRotate(c, "4"))
+        val c = content("""{"format":"abyssus","formatVersion":1,"ecs":{"4":{"components":{"CameraComponent":{"camera":{}},"PositionComponent":{"lookAtId":99}}}}}""")
+        assertTrue(canRotate(c, 4L))
     }
 
     @Test
     fun handleLightsCanRotateAndALightAimedAtAModelCannot() {
         val mundus = content(File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText())
         // A directional or spot light that looks at a direction handle keeps its rings.
-        assertTrue(canRotate(mundus, "1"))
-        assertTrue(canRotate(mundus, "4"))
+        assertTrue(canRotate(mundus, 1L))
+        assertTrue(canRotate(mundus, 4L))
         // A light aimed at something other than a handle (a model) only moves.
-        val aimedAtModel = content("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-            "0":{"components":{"RenderComponent":{"renderable":{"asset":{"type":"MODEL","assetName":"a"}}},
+        val aimedAtModel = content("""{"format":"abyssus","formatVersion":1,"ecs":{
+            "0":{"components":{"RenderComponent":{"type":"MODEL","assetName":"a"},
                 "PositionComponent":{"localPosition":{"x":1}}}},
-            "1":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{},
-                "PositionComponent":{"lookAtId":0,"localPosition":{"x":5}}}}}}}""")
-        assertFalse(canRotate(aimedAtModel, "1"))
+            "1":{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{},"PositionComponent":{"lookAtId":0,"localPosition":{"x":5}}}}}}""")
+        assertFalse(canRotate(aimedAtModel, 1L))
         // A light without a look-at target keeps its rings; a point light never has any.
-        val noTarget = content("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-            "d":{"components":{"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},"LightComponent":{}}}}}}""")
-        assertTrue(canRotate(noTarget, "d"))
-        val point = content("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-            "p":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{}}}}}}""")
-        assertFalse(canRotate(point, "p"))
+        val noTarget = content("""{"format":"abyssus","formatVersion":1,"ecs":{
+            "8":{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{}}}}}""")
+        assertTrue(canRotate(noTarget, 8L))
+        val point = content("""{"format":"abyssus","formatVersion":1,"ecs":{
+            "9":{"type":"LIGHT_POINT","components":{"LightComponent":{}}}}}""")
+        assertFalse(canRotate(point, 9L))
     }
 }

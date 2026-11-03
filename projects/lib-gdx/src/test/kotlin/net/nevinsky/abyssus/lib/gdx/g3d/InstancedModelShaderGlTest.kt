@@ -26,6 +26,7 @@ import com.badlogic.gdx.graphics.g3d.ModelBatch
 import com.badlogic.gdx.graphics.g3d.ModelInstance
 import com.badlogic.gdx.graphics.g3d.Renderable
 import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader
+import net.nevinsky.abyssus.lib.gdx.shader.OutputTransformAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowDepthPass
 import net.nevinsky.abyssus.lib.gdx.model.PBRFloatAttribute
 import org.junit.Assert.*
@@ -48,6 +49,18 @@ class InstancedModelShaderGlTest {
             val instanced = render(pbr, instanced = true)
             assertTrue("the comparison must see lit pixels (pbr=$pbr)", separate.any { (it.toInt() and 255) > 20 })
             assertPixelsClose("color pass (pbr=$pbr)", separate, instanced)
+        }
+    }
+
+    /** The instanced programs compile the output transform too: foliage and instanced models are drawn through them. */
+    @Test fun instancedDrawMatchesOneRenderablePerInstanceUnderTheOutputTransform() = TestGl.run {
+        for (pbr in listOf(false, true)) {
+            val separate = render(pbr, instanced = false, exposure = 1.3f)
+            val instanced = render(pbr, instanced = true, exposure = 1.3f)
+            val untransformed = render(pbr, instanced = true)
+            assertTrue("the comparison must see lit pixels (pbr=$pbr)", separate.any { (it.toInt() and 255) > 20 })
+            assertPixelsClose("output transform (pbr=$pbr)", separate, instanced)
+            assertTrue("the transform must change the image (pbr=$pbr)", !untransformed.contentEquals(instanced))
         }
     }
 
@@ -117,19 +130,20 @@ class InstancedModelShaderGlTest {
         return material
     }
 
-    private fun environment(): Environment = Environment().apply {
+    private fun environment(exposure: Float? = null): Environment = Environment().apply {
         add(DirectionalLight().set(Color(0.8f, 0.8f, 0.8f, 1f), 0f, 0f, -1f))
         set(ColorAttribute.createAmbientLight(0.25f, 0.25f, 0.25f, 1f))
+        if (exposure != null) set(OutputTransformAttribute(exposure))
     }
 
     private fun camera(): OrthographicCamera =
         OrthographicCamera(2f, 2f).apply { position.set(0f, 0f, 2f); lookAt(0f, 0f, 0f); near = 0.1f; far = 4f; update() }
 
-    private fun render(pbr: Boolean, instanced: Boolean): ByteArray {
+    private fun render(pbr: Boolean, instanced: Boolean, exposure: Float? = null): ByteArray {
         val framebuffer = FrameBuffer(Pixmap.Format.RGBA8888, 32, 32, true)
         val provider = ModelShaderProvider(DefaultShader.Config().apply { numPointLights = 0; numSpotLights = 0 })
         val material = material(pbr)
-        val environment = environment()
+        val environment = environment(exposure)
         var mesh: IntMesh? = null
         framebuffer.begin()
         try {

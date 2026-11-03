@@ -4,7 +4,7 @@
 // PBR (metallic-roughness) fragment shader. Pair it with default.vertex.glsl.
 //
 // Cook-Torrance GGX for directional and point lights, ambient from the environment ambient cubemap, or, with
-// environmentLightFlag, image based lighting from an irradiance cube and a prefiltered specular cube. Light units and the color space (linear, no gamma/tone mapping) are the same as in the default shader,
+// environmentLightFlag, image based lighting from an irradiance cube and a prefiltered specular cube. Light units and the color space (the value is written as lit, with no gamma or tone mapping, unless outputTransformFlag adds the display transform, see output_transform.glsl) are the same as in the default shader,
 // so a white dielectric lit head on looks the same in both. Spot lights are not implemented.
 
 #if !defined(normalFlag)
@@ -192,6 +192,7 @@ float getShadow()
 #endif //shadowMapFlag
 
 #pragma include "shadow_visibility.glsl"
+#pragma include "output_transform.glsl"
 
 // GGX normal distribution
 float distributionGGX(float NdotH, float alpha)
@@ -280,13 +281,13 @@ void main() {
 
 	// base color
 	#if defined(diffuseTextureFlag) && defined(diffuseColorFlag) && defined(colorFlag)
-		vec4 baseColor = texture2D(u_diffuseTexture, v_diffuseUV) * u_diffuseColor * v_color;
+		vec4 baseColor = sampleColor(u_diffuseTexture, v_diffuseUV) * u_diffuseColor * v_color;
 	#elif defined(diffuseTextureFlag) && defined(diffuseColorFlag)
-		vec4 baseColor = texture2D(u_diffuseTexture, v_diffuseUV) * u_diffuseColor;
+		vec4 baseColor = sampleColor(u_diffuseTexture, v_diffuseUV) * u_diffuseColor;
 	#elif defined(diffuseTextureFlag) && defined(colorFlag)
-		vec4 baseColor = texture2D(u_diffuseTexture, v_diffuseUV) * v_color;
+		vec4 baseColor = sampleColor(u_diffuseTexture, v_diffuseUV) * v_color;
 	#elif defined(diffuseTextureFlag)
-		vec4 baseColor = texture2D(u_diffuseTexture, v_diffuseUV);
+		vec4 baseColor = sampleColor(u_diffuseTexture, v_diffuseUV);
 	#elif defined(diffuseColorFlag) && defined(colorFlag)
 		vec4 baseColor = u_diffuseColor * v_color;
 	#elif defined(diffuseColorFlag)
@@ -317,9 +318,9 @@ void main() {
 	roughness = clamp(roughness, MIN_ROUGHNESS, 1.0);
 
 	#if defined(emissiveTextureFlag) && defined(emissiveColorFlag)
-		vec3 emissive = texture2D(u_emissiveTexture, v_emissiveUV).rgb * u_emissiveColor.rgb;
+		vec3 emissive = sampleColor(u_emissiveTexture, v_emissiveUV).rgb * u_emissiveColor.rgb;
 	#elif defined(emissiveTextureFlag)
-		vec3 emissive = texture2D(u_emissiveTexture, v_emissiveUV).rgb;
+		vec3 emissive = sampleColor(u_emissiveTexture, v_emissiveUV).rgb;
 	#elif defined(emissiveColorFlag)
 		vec3 emissive = u_emissiveColor.rgb;
 	#else
@@ -423,8 +424,16 @@ void main() {
 	#endif //lightingFlag
 
 	#ifdef fogFlag
-		gl_FragColor.rgb = mix(gl_FragColor.rgb, u_fogColor.rgb, v_fog);
+		#ifdef outputTransformFlag
+			gl_FragColor.rgb = mix(gl_FragColor.rgb, outputSrgbToLinear(u_fogColor.rgb), v_fog);
+		#else
+			gl_FragColor.rgb = mix(gl_FragColor.rgb, u_fogColor.rgb, v_fog);
+		#endif
 	#endif // end fogFlag
+
+	#ifdef outputTransformFlag
+		gl_FragColor.rgb = outputTransform(gl_FragColor.rgb);
+	#endif
 
 	float surfaceAlpha = baseColor.a;
 	#ifdef blendedFlag

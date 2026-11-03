@@ -9,11 +9,10 @@ import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
 import net.nevinsky.abyssus.lib.core.editor.scene.cameraDirectionOf
 import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 
-import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.editor.pick.DragResult
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoAxis
@@ -41,12 +40,12 @@ class SceneRendererCameraTest {
         return testRenderer().also { it.params = params }
     }
 
-    private fun orbitAt(target: Vec3) = OrbitCamera(target, 10f, 0f, 0f)
+    private fun orbitAt(target: Vector3) = OrbitCamera(target, 10f, 0f, 0f)
 
     @Test
     fun lookingThroughACameraUsesItsPositionDirectionAndLens() {
         val r = renderer()
-        r.state.viewCamera = "4"
+        r.state.viewCamera = 4L
         r.updateCamera(width, height, OrbitCamera(CameraParams.DEFAULT))
         val cam = r.frameCamera
         assertEquals(-23.56657f, cam.position.x, 1e-4f)
@@ -68,7 +67,7 @@ class SceneRendererCameraTest {
         val orbit = OrbitCamera(CameraParams.DEFAULT)
         r.updateCamera(width, height, orbit)
         val before = Vector3(r.frameCamera.position)
-        r.state.viewCamera = "4"
+        r.state.viewCamera = 4L
         r.updateCamera(width, height, orbit)
         r.state.viewCamera = null
         r.updateCamera(width, height, orbit)
@@ -83,7 +82,7 @@ class SceneRendererCameraTest {
     fun aMissingViewCameraFallsBackToTheOrbit() {
         val r = renderer()
         val orbit = OrbitCamera(CameraParams.DEFAULT)
-        r.state.viewCamera = "99"
+        r.state.viewCamera = 99L
         r.updateCamera(width, height, orbit)
         assertEquals(orbit.position().x, r.frameCamera.position.x, 0f)
     }
@@ -93,11 +92,11 @@ class SceneRendererCameraTest {
         val r = renderer()
         val p = r.params.content.cameras.single().position
         r.updateCamera(width, height, orbitAt(p))
-        assertEquals("4", r.queries.pick(width / 2, height / 2, width, height))
+        assertEquals(4L, r.queries.pick(width / 2, height / 2, width, height))
         assertNull(r.queries.pick(5, 5, width, height))
     }
 
-    private fun screenOf(r: SceneRenderer, p: Vec3): Pair<Int, Int> {
+    private fun screenOf(r: SceneRenderer, p: Vector3): Pair<Int, Int> {
         val v = Vector3(p.x, p.y, p.z)
         r.frameCamera.project(v, 0f, 0f, width.toFloat(), height.toFloat())
         return v.x.toInt() to (height - v.y.toInt())
@@ -106,8 +105,8 @@ class SceneRendererCameraTest {
     @Test
     fun theMoveGizmoOfTheSelectionIsHitAtItsArrowTips() {
         val r = renderer()
-        val model = r.params.content.models.first { it.entityId == "0" }
-        r.state.selectedId = "0"
+        val model = r.params.content.models.first { it.entityId == 0L }
+        r.state.selectedId = 0L
         r.state.gizmoMode = GizmoMode.MOVE
         r.updateCamera(width, height, orbitAt(model.transform.position))
         val handles = r.queries.gizmoHandles(height)!!
@@ -121,7 +120,7 @@ class SceneRendererCameraTest {
     @Test
     fun noSelectionMeansNoGizmo() {
         val r = renderer()
-        r.updateCamera(width, height, orbitAt(Vec3(0f, 0f, 0f)))
+        r.updateCamera(width, height, orbitAt(Vector3(0f, 0f, 0f)))
         assertNull(r.queries.gizmoHandles(height))
         assertNull(r.queries.gizmoHit(width / 2, height / 2, width, height))
     }
@@ -130,7 +129,7 @@ class SceneRendererCameraTest {
     fun aLookAtCameraHasNoRotateHandlesButMoves() {
         val r = renderer()
         val p = r.params.content.cameras.single().position
-        r.state.selectedId = "4"
+        r.state.selectedId = 4L
         r.updateCamera(width, height, orbitAt(p))
         r.state.gizmoMode = GizmoMode.ROTATE
         assertNull(r.queries.gizmoHandles(height))
@@ -141,13 +140,13 @@ class SceneRendererCameraTest {
     @Test
     fun aPreviewMovesTheEntityOverTheSceneContent() {
         val r = renderer()
-        val original = r.params.content.models.first { it.entityId == "0" }
-        val moved = original.transform.copy(position = Vec3(1f, 2f, 3f))
-        r.state.preview = mapOf("0" to DragResult(moved, null))
-        assertEquals(Vec3(1f, 2f, 3f), r.content.models.first { it.entityId == "0" }.transform.position)
-        assertEquals(original.transform.position, r.params.content.models.first { it.entityId == "0" }.transform.position)
+        val original = r.params.content.models.first { it.entityId == 0L }
+        val moved = original.transform.copy(position = Vector3(1f, 2f, 3f))
+        r.state.preview = mapOf(0L to DragResult(moved, null))
+        assertEquals(Vector3(1f, 2f, 3f), r.content.models.first { it.entityId == 0L }.transform.position)
+        assertEquals(original.transform.position, r.params.content.models.first { it.entityId == 0L }.transform.position)
         r.state.preview = emptyMap()
-        assertEquals(original, r.content.models.first { it.entityId == "0" })
+        assertEquals(original, r.content.models.first { it.entityId == 0L })
     }
 
     @Test
@@ -155,9 +154,9 @@ class SceneRendererCameraTest {
         val r = renderer()
         val camera = r.params.content.cameras.single()
         val before = cameraDirectionOf(camera, r.params.content.entityPositions)
-        val target = r.params.content.entityPositions.getValue("3")
-        val moved = PlacementTransform(Vec3(target.x, target.y + 20f, target.z), Quat.IDENTITY, Vec3(1f, 1f, 1f))
-        r.state.preview = mapOf("3" to DragResult(moved, null))
+        val target = r.params.content.entityPositions.getValue(3L)
+        val moved = PlacementTransform(Vector3(target.x, target.y + 20f, target.z), Quaternion(), Vector3(1f, 1f, 1f))
+        r.state.preview = mapOf(3L to DragResult(moved, null))
         val c = r.content
         val after = cameraDirectionOf(c.cameras.single(), c.entityPositions)
         assertTrue(after.y > before.y + 0.5f)

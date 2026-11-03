@@ -20,6 +20,13 @@ internal class CanvasAntialiasing(
     private var stale = false
     private var warned = false
 
+    /**
+     * Whether new canvases ask GLX for swap interval 0. Servers without a swap-control extension (Xvfb) refuse every
+     * pixel format that asks, so the last attempt, at Off, drops it; once dropped it stays dropped for this view.
+     */
+    var swapControl = true
+        private set
+
     fun setLevel(value: AntialiasingLevel, showing: Boolean) {
         if (value == level) return
         level = value
@@ -39,8 +46,18 @@ internal class CanvasAntialiasing(
     }
 
     fun renderFailed(error: Throwable, initialized: Boolean) {
-        if (initialized || samples == 0) {
+        if (initialized) {
             fail(error)
+            return
+        }
+        if (samples == 0) {
+            if (!swapControl) {
+                fail(error)
+                return
+            }
+            swapControl = false
+            stale = true
+            shown()
             return
         }
         if (!warned) {

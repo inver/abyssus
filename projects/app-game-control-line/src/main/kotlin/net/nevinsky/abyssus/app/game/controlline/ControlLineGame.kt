@@ -13,12 +13,23 @@ import net.nevinsky.abyssus.app.game.controlline.components.GAME_COMPONENTS
 import net.nevinsky.abyssus.app.game.controlline.flight.CONTROL_TENSION
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
 import net.nevinsky.abyssus.app.game.controlline.flow.GameFlow
+import net.nevinsky.abyssus.app.game.controlline.controller.ControllerProfiles
+import net.nevinsky.abyssus.app.game.controlline.controller.ControllerService
+import net.nevinsky.abyssus.app.game.controlline.controller.ControllerSource
+import net.nevinsky.abyssus.app.game.controlline.controller.drive
+import net.nevinsky.abyssus.app.game.controlline.display.DisplaySettings
+import net.nevinsky.abyssus.app.game.controlline.display.GdxDisplay
+import net.nevinsky.abyssus.app.game.controlline.controller.gdx.GdxControllers
+import net.nevinsky.abyssus.app.game.controlline.controller.glfw.GlfwJoysticks
+import net.nevinsky.abyssus.app.game.controlline.controller.CombinedControllerSource
+import net.nevinsky.abyssus.app.game.controlline.flow.Control
 import net.nevinsky.abyssus.app.game.controlline.flow.Screen
 import net.nevinsky.abyssus.app.game.controlline.render.*
 import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefModel
 import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefFrame
 import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefView
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
 import net.nevinsky.abyssus.app.game.controlline.screens.GameUiHost
 import net.nevinsky.abyssus.app.game.controlline.screens.createGameUi
@@ -49,6 +60,10 @@ class ControlLineGame(
     private val project: Path, private val scoresFile: Path,
     private val patternScoresFile: Path = scoresFile.resolveSibling("f2b-scores.json"),
     private val fieldView: FieldView? = null,
+    private val scaleScoresFile: Path = scoresFile.resolveSibling("scale-scores.json"),
+    private val controlsFile: Path = scoresFile.resolveSibling("controls.json"),
+    private val displayFile: Path = scoresFile.resolveSibling("display.json"),
+    private val controllerSource: ControllerSource = CombinedControllerSource(listOf(GdxControllers(), GlfwJoysticks())),
 ) : ApplicationAdapter() {
     /** Problems go to stderr through `physics`'s slf4j-simple binding. */
     private val log = LoggerFactory.getLogger("control-line")
@@ -67,6 +82,8 @@ class ControlLineGame(
     private lateinit var parked: FieldScene
 
     private lateinit var flights: FlightRunner
+    private lateinit var controllers: ControllerService
+    private lateinit var display: GdxDisplay
 
     // the debrief: its own load of the field, and what to draw for the selected manoeuvre
     private var debriefScene: FieldScene? = null
@@ -88,10 +105,12 @@ class ControlLineGame(
         ShaderProgram.prependVertexCode = "#version 150\n#define attribute in\n#define varying out\n"
         ShaderProgram.prependFragmentCode = "#version 150\n#define varying in\n#define texture2D texture\n" +
             "#define textureCube texture\n#define gl_FragColor fragColor\nout vec4 fragColor;\n"
-        parked = loadScene()
-        flow = GameFlow(parked.planes, ScoreTable(scoresFile), PatternScoreTable(patternScoresFile))
+        parked = loadScene().also { it.standOnTables(PhysicsAssets(project.toFile())::modelPoints) }
+        flow = GameFlow(parked.planes, ScoreTable(scoresFile), PatternScoreTable(patternScoresFile), ScaleScoreTable(scaleScoresFile))
         flights = FlightRunner(flow, ::loadScene, { PhysicsAssets(project.toFile()) }, log, natives)
-        ui = createGameUi(project, PROJECT_FILE, flow, log) { Gdx.app.exit() }
+        controllers = ControllerService(controllerSource, ControllerProfiles(controlsFile), flights.input)
+        display = GdxDisplay(DisplaySettings(displayFile))
+        ui = createGameUi(project, PROJECT_FILE, flow, log, controllers, display) { Gdx.app.exit() }
         cameras = Cameras(Gdx.graphics.width.toFloat(), Gdx.graphics.height.toFloat())
         Gdx.input.inputProcessor = InputMultiplexer(Keys(), ui.inputProcessor)
         ui.resize()
@@ -106,6 +125,8 @@ class ControlLineGame(
 
     override fun render() {
         val seconds = Gdx.graphics.deltaTime.coerceIn(0f, 0.1f)
+        display.applyPending()
+        controllers.drive(flow, seconds, ui::navigate)
         followFlow()
         flights.advance(seconds)
         val screen = flow.screen
@@ -114,6 +135,7 @@ class ControlLineGame(
 
         val scene = (screen as? Screen.Debrief)?.let { debriefSceneOf(it.model) } ?: flights.scene ?: parked
         var lines = emptyList<LineSegment>()
+        var cables = emptyList<Cable>()
         var hidden = if (s != null && screen !is Screen.PlaneSelect) s.rig.pilot else null
         when (screen) {
             is Screen.Debrief -> {
@@ -134,9 +156,15 @@ class ControlLineGame(
                 val pilot = scene.position(s.rig.pilot).localPosition
                 cameras.flying(pilot, scene.position(s.plane).localPosition)
                 val color = if (s.flight.tension >= CONTROL_TENSION) TAUT_LINE else SLACK_LINE
-                val thickness = s.rig.planeSettings.lineDiameter
-                lines = s.wires(seconds).flatMap { wire ->
-                    wire.zipWithNext { a, b -> LineSegment(Vector3(a), Vector3(b), color, thickness = thickness) }
+                // the lines bend with their tension, weight and drag: lit cables where the renderer draws them, wire ribbons otherwise
+                val diameter = s.rig.planeSettings.lineDiameter
+                val wires = s.wires(seconds)
+                if (renderer.drawsCables) {
+                    cables = wires.map { wire -> Cable(wire.map { Vector3(it) }, diameter, color) }
+                } else {
+                    lines = wires.flatMap { wire ->
+                        wire.zipWithNext { a, b -> LineSegment(Vector3(a), Vector3(b), color, thickness = diameter) }
+                    }
                 }
                 if (screen is Screen.Flying || screen is Screen.Paused) guide?.let { lines = lines + it.segments().toLines(pilot) }
             } else {
@@ -155,9 +183,10 @@ class ControlLineGame(
             hidden = hidden,
             clips = if (screen is Screen.Debrief) emptyMap() else s?.flight?.crash?.let { mapOf(s.plane to it.clip) }.orEmpty(),
             seconds = seconds,
+            cables = cables,
         )
         (optIn as? FailableFieldView)?.failure?.let(::fallBackToRaster)
-        ui.update(s, flights.judge, seconds)
+        ui.update(s, flights.judge, seconds, flights.scaleJudge, flights.instructor)
         ui.draw(seconds)
     }
 

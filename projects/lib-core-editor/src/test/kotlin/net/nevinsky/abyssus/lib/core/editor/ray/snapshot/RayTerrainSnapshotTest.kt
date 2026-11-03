@@ -174,6 +174,24 @@ class RayTerrainSnapshotTest {
         next.close(); assertEquals(0L, store.retainedBytes)
     }
 
+    @Test fun aSculptedTerrainsChangedHeightsReachTheSnapshotAfterInvalidation() {
+        val graph = graph()
+        val queue = ArrayDeque<Runnable>()
+        val store = store(graph, queue)
+        val before = store.acquire("terrain")
+        queue.removeFirst().run()
+        assertArrayEquals(floatArrayOf(0f, 1f, 2f, 3f), before.snapshot!!.heights(), 0f)
+        // a committed stroke rewrites terrain.data; the view's asset refresh invalidates the terrain by name
+        DataOutputStream(File(graph.root, "assets/terrain/terrain.data").outputStream()).use { out -> listOf(0f, 5f, 5f, 0f).forEach(out::writeFloat) }
+        assertArrayEquals("the old revision is kept until the invalidation", floatArrayOf(0f, 1f, 2f, 3f), before.snapshot!!.heights(), 0f)
+        store.invalidate("terrain")
+        val after = store.acquire("terrain")
+        queue.removeFirst().run()
+        assertArrayEquals(floatArrayOf(0f, 5f, 5f, 0f), after.snapshot!!.heights(), 0f)
+        assertNull("the old revision is dropped by the invalidation", before.snapshot)
+        before.close(); after.close()
+    }
+
     private fun channels(bytes: ByteArray) = bytes.map { (it.toInt() and 255) / 255f }
     private fun pixel(rgba: Int) = Pixmap(1, 1, Pixmap.Format.RGBA8888).apply {
         setBlending(Pixmap.Blending.None)

@@ -41,7 +41,7 @@ position is known, each directional or spot light whose `lookAtId` names an enti
 
 Resolving at read time gives every existing consumer (lighting, cones, markers, gizmo start direction) the right
 direction without changing them. The rule is the one `CameraFrustum.directionOf` applies. The vector math moves into
-a shared helper in `SceneContent` (for example `SceneContent.aim(from, to): Vec3?`), and both use it.
+a shared helper in `SceneContent` (for example `SceneContent.aim(from, to): Vector3?`), and both use it.
 
 Alternative: resolve in each consumer, as cameras do through `CameraFrustum.directionOf`. Rejected: lights have three
 consumers, and a direction that is already resolved can't be forgotten in one of them.
@@ -66,7 +66,7 @@ id, result)` or similar). `editOf` and the preview both call it, so they agree.
 
 `SceneTransformWriter.apply(root, entityId, edit)` writes `edit.target` as the target entity's
 `PositionComponent.localPosition`, using the existing `setVec` (only the differing fields when the object exists; all
-three when it is missing). It returns true when anything changed. The whole edit is still one `editSceneJson` command,
+three when it is missing). It returns true when anything changed. The whole edit is still one `editSceneDocument` command,
 "Rotate Entity" (because the command name keys on a rotate, `SceneFileEditor.applyTransform` checks
 `edit.rotation != null || edit.target != null`).
 
@@ -110,7 +110,7 @@ a point light.
 
 Everything new is CPU-only, with no GL and no Swing: `SceneContent.of` (wherever the scene is parsed today),
 `canRotate`, `ScenePreview` and the edit computation (on the AWT thread that renders the canvas, inside the existing
-`SceneInteraction` callbacks), and `SceneTransformWriter` (inside the `editSceneJson` command, as today). No GL call
+`SceneInteraction` callbacks), and `SceneTransformWriter` (inside the `editSceneDocument` command, as today). No GL call
 is added: the marker and lights are drawn from `LightPlacement.direction` as before.
 
 ## Verification

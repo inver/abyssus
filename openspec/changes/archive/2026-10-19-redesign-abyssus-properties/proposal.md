@@ -35,7 +35,7 @@ enabled flag on entities and components, which the mockup shows as a tree eye an
 - **Enabled flag (runtime and editor).** A disabled component is not built by `EcsLoader`'s systems (no rendering, light,
   collider or rigid body), a disabled entity contributes nothing; the scene view does not draw or pick it. The tree gets the
   design's eye on entity and component rows and the Properties section gets the `Enabled` check box; both write through
-  `editSceneJson` as one undoable edit.
+  `editSceneDocument` as one undoable edit.
 - **Panel model.** `lib-core-editor`'s panel model gains the facts the view needs without Swing: per-field `isDefault`, the
   breadcrumb, the badges, the `game` flag and class hint, the unit of a field, the folder / `ecs` / UI-screen states and the
   read-only tables.
@@ -76,7 +76,7 @@ None.
   panel model, `ComponentCodec`, `EcsWriter`, edit API; `lib-core` (`EcsLoader`, components, systems); `lib-physics`
   (`PhysicsWorld` body creation); `AbyssusBundle.properties` and `AbyssusEditorBundle.properties`.
 - Boundaries kept: `lib-core` / `lib-physics` read `enabled` without editor types; Jolt stays out of the IDE; the panel model
-  stays free of Swing; all writes go through `editSceneJson`.
+  stays free of Swing; all writes go through `editSceneDocument`.
 - Tests: panel-model tests in `lib-core-editor`, loader and system tests in `lib-core`, physics tests, plugin panel tests,
   Remote Robot UI tests with new baselines (canonical container).
 - Overlaps: `redesign-abyssus-tree-view` (icons, row painting, Browse button in the scene section; this change builds on its

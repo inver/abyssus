@@ -40,10 +40,10 @@ class ProjectAssetsTest : BasePlatformTestCase() {
         project.service<ProjectReader>().read(abss).obj!!.assets
 
     private fun ecs(vararg refs: String) =
-        """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{${refs.mapIndexed { i, r -> "\"$i\":{\"components\":{\"RenderComponent\":{\"renderable\":$r}}}" }.joinToString(",")}}}}"""
+        """{"format":"abyssus","formatVersion":1,"ecs":{${refs.mapIndexed { i, r -> "\"$i\":{\"components\":{\"RenderComponent\":$r}}" }.joinToString(",")}}}"""
 
     private fun modelRef(name: String, shader: String = "defaultShader") =
-        """{"shaderKey":"$shader","asset":{"type":"MODEL","assetName":"$name"}}"""
+        """{"shaderKey":"$shader","type":"MODEL","assetName":"$name"}"""
 
     private fun meta(type: String, label: String, additional: String = "{}") =
         """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"uuid":"${u(label)}","type":"$type","additional":$additional}"""
@@ -93,7 +93,7 @@ class ProjectAssetsTest : BasePlatformTestCase() {
 
     fun testSceneNamesAssetsSkyboxesAndShadersDirectly() {
         val abss = project(
-            mapOf("S" to """{"format":"abyssus","formatVersion":1,"skyboxName":"sky","ecs":{"x":{"asset":{"assetName":"m1"},"shaderKey":"myShader"}}}"""),
+            mapOf("S" to """{"format":"abyssus","formatVersion":1,"skyboxName":"sky","ecs":{"0":{"components":{"RenderComponent":{"type":"MODEL","assetName":"m1","shaderKey":"myShader"}}}}}"""),
             mapOf(
                 "m1" to meta("MODEL", "u1"), "m2" to meta("MODEL", "u2"), "sky" to meta("SKYBOX", "u3"),
                 "myShader" to meta("SHADER", "u4"), "otherShader" to meta("SHADER", "u5"),
@@ -133,7 +133,7 @@ class ProjectAssetsTest : BasePlatformTestCase() {
 
     fun testSplatTextureIsUsedThroughItsTerrain() {
         val abss = project(
-            mapOf("S" to """{"format":"abyssus","formatVersion":1,"ecs":{"e":{"asset":{"assetName":"terr"}}}}"""),
+            mapOf("S" to """{"format":"abyssus","formatVersion":1,"ecs":{"0":{"components":{"RenderComponent":{"type":"TERRAIN","assetName":"terr"}}}}}"""),
             mapOf(
                 "terr" to meta("TERRAIN", "ut", """{"splatMap":"${u("us1")}","splatR":"${u("us2")}","splatG":null}"""),
                 "splat1" to meta("TEXTURE", "us1"), "splat2" to meta("TEXTURE", "us2"), "lonely" to meta("TEXTURE", "ul"),

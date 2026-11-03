@@ -114,6 +114,7 @@
         <action id="Abyssus.AddLight" class="net.nevinsky.abyssus.plugin.projectView.AddLightAction">
             <add-to-group group-id="Abyssus.Menu.Add" anchor="after" relative-to-action="Abyssus.AddPathArrangement"/>
         </action>
+        <!-- G7: the water actions are disabled (their classes are commented out); scene water is no longer modeled.
         <action id="Abyssus.AddWater" class="net.nevinsky.abyssus.plugin.projectView.AddWaterAction">
             <add-to-group group-id="Abyssus.Menu.Add" anchor="after" relative-to-action="Abyssus.AddLight"/>
         </action>
@@ -123,6 +124,7 @@
         <action id="Abyssus.RemoveWater" class="net.nevinsky.abyssus.plugin.projectView.RemoveWaterAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.RenameWater"/>
         </action>
+        -->
         <action id="Abyssus.AddAsset" class="net.nevinsky.abyssus.plugin.projectView.AddAssetAction">
             <add-to-group group-id="Abyssus.Menu.Add" anchor="first"/>
         </action>

@@ -8,6 +8,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.editor.pick.*
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.plugin.foliage.FoliagePaintSession
+import net.nevinsky.abyssus.plugin.foliage.layerId
 import java.awt.Component
 import java.awt.Container
 import javax.swing.JToggleButton
@@ -19,22 +20,22 @@ class SceneFoliageControlsTest : BasePlatformTestCase() {
     fun testPaintModeShowsBrushAndSelectionChangeDisposesIt() {
         val renderer = testRenderer()
         var closed = false
-        val session = FoliagePaintSession(listOf(7, 9), object : FoliagePaint {
+        val session = FoliagePaintSession(listOf(7, 9), object : BrushStroke {
             override fun pressed(terrain: TerrainTarget, at: com.badlogic.gdx.math.Vector3) = true
-            override fun dragged(to: com.badlogic.gdx.math.Vector3, erase: Boolean) {}
+            override fun dragged(to: com.badlogic.gdx.math.Vector3, reversed: Boolean) {}
             override fun released() {}
             override fun cancelled() {}
         }) { closed = true }
         val panel = SceneViewPanel(SceneRenderParams.DEFAULT, renderer,
-            paintSession = { id, _, ready -> ready(if (id == "1") session else null) })
+            paintSession = { id, _, ready -> ready(if (id == 1L) session else null) })
         try {
-            panel.selectEntity("1")
+            panel.selectEntity(1L)
             val button = named(panel, "paint-foliage") as JToggleButton
             button.doClick()
-            assertEquals(7, renderer.state.paint!!.layerId)
+            assertEquals(7, renderer.state.brush!!.layerId)
             assertTrue(named(panel, "foliage-brush-strip")!!.isVisible)
-            panel.selectEntity("2")
-            assertNull(renderer.state.paint)
+            panel.selectEntity(2L)
+            assertNull(renderer.state.brush)
             assertTrue(closed)
             assertFalse(button.isSelected)
         } finally { panel.dispose() }
@@ -47,22 +48,22 @@ class SceneFoliageControlsTest : BasePlatformTestCase() {
         val panel = SceneViewPanel(SceneRenderParams.DEFAULT, renderer, paintSession = { _, _, ready ->
             opens++
             ready(if (renderer.params.content.foliages.isEmpty()) null else FoliagePaintSession(listOf(1),
-                object : FoliagePaint {
+                object : BrushStroke {
                     override fun pressed(terrain: TerrainTarget, at: com.badlogic.gdx.math.Vector3) = true
-                    override fun dragged(to: com.badlogic.gdx.math.Vector3, erase: Boolean) {}
+                    override fun dragged(to: com.badlogic.gdx.math.Vector3, reversed: Boolean) {}
                     override fun released() {}
                     override fun cancelled() {}
                 }) { closes++ })
         })
         fun params(name: String?) = SceneRenderParams.DEFAULT.copy(content =
             net.nevinsky.abyssus.lib.core.editor.scene.SceneContent(terrains = listOf(
-                net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement("1", "terrain",
+                net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement(1L, "terrain",
                     net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform.IDENTITY)), foliages = name?.let {
-                listOf(net.nevinsky.abyssus.lib.core.editor.scene.FoliagePlacement("1", it, "terrain",
+                listOf(net.nevinsky.abyssus.lib.core.editor.scene.FoliagePlacement(1L, it, "terrain",
                     net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform.IDENTITY))
             }.orEmpty()))
         try {
-            panel.selectEntity("1")
+            panel.selectEntity(1L)
             val button = named(panel, "paint-foliage") as JToggleButton
             assertFalse(button.isEnabled)
             panel.setParams(params("first"))
@@ -89,24 +90,24 @@ class SceneFoliageControlsTest : BasePlatformTestCase() {
                 override fun poses(): Map<String, net.nevinsky.abyssus.lib.core.editor.content.Pose>? = null
             }
         })
-        val session = FoliagePaintSession(listOf(1), object : FoliagePaint {
+        val session = FoliagePaintSession(listOf(1), object : BrushStroke {
             override fun pressed(terrain: TerrainTarget, at: com.badlogic.gdx.math.Vector3) = true
-            override fun dragged(to: com.badlogic.gdx.math.Vector3, erase: Boolean) {}
+            override fun dragged(to: com.badlogic.gdx.math.Vector3, reversed: Boolean) {}
             override fun released() {}
             override fun cancelled() { cancelled++ }
         }) {}
         val panel = SceneViewPanel(SceneRenderParams.DEFAULT, renderer, play = play,
             paintSession = { _, _, ready -> ready(session) })
         try {
-            panel.selectEntity("1")
+            panel.selectEntity(1L)
             val button = named(panel, "paint-foliage") as JToggleButton
             button.doClick()
-            assertNotNull(renderer.state.paint)
+            assertNotNull(renderer.state.brush)
             val previous = cancelled
             play.play { SimulationRequest(project, com.intellij.testFramework.LightVirtualFile("Main.scene"),
                 "{}", java.io.File("."), "1") }
             assertTrue(cancelled > previous)
-            assertNull(renderer.state.paint)
+            assertNull(renderer.state.brush)
             assertFalse(button.isEnabled)
             assertFalse(button.isSelected)
         } finally { panel.dispose() }

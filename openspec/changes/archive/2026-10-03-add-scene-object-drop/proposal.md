@@ -27,7 +27,7 @@ scene.
 - The move is written to the scene file exactly as a gizmo move is — same fields, same single undoable edit, same
   formatting. Reads are unchanged: `ecs/entities/<id>/components` as the view already reads it.
 - **File fields written**: `PositionComponent.localPosition.y`, and for a camera entity also
-  `CameraComponent.camera.position.y`, through the existing `editSceneJson` path. **The file format does not
+  `CameraComponent.camera.position.y`, through the existing `editSceneDocument` path. **The file format does not
   change**; no key is added, renamed, dropped or reordered.
 - Out of scope: a hover ghost showing where the object would land; snapping rotation to a yaw grid; resting an
   object flat on a slope (it settles by height, so a tilted object may touch with one corner); mesh-accurate contact;

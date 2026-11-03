@@ -23,4 +23,7 @@ data class ProjectDto(
 data class SceneError(@get:JsonIgnore val file: VirtualFile, val error: String?)
 
 /** Editor source paired with a platform-independent scene. */
-data class SceneEntry(@get:JsonIgnore val file: VirtualFile, val scene: SceneDto)
+data class SceneEntry @JvmOverloads constructor(
+    @get:JsonIgnore val file: VirtualFile,
+    val scene: SceneDto,
+)

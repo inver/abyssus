@@ -22,8 +22,10 @@ internal class MetalLibrary(
         val bytes = checkNotNull(resource()) { "Packaged Metal JNI library is missing" }
         // The JVM caches native libraries by path. Share code within a classloader, never session state.
         val digest = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
-        val directory = Path.of(System.getProperty("java.io.tmpdir"),
-            "abyssus-metal-${ProcessHandle.current().pid()}-${System.identityHashCode(javaClass.classLoader)}")
+        val directory = Path.of(
+            System.getProperty("java.io.tmpdir"),
+            "abyssus-metal-${ProcessHandle.current().pid()}-${System.identityHashCode(javaClass.classLoader)}"
+        )
         Files.createDirectories(directory)
         directory.toFile().deleteOnExit()
         val file = directory.resolve("$digest.dylib")
@@ -59,11 +61,15 @@ class MetalRayBackendFactory(
         }
         return javaClass.getResourceAsStream("/native/$arch/$name")?.use { it.readBytes() }
     }
+
     private fun prepare(): ByteArray {
         check(System.getProperty("os.name").startsWith("Mac")) { "Metal requires macOS" }
         library.load()
-        return shader ?: checkNotNull(resource("slice.metallib")) { "Packaged Metal shader is missing" }.also { shader = it }
+        return shader ?: checkNotNull(resource("slice.metallib")) { "Packaged Metal shader is missing" }.also {
+            shader = it
+        }
     }
+
     override fun probe(): RayCapability {
         if (!deviceAvailable()) return RayCapability.Unavailable(RayUnavailableReason.ACCELERATION_STRUCTURES)
         backend?.takeUnless { it.disposed }?.let { return RayCapability.Available(it) }
@@ -71,26 +77,39 @@ class MetalRayBackendFactory(
         return RayBackendProbe({
             val values = bridge.probe(prepare())
             check(values.size == 5) { "Invalid Metal probe response" }
-            RayCapabilities(values[0] != 0L,values[1] != 0L,values[2] != 0L,values[3].toInt(),values[4],METAL_MAX_INSTANCES,sceneOptics=true).also { log.info("Metal probe: $it") }
+            RayCapabilities(
+                values[0] != 0L,
+                values[1] != 0L,
+                values[2] != 0L,
+                values[3].toInt(),
+                values[4],
+                METAL_MAX_INSTANCES,
+                sceneOptics = true
+            ).also { log.info("Metal probe: $it") }
         }, { caps ->
             val handle = bridge.create(prepare())
             check(handle != 0L) { "Metal backend initialization failed" }
-            MetalRayBackend(bridge,handle,caps,bridge.deviceName(handle),health,log).also {
+            MetalRayBackend(bridge, handle, caps, bridge.deviceName(handle), health, log).also {
                 backend = it
                 log.info("Metal backend ready on '${it.info.gpu}'")
             }
-        }).probe().also { if (it is RayCapability.Unavailable) log.warn("Metal is unavailable: ${it.reason}${it.detail?.let { d -> " ($d)" } ?: ""}") }
+        }).probe()
+            .also { if (it is RayCapability.Unavailable) log.warn("Metal is unavailable: ${it.reason}${it.detail?.let { d -> " ($d)" } ?: ""}") }
     }
 }
 
 /** All sessions share this device/queue; each keeps independent scene and readback resources. */
 class MetalRayBackend internal constructor(
-    private val bridge: MetalBridge, private var handle: Long,
-    override val capabilities: RayCapabilities, gpu: String, private val health: RayDeviceHealth, private val log: Logger = NOPLogger.NOP_LOGGER,
+    private val bridge: MetalBridge,
+    private var handle: Long,
+    override val capabilities: RayCapabilities,
+    gpu: String,
+    private val health: RayDeviceHealth,
+    private val log: Logger = NOPLogger.NOP_LOGGER,
 ) : RayBackend {
-    override val info = RayBackendInfo("Metal",gpu)
+    override val info = RayBackendInfo("Metal", gpu)
     private val worker = Thread.currentThread()
-    private val sessions = linkedMapOf<String,RaySession>()
+    private val sessions = linkedMapOf<String, RaySession>()
     internal val disposed: Boolean get() = handle == 0L
     override fun openSession(viewId: String, limits: RayLimits): RaySession {
         check(Thread.currentThread() === worker && !disposed) { "Metal backend is closed or used from another worker" }
@@ -98,9 +117,10 @@ class MetalRayBackend internal constructor(
         require(limits.maxDimension <= capabilities.maxFrameDimension && limits.maxPixels <= 4_194_304 && limits.maxInstances <= capabilities.maxInstances)
         health.checkUsable()
         log.atDebug().log { "Metal session '$viewId' opened, $limits" }
-        val driver = MetalRaySession(bridge,bridge.openSession(handle),limits) { sessions.remove(viewId) }
-        return RayQueuedSession(driver,health).also { sessions[viewId] = it }
+        val driver = MetalRaySession(bridge, bridge.openSession(handle), limits) { sessions.remove(viewId) }
+        return RayQueuedSession(driver, health).also { sessions[viewId] = it }
     }
+
     override fun dispose() {
         check(Thread.currentThread() === worker) { "Metal backend must stay on its owner worker" }
         if (disposed) return
@@ -119,8 +139,23 @@ internal class MetalBridge {
     external fun deviceName(backend: Long): String
     external fun destroy(handle: Long)
     external fun updateGeometry(handle: Long, meshes: IntArray, vertices: FloatArray)
-    external fun setGeometry(handle: Long, vertices: FloatArray, indices: IntArray, vertexCounts: IntArray, indexCounts: IntArray)
-    external fun submit(handle: Long, width: Int, height: Int, camera: FloatArray, instances: FloatArray, meshes: IntArray)
+    external fun setGeometry(
+        handle: Long,
+        vertices: FloatArray,
+        indices: IntArray,
+        vertexCounts: IntArray,
+        indexCounts: IntArray
+    )
+
+    external fun submit(
+        handle: Long,
+        width: Int,
+        height: Int,
+        camera: FloatArray,
+        instances: FloatArray,
+        meshes: IntArray
+    )
+
     external fun setSceneData(handle: Long, values: FloatArray?, bytes: ByteArray?)
     external fun poll(handle: Long, color: FloatArray, depth: FloatArray): Boolean
 }
@@ -137,42 +172,53 @@ class MetalRaySession internal constructor(
     private var builds = 0L
     override val geometryBuilds: Long get() = builds
     private var pending: Pending? = null
-    private val accumulator=RayFrameAccumulator()
-    private var opticalRequest:RaySceneRequest?=null
+    private val accumulator = RayFrameAccumulator()
+    private var opticalRequest: RaySceneRequest? = null
+
     private class Pending(val key: RayFrameKey, val width: Int, val height: Int) {
         val color = FloatArray(width * height * 4)
         val depth = FloatArray(width * height)
     }
 
     private fun checkOwner() {
-        check(Thread.currentThread() === worker) { "Metal session must stay on its owner worker" }
-        check(handle != 0L) { "Metal session is closed" }
+        checkSessionOwner("Metal", worker, handle != 0L)
     }
 
     /** Upload/build runs on the worker; static geometry survives subsequent instance transform submissions. */
     fun setGeometry(meshes: List<RaySliceMesh>) {
         checkOwner()
         check(pending == null) { "Cannot replace geometry during a render" }
-        require(meshes.isNotEmpty() && meshes.size <= limits.maxInstances)
-        val vertices = meshes.map { it.vertices() }
-        val indices = meshes.map { it.indices() }
-        require(vertices.sumOf { it.size.toLong() * 4 } + indices.sumOf { it.size.toLong() * 4 } <= 32L * 1024 * 1024)
-        bridge.setGeometry(handle, vertices.flatMap { it.asIterable() }.toFloatArray(), indices.flatMap { it.asIterable() }.toIntArray(),
-            vertices.map { it.size / 3 }.toIntArray(), indices.map { it.size }.toIntArray())
+        val (vertices, indices) = checkedGeometry(meshes, limits).let { it.vertices to it.indices }
+        bridge.setGeometry(
+            handle,
+            vertices.flatMap { it.asIterable() }.toFloatArray(),
+            indices.flatMap { it.asIterable() }.toIntArray(),
+            vertices.map { it.size / 3 }.toIntArray(),
+            indices.map { it.size }.toIntArray()
+        )
         meshCount = meshes.size
         geometryKey = meshes.toList()
         builds += meshes.size
     }
 
     /** Enqueues GPU work without waiting for a fence. One submitted request per session. */
-    fun submit(key: RayFrameKey, width: Int, height: Int, camera: RaySliceCamera, instances: List<RaySliceInstance>, nativeCamera: FloatArray = camera.uniforms(width,height)) {
+    fun submit(
+        key: RayFrameKey,
+        width: Int,
+        height: Int,
+        camera: RaySliceCamera,
+        instances: List<RaySliceInstance>,
+        nativeCamera: FloatArray = camera.uniforms(width, height)
+    ) {
         checkOwner()
         check(pending == null) { "A Metal frame is already in flight" }
-        require(width in 1..limits.maxDimension && height in 1..limits.maxDimension && width.toLong() * height <= limits.maxPixels)
+        requireFrameWithin(width, height, limits)
         require(instances.isNotEmpty() && instances.size <= limits.maxInstances && instances.all { it.mesh < meshCount })
         val request = Pending(key, width, height)
-        bridge.submit(handle, width, height, nativeCamera,
-            instances.flatMap { it.metalUniforms().asIterable() }.toFloatArray(), instances.map { it.mesh }.toIntArray())
+        bridge.submit(
+            handle, width, height, nativeCamera,
+            instances.flatMap { it.metalUniforms().asIterable() }.toFloatArray(), instances.map { it.mesh }.toIntArray()
+        )
         pending = request
     }
 
@@ -183,47 +229,51 @@ class MetalRaySession internal constructor(
         if (!bridge.poll(handle, request.color, request.depth)) return null
         pending = null
         requireNativeOpticalFrame(request.color)
-        val frame=RayFrame(request.key, request.width, request.height, request.color, request.depth)
-        return opticalRequest?.let { accumulator.add(it,frame) } ?: frame
+        val frame = RayFrame(request.key, request.width, request.height, request.color, request.depth)
+        return opticalRequest?.let { accumulator.add(it, frame) } ?: frame
     }
 
     override fun submit(request: RayRequest) {
         checkOwner()
-        opticalRequest=null;accumulator.clear()
+        opticalRequest = null; accumulator.clear()
         check(pending == null) { "A Metal frame is already in flight" }
         sceneGeometryKey = null
         lastScene = null
-        bridge.setSceneData(handle,null,null)
+        bridge.setSceneData(handle, null, null)
         val meshes = request.meshes()
         if (geometryKey != meshes) setGeometry(meshes)
-        submit(request.key,request.width,request.height,request.camera,request.instances())
+        submit(request.key, request.width, request.height, request.camera, request.instances())
     }
 
     override fun submit(request: RaySceneRequest) {
         checkOwner()
         check(pending == null) { "A Metal frame is already in flight" }
         request.requireWithinBudget()
-        opticalRequest=request
-        val scene=request.scene
+        opticalRequest = request
+        val scene = request.scene
         require(scene.instances.isNotEmpty()) { "Empty ray scenes are not supported yet" }
         scene.unsupportedReason()?.let { throw IllegalArgumentException(it) }
         // Static geometry and shading data survive transform-only updates; only changed inputs are rebuilt or re-encoded.
-        val dirty = dirtyMeshes(sceneGeometryKey,scene.meshes)
+        val dirty = dirtyMeshes(sceneGeometryKey, scene.meshes)
         val geometryChanged = dirty == null || dirty.isNotEmpty()
-        if(dirty == null) {
-            setGeometry(scene.meshes.map { RaySliceMesh(it.positions(),it.indices()) })
-        } else if(dirty.isNotEmpty()) {
+        if (dirty == null) {
+            setGeometry(scene.meshes.map { RaySliceMesh(it.positions(), it.indices()) })
+        } else if (dirty.isNotEmpty()) {
             // same topology, new positions (a re-skinned model): refit only the changed meshes' structures
             check(pending == null) { "Cannot replace geometry during a render" }
-            bridge.updateGeometry(handle,dirty.toIntArray(),dirty.flatMap { scene.meshes[it].positions().asIterable() }.toFloatArray())
+            bridge.updateGeometry(
+                handle,
+                dirty.toIntArray(),
+                dirty.flatMap { scene.meshes[it].positions().asIterable() }.toFloatArray()
+            )
             builds += dirty.size
         }
         sceneGeometryKey = scene.meshes
-        if(geometryChanged || !shadingUnchanged(lastScene,scene)) {
-            RaySceneEncoding(scene).encode().let { bridge.setSceneData(handle,it.floats,it.bytes) }
-            lastScene=scene
+        if (geometryChanged || !shadingUnchanged(lastScene, scene)) {
+            RaySceneEncoding(scene).encode().let { bridge.setSceneData(handle, it.floats, it.bytes) }
+            lastScene = scene
         }
-        submit(request.key,request.width,request.height,request.camera,request.instances(), request.nativeCamera())
+        submit(request.key, request.width, request.height, request.camera, request.instances(), request.nativeCamera())
     }
 
     override fun dispose() {
@@ -243,7 +293,15 @@ class MetalRaySession internal constructor(
 /** The shading payload depends on everything except instance transforms and the camera. */
 internal fun shadingUnchanged(previous: RaySceneSnapshot?, next: RaySceneSnapshot): Boolean =
     previous != null && previous.materials == next.materials && previous.lights == next.lights &&
-        previous.environment == next.environment && previous.fog == next.fog && previous.sunVisibility == next.sunVisibility &&
-        previous.instances.map { it.material } == next.instances.map { it.material } &&
-        previous.meshes.size == next.meshes.size && previous.meshes.indices.all { previous.meshes[it].sameContentAs(next.meshes[it]) } &&
-        previous.textures.size == next.textures.size && previous.textures.indices.all { previous.textures[it].sameContentAs(next.textures[it]) }
+            previous.environment == next.environment && previous.fog == next.fog && previous.sunVisibility == next.sunVisibility &&
+            previous.instances.map { it.material } == next.instances.map { it.material } &&
+            previous.meshes.size == next.meshes.size && previous.meshes.indices.all {
+        previous.meshes[it].sameContentAs(
+            next.meshes[it]
+        )
+    } &&
+            previous.textures.size == next.textures.size && previous.textures.indices.all {
+        previous.textures[it].sameContentAs(
+            next.textures[it]
+        )
+    }

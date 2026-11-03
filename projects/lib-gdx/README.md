@@ -57,6 +57,13 @@ pin this down with a 90,000-vertex mesh.
     while a pass draws. `ModelShader` and `PbrModelShader` then compile a `clipPlaneFlag` variant that discards the fragments
     below it from the world position (the vertex shader supplies it even without lighting or normals); the plane is
     bound per renderable. Skinned and instanced meshes are clipped after posing, and alpha-tested cutouts keep their holes.
+  - `OutputTransformAttribute` (an `OutputTransform`: exposure, Khronos PBR Neutral tone map, sRGB encode) set on an
+    `Environment` makes `ModelShader` and `PbrModelShader` compile `outputTransformFlag` (`shader/shared/output_transform.glsl`):
+    colour *textures* (diffuse, emissive) and the fog colour are decoded from sRGB, lighting runs in linear space, and the
+    last write of the fragment is the transform. Material and vertex colour factors are used as they are (glTF values), and
+    data textures (normal, metallic-roughness, occlusion) are never decoded. Without the attribute the shaders write what
+    they always did. `OutputTransform.kt` holds the Kotlin reference of the maths; `OutputTransformGlTest` compares the GPU
+    with it and with the recorded output of the pre-transform shaders.
   - `ShadowDepthPass.clipPlane` clips the depth pass the same way, and `ShadowDepthPass.linearFar` (above 0) makes it
     write the linear view depth divided by that distance, packed like the shadow depths, instead of the window depth.
     `ModelDepthShader` still skips alpha-blended materials.

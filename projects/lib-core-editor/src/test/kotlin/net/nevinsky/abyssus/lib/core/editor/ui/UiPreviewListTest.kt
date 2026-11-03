@@ -1,6 +1,5 @@
 package net.nevinsky.abyssus.lib.core.editor.ui
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
 import net.nevinsky.abyssus.lib.core.ui.model.UiCollection
 import net.nevinsky.abyssus.lib.core.ui.state.UiBindingResolver
@@ -10,12 +9,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class UiPreviewListTest {
-    private val text = SceneJson().pretty("""{"format":"abyssus","formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,
+    private val text = canonicalUi("""{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,
         "bindings":[{"name":"scores","type":"list","fields":[{"name":"rank","type":"number"},{"name":"name","type":"string"},{"name":"ok","type":"boolean"}],
           "sample":[{"rank":1,"name":"Ace","ok":true},{"rank":2,"name":"Bo","ok":false}]}],
         "screens":[{"id":"main","root":{"id":"root","type":"list","bindings":{"items":"scores"},"template":{"id":"row","type":"label","bindings":{"text":"item.name"}}}}]}}}""")!!
 
-    private val collection: UiCollection get() = (UiCollectionDecoder().decode(SceneJson().parse(text)) as UiAdmission.Admitted).collection
+    private val collection: UiCollection get() = (admitUi(text) as UiAdmission.Admitted).collection
     private fun state() = UiPreviewState.Factory().of(collection)
     private fun rows(s: UiPreviewState) = (s.samples["scores"] as UiValue.Rows).items
 
@@ -63,14 +62,14 @@ class UiPreviewListTest {
         assertTrue(s.log.isEmpty())
         val refused = s.writer().write(net.nevinsky.abyssus.lib.core.ui.state.UiWrite("scores", UiValue.Rows(emptyList()), "w"))
         assertTrue(refused is net.nevinsky.abyssus.lib.core.ui.state.UiWriteResult.Rejected)
-        assertEquals("the document text is unchanged by all of it", SceneJson().pretty(text), text)
+        assertEquals("the document text is unchanged by all of it", canonicalUi(text), text)
     }
 
     @Test fun aDefinitionChangeStartsFromTheNewAuthoredRows() {
         val old = state()
         old.addRow("scores")
         val changed = text.replace("\"name\": \"Ace\"", "\"name\": \"Zoe\"")
-        val c2 = (UiCollectionDecoder().decode(SceneJson().parse(changed)) as UiAdmission.Admitted).collection
+        val c2 = (admitUi(changed) as UiAdmission.Admitted).collection
         val fresh = UiPreviewState.Factory().of(c2)
         assertEquals(2, (fresh.samples["scores"] as UiValue.Rows).items.size)
         assertEquals(UiValue.Text("Zoe"), (fresh.samples["scores"] as UiValue.Rows).items[0]["name"])

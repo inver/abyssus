@@ -31,6 +31,8 @@ class GameUiHostDriver(private val host: GameUiHost) : ScreenDriver {
 
     override fun keyDown(keycode: Int) = host.keyDown(keycode)
 
+    override fun navigate(keycode: Int) = host.navigate(keycode)
+
     override val focus: String? get() = presenter.navigator.focus
 
     override fun click(screen: String, widget: String) {

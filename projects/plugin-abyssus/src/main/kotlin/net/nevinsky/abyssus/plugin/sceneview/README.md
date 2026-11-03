@@ -12,9 +12,9 @@ the toolbar, Play and the view's asset storage.
 
 | Class | Role |
 |---|---|
-| `SceneFileEditor` / `SceneFileEditorProvider` | The tab, the second editor of the file after the text editor: the IDE's own `Text` and `Scene View` tabs switch between the JSON and the render on one shared document (unsaved text and Undo shared), and `openSceneView` selects Scene View. There is no custom preview/source switch. Re-reads params (typing after a 200 ms pause via `ReloadPolicy`; VFS changes, plugin edits and Undo at once); writes transforms via `editSceneJson`; `DocumentReferenceProvider` for undo. The provider in the root package is where the tab's collaborators are looked up and passed in; `SceneViewHost` carries tree selection and Add actions |
+| `SceneFileEditor` / `SceneFileEditorProvider` | The tab, the second editor of the file after the text editor: the IDE's own `Text` and `Scene View` tabs switch between the JSON and the render on one shared document (unsaved text and Undo shared), and `openSceneView` selects Scene View. There is no custom preview/source switch. Re-reads params (typing after a 200 ms pause via `ReloadPolicy`; VFS changes, plugin edits and Undo at once); writes transforms via `editSceneDocument`; `DocumentReferenceProvider` for undo. The provider in the root package is where the tab's collaborators are looked up and passed in; `SceneViewHost` carries tree selection and Add actions |
 | `AntialiasingLevel`, `SampleFallback`, `CanvasAntialiasing` | Plain setting values and canvas lifecycle decisions: default 4×, fallback 8 → 4 → 2 → Off; hidden changes coalesce until shown. `SceneViewPanel` supplies replacement, warning and terminal failure callbacks |
-| `AbyssusProjectSettings` (filetype package) | The native project's `sceneViewAntialiasing` field, edited in project Properties through `editSceneJson`. `SceneFileEditor` reads its owning `.abss` for new views and subscribes to `ProjectSettingsListener` for live updates, including unsaved text and Undo/Redo. The preference is excluded from content comparisons so Play keeps running. Standalone scenes use 4×; there is no application setting |
+| `AbyssusProjectSettings` (filetype package) | The native project's `sceneViewAntialiasing` field, edited in project Properties through `editSceneDocument`. `SceneFileEditor` reads its owning `.abss` for new views and subscribes to `ProjectSettingsListener` for live updates, including unsaved text and Undo/Redo. The preference is excluded from content comparisons so Play keeps running. Standalone scenes use 4×; there is no application setting |
 | `SceneParamsSource` | Scene + project `mainCamera` → `SceneRenderParams`, from unsaved editor text when present |
 | `SceneContent`, `PlacementMapper` *(lib-core-editor)* | `ecs` JSON → placements: models, terrains, lights, cameras, skybox. The components are decoded by the same codecs the Properties panel uses (`DecodedEntity`), so both show the same values and defaults; `PlacementMapper` (pure) maps them. A light's or camera's direction resolves its `lookAtId` to an entity's `localPosition` when that target exists and is not at the entity itself, else it uses the entity's `localRotation`. `handleIds` records the `HANDLE` entities a light may be aimed at |
 | `LightSet`, `SpotCone` *(lib-core-editor)* | Deterministic light selection and CPU cone/range attenuation math |
@@ -27,9 +27,10 @@ the toolbar, Play and the view's asset storage.
 | `CornerOverlay`, `CornerSprite`, `CornerPainter` (`OrientationWidget`, `StatsStrip`), `cornerRect` | The orientation widget (upper right) and the stats strip (lower left). A Swing component cannot sit over the heavyweight canvas, so Swing paints each into an image (`toImage`, at the display scale) and `CornerOverlay` draws it as a blended quad after the loading overlay, uploading the texture only when the painter's `version` changes. A press on the widget's disc is handled by the panel (`pressOnOrientationWidget`, look along the clicked axis from its side) and never reaches the scene. The geometry is `cornerRect`, tested headless |
 | `FpsCounter`, `SceneViewSettings` | The optional frame rate. `SceneViewSettings` (project service over the IDE's project `PropertiesComponent`, EDT) holds `showFps`; `SceneFileEditor` applies it to every view it creates (`SceneView.setFpsEnabled`) and to open views when it changes, and the panel also reads the setting itself before every frame (`showFps`), so a missed change event cannot leave the counter off. `FpsCounter` is pure: the panel gives it nanosecond timestamps before a frame (`frameStarted`) and after its buffer swap (`frameCompleted`), it publishes a whole number once a window reached a second, and `reset` (disable, unsafe or hidden surface, `removeNotify`, failure, context abandonment, disposal) forgets everything so the next sample never includes inactive time. The value is drawn as the first part of the stats strip (`<n> fps`, `-- fps` before the first sample); sampling adds no timer or render |
 | `ViewDisplay`, `Shading` | The Shadows / Fog / Grid toggles and Lit / Unlit / Wireframe of one view, set on `SceneRenderer.display` and read on the next frame. Per view and never saved; the scene's own `fogEnabled` is untouched. Unlit gives every material a white ambient and no lights or shadow pass; Wireframe draws every content drawable (models, terrains, foliage OBJECT layers, skybox cube, water) as edges only with `glPolygonMode(GL_LINE)` |
-| `SceneInputForwarder` | Keys (Q / W / E / F / D / Esc / Enter / Backspace) and the canvas mouse: into `SceneInteraction`, into the simulation while playing, the arrangement point menu |
+| `SceneInputForwarder` | Keys (Q / W / E / F / D / Esc / Enter / Backspace / Delete) and the canvas mouse: into `SceneInteraction`, into the simulation while playing, the arrangement point menu |
 | `RayControlBinding` | The view's ray feed, the mode the Properties switch shows and its listeners |
-| `CloudControls`, `PlayControlsStrip`, `FoliagePaintControls` | The Clouds choice and fallback, the Play / Pause / Step / Stop buttons, the foliage brush and its paint session |
+| `CloudControls`, `PlayControlsStrip` | The Clouds choice and fallback, the Play / Pause / Step / Stop buttons |
+| `BrushStrip`, `BrushKinds`, `FoliagePaintControls`, `SculptTerrainControls`, `BrushCursor` | The terrain brushes. `BrushStrip<S>` is the base of a brush's controls: the radius and strength spinners, the strip, the session of the selected entity (opened through a hook, replaced with the selection, a token drops a late answer), the stroke it registers with `SceneInteraction.setBrushStroke`, and the one `BrushMode` the view holds. `FoliagePaintControls` (the Paint toggle, layer and erase) and `SculptTerrainControls` (the tool and its options) are its two kinds; `BrushKinds` keeps them in toolbar order, builds, syncs and closes them with the toolbar, and ends the others when one starts. `BrushCursor` draws the radius circle, from `BrushPath`'s terrain-local axes, for every kind |
 | `PlacementMenu` | An "Add ..." menu: whether it can be offered, and its choices (`lightMenu`, `assetMenu`, `pathMenu` of the panel) |
 | `SceneViewState` *(lib-core-editor)* | What the user chose: selection, gizmo mode and hovered handle, the camera looked through, the drag/drop preview. The panel changes it; the renderer and the queries read it |
 | `SceneInteraction` *(lib-core-editor)* | Mouse and key logic without Swing or GL, over a `SceneViewState` and `SceneQueries`: click → pick/select, drag → gizmo or orbit/pan (one `Gesture`: Idle, Dragging or Cancelled), Drop → a Y-only move |
@@ -37,8 +38,8 @@ the toolbar, Play and the view's asset storage.
 | `SceneContentPass`, `SceneSkyPass` | The two passes `SceneRenderer` runs over `SceneViewState`: models, terrains, foliage and the gizmo; the sky, fog and clouds (it packs the snapshot it reads). GL only |
 | `SceneViewToolbar`, `SceneGlLifecycle`, `SceneFrameDriver` | What `SceneViewPanel` delegates to: the toolbar and its control sync (Swing); the canvas, libGDX context and capabilities of one GL context (GL, EDT); the frame timer and idle throttle (Swing) |
 | `SceneRenderer` | One frame: environment, skybox, grid, terrains, models, markers, highlight, gizmo. GL only: it publishes a `FrameSnapshot` after each frame and exposes `queries`. `GridModel` and `SelectionBox` build the grid and the highlight |
-| `PlacedAssets`, `SceneModels`, `SceneTerrains`, `SceneSkybox` | Per-kind loaded assets (an `AssetView` each over the view's `ViewAssets`, whose `ProjectAssets` from `AssetLoading` hold the one `lib-core` `AssetStorage`) and per-entity instances (`PlacedEntities`); `SceneModels` and `SceneTerrains` extend `PlacedAssets` and `SceneSkybox` has the same `abandon` |
-| `skybox` | `SunDirection`: the sun a procedural sky is lit from, from the scene's lights (`sunLight` is the light clouds dim). `SkyClock`: the view's sky time, which clouds drift by. `CloudViewState` (the toolbar's Clouds choice and the automatic fallbacks) and `CloudFrameBudget` (2 s over 33 ms per frame while volumetric clouds draw) are pure and per view; nothing is written. The cloud techniques and `SunOcclusion` are in `lib-core`'s `assets.sky.clouds`. The sky loaders, the HDR environment and the sky shaders are in `lib-core` (`net.nevinsky.abyssus.lib.core.assets.sky`) |
+| `PlacedAssets`, `SceneModels`, `SceneTerrains`, `SceneSkybox` | Per-kind loaded assets (an `AssetView` each over the view's `ViewAssets`, whose `ProjectAssets` from `AssetLoading` hold the one `lib-core` `AssetStorage`) and per-entity instances (`PlacedEntities`); `SceneModels` and `SceneTerrains` extend `PlacedAssets` and `SceneSkybox` has the same `abandon`. A model placement that names a `meshId` is requested, retained and cached under `AssetPlacement.storageName` (its encoded `ModelKey`), so entities showing different meshes of one asset have different built models, and an unknown mesh skips only its entity |
+| `skybox` | `SunDirection`: the sun a procedural sky is lit from, from the scene's lights (`sunLight` is the light clouds dim). `SkyClock`: the view's sky time, which clouds drift by. `CloudViewState` (the toolbar's Clouds choice and the automatic fallbacks) is pure and per view; nothing is written. The cloud techniques, `SunOcclusion` and `CloudFrameBudget` (2 s over 33 ms per frame while volumetric clouds draw; the game uses it too) are in `lib-core`'s `assets.sky.clouds`. The sky loaders, the HDR environment and the sky shaders are in `lib-core` (`net.nevinsky.abyssus.lib.core.assets.sky`) |
 | `SceneMarkers`, `CameraFrustum` *(lib-core-editor)* | Camera body and frustum, light markers, and their pick bounds |
 | `ScenePicker` *(lib-core-editor)* | Ray from a pixel, nearest hit over boxes and terrain heights (used by `SnapshotSceneQueries`) |
 | Drop: `OrientedBox`, `TerrainRestHeight`, `ScenePicker.restHeight` *(lib-core-editor)* | Highest surface under a rotated box footprint; CPU-only bilinear terrain-cell maxima |
@@ -48,6 +49,7 @@ the toolbar, Play and the view's asset storage.
 | `gizmo` | Drawing (`GizmoDraw`) over the handle geometry (`GizmoHandles`), hit tests (`GizmoHit`) and drag math (`GizmoDrag`) of `lib-core-editor` |
 | `SceneTransformWriter` *(lib-core-editor)* | A finished transform → `PositionComponent` (and camera) fields in the scene JSON |
 | `GdxRuntime`, `GuardedGLCanvas` | The `Gdx.*` shim, and the canvas that refuses unsafe GL |
+| `GlCanvasHost`, `GlFrameTimer` | The create, paint, release and abandoned sequence of one GL context, shared by the scene view (through `SceneGlLifecycle`), the Game UI canvas and the Import Model preview; and the `glSafe()`-guarded frame timer the last two use (GL, EDT) |
 
 ## Things that are not obvious
 
@@ -55,13 +57,13 @@ the toolbar, Play and the view's asset storage.
   `gl*` / `files` and the GLSL 150 prefixes under a lock, and restores the old values afterwards. Every libGDX call
   must be inside it. Clicks arrive outside it, so `ScenePicker.pickRay` unprojects by hand instead of using
   `Camera.getPickRay`.
-- **Multisampled default framebuffer.** `glData(samples)` requests a GL 3.3 core canvas with 24-bit depth, no swap
-  interval, and sample buffers only when the count is positive. Default 4× smooths raster edges and overlays; shadow,
+- **Multisampled default framebuffer.** `glData(samples)` requests a GL 3.3 core canvas with 24-bit depth, swap
+  interval 0 (dropped for the last attempt when the GLX server has no swap control, as Xvfb), and sample buffers only when the count is positive. Default 4× smooths raster edges and overlays; shadow,
   water and ray targets retain their own formats and the ray image retains its own accumulation. Test harness formats
   stay unchanged. Applying a level replaces only the native canvas through guarded `disposeCanvas`, reattaches input
   and rebuilds renderer resources in `initGL`; camera, selection, tools, look-through camera, Play and Ray Tracing mode
   stay in the view. The ray feed resets accumulation on context loss. Hidden views defer replacement until `addNotify`
-  or a showing hierarchy event. A failure before `initGL` retries lower sample counts down to Off, warns once per view,
+  or a showing hierarchy event. A failure before `initGL` retries lower sample counts down to Off, then Off without swap interval, warns once per view,
   and leaves the requested preference intact. A renderer failure after `initGL`, or a failed Off format, uses `onFailure`.
 - **GL only on a safe surface.** `GuardedGLCanvas.glSafe` needs the canvas showing, non-empty, not minimized, and
   stable for 250 ms. On macOS a zero-sized surface aborts the JVM. A canvas disposed while hidden drops its context
@@ -94,13 +96,13 @@ the toolbar, Play and the view's asset storage.
   frame; `SnapshotSceneQueries` answers from that copy, the `SceneViewState` and the scene content, and puts the drawn
   boxes together once per snapshot and preview. Marker boxes (cameras, lights) come from the content at question time.
 - **Drags preview, then write once.** During a drag `ScenePreview` overrides the dragged entity's placement. On release
-  one `editSceneJson` command ("Move Entity" / "Rotate Entity") writes it. The document change re-reads params, and
+  one `editSceneDocument` command ("Move Entity" / "Rotate Entity") writes it. The document change re-reads params, and
   the override stays until they arrive so the object doesn't jump back.
 - **Play shows poses, never writes them.** With an available `sceneSimulation` provider, the toolbar
   has Play, Pause, Step and Stop. `PlayState` starts the provider's simulation from the scene's document text, the
   project folder and the selection. Each frame the panel copies the simulation's latest poses into
-  `SceneViewState.poses`. The renderer's `posedContent` applies them over the authored placements, keeping each
-  placement's scale, so drawing, picking, markers and overlays all see them. A drag preview applies on top. While a
+  `SceneViewState.poses`. `ScenePreviewLayers.posed` applies them over the authored placements, keeping each
+  placement's scale, so drawing, picking, markers and overlays all see them. A drag preview applies on top (`ScenePreviewLayers.apply`). While a
   simulation is active, gizmos are off (`SceneViewState.gizmosEnabled`), Move/Rotate/Drop are disabled, and every key
   but Escape goes to the simulation and is consumed. Mouse buttons and moves go to it too, and the camera still
   orbits. Escape stops. `SceneFileEditor` stops play before scene edits or changes to project render inputs. A change only
@@ -217,13 +219,12 @@ The toolbar's Add Path Arrangement button (`add-path-arrangement`) lists the pro
 `AddPathArrangementGroup` (`SceneFileEditor` supplies `pathActions` and `canAddPath` through `SceneViewHost`). Choosing one
 calls `SceneView.startDrawing`, which puts `SceneInteraction` in drawing mode (a hint shows in the toolbar). The renderer
 draws the line with a handle on each point and a cross with a post at every copy's ground height (`SceneMarkers.drawPath`);
-no model is drawn in the preview. A selected arrangement shows the same with a handle in the middle of each segment;
-unselected ones show a bare line a click can select (a model in front of it wins over the line, the line over the terrain).
+no model is drawn in the preview. A finished arrangement shows its line, handles and crosses only while its control points are edited; otherwise it shows only its copies, and the line cannot be clicked.
 
-Finishing writes through `SceneFileEditor.createArrangement`, a point drag, insert or Remove Point through `editArrangement`,
+Finishing writes through `SceneFileEditor.createArrangement`, a point drag or Remove Point through `editArrangement`,
 and the Regenerate button (shown while an arrangement is selected) through `regenerateArrangement`. The ground comes from
 `SceneView.groundHeights()` (the last drawn frame's terrains, answers kept per terrain data) and, when the view has no
-frame yet, from `ArrangementHeights`. Remove Point is on the right-click menu of a point handle and is disabled at two points.
+frame yet, from `ArrangementHeights`. Clicking the curve in the edit mode adds a control point there (`PathHit.Line`). Remove Point is on the right-click menu of a point handle and is disabled at two points; Backspace or Delete removes the selected point in the edit mode under the same limit, and Drop to terrain on that menu puts it on the ground. While the edit is on, changes stay in `SceneViewState.pathDraft`, and the renderer lays the copies out along it at the line's own height (`ArrangementPreview`, so the models follow the points, in the air too, before Apply); Apply (`SceneView.applyPathEdit`) writes them, Close drops them, and Drop path to terrain (`dropPathToTerrain`) drops every point. The three buttons replace Edit in the Properties panel and go through `PathEditSession`.
 
 ## Spotlight illumination
 
@@ -340,6 +341,31 @@ Foliage is drawn, and it is deliberately left out of everything else the view an
   `SceneRayControls` into the `ray-tracing-foliage` label of the Properties panel's Ray Tracing section, while the
   shown scene has any.
 
+## Sculpt Terrain
+
+Sculpt Terrain is a brush mode of a view beside Paint Foliage, and the two never hold at once (starting one ends the other
+through `BrushKinds`). `SculptTerrainControls` is the
+strip (tool, radius, strength, the options of the chosen tool; Shift inverts); like `FoliagePaintControls`, a `BrushStrip`, it
+sets a mode on the view's state (`SceneViewState.brush`, a `BrushMode` of kind `SCULPT_BRUSH`; Paint Foliage uses `FOLIAGE_BRUSH`, so setting one replaces the other), which hides the gizmos, gives the left button to the
+brush and ends when another entity is selected. The on/off toggle is in the Abyssus Properties panel, in the Render section of
+a terrain entity (`EntityDetailsView`): it starts the project's `SculptRequests`, `SceneFileEditor` passes that to the view
+(`setSculpting`), and the view tells the session when it ended the brush itself (`onSculptEnded`), as with `PathEditSession`.
+The view ends the sculpting and reports why when the terrain data cannot be read or its sculpt state is unsafe
+(`SculptEditing` reads the files off the EDT).
+The pick layer calls the `BrushStroke` registered for the kind (`pressed` / `dragged` / `released` / `cancelled`), which `SculptStrokeCommand` implements. Each strip registers its stroke with `SceneInteraction.setBrushStroke` when its session loads, and takes its mode off the view only when the mode is its own.
+
+A stroke lives in the project's `SculptDrafts` (one `SculptDraft` per terrain folder) only while the button is down. The
+command writes nothing before the release: it then plans the files with `SculptPlanner.commitStroke` and stages them
+through `SculptTransactions` as one undoable `AssetTransaction`. An empty stroke writes nothing and adds no undo step.
+
+Every view follows a stroke through `SculptViewSync` (called each frame after `terrains.update`): when a draft has a new
+revision, the draft's changed rectangle of heights is copied **in place** into that view's own `TerrainData.heights`
+(each view loads its own copy of the terrain) and `TerrainMesh.updateRegion` sends those vertices again (one-vertex border
+for the normals; the whole buffer past half the grid). When a draft a view followed is gone, because the stroke was
+committed or discarded, the view loads the terrain again from the files. Picking, foliage and ray snapshots read the
+view's `TerrainData`, so they follow the new heights; a ray snapshot is dropped by the existing asset refresh when
+`terrain.data` changes. The Stamp tool decodes its image with a libGDX `Pixmap` off the AWT thread (`StampImages`), no GL.
+
 ## Ray tracing scene conversion
 
 The ray classes named here (`RaySceneSnapshots`, `RayViewFeed`, `RayViewRuntime`, `RayBackendService`, `RayModeState`) are in
@@ -410,7 +436,7 @@ the view and turning it on or off never writes the scene file.
 
 Below the switch, the same Rendering section edits the scene's saved `rayTracing` limits: **Target samples per pixel**
 (accumulated while the view is still), **Maximum rays per frame** (all queries of one submitted frame), and maximum
-reflection and refraction bounces. They are scene data, unlike the switch: each accepted edit is one `editSceneJson`
+reflection and refraction bounces. They are scene data, unlike the switch: each accepted edit is one `editSceneDocument`
 command through `SceneRayEdits`, checked against the value the panel was built from (a newer value wins and the field
 says so), and Undo/Redo work from the panel through its hidden text editor on the scene. They stay editable with no view
 open or no ray tracing hardware, selecting a scene writes nothing, and a malformed saved value is shown beside its
@@ -459,3 +485,6 @@ the uniform factor for beyond the square. `ModelShader`, `PbrModelShader` and `t
 light, on top of its atlas shadow. No usable sun, a sun outside the rendered light budget, no clouds, exhausted cloud
 techniques or a map that could not be made (logged once to the `sceneview` logger) leave the uniform dimming as before.
 
+## Paint Texture
+
+Paint Texture is the fourth brush kind (`PaintTextureControls`, toggle `paint-texture` in the Properties panel via `PaintTextureRequests`). `SplatSession` offers the stroke, a snapshot of the splat state and layers, Create splat map, Make unique copy and layer assignment. `SplatViewSync` follows a stroke in every view through the draft's changed tiles.

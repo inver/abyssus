@@ -23,6 +23,7 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.gdx.shader.ClipPlaneAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.OutputTransformAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShaderSources
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasBindings
@@ -74,6 +75,7 @@ open class ModelShader(
 
     override fun render(renderable: Renderable, combinedAttributes: Attributes) {
         bindClipPlane(combinedAttributes)
+        bindOutputTransform(combinedAttributes)
         super.render(renderable, combinedAttributes)
     }
 
@@ -83,6 +85,15 @@ open class ModelShader(
         val location = program.fetchUniformLocation("u_clipPlane", false)
         if (location >= 0) {
             program.setUniformf(location, plane.normalX, plane.normalY, plane.normalZ, plane.offset)
+        }
+    }
+
+    /** The exposure of the pass's output transform, when it set one; the program was compiled with the transform only in that case. */
+    private fun bindOutputTransform(attributes: Attributes) {
+        val output = attributes.get(OutputTransformAttribute.Type) as? OutputTransformAttribute ?: return
+        val location = program.fetchUniformLocation("u_exposure", false)
+        if (location >= 0) {
+            program.setUniformf(location, output.transform.exposure)
         }
     }
 
@@ -185,6 +196,9 @@ fun extraDefines(attributes: Attributes, vertexMask: Long, hasEnvironment: Boole
     val sb = StringBuilder()
     if (attributes.has(ClipPlaneAttribute.Type)) {
         sb.append("#define clipPlaneFlag\n")
+    }
+    if (attributes.has(OutputTransformAttribute.Type)) {
+        sb.append("#define outputTransformFlag\n")
     }
     val normal = VertexAttributes.Usage.Normal.toLong()
     val tangentAndBinormal = (VertexAttributes.Usage.Tangent or VertexAttributes.Usage.BiNormal).toLong()

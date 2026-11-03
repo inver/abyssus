@@ -105,8 +105,6 @@ SHALL remain raw with a warning rather than discarding extension data.
 - **WHEN** the component's asset name is a number
 - **THEN** the unbound component remains raw with one warning and preserves that number on write
 
-## ADDED Requirements
-
 ### Requirement: Disabled entities and components load but do not act
 
 A disabled entity SHALL load with its components and contribute nothing to the scene. A disabled component SHALL load as data without its behavior, while the entity's other components stay active. The flag SHALL round-trip: a scene loaded and written by the engine SHALL keep `enabled: false` where it was.

@@ -3,6 +3,10 @@ package net.nevinsky.abyssus.lib.core.io
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.SCENES_DIR
 import java.io.File
+import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.InvalidPathException
+import java.nio.file.Path
 
 class FileLoader(val projectDir: File) {
 
@@ -51,15 +55,34 @@ class FileLoader(val projectDir: File) {
             ?: throw IllegalStateException("Failed to load scene '$sceneName'")
     }
 
-    /** The file [name] inside [folder], or null when it is blank, missing or outside the folder. */
+    /** The file [name] inside [folder], or null when it is blank, missing, absolute or outside the folder. */
     private fun file(folder: File, name: String?): File? {
         if (name.isNullOrBlank()) {
             return null
         }
-        val res = File(folder, name)
-        if (!res.isFile) {
-            return null
-        }
-        return res
+        return confinedFile(folder, name)
     }
+}
+
+/**
+ * The regular file [name] under [folder] when it is relative, names no network location and neither `..` nor a
+ * symbolic link leads out of [folder]; null otherwise.
+ */
+fun confinedFile(folder: File, name: String): File? {
+    if (name.isBlank() || name.contains("://") || name.startsWith("//") || name.startsWith("\\\\")) return null
+    if (File(name).isAbsolute || name.startsWith("/") || name.startsWith("\\")) return null
+    val root = folder.toPath().toAbsolutePath().normalize()
+    val candidate = try { root.resolve(name).normalize() } catch (e: InvalidPathException) { return null }
+    if (candidate == root || !candidate.startsWith(root)) return null
+    if (!Files.isRegularFile(candidate)) return null
+    val real: Path
+    val realRoot: Path
+    try {
+        real = candidate.toRealPath()
+        realRoot = root.toRealPath()
+    } catch (e: IOException) {
+        return null
+    }
+    if (!real.startsWith(realRoot)) return null
+    return candidate.toFile()
 }

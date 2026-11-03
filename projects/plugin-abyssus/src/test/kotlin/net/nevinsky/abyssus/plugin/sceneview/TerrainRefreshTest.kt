@@ -7,8 +7,8 @@ package net.nevinsky.abyssus.plugin.sceneview
 
 import net.nevinsky.abyssus.lib.core.editor.scene.PlacedEntities
 import net.nevinsky.abyssus.lib.core.editor.scene.PlacedEntity
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
@@ -26,14 +26,14 @@ class TerrainRefreshTest {
 
     private class Entity(override val placement: AssetPlacement, override val asset: Heights) : PlacedEntity<Heights>
 
-    private fun placement(entity: String, asset: String, x: Float = 0f) =
-        AssetPlacement(entity, asset, PlacementTransform(Vec3(x, 0f, 0f), Quat.IDENTITY, Vec3(1f, 1f, 1f)))
+    private fun placement(entity: Long, asset: String, x: Float = 0f) =
+        AssetPlacement(entity, asset, PlacementTransform(Vector3(x, 0f, 0f), Quaternion(), Vector3(1f, 1f, 1f)))
 
     private val entities = PlacedEntities<Heights, Entity> { p, asset, _ -> Entity(p, asset) }
 
     @Test
     fun `every entity sharing a terrain follows its replacement and keeps its own placement`() {
-        val placements = listOf(placement("1", "hills", 0f), placement("2", "hills", 500f), placement("3", "other", 9f))
+        val placements = listOf(placement(1L, "hills", 0f), placement(2L, "hills", 500f), placement(3L, "other", 9f))
         var hills = Heights("hills v1")
         val other = Heights("other")
         val assetOf = { name: String -> if (name == "hills") hills else other }
@@ -44,18 +44,18 @@ class TerrainRefreshTest {
         entities.update(placements, assetOf)
         val after = entities.drawn.associateBy { it.placement.entityId }
 
-        assertSame(hills, after.getValue("1").asset)
-        assertSame(hills, after.getValue("2").asset)
-        assertSame("the same heights object serves both entities", after.getValue("1").asset, after.getValue("2").asset)
-        assertEquals("transforms are untouched", 500f, after.getValue("2").placement.transform.position.x, 0f)
+        assertSame(hills, after.getValue(1L).asset)
+        assertSame(hills, after.getValue(2L).asset)
+        assertSame("the same heights object serves both entities", after.getValue(1L).asset, after.getValue(2L).asset)
+        assertEquals("transforms are untouched", 500f, after.getValue(2L).placement.transform.position.x, 0f)
         assertEquals("entities are not moved to rest on the new surface", placements, after.values.map { it.placement })
-        assertNotSame(before.getValue("1"), after.getValue("1"))
-        assertSame("an unrelated asset's entity is kept", before.getValue("3"), after.getValue("3"))
+        assertNotSame(before.getValue(1L), after.getValue(1L))
+        assertSame("an unrelated asset's entity is kept", before.getValue(3L), after.getValue(3L))
     }
 
     @Test
     fun `an entity drawn from the old asset until the replacement exists`() {
-        val placements = listOf(placement("1", "hills"))
+        val placements = listOf(placement(1L, "hills"))
         val v1 = Heights("v1")
         var current: Heights? = v1
         entities.update(placements) { current }
@@ -69,7 +69,7 @@ class TerrainRefreshTest {
 
     @Test
     fun `a terrain that cannot load stops being drawn and returns when repaired`() {
-        val placements = listOf(placement("1", "hills"))
+        val placements = listOf(placement(1L, "hills"))
         var current: Heights? = Heights("v1")
         entities.update(placements) { current }
         current = null

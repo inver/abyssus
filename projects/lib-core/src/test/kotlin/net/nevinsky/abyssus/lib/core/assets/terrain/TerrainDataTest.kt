@@ -112,4 +112,60 @@ class TerrainDataTest {
         assertEquals(3, t.resolution)
         assertArrayEquals(heights, t.heights, 0f)
     }
+
+    private fun terrain(heights: FloatArray, resolution: Int = 8) = TerrainData(resolution, heights, 70, 2f)
+
+    private fun rows(t: TerrainData, minX: Int, minZ: Int, maxX: Int, maxZ: Int): Map<Pair<Int, Int>, List<Float>> {
+        val w = maxX - minX + 1
+        val out = FloatArray(w * TERRAIN_FLOATS_PER_VERTEX)
+        val map = HashMap<Pair<Int, Int>, List<Float>>()
+        for (z in minZ..maxZ) {
+            t.vertexRow(z, minX, maxX, out, 0)
+            for (x in 0 until w) map[(minX + x) to z] = out.slice(x * TERRAIN_FLOATS_PER_VERTEX until (x + 1) * TERRAIN_FLOATS_PER_VERTEX)
+        }
+        return map
+    }
+
+    @Test
+    fun aRegionEditMatchesAFullRebuildAndOnlyTheOneVertexBorderMoves() {
+        val resolution = 8
+        val before = terrain(FloatArray(resolution * resolution) { (it % 5) * 0.7f })
+        val oldVertices = before.vertices()
+        val edited = FloatArray(resolution * resolution) { before.heights[it] }
+        for (z in 3..4) for (x in 2..5) edited[z * resolution + x] += 9f
+        before.copyHeights(edited, 2, 3, 5, 4)
+        val rebuilt = terrain(edited).vertices()
+        assertArrayEquals("a region edit is the same as a rebuild from the new heights", rebuilt, before.vertices(), 0f)
+        // vertices more than one step away from the edited rectangle are what they were
+        val moved = HashSet<Pair<Int, Int>>()
+        for (z in 0 until resolution) for (x in 0 until resolution) {
+            val from = (z * resolution + x) * TERRAIN_FLOATS_PER_VERTEX
+            if (!(0 until TERRAIN_FLOATS_PER_VERTEX).all { oldVertices[from + it] == rebuilt[from + it] }) moved += x to z
+        }
+        assertTrue(moved.isNotEmpty())
+        assertTrue(moved.all { (x, z) -> x in 1..6 && z in 2..5 })
+        // and the rows of the expanded rectangle carry every change
+        val patch = rows(before, 1, 2, 6, 5)
+        for ((xz, v) in patch) {
+            val from = (xz.second * resolution + xz.first) * TERRAIN_FLOATS_PER_VERTEX
+            assertEquals(rebuilt.slice(from until from + TERRAIN_FLOATS_PER_VERTEX), v)
+        }
+    }
+
+    @Test
+    fun copyHeightsChangesTheArrayInPlace() {
+        val t = terrain(FloatArray(64))
+        val heights = t.heights
+        t.copyHeights(FloatArray(64) { 5f }, 0, 0, 1, 1)
+        assertTrue(heights === t.heights)
+        assertEquals(5f, heights[9], 0f)
+        assertEquals(0f, heights[2], 0f)
+    }
+
+    @Test
+    fun copyHeightsRefusesAnotherGridOrARectangleOutsideIt() {
+        val t = terrain(FloatArray(64))
+        assertThrows(IllegalArgumentException::class.java) { t.copyHeights(FloatArray(9), 0, 0, 1, 1) }
+        assertThrows(IllegalArgumentException::class.java) { t.copyHeights(FloatArray(64), 0, 0, 8, 1) }
+    }
 }

@@ -7,11 +7,16 @@ package net.nevinsky.abyssus.lib.core.format
 
 import com.fasterxml.jackson.databind.JsonNode
 
-/** The key of the optional enabled flag on an entity entry and on a component entry of the `ecs` block. */
-const val ENABLED_KEY = "enabled"
+/** The `type` of an entity entry as written, or null when it has none. */
+fun entityTypeOf(entity: JsonNode?): String? = entity?.get("type")?.takeIf { it.isTextual }?.textValue()
 
-/** True unless [node] carries `enabled: false`; a missing or non-boolean flag means enabled. */
-fun isEnabled(node: JsonNode?): Boolean = node?.get(ENABLED_KEY)?.let { !(it.isBoolean && !it.booleanValue()) } ?: true
+/** The component names an entity entry lists in `disabledComponents`, as written. */
+fun entityDisabledComponents(entity: JsonNode?): List<String> =
+    entity?.get("disabledComponents")?.takeIf { it.isArray }?.mapNotNull { it.takeIf(JsonNode::isTextual)?.textValue() }
+        .orEmpty()
 
-/** True when [node] has no `enabled` key, or the key is a boolean. Anything else makes the document unsupported. */
-fun isEnabledFlagValid(node: JsonNode?): Boolean = node?.get(ENABLED_KEY)?.isBoolean ?: true
+/** True unless the entity entry lists the component [key] (short or fully qualified) as disabled. */
+fun isComponentEnabled(entity: JsonNode?, key: String): Boolean {
+    val short = key.substringAfterLast('.')
+    return entityDisabledComponents(entity).none { it.substringAfterLast('.') == short }
+}

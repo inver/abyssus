@@ -4,13 +4,13 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
-import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.ui.UiTreeEdit
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.ui.*
 import net.nevinsky.abyssus.lib.core.ui.layout.UiLayoutResult
 import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
@@ -111,13 +111,12 @@ class UiEditorController(
     private val background: Executor,
     private val ui: (Runnable) -> Unit,
     private val decoder: UiCollectionDecoder = UiCollectionDecoder(),
-    private val textEditor: UiTextEditor = UiTextEditor(),
+    private val textEditor: UiTextEditor = UiTextEditor(com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.json),
     /** The layout the canvas shows for a screen, for drag gestures; null while nothing is drawn. */
     override var layoutProvider: (String) -> UiLayoutResult? = { null },
     private val preferences: UiPreferences = MemoryUiPreferences(),
     private val previews: UiPreviewState.Factory = UiPreviewState.Factory(),
 ) : Disposable, UiCanvasModel {
-    private val json = SceneJson()
     private var revision = 0L
     private var disposed = false
 
@@ -197,7 +196,7 @@ class UiEditorController(
     }
 
     private fun parse(text: String): UiEditorState {
-        val tree = runCatchingKeepingCancellation { json.parse(text) }.getOrElse { return UiEditorState.Unreadable(it.message.orEmpty(), text) }
+        val tree = runCatchingKeepingCancellation { com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.json.readObject(text) }.getOrElse { return UiEditorState.Unreadable(it.message.orEmpty(), text) }
         return when (val admission = decoder.decode(tree)) {
             is UiAdmission.Admitted -> UiEditorState.Editable(admission, text)
             is UiAdmission.Refused -> UiEditorState.Refused(admission.issues, text)
@@ -277,7 +276,7 @@ class UiEditorController(
 
     // ---- edits ----
 
-    private fun perform(name: String, baseText: String? = null, op: (UiDocumentEdits, JsonNode) -> UiEditResult): UiEditOutcome {
+    private fun perform(name: String, baseText: String? = null, op: UiTreeEdit): UiEditOutcome {
         val outcome = editUiMeta(project, file, name, baseText, textEditor, op)
         lastError = when (outcome) {
             is UiEditOutcome.Rejected -> outcome.error
@@ -380,7 +379,7 @@ class UiEditorController(
     fun deleteScreen(id: String) = perform(AbyssusBundle.message("uiCommandDeleteScreen")) { e, m -> e.deleteScreen(m, id) } is UiEditOutcome.Edited
 
     /** A generic property-panel edit; see `UiDocumentEdits`. */
-    fun edit(name: String, op: (UiDocumentEdits, JsonNode) -> UiEditResult): Boolean = perform(name, null, op) is UiEditOutcome.Edited
+    fun edit(name: String, op: UiTreeEdit): Boolean = perform(name, null, op) is UiEditOutcome.Edited
 
     // ---- canvas gestures ----
 

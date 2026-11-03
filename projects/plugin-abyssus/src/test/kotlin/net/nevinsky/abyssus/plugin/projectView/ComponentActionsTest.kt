@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import net.nevinsky.abyssus.lib.core.assets.MetaType
+import com.badlogic.gdx.math.Vector3
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.actionSystem.ActionManager
@@ -13,7 +15,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import java.io.File
 import net.nevinsky.abyssus.plugin.testMetaFiles
@@ -56,7 +58,7 @@ class ComponentActionsTest : BasePlatformTestCase() {
     }
 
     private fun scene() = componentTargetOf(entity("0"))!!.file
-    private fun components(id: String) = net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree(SceneJson().parse(FileDocumentManager.getInstance().getDocument(scene())!!.text)).components(id)!!
+    private fun entityDto(id: Long) = net.nevinsky.abyssus.plugin.parsedScene(FileDocumentManager.getInstance().getDocument(scene())!!.text).entity(id)!!
 
     private class LightOn(val node: Any?) : AddLightAction() {
         override fun selected(e: AnActionEvent) = node
@@ -70,15 +72,15 @@ class ComponentActionsTest : BasePlatformTestCase() {
         assertFalse(visible(LightOn(entity("0"))))
         assertFalse(visible(LightOn(abss())))
         assertTrue(ActionManager.getInstance().getAction("Abyssus.AddLight") is AddLightAction)
-        var selected: String? = null
-        val choices = AddLightGroup(project, scene(), { net.nevinsky.abyssus.lib.core.editor.content.Vec3(0f, 0f, 0f) }, { selected = it }).getChildren(null)
+        var selected: Long? = null
+        val choices = AddLightGroup(project, scene(), { com.badlogic.gdx.math.Vector3(0f, 0f, 0f) }, { selected = it }).getChildren(null)
         assertEquals(listOf("Directional", "Sun", "Spot"), choices.map { it.templatePresentation.text })
         choices[2].actionPerformed(TestActionEvent.createTestEvent(choices[2]))
-        assertEquals("7", selected)
-        val position = components("7")["PositionComponent"]["localPosition"]
-        assertEquals(5, position["y"].asInt())
-        assertEquals(0, position.path("x").asInt())
-        assertEquals(0, position.path("z").asInt())
+        assertEquals(7L, selected)
+        val position = entityDto(7).component(PositionComponent::class.java)!!.localPosition
+        assertEquals(5f, position.y, 0f)
+        assertEquals(0f, position.x, 0f)
+        assertEquals(0f, position.z, 0f)
     }
 
     fun testActionsAreRegisteredInTheProjectViewMenu() {
@@ -90,7 +92,7 @@ class ComponentActionsTest : BasePlatformTestCase() {
     fun testAddIsOfferedOnEntityRowsOnly() {
         copyProject()
         assertTrue(visible(AddOn(entity("0"))))
-        assertFalse(visible(AddOn(component("0", "TypeComponent"))))
+        assertFalse(visible(AddOn(component("0", "PositionComponent"))))
         assertFalse(visible(AddOn(abss())))
         assertFalse(visible(AddOn(descend(abss(), "scenes"))))
         assertFalse(visible(AddOn(descend(abss(), "assets"))))
@@ -108,30 +110,30 @@ class ComponentActionsTest : BasePlatformTestCase() {
         assertTrue("Render" !in names)
         val light = add.choices(project, target, testMetaFiles()).getChildren(null).first { it.templatePresentation.text == "Light" }
         light.actionPerformed(TestActionEvent.createTestEvent(light))
-        assertTrue(components("0").has("LightComponent"))
+        assertNotNull(entityDto(0).component(LightComponent::class.java))
         assertFalse(add.choices(project, target, testMetaFiles()).getChildren(null).any { it.templatePresentation.text == "Light" })
     }
 
     fun testRenderIsOfferedPerProjectAsset() {
         copyProject()
-        SceneComponentEdits.remove(project, scene(), "6", "RenderComponent")
+        SceneComponentEdits.remove(project, scene(), 6L, "RenderComponent")
         val target = componentTargetOf(entity("6"))!!
         val render = AddOn(null).choices(project, target, testMetaFiles()).getChildren(null)
             .filterIsInstance<com.intellij.openapi.actionSystem.ActionGroup>().single { it.templatePresentation.text == "Render" }
         val assets = SceneComponentEdits.renderAssets(scene(), testMetaFiles())
         assertTrue(assets.isNotEmpty())
-        assertTrue(assets.all { it.type == "MODEL" || it.type == "TERRAIN" })
+        assertTrue(assets.all { it.type == MetaType.MODEL || it.type == MetaType.TERRAIN })
         val items = render.getChildren(null)
-        assertEquals(assets.map { "${it.type.lowercase()} ${it.name}" }, items.map { it.templatePresentation.text })
+        assertEquals(assets.map { "${it.type.name.lowercase()} ${it.name}" }, items.map { it.templatePresentation.text })
         items.first().actionPerformed(TestActionEvent.createTestEvent(items.first()))
-        val asset = components("6")["RenderComponent"]
-        assertEquals(assets.first().name, asset["assetName"].asText())
-        assertEquals(assets.first().type, asset["type"].asText())
+        val asset = entityDto(6).component(RenderComponent::class.java)!!
+        assertEquals(assets.first().name, asset.assetName)
+        assertEquals(assets.first().type.name, asset.type?.name)
     }
 
     fun testRemoveIsOfferedOnModeledComponentsOnly() {
         copyProject()
-        assertTrue(visible(RemoveOn(component("0", "TypeComponent"))))
+        assertTrue(visible(RemoveOn(component("0", "NameComponent"))))
         assertFalse(visible(RemoveOn(component("0", "PickableComponent"))))
         assertFalse(visible(RemoveOn(entity("0"))))
         assertFalse(visible(RemoveOn(abss())))
@@ -139,10 +141,10 @@ class ComponentActionsTest : BasePlatformTestCase() {
 
     fun testRemoveWritesTheFile() {
         copyProject()
-        val remove = RemoveOn(component("0", "TypeComponent"))
+        val remove = RemoveOn(component("0", "NameComponent"))
         remove.actionPerformed(TestActionEvent.createTestEvent(remove))
-        assertFalse(components("0").has("TypeComponent"))
-        assertTrue(components("0").has("PickableComponent"))
+        assertNull(entityDto(0).component(NameComponent::class.java))
+        assertTrue("PickableComponent" in componentNames(entityDto(0)))
     }
 
     fun testTreeShowsTheNewComponentAndCount() {
@@ -152,6 +154,6 @@ class ComponentActionsTest : BasePlatformTestCase() {
         light.actionPerformed(TestActionEvent.createTestEvent(light))
         val node = entity("0") as DtoEntryNode
         assertTrue(children(node).any { label(it) == "LightComponent" })
-        assertEquals(6, children(node).size)
+        assertEquals(5, children(node).size)
     }
 }

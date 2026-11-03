@@ -41,9 +41,9 @@ Native fields:
   "MODEL"`, and `additional.file` / `format: "GLTF"` / `binary: true` / `materials: []`. It validates the project file
   first.
 - The Trainer re-import replaces only `model.glb`, `textures/`, `source.json` and `COPYING` in `model_trainer`, plus
-  `additional.file` in its meta through `editSceneJson`. The `uuid` and other fields stay.
+  `additional.file` in its meta through `editSceneDocument`. The `uuid` and other fields stay.
 - The Trainer's `PositionComponent.localPosition.y` and `localRotation` in `Field.scene` change through
-  `editSceneJson`. Unrelated keys and number text are preserved.
+  `editSceneDocument`. Unrelated keys and number text are preserved.
 
 There is no format version change. This is an asset importer that produces native assets. It is not an importer or
 migration of foreign Abyssus documents, which the native-format contract still rules out.

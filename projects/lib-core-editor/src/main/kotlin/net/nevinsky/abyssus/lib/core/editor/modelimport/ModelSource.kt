@@ -18,6 +18,7 @@ import net.nevinsky.abyssus.lib.gdx.assimp.ColladaAsset
 import net.nevinsky.abyssus.lib.gdx.assimp.LeftOut
 import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import net.nevinsky.abyssus.lib.gdx.gltf.PhongToPbr
+import net.nevinsky.abyssus.lib.gdx.model.VertexLayout
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import java.io.File
 import java.io.IOException
@@ -249,13 +250,9 @@ class ModelSource(
      */
     private fun normalizeWeights(data: ModelData) {
         for (mesh in data.meshes) {
-            val stride = mesh.attributes.sumOf { it.numComponents }
-            val offsets = ArrayList<Int>()
-            var offset = 0
-            for (a in mesh.attributes) {
-                if (a.usage == VertexAttributes.Usage.BoneWeight) offsets += offset
-                offset += a.numComponents
-            }
+            val layout = VertexLayout(mesh)
+            val stride = layout.stride
+            val offsets = layout.offsetsOf(VertexAttributes.Usage.BoneWeight)
             if (offsets.isEmpty() || stride == 0) continue
             val v = mesh.vertices
             for (base in 0 until v.size / stride * stride step stride) {

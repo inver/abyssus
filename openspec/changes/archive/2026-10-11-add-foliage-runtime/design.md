@@ -113,7 +113,7 @@ OBJECT controls expose None/Box/Sphere/Capsule. Imported DETAIL colliders are ig
 editor offers no collider controls on DETAIL and does not silently erase unknown payload. Changing OBJECT → DETAIL
 with an existing collider requires clearing the incompatible collider explicitly, with validation feedback.
 
-Classify the full diff: collider-only Apply uses `FoliageMetaEdits` and `editSceneJson`, preserves bake/mask bytes and
+Classify the full diff: collider-only Apply uses `FoliageMetaEdits` and `editSceneDocument`, preserves bake/mask bytes and
 mtime, never scatters, and works with stale/missing bakes if the metadata can be edited. Mixed generation edits retain
 the existing preview and composite binary/document transaction. Unknown nested collider fields survive edits to known
 fields; None removes only collider. Native admission, writability and captured document revision are rechecked before
@@ -188,7 +188,7 @@ Integrate runtime rendering before rewriting shipped content. Retain downloaded 
 | Physics asset read/build/step/removal | Game/play-host world thread | Independent world snapshot; cancellation/failure cleanup |
 | IDE collider controls | EDT | Properties view/controller; no native Jolt or new per-frame scans |
 | IDE preparation | Existing owned worker | Snapshot current unsaved text under required model-read access; bounded work |
-| IDE metadata write/publication | Write-safe EDT command | `editSceneJson`; native/revision/writability recheck; stale/disposed result discarded |
+| IDE metadata write/publication | Write-safe EDT command | `editSceneDocument`; native/revision/writability recheck; stale/disposed result discarded |
 | Migration tool | Standalone CPU JVM | Explicit output; GL-free; canceled/failed staging never changes authored files |
 
 The configured 252 baseline remains. Consult attached SDK before selecting new APIs. The general scheduling/ownership

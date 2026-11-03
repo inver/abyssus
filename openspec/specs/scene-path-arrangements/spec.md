@@ -114,11 +114,26 @@ than 1000 copies SHALL be refused with a message and leave the file unchanged.
 - **WHEN** the user sets `spacing` of a 2000-unit line to `1`
 - **THEN** the file is unchanged and a message says the arrangement would make more than 1000 copies
 
+### Requirement: The line is a smooth spline through its points
+
+The line of an arrangement SHALL be a centripetal Catmull-Rom spline that passes through every control point; with two
+points it is straight. The Scene view SHALL draw this curve only while the arrangement's control points are edited, and SHALL NOT select an arrangement by clicking where the curve runs; moving a control point reshapes it. Copies SHALL be laid out along the same curve.
+
+#### Scenario: A bend is rounded
+
+- **WHEN** an arrangement has the points (0, 0, 0), (10, 0, 0) and (10, 0, 10)
+- **THEN** the drawn line passes through all three points and curves through the corner instead of turning sharply
+
+#### Scenario: Moving a control point
+
+- **WHEN** the user drags the handle of the middle point of a selected arrangement
+- **THEN** the curve and its copies follow the point while it moves, and the file gains the new point on release
+
 ### Requirement: Copies are spaced along the line
 
 Copies SHALL stand at stations along the line, measured on the ground plane (X and Z) from the first point: at `0`,
 `spacing`, `2 x spacing` and so on up to the end of an open line, or up to but not including the full length of a
-closed line, which runs back from the last point to the first.
+closed line, which runs back from the last point to the first. Distances are measured along the spline (see above).
 
 #### Scenario: Open line
 
@@ -128,7 +143,7 @@ closed line, which runs back from the last point to the first.
 #### Scenario: Closed square
 
 - **WHEN** a closed line runs around a 20 by 20 square with spacing `10`
-- **THEN** there are eight stations, two on each side, and none repeats the first point
+- **THEN** the stations run around the smooth loop through the corners, the first at the first point, and none repeats it
 
 #### Scenario: Line shorter than the spacing
 
@@ -151,10 +166,13 @@ right. The slot number SHALL count copies in that order along the line.
 - **WHEN** `sides` is `CENTER` and `offset` is `3`
 - **THEN** every copy stands on the line
 
-### Requirement: Copies sit on the terrain
+### Requirement: Copies sit on the terrain until the line is edited
 
-Each copy's position Y SHALL be the height of the highest terrain surface at its X and Z. A copy over no terrain SHALL
-take the height of the line at its station, interpolated between the points' heights.
+When an arrangement is first drawn, and when Regenerate is used, each copy's position Y SHALL be the height of the highest
+terrain surface at its X and Z. A copy over no terrain SHALL take the height of the line at its station, interpolated
+between the points' heights. When the control points are edited and applied, each copy SHALL take the height of the line
+at its station, so a raised point raises the copies, in the air as well as on the ground; Drop path to terrain and Drop to
+terrain on a point put the points on the terrain.
 
 #### Scenario: On the fixture terrain
 
@@ -187,27 +205,66 @@ rows face each other. With `alignToPath` `false` a copy SHALL be turned by `yawO
 - **WHEN** a line runs along +X with `sides` `BOTH`
 - **THEN** left copies have no rotation and right copies are turned half a turn about Y
 
-### Requirement: Selecting an arrangement shows its path
+### Requirement: Selecting a copy selects the whole arrangement
 
-Selecting an arrangement's row in the tree, or clicking its line in the Scene view, SHALL select it and show the line
-with a handle on each point and a handle in the middle of each segment. Selecting anything else SHALL hide them.
-Clicking a copy SHALL select that copy, not the arrangement.
-
-#### Scenario: Select from the tree
-
-- **WHEN** the user selects the `Path 11` row
-- **THEN** the Scene view shows its line, two point handles and one middle handle
+Clicking a copy that an arrangement lists in its `slots`, or selecting the
+arrangement's row in the tree, SHALL select the arrangement as a whole: its row is selected in the tree, every linked
+copy is outlined in the Scene view. Clicking another copy of the same arrangement SHALL keep the
+arrangement selected. A model that belongs to no arrangement SHALL select itself, as before.
 
 #### Scenario: Click a copy
 
-- **WHEN** the user clicks copy `13` in the Scene view
-- **THEN** entity `13` is selected and the path handles are hidden
+- **WHEN** the user clicks copy `13` of `Path 11` in the Scene view
+- **THEN** `Path 11` is selected in the tree and copies `12` to `16` are all outlined
+
+#### Scenario: Click another copy
+
+- **WHEN** the user then clicks copy `15`
+- **THEN** `Path 11` is still the selection
+
+### Requirement: Editing the control points of the spline
+
+The Properties panel of an arrangement SHALL offer **Edit** and **Apply** buttons in its `PathArrangementComponent`
+section. Edit starts the control point edit of that arrangement and is replaced by Drop path to terrain, Close and Apply. Changes made while the edit is on are kept as an unwritten draft: Apply writes them and ends the edit, Close drops them and ends the edit, and Drop path to terrain puts every control point of the draft on the ground.
+Only while the edit is on, the Scene view SHALL show a handle on each control point. Pressing a control point handle SHALL give that point the move gizmo (world axes); dragging a
+gizmo handle moves the point and shows the curve following; the points are written only by Apply, as one undoable edit. Pressing the curve between two control points SHALL insert a control point there, on the curve, and give it the gizmo. A click off the handles and the curve lets go of the
+point and keeps the edit on. Selecting anything else ends the edit, and Esc during a drag restores the point.
+
+#### Scenario: Edit and move
+
+- **WHEN** the user selects `Path 11`, presses Edit, presses the middle control point and drags the gizmo's X arrow
+- **THEN** the curve follows the point, and the file is unchanged until Apply
+
+#### Scenario: Apply
+
+- **WHEN** the user has moved a point and presses Apply
+- **THEN** the file holds the new points and the copies are regenerated, the handles and the gizmo are hidden and Edit is shown again
+
+#### Scenario: Close
+
+- **WHEN** the user has moved a point and presses Close
+- **THEN** the file is unchanged, the handles and the gizmo are hidden and Edit is shown again
+
+#### Scenario: Drop path to terrain
+
+- **WHEN** the user presses Drop path to terrain
+- **THEN** every control point of the draft is on the terrain height under it, and the file is unchanged until Apply
+
+### Requirement: The spline is drawn four pixels wide
+
+The line of an arrangement SHALL be drawn 4 screen pixels wide at any distance from the camera. The control objects
+(the diamonds on the control points and on the segments) SHALL be drawn with edges 3 screen pixels wide, and a control
+object is pressed by pressing on any edge of it.
+
+#### Scenario: Pressing an edge
+
+- **WHEN** the edit is on and the user presses on an edge of the diamond of a control point
+- **THEN** that point is selected and wears the move gizmo
 
 ### Requirement: Editing the path regenerates the copies
 
-Dragging a point handle SHALL move that point over the terrain under the cursor, and dragging a middle handle SHALL
-insert a new point there. Remove Point on a point handle's right-click menu SHALL remove it when at least two points
-would remain. While dragging, the markers SHALL follow; releasing SHALL write the new points and regenerate the copies.
+Dragging a point handle SHALL move that point over the terrain under the cursor. Remove Point on a point handle's right-click menu, and Backspace or Delete on the selected point, SHALL remove it when at least two points
+would remain, and Drop to terrain on that menu SHALL put the point on the ground. While dragging, the markers SHALL follow; Apply SHALL write the new points and regenerate the copies.
 
 #### Scenario: Drag the end point
 

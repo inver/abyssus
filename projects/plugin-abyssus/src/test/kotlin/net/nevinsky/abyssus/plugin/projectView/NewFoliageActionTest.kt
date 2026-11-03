@@ -84,7 +84,6 @@ class NewFoliageActionTest : BasePlatformTestCase() {
         assertEquals("the asset is selected in the view", "foliage_meadow", selected)
 
         val meta = metaOf("foliage_meadow")
-        assertEquals("abyssus", meta["format"].asText())
         assertEquals(1, meta["formatVersion"].asInt())
         assertEquals(MetaType.FOLIAGE.name, meta["type"].asText())
         val uuid = meta["uuid"].asText()
@@ -179,7 +178,7 @@ class NewFoliageActionTest : BasePlatformTestCase() {
     fun testAProjectWithoutATerrainDoesNotOfferTheAction() {
         File(projectDir, "P.abss").writeText("""{"format":"abyssus","formatVersion":1,"name":"P"}""")
         File(projectDir, "scenes").mkdirs()
-        File(projectDir, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{}}}""")
+        File(projectDir, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{}}""")
         File(projectDir, "assets/tree").mkdirs()
         File(projectDir, "assets/tree/meta.json")
             .writeText("""{"format":"abyssus","formatVersion":1,"version":1,"uuid":"u-tree","type":"MODEL","additional":{}}""")

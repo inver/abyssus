@@ -114,7 +114,7 @@ fun planBindings(collection: UiCollection): UiBindingPlan {
     val diagnostics = mutableListOf<UiBindingDiagnostic>()
     val disabled = HashSet<String>()
     val ignored = HashSet<Pair<String, String>>()
-    fun walk(widget: UiWidget, item: Map<String, UiBindingType>?) {
+    for (screen in collection.screens) collection.walkScoped(screen.root, "") { widget, _, item ->
         val type = widget.type
         if (type != null) {
             for ((property, name) in widget.bindings) {
@@ -137,15 +137,7 @@ fun planBindings(collection: UiCollection): UiBindingPlan {
                 }
             }
         }
-        widget.children.forEach { walk(it, item) }
-        if (type == UiWidgetType.LIST) {
-            val record = widget.bindings["items"]?.let(collection::binding)
-                ?.takeIf { it.type == UiBindingType.LIST }?.fields?.associate { it.name to it.type }.orEmpty()
-            widget.template?.let { walk(it, record) }
-            widget.empty?.let { walk(it, null) }
-        }
     }
-    collection.screens.forEach { walk(it.root, null) }
     return UiBindingPlan(diagnostics, disabled, ignored)
 }
 

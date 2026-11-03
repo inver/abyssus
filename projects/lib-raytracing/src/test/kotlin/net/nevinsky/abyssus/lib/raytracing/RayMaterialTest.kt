@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.lib.raytracing
 
+import com.badlogic.gdx.math.Vector3
+
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -11,13 +13,13 @@ class RayMaterialTest {
     private val reference = RayMaterialReference()
     @Test fun defaultDiffuseSpecularAndEmissionAreIndependent() {
         val material = RayMaterial(baseColor = RayColor(.4f,.2f,.1f), specular = RayColor(.1f,.1f,.1f), emissive = RayColor(.3f,0f,0f))
-        val value = reference.direct(material, material.baseColor, RayVec3(0f,0f,1f), RayVec3(0f,0f,1f), RayVec3(0f,0f,1f), RayColor(2f,2f,2f))
+        val value = reference.direct(material, material.baseColor, Vector3(0f,0f,1f), Vector3(0f,0f,1f), Vector3(0f,0f,1f), RayColor(2f,2f,2f))
         assertEquals(1f,value.r,1e-5f)
         assertEquals(.6f,value.g,1e-5f)
     }
     @Test fun pbrRoughMetalHasRasterGgxPeak() {
         val material = RayMaterial(kind=RayMaterialKind.PBR,baseColor=RayColor(.8f,.4f,.2f),metallic=1f,roughness=1f)
-        val value = reference.direct(material,material.baseColor,RayVec3(0f,0f,1f),RayVec3(0f,0f,1f),RayVec3(0f,0f,1f),RayColor(1f,1f,1f))
+        val value = reference.direct(material,material.baseColor,Vector3(0f,0f,1f),Vector3(0f,0f,1f),Vector3(0f,0f,1f),RayColor(1f,1f,1f))
         assertEquals(.2f,value.r,1e-5f)
         assertEquals(.1f,value.g,1e-5f)
     }
@@ -41,12 +43,12 @@ class RayMaterialTest {
         val sky=RayTexture("sky",4,2,rgba,RayWrap.REPEAT,RayWrap.CLAMP_TO_EDGE,RayFilter.NEAREST)
         val environment=RayEnvironment(texture=0,intensity=3f)
         // -Z is the centre column, +X is a quarter turn right of it, straight up is the top row
-        assertEquals(0f,reference.skyColor(environment,listOf(sky),RayVec3(-.1f,0f,-1f)).g,1e-6f)
-        assertEquals(6f,reference.skyColor(environment,listOf(sky),RayVec3(-.1f,.3f,-1f)).r,1e-5f)
-        assertEquals(6f,reference.skyColor(environment,listOf(sky),RayVec3(.1f,.3f,-1f)).g,1e-5f)
+        assertEquals(0f,reference.skyColor(environment,listOf(sky),Vector3(-.1f,0f,-1f)).g,1e-6f)
+        assertEquals(6f,reference.skyColor(environment,listOf(sky),Vector3(-.1f,.3f,-1f)).r,1e-5f)
+        assertEquals(6f,reference.skyColor(environment,listOf(sky),Vector3(.1f,.3f,-1f)).g,1e-5f)
         val turned=environment.copy(rotation=90f)
-        assertNotEquals(reference.skyColor(environment,listOf(sky),RayVec3(-.1f,.3f,-1f)),reference.skyColor(turned,listOf(sky),RayVec3(-.1f,.3f,-1f)))
-        assertEquals(RayColor(.05f,.1f,.2f),reference.skyColor(RayEnvironment(),emptyList(),RayVec3(0f,1f,0f)))
+        assertNotEquals(reference.skyColor(environment,listOf(sky),Vector3(-.1f,.3f,-1f)),reference.skyColor(turned,listOf(sky),Vector3(-.1f,.3f,-1f)))
+        assertEquals(RayColor(.05f,.1f,.2f),reference.skyColor(RayEnvironment(),emptyList(),Vector3(0f,1f,0f)))
     }
     @Test fun fogIsTheRasterQuadraticRamp() {
         assertEquals(0f,reference.fogAmount(.5f,0f),1e-7f)
@@ -55,8 +57,8 @@ class RayMaterialTest {
         assertEquals(0f,reference.fogAmount(0f,100f),0f)
     }
     @Test fun reflectionSamplingIsDeterministicAndStaysAboveTheSurface() {
-        val normal=RayVec3(0f,1f,0f); val view=RayVec3(0f,1f,1f).unit()
-        val mirror=RayVec3(0f,1f,-1f).unit()
+        val normal=Vector3(0f,1f,0f); val view=Vector3(0f,1f,1f).unit()
+        val mirror=Vector3(0f,1f,-1f).unit()
         val smooth=reference.reflectionDirection(normal,view,.04f,3,5)
         assertEquals(1f,smooth.dot(mirror),1e-3f)
         assertEquals(smooth,reference.reflectionDirection(normal,view,.04f,3,5))

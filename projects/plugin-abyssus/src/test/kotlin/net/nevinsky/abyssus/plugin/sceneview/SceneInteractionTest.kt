@@ -17,9 +17,8 @@ import net.nevinsky.abyssus.lib.core.editor.pick.ScenePreview
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneQueries
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.lib.core.editor.pick.ViewSize
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-
 import com.badlogic.gdx.math.Vector3
+
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoAxis
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode
@@ -45,16 +44,16 @@ class SceneInteractionTest {
     )
 
     private class Setup(val renderer: SceneRenderer, val orbit: OrbitCamera, val interaction: SceneInteraction) {
-        val picked = mutableListOf<String>()
-        val transforms = mutableListOf<Pair<String, TransformEdit>>()
+        val picked = mutableListOf<Long>()
+        val transforms = mutableListOf<Pair<Long, TransformEdit>>()
     }
 
     /** The real picking queries over what a headless frame published, except that the height below can be stated. */
-    private class FakeQueries(private val real: SceneQueries, private val ground: ((String) -> Float?)?) : SceneQueries by real {
-        override fun groundBelow(entityId: String): Float? = if (ground != null) ground.invoke(entityId) else real.groundBelow(entityId)
+    private class FakeQueries(private val real: SceneQueries, private val ground: ((Long) -> Float?)?) : SceneQueries by real {
+        override fun groundBelow(entityId: Long): Float? = if (ground != null) ground.invoke(entityId) else real.groundBelow(entityId)
     }
 
-    private fun setup(orbit: OrbitCamera = OrbitCamera(CameraParams.DEFAULT), ground: ((String) -> Float?)? = null): Setup {
+    private fun setup(orbit: OrbitCamera = OrbitCamera(CameraParams.DEFAULT), ground: ((Long) -> Float?)? = null): Setup {
         val renderer = testRenderer().also { it.params = mainParams }
         renderer.updateCamera(width, height, orbit)
         val interaction = SceneInteraction(renderer.state, FakeQueries(renderer.queries, ground), orbit)
@@ -65,7 +64,7 @@ class SceneInteractionTest {
         }
     }
 
-    private fun screenOf(r: SceneRenderer, p: Vec3): Pair<Int, Int> {
+    private fun screenOf(r: SceneRenderer, p: Vector3): Pair<Int, Int> {
         val v = Vector3(p.x, p.y, p.z)
         r.frameCamera.project(v, 0f, 0f, width.toFloat(), height.toFloat())
         return v.x.toInt() to (height - v.y.toInt())
@@ -74,15 +73,15 @@ class SceneInteractionTest {
     private val cameraPosition get() = mainParams.content.cameras.single().position
 
     /** A scene view looking at entity 0 with the Move gizmo selected on it. */
-    private fun movingModel(ground: ((String) -> Float?)? = null): Setup {
-        val target = mainParams.content.models.first { it.entityId == "0" }.transform.position
+    private fun movingModel(ground: ((Long) -> Float?)? = null): Setup {
+        val target = mainParams.content.models.first { it.entityId == 0L }.transform.position
         val s = setup(OrbitCamera(target, 12f, 0.4f, 0.4f), ground)
-        s.renderer.state.selectedId = "0"
+        s.renderer.state.selectedId = 0L
         s.renderer.updateCamera(width, height, s.orbit)
         return s
     }
 
-    private fun droppingCamera(height: Float?): Setup = setup(ground = { height }).also { it.renderer.state.selectedId = "4" }
+    private fun droppingCamera(height: Float?): Setup = setup(ground = { height }).also { it.renderer.state.selectedId = 4L }
 
     @Test fun selectModeShowsNoHandlesAndAPressOnTheFormerHandleDoesNotDrag() {
         val s = movingModel()
@@ -96,7 +95,7 @@ class SceneInteractionTest {
         s.interaction.released(tip.first + 40, tip.second + 10, true)
         assertTrue("a drag orbits the camera", s.orbit.yaw != yawBefore)
         assertTrue("select mode writes nothing", s.transforms.isEmpty())
-        assertEquals("the selection stays", "0", s.interaction.selectedId)
+        assertEquals("the selection stays", 0L, s.interaction.selectedId)
     }
 
     @Test fun switchingBackToMoveShowsTheArrowsAgain() {
@@ -132,8 +131,8 @@ class SceneInteractionTest {
         assertTrue(s.interaction.canDrop)
         s.interaction.drop()
         val (id, edit) = s.transforms.single()
-        assertEquals("4", id)
-        assertEquals(Vec3(cameraPosition.x, 2.5f, cameraPosition.z), edit.position)
+        assertEquals(4L, id)
+        assertEquals(Vector3(cameraPosition.x, 2.5f, cameraPosition.z), edit.position)
         assertNull(edit.rotation); assertNull(edit.direction)
         assertEquals(mainParams.content.cameras.single().rotation, s.renderer.content.cameras.single().rotation)
         assertEquals(edit.position, s.renderer.content.cameras.single().position)
@@ -146,14 +145,14 @@ class SceneInteractionTest {
     }
     @Test fun terrainsAndTheViewCameraCannotDrop() {
         val s = droppingCamera(0f)
-        s.interaction.viewCamera = "4"; assertFalse(s.interaction.canDrop); s.interaction.drop()
-        s.interaction.viewCamera = null; s.renderer.state.selectedId = "1"; assertFalse(s.interaction.canDrop); s.interaction.drop()
+        s.interaction.viewCamera = 4L; assertFalse(s.interaction.canDrop); s.interaction.drop()
+        s.interaction.viewCamera = null; s.renderer.state.selectedId = 1L; assertFalse(s.interaction.canDrop); s.interaction.drop()
         assertTrue(s.transforms.isEmpty())
     }
     @Test fun aLightDropsUsingItsMarkerBottom() {
         val s = setup(ground = { 2f })
-        val light = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"9":{"components":{"TypeComponent":{"type":"LIGHT_POINT"},"LightComponent":{"light":{}},"PositionComponent":{"localPosition":{"x":1,"y":8,"z":3}}}}}}}"""))
-        s.renderer.params = mainParams.copy(content = light); s.renderer.state.selectedId = "9"
+        val light = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"9":{"type":"LIGHT_POINT","components":{"LightComponent":{"light":{}},"PositionComponent":{"localPosition":{"x":1,"y":8,"z":3}}}}}}"""))
+        s.renderer.params = mainParams.copy(content = light); s.renderer.state.selectedId = 9L
         assertTrue(s.interaction.canDrop)
         s.interaction.drop()
         val position = s.transforms.single().second.position!!
@@ -178,7 +177,7 @@ class SceneInteractionTest {
     }
     @Test fun aParamsChangeRechecksDropAfterTheNextFrameEvenWithUnchangedDrawnIds() {
         var ground: Float? = null
-        val s = setup(ground = { ground }); s.renderer.state.selectedId = "4"
+        val s = setup(ground = { ground }); s.renderer.state.selectedId = 4L
         var changes = 0; s.interaction.onStateChanged = { changes++ }
         s.interaction.frameRendered(1L)
         s.interaction.paramsChanged(mainParams) // query still sees last frame's geometry
@@ -191,7 +190,7 @@ class SceneInteractionTest {
         val s = droppingCamera(1.234f)
         val original = mainParams.content.cameras.single()
         s.renderer.params = mainParams.copy(content = mainParams.content.copy(
-            cameras = listOf(original.copy(position = original.position.copy(y = 10000f)))))
+            cameras = listOf(original.copy(position = Vector3(original.position).apply { y = 10000f }))))
         s.interaction.drop()
         assertEquals(1.734f, s.transforms.single().second.position!!.y, 1e-5f)
         assertFalse(s.interaction.canDrop)
@@ -201,7 +200,7 @@ class SceneInteractionTest {
 
     @Test fun canDropTurnsOnWhenTheDrawnListsChange() {
         var ground: Float? = null
-        val s = setup(ground = { ground }); s.renderer.state.selectedId = "4"
+        val s = setup(ground = { ground }); s.renderer.state.selectedId = 4L
         var changes = 0; s.interaction.onStateChanged = { changes++ }
         s.interaction.frameRendered(0L); assertFalse(s.interaction.canDrop)
         ground = 0f; s.interaction.frameRendered(1L)
@@ -211,7 +210,7 @@ class SceneInteractionTest {
     }
     @Test fun anUnchangedDrawnVersionFiresNoStateChange() {
         var lookups = 0
-        val s = setup(ground = { lookups++; null }); s.renderer.state.selectedId = "4"
+        val s = setup(ground = { lookups++; null }); s.renderer.state.selectedId = 4L
         var changes = 0; s.interaction.onStateChanged = { changes++ }
         s.interaction.frameRendered(1L)
         val before = lookups
@@ -224,14 +223,14 @@ class SceneInteractionTest {
         val s = setup(OrbitCamera(cameraPosition, 10f, 0f, 0f))
         s.interaction.pressed(width / 2, height / 2, true)
         s.interaction.released(width / 2, height / 2, true)
-        assertEquals("4", s.interaction.selectedId)
-        assertEquals(listOf("4"), s.picked)
+        assertEquals(4L, s.interaction.selectedId)
+        assertEquals(listOf(4L), s.picked)
     }
 
     @Test
     fun aClickOnEmptySpaceClearsTheSelection() {
         val s = setup(OrbitCamera(cameraPosition, 10f, 0f, 0f))
-        s.renderer.state.selectedId = "4"
+        s.renderer.state.selectedId = 4L
         s.interaction.pressed(5, 5, true)
         s.interaction.released(5, 5, true)
         assertNull(s.interaction.selectedId)
@@ -241,7 +240,7 @@ class SceneInteractionTest {
     @Test
     fun aSelectedEntityThatLeavesTheSceneIsDeselected() {
         val s = setup()
-        s.renderer.state.selectedId = "0"
+        s.renderer.state.selectedId = 0L
         s.interaction.paramsChanged(SceneRenderParams.DEFAULT)
         assertNull(s.interaction.selectedId)
     }
@@ -259,8 +258,8 @@ class SceneInteractionTest {
     @Test
     fun theSelectorListsFreeCameraAndTheSceneCamerasByName() {
         assertEquals(listOf("Free camera", "Camera 4"), cameraChoices(mainParams.content, "Free camera").map { it.label })
-        assertEquals(listOf(null, "4"), cameraChoices(mainParams.content, "Free camera").map { it.id })
-        val unnamed = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"8":{"components":{"CameraComponent":{"camera":{}}}}}}}"""))
+        assertEquals(listOf(null, 4L), cameraChoices(mainParams.content, "Free camera").map { it.id })
+        val unnamed = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"8":{"components":{"CameraComponent":{"camera":{}}}}}}"""))
         assertEquals("8", cameraChoices(unnamed, "Free camera")[1].label)
     }
 
@@ -269,7 +268,7 @@ class SceneInteractionTest {
         val s = setup()
         var changed = 0
         s.interaction.onStateChanged = { changed++ }
-        s.interaction.viewCamera = "4"
+        s.interaction.viewCamera = 4L
         s.interaction.paramsChanged(SceneRenderParams.DEFAULT)
         assertNull(s.interaction.viewCamera)
         assertTrue(changed >= 2)
@@ -281,19 +280,19 @@ class SceneInteractionTest {
         val handles = s.renderer.queries.gizmoHandles(height)!!
         val origin = handles.origin
         val tip = screenOf(s.renderer, handles.tip(GizmoAxis.X))
-        val farther = screenOf(s.renderer, Vec3(origin.x + 2 * handles.size, origin.y, origin.z))
+        val farther = screenOf(s.renderer, Vector3(origin.x + 2 * handles.size, origin.y, origin.z))
         val yaw = s.orbit.yaw
         val pitch = s.orbit.pitch
         s.interaction.pressed(tip.first, tip.second, true)
         assertTrue(s.interaction.isDragging)
         s.interaction.dragged(farther.first, farther.second, true)
         // shown live over the scene before anything is written
-        assertEquals(origin.x + handles.size, s.renderer.content.models.first { it.entityId == "0" }.transform.position.x, handles.size * 0.1f)
+        assertEquals(origin.x + handles.size, s.renderer.content.models.first { it.entityId == 0L }.transform.position.x, handles.size * 0.1f)
         assertTrue(s.transforms.isEmpty())
         s.interaction.released(farther.first, farther.second, true)
         assertEquals(1, s.transforms.size)
         val (id, edit) = s.transforms.single()
-        assertEquals("0", id)
+        assertEquals(0L, id)
         assertEquals(origin.x + handles.size, edit.position!!.x, handles.size * 0.1f)
         assertEquals(origin.y, edit.position!!.y, 1e-3f)
         assertEquals(origin.z, edit.position!!.z, 1e-3f)
@@ -307,7 +306,7 @@ class SceneInteractionTest {
         val s = movingModel()
         val q = com.badlogic.gdx.math.Quaternion(Vector3.Y, 90f)
         val turned = mainParams.content.models.map {
-            if (it.entityId == "0") it.copy(transform = it.transform.copy(rotation = net.nevinsky.abyssus.lib.core.editor.content.Quat(q.x, q.y, q.z, q.w))) else it
+            if (it.entityId == 0L) it.copy(transform = it.transform.copy(rotation = com.badlogic.gdx.math.Quaternion(q.x, q.y, q.z, q.w))) else it
         }
         s.renderer.params = mainParams.copy(content = mainParams.content.copy(models = turned))
         s.renderer.state.gizmoSpace = space
@@ -326,7 +325,7 @@ class SceneInteractionTest {
         assertEquals(origin.x, tipVector.x, 1e-4f)
         assertEquals(origin.z - handles.size, tipVector.z, 1e-4f)
         val tip = screenOf(s.renderer, tipVector)
-        val farther = screenOf(s.renderer, Vec3(origin.x, origin.y, origin.z - 2 * handles.size))
+        val farther = screenOf(s.renderer, Vector3(origin.x, origin.y, origin.z - 2 * handles.size))
         s.interaction.pressed(tip.first, tip.second, true)
         assertTrue(s.interaction.isDragging)
         s.interaction.dragged(farther.first, farther.second, true)
@@ -344,13 +343,13 @@ class SceneInteractionTest {
         val handles = s.renderer.queries.gizmoHandles(height)!!
         val origin = handles.origin
         val tip = screenOf(s.renderer, handles.tip(GizmoAxis.X))
-        val farther = screenOf(s.renderer, Vec3(origin.x + 2 * handles.size, origin.y, origin.z))
+        val farther = screenOf(s.renderer, Vector3(origin.x + 2 * handles.size, origin.y, origin.z))
         s.interaction.pressed(tip.first, tip.second, true)
         s.interaction.dragged(farther.first, farther.second, true)
         s.interaction.escape()
         assertFalse(s.interaction.isDragging)
         assertTrue(s.transforms.isEmpty())
-        assertEquals(origin.x, s.renderer.content.models.first { it.entityId == "0" }.transform.position.x, 1e-4f)
+        assertEquals(origin.x, s.renderer.content.models.first { it.entityId == 0L }.transform.position.x, 1e-4f)
     }
 
     @Test
@@ -359,7 +358,7 @@ class SceneInteractionTest {
         val handles = s.renderer.queries.gizmoHandles(height)!!
         val origin = handles.origin
         val tip = screenOf(s.renderer, handles.tip(GizmoAxis.X))
-        val farther = screenOf(s.renderer, Vec3(origin.x + 1.37f * handles.size, origin.y, origin.z))
+        val farther = screenOf(s.renderer, Vector3(origin.x + 1.37f * handles.size, origin.y, origin.z))
         s.interaction.pressed(tip.first, tip.second, true)
         s.interaction.dragged(farther.first, farther.second, true)
         s.interaction.released(farther.first, farther.second, true)
@@ -377,7 +376,7 @@ class SceneInteractionTest {
         s.interaction.released(60, 5, true)
         assertTrue(s.orbit.yaw != yaw)
         assertTrue(s.transforms.isEmpty())
-        assertEquals("0", s.interaction.selectedId)
+        assertEquals(0L, s.interaction.selectedId)
     }
 
     @Test
@@ -387,7 +386,7 @@ class SceneInteractionTest {
         s.interaction.pressed(tip.first, tip.second, true)
         s.interaction.released(tip.first, tip.second, true)
         assertTrue(s.transforms.isEmpty())
-        assertEquals("0", s.interaction.selectedId)
+        assertEquals(0L, s.interaction.selectedId)
         assertTrue(s.renderer.state.preview.isEmpty())
     }
 
@@ -396,17 +395,17 @@ class SceneInteractionTest {
         val s = movingModel()
         val handles = s.renderer.queries.gizmoHandles(height)!!
         val tip = screenOf(s.renderer, handles.tip(GizmoAxis.X))
-        val farther = screenOf(s.renderer, Vec3(handles.origin.x + 2 * handles.size, handles.origin.y, handles.origin.z))
-        val start = mainParams.content.models.first { it.entityId == "0" }.transform.position
+        val farther = screenOf(s.renderer, Vector3(handles.origin.x + 2 * handles.size, handles.origin.y, handles.origin.z))
+        val start = mainParams.content.models.first { it.entityId == 0L }.transform.position
         s.interaction.pressed(tip.first, tip.second, true)
         s.interaction.dragged(farther.first, farther.second, true)
         s.interaction.escape()
         assertFalse(s.interaction.isDragging)
-        assertEquals(start, s.renderer.content.models.first { it.entityId == "0" }.transform.position)
+        assertEquals(start, s.renderer.content.models.first { it.entityId == 0L }.transform.position)
         s.interaction.dragged(farther.first + 10, farther.second, true)
         s.interaction.released(farther.first, farther.second, true)
         assertTrue(s.transforms.isEmpty())
-        assertEquals("0", s.interaction.selectedId)
+        assertEquals(0L, s.interaction.selectedId)
     }
 
     @Test
@@ -415,7 +414,7 @@ class SceneInteractionTest {
         s.interaction.onTransform = { _, _ -> false }
         val handles = s.renderer.queries.gizmoHandles(height)!!
         val tip = screenOf(s.renderer, handles.tip(GizmoAxis.X))
-        val farther = screenOf(s.renderer, Vec3(handles.origin.x + 2 * handles.size, handles.origin.y, handles.origin.z))
+        val farther = screenOf(s.renderer, Vector3(handles.origin.x + 2 * handles.size, handles.origin.y, handles.origin.z))
         s.interaction.pressed(tip.first, tip.second, true)
         s.interaction.dragged(farther.first, farther.second, true)
         s.interaction.released(farther.first, farther.second, true)
@@ -429,8 +428,8 @@ class SceneInteractionTest {
         val handles = s.renderer.queries.gizmoHandles(height)!!
         val o = handles.origin
         // a quarter turn about Y: from +X on the ring to +Z... in screen terms, between two points of the Y ring
-        val from = screenOf(s.renderer, Vec3(o.x + handles.size, o.y, o.z))
-        val to = screenOf(s.renderer, Vec3(o.x, o.y, o.z + handles.size))
+        val from = screenOf(s.renderer, Vector3(o.x + handles.size, o.y, o.z))
+        val to = screenOf(s.renderer, Vector3(o.x, o.y, o.z + handles.size))
         s.interaction.pressed(from.first, from.second, true)
         s.interaction.dragged(to.first, to.second, true)
         s.interaction.released(to.first, to.second, true)
@@ -446,26 +445,26 @@ class SceneInteractionTest {
             parseScene(File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText()),
             CameraParams.DEFAULT,
         )
-        val lightPos = params.content.lights.first { it.entityId == "1" }.position
+        val lightPos = params.content.lights.first { it.entityId == 1L }.position
         val s = setup(OrbitCamera(lightPos, 12f, 0.4f, 0f))
         s.renderer.params = params
         s.renderer.updateCamera(width, height, s.orbit)
-        s.renderer.state.selectedId = "1"
+        s.renderer.state.selectedId = 1L
         s.interaction.mode = GizmoMode.ROTATE
         val handles = s.renderer.queries.gizmoHandles(height)!!
         val o = handles.origin
         // a quarter turn about X on the X ring: from +Y to +Z
-        val from = screenOf(s.renderer, Vec3(o.x, o.y + handles.size, o.z))
-        val to = screenOf(s.renderer, Vec3(o.x, o.y, o.z + handles.size))
+        val from = screenOf(s.renderer, Vector3(o.x, o.y + handles.size, o.z))
+        val to = screenOf(s.renderer, Vector3(o.x, o.y, o.z + handles.size))
         s.interaction.pressed(from.first, from.second, true)
         s.interaction.dragged(to.first, to.second, true)
         s.interaction.released(to.first, to.second, true)
         val (id, edit) = s.transforms.single()
-        assertEquals("1", id)
+        assertEquals(1L, id)
         assertNull(edit.position)
         assertNull(edit.rotation)
         val target = edit.target!!
-        assertEquals("0", target.entityId)
+        assertEquals(0L, target.entityId)
         // distance 10 from (0, 10, 0) along the turned direction (about (0, 0, -1)); screen projection truncates
         // the ring pixels, so the drag lands near a quarter turn rather than exactly on it.
         assertEquals(0f, target.position.x, 0.5f)
@@ -477,7 +476,7 @@ class SceneInteractionTest {
     @Test
     fun lookingThroughACameraFreezesOrbitPanAndZoomButNotSelection() {
         val s = setup(OrbitCamera(cameraPosition, 10f, 0f, 0f))
-        s.interaction.viewCamera = "4"
+        s.interaction.viewCamera = 4L
         s.renderer.updateCamera(width, height, s.orbit)
         val yaw = s.orbit.yaw
         val target = s.orbit.target

@@ -43,7 +43,7 @@ internal class StructuralView @JvmOverloads constructor(
         override fun assetField(key: String, label: String): JComponent? {
             val setting = selection as? Structural.Setting ?: return null
             if (key != "skyboxName") return null
-            val model = state.root?.let { scenePanelModel(it, ProjectLayout.abssFor(setting.file) != null).skybox }
+            val model = state.scene?.let { scenePanelModel(it, ProjectLayout.abssFor(setting.file) != null).skybox }
             return SkyboxRow(setting.file, model?.value, model?.browsable == true, browseSkybox).component(label)
         }
     }

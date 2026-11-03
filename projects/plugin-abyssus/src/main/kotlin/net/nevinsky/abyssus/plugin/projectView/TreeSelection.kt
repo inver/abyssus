@@ -19,6 +19,8 @@ fun selectInAbyssusView(project: Project, visitor: TreeVisitor, refresh: Boolean
     val pane = view.getProjectViewPaneById(AbyssusProjectViewPane.ID) ?: return
     if (refresh) pane.updateFromRoot(true)
     val tree = pane.tree ?: return
+    // a created asset's VFS events can start a rebuild after the selection below ran against a tree without the row
+    if (refresh) (pane as? AbyssusProjectViewPane)?.refresh?.selectAfterRebuild(visitor, evenIfIdle = true)
     // after a plugin edit the rebuild is still to come: it selects the row once the tree has it (see selectAfterRebuild)
     if (!refresh && (pane as? AbyssusProjectViewPane)?.refresh?.selectAfterRebuild(visitor) == true) {
         return

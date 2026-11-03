@@ -1,7 +1,7 @@
 # lib-core-editor
 
 The editing engine of Abyssus without the IDE: a plain JVM library on `lib-core`, `lib-raytracing` and `lib-gdx`.
-The plugin bundles it (in its `lib` folder) and keeps only IDE glue: `editSceneJson`'s undoable command,
+The plugin bundles it (in its `lib` folder) and keeps only IDE glue: `editSceneDocument`'s undoable command,
 the tree, tool windows, dialogs, the GL canvas and renderer, actions, file types and VFS wiring. Physics editing kinds are supplied by plugin composition; this library has no physics dependency.
 
 ## Rules
@@ -24,19 +24,21 @@ namespace, including extension providers that use editor value types, must updat
 | Package | Holds |
 |---|---|
 | (root) | `EditorMessages`, `ResourceEditorMessages` |
-| `document` | `SceneJson` (key order and number text kept, reading through `lib-core`'s `NativeJsonTree`), `JsonFormat`, `DocumentParsing`, `AssetMetaReader`, the format aliases, `SceneDocument` / `EntityView` / `SceneEntityTree` (the only code that knows `ecs[.entities].<id>.components`), `DocumentTextEditor` (parse, admit, mutate, admit, print in style), `SceneRaySettings` and `RayMaterialOverrides` (the `rayTracing` blocks) |
-| `components` | `ComponentEditor` (add, update, remove a modeled component), `ComponentCodec`, `BuiltInComponentKinds`, `ComponentReader`, `LightEntities`, `AssetEntities` |
-| `ecs` | `EcsWriter` (Jackson serialization of components and engines; a `SourceBackedComponent` such as `FoliageComponent` is written from its source object) |
-| `content` | Leaf value types: `Vec3`, `Quat`, `Pose`, the placements, `RenderAsset`, `PlacementTransform.toMatrix` |
+| `document` | `DocumentParsing`, `AssetMetaReader`, `AssetMetaTextEditor`, `ProjectTextEditor`, `TextEditOutcome`, `MetaDocument` (plain-value asset reads), `JsonValues` readers |
+| `components` | `ComponentEditor` (add, update, remove a modeled component in place on the `EntityDto`), `BuiltInComponentKinds`, `LightEntities`, `AssetEntities` |
+| `content` | Leaf value types: `Vector3`, `Quaternion`, `Pose`, the placements, `RenderAsset`, `PlacementTransform.toMatrix` |
 | `scene` | The read model: `SceneContent` / `sceneContentOf`, `FoliagePlacement`, `SceneRenderParams` / `renderParamsOf`, `PlacementMapper`, `CameraFrustum`, `LightSet`, `ModelEntity`, `AssetRevisions` |
-| `pick` | `ScenePicker`, `SnapshotSceneQueries` (incl. `terrainOf` / `terrainHit` for painting), `TerrainRestHeight`, `OrbitCamera`, gizmo math (`GizmoDrag`, `GizmoHit`, `GizmoHandles`), `SceneInteraction` (with `GestureDriver` for the press-drag-release gestures, incl. the `Gesture.Painting` stroke and `FoliagePaint`, and `DrawingSession` for path drawing; both plain JVM), `FoliagePaintMode` in `SceneViewState`, `ScenePreview`, `SceneTransformWriter`, `SceneMarkers` / `LineSink` |
+| `pick` | `ScenePicker`, `ScenePreviewLayers`, `SnapshotSceneQueries` (incl. `terrainOf` / `terrainHit` for painting), `TerrainRestHeight`, `OrbitCamera`, gizmo math (`GizmoDrag`, `GizmoHit`, `GizmoHandles`), `SceneInteraction` (with `GestureDriver` for the press-drag-release gestures, incl. the one `Gesture.Brushing` stroke that calls the `BrushStroke` registered for the mode's kind (`SceneInteraction.setBrushStroke`), and `DrawingSession` for path drawing; both plain JVM), `BrushMode` (kind, entity, radius, strength, the resolved `reversed` flag and the kind's `BrushOptions`) in `SceneViewState.brush`, the one terrain brush a view holds, `ScenePreview`, `SceneTransformWriter`, `SceneMarkers` / `LineSink` |
 | `arrange` | Path arrangements: `PathLayout` (stations along a line on X/Z arc length, sides, offset, yaw, the 1000-slot cap), `ArrangementEdits` (`create`, `regenerate`, `detach` over the scene JSON), the `GroundHeight` interface that gives the copies their heights (`GroundHeights` in `pick` implements it from terrains) |
-| `terrain` | Terrain generation, noise, recipe, new-terrain files and checks |
-| `foliage` | Terrain foliage authoring: `FoliageSettingsReader` / `FoliageRead` (typed settings from an `additional` node with validation), the field keys and defaults, `FoliageScatter` (deterministic copy generation), `FoliageBrush` / `MaskRect` (the density-mask brush and its dirty rectangles), `FoliageDraft` (uncommitted settings, masks and dirty chunks), `FoliageMetaEdits` (settings diffs as `DocumentTextEditor` edits), `FoliageColliderEdits` (a layer's `collider` member patched from the edited collider, nested unknown members kept, and the collider-only classification of a diff; `FoliageSettingsReader` validates colliders and `transitions` refuses OBJECT to DETAIL with one) and `NewFoliageFiles` / `FoliageAssetWriter` (planning a new `FOLIAGE` asset) |
+| `brush` | The engine every terrain brush runs on. `BrushPath`: the stamp walk along a world-space drag and the grid cells within a radius, in terrain-local space through the entity matrix. `StampBrush<G>` stamps a `BrushTool<G>` along it: the tool computes one change per footprint cell and channel (`Footprint`, `BrushStamp`) from the `BrushGrid` as it was, and the `BrushTarget<G>` applies them (adds, rounds and clamps, renormalizes) and reports whether a cell changed; the stroke returns the `GridRect` of changed cells. `ByteGrid` is the byte-per-channel grid of a mask; `smoothFalloff`. Shared by `FoliageBrush` and `SculptBrush`, and what a splat brush will implement |
+| `terrain` | Terrain generation, noise, recipe, new-terrain files and checks; `terrain.sculpt` holds the sculpting: `SculptManifestCodec` (the manifest and the delta/base file names), `SculptStateReader` (`None` / `Sculpted` / `Unsafe` from the files and their fingerprints) and `SculptDraft` (the composed and delta heights a stroke edits, with `composeSculpt`). `SculptBrush` is a `StampBrush` over a `SculptTarget` (a `SculptDraft` with its `SculptGrid`); `SculptTool` is a sealed `BrushTool<SculptGrid>` and the tools are `RaiseLowerTool`, `SmoothTool`, `FlattenTool`, `SetHeightTool`, `NoiseTool` (`noiseTool`), `SlopeLimitTool`, `ThermalErosionTool` and `StampTool` (a `StampImage` heightmap, `StampBlend` Add/Max/Min), each computing its changes from the heights before the stamp |
+| `terrain.splat` | The splat map as an RGBA PNG a stroke edits: `SplatImageCodec` decodes and encodes 8-bit non-premultiplied RGBA only (`SplatPixels`, 64 to 2048 pixels, square; anything else is a `SplatImageException` with a `SplatImageProblem`), and `SplatStateReader` turns a terrain folder into `SplatState` (`None` with no map or an unresolved `uuid`, `Ready` with the texture folder, the pixels and the other terrains sharing the map, `Unusable` with a `SplatProblem`) after validating the terrain `meta.json` as native. `SplatDraft` holds the RGBA weights a stroke edits (`grid`, `revision`, the `changed` `GridRect`, `fill(slot)` for the whole map; slot 0 is Base, 1 to 4 are R, G, B, A); `SplatBrush` is a `StampBrush` over a `SplatTarget` that rounds each change in magnitude, applies its sign and clamps to 0 through 255. With **Exclusive** on, raising a channel takes the excess over 255 from the other channels in proportion (largest-remainder rounding, ties by channel order), so the four weights never sum to more than 255; lowering never redistributes. `SplatTool` is a sealed `BrushTool<ByteGrid>` with four channels: `Paint(slot)` (reversed lowers only that channel; the Base slot acts as Erase), `Erase` and `Smooth` (3x3 average) |
+| `foliage` | Terrain foliage authoring: `FoliageSettingsReader` / `FoliageRead` (typed settings from an `additional` node with validation), the field keys and defaults, `FoliageScatter` (deterministic copy generation), `FoliageBrush` (the density-mask brush: a `StampBrush` with `PaintMaskTool` over a `MaskTarget` that rounds the change in magnitude, applies its sign and clamps to 0 through 255), `FoliageDraft` (uncommitted settings, masks and dirty chunks), `FoliageMetaEdits` (settings diffs as `DocumentTextEditor` edits), `FoliageColliderEdits` (a layer's `collider` member patched from the edited collider, nested unknown members kept, and the collider-only classification of a diff; `FoliageSettingsReader` validates colliders and `transitions` refuses OBJECT to DETAIL with one) and `NewFoliageFiles` / `FoliageAssetWriter` (planning a new `FOLIAGE` asset) |
 | `meta` | `AssetMetaEditor` and field descriptions, `MetaRows`, `AssetReferenceChoices`, the panel's entity sections and asset field states |
 | `panel` | The Abyssus Properties panel model, with no Swing: `PanelModel` (`Header`, `Section`, the `Row` kinds, `FieldRef`, `EnableToggle`) and `PanelBuilders`, one pure builder per selection (project, folder, scene, scene setting, `ecs`, entity, component, UI screen, asset by type). A row is dim when the file does not write its value (`FieldValue.isDefault` is key absence, never equality with the default); units come from `ComponentField.unit`; a component section is togglable by `SetEnabledAction`'s rule; `CustomRow` marks where the plugin hosts an existing typed editor (terrain, foliage, faces, HDR, antialiasing). `PanelIcons` names the design's icon keys |
 | `ray` | The ray tracing bridge: `RayBackendService`, `RayBackendSelector`, `RayViewRuntime`, `RayViewFeed`, `RaySceneSnapshots`, `RaySkyBaker` (a display-value sky bake with clouds at a given sky time and a revision per bake), `RayModeState`, diagnostics. The CPU snapshots of models, terrains and skies are in `ray.snapshot` (see Optional CPU companions below). A `RayFrameContext` carries the sky light (six axis colours), the baked sky and the cloud shade on the sun (`sunVisibility`, a `RaySunVisibility` from `raytracing`); a changed light, bake revision or visibility is an `ENVIRONMENT` change that restarts accumulation |
 | `headless` | `HeadlessEditing` (spec `headless-scene-editing`) |
+| `modelmesh` | `ModelMeshLister`: the mesh ids and material ids of a model asset, read without images or GL (`ModelLoader(decodeTextures = false)`), cached per asset until invalidated; the Properties mesh chooser and Add Asset read it off the UI thread. A `RenderComponent`'s `meshId` is an `FieldKind.MESH_ID` field whose choices `EntityAssetChoices.meshes` supplies; `AssetPlacement.storageName` is the name a placement is built under (see `lib-core`, Model variants), and `RaySceneAssets` leases a ray snapshot per variant |
 | `flightgear` | The FlightGear aircraft import: archive, model XML, AC3D and SGI readers, `FlightGearImport` |
 | `modelimport` | The model import: `ModelSource`, `ImportSettings`, `ImportTransform`, `TextureGather`, `ModelImport` |
 | `ui` | Game UI documents (spec `game-ui-authoring`): `UiDocumentEdits`, `UiTextEditor`, `UiRegistryEdits`, `UiAssetTemplate`, `UiTree` / `UiSelection` / `UiHitTest` and `UiLayoutGesture`. See *UI documents* below |
@@ -96,7 +98,7 @@ GL, so the plugin's Import Model dialog can preview exactly what it writes:
 The editor keeps the parsed JSON tree as its model; games and Play keep the Ashley `SceneEngine`; both bind components
 through Jackson to `core.ecs.component` classes (`ComponentReader` in the editor, `EcsLoader` in core). Readers use `SceneDocument` (admitted on
 construction) and `EntityView`; writers address and insert entities through `SceneEntityTree` on a tree that
-`editSceneJson` has admitted.
+`editSceneDocument` has admitted.
 
 ## Components
 
@@ -126,18 +128,18 @@ key); when it is listed in the `slots` of a `PathArrangementComponent`; when it 
 existing copies; or when a component kind passed to the constructor (a registered schema or physics kind) has an
 `ENTITY_REF` field naming it. Unknown components are opaque: no reference is guessed from their numbers, and nothing is
 cleared, detached or retargeted for the caller. `HeadlessEditing.removeEntity` runs it as text; the plugin's Remove Entity
-tree action runs it through `editSceneJson`. `HeadlessEditing.removeEntities` (the foliage helper's built-in-only check)
+tree action runs it through `editSceneDocument`. `HeadlessEditing.removeEntities` (the foliage helper's built-in-only check)
 remains for removing several entities at once.
 
 ## Enabled flag
 
-`SetEnabledAction` (with `EnabledTarget`) writes or removes the optional `enabled: false` on one entity entry or one
-component entry of a scene tree: disabling adds the key, enabling removes it, and no other value, key order or number text
-changes. A `GROUP` entity and the Name, Parent and Position components are not togglable. `HeadlessEditing.setEnabled` runs it
-as text, and the plugin runs it through `editSceneJson` as one undoable command. `sceneContentOf` reads the flag: a disabled
+`SetEnabledAction` (with `EnabledTarget`) sets or clears the disabled bit of an entity's `flags`, or lists or unlists a component in the entity's
+`disabledComponents` (the key is added for the first entry and removed with the last), and no other value, key order or
+number text changes. A `GROUP` entity and the Name, Parent and Position components are not togglable. `HeadlessEditing.setEnabled` runs it
+as text, and the plugin runs it through `editSceneDocument` as one undoable command. `sceneContentOf` reads the flag: a disabled
 entity has no placements (so it is not drawn, shadowed, picked, gizmoed or put in a ray snapshot, while its position still
 answers a look-at), and a disabled `RenderComponent`, `LightComponent`, `CameraComponent`, `FoliageComponent` or
-`PathArrangementComponent` leaves out only its own placement. `EcsWriter` writes the flag back from `EnabledState`.
+`PathArrangementComponent` leaves out only its own placement. `EcsWriter` writes `type`, `flags` and `disabledComponents` back from the entity's `HeaderComponent`.
 
 ## UI documents
 
@@ -160,7 +162,7 @@ no Swing, GL or platform classes.
   a drop over another container reparents) without writing; `commit()` returns the one edit of the whole gesture. Picking
   (`UiHitTest`) goes through `lib-core`'s layout, so it follows clipping and the letterboxed fit.
 - **Persistence boundary.** An edit of an existing document is a text transform and goes through the plugin's
-  `editSceneJson`. Creating a UI asset (a new folder, a new `meta.json`, imported images and fonts) is not a document edit;
+  `editSceneDocument`. Creating a UI asset (a new folder, a new `meta.json`, imported images and fonts) is not a document edit;
   it is an `AssetTransaction` in the plugin that also edits the project file's registry, so creation and registration are
   one undoable command. See `docs/ai/architecture.md`.
 
@@ -168,7 +170,7 @@ no Swing, GL or platform classes.
 
 `HeadlessEditing` validates `.scene`, `.abss` and `meta.json` text and applies the transform, component-field and
 asset-property edits, returning the edited text or a `Refusal` with the reason the plugin shows. It runs the same
-`DocumentTextEditor` that `editSceneJson` runs, so the same input gives byte-identical output
+`SceneTextEditor` that `editSceneDocument` runs, so the same input gives byte-identical output
 (`HeadlessSceneEditingTest` in the plugin compares them).
 
 ## Tests

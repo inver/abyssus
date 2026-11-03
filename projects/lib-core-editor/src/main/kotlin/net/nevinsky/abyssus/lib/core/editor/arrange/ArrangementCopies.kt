@@ -5,36 +5,41 @@
 
 package net.nevinsky.abyssus.lib.core.editor.arrange
 
-import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.core.editor.document.sceneEcsRows
-
-/** The entity of an arrangement or of a copy: its `components` object, or null. */
-private fun components(entity: JsonNode): JsonNode? = entity.get("components")?.takeIf { it.isObject }
+import net.nevinsky.abyssus.lib.core.dto.EntityDto
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 
 /** The entries of the arrangement's `slots` that name an entity (not `-1`); empty for an entity that is no arrangement. */
-private fun slotIds(entity: JsonNode): List<Int> =
-    components(entity)?.get(ARRANGEMENT_COMPONENT)?.get("slots")?.takeIf { it.isArray }
-        ?.mapNotNull { slot -> slot.takeIf { it.isInt && it.asInt() >= 0 }?.asInt() }.orEmpty()
+private fun slotIds(entity: EntityDto?): List<Int> =
+    entity?.component(PathArrangementComponent::class.java)?.slots?.filter { it >= 0 }.orEmpty()
+
+private fun parentOf(entity: EntityDto?): Int? =
+    entity?.component(ParentComponent::class.java)?.parentEntityId
 
 /**
  * How many copies the arrangement [entity] lists in its `slots` (`-1` marks an empty slot); 0 for an entity that has no
  * `PathArrangementComponent`.
  */
-fun arrangementCopyCount(entity: JsonNode): Int = slotIds(entity).size
+fun arrangementCopyCount(entity: EntityDto): Int = slotIds(entity).size
 
 /**
- * The ids of the linked copies of every path arrangement in the scene's [ecs] object: the entities that an
- * arrangement lists in `slots` and that point back to it with a `ParentComponent`. A detached copy (no
- * `ParentComponent`, or one to another entity) is an ordinary entity and is not in the set.
+ * The ids of the linked copies of every path arrangement in [scene]: the entities that an arrangement lists in `slots`
+ * and that point back to it with a `ParentComponent`. A detached copy (no `ParentComponent`, or one to another entity)
+ * is an ordinary entity and is not in the set.
  */
-fun arrangementCopyIds(ecs: JsonNode): Set<String> {
-    val entities = sceneEcsRows(ecs).filter { it.node.isObject && it.name.toIntOrNull() != null }.associate { it.name to it.node }
-    val copies = HashSet<String>()
-    for ((id, entity) in entities) {
+fun arrangementCopyIds(scene: SceneDto): Set<Long> {
+    val copies = HashSet<Long>()
+    for ((id, entity) in scene.ecs) {
         for (slot in slotIds(entity)) {
-            val parent = entities[slot.toString()]?.let(::components)?.get("ParentComponent")?.get("parentEntityId")
-            if (parent != null && parent.isInt && parent.asInt().toString() == id) copies += slot.toString()
+            if (parentOf(scene.entity(slot.toLong())) == id.toInt()) copies += slot.toLong()
         }
     }
     return copies
+}
+
+/** The id of the arrangement that [entityId] is a linked copy of (see [arrangementCopyIds]), or null for any other entity. */
+fun arrangementOwnerOf(scene: SceneDto, entityId: Long): Long? {
+    val parent = parentOf(scene.entity(entityId)) ?: return null
+    return parent.toLong().takeIf { entityId.toInt() in slotIds(scene.entity(it)) }
 }

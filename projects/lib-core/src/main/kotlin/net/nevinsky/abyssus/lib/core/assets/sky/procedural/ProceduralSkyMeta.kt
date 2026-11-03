@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.JsonNode
 
 class ProceduralSkyMeta(
@@ -24,13 +25,16 @@ class ProceduralSkyMeta(
     val lightsScene: JsonNode? = null,
 ) {
     /** True only for the literal boolean `true`; absent, false or any other kind of value keeps the scene's ambient light. */
+    @get:JsonIgnore
     val lightsSceneEnabled: Boolean
         get() = lightsScene?.let { it.isBoolean && it.booleanValue() } ?: false
 
     /** The cloud asset `uuid` [clouds] names, as text; null when it names none. */
+    @get:JsonIgnore
     val cloudsReference: String?
         get() = clouds?.takeIf { it.isTextual }?.textValue()?.takeIf { it.isNotBlank() }
 
+    @get:JsonIgnore
     val params: AtmosphereParams
         get() {
             val d = AtmosphereParams()

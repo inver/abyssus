@@ -6,25 +6,18 @@
 package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.ashley.core.Component
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
+import net.nevinsky.abyssus.lib.core.dto.EntityDto
+import net.nevinsky.abyssus.lib.core.format.EntityType
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
-import net.nevinsky.abyssus.lib.core.editor.arrange.ARRANGEMENT_COMPONENT
-import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementEdits
-import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
-import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
-import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
-import net.nevinsky.abyssus.lib.core.editor.arrange.MAX_ARRANGEMENT_SLOTS
-import net.nevinsky.abyssus.lib.core.editor.arrange.PathLayout
-import net.nevinsky.abyssus.lib.core.editor.components.BuiltInComponentKinds
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
+import net.nevinsky.abyssus.lib.core.editor.arrange.*
 
-/** What an edit of a scene's JSON tree did. The tree is only touched for [Changed]. */
+/** What an edit of a scene did. The scene is only touched for [Changed]. */
 sealed interface EditResult {
     data object Changed : EditResult
 
@@ -34,64 +27,57 @@ sealed interface EditResult {
 }
 
 /**
- * Creates, updates and removes the modeled components of an entity in a scene's JSON tree (`ecs.entities.<id>`): the
- * built-in kinds. Values go through the
- * component codecs, so defaults and number text match what a scene load and write do, and an update applies only the
- * keys that really differ onto the file's own component object.
+ * Creates, updates and removes the modeled components of an entity of a [SceneDto]: the built-in kinds plus the
+ * contributed ones. A field is read and written as text on the component itself, so values match what a scene load and
+ * write do.
  */
 class ComponentEditor(
-    private val jsonProcessor: JsonProcessor,
-    private val ecsWriter: EcsWriter,
     private val messages: EditorMessages,
-    contributions: List<ComponentKind<*>> = emptyList()
+    contributions: List<ComponentKind<*>> = emptyList(),
 ) {
-    constructor(messages: EditorMessages, contributions: List<ComponentKind<*>> = emptyList()) :
-        this(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), messages, contributions)
-
-    constructor(json: JsonProcessor, messages: EditorMessages, contributions: List<ComponentKind<*>> = emptyList()) :
-        this(json, EcsWriter(json), messages, contributions)
-
-    private val reader = ComponentReader(jsonProcessor)
+    private val references = EntityReferences(contributions)
     private val arrangements = ArrangementEdits(messages)
-    val kinds: List<ComponentKind<*>> = BuiltInComponentKinds(reader, ecsWriter).kinds + contributions
+    val kinds: List<ComponentKind<*>> = BuiltInComponentKinds().kinds + contributions
 
-    private val byName = kinds.flatMap { listOf(it.name to it, it.codec.type.name to it) }.toMap()
+    private val byName = kinds.flatMap { listOf(it.name to it, it.type.name to it) }.toMap()
 
     fun kindOf(name: String): ComponentKind<*>? = byName[name]
 
-    private fun entities(root: JsonNode): JsonNode? = SceneEntityTree(root).entities()
-
-    private fun componentsOf(root: JsonNode, entityId: String): ObjectNode? = SceneEntityTree(root).components(entityId)
+    private fun <C : Component> componentOf(entity: EntityDto, kind: ComponentKind<C>): C? =
+        entity.component(kind.type)
 
     /** The modeled kinds [entityId] lacks, in the order the view lists them; empty when the entity is missing. */
-    fun missingKinds(root: JsonNode, entityId: String): List<ComponentKind<*>> {
-        val components = componentsOf(root, entityId) ?: return emptyList()
+    fun missingKinds(scene: SceneDto, entityId: Long): List<ComponentKind<*>> {
+        val entity = scene.entity(entityId) ?: return emptyList()
         return kinds.filter { kind ->
-            kind.name != ARRANGEMENT_COMPONENT && components.fieldNames().asSequence().none { byName[it] === kind }
+            kind.name != PathArrangementComponent::class.simpleName && entity.components.none { kind.type.isInstance(it) }
         }
     }
 
     /** The fields of the component [kindName] of [entityId] with their values, or null when it is not there. */
-    fun read(root: JsonNode, entityId: String, kindName: String): List<FieldValue>? {
+    fun read(scene: SceneDto, entityId: Long, kindName: String): List<FieldValue>? {
         val kind = byName[kindName] ?: return null
-        val node = componentsOf(root, entityId)?.get(kindName) ?: return null
-        val fields = readFields(kind, node)
-        val spotlight = componentsOf(root, entityId)?.get("TypeComponent")?.get("type")?.asText() == "LIGHT_SPOT"
+        val entity = scene.entity(entityId) ?: return null
+        val fields = fieldsOf(kind, entity) ?: return null
+        val spotlight = entity.components.filterIsInstance<net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent>()
+            .firstOrNull()?.type == EntityType.LIGHT_SPOT
         return if (kindName == "LightComponent" && !spotlight) fields.filterNot {
-            it.field in listOf(
-                "coneAngle",
-                "edgeSoftness"
-            )
+            it.field in listOf("coneAngle", "edgeSoftness")
         } else fields
     }
 
-    private fun <C : Component> readFields(kind: ComponentKind<C>, node: JsonNode): List<FieldValue> {
-        val component = kind.codec.read(node)
+    private fun <C : Component> fieldsOf(kind: ComponentKind<C>, entity: EntityDto): List<FieldValue>? =
+        componentOf(entity, kind)?.let { readFields(kind, it) }
+
+    /** A value is shown as a default when it equals what a new component of the kind holds. */
+    private fun <C : Component> readFields(kind: ComponentKind<C>, component: C): List<FieldValue> {
+        val fresh = kind.create()
         return kind.fields.map {
+            val value = it.get(component)
             FieldValue(
                 it.name,
                 it.kind,
-                it.get(component),
+                value,
                 it.choices,
                 it.optional,
                 it.labelKey?.let(messages::message) ?: it.label,
@@ -99,20 +85,8 @@ class ComponentEditor(
                 it.assetType,
                 it.tooltipKey?.let(messages::message),
                 it.unit,
-                !isWritten(node, it.name),
+                value == it.get(fresh),
             )
-        }
-    }
-
-    /**
-     * Whether the file holds a value for the field [name] of a component entry [node]. It is the presence of the key,
-     * never a comparison with the default, so a default that was written explicitly is not dim. A few components keep
-     * their values one level down (`light`, `camera`), and the render component calls its `type` key `assetType`.
-     */
-    private fun isWritten(node: JsonNode, name: String): Boolean {
-        val path = (FILE_KEYS[name] ?: name).split('.')
-        return listOf(node, node.get("light"), node.get("camera")).any { base ->
-            base != null && path.fold(base as JsonNode?) { n, key -> n?.get(key) } != null
         }
     }
 
@@ -121,28 +95,28 @@ class ComponentEditor(
      * text). A render component needs `assetName`; [assets], when given, lists the asset folders it may name.
      */
     fun add(
-        root: JsonNode,
-        entityId: String,
+        scene: SceneDto,
+        entityId: Long,
         kindName: String,
         initial: Map<String, String> = emptyMap(),
         assets: Set<String>? = null,
         assetsByType: Map<String, Set<String>>? = null,
     ): EditResult {
-        val components = componentsOf(root, entityId) ?: return reject("componentEntityMissing", entityId)
+        val entity = scene.entity(entityId) ?: return reject("componentEntityMissing", entityId)
         val kind = byName[kindName] ?: return reject("componentKindUnknown", kindName)
-        if (components.fieldNames().asSequence().any { byName[it] === kind }) return reject(
+        if (entity.components.any { kind.type.isInstance(it) }) return reject(
             "componentAlreadyPresent",
             entityId,
             kind.label
         )
-        return addTo(root, components, entityId, kind, initial, Assets(assets, assetsByType))
+        return addTo(scene, entity, entityId, kind, initial, Assets(assets, assetsByType))
     }
 
     /** The asset folders a value may name: [render] for a render component, [byType] for a schema's typed reference. */
     private class Assets(val render: Set<String>?, val byType: Map<String, Set<String>>?)
 
     private fun <C : Component> addTo(
-        root: JsonNode, components: ObjectNode, entityId: String, kind: ComponentKind<C>,
+        scene: SceneDto, entity: EntityDto, entityId: Long, kind: ComponentKind<C>,
         initial: Map<String, String>, assets: Assets,
     ): EditResult {
         val component = kind.create()
@@ -152,24 +126,24 @@ class ComponentEditor(
                 kind.label,
                 name
             )
-            checkValue(root, entityId, kind, field, text, assets)?.let { return it }
+            checkValue(scene, entityId, kind, field, text, assets)?.let { return it }
             field.set(component, text)
         }
         if (kind.name == "RenderComponent" && (component as RenderComponent).assetName.isEmpty()) {
             return reject("componentAssetRequired")
         }
-        components.set<JsonNode>(kind.name, kind.codec.write(component))
+        entity.add(component)
         return EditResult.Changed
     }
 
     /**
-     * Sets [field] of the component [kindName] of [entityId] to [text]; only the keys that differ are rewritten. A change
-     * to a path arrangement regenerates its copies in the same edit, standing on [heights] (the line's own height
-     * without it); a change to the `PositionComponent` of an arranged copy detaches the copy.
+     * Sets [field] of the component [kindName] of [entityId] to [text]. A change to a path arrangement regenerates its
+     * copies in the same edit, standing on [heights] (the line's own height without it); a change to the
+     * `PositionComponent` of an arranged copy detaches the copy.
      */
     fun update(
-        root: JsonNode,
-        entityId: String,
+        scene: SceneDto,
+        entityId: Long,
         kindName: String,
         field: String,
         text: String,
@@ -177,123 +151,67 @@ class ComponentEditor(
         assetsByType: Map<String, Set<String>>? = null,
         heights: GroundHeight? = null,
     ): EditResult {
-        val components = componentsOf(root, entityId) ?: return reject("componentEntityMissing", entityId)
+        val entity = scene.entity(entityId) ?: return reject("componentEntityMissing", entityId)
         val kind = byName[kindName] ?: return reject("componentKindUnknown", kindName)
-        val node = components.get(kindName) ?: return reject("componentMissing", entityId, kind.label)
-        return updateIn(root, components, node, entityId, kind, field, text, Assets(assets, assetsByType), heights ?: LineHeights())
+        return updateIn(
+            scene, entity, entityId, kind, field, text, Assets(assets, assetsByType), heights ?: LineHeights()
+        )
     }
 
     private fun <C : Component> updateIn(
-        root: JsonNode, components: ObjectNode, node: JsonNode, entityId: String, kind: ComponentKind<C>,
+        scene: SceneDto, entity: EntityDto, entityId: Long, kind: ComponentKind<C>,
         fieldName: String, text: String, assets: Assets, heights: GroundHeight,
     ): EditResult {
+        val component = componentOf(entity, kind) ?: return reject("componentMissing", entityId, kind.label)
         val field = kind.fields.firstOrNull { it.name == fieldName } ?: return reject(
             "componentFieldUnknown",
             kind.label,
             fieldName
         )
-        val component = kind.codec.read(node)
-        checkValue(root, entityId, kind, field, text, assets)?.let { return it }
+        checkValue(scene, entityId, kind, field, text, assets)?.let { return it }
         val before = field.get(component)
-        val base = kind.codec.write(component)
-        val previous = if (kind.name == ARRANGEMENT_COMPONENT) kind.codec.read(node) else null
+        val previous = (component as? PathArrangementComponent)?.let { arrangementAlong(it.points, it) }
         field.set(component, text)
         if (field.get(component) == before) return EditResult.Unchanged
         if (component is PathArrangementComponent && PathLayout().slots(component) == null) {
+            field.set(component, before)
             return reject("arrangementTooMany", MAX_ARRANGEMENT_SLOTS.toString())
         }
-        val target = node as? ObjectNode
-        val backup = target?.deepCopy()
-        if (target == null) components.set<JsonNode>(kind.name, kind.codec.write(component))
-        else applyDiff(target, base, kind.codec.write(component), jsonProcessor.componentValues(component))
-        if (previous is PathArrangementComponent) {
-            val regenerated = arrangements.regenerate(root, entityId, previous, heights)
+        if (previous != null) {
+            val regenerated = arrangements.regenerate(scene, entityId, previous, heights)
             if (regenerated is ArrangementResult.Rejected) {
-                if (target != null && backup != null) target.removeAll().setAll<ObjectNode>(backup)
+                field.set(component, before)
                 return EditResult.Rejected(regenerated.reason)
             }
         }
-        if (kind.name == "PositionComponent") arrangements.detach(root, entityId)
+        if (component is PositionComponent) arrangements.detach(scene, entityId)
         return EditResult.Changed
-    }
-
-    /** Copies onto [target] what differs between [base] and [new]: changed and added keys are set, dropped ones removed. */
-    private fun applyDiff(target: ObjectNode, base: JsonNode?, new: JsonNode, values: JsonNode?) {
-        val keys = LinkedHashSet<String>()
-        base?.fieldNames()?.forEach(keys::add)
-        new.fieldNames().forEach(keys::add)
-        for (key in keys) {
-            val b = base?.get(key)
-            val n = new.get(key)
-            when {
-                b == n -> Unit
-                n == null && b is ObjectNode && target.get(key) is ObjectNode -> {
-                    val child = target.get(key) as ObjectNode
-                    if (!containsUnknown(child, b)) target.remove(key)
-                    else {
-                        removeDefaulted(child, b, values?.get(key))
-                        if (child.isEmpty) target.remove(key)
-                    }
-                }
-                n == null -> target.remove(key)
-                n is ObjectNode && target.get(key) is ObjectNode -> applyDiff(target.get(key) as ObjectNode, b, n, values?.get(key))
-                else -> target.set<JsonNode>(key, n)
-            }
-        }
-    }
-
-    private fun containsUnknown(target: ObjectNode, modeled: JsonNode): Boolean = target.fields().asSequence().any { (key, value) ->
-        val known = modeled.get(key)
-        known == null || value is ObjectNode && known is ObjectNode && containsUnknown(value, known)
-    }
-
-    /** Remove only modeled values that changed to their defaults; unknown and unchanged children retain their text. */
-    private fun removeDefaulted(target: ObjectNode, base: JsonNode, values: JsonNode?) {
-        base.fields().forEach { (key, previous) ->
-            val value = values?.get(key)
-            when {
-                previous == value -> Unit
-                previous is ObjectNode && target.get(key) is ObjectNode -> {
-                    val child = target.get(key) as ObjectNode
-                    removeDefaulted(child, previous, value)
-                    if (child.isEmpty) target.remove(key)
-                }
-                else -> target.remove(key)
-            }
-        }
     }
 
     /** Removes the component [kindName] from [entityId], unless another entity still refers to the position it holds. */
-    fun remove(root: JsonNode, entityId: String, kindName: String): EditResult {
-        val components = componentsOf(root, entityId) ?: return reject("componentEntityMissing", entityId)
+    fun remove(scene: SceneDto, entityId: Long, kindName: String): EditResult {
+        val entity = scene.entity(entityId) ?: return reject("componentEntityMissing", entityId)
         val kind = byName[kindName] ?: return reject("componentKindUnknown", kindName)
-        if (!components.has(kindName)) return reject("componentMissing", entityId, kind.label)
+        if (entity.components.none { kind.type.isInstance(it) }) return reject("componentMissing", entityId, kind.label)
         if (kindName == "PositionComponent") {
-            referrer(root, entityId)?.let { return reject("componentReferencedBy", kind.label, entityId, it) }
+            referrer(scene, entityId)?.let { return reject("componentReferencedBy", kind.label, entityId, it) }
         }
-        components.remove(kindName)
+        entity.components.removeAll { kind.type.isInstance(it) }
         return EditResult.Changed
     }
 
-    /** An entity other than [entityId] that looks at it, has it as parent or ends a point-to-point at it. */
-    private fun referrer(root: JsonNode, entityId: String): String? {
-        val wanted = entityId.toIntOrNull() ?: return null
-        for ((id, c) in SceneEntityTree(root).componentsById()) {
+    /** An entity other than [entityId] that has a reference field naming it, or null. */
+    private fun referrer(scene: SceneDto, entityId: Long): Long? {
+        for ((id, entity) in scene.entities()) {
             if (id == entityId) continue
-            val refs = listOf(
-                c.get("PositionComponent")?.get("lookAtId"),
-                c.get("ParentComponent")?.get("parentEntityId"),
-                c.get("Point2PointPositionComponent")?.get("entity1Id"),
-                c.get("Point2PointPositionComponent")?.get("entity2Id"),
-            )
-            if (refs.any { it?.asInt(NO_ENTITY) == wanted }) return id
+            if (entity.components.any { references.fieldNaming(it, entityId) != null }) return id
         }
         return null
     }
 
     private fun checkValue(
-        root: JsonNode,
-        entityId: String,
+        scene: SceneDto,
+        entityId: Long,
         kind: ComponentKind<*>,
         field: ComponentField<*>,
         text: String,
@@ -333,6 +251,8 @@ class ComponentEditor(
             )
 
             FieldKind.TEXT -> null
+            // the meshes of a model are read from the model; whether the id is among them is shown, not enforced
+            FieldKind.MESH_ID -> null
             FieldKind.CHOICE ->
                 if (value in field.choices || (field.optional && value.isEmpty())) null
                 else reject("componentNotAChoice", label, text, field.choices.joinToString(", "))
@@ -349,7 +269,7 @@ class ComponentEditor(
                 }
             }
 
-            FieldKind.ENTITY_REF -> checkReference(root, entityId, kind, field, label, value)
+            FieldKind.ENTITY_REF -> checkReference(scene, entityId, kind, field, label, value)
         }
     }
 
@@ -379,8 +299,8 @@ class ComponentEditor(
     private fun limitText(limit: Double) = net.nevinsky.abyssus.lib.core.editor.util.numberText(limit)
 
     private fun checkReference(
-        root: JsonNode,
-        entityId: String,
+        scene: SceneDto,
+        entityId: Long,
         kind: ComponentKind<*>,
         field: ComponentField<*>,
         label: String,
@@ -388,17 +308,15 @@ class ComponentEditor(
     ): EditResult.Rejected? {
         val target = value.toIntOrNull() ?: return reject("componentNotAnInteger", label, value)
         if (target == NO_ENTITY) return null
-        val entities = entities(root)
-        if (entities?.has(target.toString()) != true) return reject("componentUnknownEntity", label, target)
+        if (scene.entity(target.toLong()) == null) return reject("componentUnknownEntity", label, target)
         if (kind.name == "ParentComponent" && field.name == "parentEntityId") {
-            if (target.toString() == entityId) return reject("componentParentSelf", label)
+            if (target.toLong() == entityId) return reject("componentParentSelf", label)
             var current: Int = target
             val seen = HashSet<Int>()
             while (current != NO_ENTITY && seen.add(current)) {
-                val next =
-                    SceneEntityTree(root).components(current.toString())?.get("ParentComponent")?.get("parentEntityId")
-                        ?.asInt(NO_ENTITY) ?: NO_ENTITY
-                if (next.toString() == entityId) return reject("componentParentCycle", label, target, entityId)
+                val next = scene.entity(current.toLong())?.component(ParentComponent::class.java)
+                    ?.parentEntityId ?: NO_ENTITY
+                if (next.toLong() == entityId) return reject("componentParentCycle", label, target, entityId)
                 current = next
             }
         }
@@ -408,6 +326,3 @@ class ComponentEditor(
     private fun reject(key: String, vararg params: Any) = EditResult.Rejected(messages.message(key, *params))
 
 }
-
-/** Fields whose key in the file differs from the field's name. */
-private val FILE_KEYS = mapOf("assetType" to "type")

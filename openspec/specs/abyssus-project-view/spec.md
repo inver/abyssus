@@ -241,7 +241,7 @@ expanding, refreshing, and reopening the view do not lose or duplicate nodes.
 
 #### Scenario: Entity icons follow their type
 
-- **WHEN** an entity under `ecs` has a `TypeComponent` using its short or fully qualified class name
+- **WHEN** an entity under `ecs` has a `type`
 - **THEN** its row uses a distinct SVG icon for each of GROUP, LIGHT_DIRECTIONAL, LIGHT_POINT, LIGHT_SPOT, OBJECT,
   TERRAIN, CAMERA and HANDLE, and a type change updates the icon on refresh even when its label and component count stay the same
 - **AND** an absent, null or unknown type uses the generic ECS icon
@@ -329,6 +329,15 @@ is the number of its slots that name an entity. An entity without such a `Parent
 
 - **WHEN** a copy has been detached, so it has no `ParentComponent` and its slot is `-1`
 - **THEN** it is listed under `ecs` as an ordinary entity
+
+### Requirement: A path arrangement is a plain row that stands for its copies
+
+The row of a path arrangement SHALL have no children and no expand control. Selecting a linked copy of an arrangement in the scene view SHALL select the arrangement's row in the tree.
+
+#### Scenario: Selecting a copy in the scene view
+
+- **WHEN** the user clicks a linked copy of the arrangement `Railway` in the scene view
+- **THEN** the `Railway` row is selected in the tree, and it cannot be expanded
 
 ### Requirement: Water rows in a scene
 

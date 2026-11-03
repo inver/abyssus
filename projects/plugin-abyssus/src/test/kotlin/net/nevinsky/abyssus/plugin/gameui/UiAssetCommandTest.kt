@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.plugin.admitUi
+
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.components.service
@@ -12,7 +14,6 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.ui.UiEditError
 import net.nevinsky.abyssus.lib.core.editor.ui.UiEditResult
 import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
@@ -27,8 +28,7 @@ class UiAssetCommandTest : BasePlatformTestCase() {
     private lateinit var dir: File
     private lateinit var abss: VirtualFile
     private val projectText = """{"format":"abyssus","formatVersion":1,"name":"P"}"""
-    private val sceneText = """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{}}}"""
-    private val json = SceneJson()
+    private val sceneText = """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{}}"""
 
     override fun setUp() {
         super.setUp()
@@ -65,9 +65,8 @@ class UiAssetCommandTest : BasePlatformTestCase() {
     fun testCreationWritesAnAdmittedAssetRegistersItAndTouchesNoScene() {
         assertEquals(AssetCommandResult.Done, create())
         abss.parent.refresh(false, true)
-        val meta = json.parse(text("assets/menus/meta.json"))
-        assertTrue(UiCollectionDecoder().decode(meta) is UiAdmission.Admitted)
-        assertEquals(listOf("menus"), json.parse(text("P.abss"))["uiAssetNames"].map { it.asText() })
+        assertTrue(admitUi(text("assets/menus/meta.json")) is UiAdmission.Admitted)
+        assertEquals(listOf("menus"), service<AbyssusPluginCtx>().documents.json.parse(text("P.abss"), net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java).uiAssetNames)
         assertEquals(sceneText, text("scenes/Main.scene"))
         val listed = project.service<ProjectReader>().read(abss).obj!!.assets.single { it.name == "menus" }
         assertEquals("UI", listed.type.name)
@@ -80,7 +79,9 @@ class UiAssetCommandTest : BasePlatformTestCase() {
         val registered = text("P.abss")
         undo()
         assertFalse(File(dir, "assets/menus").exists())
-        assertEquals(projectText, text("P.abss"))
+        val projectJson = service<AbyssusPluginCtx>().documents.json
+        fun project(t: String) = projectJson.parse(t, net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java)
+        assertEquals(project(projectText), project(text("P.abss")))
         assertTrue(File(dir, "assets/tree/meta.json").isFile)
         redo()
         assertEquals(meta, text("assets/menus/meta.json"))
@@ -112,7 +113,9 @@ class UiAssetCommandTest : BasePlatformTestCase() {
         val result = AssetFileCommand(project, LocalAssetFileStore(dir)).execute(staged.transaction)
         assertTrue(result is AssetCommandResult.Collision)
         assertEquals("mine", text("assets/menus/meta.json"))
-        assertEquals(projectText, text("P.abss"))
+        val projectJson = service<AbyssusPluginCtx>().documents.json
+        fun project(t: String) = projectJson.parse(t, net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java)
+        assertEquals(project(projectText), project(text("P.abss")))
     }
 
     fun testReadOnlyTargetsAreRefusedAndNothingIsWritten() {
@@ -144,7 +147,9 @@ class UiAssetCommandTest : BasePlatformTestCase() {
         val result = create(store = FailingStore(LocalAssetFileStore(dir), "P.abss"))
         assertTrue(result is AssetCommandResult.Failed)
         assertFalse("the half-written asset is removed", File(dir, "assets/menus").exists())
-        assertEquals(projectText, text("P.abss"))
+        val projectJson = service<AbyssusPluginCtx>().documents.json
+        fun project(t: String) = projectJson.parse(t, net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java)
+        assertEquals(project(projectText), project(text("P.abss")))
         assertEquals((result as AssetCommandResult.Failed).leftover, emptyList<String>())
     }
 
@@ -153,7 +158,9 @@ class UiAssetCommandTest : BasePlatformTestCase() {
         ApplicationManager.getApplication().runWriteAction { document.setText(projectText.replace("\"P\"", "\"Edited\"")) }
         val failure = runCatching { factory().stage(abss, "menus") }.exceptionOrNull()
         assertTrue(failure is IllegalArgumentException)
-        assertEquals(projectText, text("P.abss"))
+        val projectJson = service<AbyssusPluginCtx>().documents.json
+        fun project(t: String) = projectJson.parse(t, net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java)
+        assertEquals(project(projectText), project(text("P.abss")))
         assertFalse(File(dir, "assets/menus").exists())
     }
 
@@ -210,9 +217,11 @@ class UiAssetCommandTest : BasePlatformTestCase() {
 
     fun testRegisteringAndUnregisteringAreUndoableProjectEdits() {
         assertTrue(registerUiAsset(project, abss, "menus"))
-        assertEquals(listOf("menus"), json.parse(text("P.abss"))["uiAssetNames"].map { it.asText() })
+        assertEquals(listOf("menus"), service<AbyssusPluginCtx>().documents.json.parse(text("P.abss"), net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java).uiAssetNames)
         assertFalse("registering twice changes nothing", registerUiAsset(project, abss, "menus"))
         assertTrue(unregisterUiAsset(project, abss, "menus"))
-        assertEquals(projectText, text("P.abss"))
+        val projectJson = service<AbyssusPluginCtx>().documents.json
+        fun project(t: String) = projectJson.parse(t, net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java)
+        assertEquals(project(projectText), project(text("P.abss")))
     }
 }

@@ -18,8 +18,8 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
  */
 fun setEnabled(project: Project, scene: VirtualFile, target: EnabledTarget, enabled: Boolean): Boolean {
     val action = SetEnabledAction()
-    return editSceneJson(project, scene, AbyssusBundle.message("commandSetEnabled")) { root ->
-        action.apply(root, target, enabled)
+    return editSceneDocument(project, scene, AbyssusBundle.message("commandSetEnabled")) { dto ->
+        action.apply(dto, target, enabled)
     }
 }
 
@@ -28,9 +28,11 @@ fun setEnabled(project: Project, scene: VirtualFile, target: EnabledTarget, enab
  * command, adding the key when the file has none. Only that key changes. Returns whether anything was written.
  */
 fun setSceneToggle(project: Project, scene: VirtualFile, key: String, on: Boolean): Boolean =
-    editSceneJson(project, scene, AbyssusBundle.message("commandToggleEnabled")) { root ->
-        val obj = root as? com.fasterxml.jackson.databind.node.ObjectNode ?: return@editSceneJson false
-        if (obj.get(key)?.let { it.isBoolean && it.booleanValue() == on } == true) return@editSceneJson false
-        obj.put(key, on)
-        true
+    editSceneSettings(project, scene, AbyssusBundle.message("commandToggleEnabled")) { dto ->
+        when (key) {
+            "fogEnabled" -> dto.copy(fogEnabled = on)
+            "ambientLightEnabled" -> dto.copy(ambientLightEnabled = on)
+            "skyboxEnabled" -> dto.copy(skyboxEnabled = on)
+            else -> null
+        }
     }

@@ -58,7 +58,7 @@ Handles SHALL keep a constant size on screen and be drawn on top of the scene.
 ### Requirement: Objects without rotation
 
 A camera whose `lookAtId` names an existing entity, a light whose `lookAtId` names an existing entity that is not a
-direction handle (an entity whose `TypeComponent.type` is `HANDLE`), and a point light, SHALL show no rotate rings in
+direction handle (an entity whose `type` is `HANDLE`), and a point light, SHALL show no rotate rings in
 Rotate mode, since their orientation comes from their target or doesn't matter. They SHALL still show move arrows in
 Move mode. A directional or spot light that looks at a direction handle SHALL show rotate rings.
 

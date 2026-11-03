@@ -19,7 +19,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ScenePickerTest {
-    private fun box(id: String, x: Float, y: Float, z: Float, half: Float = 1f) =
+    private fun box(id: Long, x: Float, y: Float, z: Float, half: Float = 1f) =
         BoxTarget(id, BoundingBox(Vector3(x - half, y - half, z - half), Vector3(x + half, y + half, z + half)))
 
     private fun ray(from: Vector3, to: Vector3) = Ray(from, Vector3(to).sub(from).nor())
@@ -32,11 +32,11 @@ class ScenePickerTest {
 
     @Test fun aRegeneratedTerrainIsPickedAtItsNewHeightsAndNotTheOldOnes() {
         val down = ray(Vector3(50f, 20f, 50f), Vector3(50f, 12f, 50f))
-        val old = TerrainTarget("t", flat, Matrix4())
-        val regenerated = TerrainTarget("t", TerrainData(3, FloatArray(9) { 10f }, 100, 1f), Matrix4())
+        val old = TerrainTarget(1000L, flat, Matrix4())
+        val regenerated = TerrainTarget(1000L, TerrainData(3, FloatArray(9) { 10f }, 100, 1f), Matrix4())
         assertEquals(20f, ScenePicker().terrainDistance(down, old, 30f)!!, 1e-3f)
         assertEquals(10f, ScenePicker().terrainDistance(down, regenerated, 30f)!!, 1e-3f)
-        assertEquals("t", ScenePicker().pick(down, emptyList(), listOf(regenerated), 30f))
+        assertEquals(1000L, ScenePicker().pick(down, emptyList(), listOf(regenerated), 30f))
     }
 
     @Test fun anIdentityMatrixLeavesTheCornersUnmoved() {
@@ -81,7 +81,7 @@ class ScenePickerTest {
     private fun terrainRest(footprint: OrientedBox = oriented(x = 2f, z = 2f),
                             data: TerrainData = TerrainData(3, FloatArray(9) { 3f }, 4, 1f),
                             world: Matrix4 = Matrix4(), boxes: List<OrientedBox> = emptyList()) =
-        ScenePicker().restHeight(footprint, boxes, listOf(TerrainTarget("t", data, world)))
+        ScenePicker().restHeight(footprint, boxes, listOf(TerrainTarget(1000L, data, world)))
 
     @Test fun restsOnTheTerrainHeightUnderTheFootprint() { assertEquals(3f, terrainRest()!!, 1e-5f) }
     @Test fun restsOnTheHigherOfTerrainAndBox() { assertEquals(4f, terrainRest(boxes = listOf(oriented(x = 2f, bottom = 2f, z = 2f)))!!, 1e-5f) }
@@ -116,12 +116,13 @@ class ScenePickerTest {
         val data = net.nevinsky.abyssus.lib.core.editor.terrainData(dir, placement.assetName)
         org.junit.Assert.assertTrue(data.heights.all { it == 0f })
         val camera = content.cameras.single()
-        val ground = ScenePicker().restHeight(OrientedBox(SceneMarkers().cameraBounds(camera.position), Matrix4()), emptyList(), listOf(TerrainTarget("1", data, placement.transform.toMatrix())))!!
+        val ground = ScenePicker().restHeight(OrientedBox(SceneMarkers().cameraBounds(camera.position), Matrix4()), emptyList(), listOf(TerrainTarget(1L, data, placement.transform.toMatrix())))!!
         println("Camera 4: terrain=$ground lowest=${camera.position.y - 0.5f}")
         org.junit.Assert.assertTrue(kotlin.math.abs(camera.position.y - 0.5f - ground) > REST_EPS)
-        val root = net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(java.io.File(dir, "scenes/Main Scene.scene").readText())
-        val components = root["ecs"]["4"]["components"]
-        assertEquals(components["PositionComponent"]["localPosition"], components["CameraComponent"]["camera"]["position"])
+        val scene = net.nevinsky.abyssus.lib.core.editor.parseScene(java.io.File(dir, "scenes/Main Scene.scene").readText())
+        val local = scene.component(4, net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent::class.java)!!.localPosition
+        val viewed = scene.component(4, net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent::class.java)!!.camera.position
+        assertEquals(local, viewed)
     }
 
     @Test fun aRestHeightWithinEpsAboveIsResting() {
@@ -144,39 +145,39 @@ class ScenePickerTest {
     @Test
     fun hitsTheBoxUnderTheRay() {
         val r = ray(Vector3(0f, 0f, 10f), Vector3(0f, 0f, 0f))
-        assertEquals("a", ScenePicker().pick(r, listOf(box("a", 0f, 0f, 0f), box("b", 5f, 0f, 0f)), emptyList(), 100f))
+        assertEquals(1L, ScenePicker().pick(r, listOf(box(1L, 0f, 0f, 0f), box(2L, 5f, 0f, 0f)), emptyList(), 100f))
     }
 
     @Test
     fun missesWhenNothingIsUnderTheRay() {
         val r = ray(Vector3(0f, 0f, 10f), Vector3(20f, 0f, 0f))
-        assertNull(ScenePicker().pick(r, listOf(box("a", 0f, 0f, 0f)), emptyList(), 100f))
+        assertNull(ScenePicker().pick(r, listOf(box(1L, 0f, 0f, 0f)), emptyList(), 100f))
     }
 
     @Test
     fun theNearestBoxWins() {
         val r = ray(Vector3(0f, 0f, 20f), Vector3(0f, 0f, 0f))
-        val boxes = listOf(box("far", 0f, 0f, -5f), box("near", 0f, 0f, 5f))
-        assertEquals("near", ScenePicker().pick(r, boxes, emptyList(), 100f))
+        val boxes = listOf(box(3L, 0f, 0f, -5f), box(4L, 0f, 0f, 5f))
+        assertEquals(4L, ScenePicker().pick(r, boxes, emptyList(), 100f))
     }
 
     @Test
     fun terrainIsHitWhereNoModelIsInFront() {
-        val t = TerrainTarget("ground", flat, Matrix4())
+        val t = TerrainTarget(1001L, flat, Matrix4())
         val r = ray(Vector3(50f, 10f, 50f), Vector3(50f, 0f, 60f))
-        assertEquals("ground", ScenePicker().pick(r, listOf(box("m", 80f, 1f, 80f)), listOf(t), 1000f))
+        assertEquals(1001L, ScenePicker().pick(r, listOf(box(5L, 80f, 1f, 80f)), listOf(t), 1000f))
     }
 
     @Test
     fun aModelInFrontOfTheTerrainWins() {
-        val t = TerrainTarget("ground", flat, Matrix4())
+        val t = TerrainTarget(1001L, flat, Matrix4())
         val r = ray(Vector3(50f, 10f, 50f), Vector3(50f, 0f, 50f))
-        assertEquals("m", ScenePicker().pick(r, listOf(box("m", 50f, 5f, 50f)), listOf(t), 1000f))
+        assertEquals(5L, ScenePicker().pick(r, listOf(box(5L, 50f, 5f, 50f)), listOf(t), 1000f))
     }
 
     @Test
     fun terrainBehindTheModelLosesAndTerrainBeyondTheRangeIsIgnored() {
-        val t = TerrainTarget("ground", flat, Matrix4())
+        val t = TerrainTarget(1001L, flat, Matrix4())
         val r = ray(Vector3(50f, 10f, 50f), Vector3(50f, 0f, 50f))
         assertNull(ScenePicker().pick(r, emptyList(), listOf(t), 5f))
         assertNotNull(ScenePicker().pick(r, emptyList(), listOf(t), 50f))
@@ -184,25 +185,25 @@ class ScenePickerTest {
 
     @Test
     fun rayAboveOrOutsideTheTerrainMisses() {
-        val t = TerrainTarget("ground", flat, Matrix4())
+        val t = TerrainTarget(1001L, flat, Matrix4())
         assertNull(ScenePicker().pick(ray(Vector3(50f, 10f, 50f), Vector3(50f, 20f, 60f)), emptyList(), listOf(t), 1000f))
         assertNull(ScenePicker().pick(ray(Vector3(500f, 10f, 500f), Vector3(500f, 0f, 510f)), emptyList(), listOf(t), 1000f))
     }
 
     @Test
     fun terrainTransformIsHonoured() {
-        val moved = TerrainTarget("ground", flat, Matrix4().setToTranslation(1000f, 0f, 0f))
+        val moved = TerrainTarget(1001L, flat, Matrix4().setToTranslation(1000f, 0f, 0f))
         assertNull(ScenePicker().pick(ray(Vector3(50f, 10f, 50f), Vector3(50f, 0f, 60f)), emptyList(), listOf(moved), 5000f))
-        assertEquals("ground", ScenePicker().pick(ray(Vector3(1050f, 10f, 50f), Vector3(1050f, 0f, 60f)), emptyList(), listOf(moved), 5000f))
+        assertEquals(1001L, ScenePicker().pick(ray(Vector3(1050f, 10f, 50f), Vector3(1050f, 0f, 60f)), emptyList(), listOf(moved), 5000f))
     }
 
     @Test
     fun hillsAreHitAtTheirSurface() {
         // a ridge of height 10 along the middle: a ray coming in low hits the ridge side, not the floor behind it
         val heights = floatArrayOf(0f, 10f, 0f, 0f, 10f, 0f, 0f, 10f, 0f)
-        val t = TerrainTarget("hill", TerrainData(3, heights, 100, 1f), Matrix4())
+        val t = TerrainTarget(1002L, TerrainData(3, heights, 100, 1f), Matrix4())
         val r = ray(Vector3(-20f, 5f, 50f), Vector3(40f, 5f, 50f))
-        assertEquals("hill", ScenePicker().pick(r, emptyList(), listOf(t), 1000f))
+        assertEquals(1002L, ScenePicker().pick(r, emptyList(), listOf(t), 1000f))
         val d = ScenePicker().terrainDistance(r, t, 1000f)!!
         // the surface at height 5 is x = 25 (first slope reaches 10 at x = 50), so the hit is 45 away
         assertEquals(45f, d, 1.5f)
@@ -246,21 +247,21 @@ class PickRayTest {
         val high = TerrainData(3, FloatArray(9) { 40f }, 100, 1f)
         // a ray from above at (50, 50) towards (50, 20, 50): it passes the low surface (y 1) but is blocked by the high one (y 40)
         val ray = Ray(Vector3(50f, 100f, 50f), Vector3(0f, -1f, 0f))
-        val beforeHit = ScenePicker().terrainDistance(ray, TerrainTarget("t", low, Matrix4()), 1000f)!!
-        val afterHit = ScenePicker().terrainDistance(ray, TerrainTarget("t", high, Matrix4()), 1000f)!!
+        val beforeHit = ScenePicker().terrainDistance(ray, TerrainTarget(1000L, low, Matrix4()), 1000f)!!
+        val afterHit = ScenePicker().terrainDistance(ray, TerrainTarget(1000L, high, Matrix4()), 1000f)!!
         assertEquals(99f, beforeHit, 0.05f)
         assertEquals(60f, afterHit, 0.05f)
-        assertEquals("t", ScenePicker().pick(ray, emptyList(), listOf(TerrainTarget("t", high, Matrix4())), 1000f))
+        assertEquals(1000L, ScenePicker().pick(ray, emptyList(), listOf(TerrainTarget(1000L, high, Matrix4())), 1000f))
         // a ray that only reaches y 20 hits the new surface and missed the old one
         val short = Ray(Vector3(50f, 60f, 50f), Vector3(0f, -1f, 0f))
-        assertEquals("t", ScenePicker().pick(short, emptyList(), listOf(TerrainTarget("t", high, Matrix4())), 30f))
-        assertNull(ScenePicker().pick(short, emptyList(), listOf(TerrainTarget("t", low, Matrix4())), 30f))
+        assertEquals(1000L, ScenePicker().pick(short, emptyList(), listOf(TerrainTarget(1000L, high, Matrix4())), 30f))
+        assertNull(ScenePicker().pick(short, emptyList(), listOf(TerrainTarget(1000L, low, Matrix4())), 30f))
     }
 
     @Test fun restingFollowsTheNewHeightsOfAReplacedTerrain() {
         val footprint = OrientedBox(BoundingBox(Vector3(1f, 5f, 1f), Vector3(3f, 7f, 3f)), Matrix4())
-        val before = ScenePicker().restHeight(footprint, emptyList(), listOf(TerrainTarget("t", TerrainData(3, FloatArray(9) { 3f }, 4, 1f), Matrix4())))!!
-        val after = ScenePicker().restHeight(footprint, emptyList(), listOf(TerrainTarget("t", TerrainData(3, FloatArray(9) { 8f }, 4, 1f), Matrix4())))!!
+        val before = ScenePicker().restHeight(footprint, emptyList(), listOf(TerrainTarget(1000L, TerrainData(3, FloatArray(9) { 3f }, 4, 1f), Matrix4())))!!
+        val after = ScenePicker().restHeight(footprint, emptyList(), listOf(TerrainTarget(1000L, TerrainData(3, FloatArray(9) { 8f }, 4, 1f), Matrix4())))!!
         assertEquals(3f, before, 1e-5f)
         assertEquals(8f, after, 1e-5f)
     }

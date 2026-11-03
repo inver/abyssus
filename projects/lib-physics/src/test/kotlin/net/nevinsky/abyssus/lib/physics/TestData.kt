@@ -6,7 +6,7 @@ package net.nevinsky.abyssus.lib.physics
 
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
-import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.core.dto.EcsLoader
 import net.nevinsky.abyssus.lib.core.scene.SceneLoader
 import org.slf4j.Logger
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
@@ -36,8 +36,8 @@ fun physicsLoader(
         it.registerAll(extra)
     }
     return RuntimeSceneLoader(
-        SceneLoader(json, FileLoader(project)),
-        EcsLoader(json, registry),
+        SceneLoader(json, FileLoader(project), registry),
+        EcsLoader(),
         log,
     )
 }

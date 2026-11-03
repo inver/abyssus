@@ -5,16 +5,21 @@
 
 package net.nevinsky.abyssus.lib.core.editor.document
 
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
-import net.nevinsky.abyssus.lib.core.assets.AssetMetaBinder
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaParser
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.dto.ProjectDto
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.editor.util.JsonValues
+import net.nevinsky.abyssus.lib.core.editor.util.at
+import net.nevinsky.abyssus.lib.core.editor.util.objectAt
+import net.nevinsky.abyssus.lib.core.editor.util.textAt
+import net.nevinsky.abyssus.lib.core.scene.SceneParser
 import org.slf4j.Logger
 
 /**
@@ -24,38 +29,45 @@ import org.slf4j.Logger
 class DocumentParsing(
     private val json: JsonProcessor,
     private val log: Logger,
-    private val format: AbyssusDocumentFormat = AbyssusDocumentFormat(),
+    registry: ComponentRegistry = ComponentRegistry(),
+    private val format: net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat = net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat(),
 ) {
+    /** Binds a scene with its components resolved through [registry]; what it does not know is kept raw. */
+    private val scenes = SceneParser(json, registry)
+
     fun requireSupported(text: String, kind: DocumentKind) {
-        supported(text, kind)
+        format.requireSupported(json.readObject(text), kind)
     }
 
     fun project(text: String): ProjectDto = json.bind(supported(text, DocumentKind.PROJECT), ProjectDto::class.java)
 
-    fun assetMeta(text: String): AssetMeta<Any> = AssetMetaBinder(json).bind("", supported(text, DocumentKind.ASSET))
+    fun assetMeta(text: String): AssetMeta<Any> = AssetMetaParser(json).read("", text)
 
     /** Narrow editor reads must not bind (and reject) unrelated settings or UUIDs. */
     fun assetFields(text: String): AssetDocumentFields {
-        val root = supported(text, DocumentKind.ASSET)
-        val type = root["type"]?.takeIf { it.isTextual }?.textValue()
+        val root = values(text)
         return AssetDocumentFields(
-            MetaType.entries.firstOrNull { it.name == type } ?: MetaType.UNKNOWN,
-            root["uuid"]?.asText(),
-            root["additional"]?.get("clouds")?.takeIf { it.isTextual }?.textValue(),
-            root.path("additional").path("terrainFile").asText(),
+            MetaType.entries.firstOrNull { it.name == root.textAt("type") } ?: MetaType.UNKNOWN,
+            root["uuid"]?.takeIf { it !is Map<*, *> && it !is List<*> }?.toString(),
+            root.textAt("additional", "clouds"),
+            root.at("additional", "terrainFile")?.toString().orEmpty(),
         )
     }
 
     /** Keeps the editor's existing wrong-type defaults, rather than runtime DTO coercions. */
-    fun foliageMeta(text: String): FoliageMeta = supported(text, DocumentKind.ASSET)["additional"]
-        ?.let { FoliageSettingsBinding().read(it) } ?: FoliageMeta()
+    fun foliageMeta(text: String): FoliageMeta =
+        values(text).objectAt("additional")?.let { FoliageSettingsBinding(json).read(it) } ?: FoliageMeta()
 
-    private fun supported(text: String, kind: DocumentKind) =
-        SceneJson().parseObject(text).also { format.requireSupported(it, kind) }
+    private fun supported(text: String, kind: DocumentKind) = json.readObject(text).also { format.requireSupported(it, kind) }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun values(text: String): JsonValues {
+        json.readObject(text)
+        return json.parse(text, Map::class.java) as JsonValues
+    }
 
     fun projectName(text: String): String? {
         val root = json.readObject(text)
-        format.requireSupported(root, DocumentKind.PROJECT)
         return json.bind(root, ProjectName::class.java).name
     }
 
@@ -74,12 +86,8 @@ class DocumentParsing(
         reportedOrThrow("project $source") { uiAssetNames(readText()) }
 
     fun parse(text: String): SceneDto {
-        val root = json.readObject(text)
-        format.requireSupported(root, DocumentKind.SCENE)
-        return json.bind(root, SceneDto::class.java)
+        return scenes.parse(text)
     }
-
-    fun scene(text: String): SceneDto = parse(text)
 
     /** Includes failures obtaining the text (an editor's filesystem) in the same logging boundary. */
     fun parse(source: String, readText: () -> String): SceneDto = reportedOrThrow("scene $source") { parse(readText()) }
@@ -96,13 +104,3 @@ private data class ProjectRegistry(
     @param:com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = net.nevinsky.abyssus.lib.core.dto.UiAssetNamesDeserializer::class)
     val uiAssetNames: List<String> = emptyList(),
 )
-
-/** Validation owns the temporary tree; document creators only supply typed values. */
-internal fun validateAssetDocument(document: AssetMetaDocument<*>, format: AbyssusDocumentFormat) =
-    format.validate(SceneJson().mapper.valueToTree(document), DocumentKind.ASSET)
-
-/** The UI decoder still takes a tree; keep that adapter beside the other document admission paths. */
-internal fun admitUiDocument(
-    document: AssetMetaDocument<*>,
-    decoder: net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder,
-): net.nevinsky.abyssus.lib.core.ui.model.UiAdmission = decoder.decode(SceneJson().mapper.valueToTree(document))

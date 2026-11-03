@@ -71,7 +71,7 @@
 - [x] 5.1 Move the six-face cube (`SkyboxCube`, `SkyboxLoader`, `SkyboxMeta`) and the procedural sky
       (`ProceduralSky`, its loader and meta, `AtmosphereParams` with default arguments instead of a companion) to
       `assets.sky.cube` / `assets.sky.procedural`; `skybox.vert/frag` move to `core/src/main/resources/shader/sky/`.
-      `ProceduralSky.draw` takes a libGDX `Vector3` sun; `SceneSkybox` converts the plugin's `Vec3`. Verify:
+      `ProceduralSky.draw` takes a libGDX `Vector3` sun; `SceneSkybox` converts the plugin's `Vector3`. Verify:
       `SkyboxMetaTest`, `ProceduralSkyLoaderTest`, `ProceduralSkyFixtureTest`, `AtmosphereParamsTest` moved to `core`
       pass with `./gradlew :core:test --tests 'net.nevinsky.abyssus.assets.sky.*'`
 - [x] 5.2 Move the HDR sky to `assets.sky.hdr` with the singletons replaced as design decision 3

@@ -24,6 +24,8 @@ import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RaySnapshotStore
 import net.nevinsky.abyssus.lib.core.assets.standard.StandardAssetLoaders
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
+import net.nevinsky.abyssus.lib.core.editor.modelmesh.ModelMeshInfo
+import net.nevinsky.abyssus.lib.core.editor.modelmesh.ModelMeshLister
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.ModelRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.asPreparationTap
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelMaterialInfo
@@ -44,6 +46,7 @@ import net.nevinsky.abyssus.plugin.projectView.HdrPreviewService
 import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
 import org.slf4j.Logger
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executor
 
 /**
@@ -82,6 +85,22 @@ class AssetLoading(
         return runCatchingKeepingCancellation {
             files.loadAssetFile(name, meta.typedAdditional<ModelMeta>().file)
         }.getOrNull()
+    }
+
+    private val meshTables = ConcurrentHashMap<File, Pair<Long, List<ModelMeshInfo>>>()
+
+    /**
+     * The meshes of model asset [name], read on the caller's thread without images or GL (so off the UI thread); null
+     * when it is not a readable model. The model file is parsed once per modification.
+     */
+    fun modelMeshes(projectDir: File, name: String): List<ModelMeshInfo>? {
+        val model = modelFile(projectDir, name)?.canonicalFile ?: return null
+        val stamp = model.lastModified()
+        meshTables[model]?.takeIf { it.first == stamp }?.let { return it.second }
+        val files = FileLoader(projectDir)
+        val meshes = ModelMeshLister(files, AssetMetaLoader(json, files, log), assimp).list(name) ?: return null
+        meshTables[model] = stamp to meshes
+        return meshes
     }
 
     /** A model's material identifiers and PBR flags, read on the caller's thread without images or GL. */

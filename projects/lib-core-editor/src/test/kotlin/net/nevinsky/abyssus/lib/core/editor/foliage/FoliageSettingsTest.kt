@@ -7,7 +7,8 @@ package net.nevinsky.abyssus.lib.core.editor.foliage
 
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerKind
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.FoliageSettingsBinding
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageError.ALIGNMENT
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageError.DENSITY
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageError.DUPLICATE_ID
@@ -26,8 +27,10 @@ class FoliageSettingsTest {
 
     /** The `additional` of a foliage meta, read the way the panel reads a `meta.json`. */
     private fun read(additional: String, modelAssets: Set<String> = models): FoliageRead {
-        val root = SceneJson().parse("""{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","additional":$additional}""")
-        return reader.read(root.get("additional"), modelAssets)
+        val values = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).parse("""{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","additional":$additional}""", Map::class.java)
+        @Suppress("UNCHECKED_CAST")
+        val block = (values["additional"] as? Map<String, Any?>).orEmpty()
+        return reader.read(FoliageSettingsBinding(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)).read(block), modelAssets)
     }
 
     private fun only(read: FoliageRead, error: FoliageError): FoliageProblem {

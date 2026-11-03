@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.parseScene
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -13,24 +13,27 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ScenePanelModelTest {
-    private fun model(json: String, inProject: Boolean) = scenePanelModel(SceneJson().parse(json), inProject)
+    private fun model(json: String, inProject: Boolean) = scenePanelModel(parseScene(json), inProject)
 
     @Test
     fun projectSceneOffersBrowseAndShowsTheSavedSkybox() {
-        val row = model("""{"skyboxName":"skybox_default"}""", inProject = true).skybox
+        val row = model("""{"format":"abyssus","formatVersion":1,"skyboxName":"skybox_default"}""", inProject = true).skybox
         assertEquals("skybox_default", row.value)
         assertTrue(row.browsable)
     }
 
     @Test
     fun standaloneSceneHasTheFieldButNoBrowse() {
-        val row = model("""{"skyboxName":"x"}""", inProject = false).skybox
+        val row = model("""{"format":"abyssus","formatVersion":1,"skyboxName":"x"}""", inProject = false).skybox
         assertEquals("x", row.value)
         assertFalse(row.browsable)
     }
 
     @Test
     fun nullAbsentAndNonTextSkyboxesAreNone() {
-        for (json in listOf("""{"skyboxName":null}""", "{}", """{"skyboxName":5}""")) assertNull(json, model(json, true).skybox.value)
+        for (body in listOf("\"skyboxName\":null", "")) {
+            val json = """{"format":"abyssus","formatVersion":1${if (body.isEmpty()) "" else ",$body"}}"""
+            assertNull(json, model(json, true).skybox.value)
+        }
     }
 }

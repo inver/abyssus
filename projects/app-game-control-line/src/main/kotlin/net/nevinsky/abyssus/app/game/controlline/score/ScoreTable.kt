@@ -4,13 +4,11 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.score
 
-import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import java.nio.file.Files
 import java.nio.file.Path
 import net.nevinsky.abyssus.app.game.controlline.io.AtomicJsonStore
+import net.nevinsky.abyssus.app.game.controlline.io.RankedBoard
 
 /** How many flights the table keeps. */
 const val TABLE_SIZE = 10
@@ -42,6 +40,7 @@ fun defaultScoresFile(home: String = System.getProperty("user.home")): Path =
  */
 class ScoreTable(private val file: Path, private val json: ObjectMapper = jacksonObjectMapper()) {
     private val store = AtomicJsonStore()
+    private val board = RankedBoard<ScoreEntry>(TABLE_SIZE) { it.score.toDouble() }
 
     var entries: List<ScoreEntry> = emptyList()
         private set
@@ -51,32 +50,24 @@ class ScoreTable(private val file: Path, private val json: ObjectMapper = jackso
         private set
 
     init {
-        entries = store.read(file, {
-            val read = json.copy().configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, true)
-                .readValue(it.toFile(), ScoresFile::class.java)
-            require(read.version == SCORES_VERSION) { "unknown version ${read.version}" }
-            ranked(read.entries)
-        }, { damaged = true }).orEmpty()
+        entries = store.readJson(
+            file, json, ScoresFile::class.java,
+            validate = { require(it.version == SCORES_VERSION) { "unknown version ${it.version}" } },
+            damaged = { damaged = true },
+        )?.let { board.ranked(it.entries) }.orEmpty()
     }
 
     /** Whether a flight scoring [score] would enter the table. */
-    fun qualifies(score: Int): Boolean = entries.size < TABLE_SIZE || score > entries.last().score
+    fun qualifies(score: Int): Boolean = board.qualifies(entries, score.toDouble())
 
     /** Adds [entry] when it qualifies and saves the table; returns its rank from 1, or null when it did not enter. */
     fun add(entry: ScoreEntry): Int? {
         if (!qualifies(entry.score)) return null
-        val next = ranked(entries + entry)
+        val next = board.ranked(entries + entry)
         entries = next
         save()
         return next.indexOf(entry).takeIf { it >= 0 }?.plus(1)
     }
 
-    private fun ranked(list: List<ScoreEntry>) = list.sortedByDescending { it.score }.take(TABLE_SIZE)
-
-    private fun save() {
-        store.save(file, "scores") { temp ->
-            Files.writeString(temp, json.copy().enable(SerializationFeature.INDENT_OUTPUT)
-                .writeValueAsString(ScoresFile(SCORES_VERSION, entries)).replace("\r\n", "\n") + "\n")
-        }
-    }
+    private fun save() = store.saveJson(file, "scores", json, ScoresFile(SCORES_VERSION, entries))
 }

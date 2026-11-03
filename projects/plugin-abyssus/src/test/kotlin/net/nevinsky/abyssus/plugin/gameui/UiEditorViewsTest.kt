@@ -4,10 +4,13 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.plugin.canonicalUi
+import net.nevinsky.abyssus.plugin.admitUi
+import net.nevinsky.abyssus.plugin.uiWidgetIds
+
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.ui.UiEditError
 import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
 import net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder
@@ -16,7 +19,7 @@ import javax.swing.JPanel
 import javax.swing.tree.DefaultMutableTreeNode
 
 class UiEditorViewsTest : BasePlatformTestCase() {
-    private val source = SceneJson().pretty("""{"format":"abyssus","formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main","screens":[
+    private val source = canonicalUi("""{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main","screens":[
         {"id":"main","name":"Main","root":{"id":"root","type":"panel","children":[
           {"id":"free","type":"button","layout":{"x":50,"y":40,"width":100,"height":40},"properties":{"text":"Go"}},
           {"id":"list","type":"column","children":[{"id":"a","type":"label"},{"id":"b","type":"label"},{"id":"c","type":"label"}]},
@@ -35,13 +38,10 @@ class UiEditorViewsTest : BasePlatformTestCase() {
         UiEditorController(project, file, Executor { it.run() }, { it.run() }).also { it.reload() }
 
     private fun ids(): List<String> {
-        val out = mutableListOf<String>()
-        fun walk(n: com.fasterxml.jackson.databind.JsonNode) { n.get("id")?.takeIf { it.isTextual }?.let { out += it.asText() }; n.get("children")?.forEach(::walk) }
-        SceneJson().parse(FileDocumentManager.getInstance().getDocument(file)!!.text).path("additional").path("ui").path("screens").get(0).get("root").let(::walk)
-        return out
+        return uiWidgetIds(FileDocumentManager.getInstance().getDocument(file)!!.text)
     }
 
-    private val collection get() = (UiCollectionDecoder().decode(SceneJson().parse(source)) as UiAdmission.Admitted).collection
+    private val collection get() = (admitUi(source) as UiAdmission.Admitted).collection
 
     // ---- tree drop rules ----
 

@@ -32,7 +32,7 @@ See proposal.md for motivation and the specs for required behavior. What exists 
   - New Terrain, terrain Apply and FlightGear import use it. `AssetReferenceGuard` refuses Undo of a creation while a
     scene names the asset.
 - **Text-preserving JSON edits**: `SceneJson` and `DocumentTextEditor` (`lib-core-editor` `document`), used by
-  `editSceneJson` and by asset meta edits.
+  `editSceneDocument` and by asset meta edits.
 
 ## Goals / Non-Goals
 
@@ -252,7 +252,7 @@ stale until a Re-bake.
 
 `FoliageMetaEdits` computes the new metadata with `DocumentTextEditor`, preserving number text, key order and unknown
 members. Apply runs a composite platform command: first it verifies the current metadata and applies the binary
-transaction with its undo action handed back, then it edits and saves metadata through `editSceneJson`, and finally
+transaction with its undo action handed back, then it edits and saves metadata through `editSceneDocument`, and finally
 registers the binary undo action in that same command. If the metadata edit cannot be made, the binary transaction is
 rolled back before registering Undo. The VFS is refreshed after the composite command. Metadata is never replaced
 through a disk transaction: IntelliJ otherwise records a separate Reload From Disk undo step for its open document.
@@ -262,7 +262,7 @@ The binary transaction does not pin metadata to the old text for Redo: the platf
 redoing the binary action. The composite command checks the metadata's starting text before the initial write;
 document undo and the binary hash checks protect subsequent Undo/Redo independently.
 
-Add Foliage edits the scene only, so it goes through `editSceneJson` like Add Asset.
+Add Foliage edits the scene only, so it goes through `editSceneDocument` like Add Asset.
 
 ### 11. Threads
 
@@ -271,7 +271,7 @@ Add Foliage edits the scene only, so it goes through `editSceneJson` like Add As
 | Meta/mask/data reading, fingerprint, `FoliageScatter`, chunk matrices, `FoliageMetaEdits` | pooled background (`AssetStorage.prepare` or the foliage executor); no GL, no `Gdx.*` |
 | Brush stamps into the draft, gesture handling, cursor polyline | AWT thread (mouse events); pure math |
 | Instanced mesh build, instance buffer upload, drawing, depth pass | AWT thread inside `GdxRuntime.withContext`, only while `glSafe` |
-| `AssetFileCommand` (Create, Apply, Re-bake, stroke), `editSceneJson` (Add Foliage) | EDT write action; the bake is generated before the command, and only its hash and `rebuild` are kept |
+| `AssetFileCommand` (Create, Apply, Re-bake, stroke), `editSceneDocument` (Add Foliage) | EDT write action; the bake is generated before the command, and only its hash and `rebuild` are kept |
 
 Generation for a stroke's dirty chunks is posted to the pool, and the latest result wins. If a newer stamp has moved
 the draft revision, a stale result is dropped.

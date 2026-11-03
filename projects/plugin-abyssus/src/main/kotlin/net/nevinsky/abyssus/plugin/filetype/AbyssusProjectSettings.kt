@@ -5,12 +5,13 @@
 
 package net.nevinsky.abyssus.plugin.filetype
 
-import com.fasterxml.jackson.databind.node.ObjectNode
 import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
@@ -48,7 +49,7 @@ class AbyssusProjectSettings(private val project: Project) : Disposable {
     private val cache = ConcurrentHashMap<String, Cached>()
     private val watched = ConcurrentHashMap.newKeySet<VirtualFile>()
     private val reported = ConcurrentHashMap<String, List<String>>()
-    private val reader = ProjectSettingsReader()
+    private val reader = ProjectSettingsReader(service<AbyssusPluginCtx>().documents.parsing, service<AbyssusPluginCtx>().json)
     private val listeners = project.messageBus.syncPublisher(ProjectSettingsListener.TOPIC)
 
     init {
@@ -87,26 +88,14 @@ class AbyssusProjectSettings(private val project: Project) : Disposable {
     fun setPhysicsEnabled(abss: VirtualFile, on: Boolean): Boolean {
         if (!getSettings(abss).supported) return false
         val commandName = if (on) AbyssusBundle.message("commandTurnPhysicsOn") else AbyssusBundle.message("commandTurnPhysicsOff")
-        return editSceneJson(project, abss, commandName) { root ->
-            if (root !is ObjectNode || root.get("physicsEnabled")?.let { it.isBoolean && it.booleanValue() == on } == true) return@editSceneJson false
-            root.put("physicsEnabled", on)
-            true
-        }
+        return editProjectDocument(project, abss, commandName) { it.copy(physicsEnabled = on) }
     }
 
     /** One native document edit; a default is omitted and unrelated project data stays intact. */
     fun setAntialiasing(abss: VirtualFile, level: AntialiasingLevel): Boolean {
         if (!getSettings(abss).supported) return false
-        return editSceneJson(project, abss, AbyssusBundle.message("commandSetProjectAntialiasing")) { root ->
-            if (root !is ObjectNode) return@editSceneJson false
-            val current = root.get("sceneViewAntialiasing")
-            if (current == null && level == AntialiasingLevel.DEFAULT) return@editSceneJson false
-            if (level == AntialiasingLevel.DEFAULT) root.remove("sceneViewAntialiasing")
-            else {
-                if (current?.isTextual == true && current.textValue() == level.name) return@editSceneJson false
-                root.put("sceneViewAntialiasing", level.name)
-            }
-            true
+        return editProjectDocument(project, abss, AbyssusBundle.message("commandSetProjectAntialiasing")) {
+            it.copy(sceneViewAntialiasing = level.name.takeUnless { level == AntialiasingLevel.DEFAULT })
         }
     }
 

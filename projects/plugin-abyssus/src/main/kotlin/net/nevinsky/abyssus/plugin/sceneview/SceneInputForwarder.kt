@@ -11,6 +11,7 @@ import java.awt.event.*
 import javax.swing.JComponent
 import javax.swing.JMenuItem
 import javax.swing.JPopupMenu
+import java.awt.Toolkit
 import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
 
@@ -18,7 +19,7 @@ import javax.swing.SwingUtilities
  * Keyboard and mouse input of the Scene view: W/E/D/Esc/Enter/Backspace on the [panel], the canvas mouse into the
  * [interaction] (select, gizmo, orbit, the arrangement point menu, the foliage brush) and, while [play] runs, into the
  * simulation. [experimenting] and [experimentOrbit] stand for the ray feasibility experiment, which takes the mouse over;
- * [updatePaintMode] re-reads the foliage brush (the Shift key erases). AWT thread.
+ * [updatePaintMode] re-reads the terrain brush, Paint Foliage or Sculpt Terrain (the Shift key erases or inverts). AWT thread.
  */
 internal class SceneInputForwarder(
     private val panel: JComponent,
@@ -47,6 +48,15 @@ internal class SceneInputForwarder(
         bind(KeyEvent.VK_ESCAPE) { if (!play.escape()) interaction.escape() }
         bind(KeyEvent.VK_ENTER) { if (!play.active) interaction.enter() }
         bind(KeyEvent.VK_BACK_SPACE) { if (!play.active) interaction.backspace() }
+        bind(KeyEvent.VK_DELETE) { if (!play.active) interaction.backspace() }
+        // Copy and Paste of the selected object: Ctrl on Windows and Linux, Cmd on macOS
+        fun bindShortcut(key: Int, action: () -> Unit) {
+            val stroke = KeyStroke.getKeyStroke(key, Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx)
+            panel.registerKeyboardAction({ if (!experimenting() && !play.active) action() }, stroke, JComponent.WHEN_FOCUSED)
+            panel.registerKeyboardAction({ if (!experimenting() && !play.active) action() }, stroke, JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+        }
+        bindShortcut(KeyEvent.VK_C) { interaction.copy() }
+        bindShortcut(KeyEvent.VK_V) { interaction.paste() }
     }
 
     /** While playing, every key but Escape goes to the simulation and is consumed, so no editor shortcut fires. */
@@ -130,14 +140,16 @@ internal class SceneInputForwarder(
             override fun mouseExited(e: MouseEvent) { renderer.brushCursor = null }
 
             private fun cursor(e: MouseEvent) {
-                val mode = renderer.state.paint
+                val brush = renderer.state.brush
+                val entityId = brush?.entityId
+                val radius = brush?.radius
                 val size = interaction.size
-                if (mode == null || size.isEmpty) { renderer.brushCursor = null; return }
+                if (entityId == null || radius == null || size.isEmpty) { renderer.brushCursor = null; return }
                 val at = size.toFramebuffer(e.x, e.y)
                 val ray = renderer.queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
-                val terrain = renderer.queries.terrainOf(mode.entityId)
-                val hit = ray?.let { renderer.queries.terrainHit(mode.entityId, it) }
-                renderer.brushCursor = if (terrain != null && hit != null) FoliageBrushCursor(terrain, hit, mode.radius) else null
+                val terrain = renderer.queries.terrainOf(entityId)
+                val hit = ray?.let { renderer.queries.terrainHit(entityId, it) }
+                renderer.brushCursor = if (terrain != null && hit != null) BrushCursor(terrain, hit, radius) else null
             }
 
             override fun mouseWheelMoved(e: MouseWheelEvent) {
@@ -158,7 +170,7 @@ internal class SceneInputForwarder(
     }
 
     /**
-     * The right-click menu of a point handle of the selected arrangement: Remove Point, disabled while only two points
+     * The right-click menu of a point handle of the selected arrangement: Drop to terrain and Remove Point, disabled while only two points
      * remain. True when the click hit a handle and the menu was shown (the press is then not a pan).
      */
     private fun pointMenu(e: MouseEvent): Boolean {
@@ -169,6 +181,10 @@ internal class SceneInputForwarder(
         val at = size.toFramebuffer(e.x, e.y)
         val hit = renderer.queries.pathHandleAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) as? PathHit.Point ?: return false
         val menu = JPopupMenu()
+        menu.add(JMenuItem(AbyssusBundle.message("dropPathPoint")).apply {
+            name = "drop-path-point"
+            addActionListener { interaction.dropPathPoint(hit.index) }
+        })
         menu.add(JMenuItem(AbyssusBundle.message("removePathPoint")).apply {
             name = "remove-path-point"
             isEnabled = interaction.canRemovePoint(id)

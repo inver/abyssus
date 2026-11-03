@@ -13,7 +13,7 @@ fixed entity id. `ComponentEditor.add` needs the entity to exist and does not to
   layout, the archetype matching the component names. It also offers `matchArchetype(root, id)`, which re-points a
   wrapped entity at the archetype for its current components, adding one when none matches. `AssetEntities` delegates
   to it; behaviour is unchanged and its tests still hold.
-- **`SceneComponentEdits.addAsNewEntity(project, file, kind, metaFiles, initial)`** works inside one `editSceneJson`
+- **`SceneComponentEdits.addAsNewEntity(project, file, kind, metaFiles, initial)`** works inside one `editSceneDocument`
   command:
   1. Insert `{NameComponent: "Entity <id>"}`.
   2. Run `ComponentEditor.add` for the kind, with the same asset sets as `add`. A rejection aborts the whole command, so
@@ -29,7 +29,7 @@ fixed entity id. `ComponentEditor.add` needs the entity to exist and does not to
   ecs row share the Render submenu and the mnemonic-safe labels. For the ecs row, the kinds are all of the editor's
   kinds except `NameComponent`. A new entity is selected with `selectCreatedEntity`.
 - **Threads:** the same as Add Component: the menu is built on the EDT from the cached document; the write is
-  `editSceneJson`.
+  `editSceneDocument`.
 
 ## Risks / Trade-offs
 

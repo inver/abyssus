@@ -19,6 +19,7 @@ import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudScene
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechniques
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.Clouds
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CumulusClouds
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.LayeredClouds
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.ShellClouds
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.VolumetricClouds
@@ -77,6 +78,7 @@ class ProceduralSky(
     private val techniques = CloudTechniques(prepared.name, log, cloudFactory ?: { technique ->
         when (technique) {
             CloudTechnique.LAYERED -> LayeredClouds(shaders, field)
+            CloudTechnique.CUMULUS -> CumulusClouds(shaders, field)
             CloudTechnique.SHELLS -> ShellClouds(shaders, field)
             CloudTechnique.VOLUMETRIC -> VolumetricClouds(shaders, field)
         }
@@ -158,16 +160,7 @@ class ProceduralSky(
         rotationOnlyViewProj(camera, invViewProj).inv()
         program.bind()
         program.setUniformMatrix("u_invViewProj", invViewProj)
-        program.setUniformf("u_sunDir", sun.x, sun.y, sun.z)
-        program.setUniformf("u_cameraHeight", SKY_CAMERA_HEIGHT)
-        program.setUniformf("u_planetRadius", params.planetRadius)
-        program.setUniformf("u_atmosphereRadius", params.atmosphereRadius)
-        program.setUniformf("u_betaRayleigh", params.betaRayleigh[0], params.betaRayleigh[1], params.betaRayleigh[2])
-        program.setUniformf("u_betaMie", params.betaMie)
-        program.setUniformf("u_heightRayleigh", params.heightRayleigh)
-        program.setUniformf("u_heightMie", params.heightMie)
-        program.setUniformf("u_mieG", params.mieG)
-        program.setUniformf("u_sunIntensity", params.sunIntensity)
+        params.bindTo(program, sun)
         mesh.render(program, GL20.GL_TRIANGLES)
         drawClouds(camera, frame)
     }

@@ -16,7 +16,6 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import java.io.File
 
 class RemoveEntityActionTest : BasePlatformTestCase() {
@@ -57,7 +56,7 @@ class RemoveEntityActionTest : BasePlatformTestCase() {
 
     private fun scene() = sceneFile
     private fun document() = FileDocumentManager.getInstance().getDocument(scene())!!
-    private fun ids() = SceneJson().parse(document().text)["ecs"].fieldNames().asSequence().toList()
+    private fun ids() = net.nevinsky.abyssus.plugin.parsedScene(document().text).ecs.keys.toList()
 
     /** Performs Remove Entity on [node]; returns the refusal messages it showed. */
     private fun run(node: Any?): List<String> {
@@ -79,7 +78,7 @@ class RemoveEntityActionTest : BasePlatformTestCase() {
     fun testOfferedOnEntityRowsOnly() {
         copyProject()
         assertTrue(visible(RemoveOn(entity("0"))))
-        assertFalse(visible(RemoveOn(descend(entity("0"), "TypeComponent"))))
+        assertFalse(visible(RemoveOn(descend(entity("0"), "NameComponent"))))
         assertFalse(visible(RemoveOn(descend(sceneNode(), "ecs"))))
         assertFalse(visible(RemoveOn(sceneNode())))
         assertFalse(visible(RemoveOn(abss())))
@@ -96,15 +95,15 @@ class RemoveEntityActionTest : BasePlatformTestCase() {
         val assetsBefore = myFixture.findFileInTempDir("Untitled/assets").children.map { it.name }.sorted()
 
         run(entity("0"))
-        assertFalse("0" in ids())
-        assertEquals((0..10).map(Int::toString) - "0", ids())
+        assertFalse(0L in ids())
+        assertEquals((0L..10L).toList() - 0L, ids())
         assertEquals(assetsBefore, myFixture.findFileInTempDir("Untitled/assets").children.map { it.name }.sorted())
 
         UndoManager.getInstance(project).undo(editor)
         assertEquals("one Undo restores the exact text", before, document().text)
         UndoManager.getInstance(project).redo(editor)
-        assertFalse("0" in ids())
-        assertEquals((0..10).map(Int::toString) - "0", ids())
+        assertFalse(0L in ids())
+        assertEquals((0L..10L).toList() - 0L, ids())
     }
 
     /** The tree has focus, not a text editor: Undo and Redo of the removal must still reach it (EntityLifecycleUiTest). */
@@ -151,10 +150,10 @@ class RemoveEntityActionTest : BasePlatformTestCase() {
         copyProject()
         myFixture.openFileInEditor(scene())
         val editor = TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
-        runWriteAction { document().setText(document().text.replaceFirst("\"formatVersion\": 1", "\"formatVersion\": 1,\n  \"unrelated\": 1.000")) }
+        runWriteAction { document().setText(document().text.replaceFirst("\"ambientLightEnabled\": true", "\"ambientLightEnabled\": false")) }
         val unsaved = document().text
         run(entity("0"))
-        assertTrue(document().text.contains("\"unrelated\": 1.000"))
+        assertTrue(document().text.contains("\"ambientLightEnabled\": false"))
         UndoManager.getInstance(project).undo(editor)
         assertEquals(unsaved, document().text)
     }

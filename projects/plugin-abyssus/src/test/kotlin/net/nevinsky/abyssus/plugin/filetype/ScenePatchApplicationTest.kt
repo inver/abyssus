@@ -1,3 +1,4 @@
+/* DISABLED (a tree-path patch tool; scenes are edited as DTOs now); kept for reference, not compiled.
 /*
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
@@ -16,7 +17,7 @@ import java.io.File
 import java.security.MessageDigest
 
 /**
- * Applies a staged edit of native documents (a scene, a project or an asset `meta.json`) through [editSceneJson], the
+ * Applies a staged edit of native documents (a scene, a project or an asset `meta.json`) through [editSceneDocument], the
  * one writer of those files. A tool, not a check: it runs only with `ABYSSUS_SCENE_PATCH` set to a patch file, e.g.
  * `ABYSSUS_SCENE_PATCH=$PWD/games/control-line/importers/trainer.patch.json
  * ./gradlew :test --tests 'net.nevinsky.abyssus.plugin.filetype.ScenePatchApplicationTest'`.
@@ -38,7 +39,7 @@ class ScenePatchApplicationTest : BasePlatformTestCase() {
             assertEquals("$target changed since the patch was staged", document.get("expectedSha256").asText(), actual)
             VfsRootAccess.allowRootAccess(testRootDisposable, target.parentFile.absolutePath)
             val file = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(target)!!
-            val written = editSceneJson(project, file, "Apply Staged Patch") { root ->
+            val written = editSceneDocument(project, file, "Apply Staged Patch") { root ->
                 document.get("operations").forEach { apply(root, it) }
                 true
             }
@@ -58,9 +59,9 @@ class ScenePatchApplicationTest : BasePlatformTestCase() {
             "removeEntitiesWithAssets" -> {
                 val prefixes = operation.get("prefixes").map { it.asText() }
                 val keep = operation.path("keep").map { it.asText() }.toSet()
-                val entities = root.get("ecs").get("entities") as ObjectNode
+                val entities = root.get("ecs") as ObjectNode
                 entities.properties().filter { (id, entity) ->
-                    id !in keep && entity.path("components").path("RenderComponent").path("renderable").path("asset")
+                    id !in keep && entity.path("components").path("RenderComponent")
                         .path("assetName").asText().let { name -> prefixes.any(name::startsWith) }
                 }.map { it.key }.forEach(entities::remove)
             }
@@ -68,3 +69,5 @@ class ScenePatchApplicationTest : BasePlatformTestCase() {
         }
     }
 }
+
+*/

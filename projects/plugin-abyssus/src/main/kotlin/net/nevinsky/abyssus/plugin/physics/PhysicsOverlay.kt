@@ -4,7 +4,6 @@
  */
 package net.nevinsky.abyssus.plugin.physics
 
-import com.fasterxml.jackson.databind.JsonNode
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
@@ -55,8 +54,8 @@ class PhysicsOverlay(initialProjectDir: File?) : SceneOverlay {
     init { initialProjectDir?.let(::useProject) }
 
     private var lastContent: SceneContent? = null
-    private var lastEcs: JsonNode? = null
-    private var lastSelection: String? = null
+    private var lastEcs: Map<Long, net.nevinsky.abyssus.lib.core.dto.EntityDto>? = null
+    private var lastSelection: Long? = null
     private var segments: List<OverlaySegment> = emptyList()
 
     override fun draw(view: OverlayView, lines: LineSink) {

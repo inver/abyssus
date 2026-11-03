@@ -241,7 +241,7 @@ class AssetFileCommandTest : BasePlatformTestCase() {
         val txn = creation()
         create(txn)
         File(disk, "scenes").mkdirs()
-        File(disk, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{"0":{"components":{"RenderComponent":{"renderable":{"asset":{"assetName":"hills","type":"TERRAIN"}}}}}}}}""")
+        File(disk, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"0":{"components":{"RenderComponent":{"type":"TERRAIN","assetName":"hills"}}}}}""")
         assertUndoRefused(txn, "Main.scene uses hills")
     }
 
@@ -249,11 +249,11 @@ class AssetFileCommandTest : BasePlatformTestCase() {
         val txn = creation()
         create(txn)
         File(disk, "scenes").mkdirs()
-        File(disk, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{}}}""")
+        File(disk, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{}}""")
         root.refresh(false, true)
         val document = FileDocumentManager.getInstance().getDocument(root.findFileByRelativePath("scenes/Main.scene")!!)!!
         WriteCommandAction.runWriteCommandAction(project) {
-            document.setText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{"0":{"components":{"RenderComponent":{"renderable":{"asset":{"assetName":"hills"}}}}}}}}""")
+            document.setText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"0":{"components":{"RenderComponent":{"assetName":"hills"}}}}}""")
         }
         assertTrue(FileDocumentManager.getInstance().isDocumentUnsaved(document))
         assertUndoRefused(txn, "Main.scene uses hills")
@@ -263,7 +263,7 @@ class AssetFileCommandTest : BasePlatformTestCase() {
         val txn = creation()
         create(txn)
         File(disk, "scenes").mkdirs()
-        File(disk, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","skyboxName":"hills","ecs":{"entities":{}}}""")
+        File(disk, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","skyboxName":"hills","ecs":{}}""")
         assertUndoRefused(txn, "Main.scene")
         File(disk, "scenes/Main.scene").delete()
         File(disk, "assets/other").mkdirs()
@@ -275,7 +275,7 @@ class AssetFileCommandTest : BasePlatformTestCase() {
         val txn = creation()
         create(txn)
         File(disk, "scenes").mkdirs()
-        File(disk, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{"0":{"components":{"RenderComponent":{"renderable":{"asset":{"assetName":"t"}}}}}}}}""")
+        File(disk, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"0":{"components":{"RenderComponent":{"assetName":"t"}}}}}""")
         WriteCommandAction.runWriteCommandAction(project) { undoOf(txn).undo() }
         assertFalse(File(disk, "assets/hills").exists())
     }

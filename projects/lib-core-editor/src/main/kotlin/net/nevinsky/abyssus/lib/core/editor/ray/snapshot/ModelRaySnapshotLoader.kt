@@ -6,6 +6,8 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.decodeModelKey
+import net.nevinsky.abyssus.lib.core.assets.model.selectMesh
 import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
 import net.nevinsky.abyssus.lib.core.assets.model.ModelPreparationTap
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
@@ -19,11 +21,13 @@ data class RayModelSource(val data: ModelData, val images: Map<String, Pixmap>)
 class ModelRaySnapshotLoader(
     private val fileLoader: FileLoader,
     private val assimp: AssimpModelLoader,
-    private val maxBytes: Long = 128L * 1024 * 1024
+    private val maxBytes: Long = RAY_SNAPSHOT_MAX_BYTES
 ) : RaySnapshotLoader<RayModelSnapshot, RayModelSource> {
     override fun load(meta: AssetMeta<Any>): RayModelSnapshot {
-        val file = FileHandle(fileLoader.loadAssetFile(meta.name, meta.typedAdditional<ModelMeta>().file))
+        val key = decodeModelKey(meta.name)
+        val file = FileHandle(fileLoader.loadAssetFile(key.name, meta.typedAdditional<ModelMeta>().file))
         val data = assimp.loadData(file)
+        key.meshId?.let { selectMesh(data, key.name, it) }
         val images = assimp.decodeTextures(data, file)
         return try {
             capture(RayModelSource(data, images))
@@ -38,7 +42,7 @@ class ModelRaySnapshotLoader(
         val bytes = data.meshes.sumOf { mesh ->
             mesh.vertices.size.toLong() * 4 + mesh.parts.sumOf { it.indices.size.toLong() * 4 }
         } + images.values.sumOf { it.width.toLong() * it.height * 4 }
-        require(bytes <= maxBytes) { "CPU model snapshot exceeds its $maxBytes byte limit" }
+        requireSnapshotSize("model", bytes, maxBytes)
         val meshes = data.meshes.map { mesh ->
             var offset = 0
             val attributes = mesh.attributes.map { attribute ->

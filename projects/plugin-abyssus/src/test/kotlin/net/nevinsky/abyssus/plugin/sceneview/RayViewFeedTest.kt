@@ -18,8 +18,8 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.editor.ray.RayModePhase
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 
@@ -44,7 +44,7 @@ class RayViewFeedTest {
     }
 
     private val model = rayTestModel()
-    private val placement = AssetPlacement("entity", "model", PlacementTransform.IDENTITY)
+    private val placement = AssetPlacement(1L, "model", PlacementTransform.IDENTITY)
     private val camera = PerspectiveCamera(61f, 8f, 8f).apply { position.set(4f, 5f, 6f); direction.set(-1f, -1f, -1f).nor(); near = .2f; far = 500f; update() }
     private val device = RayFakeDevice()
     private val service = RayFakeDevice.service("metal" to device)
@@ -85,7 +85,7 @@ class RayViewFeedTest {
         val metadata = display.metadata
         assertEquals(8, metadata.width); assertEquals(8, metadata.height)
         assertEquals(camera.position.x, metadata.camera.position.x, 1e-5f)
-        assertEquals(setOf("entity"), metadata.content.models.map { it.entityId }.toSet())
+        assertEquals(setOf(1L), metadata.content.models.map { it.entityId }.toSet())
         assertTrue(display.frame.width in 1..8)
     }
 
@@ -94,7 +94,7 @@ class RayViewFeedTest {
         SwingUtilities.invokeAndWait { feed.runtime.setRequested(true) }
         presented(feed)
         val before = device.submitted.get()
-        val moved = placement.copy(transform = PlacementTransform(Vec3(5f, 0f, 0f), Quat.IDENTITY, Vec3(1f, 1f, 1f)))
+        val moved = placement.copy(transform = PlacementTransform(Vector3(5f, 0f, 0f), Quaternion(), Vector3(1f, 1f, 1f)))
         val content = SceneContent(models = listOf(moved))
         // an older frame may be shown briefly while motion continues, so wait for one rendered for the moved content
         var display: RaySceneDisplay? = null

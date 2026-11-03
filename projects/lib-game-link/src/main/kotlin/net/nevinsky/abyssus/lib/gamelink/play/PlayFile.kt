@@ -5,8 +5,9 @@
 package net.nevinsky.abyssus.lib.gamelink.play
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.node.ArrayNode
-import com.fasterxml.jackson.databind.node.ObjectNode
+import net.nevinsky.abyssus.lib.core.editor.json.JsonObjectWriter
+import net.nevinsky.abyssus.lib.core.io.JsonObjectReader
+import net.nevinsky.abyssus.lib.core.io.JsonObjectView
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -23,7 +24,10 @@ data class PlayConfig(val protocol: Int, val module: String, val classpath: List
  * Writes and reads `abyssus/play.json`. Writing is stable: two-space indent, LF line ends and a final newline, so the
  * same configuration gives the same bytes.
  */
-class PlayFile(private val json: ObjectMapper = ObjectMapper()) {
+class PlayFile(json: ObjectMapper = ObjectMapper()) {
+    private val reader = JsonObjectReader(json)
+    private val writer = JsonObjectWriter(json)
+
     fun write(config: PlayConfig): String {
         val out = StringBuilder("{\n")
         out.append("  \"protocol\": ").append(config.protocol).append(",\n")
@@ -43,19 +47,17 @@ class PlayFile(private val json: ObjectMapper = ObjectMapper()) {
 
     /** The configuration [text] holds; throws [IllegalArgumentException] naming what is missing or malformed. */
     fun parse(text: String): PlayConfig {
-        val root = json.readTree(text) as? ObjectNode ?: throw IllegalArgumentException("play.json is not a JSON object")
-        val protocol = root.get("protocol")?.takeIf { it.isIntegralNumber }?.intValue()
-            ?: throw IllegalArgumentException("play.json has no whole-number protocol")
-        val module = root.get("module")?.takeIf { it.isTextual }?.textValue()?.takeIf { it.isNotBlank() }
-            ?: throw IllegalArgumentException("play.json names no module")
+        val root = reader.parse(text) ?: throw IllegalArgumentException("play.json is not a JSON object")
+        val protocol = root.int("protocol") ?: throw IllegalArgumentException("play.json has no whole-number protocol")
+        val module = root.text("module")?.takeIf { it.isNotBlank() } ?: throw IllegalArgumentException("play.json names no module")
         return PlayConfig(protocol, module, strings(root, "classpath") ?: throw IllegalArgumentException("play.json has no classpath list"),
             strings(root, "jvmArgs").orEmpty())
     }
 
-    private fun strings(root: ObjectNode, name: String): List<String>? =
-        (root.get(name) as? ArrayNode)?.map { it.takeIf { e -> e.isTextual }?.textValue() ?: throw IllegalArgumentException("play.json $name holds a non-text entry") }
+    private fun strings(root: JsonObjectView, name: String): List<String>? =
+        try { root.strings(name) } catch (e: IllegalArgumentException) { throw IllegalArgumentException("play.json ${e.message}") }
 
-    private fun quoted(text: String) = json.writeValueAsString(text)
+    private fun quoted(text: String) = writer.quoted(text)
 
     private fun list(values: List<String>): String =
         if (values.isEmpty()) "[]" else values.joinToString(",\n", "[\n", "\n  ]") { "    " + quoted(it) }

@@ -1,68 +1,43 @@
 package net.nevinsky.abyssus.lib.core.editor.ray.snapshot
 
 import com.badlogic.gdx.graphics.Pixmap
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxLoader
-import kotlin.math.PI
-import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.sin
 
 class SkyboxRaySnapshotLoader(
     private val skyboxLoader: SkyboxLoader
 ) : RaySnapshotLoader<RaySkySnapshot, Nothing> {
+    // the GL cube map convention: the in-face coordinates (sc, tc) of the major axis, with tc running down the image
+    private val mapping = EquirectCubeMapping(
+        RAY_SKY_MAX_WIDTH, RAY_SKY_MAX_WIDTH / 2, listOf(
+            axes(1f, 0f, 0f, 0f, 0f, -1f, 0f, 1f, 0f), axes(-1f, 0f, 0f, 0f, 0f, 1f, 0f, 1f, 0f),
+            axes(0f, 1f, 0f, 1f, 0f, 0f, 0f, 0f, -1f), axes(0f, -1f, 0f, 1f, 0f, 0f, 0f, 0f, 1f),
+            axes(0f, 0f, 1f, 1f, 0f, 0f, 0f, 1f, 0f), axes(0f, 0f, -1f, -1f, 0f, 0f, 0f, 1f, 0f),
+        )
+    )
+
     override fun load(meta: AssetMeta<Any>): RaySkySnapshot {
         val skybox = checkNotNull(skyboxLoader.loadPrepared(meta)).staged
-        return resample(skybox.faces)
+        try {
+            return RaySkySnapshot(mapping.width, mapping.height, mapping.resample(skybox.faces.map(::image)), hdr = false)
+        } finally {
+            skyboxLoader.discardStaged(skybox)
+        }
     }
 
-    private fun resample(faces: List<Pixmap>): RaySkySnapshot {
-        val width = RAY_SKY_MAX_WIDTH
-        val height = width / 2
-        val out = FloatArray(width * height * 4)
-        for (y in 0 until height) {
-            val phi = (y + .5f) / height * PI.toFloat()
-            for (x in 0 until width) {
-                val theta = ((x + .5f) / width - .5f) * 2f * PI.toFloat()
-                val dx = sin(phi) * sin(theta);
-                val dy = cos(phi);
-                val dz = -sin(phi) * cos(theta)
-                val ax = abs(dx);
-                val ay = abs(dy);
-                val az = abs(dz)
-                // the GL cube map face selection: major axis, then the in-face coordinates (sc, tc) over |ma|
-                val face: Int;
-                val sc: Float;
-                val tc: Float;
-                val ma: Float
-                if (ax >= ay && ax >= az) {
-                    ma = ax; if (dx > 0) {
-                        face = 0; sc = -dz; tc = -dy
-                    } else {
-                        face = 1; sc = dz; tc = -dy
-                    }
-                } else if (ay >= az) {
-                    ma = ay; if (dy > 0) {
-                        face = 2; sc = dx; tc = dz
-                    } else {
-                        face = 3; sc = dx; tc = -dz
-                    }
-                } else {
-                    ma = az; if (dz > 0) {
-                        face = 4; sc = dx; tc = -dy
-                    } else {
-                        face = 5; sc = -dx; tc = -dy
-                    }
-                }
-                val pixmap = faces[face]
-                val px = ((sc / ma + 1f) / 2f * pixmap.width).toInt().coerceIn(0, pixmap.width - 1)
-                val py = ((tc / ma + 1f) / 2f * pixmap.height).toInt().coerceIn(0, pixmap.height - 1)
-                val rgba = pixmap.getPixel(px, py)
-                val i = (y * width + x) * 4
-                out[i] = ((rgba ushr 24) and 255) / 255f; out[i + 1] = ((rgba ushr 16) and 255) / 255f
-                out[i + 2] = ((rgba ushr 8) and 255) / 255f; out[i + 3] = 1f
-            }
+    /** The pixmap as bottom-origin RGBA bytes. */
+    private fun image(pixmap: Pixmap): CubeFaceImage {
+        val rgba = ByteArray(pixmap.width * pixmap.height * 4)
+        for (row in 0 until pixmap.height) for (x in 0 until pixmap.width) {
+            val color = pixmap.getPixel(x, pixmap.height - 1 - row)
+            val i = (row * pixmap.width + x) * 4
+            rgba[i] = (color ushr 24).toByte(); rgba[i + 1] = (color ushr 16).toByte()
+            rgba[i + 2] = (color ushr 8).toByte(); rgba[i + 3] = color.toByte()
         }
-        return RaySkySnapshot(width, height, out, hdr = false)
+        return CubeFaceImage(pixmap.width, pixmap.height, rgba)
     }
+
+    private fun axes(dx: Float, dy: Float, dz: Float, rx: Float, ry: Float, rz: Float, vx: Float, vy: Float, vz: Float) =
+        CubeFaceAxes(Vector3(dx, dy, dz), Vector3(rx, ry, rz), Vector3(vx, vy, vz))
 }

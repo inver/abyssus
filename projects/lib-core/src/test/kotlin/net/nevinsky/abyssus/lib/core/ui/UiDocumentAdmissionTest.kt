@@ -58,11 +58,11 @@ class UiDocumentAdmissionTest {
         assertEquals("big", c.styles.single().name)
     }
 
-    @Test fun missingOrForeignMarkersAreRefusedWithoutTouchingTheTree() {
-        val noMarker = json.readObject("""{"formatVersion":1,"type":"UI","additional":{"ui":$minimal}}""")
-        assertEquals(UiIssueCode.FORMAT_MARKER, refusal(noMarker).single().code)
-        val foreign = meta(minimal, """"format":"other","formatVersion":1,"type":"UI"""")
-        assertEquals(UiIssueCode.FORMAT_MARKER, refusal(foreign).single().code)
+    @Test fun aMissingVersionIsRefusedWithoutTouchingTheTree() {
+        val noVersion = json.readObject("""{"type":"UI","additional":{"ui":$minimal}}""")
+        assertEquals(UiIssueCode.FORMAT_VERSION, refusal(noVersion).single().code)
+        val foreign = meta(minimal, """"formatVersion":7,"type":"UI"""")
+        assertEquals(UiIssueCode.FORMAT_VERSION, refusal(foreign).single().code)
         val before = foreign.toString()
         refusal(foreign)
         assertEquals(before, foreign.toString())

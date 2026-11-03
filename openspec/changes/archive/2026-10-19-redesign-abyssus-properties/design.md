@@ -47,7 +47,7 @@ raw flag. `lib-physics` skips body and shape creation for disabled physics compo
 `lib-core-editor` adds a `PanelModel` layer between the current states and the views: `Header` (breadcrumb, icon kind, title,
 subtitle, badges), `Section` (kind, title, game flag, class hint, enabled state, collapsed key, rows) and `Row` variants
 (`Text`, `Number(unit)`, `Vector(axes)`, `Choice`, `Check`, `Color`, `Asset(kind, browse)`, `Readonly`, `Link`, `Note`,
-`SubHeading`, `Table`). `FieldValue` gains `isDefault` (value absent from the file). Strings come from
+`SubHeading`, `Table`). `AssetFieldValue` gains `isDefault` (value absent from the file). Strings come from
 `AbyssusEditorBundle.properties` through `EditorMessages`. The plugin maps `Row` to Swing; rows that carry editors keep today's
 `FieldEditors` commit/refuse/revert behavior.
 
@@ -67,7 +67,7 @@ runtime uses.
 
 ### D6. Enabled in the UI
 The tree eye and the section check box are the same action: `SetEnabledAction(target, enabled)` in `lib-core-editor`
-(`HeadlessEditing` can run it) producing one `DocumentTextEditor` transform, called through `editSceneJson`. Togglable
+(`HeadlessEditing` can run it) producing one `DocumentTextEditor` transform, called through `editSceneDocument`. Togglable
 means: not `GROUP`, not `NameComponent` / `ParentComponent` / `PositionComponent` (the board shows no toggle on those).
 Scene settings keep their `<x>Enabled` keys and use the same check box widget.
 

@@ -8,7 +8,7 @@ See proposal.md for why. Observed in the repository on 2026-10-13:
   creates a project or a scene.
 - Asset creation already goes through `plugin/assetfiles` (`AssetTransactionEngine`, `AssetFileStore`), which writes several
   files as one transaction and undoes the writes already made when a later one fails. `NewTerrainAction` uses it.
-- `editSceneJson` edits an existing document as one undoable command. It cannot create a file, so it is not the path for the
+- `editSceneDocument` edits an existing document as one undoable command. It cannot create a file, so it is not the path for the
   new files; the existing multi-file transaction is (the AGENTS.md rule asks a plan needing another write path to say why).
 - `Untitled.abss` shows the project shape: `format`, `formatVersion`, `name`, `activeSceneName`, `mainCamera`, `settings`.
   A procedural sky `meta.json` needs `type: "SKYBOX_PROCEDURAL"` and an `additional` block with the atmosphere constants.
@@ -45,7 +45,7 @@ See proposal.md for why. Observed in the repository on 2026-10-13:
 
 3. **Writes use the existing multi-file transaction.** All files of one action are written as one `AssetTransaction`, so a
    failure removes the files already written (spec: "Failed creation leaves no partial project"). *Alternative:*
-   `editSceneJson` plus a plain create; rejected because it cannot create files and has no rollback. IDE Undo of a creation
+   `editSceneDocument` plus a plain create; rejected because it cannot create files and has no rollback. IDE Undo of a creation
    is not promised; the spec does not require it, and the existing asset-creation actions are the precedent.
 
 4. **Threads.** Name validation runs on the EDT while the user types, on data already read (existing scene names are read

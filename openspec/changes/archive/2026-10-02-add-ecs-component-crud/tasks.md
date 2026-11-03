@@ -12,7 +12,7 @@
 ## 2. Writing to the scene file
 
 - [x] 2.1 Add `commandAddComponent`, `commandEditComponent`, `commandRemoveComponent` and the validation messages to `AbyssusBundle.properties`; verify the keys are used by the next tasks
-- [x] 2.2 Add a `SceneComponentEdits` entry point that runs the editor inside `editSceneJson` and returns the result for the UI; verify a test on a temp scene file covers one undoable command per change and Undo restoring the text
+- [x] 2.2 Add a `SceneComponentEdits` entry point that runs the editor inside `editSceneDocument` and returns the result for the UI; verify a test on a temp scene file covers one undoable command per change and Undo restoring the text
 - [x] 2.3 Verify the open Scene view follows an edit: extend `SceneFileEditorTest` so a component change reloads the params without reopening the tab
 
 ## 3. Properties panel for entities and components

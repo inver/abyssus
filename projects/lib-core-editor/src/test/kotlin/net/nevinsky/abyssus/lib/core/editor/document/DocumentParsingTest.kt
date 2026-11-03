@@ -28,12 +28,12 @@ class DocumentParsingTest {
         for (kind in DocumentKind.entries) for (header in headers) {
             val text = "{$header}"
             val expected = runCatchingKeepingCancellation {
-                AbyssusDocumentFormat().requireSupported(SceneJson().parse(text), kind)
+                AbyssusDocumentFormat().requireSupported(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(text), kind)
             }.isSuccess
             assertEquals("$kind $text", expected, runCatchingKeepingCancellation { parsing.requireSupported(text, kind) }.isSuccess)
         }
         for (text in listOf("{", "[]", """{"format":"abyssus","formatVersion":1,"ecs":{"componentIdentifiers":{}}}""")) {
-            assertNull(runCatchingKeepingCancellation { parsing.scene(text) }.getOrNull())
+            assertNull(runCatchingKeepingCancellation { parsing.parse(text) }.getOrNull())
         }
     }
 
@@ -67,7 +67,8 @@ class DocumentParsingTest {
         assertEquals(1f, layer.models.single().weight, 0f)
         assertEquals(0.8f, layer.scale.min, 0f)
         assertEquals(2f, layer.scale.max, 0f)
-        assertEquals("1.00", layer.collider!!["future"].toString())
+        // G4: number spelling is not kept (1.00 reads back as 1.0)
+        assertEquals("1.0", layer.collider!!["future"].toString())
     }
 
     @Test

@@ -21,4 +21,4 @@ internal fun newSceneEditor(
     paramsSource: SceneParamsSource = SceneParamsSource.editorText(service<SceneReader>()),
     host: SceneViewHost = net.nevinsky.abyssus.plugin.projectView.ProjectSceneViewHost(project),
     viewFactory: (SceneRenderParams) -> SceneView,
-) = SceneFileEditor(project, file, service<AbyssusPluginCtx>().json, project.service<SceneRayControls>(), paramsSource, host, viewFactory)
+) = SceneFileEditor(project, file, service<AbyssusPluginCtx>().documents.parsing, service<AbyssusPluginCtx>().documents.json, project.service<SceneRayControls>(), paramsSource, host, viewFactory)

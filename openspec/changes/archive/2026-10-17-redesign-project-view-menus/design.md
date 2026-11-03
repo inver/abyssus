@@ -64,7 +64,7 @@ standalone `.scene` (`AbyssusAssetNode`) — the same helper the Add actions use
 `perform` no longer has a `SceneEntry`, so the dialog's initial name and the "unchanged" check come from a new internal
 helper `sceneNameOf(project, file)` = `SceneDocumentCache.of(project).read(file)?.scene?.name`: the same cached read the
 Add actions use, unsaved editor text included, no new state. A scene with no name starts with an empty field.
-`renameScene(project, file, name)` stays the single write (one undoable `editSceneJson` command) and runs on the EDT as
+`renameScene(project, file, name)` stays the single write (one undoable `editSceneDocument` command) and runs on the EDT as
 before. `sceneName(entry)` loses its last production caller and is removed; `AbyssusViewTest` reads through
 `sceneNameOf` instead.
 

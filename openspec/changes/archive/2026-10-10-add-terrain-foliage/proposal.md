@@ -32,7 +32,7 @@ Control Line, or any other game, looks like a landscape.
   discards the preview. The panel shows the copy count of each layer, and refuses an Apply above the copy limit.
 - **Show foliage in a scene: Add Foliage...** on a terrain entity, in the tree and in the Scene view toolbar. It lists
   the foliage assets of that entity's terrain and adds `FoliageComponent` to the entity, so the copies follow the
-  entity's position, rotation and scale. This is one undoable scene edit through `editSceneJson`.
+  entity's position, rotation and scale. This is one undoable scene edit through `editSceneDocument`.
 - **Paint Foliage mode in the Scene view**, available when a terrain entity with foliage is selected:
   - A brush strip chooses the layer, radius, strength and Paint or Erase; holding Shift erases.
   - Dragging with the left button paints that layer's density mask under a circle drawn on the terrain. The other
@@ -70,7 +70,7 @@ Native fields:
   copies of each layer by chunk. A copy is a model index, terrain-local x and z, yaw and scale. This file has its own
   version number. It is not a native JSON document, and the native `formatVersion` does not change.
 - **The scene gains `ecs.<id>.components.FoliageComponent: { "assetName": "<foliage folder>" }`** on a terrain entity.
-  It is written through `editSceneJson`. Until the runtime registers this component (follow-up change), it is extension
+  It is written through `editSceneDocument`. Until the runtime registers this component (follow-up change), it is extension
   data that round-trips unchanged.
 - **No format version change for existing documents.** The `.abss` is never written.
 

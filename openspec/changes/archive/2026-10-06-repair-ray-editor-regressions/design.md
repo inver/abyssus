@@ -2,7 +2,7 @@
 
 Existing failing suites provide the regression baseline; assertions remain unchanged.
 
-1. `SceneRayEdits.edit` invokes its supplied mutation on the validated object inside `editSceneJson`; its return
+1. `SceneRayEdits.edit` invokes its supplied mutation on the validated object inside `editSceneDocument`; its return
    value still decides whether the one undoable command writes. Invalid, equal and superseded edits write nothing.
 2. `RayViewFeed.frame` stores the settings/override signature in the same render-thread branch that increments
    revision and epoch. Converter ownership and stale-result rejection remain unchanged.

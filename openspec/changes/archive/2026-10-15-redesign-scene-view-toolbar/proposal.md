@@ -34,7 +34,7 @@ tree and Properties already use. This change brings the Scene View to that desig
 
 No native document field is read or written by the new view state: Local/World, Snap, shading, the toggles and the camera
 framing live in the view only and are not saved in `.scene`, `.abss` or `meta.json`. The existing gizmo writes still go
-through `editSceneJson` unchanged, so no versioned format change and no new document validation is needed beyond the
+through `editSceneDocument` unchanged, so no versioned format change and no new document validation is needed beyond the
 existing `AbyssusDocumentFormat` check the view already performs.
 
 ## Capabilities

@@ -1,6 +1,5 @@
 package net.nevinsky.abyssus.lib.core.editor.ui
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
 import net.nevinsky.abyssus.lib.core.ui.model.UiCollection
 import net.nevinsky.abyssus.lib.core.ui.model.UiWidget
@@ -10,7 +9,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class UiPreviewStateTest {
-    private val text = SceneJson().pretty("""{"format":"abyssus","formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,
+    private val text = canonicalUi("""{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,
         "entryScreen":"hud",
         "bindings":[
           {"name":"volume","type":"number","access":"write","sample":0.5,"min":0,"max":1,"step":0.25},
@@ -25,7 +24,7 @@ class UiPreviewStateTest {
             {"id":"scoreSlider","type":"slider","bindings":{"value":"score"}},
             {"id":"nameField","type":"textField","bindings":{"text":"name"}}]}}]}}}""")!!
 
-    private val collection: UiCollection get() = (UiCollectionDecoder().decode(SceneJson().parse(text)) as UiAdmission.Admitted).collection
+    private val collection: UiCollection get() = (admitUi(text) as UiAdmission.Admitted).collection
     private val factory = UiPreviewState.Factory()
 
     private fun widget(c: UiCollection, id: String): UiWidget = c.screens.flatMap { it.root.children + it.root }.first { it.id == id }
@@ -56,8 +55,8 @@ class UiPreviewStateTest {
         assertEquals(UiValue.Num(7.0), state.samples["score"])
         state.actionSink().emit("startGame")
         // nothing the preview did reaches the text the editor holds
-        assertEquals(SceneJson().pretty(text), text)
-        val again = (UiCollectionDecoder().decode(SceneJson().parse(text)) as UiAdmission.Admitted).collection
+        assertEquals(canonicalUi(text), text)
+        val again = (admitUi(text) as UiAdmission.Admitted).collection
         assertEquals(0.5, (again.binding("volume")!!.sample!!.doubleValue()), 0.0)
     }
 
@@ -117,7 +116,7 @@ class UiPreviewStateTest {
         val old = factory.of(collection)
         old.setSample("volume", "0.9"); old.actionSink().emit("x")
         val changed = text.replace("\"sample\": 0.5", "\"sample\": 0.25").replace("\"entryScreen\": \"hud\"", "\"entryScreen\": \"main\"")
-        val c2 = (UiCollectionDecoder().decode(SceneJson().parse(changed)) as UiAdmission.Admitted).collection
+        val c2 = (admitUi(changed) as UiAdmission.Admitted).collection
         val fresh = factory.of(c2)
         assertEquals("edits to the previous definition are not carried over", UiValue.Num(0.25), fresh.samples["volume"])
         assertTrue(fresh.log.isEmpty())

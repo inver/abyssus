@@ -33,7 +33,7 @@ can be verified instead of eyeballed.
 
 No document format changes. The folders are view-only rows: nothing new is read from or written to `.abss`, `.scene` or
 `meta.json`, and every existing write (eye toggle, Rename Scene, skybox assignment, component edits) keeps going through
-`editSceneJson`.
+`editSceneDocument`.
 
 ## Capabilities
 

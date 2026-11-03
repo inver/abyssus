@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.assets.foliage
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.JsonNode
 
 /** The file a foliage asset bakes its copies into, when `additional.dataFile` omits it. */
@@ -15,6 +16,8 @@ data class FoliageMeta(
     val terrain: String = "",
     val dataFile: String? = null,
     val maskResolution: Int = 256,
+    /** Not written when empty, so a new foliage meta has no `layers` key. */
+    @get:JsonInclude(JsonInclude.Include.NON_EMPTY)
     val layers: List<FoliageLayerMeta> = emptyList()
 ) {
     /** The bake file of this asset: [dataFile], or [FOLIAGE_DATA_FILE] when the meta omits it. */

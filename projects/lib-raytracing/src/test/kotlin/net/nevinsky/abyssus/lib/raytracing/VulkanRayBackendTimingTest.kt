@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.lib.raytracing
 
+import com.badlogic.gdx.math.Vector3
+
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -59,7 +61,7 @@ class VulkanRayBackendTimingTest {
             val prism = RayMesh("prism", floatArrayOf(-1f, 0f, 0f, 1f, 0f, 0f, 0f, 2f, 0f), intArrayOf(0, 1, 2), normals = floatArrayOf(0f, 0f, 1f, 0f, 0f, 1f, 0f, 0f, 1f))
             val materials = listOf(RayMaterial(kind = RayMaterialKind.PBR, baseColor = RayColor(.8f, .8f, .8f), metallic = 1f, roughness = .2f),
                 RayMaterial(baseColor = RayColor(1f, .2f, .1f)))
-            val lights = listOf(RayLight("sun", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), direction = RayVec3(-.4f, -1f, -.3f)))
+            val lights = listOf(RayLight("sun", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), direction = Vector3(-.4f, -1f, -.3f)))
             measure("scene", backend) { session, version, phase ->
                 val camera = RaySliceCamera(listOf(sin(phase).toFloat(), 2f, 4f), listOf(0f, -2f, -4f), listOf(0f, 1f, 0f), 60f, 0.1f, 100f)
                 val translated = identity.toMutableList().also { it[12] = sin(phase).toFloat(); it[14] = -2f }

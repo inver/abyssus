@@ -10,11 +10,19 @@ const val SCREENS_ASSET = "screens"
 /** The Watch AI button of plane select: Enter on it watches the bot instead of flying. */
 const val WATCH_AI_BUTTON = "ps-watch-ai"
 
+/** The Instructor checkbox of plane select: Enter on it toggles the instructor instead of flying. */
+const val INSTRUCTOR_CHECKBOX = "ps-instructor"
+
+/** The ghost handle shows a cue when its tilt is this far from the player's. */
+const val CUE_MARGIN = 0.2f
+
 /** Screen and overlay ids of the UI asset, as the game shows them. */
 const val SCREEN_MAIN_MENU = "mainMenu"
 const val SCREEN_ASSIST = "assistSelect"
 const val SCREEN_PLANE = "planeSelect"
+const val SCREEN_SETTINGS = "settings"
 const val SCREEN_HUD_FREE = "hudFree"
+const val SCREEN_HUD_SCALE = "hudScale"
 const val SCREEN_HUD_PATTERN = "hudPattern"
 const val SCREEN_PAUSED = "paused"
 const val SCREEN_NAME_ENTRY = "nameEntry"
@@ -23,7 +31,7 @@ const val SCREEN_SCORES = "scores"
 const val SCREEN_DEBRIEF = "debrief"
 
 val SCREEN_IDS = listOf(
-    SCREEN_MAIN_MENU, SCREEN_ASSIST, SCREEN_PLANE, SCREEN_HUD_FREE, SCREEN_HUD_PATTERN, SCREEN_PAUSED,
+    SCREEN_MAIN_MENU, SCREEN_ASSIST, SCREEN_PLANE, SCREEN_SETTINGS, SCREEN_HUD_FREE, SCREEN_HUD_SCALE, SCREEN_HUD_PATTERN, SCREEN_PAUSED,
     SCREEN_NAME_ENTRY, SCREEN_GAME_OVER, SCREEN_SCORES, SCREEN_DEBRIEF,
 )
 
@@ -33,33 +41,43 @@ val SCREEN_IDS = listOf(
  */
 val PUBLISHED_BINDINGS: Map<String, String> = mapOf(
     // main menu
-    "freeEnabled" to "boolean", "patternEnabled" to "boolean", "hasMessage" to "boolean", "message" to "string",
+    "freeEnabled" to "boolean", "patternEnabled" to "boolean", "scaleEnabled" to "boolean", "hasMessage" to "boolean", "message" to "string",
     // plane select
     "hasModeLabel" to "boolean", "modeLabel" to "string", "planeCount" to "string", "planeName" to "string", "planeFacts" to "string",
-    "watchAiVisible" to "boolean",
+    "watchAiVisible" to "boolean", "instructorOffered" to "boolean", "instructorOn" to "boolean", "hasScaleFacts" to "boolean", "scaleFacts" to "string",
+    // the controller settings
+    "hasDevice" to "boolean", "deviceName" to "string", "deviceCount" to "string", "axisName" to "string", "liveTilt" to "number",
+    "liveTiltText" to "string", "invert" to "boolean", "deadZone" to "number", "deadZoneText" to "string", "curve" to "number",
+    "curveText" to "string", "pauseName" to "string", "detecting" to "boolean", "detectStatus" to "string",
+    "hasControlsDamaged" to "boolean", "controlsDamaged" to "string",
+    // the display settings
+    "fullscreen" to "boolean", "hasDisplayDamaged" to "boolean", "displayDamaged" to "string",
     // who flies: an AI demonstration on the HUD, the pause menu, GAME OVER and the debrief, or the player
     "isAi" to "boolean", "isHuman" to "boolean",
     // the HUD
     "tensionText" to "string", "tensionValue" to "number", "fuel" to "string", "laps" to "string", "score" to "string",
     "combo" to "string", "time" to "string", "next" to "string", "pauseLaps" to "string", "warning" to "string",
+    "isInstructed" to "boolean", "handleTilt" to "number", "ghostVisible" to "boolean", "ghostTilt" to "number", "ghostCue" to "string",
+    "instructorHolds" to "boolean",
     "prompted" to "boolean", "toast" to "string", "toastVisible" to "boolean",
     // the flight summary (name entry and game over)
-    "endLabel" to "string", "isFree" to "boolean", "isPattern" to "boolean", "patternHeader" to "string", "sheetScore" to "string",
+    "endLabel" to "string", "isFree" to "boolean", "isPattern" to "boolean", "isScale" to "boolean", "patternHeader" to "string", "sheetScore" to "string",
     "facts" to "list:name,value", "sheet" to "list:title,k,result,style",
     "playerName" to "string", "rankText" to "string", "hasRank" to "boolean", "canDebrief" to "boolean",
     // the score tables
-    "tabFreeStyle" to "string", "tabProStyle" to "string", "tabMidStyle" to "string", "tabNoobStyle" to "string",
-    "scoresHint" to "string", "damagedMessage" to "string", "hasDamaged" to "boolean", "isFreeTab" to "boolean", "isBoardTab" to "boolean",
+    "tabFreeStyle" to "string", "tabProStyle" to "string", "tabMidStyle" to "string", "tabNoobStyle" to "string", "tabScaleStyle" to "string",
+    "scoresHint" to "string", "damagedMessage" to "string", "hasDamaged" to "boolean", "isFreeTab" to "boolean", "isBoardTab" to "boolean", "isScaleTab" to "boolean",
     "freeRows" to "list:rank,name,plane,score,laps,combo,time,date,style",
     "boardRows" to "list:rank,name,plane,score,time,date,style",
+    "scaleRows" to "list:rank,name,plane,score,speed,level,landing,time,date,style",
     // the debrief
     "debriefTitle" to "string", "debriefRows" to "list:label,k,result,style,kStyle", "hasRecording" to "boolean",
     "deductionTitle" to "string", "deductions" to "list:text,style", "hasNotice" to "boolean", "notice" to "string",
-    "debriefStatus" to "string", "debriefKeys" to "string",
+    "hasInstructorTrack" to "boolean", "debriefStatus" to "string", "debriefKeys" to "string",
 )
 
 /** The named actions the asset emits; `openRow` arrives as `openRow#<row>` from the board rows. */
 val ACTIONS = listOf(
-    "freeFlight", "f2bPattern", "scores", "quit", "assistPro", "assistMid", "assistNoob", "back", "previousPlane", "nextPlane",
-    "choosePlane", "watchAi", "resume", "mainMenu", "saveName", "retry", "debrief", "tabFree", "tabPro", "tabMid", "tabNoob", "openRow",
+    "freeFlight", "f2bPattern", "scale", "settings", "scores", "quit", "assistPro", "assistMid", "assistNoob", "back", "previousPlane", "nextPlane",
+    "choosePlane", "watchAi", "resume", "mainMenu", "saveName", "retry", "debrief", "tabFree", "tabPro", "tabMid", "tabNoob", "tabScale", "openRow", "devicePrevious", "deviceNext", "detectAxis", "detectPause", "cancelDetect", "resetProfile",
 )

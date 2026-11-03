@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.lib.render
 
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.gdx.shader.OutputTransform
 import net.nevinsky.abyssus.lib.render.frame.FrameInputs
 import net.nevinsky.abyssus.lib.render.frame.RenderFog
 import net.nevinsky.abyssus.lib.render.light.DirectionalInput
@@ -19,6 +20,7 @@ import net.nevinsky.abyssus.lib.render.shadow.sunShadowBias
 import net.nevinsky.abyssus.lib.render.shadow.sunShadowCamera
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -47,6 +49,13 @@ class RenderPlansTest {
         val lights = RenderLights(listOf(dir("a")))
         assertSame(lights, LightProfile.EDITOR_MULTI_LIGHT.select(lights))
         assertSame(lights, FrameInputs(Matrix4(), Vector3(), floatArrayOf(0f, 0f, 0f), null, lights, LightProfile.GAME_SINGLE_SUN).lights)
+    }
+
+    @Test fun aFrameHasNoOutputTransformUnlessTheHostAsksForOne() {
+        fun frame(output: OutputTransform? = null) =
+            FrameInputs(Matrix4(), Vector3(), floatArrayOf(0f, 0f, 0f), null, RenderLights(), LightProfile.GAME_SINGLE_SUN, output)
+        assertNull(frame().output)
+        assertEquals(OutputTransform(1.5f), frame(OutputTransform(1.5f)).output)
     }
 
     @Test fun packedArraysHoldEachLightInItsSlotAndZeroElsewhere() {

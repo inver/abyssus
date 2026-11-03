@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.lib.core.editor.foliage
 
-import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderProblem
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderRead
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderReader
@@ -51,20 +50,14 @@ class FoliageRead(val settings: FoliageMeta, val problems: List<FoliageProblem>)
 }
 
 /**
- * Reads a foliage `meta.json` `additional` [JsonNode] into editable [FoliageMeta] settings and validates them.
+ * Validates editable [FoliageMeta] settings read from a foliage `meta.json`.
  * Members that are not of the shape the format documents take their defaults; the validation then reports what must
  * be refused with a reason. [modelAssets] are the project's MODEL asset folders, the only ones a layer may name.
  */
 class FoliageSettingsReader(
     private val messages: EditorMessages,
     private val colliders: FoliageColliderReader = FoliageColliderReader(),
-    private val binding: net.nevinsky.abyssus.lib.core.editor.document.FoliageSettingsBinding = net.nevinsky.abyssus.lib.core.editor.document.FoliageSettingsBinding(),
 ) {
-
-    fun read(node: JsonNode?, modelAssets: Set<String>): FoliageRead {
-        val settings = binding.read(node ?: return FoliageRead(FoliageMeta(), emptyList()))
-        return read(settings, modelAssets)
-    }
 
     fun read(settings: FoliageMeta, modelAssets: Set<String>): FoliageRead {
         return FoliageRead(settings, problems(settings, modelAssets))

@@ -56,7 +56,7 @@ ControlLine or shared fixtures. The archived predecessor's seven manual checks r
 - [x] 4.1 Add collider validation/diffs to editor-core, sharing core's neutral reader and injected localized reasons.
   Verify `FoliageSettingsTest` active finite positive dimensions/finite offset, DETAIL incompatibility and OBJECT-to-DETAIL
   transition; `FoliageMetaEditsTest` add/change/remove collider, omitted defaults, nested unknown keys/order/number text.
-- [x] 4.2 Add a collider-only Apply path using `editSceneJson` that requires no scatter/bake preview and changes no
+- [x] 4.2 Add a collider-only Apply path using `editSceneDocument` that requires no scatter/bake preview and changes no
   binary transaction, mask or bake. Keep the existing composite command for mixed generation edits. Verify platform
   `FoliagePanelTest`: supported metadata with a stale or missing bake, open unsaved metadata, Apply/Undo/Redo exact
   metadata restoration, unchanged bake/mask bytes/mtime and stale notice, no additional reload-from-disk Undo.

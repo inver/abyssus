@@ -18,7 +18,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
-import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.core.dto.EcsLoader
 import net.nevinsky.abyssus.lib.core.scene.SceneLoader
 import org.slf4j.Logger
 import java.io.DataInputStream
@@ -164,7 +164,7 @@ class PlayHost(
         // the scene loader only needs the storage to exist: nothing is drawn here, so no asset loader is registered
         val storage = AssetStorage(log)
         val loaded = try {
-            RuntimeSceneLoader(SceneLoader(json, files), EcsLoader(json, registry), log)
+            RuntimeSceneLoader(SceneLoader(json, files, registry), EcsLoader(), log)
                 .loadFromText(command.sceneText)
                 ?: throw IllegalArgumentException("the scene text is not a supported Abyssus scene")
         } catch (e: Exception) {

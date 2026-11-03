@@ -72,14 +72,14 @@ class AssetReferenceGuardTest : BasePlatformTestCase() {
     }
 
     private val withFoliage =
-        """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{"1":{"components":{"FoliageComponent":{"assetName":"meadow"}}}}}}"""
+        """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"1":{"components":{"FoliageComponent":{"assetName":"meadow"}}}}}"""
 
     fun testAFoliageComponentNamingTheAssetBlocksUndo() {
         assertUndoRefused(createFoliage(withFoliage))
     }
 
     fun testAnUnsavedFoliageComponentNamingTheAssetBlocksUndo() {
-        val txn = createFoliage("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{}}}""")
+        val txn = createFoliage("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{}}""")
         val document = FileDocumentManager.getInstance().getDocument(file("scenes/Main.scene"))!!
         WriteCommandAction.runWriteCommandAction(project) { document.setText(withFoliage) }
         assertUndoRefused(txn)
@@ -87,7 +87,7 @@ class AssetReferenceGuardTest : BasePlatformTestCase() {
 
     fun testAFoliageComponentNamingAnotherAssetDoesNotBlock() {
         val txn = createFoliage(
-            """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"entities":{"1":{"components":{"FoliageComponent":{"assetName":"other"}}}}}}""",
+            """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"1":{"components":{"FoliageComponent":{"assetName":"other"}}}}}""",
         )
         WriteCommandAction.runWriteCommandAction(project) { undoOf(txn).undo() }
         assertFalse(File(disk, "assets/meadow").exists())

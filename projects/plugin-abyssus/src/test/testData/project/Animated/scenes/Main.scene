@@ -4,49 +4,35 @@
  "id": 0,
  "name": "Animated",
  "ecs": {
-  "entities": {
-   "1": {
-    "archetype": 1,
-    "components": {
-     "PositionComponent": {
-      "localPosition": {
-       "x": 0,
-       "y": 0,
-       "z": 0
+    "1": {
+      "components": {
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        "RenderComponent": {
+          "type": "MODEL",
+          "assetName": "model_anim"
+        }
       }
-     },
-     "RenderComponent": {
-      "renderable": {
-       "kind": "asset",
-       "asset": {
-        "type": "MODEL",
-        "assetName": "model_anim"
-       }
+    },
+    "2": {
+      "components": {
+        "PositionComponent": {
+          "localPosition": {
+            "x": 2,
+            "y": 0,
+            "z": 0
+          }
+        },
+        "RenderComponent": {
+          "type": "MODEL",
+          "assetName": "model_anim"
+        }
       }
-     }
     }
-   },
-   "2": {
-    "archetype": 1,
-    "components": {
-     "PositionComponent": {
-      "localPosition": {
-       "x": 2,
-       "y": 0,
-       "z": 0
-      }
-     },
-     "RenderComponent": {
-      "renderable": {
-       "kind": "asset",
-       "asset": {
-        "type": "MODEL",
-        "assetName": "model_anim"
-       }
-      }
-     }
-    }
-   }
   }
- }
 }

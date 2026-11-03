@@ -6,24 +6,20 @@
 package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.ashley.core.Component
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.editor.ecs.EcsWriter
-import net.nevinsky.abyssus.lib.core.dto.LightDto
+import net.nevinsky.abyssus.lib.core.ecs.component.LightDto
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PathSides
-import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentField
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentKind
-import net.nevinsky.abyssus.lib.core.editor.components.ComponentReader
 import net.nevinsky.abyssus.lib.core.editor.components.FieldKind
-import net.nevinsky.abyssus.lib.core.editor.components.RuntimeCodec
 import net.nevinsky.abyssus.lib.core.editor.components.decimalText
 
 private fun <C : Component> floatField(
@@ -36,14 +32,14 @@ private fun <C : Component> floatField(
 private fun <C : Component> refField(name: String, get: (C) -> Int, set: (C, Int) -> Unit) =
     ComponentField<C>(name, FieldKind.ENTITY_REF, { get(it).toString() }, { c, t -> set(c, t.trim().toInt()) })
 
-/** The built-in kinds the editor models, in the order the view lists them, bound through [reader] and [writer]. */
-internal class BuiltInComponentKinds(private val reader: ComponentReader, private val writer: EcsWriter) {
+/** The built-in kinds the editor models, in the order the view lists them. */
+internal class BuiltInComponentKinds {
     private inline fun <reified C : Component> kind(
         codecName: String,
         fields: List<ComponentField<C>>,
         noinline create: () -> C,
     ): ComponentKind<C> =
-        ComponentKind(codecName, RuntimeCodec(codecName, C::class.java, reader, writer), fields, create)
+        ComponentKind(codecName, C::class.java, fields, create)
 
     val kinds: List<ComponentKind<*>> = listOf(
         kind<NameComponent>(
@@ -58,16 +54,6 @@ internal class BuiltInComponentKinds(private val reader: ComponentReader, privat
                 )
             ),
         ) { NameComponent() },
-        kind<TypeComponent>(
-            "TypeComponent",
-            listOf(
-                ComponentField(
-                    "type", FieldKind.CHOICE, { it.type?.name.orEmpty() },
-                    { c, t -> c.type = TypeComponent.Type.entries.firstOrNull { e -> e.name == t } },
-                    choices = TypeComponent.Type.entries.map { it.name }, optional = true,
-                ),
-            ),
-        ) { TypeComponent() },
         kind<ParentComponent>("ParentComponent", listOf(refField("parentEntityId", { it.parentEntityId }, { c, v -> c.parentEntityId = v }))) { ParentComponent() },
         kind<PositionComponent>(
             "PositionComponent",
@@ -115,13 +101,6 @@ internal class BuiltInComponentKinds(private val reader: ComponentReader, privat
                 ),
             ),
         ) { LightComponent(LightDto()) },
-        kind<Point2PointPositionComponent>(
-            "Point2PointPositionComponent",
-            listOf(
-                refField("entity1Id", { it.entity1Id }, { c, v -> c.entity1Id = v }),
-                refField("entity2Id", { it.entity2Id }, { c, v -> c.entity2Id = v }),
-            ),
-        ) { Point2PointPositionComponent() },
         kind<RenderComponent>(
             "RenderComponent",
             listOf(
@@ -135,6 +114,10 @@ internal class BuiltInComponentKinds(private val reader: ComponentReader, privat
                     { c, t -> c.assetName = t },
                 ),
                 ComponentField(
+                    "meshId", FieldKind.MESH_ID, { it.meshId.orEmpty() },
+                    { c, t -> c.meshId = t.ifEmpty { null } }, optional = true, label = "mesh",
+                ),
+                ComponentField(
                     "shaderKey", FieldKind.TEXT, { it.shaderKey.orEmpty() },
                     { c, t -> c.shaderKey = t.ifEmpty { null } }, optional = true,
                 ),
@@ -145,7 +128,7 @@ internal class BuiltInComponentKinds(private val reader: ComponentReader, privat
             "PathArrangementComponent",
             listOf(
                 ComponentField(
-                    "asset.assetName", FieldKind.ASSET_NAME, { it.asset.assetName }, { c, t -> c.asset.assetName = t.trim() },
+                    "asset.assetName", FieldKind.ASSET_NAME, { it.asset.name }, { c, t -> c.asset = BaseMeta(c.asset.type, t.trim()) },
                     label = "asset",
                 ),
                 ComponentField(

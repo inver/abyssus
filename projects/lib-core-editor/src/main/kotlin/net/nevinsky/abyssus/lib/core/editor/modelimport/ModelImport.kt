@@ -5,19 +5,15 @@
 
 package net.nevinsky.abyssus.lib.core.editor.modelimport
 
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.editor.document.ModelImportRecord
 import net.nevinsky.abyssus.lib.core.editor.document.ImportFrameRecord
 import net.nevinsky.abyssus.lib.core.editor.document.ImportItemRecord
 import net.nevinsky.abyssus.lib.core.editor.document.OriginalImportSize
 import net.nevinsky.abyssus.lib.core.editor.document.ImportLargestExtent
 import net.nevinsky.abyssus.lib.core.editor.document.ImportHeight
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaDocument
-import net.nevinsky.abyssus.lib.core.editor.document.ModelAssetAdditional
-import net.nevinsky.abyssus.lib.core.editor.document.validateAssetDocument
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriteException
 import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriter
@@ -53,11 +49,12 @@ class StagedModelImport(val folder: String, val uuid: UUID, val files: Map<Strin
  */
 class ModelImport(
     private val json: JsonProcessor,
-    private val format: AbyssusDocumentFormat,
     private val transform: ImportTransform = ImportTransform(),
     private val textures: TextureGather = TextureGather(),
     private val writer: GltfWriter = GltfWriter(),
 ) {
+    private val assets = ModelAssetFiles(json)
+
     /**
      * @param projectDir the folder of the project's `.abss` file: `source.json` records the source path relative to
      * it when the source is inside it
@@ -83,12 +80,7 @@ class ModelImport(
         val leftOut = (source.leftOut + gathered.leftOut).distinct()
 
         val files = LinkedHashMap<String, ByteArray>()
-        val meta = AssetMetaDocument(
-            lastModified = lastModified, uuid = uuid.toString(), type = MetaType.MODEL,
-            additional = ModelAssetAdditional(file = MODEL_FILE),
-        )
-        validateAssetDocument(meta, format)?.let { throw IllegalStateException("the staged meta.json is not native: $it") }
-        files["meta.json"] = SceneJson().pretty(meta).toByteArray()
+        files[META_FILE] = assets.metaBytes(uuid, lastModified)
         files[MODEL_FILE] = glb
         files.putAll(gathered.files)
 
@@ -108,7 +100,7 @@ class ModelImport(
             skipped = leftOut.map { ImportItemRecord(it.item, it.reason.id) },
             approximated = source.approximated.map { ImportItemRecord(it.item, it.reason) },
         )
-        files[SOURCE_FILE] = SceneJson().pretty(record).toByteArray()
+        files[SOURCE_FILE] = assets.sourceBytes(record)
 
         val report = ImportReport(transformed.size, source.animations, gathered.files.size, leftOut, source.approximated)
         return StagedModelImport(settings.folderName, uuid, files, report)

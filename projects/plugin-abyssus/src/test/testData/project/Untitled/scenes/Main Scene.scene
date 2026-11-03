@@ -28,7 +28,7 @@
   "skyboxName": "skybox_physical",
   "ecs": {
     "0": {
-      "archetype": 1,
+      "type": "OBJECT",
       "components": {
         "NameComponent": {
           "name": "Model 0"
@@ -49,22 +49,14 @@
           }
         },
         "RenderComponent": {
-          "renderable": {
-            "kind": "asset",
-            "shaderKey": "defaultShader",
-            "asset": {
-              "type": "MODEL",
-              "assetName": "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"
-            }
-          }
-        },
-        "TypeComponent": {
-          "type": "OBJECT"
+          "shaderKey": "defaultShader",
+          "type": "MODEL",
+          "assetName": "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"
         }
       }
     },
     "1": {
-      "archetype": 1,
+      "type": "TERRAIN",
       "components": {
         "NameComponent": {
           "name": "Terrain"
@@ -85,22 +77,14 @@
           }
         },
         "RenderComponent": {
-          "renderable": {
-            "kind": "asset",
-            "shaderKey": "terrain",
-            "asset": {
-              "type": "TERRAIN",
-              "assetName": "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
-            }
-          }
-        },
-        "TypeComponent": {
-          "type": "TERRAIN"
+          "shaderKey": "terrain",
+          "type": "TERRAIN",
+          "assetName": "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
         }
       }
     },
     "2": {
-      "archetype": 1,
+      "type": "OBJECT",
       "components": {
         "NameComponent": {
           "name": "Model 2"
@@ -127,22 +111,14 @@
           }
         },
         "RenderComponent": {
-          "renderable": {
-            "kind": "asset",
-            "shaderKey": "defaultShader",
-            "asset": {
-              "type": "MODEL",
-              "assetName": "model_fc33e1f1-015b-4524-9b10-aa417acd273c"
-            }
-          }
-        },
-        "TypeComponent": {
-          "type": "OBJECT"
+          "shaderKey": "defaultShader",
+          "type": "MODEL",
+          "assetName": "model_fc33e1f1-015b-4524-9b10-aa417acd273c"
         }
       }
     },
     "3": {
-      "archetype": 1,
+      "type": "HANDLE",
       "components": {
         "NameComponent": {
           "name": "'Direction' handle"
@@ -159,18 +135,11 @@
           }
         },
         "PositionComponent": {},
-        "RenderComponent": {
-          "renderable": {
-            "kind": "direction-handle-marker"
-          }
-        },
-        "TypeComponent": {
-          "type": "HANDLE"
-        }
+        "RenderComponent": {}
       }
     },
     "4": {
-      "archetype": 2,
+      "type": "CAMERA",
       "components": {
         "CameraComponent": {
           "camera": {
@@ -221,32 +190,21 @@
           }
         },
         "RenderComponent": {
-          "renderable": {
-            "kind": "camera-marker",
-            "shaderKey": "defaultShader"
-          }
-        },
-        "TypeComponent": {
-          "type": "CAMERA"
+          "shaderKey": "defaultShader"
         }
       }
     },
     "5": {
-      "archetype": 3,
       "components": {
         "Point2PointPositionComponent": {
           "entity1Id": 4,
           "entity2Id": 3
         },
-        "RenderComponent": {
-          "renderable": {
-            "kind": "direction-line-marker"
-          }
-        }
+        "RenderComponent": {}
       }
     },
     "6": {
-      "archetype": 1,
+      "type": "OBJECT",
       "components": {
         "NameComponent": {
           "name": "Model 6"
@@ -273,28 +231,17 @@
           }
         },
         "RenderComponent": {
-          "renderable": {
-            "kind": "asset",
-            "shaderKey": "pbr",
-            "asset": {
-              "type": "MODEL",
-              "assetName": "model_900f6f61-6384-434a-be81-56ce303fbb56"
-            }
-          }
-        },
-        "TypeComponent": {
-          "type": "OBJECT"
+          "shaderKey": "pbr",
+          "type": "MODEL",
+          "assetName": "model_900f6f61-6384-434a-be81-56ce303fbb56"
         }
       }
     },
     "7": {
-      "archetype": 4,
+      "type": "LIGHT_DIRECTIONAL",
       "components": {
         "NameComponent": {
           "name": "Directional Light 7"
-        },
-        "TypeComponent": {
-          "type": "LIGHT_DIRECTIONAL"
         },
         "PositionComponent": {
           "localRotation": {
@@ -310,13 +257,10 @@
       }
     },
     "8": {
-      "archetype": 4,
+      "type": "LIGHT_SPOT",
       "components": {
         "NameComponent": {
           "name": "Spot Light 8"
-        },
-        "TypeComponent": {
-          "type": "LIGHT_SPOT"
         },
         "PositionComponent": {
           "localPosition": {
@@ -339,12 +283,10 @@
       }
     },
     "9": {
+      "type": "OBJECT",
       "components": {
         "NameComponent": {
           "name": "Model 9"
-        },
-        "TypeComponent": {
-          "type": "OBJECT"
         },
         "PositionComponent": {
           "localPosition": {
@@ -354,24 +296,17 @@
           }
         },
         "RenderComponent": {
-          "renderable": {
-            "kind": "asset",
-            "shaderKey": "defaultShader",
-            "asset": {
-              "type": "MODEL",
-              "assetName": "model_extra500"
-            }
-          }
+          "shaderKey": "defaultShader",
+          "type": "MODEL",
+          "assetName": "model_extra500"
         }
       }
     },
     "10": {
+      "type": "LIGHT_DIRECTIONAL",
       "components": {
         "NameComponent": {
           "name": "Directional Light 10"
-        },
-        "TypeComponent": {
-          "type": "LIGHT_DIRECTIONAL"
         },
         "PositionComponent": {
           "localRotation": {

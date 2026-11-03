@@ -68,7 +68,7 @@ How each is fixed:
 
 - Any change to `.scene`, `.abss` or `meta.json`: no field is read or written differently. Validation through
   `AbyssusDocumentFormat` stays before binding on every path; D4 and K1 move code and imports, not checks. Writes still go
-  only through `editSceneJson`.
+  only through `editSceneDocument`.
 - Reopening decisions already made: field-type switches stay (`refactor-solid-dedup` 3.1 prototype failed its size
   gate), the `PhysicsWorld` and Vulkan/Metal backend seams stay as recorded there, and `AbyssusCore` keeps its groups.
 - `lib-gdx`'s inherited classes (`Mesh`, `DefaultShader`, `Model`). Its package is already `net.nevinsky.abyssus.lib.gdx`.

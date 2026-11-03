@@ -46,32 +46,32 @@ class EntitySelectionTest : BasePlatformTestCase() {
     fun testWalkingDownFindsTheEntityRow() {
         val chain = chainTo("0")
         for (end in 1 until chain.size - 1) {
-            assertEquals("at ${label(chain[end])}", TreeVisitor.Action.CONTINUE, entityVisitAction(scene, "0", chain.subList(0, end + 1)))
+            assertEquals("at ${label(chain[end])}", TreeVisitor.Action.CONTINUE, entityVisitAction(scene, 0L, chain.subList(0, end + 1)))
         }
-        assertEquals(TreeVisitor.Action.INTERRUPT, entityVisitAction(scene, "0", chain))
+        assertEquals(TreeVisitor.Action.INTERRUPT, entityVisitAction(scene, 0L, chain))
     }
 
     fun testOtherEntitiesAndSiblingsAreSkipped() {
         val chain = chainTo("0")
         // the row of entity 2 is not the row of entity 0
-        assertEquals(TreeVisitor.Action.SKIP_CHILDREN, entityVisitAction(scene, "2", chain))
+        assertEquals(TreeVisitor.Action.SKIP_CHILDREN, entityVisitAction(scene, 2L, chain))
         // a sibling of `ecs` inside the scene leads nowhere
         val sceneNode = chain[3]
         val other = children(sceneNode).first { label(it) != "ecs" }
-        assertEquals(TreeVisitor.Action.SKIP_CHILDREN, entityVisitAction(scene, "0", chain.subList(0, 4) + other))
+        assertEquals(TreeVisitor.Action.SKIP_CHILDREN, entityVisitAction(scene, 0L, chain.subList(0, 4) + other))
     }
 
     fun testOtherProjectsAreNotEntered() {
         val root = AbyssusRootNode(project, ViewSettings.DEFAULT)
         val other = myFixture.addFileToProject("Other/Other.abss", "{}").virtualFile
         val node = AbyssusAssetNode(project, other, ViewSettings.DEFAULT)
-        assertEquals(TreeVisitor.Action.SKIP_CHILDREN, entityVisitAction(scene, "0", listOf(root, node)))
+        assertEquals(TreeVisitor.Action.SKIP_CHILDREN, entityVisitAction(scene, 0L, listOf(root, node)))
     }
 
     fun testNonScenesEntriesOfTheProjectAreSkipped() {
         val root = AbyssusRootNode(project, ViewSettings.DEFAULT)
         val abss = children(root).single { label(it).endsWith(".abss") }
         val notScenes = children(abss).first { label(it) != "scenes" }
-        assertEquals(TreeVisitor.Action.SKIP_CHILDREN, entityVisitAction(scene, "0", listOf(root, abss, notScenes)))
+        assertEquals(TreeVisitor.Action.SKIP_CHILDREN, entityVisitAction(scene, 0L, listOf(root, abss, notScenes)))
     }
 }

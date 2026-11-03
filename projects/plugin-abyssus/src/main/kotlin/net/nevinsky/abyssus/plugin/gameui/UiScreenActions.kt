@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
@@ -25,7 +27,7 @@ abstract class NewUiScreenActionBase(private val kind: String, textKey: String) 
 
     override fun perform(project: Project, target: UiFolder, e: AnActionEvent) {
         val asset = chooseAsset(project, target.assetNames) ?: return
-        val meta = target.abss.parent?.findChild("assets")?.findChild(asset)?.findChild("meta.json") ?: return
+        val meta = target.abss.parent?.findChild(ASSETS_DIR)?.findChild(asset)?.findChild(META_FILE) ?: return
         val name = Messages.showInputDialog(
             project, AbyssusBundle.message("uiScreenNamePrompt"), AbyssusBundle.message("uiCommandAddScreen"), null,
         )?.takeIf { it.isNotBlank() } ?: return

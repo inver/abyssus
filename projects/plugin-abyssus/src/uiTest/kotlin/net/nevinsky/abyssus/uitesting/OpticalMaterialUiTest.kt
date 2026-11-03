@@ -122,4 +122,66 @@ class OpticalMaterialUiTest : UiTestBase() {
         assertEquals("entity 6 is as before the edits", ObjectMapper().readTree(original)["ecs"]["6"], entity(6))
         assertEquals("the model's files are untouched", setOf(scenePath), project.differences())
     }
+
+    @Test
+    fun anOverrideNamingAMaterialThatIsGoneStaysVisibleAndSurvivesEditsToTheRealOne() {
+        openEntity("Model 6")
+        val id = material()
+        frame.properties().enter("optics-transmission-$id", "25")
+        LifecycleHarness.awaitState("the override is stored", "0.25") { override(6, "transmission") }
+        frame.saveAll()
+        // setup, not the operation under test: the stored override now names a material the model does not have
+        val ghost = "ghost_material"
+        val renamed = Files.readString(scene).replace("\"$id\"", "\"$ghost\"")
+        assertTrue("the override key was found", renamed != Files.readString(scene))
+        Files.writeString(scene, renamed)
+        ide.refresh(scene.toString())
+        reset.closeAllEditors()
+        reset.discardUnsavedDocuments()
+        val tree = openEntity("Model 6")
+        tree.clickRow("Model 2")
+        tree.clickRow("Model 6")
+        LifecycleHarness.awaitState("the unresolved identity is named", true) { frame.properties().exists("optics-unresolved-$ghost") }
+        assertEquals("looking at it wrote nothing", renamed, Files.readString(scene))
+        assertTrue("the real material is still editable", frame.properties().fieldNames("optics-transmission-").isNotEmpty())
+
+        val real = material()
+        frame.properties().enter("optics-ior-$real", "1.6")
+        LifecycleHarness.awaitState("the real material's edit is stored", "1.6") { override(6, "ior") }
+        assertTrue("the unresolved override is preserved by the edit", Files.readString(scene).contains("\"$ghost\""))
+        assertEquals("with its stored value", "0.25", entity(6)!!.findValue(ghost)?.get("transmission")?.asText())
+    }
+
+    @Test
+    fun aModelThatCannotBeReadOffersNoOpticalEditsAndExplainsWhy() {
+        val original = Files.readString(scene)
+        openEntity("Model 9")
+        val p = frame.properties()
+        Thread.sleep(2000)
+        assertTrue("no optical editor is offered: ${p.fieldNames("optics-")}", p.fieldNames("optics-transmission-").isEmpty() && p.fieldNames("optics-ior-").isEmpty())
+        assertEquals("looking wrote nothing", original, Files.readString(scene))
+        assertEquals("and left no history", "", reset.historyText(scene.toString()))
+    }
+
+    @Test
+    fun anOlderUncommittedValueCannotOverwriteANewerOverride() {
+        openEntity("Model 6")
+        val id = material()
+        val p = frame.properties()
+        p.enter("optics-transmission-$id", "25")
+        LifecycleHarness.awaitState("the first value is stored", "0.25") { override(6, "transmission") }
+        frame.saveAll()
+
+        // an older editor holds 40 while another editor stores 30
+        p.type("optics-transmission-$id", "40")
+        val newer = Files.readString(scene).replace("0.25", "0.3")
+        Files.writeString(scene, newer)
+        ide.refresh(scene.toString())
+        Thread.sleep(1500)
+        p.focus("optics-ior-$id")
+        Thread.sleep(2000)
+        frame.saveAll()
+        assertEquals("the newer override stays", "0.3", override(6, "transmission"))
+        assertTrue("and the older value was never written", !Regex("\"transmission\"\\s*:\\s*0\\.4").containsMatchIn(Files.readString(scene)))
+    }
 }

@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
+import net.nevinsky.abyssus.lib.core.ui.model.displayAt
+import net.nevinsky.abyssus.lib.core.editor.ui.*
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
@@ -134,7 +136,8 @@ class UiDeclarationsPanel(private val project: Project?, private val controller:
 
     private fun editBinding(name: String?) {
         val existing = name?.let { controller.collection?.binding(it) }
-        val start = existing?.let(BindingForm::of) ?: BindingForm()
+        val start = existing?.let(::bindingFormOf) ?: BindingForm()
+        val json = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.json
         val dialog = UiFormDialog(project, "uiBindingDialog", listOf(
             FormInput("name", "uiFormName", start.name),
             FormInput("type", "uiFormType", start.type, UiBindingType.entries.map { it.json }),
@@ -142,10 +145,10 @@ class UiDeclarationsPanel(private val project: Project?, private val controller:
             FormInput("sample", "uiFormSample", start.sample), FormInput("min", "uiFormMin", start.min), FormInput("max", "uiFormMax", start.max),
             FormInput("step", "uiFormStep", start.step), FormInput("maxLength", "uiFormMaxLength", start.maxLength),
             FormInput("fields", "uiFormFields", start.fields),
-        )) { v -> (bindingMembers(formOf(v)) as? FormResult.Invalid)?.errors.orEmpty() }
+        )) { v -> (bindingMembers(formOf(v), json) as? FormResult.Invalid)?.errors.orEmpty() }
         if (!dialog.showAndGet()) return
         val form = formOf(dialog.values())
-        val members = (bindingMembers(form) as? FormResult.Valid)?.value ?: return
+        val members = (bindingMembers(form, json) as? FormResult.Valid)?.value ?: return
         controller.edit(AbyssusBundle.message("uiCommandEditBinding")) { e, m -> e.upsertBinding(m, form.name.trim(), form.type, members) }
     }
 
@@ -156,7 +159,7 @@ class UiDeclarationsPanel(private val project: Project?, private val controller:
 
     private fun editStyle(name: String?) {
         val existing: UiStyle? = name?.let { n -> controller.collection?.styles?.firstOrNull { it.name == n } }
-        fun at(vararg path: String): String { var n = existing?.values; for (p in path) n = n?.get(p); return n?.takeIf { !it.isMissingNode && !it.isNull }?.asText().orEmpty() }
+        fun at(vararg path: String): String = existing?.displayAt(*path).orEmpty()
         val fonts = listOf("") + controller.collection?.resources?.filter { it.kind == UiResourceKind.BITMAP_FONT }?.map { it.id }.orEmpty()
         val dialog = UiFormDialog(project, "uiStyleDialog", listOf(
             FormInput("name", "uiFormName", existing?.name.orEmpty()), FormInput("fontSize", "uiFormFontSize", at("fontSize")),
@@ -177,9 +180,8 @@ class UiDeclarationsPanel(private val project: Project?, private val controller:
     // ---- resources ----
 
     private fun importFile(font: Boolean) {
-        val descriptor = FileChooserDescriptorFactory.createSingleFileDescriptor().withExtensionFilter(
-            if (font) "fnt" else "png", *(if (font) emptyArray() else arrayOf("jpg", "jpeg")))
-        val chosen = FileChooser.chooseFile(descriptor, project, null) ?: return
+        val descriptor = resourceChooserDescriptor(font)
+        val chosen = net.nevinsky.abyssus.plugin.ui.chooseFileOrOverride(descriptor, project) ?: return
         importResource(File(chosen.path), font)
     }
 
@@ -201,3 +203,10 @@ class UiDeclarationsPanel(private val project: Project?, private val controller:
         return result
     }
 }
+
+/** The chooser of Import Image (png, jpg, jpeg) or Import Font (a bitmap font's `.fnt`); the first argument of the filter is its label, the rest the extensions. */
+internal fun resourceChooserDescriptor(font: Boolean): com.intellij.openapi.fileChooser.FileChooserDescriptor =
+    FileChooserDescriptorFactory.createSingleFileDescriptor().withExtensionFilter(
+        AbyssusBundle.message(if (font) "uiImportFontFilter" else "uiImportImageFilter"),
+        *(if (font) arrayOf("fnt") else arrayOf("png", "jpg", "jpeg")),
+    )

@@ -5,47 +5,52 @@
 
 package net.nevinsky.abyssus.lib.core.editor.arrange
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
+import net.nevinsky.abyssus.lib.core.format.EntityType
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
+import net.nevinsky.abyssus.lib.core.editor.entityOf
+import net.nevinsky.abyssus.lib.core.editor.sceneOf
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ArrangementCopiesTest {
-    private fun ecs(text: String): JsonNode = ObjectMapper().readTree(text)
+    private fun arrangement(vararg slots: Int) = PathArrangementComponent().also { it.slots = slots.toMutableList() }
 
-    private val scene = """
-        {"entities": {
-          "1": {"components": {"NameComponent": {"name": "Ground"}}},
-          "2": {"components": {"NameComponent": {"name": "Railway"}, "PathArrangementComponent": {"slots": [3, -1, 4, 9, 6]}}},
-          "3": {"components": {"ParentComponent": {"parentEntityId": 2}}},
-          "4": {"components": {"ParentComponent": {"parentEntityId": 2}}},
-          "5": {"components": {"NameComponent": {"name": "Detached"}}},
-          "6": {"components": {"ParentComponent": {"parentEntityId": 5}}}
-        }}
-    """
+    private fun child(id: Long, parent: Int) = entityOf(id, EntityType.OBJECT, ParentComponent(parent))
+
+    private val scene: SceneDto = sceneOf(
+        entityOf(1, EntityType.OBJECT, NameComponent("Ground")),
+        entityOf(2, EntityType.OBJECT, NameComponent("Railway"), arrangement(3, -1, 4, 9, 6)),
+        child(3, 2),
+        child(4, 2),
+        entityOf(5, EntityType.OBJECT, NameComponent("Detached")),
+        child(6, 5),
+    )
 
     @Test
     fun theCopiesAreTheEntitiesAnArrangementListsAndThatPointBackToIt() {
         // 9 does not exist, -1 is an empty slot and 6 points at another entity: none of them is a linked copy
-        assertEquals(setOf("3", "4"), arrangementCopyIds(ecs(scene)))
+        assertEquals(setOf(3L, 4L), arrangementCopyIds(scene))
     }
 
     @Test
     fun aSceneWithoutArrangementsHasNoCopies() {
-        assertEquals(emptySet<String>(), arrangementCopyIds(ecs("""{"entities": {"1": {"components": {}}}}""")))
-        assertEquals(emptySet<String>(), arrangementCopyIds(ecs("{}")))
+        assertEquals(emptySet<Long>(), arrangementCopyIds(sceneOf(entityOf(1, EntityType.OBJECT))))
+        assertEquals(emptySet<Long>(), arrangementCopyIds(sceneOf()))
     }
 
     @Test
-    fun theFlatEntityLayoutIsReadToo() {
-        val flat = ecs("""{"1": {"components": {"PathArrangementComponent": {"slots": [2]}}}, "2": {"components": {"ParentComponent": {"parentEntityId": 1}}}}""")
-        assertEquals(setOf("2"), arrangementCopyIds(flat))
+    fun aCopyIsOwnedByTheArrangementThatListsItAndPointsBack() {
+        assertEquals(2L, arrangementOwnerOf(scene, 3))
+        assertEquals(null, arrangementOwnerOf(scene, 6))
+        assertEquals(null, arrangementOwnerOf(scene, 1))
     }
 
     @Test
     fun theCountIsTheSlotsThatNameAnEntity() {
-        val entities = ecs(scene)["entities"]
-        assertEquals(4, arrangementCopyCount(entities["2"]))
-        assertEquals(0, arrangementCopyCount(entities["1"]))
+        assertEquals(4, arrangementCopyCount(scene.entity(2)!!))
+        assertEquals(0, arrangementCopyCount(scene.entity(1)!!))
     }
 }

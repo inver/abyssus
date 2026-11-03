@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
-import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_FIELDS
 import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
 import net.nevinsky.abyssus.lib.core.assets.MetaType
@@ -13,8 +12,9 @@ import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.terrain.sha256Hex
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.lib.core.util.obj
-import net.nevinsky.abyssus.lib.core.util.text
+import net.nevinsky.abyssus.lib.core.editor.util.objectAt
+import net.nevinsky.abyssus.lib.core.editor.util.textAt
+import net.nevinsky.abyssus.lib.core.editor.document.MetaDocument
 import java.io.File
 import kotlin.collections.iterator
 
@@ -60,7 +60,7 @@ class AssetRevisionTracker(private val json: JsonProcessor) {
         val folders = assetsDir.listFiles { f -> f.isDirectory }?.sortedBy { it.name }.orEmpty()
         val parsed = folders.map { dir ->
             val text = runCatchingKeepingCancellation { metaText.read(File(dir, META_FILE)) }.getOrNull()
-            val tree = text?.let { runCatchingKeepingCancellation { AssetMetaReader(json).read(it).json }.getOrNull() }
+            val tree = text?.let { runCatchingKeepingCancellation { AssetMetaReader(json).read(it) }.getOrNull() }
             Triple(dir, text, tree)
         }
         val byUuid = buildMap { for ((dir, _, tree) in parsed) tree?.text("uuid")?.let { putIfAbsent(it, dir.name) } }
@@ -78,21 +78,19 @@ class AssetRevisionTracker(private val json: JsonProcessor) {
     }
 
     /** The files a `meta.json` names directly in its `additional` text values that are files of the folder. */
-    private fun stamps(dir: File, tree: JsonNode): Map<String, FileStamp?> {
-        val additional = tree.obj("additional") ?: return emptyMap()
-        return additional.fields().asSequence()
-            .filter { (key, value) -> value.isTextual && key !in SPLAT_FIELDS && value.asText().isNotBlank() }
-            .map { (_, value) -> value.asText() }
+    private fun stamps(dir: File, tree: MetaDocument): Map<String, FileStamp?> {
+        val additional = tree.values.objectAt("additional") ?: return emptyMap()
+        return additional.entries.asSequence()
+            .filter { (key, value) -> value is String && key !in SPLAT_FIELDS && value.isNotBlank() }
+            .map { (_, value) -> value as String }
             .distinct().sorted()
             .associateWith { name ->
                 File(dir, name).takeIf { it.isFile }?.let { FileStamp(it.length(), it.lastModified()) }
             }
     }
 
-    private fun references(tree: JsonNode, byUuid: Map<String, String>): Map<String, String?> {
-        val additional = tree.obj("additional") ?: return emptyMap()
-        return SPLAT_FIELDS.mapNotNull { field -> additional.text(field)?.let { field to byUuid[it] } }.toMap()
-    }
+    private fun references(tree: MetaDocument, byUuid: Map<String, String>): Map<String, String?> =
+        SPLAT_FIELDS.mapNotNull { field -> tree.text("additional", field)?.let { field to byUuid[it] } }.toMap()
 
     /** The folder names of assets that must be loaded again going from [old] to [new]. */
     fun changed(old: ProjectRevisions, new: ProjectRevisions): Set<String> {

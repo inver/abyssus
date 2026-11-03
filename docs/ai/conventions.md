@@ -47,27 +47,24 @@ Don't copy a stock g3d class into the repository: subclass it, or wrap it as `Fi
 
 ## JSON
 
-- **Always use `SceneJson`** (`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/document/SceneJson.kt`), never a fresh
-  `ObjectMapper`. It keeps key order and `null` members, and keeps float text exactly (`RawNumberNode`). Reading and
-  writing a file therefore never changes numbers you didn't touch.
-- **Binding:** read-only DTO readers use `JsonProcessor.bind` / `SceneReader.parse`; edit transforms use the
-  original `SceneJson` tree. `JsonProcessor(log)` owns its Jackson mapper; `SceneJson` shares its formatting mapper.
-  Unknown fields are ignored during DTO binding, and property declaration order is the order the tree shows.
+- **Always use `JsonProcessor`**, never a fresh `ObjectMapper`. Documents are bound to DTOs (`SceneDto`, `ProjectDto`,
+  `AssetMeta<T>`, `UiMetaDoc`) with `parse` / `bind` and printed with `pretty`. The printer decides number spelling and key
+  order (declaration order); unknown members of a typed DTO are dropped, except where a DTO keeps them (`extras`).
+- **No tree types in `lib-core-editor`:** it never names `JsonNode`, `ObjectNode` or `ArrayNode` (`checkJacksonTreeUse`).
+  Free-form values are `Map<String, Any?>` read with `JsonValues` (`valuesOf`, `at`, `textAt`).
 - **Non-row fields:** mark them `@get:JsonIgnore` (for example `SceneEntry.file`, `AssetInfo.unused`) so the tree
   doesn't list them.
-- **Optional values:** read them from a `JsonNode` with the helpers in `projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/util/JsonNodeExt.kt`
-  (`opt`, `text`, `float`, `obj`), which treat absent and JSON `null` alike.
 - **Wiring:** pass collaborators in through constructors. A `service<...>()` lookup belongs only in an action, a
   provider, a tool window factory, the Abyssus pane, or a deferred service accessor. Constructors must not look up other services;
   injected collaborators or lazy access keep unrelated service groups uninitialized.
-- **Writing a file:** use `editSceneJson` (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`); its text transform is
-  `lib-core-editor`'s `DocumentTextEditor`, re-serialized with `SceneJson().inStyleOf`, so a pretty file stays pretty and a
-  compact one stays compact. Address entities through `SceneDocument` / `SceneEntityTree`, never by `"ecs"` / `"components"` keys.
+- **Writing a file:** use `editSceneDocument` (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`); its text transform is
+  `lib-core-editor`'s `SceneTextEditor`, which parses the scene to a `SceneDto`, runs a `SceneEdit` and prints it with
+  `JsonProcessor.pretty`, so a scene is always written pretty-printed. Address entities with `scene.entity(id)`, never by `"ecs"` / `"components"` keys.
 
 ## Writing files
 
 Readers never write (`ConfigFileReader` implementations never write and never throw). Only these edit files, all through
-`editSceneJson` as named undoable commands:
+`editSceneDocument` as named undoable commands:
 
 - the eye toggle,
 - Rename Scene,
@@ -76,7 +73,7 @@ Readers never write (`ConfigFileReader` implementations never write and never th
 - component add, edit and remove, and Add Light (`SceneComponentEdits`),
 - Add Foliage on a terrain entity,
 - saved ray settings and per-instance optical overrides (`SceneRayEdits`),
-- asset property edits in the properties panel (`AssetMetaEdits` in `properties/AssetMetaEdits.kt`): one `additional` key
+- asset property edits in the properties panel (`AssetMetaEdits` in `assetfiles/AssetMetaEdits.kt`): one `additional` key
   of an asset's `meta.json` per command, named Edit Asset Property. The rules (which keys, validation, defaults, stale
   values) are `lib-core-editor`'s `AssetMetaEditor`'s, which works on any JSON tree and never touches `version`, `uuid`, `type`,
   `lastModified` or unknown keys.
@@ -95,7 +92,7 @@ written. Cancellation is honoured only before the first write.
 
 **Foliage Apply combines document and binary edits.** `FoliageMetaEdits` computes a text-preserving metadata
 change. `applyFoliageFiles` checks the current document text, applies the binary `AssetFileCommand` transaction
-with its undo action handed back, then writes metadata through `editSceneJson` and registers the binary action
+with its undo action handed back, then writes metadata through `editSceneDocument` and registers the binary action
 in the same platform command. If the document edit fails, it reverts the binary transaction. VFS refresh happens
 after the command. The existing metadata is never a disk snapshot: it retains the platform's document Undo,
 with save actions that persist the restored document after Undo and Redo. Re-bake and strokes use binary
@@ -108,7 +105,7 @@ cleanup, and all remaining backups on project disposal. Strokes retain only the 
 whole-file hash checks so Undo refuses an externally replaced mask.
 
 `SceneFormatListener` is the one other writer: it pretty-prints a `.scene` / `.abss` document when it opens in the
-text editor. A new writer goes through `editSceneJson` (it publishes `AbyssusSceneEdited.TOPIC` when done) and gets a
+text editor. A new writer goes through `editSceneDocument` (it publishes `AbyssusSceneEdited.TOPIC` when done) and gets a
 command name in the message bundle.
 
 ## Errors and cancellation

@@ -46,9 +46,7 @@ class TextureGather {
             }
             val path = byContent.getOrPut(sha256Hex(png)) {
                 val stem = source.nameWithoutExtension.replace(Regex("[^A-Za-z0-9_.-]+"), "_").trim('_', '.').ifEmpty { "texture" }
-                var candidate = "$TEXTURES_DIR/$stem.png"
-                var n = 2
-                while (files.keys.any { it.equals(candidate, ignoreCase = true) }) candidate = "$TEXTURES_DIR/$stem-${n++}.png"
+                val candidate = uniqueTexturePath(files.keys, "$stem.png")
                 files[candidate] = png
                 candidate
             }

@@ -1,3 +1,4 @@
+/* DISABLED (G7: scene water is no longer modeled); kept for reference, not compiled.
 /*
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
@@ -6,7 +7,6 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.lib.core.editor.pick.ScenePicker
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
@@ -26,7 +26,7 @@ import java.io.File
 class SceneWaterPassGlTest {
     @Before fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", GlHarness.enabled)
 
-    private val orbit get() = OrbitCamera(Vec3(0f, 0f, 0f), 25f, 0.6f, 0.35f)
+    private val orbit get() = OrbitCamera(Vector3(0f, 0f, 0f), 25f, 0.6f, 0.35f)
     private fun lake(level: Double = 0.0, tint: Triple<Double, Double, Double>? = null): WaterSettings = WaterGlScenes.lake(level, tint)
 
     private fun scene(
@@ -146,3 +146,5 @@ class SceneWaterPassGlTest {
         assertTrue("the blended quad is in the frame ($visible red pixels, entity $quad, $inDepth)", visible > 100)
     }
 }
+
+*/

@@ -2,6 +2,9 @@ package net.nevinsky.abyssus.lib.core.editor.ray.snapshot
 
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.baseAssetName
+import net.nevinsky.abyssus.lib.core.assets.forVariant
+import net.nevinsky.abyssus.lib.core.assets.isModelVariant
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import java.util.concurrent.Executor
 
@@ -10,6 +13,13 @@ interface RaySnapshot {
     /** Retained payload, counted against the store's budget. */
     val byteSize: Long
 }
+
+/** The most CPU bytes one asset's ray snapshot may take. */
+const val RAY_SNAPSHOT_MAX_BYTES = 128L * 1024 * 1024
+
+/** Refuses a [kind] snapshot of [bytes] above [maxBytes]. */
+internal fun requireSnapshotSize(kind: String, bytes: Long, maxBytes: Long) =
+    require(bytes <= maxBytes) { "CPU $kind snapshot exceeds its $maxBytes byte limit" }
 
 /**
  * Builds the CPU snapshot of one asset: [load] reads it afresh from its meta (null when the asset has none), and
@@ -93,7 +103,10 @@ class RaySnapshotStore<S : RaySnapshot, D>(
     }
 
     private fun read(name: String): S {
-        val meta = checkNotNull(metaLoader.loadBaseMeta(name)) { "CPU $label '$name' is unreadable" }
+        // a model variant (one mesh, see ModelKey) reads its base asset's folder; the loader finds the mesh in the name
+        val meta = checkNotNull(
+            metaLoader.loadBaseMeta(baseAssetName(name))?.let { if (isModelVariant(name)) it.forVariant(name) else it }
+        ) { "CPU $label '$name' is unreadable" }
         return checkNotNull(loader.load(meta)) { "CPU $label '$name' is unreadable" }
     }
 

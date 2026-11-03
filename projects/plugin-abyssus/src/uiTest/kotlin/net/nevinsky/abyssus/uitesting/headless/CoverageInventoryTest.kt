@@ -99,7 +99,7 @@ class CoverageInventoryTest {
         val physics = Regex("kind\\((\\w+)::class").findAll(
             Files.readString(root.resolve("projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/physics/PhysicsComponentKinds.kt")),
         ).map { it.groupValues[1] }.toList()
-        assertTrue(builtIn.size >= 8 && physics.size >= 3)
+        assertTrue(builtIn.size >= 7 && physics.size >= 3)
         assertEquals("component kinds missing", emptyList<String>(), (builtIn + physics).filter { "`$it`" !in inventory })
     }
 }

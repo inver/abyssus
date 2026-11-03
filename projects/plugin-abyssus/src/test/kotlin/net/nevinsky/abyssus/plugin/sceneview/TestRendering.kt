@@ -2,6 +2,7 @@ package net.nevinsky.abyssus.plugin.sceneview
 
 import net.nevinsky.abyssus.plugin.AssetLoading
 import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
+import net.nevinsky.abyssus.plugin.terrain.SculptDrafts
 import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import org.slf4j.Logger
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
@@ -23,5 +24,6 @@ fun testRenderer(
     ViewAssets(AssetLoading(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), log, executor, ShaderStorage())),
     sceneShaders,
     FoliageDrafts(),
+    SculptDrafts(),
     log = log,
 )

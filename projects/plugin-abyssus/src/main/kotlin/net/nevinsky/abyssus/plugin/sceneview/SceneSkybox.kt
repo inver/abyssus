@@ -5,12 +5,11 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
@@ -32,14 +31,15 @@ class SceneSkybox(private val assets: AssetView<SkyRenderer>) : Disposable {
     private val sunDirection = Vector3()
 
     /**
-     * Draws the skybox named [name] if it is loaded (and starts loading it); nothing for null. A procedural sky is lit
-     * by the sun toward [sun], and its clouds drift to [timeSeconds] and are drawn with [technique] (null: the asset's).
+     * Draws the skybox named [name] if it is loaded; nothing for null. It never touches the storage: [update] asks for the
+     * sky once per frame, and building a replacement here would dispose a terrain or model the frame already holds. A
+     * procedural sky is lit by the sun toward [sun], and its clouds drift to [timeSeconds] and are drawn with
+     * [technique] (null: the asset's).
      */
     fun draw(
-        camera: Camera, name: String?, projectDir: File?, sun: Vec3 = SunDirection.DEFAULT, timeSeconds: Double = 0.0,
+        camera: Camera, name: String?, sun: Vector3 = SunDirection.DEFAULT, timeSeconds: Double = 0.0,
         technique: CloudTechnique? = null,
     ) {
-        assets.update(projectDir, setOfNotNull(name))
         val sky = name?.let(assets::get) ?: return
 
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
@@ -77,7 +77,7 @@ class SceneSkybox(private val assets: AssetView<SkyRenderer>) : Disposable {
      * Moves the sky light of the procedural sky [name] one frame (nothing for any other sky): the sun toward [sun] and
      * the clouds at [timeSeconds] decide when it rebuilds, [deltaSeconds] fades a new result in.
      */
-    fun updateLighting(name: String?, sun: Vec3, timeSeconds: Double, visible: Boolean, deltaSeconds: Double) {
+    fun updateLighting(name: String?, sun: Vector3, timeSeconds: Double, visible: Boolean, deltaSeconds: Double) {
         val sky = name?.let(assets::get) as? ProceduralSky ?: return
         sky.updateLighting(sunDirection.set(sun.x, sun.y, sun.z), timeSeconds, visible, deltaSeconds)
     }

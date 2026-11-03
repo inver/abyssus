@@ -5,43 +5,32 @@
 
 package net.nevinsky.abyssus.lib.core.ecs.component
 
+import com.badlogic.ashley.core.Component
+import com.fasterxml.jackson.annotation.JsonAnyGetter
+import com.fasterxml.jackson.annotation.JsonAnySetter
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.io.SourceBackedComponent
 
 /**
  * Binds the foliage asset of a terrain entity: [assetName] is the name of a `FOLIAGE` asset folder, or null for none.
  * Only a string (or null) binds; any other value fails the binding, so the loader keeps the whole component raw.
  *
- * The component also keeps the object it was read from ([adoptSource]), so [sourceTree] writes every member it does not
- * model, in its order and with its number text, and changes only `assetName`, and only when [assetName] no longer
- * equals what was read. The name is not checked against the project here: that is the asset read's job.
+ * Members the component does not model are kept in [extras] (in file order) and written back after `assetName`. The name
+ * is not checked against the project here: that is the asset read's job.
  */
-class FoliageComponent : SourceBackedComponent {
+class FoliageComponent : Component {
     @JsonDeserialize(using = AssetNameDeserializer::class)
     var assetName: String? = null
 
-    private var source: ObjectNode? = null
-    private var boundName: String? = null
+    @field:JsonAnySetter
+    private val unmodeled = LinkedHashMap<String, JsonNode>()
 
-    override fun adoptSource(node: JsonNode) {
-        source = node as? ObjectNode
-        boundName = assetName
-    }
-
-    override fun sourceTree(): JsonNode {
-        val out = source?.deepCopy() ?: JsonNodeFactory.instance.objectNode()
-        if (source == null || assetName != boundName) {
-            assetName?.let { out.put("assetName", it) } ?: out.remove("assetName")
-        }
-        return out
-    }
+    @get:JsonAnyGetter
+    val extras: Map<String, JsonNode> get() = unmodeled
 }
 
 private class AssetNameDeserializer : StdDeserializer<String?>(String::class.java) {

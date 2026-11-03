@@ -67,6 +67,8 @@ dependencies {
     "uiTestImplementation"("com.intellij.remoterobot:remote-fixtures:$remoteRobotVersion")
     // SceneJson / AbyssusDocumentFormat for assertions on the copied fixture documents
     "uiTestImplementation"(project(":lib-core-editor"))
+    // fixtureArchive: the deterministic FlightGear aircraft archive the import scenarios read
+    "uiTestImplementation"(testFixtures(project(":lib-core-editor")))
     // HdrFixtures: Radiance test images from a pixel function
     testImplementation(testFixtures(project(":lib-core")))
     // parseScene, testProject and the other scene helpers shared with editor-core's tests
@@ -188,8 +190,9 @@ tasks {
         // The sandbox IDE trusts every project (no "Trust project?" dialog) and opens the Abyssus view.
         jvmArgs("-Didea.trust.all.projects=true", "-Dabyssus.openView=true")
         // Kotlin 2.4 emits coroutine debug metadata v2, but the sandbox IDE's bundled stdlib reads v1; its coroutine debug
-        // probes then fail every resume ("Debug metadata version mismatch"). Turn the probes off.
-        jvmArgs("-Dkotlinx.coroutines.debug=off")
+        // probes (the IDE's own, `idea.enable.coroutine.dump`) then fail every resume ("Debug metadata version mismatch"), so the
+        // plugin's background coroutines (Sculpt Terrain, Paint Foliage sessions) never finish. Turn the probes off.
+        jvmArgs("-Dkotlinx.coroutines.debug=off", "-Didea.enable.coroutine.dump=false")
     }
 
     patchPluginXml {
@@ -289,6 +292,9 @@ val runIdeForUiTests by intellijPlatformTesting.runIde.registering {
                 "-Didea.trust.all.projects=true",
                 "-Dide.show.tips.on.startup.default.value=false",
                 "-Dide.no.platform.update=true",
+                // Kotlin 2.4 debug metadata v2 vs the IDE's stdlib v1 (see runIde above)
+                "-Dkotlinx.coroutines.debug=off",
+                "-Didea.enable.coroutine.dump=false",
             )
         }
     }
@@ -361,6 +367,11 @@ tasks.prepareSandbox {
     from(playHostLibs) { into(pluginName.map { "$it/play-host" }) }
 }
 
+// The IDE the UI tests drive has its own sandbox; Play needs the same bundled host there.
+tasks.matching { it.name == "prepareSandbox_runIdeForUiTests" }.configureEach {
+    (this as org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask).from(playHostLibs) { into(pluginName.map { "$it/play-host" }) }
+}
+
 val checkNoJoltInZip by tasks.registering {
     val archive = tasks.buildPlugin.flatMap { it.archiveFile }
     dependsOn(tasks.buildPlugin)
@@ -381,3 +392,6 @@ val checkNoJoltInZip by tasks.registering {
     }
 }
 tasks.named("check") { dependsOn(checkNoJoltInZip) }
+
+// No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in lib-core-editor (see gradle/checks.gradle.kts).
+extra["abyssusJacksonTreeAllowed"] = emptyList<String>()

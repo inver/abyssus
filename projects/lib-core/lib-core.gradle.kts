@@ -63,3 +63,5 @@ extra["abyssusSingletonExcludes"] = listOf(
 
 // Games ship this library: `checkNoEditorCode` keeps editor imports and ray-tracing snapshot types out of it.
 extra["abyssusShippedLibrary"] = true
+
+// lib-core reads JSON into values and lib-core-editor writes it, so both may use Jackson tree types freely: no `abyssusJacksonTreeAllowed` here.

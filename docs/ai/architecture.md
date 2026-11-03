@@ -9,7 +9,7 @@
 | `projects/lib-render/` | Plain JVM shared rendering mechanics: `TerrainPass` (editor and game terrain variants), shadow depth submission, host-neutral frame inputs and light profiles, the sun shadow camera | `:lib-core`, `:lib-gdx` |
 | `projects/lib-game-link/` | Plain JVM: the play host and protocol, `PlayModule`, the play launch file and its export, which a game links only for Abyssus (its `play` source set, never its main code) | `:lib-physics`, `:lib-core` |
 | `projects/lib-physics/` | Plain JVM physics: the physics components and `PhysicsWorld` (Jolt through jolt-jni), run in a game or the play host, never in the IDE | `:lib-core`, jolt-jni |
-| `projects/app-game-control-line/` | **Control Line**, a libGDX desktop game (LWJGL3): flight on Jolt lines, scoring, an F2B demonstration bot (Watch AI), screens (an authored UI asset drawn by `lib-core`'s `UiPresenter`), its bundled native project and its `PlayModule` for Play in Abyssus | `:lib-physics`, libGDX LWJGL3 backend, jolt-jni natives of the build machine |
+| `projects/app-game-control-line/` | **Control Line**, a libGDX desktop game (LWJGL3): flight on Jolt lines, scoring, an F2B demonstration bot (Watch AI), an Instructor that takes the handle near a crash, controller input (gamepads through libGDX's gdx-controllers, with a settings screen), screens (an authored UI asset drawn by `lib-core`'s `UiPresenter`), its bundled native project and its `PlayModule` for Play in Abyssus | `:lib-physics`, libGDX LWJGL3 backend, gdx-controllers, jolt-jni natives of the build machine |
 | `projects/lib-core/` | Plain JVM library: asset folders and `meta.json`, the asset loading pipeline (`AssetStorage`), the models, terrains and skies it builds, native DTOs, Ashley components and scene loading | `:lib-gdx`, Jackson, libGDX |
 | `projects/lib-gdx` | Plain JVM library: stock libGDX g3d plus 32-bit meshes (`IntMesh`, `IntModel`), the PBR, image-based-light, shadow-atlas and instanced shaders on the stock `DefaultShader`, an Assimp importer and a binary glTF writer | libGDX, LWJGL Assimp |
 | `projects/lib-raytracing/` | Plain JVM ray tracing: backend contracts, immutable scene snapshots and linear host frames, the scheduler and quality policy, and optional native Metal and Vulkan backends | Kotlin stdlib, LWJGL Vulkan and VMA |
@@ -45,7 +45,7 @@ loaders from one table, `StandardAssetLoaders` (`projects/lib-core/src/main/kotl
 one place. A host differs only by what it passes in (model preparation tap, logger, and the plugin's `FoliageLoader` in
 place of the game's `RuntimeFoliageLoader`).
 `AbyssusCore` creates four groups independently on first access: `documents` owns JSON, native validation and parsing;
-`assets` owns metadata, loading, property descriptions and previews; `terrain` owns generation and file staging;
+`assets` owns metadata, loading, property descriptions and previews; `terrain` owns generation, sculpting (`SculptStateReader` reads a terrain's sculpt state, `SculptPlanner` plans the height-layer files of Regenerate, Reset and Forget as a `SculptFileSet`, and `SculptTransactions` stages it as one undoable `AssetTransaction`) and file staging;
 `ray` owns the backend service and conversion worker. Actions, providers and factories pass the group collaborators
 they need. Disposal closes only initialized ray resources; reading a document does not create native workers.
 The plugin's `SceneReader` and `ProjectReader` use `DocumentParsing` and `JsonProcessor` to validate and bind
@@ -90,7 +90,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    target exists and is not at the entity itself; otherwise it uses the entity's `localRotation`. `handleIds` records
    the `HANDLE` entities that a light may be aimed at.
 3. `SceneViewPanel` hosts a `GuardedGLCanvas` and wires small collaborators, each owning one job: `SceneInputForwarder`
-   (keys and mouse), `RayControlBinding`, `CloudControls`, `PlayControlsStrip` and `FoliagePaintControls`; the "Add ..."
+   (keys and mouse), `RayControlBinding`, `CloudControls`, `PlayControlsStrip` and the terrain brush strips (`BrushStrip`: `FoliagePaintControls`, `SculptTerrainControls`); the "Add ..."
    menus come in as `PlacementMenu`s. A Swing `Timer` renders frames through
    `SceneRenderer.render`, which loads assets through `SceneModels` / `SceneTerrains` / `SceneSkybox` (each holding a
    `lib-core` `AssetStorage` built by `AssetLoading`) and draws markers (`lib-core-editor`'s `SceneMarkers` through a
@@ -107,8 +107,8 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
    noise (FastNoiseLite) on the pool thread, and its build uploads the noise. The sky reads the built `Clouds` from
    `BuiltAssets` on every draw, as `TerrainMesh` reads its splat textures, and never owns it. Every `SkyRenderer.draw` takes a `SkyFrame(sun, timeSeconds, technique, clouds)`;
    `ProceduralSky` draws the asset's atmosphere, then a core-owned cloud pass blended premultiplied over it through a
-   `CloudRenderer` strategy (`LayeredClouds`, `ShellClouds`, `VolumetricClouds`, built lazily by `CloudTechniques`, which
-   steps down volumetric to shells to layered to none when one cannot be built). All techniques and `SunOcclusion` share
+   `CloudRenderer` strategy (`LayeredClouds`, `CumulusClouds`, `ShellClouds`, `VolumetricClouds`, built lazily by `CloudTechniques`, which
+   steps down volumetric to shells to cumulus to layered to none when one cannot be built). All techniques and `SunOcclusion` share
    one coverage field, `CloudField` in Kotlin and `clouds_common.glsl` (kept equal by `CloudFieldParityGlTest`).
    A procedural sky whose asset has `additional.lightsScene: true` (parsed as a strict boolean by
    `ProceduralSkyMeta`, staged in `PreparedProceduralSky`) also lights the content. `ProceduralSky` then owns a
@@ -196,7 +196,7 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
   heights and marker bounds). It selects in the view, and `selectEntityInAbyssusView` selects the entity's row in
   the tree. Foliage copies are never pick targets: they ride their terrain entity, so a click through them picks
   what they stand on.
-- **Drags:** a drag on a gizmo handle runs a `GizmoDrag`, and `ScenePreview` shows the result live. Esc cancels.
+- **Drags:** a drag on a gizmo handle runs a `GizmoDrag`, and `ScenePreview` shows the result live. Esc cancels. `ScenePreviewLayers` lays every unwritten change (simulated poses, the drag, a water move, the copies of a path being edited) over the file's content in one order, and the renderer and `SnapshotSceneQueries` both read it, so what is drawn and what is picked agree.
   Any other drag orbits or pans `OrbitCamera`.
 - **Drop:** the toolbar button or D calls `SceneInteraction.drop`. `ScenePicker.restHeight` queries the highest
   surface under the selection's oriented-box footprint, using box tops and transformed bilinear terrain cells.
@@ -204,15 +204,14 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
   move drag. No surface or an already-resting object produces no edit. `drawnVersion` triggers an availability
   re-check after loading changes, outside the GL context. New scene params also invalidate the next frame's query
   so changed transforms and Undo update availability even when the drawn entity ids stay the same.
-- **On release:** `SceneFileEditor.applyTransform` calls `editSceneJson` with
+- **On release:** `SceneFileEditor.applyTransform` calls `editSceneDocument` with
   `SceneTransformWriter().apply`, which writes only the changed `localPosition` / `localRotation`, plus the camera's
   `position` / `viewPointPosition`. The document change triggers the re-read above.
 - **Path arrangements:** Add Path Arrangement (tree scene row and toolbar, `AddPathArrangementGroup`) puts the view in
   drawing mode: `SceneViewState.drawing` holds the model and the points, and `SceneInteraction` adds a point where a
   left click hits a terrain (`SceneQueries.groundHit`), closes on the first point, finishes on Enter or a double click,
-  drops the last point on Backspace and cancels on Esc. A selected arrangement shows `PathHandles`: dragging a point or
-  a middle handle is a `DraggingPathPoint` gesture whose points are shown through `SceneViewState.pathEdit` until the
-  release calls `SceneFileEditor.editArrangement`. Both write through `editSceneJson` with `ArrangementEdits`
+  drops the last point on Backspace and cancels on Esc. A selected arrangement shows `PathHandles`: dragging a point handle is a `DraggingPathPoint` gesture whose points are shown through `SceneViewState.pathEdit` until the
+  release calls `SceneFileEditor.editArrangement`. Both write through `editSceneDocument` with `ArrangementEdits`
   (`lib-core-editor`, `editor.arrange`), one undoable command each. The copies' heights come from `GroundHeight`: the
   open view's `GroundHeights` over its drawn terrains, else `ArrangementHeights` (plugin `sceneview`), which reads the scene's
   terrains with `TerrainLoader` under a modal progress and keeps them until their files change.
@@ -223,16 +222,16 @@ effective asset revisions off the EDT (unsaved metadata text is captured on the 
 ### Every write
 
 The eye toggle, Rename Scene, the skybox chooser, gizmo drags, Drop and component add, edit and remove (`SceneComponentEdits`) and asset property edits (`AssetMetaEdits`, over `lib-core-editor`'s
-`AssetMetaEditor`; reference and face choices come from `projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/meta/AssetReferenceChoices.kt`) all go through `editSceneJson`
+`AssetMetaEditor`; reference and face choices come from `projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/meta/AssetReferenceChoices.kt`) all go through `editSceneDocument`
 (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`):
 
-1. `DocumentTextEditor` (`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/document/DocumentTextEditor.kt`)
-   parses the document with `SceneJson` and admits it, lets the caller mutate the tree, admits the result and
-   re-serializes it with `SceneJson().inStyleOf`, which keeps indentation, key order and number text.
+1. `SceneTextEditor` (`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/scene/SceneTextEditor.kt`)
+   admits and parses the text to a `SceneDto`, lets the caller's `SceneEdit` change it, and prints it with
+   `JsonProcessor.pretty` (always pretty-printed). `ProjectTextEditor`, `AssetMetaTextEditor` and `UiTextEditor` do the same for `.abss`, `meta.json` and UI assets.
 2. Unless the document changed meanwhile, replace the text in a `WriteCommandAction` and save.
 3. Publish `AbyssusSceneEdited.TOPIC` (the file). The Abyssus pane's `AbyssusTreeRefresh` listens and refreshes the tree; the writer knows no UI. The same coordinator also follows document changes (Undo/Redo, unsaved text) and project VFS events for native documents, asset `meta.json` and asset folders, coalescing them with `lib-core-editor`'s `RefreshCoalescer` and restoring selection and expansion by row identity.
 
-`HeadlessEditing` (`lib-core-editor`, `editor.headless`) runs the same `DocumentTextEditor` on text with no IDE, so a
+`HeadlessEditing` (`lib-core-editor`, `editor.headless`) runs the same `SceneTextEditor` on text with no IDE, so a
 caller without the plugin validates and edits a scene, project or `meta.json` with byte-identical results and the same
 refusals (spec `headless-scene-editing`).
 
@@ -243,7 +242,7 @@ fail it between any two writes. No scene or project file is written that way.
 
 UI assets follow the same split (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/gameui/UiAssetCommands.kt`).
 Editing an existing UI `meta.json` (`editUiMeta`) and registering or unregistering a name in `uiAssetNames` are
-`editSceneJson` edits: the pure edit is `lib-core-editor`'s `UiDocumentEdits` run through `UiTextEditor.transform`
+`editSceneDocument` edits: the pure edit is `lib-core-editor`'s `UiDocumentEdits` run through `UiTextEditor.transform`
 (`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/ui/UiTextEditor.kt`), so the document must be admitted UI before and after, a
 gesture that began on older text is refused as stale, and one edit is one undo. Creating a UI asset cannot be a
 document edit (a new folder and file), so `NewUiAssetFactory` stages one `AssetTransaction` holding the new `meta.json`
@@ -262,8 +261,18 @@ simulation. The size and backdrop are viewer preferences (`PropertiesComponent`-
 inside `GdxRuntime.withContext` on the AWT thread behind `GuardedGLCanvas.glSafe()`, and closing the tab releases the
 presenter, the offscreen buffer, the backdrop and the GL kit while the context is current.
 
+Terrain brushes (Paint Foliage, Sculpt Terrain, and later a splat brush) share one path from the mouse to the engine. A
+`BrushStrip` in the Scene view (`FoliagePaintControls`, `SculptTerrainControls`, registered in `BrushKinds`) puts one
+`BrushMode` on `SceneViewState.brush`; `GestureDriver` turns a left press on the mode's terrain into a `Gesture.Brushing`
+and calls the `BrushStroke` registered for the mode's kind (`pressed` / `dragged` / `released` / `cancelled`). That stroke
+is a `TerrainStrokeCommand` (`FoliageStrokeCommand`, `SculptStrokeCommand`): its brush is a `StampBrush` in
+the `brush` package of `lib-core-editor`, which walks the drag with `BrushPath`, has a `BrushTool` compute one change per cell from the
+grid as it was, and has a `BrushTarget` (a density mask, the sculpt draft) apply them, reporting the `GridRect` that
+changed. Nothing is written before the release; each command then commits through its own transaction, and a view shows
+the stroke from the draft meanwhile (`FoliageDrafts`, `SculptDrafts`).
+
 Foliage creation, Re-bake and stroke commits also use asset transactions for their new files, bake and masks.
-Apply combines its binary transaction with an `editSceneJson` metadata edit in one platform command
+Apply combines its binary transaction with an `editSceneDocument` metadata edit in one platform command
 (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/foliage/FoliageApplyCommand.kt`): the binary undo action is registered after the document edit, with document-save
 actions around them so Undo and Redo restore metadata on disk as well as in the editor. A failed metadata edit
 rolls back the binary transaction. Existing metadata never goes through a disk replacement. Valid bakes are rebuilt
@@ -274,26 +283,24 @@ cache. See `docs/ai/conventions.md` for conflicts, mask patches and cache cleanu
 
 `core.ecs.ComponentRegistry` maps built-in and explicitly registered names to Ashley component classes. Keys may be
 short or fully qualified; scene data never triggers arbitrary class loading. `EcsLoader` binds the wrapped
-`ecs.entities` map through `JsonProcessor.ecsReader()` and Jackson. Unregistered or unbindable component entries
-are carried as raw JSON in `EcsLoadingWarns`, with warnings. Entity ids are numeric; invalid references become
-`NO_ENTITY`. `FoliageComponent` is built in and carries its source object (`SourceBackedComponent`), so a write keeps
-unknown members and number text. `SceneFoliageListing` lists a loaded engine's terrain-bound foliage without files or GL.
-`NativeJsonTree` in `core.io` is the one lossless JSON reader, used by `SceneJson` and by `SceneLoader`.
+`ecs` map in `SceneLoader` through `JsonProcessor.binderWith(EntityDtoModule(registry))` and Jackson; `EcsLoader` turns the
+typed entities into engine entities. Unregistered or unbindable component entries are bound as a `RawComponent`, carried as raw
+JSON in `EcsLoadingWarns`, with warnings. Entity ids are numeric; invalid references become
+`NO_ENTITY`. `FoliageComponent` is built in and keeps unmodeled members in an extras map (any-setter/any-getter), so a typed write keeps them. `SceneFoliageListing` lists a loaded engine's terrain-bound foliage without files or GL.
+`NativeJsonTree` in `core.io` is the one token-level JSON reader (exact number text and key order).
 `SceneEngine` and `SceneEntityIds` live in `core.ecs`; the look-at and camera synchronization systems
 are in `projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/ecs/system`.
 
 `RuntimeSceneLoader` combines `SceneLoader` and `EcsLoader`, installs those systems and returns a `SceneContext`.
-The editor view reads JSON directly instead of updating an Ashley engine. `lib-core-editor` owns `EcsWriter`, which
-serializes registered components with Jackson into a wrapped `entities` map, and the built-in editing codecs.
-It is a serialization API, not an IDE file writer; plugin document edits still go through `editSceneJson`.
+The editor view reads the `SceneDto` directly instead of updating an Ashley engine. Components are edited in place on the
+`EntityDto`'s Ashley instances; there is no separate editing codec and no `EcsWriter`. Plugin document edits go through `editSceneDocument`.
 
 ### The scene document layer
 
-The editor keeps the parsed JSON tree as its model (unknown keys, key order and number text stay the file's);
-games and Play keep an Ashley `SceneEngine`. Both use Jackson binding to `lib-core`'s component classes. In the editor,
-readers use `SceneDocument` / `EntityView`; writers use `SceneEntityTree`, supporting both a flat entity map and
-`ecs.entities`. The current runtime loader only enumerates `ecs.entities`; see the current-source review for
-compatibility gaps.
+The editor keeps the parsed `SceneDto` as its model (an unbindable component stays a `RawComponent`); games and Play keep an
+Ashley `SceneEngine`. Both bind `lib-core`'s component classes with Jackson. Readers and edits use `scene.entity(id)`, `entities()`, `nextId()` and `component(id, type)` over the id-keyed `ecs` map.
+The read model (`SceneContent`, `SceneRenderParams`, ray snapshots, the physics overlay) takes the typed
+`SceneDto.ecs: Map<Long, EntityDto>` that `SceneLoader` and `DocumentParsing` bind; the runtime loader reads the same map.
 
 **Foliage in games.** `lib-core`'s `FoliageComponent` and `SceneFoliageListing` name a loaded scene's foliage without
 files or GL; `FoliageRuntimeLoad` reads each asset as written (shared by games and `lib-physics`, so both see one
@@ -316,7 +323,7 @@ poses (`RayModelPoses`), freezes them into a job and offers it to a one-slot mai
 job into an immutable `RaySceneSnapshot` (`RaySceneSnapshots`, including CPU skin deformation) and offers it to the view's
 `RayRenderScheduler`. The native worker keeps one frame in flight and one replaceable pending request per view and polls
 completion, so the EDT never waits on a fence or a conversion. A completed linear RGBA/depth frame returns to the EDT,
-where `RayFramePresenter` uploads it inside the safe canvas context and `SceneRenderer` composes the grid and overlays
+where `RayFramePresenter` (over `lib-render`'s `HostFramePresenter`) uploads it inside the safe canvas context and `SceneRenderer` composes the grid and overlays
 against its depth. Scenes the backend cannot represent, a failed asset, or a device loss restore raster rendering at
 once and surface a reason with a Retry button; no scene file is written by any of this. See `projects/lib-raytracing/README.md` for
 toolchains, the opt-in device test commands (`-Dabyssus.metalTests=true`, `-Dabyssus.vulkanTests=true`), shading rules
@@ -326,12 +333,12 @@ and bounds, and `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/pl
 
 The shared `AbyssusDocumentFormat` (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/format/AbyssusDocumentFormat.kt`)
 is a constructor-built validator over parsed `JsonNode`s with no Swing, IntelliJ or GL dependencies. It checks the
-`.abss` / `.scene` / `meta.json` header (`format: "abyssus"`, integral `formatVersion: 1`) and reserved scene fields
+`.abss` / `.scene` / `meta.json` header (integral `formatVersion: 1`; a `format` marker is not required) and reserved scene fields
 (`ecs.componentIdentifiers`, renderable `class`), returning a `FormatRejection` or null. Extension payloads are opaque.
 
 `DocumentParsing` guards editor project/scene binding; `AssetMetaReader` guards editor metadata reads (both in
 `lib-core-editor`, `editor.document`, which also holds the editor-facing aliases of the `core.format` types).
-`editSceneJson` validates current and candidate document text on the EDT, and `SceneFormatListener` guards formatting.
+`editSceneDocument` validates current and candidate document text on the EDT, and `SceneFormatListener` guards formatting.
 Rejections surface through `documentDisplayMessage` and localized `unsupportedFormat.*` messages.
 
 `ProjectLoader`, `SceneLoader` and `AssetMetaLoader` validate parsed trees before binding.
@@ -350,8 +357,8 @@ collaborator may import: **plain** is a plain JVM class, **GL** needs a libGDX o
 |---|---|---|---|
 | `AssetStorage` (`lib-core`) | `OffGlExecutor`, `StorageCallGuard`, `DependencyResolver`, `HookRegistry` | The off-GL executor factory, the thread and call-depth guard, dependency satisfaction and the hook registry; `AssetStorage` owns upload, build and discard | plain |
 | `SceneRenderer` (plugin) | `SceneContentPass`, `SceneSkyPass` | The model, terrain, foliage and gizmo pass; the sky, fog and cloud pass, with the snapshot packing that pass reads | GL |
-| `SceneViewPanel` (plugin) | `SceneViewToolbar`, `SceneGlLifecycle`, `SceneFrameDriver` | The toolbar and its control sync; the canvas, libGDX context and capabilities of one GL context; the frame timer with its idle throttle | Swing (toolbar, driver), GL (lifecycle) |
-| `SceneInteraction` (`lib-core-editor`) | `GestureDriver`, `DrawingSession` | The press-drag-release gestures (gizmo, water, path point, paint stroke); drawing and editing a path arrangement | plain |
+| `SceneViewPanel` (plugin) | `SceneViewToolbar`, `SceneGlLifecycle`, `SceneFrameDriver` | The toolbar and its control sync; the canvas, libGDX context and capabilities of one GL context (through `GlCanvasHost`, which the Game UI canvas and the Import Model preview also use); the frame timer with its idle throttle | Swing (toolbar, driver), GL (lifecycle) |
+| `SceneInteraction` (`lib-core-editor`) | `GestureDriver`, `DrawingSession` | The press-drag-release gestures (gizmo, water, path point, terrain brush stroke); drawing and editing a path arrangement | plain |
 | `PhysicsWorld` (`lib-physics`) | `PhysicsBodyFactory`, `PhysicsStepper`, `PhysicsPoseWriter` | Body creation and refusal, the fixed-step advance, the pose write-back; Jolt stays in the module's `jolt` package | plain (Jolt) |
 | `FlightGearImport` (`lib-core-editor`) | `FlightGearCollection`, `FlightGearGeometry`, `FlightGearStaging` | Reading the source files, building the geometry, staging the new MODEL folder; the facade stays | plain |
 | `UiEditorController` (plugin) | `UiCanvasGestures`, `UiViewSettings` | The canvas drag and its one command; the preview size and backdrop per viewer. The controller keeps the document, the selection and the edits | plain |
@@ -383,7 +390,7 @@ collaborator may import: **plain** is a plain JVM class, **GL** needs a libGDX o
   When disposed while hidden, it drops the context without making it current, because on macOS that would abort the
   JVM.
 - **Scene antialiasing:** `AbyssusProjectSettings` reads `sceneViewAntialiasing` from each native `.abss`, and the
-  project's Properties combo writes through `editSceneJson`. `ProjectSettingsListener` delivers document/VFS changes
+  project's Properties combo writes through `editSceneDocument`. `ProjectSettingsListener` delivers document/VFS changes
   on EDT, scoped by the scene's owning `.abss`; Undo/Redo follows the same path. Antialiasing is excluded from the
   render-content comparison so changing it keeps Play running. Canvas replacement and fallback stay on EDT, and
   hidden views wait until shown. There is no application preference or IDE configurable.
@@ -449,7 +456,7 @@ quality policy falls back when the saved budget cannot fit a sample at its minim
 samples independently, and each session's `RayFrameAccumulator` merges batches of the same key, epoch, revision and limits.
 A frame that fails its per-path query bound or meets an unsupported dielectric medium is rejected whole at poll;
 `RayQueuedSession` then accepts new work at once. In Properties, `SceneDetailsView` edits the four settings and
-`EntityDetailsView` the per-material optics through `SceneRayEdits` (one `editSceneJson` command each); see the
+`EntityDetailsView` the per-material optics through `SceneRayEdits` (one `editSceneDocument` command each); see the
 scene view README.
 
 The properties panel reads live view state through the read-only `editor.facts.SceneFacts` interface. Its generic
@@ -457,3 +464,7 @@ content type lets the contract stay independent of render code. `SceneRayControl
 content, selection and ray-mode queries, removes facts on editor disposal, and retains the separate ray commands.
 Pure ray settings, optical overrides and diagnostic records live in `editor.ray`; their localized wording lives
 in `ui.RayModeText`, and `filetype.SceneRayEdits` owns the IDE document-command adapter.
+
+## Paint Texture (the fourth brush kind)
+
+`PaintTextureControls` is a `BrushStrip<SplatSession>` registered after Sculpt in `BrushKinds`. Its stroke, `SplatStrokeCommand`, edits a `SplatDraft` (RGBA weights) kept in the project's `SplatDrafts` by splat texture folder; each view's `SplatViewSync` copies the changed tiles into its own splat `Texture` with `SplatTexture.updateRegion`, and reloads the texture when the draft is gone. Release encodes the PNG off the AWT thread and writes it as one `AssetTransaction` (`SplatTransactions`); Create splat map and Make unique copy are multi-file transactions.

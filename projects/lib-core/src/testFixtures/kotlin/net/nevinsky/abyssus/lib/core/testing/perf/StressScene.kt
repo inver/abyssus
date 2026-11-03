@@ -71,12 +71,12 @@ class StressScene(private val seed: Long = SEED) {
     private fun sceneText(terrain: String, model: String, size: Float, random: Random): String {
         val entities = StringBuilder()
         entities.append(
-            """"1":{"archetype":1,"components":{"NameComponent":{"name":"Terrain"},"PositionComponent":{"localPosition":{"x":0.0,"y":0.0,"z":0.0}},""" +
-                """"RenderComponent":{"renderable":{"kind":"asset","shaderKey":"terrain","asset":{"type":"TERRAIN","assetName":"$terrain"}}},""" +
-                """"FoliageComponent":{"assetName":"$FOLIAGE_NAME"},"TypeComponent":{"type":"TERRAIN"}}}"""
+            """"1":{"type":"TERRAIN","components":{"NameComponent":{"name":"Terrain"},"PositionComponent":{"localPosition":{"x":0.0,"y":0.0,"z":0.0}},""" +
+                """"RenderComponent":{"shaderKey":"terrain","type":"TERRAIN","assetName":"$terrain"},""" +
+                """"FoliageComponent":{"assetName":"$FOLIAGE_NAME"}}}"""
         )
         entities.append(
-            ""","2":{"archetype":4,"components":{"NameComponent":{"name":"Sun"},"TypeComponent":{"type":"LIGHT_DIRECTIONAL"},""" +
+            ""","2":{"type":"LIGHT_DIRECTIONAL","components":{"NameComponent":{"name":"Sun"},""" +
                 """"PositionComponent":{"localRotation":{"x":0.38268328,"w":-0.9238796},"localPosition":{"x":0.0,"y":50.0,"z":0.0}}}}"""
         )
         // a square grid with a seeded jitter, so the placements spread over the terrain without overlapping much
@@ -86,10 +86,9 @@ class StressScene(private val seed: Long = SEED) {
             val x = ((i % side) + random.nextFloat()) * step - size / 2
             val z = ((i / side) + random.nextFloat()) * step - size / 2
             entities.append(
-                ""","${i + 3}":{"archetype":1,"components":{"NameComponent":{"name":"Model ${i + 3}"},""" +
+                ""","${i + 3}":{"type":"OBJECT","components":{"NameComponent":{"name":"Model ${i + 3}"},""" +
                     """"PositionComponent":{"localPosition":{"x":${"%.3f".format(java.util.Locale.ROOT, x)},"y":0.0,"z":${"%.3f".format(java.util.Locale.ROOT, z)}}},""" +
-                    """"RenderComponent":{"renderable":{"kind":"asset","shaderKey":"defaultShader","asset":{"type":"MODEL","assetName":"$model"}}},""" +
-                    """"TypeComponent":{"type":"OBJECT"}}}"""
+                    """"RenderComponent":{"shaderKey":"defaultShader","type":"MODEL","assetName":"$model"}}}"""
             )
         }
         return """{"format":"abyssus","formatVersion":1,"id":0,"name":"$SCENE_NAME","ambientLightEnabled":true,""" +

@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 
+import net.nevinsky.abyssus.lib.core.util.GlStateScope
+import net.nevinsky.abyssus.lib.core.util.OFFSCREEN_CAPS
 import net.nevinsky.abyssus.lib.core.util.checkFramebufferComplete
 
 import net.nevinsky.abyssus.lib.core.util.GL_HALF_FLOAT
@@ -37,7 +39,6 @@ const val IRRADIANCE_SIZE = 32
 private const val SOURCE_LEVELS = 9 // 256 down to 1
 private const val GL_RGB16F = 0x881B
 private const val GL_TEXTURE_CUBE_MAP_SEAMLESS = 0x884F
-private const val GL_FRAMEBUFFER_BINDING = 0x8CA6
 
 /** A texture made with raw GL calls, so libGDX's texture binder can bind it like any other. */
 class GpuTexture(target: Int, private val width: Int, private val height: Int) :
@@ -309,22 +310,13 @@ class HdrEnvironmentBuild(private val input: EnvironmentSource, private val shad
     /** Runs [block] with [fbo] bound and blending, depth, culling and scissor off; restores what it found. */
     private fun withFramebuffer(block: () -> Unit) {
         val gl = Gdx.gl
-        val ints = BufferUtils.newIntBuffer(16)
-        gl.glGetIntegerv(GL_FRAMEBUFFER_BINDING, ints)
-        val previous = ints.get(0)
-        ints.clear()
-        gl.glGetIntegerv(GL20.GL_VIEWPORT, ints)
-        val viewport = IntArray(4) { ints.get(it) }
-        val caps = listOf(GL20.GL_BLEND, GL20.GL_DEPTH_TEST, GL20.GL_CULL_FACE, GL20.GL_SCISSOR_TEST)
-        val enabled = caps.map(gl::glIsEnabled)
-        caps.forEach(gl::glDisable)
+        val state = GlStateScope(OFFSCREEN_CAPS)
+        state.disableCaps()
         gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, fbo)
         try {
             block()
         } finally {
-            gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, previous)
-            gl.glViewport(viewport[0], viewport[1], viewport[2], viewport[3])
-            caps.zip(enabled).forEach { (cap, on) -> if (on) gl.glEnable(cap) }
+            state.restore()
             gl.glActiveTexture(GL20.GL_TEXTURE0)
             gl.glBindTexture(GL20.GL_TEXTURE_2D, 0)
             gl.glBindTexture(GL20.GL_TEXTURE_CUBE_MAP, 0)

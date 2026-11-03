@@ -6,9 +6,9 @@
 package net.nevinsky.abyssus.lib.core.editor.scene
 
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.ArrangementPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
@@ -18,24 +18,24 @@ import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
 
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.core.dto.LightDto
+import net.nevinsky.abyssus.lib.core.ecs.component.LightDto
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
+import net.nevinsky.abyssus.lib.core.format.EntityType
 
-/** The asset a `RenderComponent` shows: `renderable.asset.type` and `assetName`. */
-class DecodedAsset(val type: String, val name: String)
+/** The asset a `RenderComponent` shows: its `type` and `assetName`, and for a model the `meshId` of the one mesh drawn. */
+class DecodedAsset(val type: String, val name: String, val meshId: String? = null)
 
 /**
  * What the component codecs decoded from one entity; null where it lacks the component. [hasLocalPosition] tells
  * whether the file's `PositionComponent` holds a `localPosition` at all (a camera then takes it over its own position).
  */
 class DecodedEntity(
-    val id: String,
+    val id: Long,
     val name: String,
     val position: PositionComponent?,
     val hasLocalPosition: Boolean,
-    val type: TypeComponent.Type?,
+    val type: EntityType?,
     val camera: CameraComponent?,
     val light: LightComponent?,
     val asset: DecodedAsset?,
@@ -57,16 +57,16 @@ class PlacementMapper {
         val lights = mutableListOf<LightPlacement>()
         val cameras = mutableListOf<CameraPlacement>()
         val arrangements = mutableListOf<ArrangementPlacement>()
-        val positions = linkedMapOf<String, Vec3>()
-        val handleIds = mutableSetOf<String>()
+        val positions = linkedMapOf<Long, Vector3>()
+        val handleIds = mutableSetOf<Long>()
         for (entity in entities) {
             val transform = entity.position?.let(::transformOf) ?: PlacementTransform.IDENTITY
             if (entity.position != null) positions[entity.id] = transform.position
-            if (entity.type == TypeComponent.Type.HANDLE) handleIds += entity.id
+            if (entity.type == EntityType.HANDLE) handleIds += entity.id
             val asset = entity.asset
             entity.arrangement?.let { arrangements += ArrangementPlacement(entity.id, it) }
             when {
-                asset != null && asset.type == "MODEL" -> models += AssetPlacement(entity.id, asset.name, transform)
+                asset != null && asset.type == "MODEL" -> models += AssetPlacement(entity.id, asset.name, transform, asset.meshId)
                 asset != null && asset.type == "TERRAIN" -> {
                     terrains += AssetPlacement(entity.id, asset.name, transform)
                     entity.foliage?.let { foliages += FoliagePlacement(entity.id, it, asset.name, transform) }
@@ -95,37 +95,37 @@ class PlacementMapper {
     }
 
     private fun transformOf(position: PositionComponent) = PlacementTransform(
-        Vec3(position.localPosition.x, position.localPosition.y, position.localPosition.z),
-        Quat(position.localRotation.x, position.localRotation.y, position.localRotation.z, position.localRotation.w),
-        Vec3(position.localScale.x, position.localScale.y, position.localScale.z),
+        Vector3(position.localPosition.x, position.localPosition.y, position.localPosition.z),
+        Quaternion(position.localRotation.x, position.localRotation.y, position.localRotation.z, position.localRotation.w),
+        Vector3(position.localScale.x, position.localScale.y, position.localScale.z),
     )
 
     /** The position is the entity's own `localPosition`, else the camera's. */
     private fun cameraOf(entity: DecodedEntity, component: CameraComponent, transform: PlacementTransform): CameraPlacement {
         val camera = component.camera
-        val position = if (entity.hasLocalPosition) transform.position else Vec3(camera.position.x, camera.position.y, camera.position.z)
+        val position = if (entity.hasLocalPosition) transform.position else Vector3(camera.position.x, camera.position.y, camera.position.z)
         return CameraPlacement(
-            entity.id, entity.name, position, Vec3(camera.direction.x, camera.direction.y, camera.direction.z), lookAtOf(entity),
+            entity.id, entity.name, position, Vector3(camera.direction.x, camera.direction.y, camera.direction.z), lookAtOf(entity),
             camera.near, camera.far, camera.fieldOfView, transform.rotation,
         )
     }
 
     /** The id of the entity [entity] looks at, as the file names it; null for none. */
-    private fun lookAtOf(entity: DecodedEntity): String? =
-        entity.position?.lookAtId?.takeIf { it != NO_ENTITY }?.toString()
+    private fun lookAtOf(entity: DecodedEntity): Long? =
+        entity.position?.lookAtId?.takeIf { it != NO_ENTITY }?.toLong()
 
     /** A `LIGHT_<KIND>` entity, or one that has a `LightComponent` and no other kind (a directional light). */
     private fun lightOf(entity: DecodedEntity, transform: PlacementTransform): LightPlacement? {
         val type = entity.type
         val kind = when {
             type == null || !type.name.startsWith("LIGHT") -> if (entity.light != null) LightKind.DIRECTIONAL else return null
-            type == TypeComponent.Type.LIGHT_POINT -> LightKind.POINT
-            type == TypeComponent.Type.LIGHT_SPOT -> LightKind.SPOT
+            type == EntityType.LIGHT_POINT -> LightKind.POINT
+            type == EntityType.LIGHT_SPOT -> LightKind.SPOT
             else -> LightKind.DIRECTIONAL
         }
         val light: LightDto = entity.light?.light ?: LightDto()
         return LightPlacement(
-            entity.id, kind, Rgba(light.color.r, light.color.g, light.color.b, 1f), light.intensity.coerceAtLeast(0f),
+            entity.id, kind, Color(light.color.r, light.color.g, light.color.b, 1f), light.intensity.coerceAtLeast(0f),
             transform.position, forwardOf(transform.rotation), light.range, transform.rotation,
             light.coneAngle, light.edgeSoftness, lookAtOf(entity),
         )

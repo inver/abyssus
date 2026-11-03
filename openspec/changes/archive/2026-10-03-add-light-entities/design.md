@@ -79,11 +79,11 @@ Its roots 1 and 4 share archetype 12 (Parent, Name, Type, Position, Render, Pick
 archetype 6, and lines use 14. Both LightComponents are empty because that runtime marks the light transient. The
 fixture's README records provenance. This observed editor shape is deliberately not the new plugin creation shape.
 
-### 4. One more caller of `editSceneJson`
+### 4. One more caller of `editSceneDocument`
 
-`SceneComponentEdits` gets an `addLight` next to `add`, which runs `LightEntities.add` inside `editSceneJson` as one undoable
+`SceneComponentEdits` gets an `addLight` next to `add`, which runs `LightEntities.add` inside `editSceneDocument` as one undoable
 command named from the bundle. No new write path is needed: the function is a pure edit of the parsed tree, and
-`editSceneJson` already keeps formatting and number text, saves, and makes the edit one undo step (the same reasons the
+`editSceneDocument` already keeps formatting and number text, saves, and makes the edit one undo step (the same reasons the
 component edits use it). `SceneFormatListener` is not involved.
 
 ### 5. Where the actions live and where the light goes

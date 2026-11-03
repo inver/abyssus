@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.ray
 
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRaySettings
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.lib.core.editor.scene.lightSetOf
@@ -12,14 +13,12 @@ import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.FoliagePlacement
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsCodec
 
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
-import net.nevinsky.abyssus.lib.core.editor.content.Quat
+import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
@@ -39,7 +38,7 @@ class RaySceneSnapshotTest {
         com.badlogic.gdx.utils.GdxNativesLoader.load() // the camera's frustum update is native
     }
 
-    private val placement = AssetPlacement("entity", "model", PlacementTransform.IDENTITY)
+    private val placement = AssetPlacement(1L, "model", PlacementTransform.IDENTITY)
     private val camera = PerspectiveCamera(61f, 800f, 600f).apply {
         position.set(4f, 5f, 6f); direction.set(-1f, -1f, -1f).nor(); near = .2f; far = 500f; update()
     }
@@ -47,29 +46,29 @@ class RaySceneSnapshotTest {
     private val assets = RaySceneAssetState.Ready(mapOf("model" to model), emptyMap())
     private fun params(content: SceneContent = SceneContent(models = listOf(placement)), project: String = "project") =
         SceneRenderParams.DEFAULT.copy(content = content, projectDir = File(project))
-    private fun ready(params: SceneRenderParams = params(), preview: Map<String, DragResult> = emptyMap(),
+    private fun ready(params: SceneRenderParams = params(), preview: Map<Long, DragResult> = emptyMap(),
         lights: LightSet = NO_LIGHTS, active: String? = null, environment: RayEnvironment? = null): RaySceneFrame =
         (RaySceneSnapshots().capture(params, camera, lights, assets, preview, active, environment) as RaySceneConversion.Ready).frame
 
     @Test fun `drag preview changes only instance transforms and keeps shared geometry`() {
-        val p = params(SceneContent(models = listOf(placement, placement.copy(entityId = "other"))))
+        val p = params(SceneContent(models = listOf(placement, placement.copy(entityId = 2L))))
         val before = ready(p)
-        val transform = PlacementTransform(Vec3(20f, 3f, -2f), Quat.IDENTITY, Vec3(2f, 2f, 2f))
-        val after = ready(p, mapOf("entity" to DragResult(transform, null)))
+        val transform = PlacementTransform(Vector3(20f, 3f, -2f), Quaternion(), Vector3(2f, 2f, 2f))
+        val after = ready(p, mapOf(1L to DragResult(transform, null)))
         assertEquals(2, after.scene.meshes.size) // two material parts, shared by both entities
-        val moved = after.scene.instances.first { it.id.startsWith("entity/") }.transform()
+        val moved = after.scene.instances.first { it.id.startsWith("1/") }.transform()
         assertEquals(20f, moved[12], 0f)
         assertEquals(5f, moved[13], 0f) // node local Y 1 scaled by entity 2, then entity Y 3
-        assertArrayEquals(before.scene.instances.first { it.id.startsWith("other/") }.transform(),
-            after.scene.instances.first { it.id.startsWith("other/") }.transform(), 0f)
+        assertArrayEquals(before.scene.instances.first { it.id.startsWith("2/") }.transform(),
+            after.scene.instances.first { it.id.startsWith("2/") }.transform(), 0f)
         assertEquals(setOf(RaySceneChange.TRANSFORM), raySceneDiff(before, after).changes)
     }
 
     @Test fun `the snapshot skips a disabled entity`() {
         val content = net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf(net.nevinsky.abyssus.lib.core.editor.parseScene(
-            """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{
-              "1":{"enabled":false,"components":{"RenderComponent":{"type":"MODEL","assetName":"model"}}},
-              "2":{"components":{"RenderComponent":{"type":"MODEL","assetName":"model"}}}}}}""",
+            """{"format":"abyssus","formatVersion":1,"ecs":{
+              "1":{"flags":1,"components":{"RenderComponent":{"type":"MODEL","assetName":"model"}}},
+              "2":{"components":{"RenderComponent":{"type":"MODEL","assetName":"model"}}}}}""",
         ))
         val instances = ready(params(content)).scene.instances
         assertTrue(instances.toString(), instances.isNotEmpty() && instances.all { it.id.startsWith("2/") })
@@ -77,7 +76,7 @@ class RaySceneSnapshotTest {
 
     @Test fun `a scene with foliage gives the same ray snapshot as without`() {
         val plain = ready(params(SceneContent(models = listOf(placement))))
-        val foliage = FoliagePlacement("entity", "foliage_meadow", "terrain", PlacementTransform.IDENTITY)
+        val foliage = FoliagePlacement(1L, "foliage_meadow", "terrain", PlacementTransform.IDENTITY)
         val shown = ready(params(SceneContent(models = listOf(placement), foliages = listOf(foliage))))
         // foliage reaches neither the geometry, the instances nor the assets of the snapshot, so no frame differs
         assertEquals(emptySet<RaySceneChange>(), raySceneDiff(plain, shown).changes)
@@ -99,11 +98,11 @@ class RaySceneSnapshotTest {
     }
 
     @Test fun `selected light identities and order are copied from raster light set`() {
-        val sources = (0..7).map { i -> LightPlacement("light-$i", LightKind.POINT, Rgba(1f, .5f, 0f, 1f), 2f,
-            Vec3(i.toFloat(), 0f, 0f), Vec3(0f, -1f, 0f), range = 10f) }
-        val set = lightSetOf(sources.reversed(), Vec3(0f, 0f, 0f))
+        val sources = (0..7).map { i -> LightPlacement(100L + i, LightKind.POINT, Color(1f, .5f, 0f, 1f), 2f,
+            Vector3(i.toFloat(), 0f, 0f), Vector3(0f, -1f, 0f), range = 10f) }
+        val set = lightSetOf(sources.reversed(), Vector3(0f, 0f, 0f))
         val frame = ready(params(SceneContent(lights = sources)), lights = set)
-        assertEquals(set.point.map { it.entityId }, frame.scene.lights.map { it.id })
+        assertEquals(set.point.map { it.entityId.toString() }, frame.scene.lights.map { it.id })
         assertEquals(5, frame.scene.lights.size)
         assertEquals(20f, frame.scene.lights.first().color.r, 0f) // raster binder multiplies color by range
         val chosen = LightSet(set.directional, set.point.reversed(), set.spot)
@@ -140,8 +139,7 @@ class RaySceneSnapshotTest {
     }
 
     @Test fun `the saved instance limit falls back with its number and never exceeds the default`() {
-        fun saved(value: Int) = params().copy(rayTracing = SceneRaySettingsCodec().read(
-            net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse("""{"rayTracing":{"maxInstances":$value}}""")))
+        fun saved(value: Int) = params().copy(rayTracing = SceneRaySettings(maxInstances = value))
         val limited = RaySceneSnapshots().capture(saved(1), camera, NO_LIGHTS, assets)
         val fallback = limited as RaySceneConversion.Fallback
         assertEquals(RaySceneFallback.RESOURCE_LIMIT, fallback.reason)
@@ -159,7 +157,7 @@ class RaySceneSnapshotTest {
     }
 
     @Test fun `environment and fog preserve linear ambient and the density gradient`() {
-        val p = params().copy(ambient = Rgba(.2f, .3f, .4f, 1f), fog = FogParams(Rgba(.1f, .2f, .3f, 1f), .02f, 1.7f))
+        val p = params().copy(ambient = Color(.2f, .3f, .4f, 1f), fog = FogParams(Color(.1f, .2f, .3f, 1f), .02f, 1.7f))
         val frame = ready(p)
         assertEquals(RayColor(.2f, .3f, .4f), frame.scene.environment.ambient)
         assertEquals(.02f, frame.scene.fog!!.density, 0f)
@@ -176,7 +174,7 @@ class RaySceneSnapshotTest {
             val id = "${project.name}:$name"; opened += id
             RayAssetLease({ model }, { null }, { closed += id })
         }, { _, _ -> error("No terrain expected") })
-        val repeated = SceneContent(models = listOf(placement, placement.copy(entityId = "second")))
+        val repeated = SceneContent(models = listOf(placement, placement.copy(entityId = 3L)))
         owner.update(File("first"), repeated); owner.update(File("first"), repeated)
         assertEquals(listOf("first:model"), opened)
         assertTrue(owner.poll() is RaySceneAssetState.Ready)
@@ -186,41 +184,6 @@ class RaySceneSnapshotTest {
         assertEquals(listOf("first:model", "first:model"), closed)
         owner.close(); owner.close()
         assertEquals(listOf("first:model", "first:model", "next:model"), closed)
-    }
-
-    @Test fun savedSettingsAndOpticsCopyMaterialsWithoutDuplicatingGeometry() {
-        val asset = rayTestModel(pbr = true)
-        val sources = RaySceneAssetState.Ready(mapOf("model" to asset), emptyMap())
-        val p = params(SceneContent(models = listOf(placement, placement.copy(entityId = "second")))).copy(
-            ecs = net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse("""{"entities":{"entity":{"components":{"RenderComponent":{"rayTracingMaterials":{"red":{"transmission":1,"ior":1.4}}}}}}}"""),
-            rayTracing = SceneRaySettingsCodec().read(net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse("""{"rayTracing":{"maxReflectionBounces":2}}""")))
-        val converter = RaySceneSnapshots()
-        val before = (converter.capture(p.copy(ecs = null), camera, NO_LIGHTS, sources) as RaySceneConversion.Ready).frame
-        val after = (converter.capture(p, camera, NO_LIGHTS, sources) as RaySceneConversion.Ready).frame
-        assertEquals(2, after.scene.meshes.size)
-        assertTrue(before.scene.meshes[0] === after.scene.meshes[0])
-        val edited = after.scene.instances.first { it.id.startsWith("entity/") }
-        val shared = after.scene.instances.first { it.id.startsWith("second/") }
-        assertEquals(1f, after.scene.materials[edited.material].transmission, 0f)
-        assertEquals(1.4f, after.scene.materials[edited.material].ior, 0f)
-        assertEquals(0f, after.scene.materials[shared.material].transmission, 0f)
-        assertEquals(setOf(RaySceneChange.MATERIAL), raySceneDiff(before, after).changes)
-        assertEquals(2, after.settings.maxReflectionBounces)
-    }
-
-    @Test fun malformedSettingsPreventRayConversionButKeepOrdinarySceneParsing() {
-        val text = """{"format":"abyssus","formatVersion":1,"rayTracing":{"maxRefractionBounces":null}}"""
-        val p = renderParamsOf(net.nevinsky.abyssus.lib.core.editor.parseScene(text), CameraParams.DEFAULT, root = SceneJson().parse(text))
-        assertNull(p.rayTracing.settings)
-        assertTrue(RaySceneSnapshots().capture(p,camera,NO_LIGHTS,assets) is RaySceneConversion.Fallback)
-    }
-
-    @Test fun unresolvedOverridesRemainStoredAndNeverRetargetAnotherMaterial() {
-        val ecs=net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse("""{"entities":{"entity":{"components":{"RenderComponent":{"rayTracingMaterials":{"lost":{"transmission":1}}}}}}}""")
-        val p=params().copy(ecs=ecs)
-        val before=net.nevinsky.abyssus.lib.core.editor.document.SceneJson().compact(ecs)
-        assertTrue(RaySceneSnapshots().capture(p,camera,NO_LIGHTS,assets) is RaySceneConversion.Fallback)
-        assertEquals(before,net.nevinsky.abyssus.lib.core.editor.document.SceneJson().compact(ecs))
     }
 
     private fun model(count: Int = 3): RayModelSnapshot = rayTestModel(count)

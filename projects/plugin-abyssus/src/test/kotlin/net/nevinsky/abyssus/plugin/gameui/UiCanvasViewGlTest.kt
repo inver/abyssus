@@ -4,7 +4,8 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.plugin.admitUi
+
 import net.nevinsky.abyssus.lib.core.editor.ui.UiGesturePreview
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.ui.layout.UiLayoutResult
@@ -42,7 +43,7 @@ class UiCanvasViewGlTest {
     private fun state(root: String): UiEditorState.Editable {
         val text = """{"format":"abyssus","formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main","screens":[
             {"id":"main","referenceSize":{"width":400,"height":300},"root":$root}]}}}"""
-        return UiEditorState.Editable(UiCollectionDecoder().decode(SceneJson().parse(text)) as UiAdmission.Admitted, text)
+        return UiEditorState.Editable(admitUi(text) as UiAdmission.Admitted, text)
     }
 
     private class FakeModel(override var state: UiEditorState, override var mode: UiEditorMode = UiEditorMode.EDIT) : UiCanvasModel {
@@ -198,7 +199,7 @@ class UiCanvasViewGlTest {
         val text = """{"format":"abyssus","formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main",
             "resources":[{"id":"pic","kind":"image","path":"images/pic.png"}],
             "screens":[{"id":"main","referenceSize":{"width":400,"height":300},"root":$withImage}]}}}"""
-        val model = FakeModel(UiEditorState.Editable(UiCollectionDecoder().decode(SceneJson().parse(text)) as UiAdmission.Admitted, text), UiEditorMode.PREVIEW)
+        val model = FakeModel(UiEditorState.Editable(admitUi(text) as UiAdmission.Admitted, text), UiEditorMode.PREVIEW)
         previewOf(model)
         val canvas = open(model)
         val layout = canvas.layoutOf("main")!!
@@ -261,7 +262,7 @@ class UiCanvasViewGlTest {
             "screens":[{"id":"main","referenceSize":{"width":400,"height":300},"root":{"id":"root","type":"panel","children":[
               {"id":"table","type":"list","layout":{"x":10,"y":10,"width":100,"spacing":2},"properties":{"maxRows":2},"bindings":{"items":"scores"},
                "template":{"id":"row","type":"panel","layout":{"width":100,"height":20},"properties":{"styleOverrides":{"background":"#ff0000ff"}}}}]}}]}}}"""
-        val model = FakeModel(UiEditorState.Editable(UiCollectionDecoder().decode(SceneJson().parse(text)) as UiAdmission.Admitted, text))
+        val model = FakeModel(UiEditorState.Editable(admitUi(text) as UiAdmission.Admitted, text))
         val canvas = open(model)
         val layout = canvas.layoutOf("main")!!
         waitFor("both sample rows") { canvas.snapshot()?.let { at(it, layout, 50f, 20f) == 0xff0000 && at(it, layout, 50f, 42f) == 0xff0000 } == true }

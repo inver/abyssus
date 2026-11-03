@@ -24,7 +24,7 @@ like `core`, gives the editor and the games one scene runtime.
 - Problems met while loading are reported to a log the caller passes in. The plugin's implementation writes the IDE
   log as today.
 - The plugin keeps everything that edits or shows scenes: `ComponentEditor` (it uses `SceneJson` and
-  `AbyssusBundle`), `LightEntities` (it builds new light entities for an edit), `editSceneJson`, the tree, the
+  `AbyssusBundle`), `LightEntities` (it builds new light entities for an edit), `editSceneDocument`, the tree, the
   properties panel and the scene view. Thin `VirtualFile` adapters over the `runtime` readers replace the readers'
   file access, and `ProjectReader` / `SceneReader` stay IntelliJ services only as those adapters.
 - **BREAKING (internal API only):** the moved classes change package and module. No user-visible change.
@@ -69,6 +69,6 @@ None. `scene-ecs-components` and `scene-ecs-systems` keep their requirements; on
   `docs/ai/testing.md`, `src/main/kotlin/net/nevinsky/abyssus/ecs/README.md` (what stays), and a new
   `runtime/README.md`.
 - **Other changes:** this change runs after `design-review-refactor`, which makes the scene view read entities
-  through `ComponentCodecs`, moves `editSceneJson` and switches to constructor wiring in the same packages. If the
+  through `ComponentCodecs`, moves `editSceneDocument` and switches to constructor wiring in the same packages. If the
   order is reversed, that change's tasks must be amended to the `runtime` paths. `add-custom-components`,
   `add-jolt-physics` and `add-control-line-game` build on this module.

@@ -1,5 +1,10 @@
 package net.nevinsky.abyssus.plugin.dto
 
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
+import net.nevinsky.abyssus.lib.core.editor.document.RawComponentValues
+import net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RawComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
@@ -8,7 +13,6 @@ import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
@@ -26,6 +30,7 @@ class ProjectReader(
     )
 
     private val assetListing by lazy { ProjectAssetListing(json) }
+    private val rawValues = RawComponentValues(json)
 
     override fun stamp(file: VirtualFile): Long {
         return (ProjectLayout.sceneFiles(file)
@@ -42,7 +47,7 @@ class ProjectReader(
         runCatchingKeepingCancellation {
             val name = loading.projectName(file.path) { textOf(file) }
             val sceneResults = ProjectLayout.sceneFiles(file).map { it to scenes.read(it) }
-            val roots = sceneResults.flatMap { (_, result) -> result.obj?.let(::sceneReferences) ?: emptySet() }
+            val roots = sceneResults.flatMap { (_, result) -> result.obj?.let { sceneReferences(it, rawValues) } ?: emptySet() }
                 .toSet()
             val assets = readAssets(file)
             val usage = usage(assets, roots, loading.uiAssetNames(file.path) { textOf(file) })
@@ -85,28 +90,28 @@ class ProjectReader(
             asset.references.forEach { visit(byUuid[it]) }
             ui.links(asset).forEach { visit(it) }
             if (asset.meta.type == MetaType.FOLIAGE) {
-                val additional = asset.meta.additional as? Map<*, *> ?: continue
-                (additional["terrain"] as? String)?.let { visit(byName[it]) }
-                val layers = additional["layers"] as? List<*> ?: continue
-                for (layer in layers) {
-                    val models = (layer as? Map<*, *>)?.get("models") as? List<*> ?: continue
-                    for (model in models) {
-                        val name = (model as? Map<*, *>)?.get("asset") as? String ?: continue
-                        visit(byName[name])
-                    }
-                }
+                val foliage = asset.meta.additional as? net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta ?: continue
+                foliage.terrain.takeIf { it.isNotEmpty() }?.let { visit(byName[it]) }
+                foliage.layers.flatMap { it.models }.forEach { visit(byName[it.asset]) }
             }
         }
         return AssetUsage(used, ui.issues(used))
     }
 }
 
-/** What a scene names directly: `assetName` and `shaderKey` values in its ECS data, and `skyboxName`. */
-fun sceneReferences(scene: SceneDto): Set<String> {
+/**
+ * What a scene names directly: the `assetName` and `shaderKey` of its render and foliage components (and of components it
+ * could not bind, from their raw data), and `skyboxName`.
+ */
+fun sceneReferences(scene: SceneDto, raw: RawComponentValues): Set<String> {
     val names = mutableSetOf<String>()
-    scene.ecs?.let { ecs ->
-        for (field in listOf("assetName", "shaderKey")) ecs.findValues(field)
-            .forEach { v -> if (v.isTextual) names += v.asText() }
+    for (component in scene.ecs.values.flatMap { it.components }) when (component) {
+        is RenderComponent -> {
+            component.assetName.takeIf { it.isNotEmpty() }?.let { names += it }
+            component.shaderKey?.let { names += it }
+        }
+        is FoliageComponent -> component.assetName?.let { names += it }
+        is RawComponent -> names += raw.textValues(component, "assetName", "shaderKey")
     }
     scene.skyboxName?.let { names += it }
     return names

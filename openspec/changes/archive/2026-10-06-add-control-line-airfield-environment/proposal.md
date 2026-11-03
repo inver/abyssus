@@ -57,7 +57,7 @@ shaders (`games/control-line` only), and associated documentation. No plugin, `c
 changes are planned. No document format version change, gameplay rule change or editor change is proposed.
 Read/write fields remain native `format`, integral `formatVersion`, asset `type`, `uuid`, `additional`, and
 `ecs.entities` entries with Name, Type, Position, asset Render and existing Light components. Validate native
-documents before binding or editing. Use `editSceneJson` for scene edits and preserve unrelated keys, number text and
+documents before binding or editing. Use `editSceneDocument` for scene edits and preserve unrelated keys, number text and
 omitted defaults. The previously approved offline application is historical evidence, not a standing exception.
 
 The supplied description and screenshot define the artistic target. Dimensions, elevations, species and building

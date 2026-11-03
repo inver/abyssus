@@ -15,7 +15,7 @@
 
 ## 3. Enabled flag: editing and the scene view
 
-- [x] 3.1 `SetEnabledAction` in `lib-core-editor` (entity and component targets, togglable rule of D6) and its `HeadlessEditing` entry; the plugin calls it through `editSceneJson` as one undoable command. Verify: tests that disable and enable, assert bytes outside the entry unchanged, `enabled` key removed on enable, Undo restores the text, and an unsupported document is refused.
+- [x] 3.1 `SetEnabledAction` in `lib-core-editor` (entity and component targets, togglable rule of D6) and its `HeadlessEditing` entry; the plugin calls it through `editSceneDocument` as one undoable command. Verify: tests that disable and enable, assert bytes outside the entry unchanged, `enabled` key removed on enable, Undo restores the text, and an unsupported document is refused.
 - [x] 3.2 The scene view draws, shadows, picks and gizmos only active entities; the ray snapshot skips disabled ones (D7). Verify: picking test with a disabled entity in front of an enabled one, a `lib-core-editor` snapshot test, and `./gradlew :plugin-abyssus:test --tests '*SceneViewPanelTest'`.
 - [x] 3.3 Document the editing and view behavior in `lib-core-editor/README.md` and `sceneview/README.md`. Verify: `scripts/check-docs.sh`.
 

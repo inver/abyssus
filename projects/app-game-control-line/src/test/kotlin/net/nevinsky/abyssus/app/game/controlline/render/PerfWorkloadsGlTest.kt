@@ -8,8 +8,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.graphics.Pixmap
-import com.badlogic.gdx.graphics.glutils.FrameBuffer
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.ControlLineGame
@@ -43,11 +42,16 @@ class PerfWorkloadsGlTest {
     private val samples = System.getProperty("abyssus.perf.samples")?.toInt() ?: 5
     private val step = 1f / 60f
 
+    /** `legacy` (flat ambient, no display transform) or `pbr` (the default), chosen with `-Dabyssus.perf.pipeline`. */
+    private val pipelineName = System.getProperty("abyssus.perf.pipeline") ?: "pbr"
+    private val pipeline get() = if (pipelineName == "legacy") FieldRenderSettings.LEGACY else FieldRenderSettings()
+
     private val settings
         get() = mapOf(
             "resolution" to "1280x720", "warmupSeconds" to warmupSeconds.toString(), "sampleSeconds" to sampleSeconds.toString(),
             "samples" to samples.toString(), "fixedDeltaSeconds" to step.toString(),
             "frameTime" to "CPU time of FieldRenderer.draw (submission), not GPU time",
+            "target" to "the default framebuffer of a 1280x720 window (the game's own)", "pipeline" to pipelineName,
         )
 
     @Test
@@ -67,7 +71,7 @@ class PerfWorkloadsGlTest {
         val total = (warmupSeconds + sampleSeconds * samples).toLong() + 400
         var gpu = "unavailable"
         var driver = "unavailable"
-        val workload = TestGl.run(total) {
+        val workload = TestGl.run(total, 1280, 720) {
             gpu = Gdx.gl.glGetString(GL20.GL_RENDERER) ?: "unknown"
             driver = Gdx.gl.glGetString(GL20.GL_VERSION) ?: "unknown"
             measure()
@@ -85,8 +89,7 @@ class PerfWorkloadsGlTest {
         val ctx = BaseCtx(project.path, "/shader", ControlLineGame::class.java, log)
             .also { it.componentRegistry.registerAll(CONTROL_LINE_COMPONENTS) }
         val loader = RuntimeSceneLoader(ctx.sceneLoader, ctx.ecsLoader, log)
-        val renderer = FieldRenderer(ctx)
-        val target = FrameBuffer(Pixmap.Format.RGBA8888, 1280, 720, true)
+        val renderer = FieldRenderer(ctx, requested = pipeline)
         try {
             val hash = hashOf(File(project, "scenes/Field.scene"))
             fun load() = FieldScene(requireNotNull(loader.load("Field.scene")) { messages.joinToString("\n") })
@@ -96,11 +99,14 @@ class PerfWorkloadsGlTest {
                 val pilot = field.position(checkNotNull(field.pilot)).getTransform().getTranslation(Vector3())
                 val plane = field.position(checkNotNull(field.entity(field.planes.first().entityId))).getTransform().getTranslation(Vector3())
                 cameras.flying(pilot, plane)
-                target.begin()
+                // the game's own target: the default framebuffer (the sun shadow pass leaves it bound)
+                Gdx.gl.glViewport(0, 0, 1280, 720)
+                val cables = listOf(Vector3(0f, 1.3f, 0.05f), Vector3(0f, 1.2f, -0.05f)).map {
+                    Cable(listOf(it, Vector3(plane).add(0f, 0.1f, 0f)), 0.0004f, Color.WHITE)
+                }
                 val started = System.nanoTime()
-                renderer.draw(field, cameras.camera, seconds = step)
+                renderer.draw(field, cameras.camera, seconds = step, cables = cables)
                 val nanos = System.nanoTime() - started
-                target.end()
                 Gdx.gl.glFinish()
                 return nanos
             }
@@ -142,7 +148,6 @@ class PerfWorkloadsGlTest {
                 coldLoadMs = cold.second, reloadMs = reload.second,
             )
         } finally {
-            target.dispose()
             renderer.dispose()
             ctx.executor.shutdownNow()
             project.deleteRecursively()

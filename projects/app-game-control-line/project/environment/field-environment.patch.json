@@ -107,7 +107,7 @@
          "shaderKey": "terrain",
          "asset": {
           "type": "TERRAIN",
-          "assetName": "terrain_airfield_outer"
+          "name": "terrain_airfield_outer"
          }
         }
        }
@@ -153,7 +153,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_pad"
+          "name": "model_airfield_pad"
          }
         }
        }
@@ -199,7 +199,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_utility"
+          "name": "model_airfield_utility"
          }
         }
        }
@@ -245,7 +245,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_table_picnic"
+          "name": "model_airfield_table_picnic"
          }
         }
        }
@@ -291,7 +291,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_table_picnic"
+          "name": "model_airfield_table_picnic"
          }
         }
        }
@@ -337,7 +337,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_table_work"
+          "name": "model_airfield_table_work"
          }
         }
        }
@@ -383,7 +383,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_table_work"
+          "name": "model_airfield_table_work"
          }
         }
        }
@@ -429,7 +429,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_model_stand"
+          "name": "model_airfield_model_stand"
          }
         }
        }
@@ -475,7 +475,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_model_stand"
+          "name": "model_airfield_model_stand"
          }
         }
        }
@@ -521,7 +521,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_model_stand"
+          "name": "model_airfield_model_stand"
          }
         }
        }
@@ -567,7 +567,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_model_stand"
+          "name": "model_airfield_model_stand"
          }
         }
        }
@@ -613,7 +613,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_model_stand"
+          "name": "model_airfield_model_stand"
          }
         }
        }
@@ -659,7 +659,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_dk_plamya"
+          "name": "model_airfield_dk_plamya"
          }
         }
        }
@@ -705,7 +705,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_long_building"
+          "name": "model_airfield_long_building"
          }
         }
        }
@@ -751,7 +751,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_warehouse"
+          "name": "model_airfield_warehouse"
          }
         }
        }
@@ -797,7 +797,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_apartment_block"
+          "name": "model_airfield_apartment_block"
          }
         }
        }
@@ -843,7 +843,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_apartment_block"
+          "name": "model_airfield_apartment_block"
          }
         }
        }
@@ -889,7 +889,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_apartment_block"
+          "name": "model_airfield_apartment_block"
          }
         }
        }
@@ -935,7 +935,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_apartment_block"
+          "name": "model_airfield_apartment_block"
          }
         }
        }
@@ -981,7 +981,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_apartment_block"
+          "name": "model_airfield_apartment_block"
          }
         }
        }
@@ -1027,7 +1027,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_apartment_block"
+          "name": "model_airfield_apartment_block"
          }
         }
        }
@@ -1064,7 +1064,7 @@
         ],
         "asset": {
          "type": "MODEL",
-         "assetName": "model_airfield_railway"
+         "name": "model_airfield_railway"
         },
         "slots": [
          322,
@@ -1119,7 +1119,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_railway"
+          "name": "model_airfield_railway"
          }
         }
        },
@@ -1163,7 +1163,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_railway"
+          "name": "model_airfield_railway"
          }
         }
        },
@@ -1207,7 +1207,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_railway"
+          "name": "model_airfield_railway"
          }
         }
        },
@@ -1251,7 +1251,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_railway"
+          "name": "model_airfield_railway"
          }
         }
        },
@@ -1295,7 +1295,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_railway"
+          "name": "model_airfield_railway"
          }
         }
        },
@@ -1339,7 +1339,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_railway"
+          "name": "model_airfield_railway"
          }
         }
        },
@@ -1383,7 +1383,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_railway"
+          "name": "model_airfield_railway"
          }
         }
        },
@@ -1427,7 +1427,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_railway"
+          "name": "model_airfield_railway"
          }
         }
        },
@@ -1471,7 +1471,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_railway"
+          "name": "model_airfield_railway"
          }
         }
        },
@@ -1515,7 +1515,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_railway"
+          "name": "model_airfield_railway"
          }
         }
        },
@@ -1559,7 +1559,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_railway"
+          "name": "model_airfield_railway"
          }
         }
        },
@@ -1603,7 +1603,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_railway"
+          "name": "model_airfield_railway"
          }
         }
        },
@@ -1652,7 +1652,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_street_lamp"
+          "name": "model_airfield_street_lamp"
          }
         }
        }
@@ -1698,7 +1698,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_street_lamp"
+          "name": "model_airfield_street_lamp"
          }
         }
        }
@@ -1744,7 +1744,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_street_lamp"
+          "name": "model_airfield_street_lamp"
          }
         }
        }
@@ -1790,7 +1790,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_street_lamp"
+          "name": "model_airfield_street_lamp"
          }
         }
        }
@@ -1836,7 +1836,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_street_lamp"
+          "name": "model_airfield_street_lamp"
          }
         }
        }
@@ -1882,7 +1882,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_street_lamp"
+          "name": "model_airfield_street_lamp"
          }
         }
        }
@@ -1928,7 +1928,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_street_lamp"
+          "name": "model_airfield_street_lamp"
          }
         }
        }
@@ -1974,7 +1974,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_street_lamp"
+          "name": "model_airfield_street_lamp"
          }
         }
        }
@@ -2020,7 +2020,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_street_lamp"
+          "name": "model_airfield_street_lamp"
          }
         }
        }
@@ -2066,7 +2066,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_street_lamp"
+          "name": "model_airfield_street_lamp"
          }
         }
        }
@@ -2112,7 +2112,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -2158,7 +2158,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -2204,7 +2204,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -2250,7 +2250,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -2296,7 +2296,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -2342,7 +2342,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -2388,7 +2388,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -2434,7 +2434,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -2480,7 +2480,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -2526,7 +2526,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -2572,7 +2572,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -2618,7 +2618,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -2664,7 +2664,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -2710,7 +2710,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -2756,7 +2756,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -2802,7 +2802,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -2848,7 +2848,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -2894,7 +2894,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -2940,7 +2940,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -2986,7 +2986,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -3032,7 +3032,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -3078,7 +3078,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -3124,7 +3124,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -3170,7 +3170,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -3216,7 +3216,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -3262,7 +3262,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -3308,7 +3308,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -3354,7 +3354,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -3400,7 +3400,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -3446,7 +3446,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -3492,7 +3492,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -3538,7 +3538,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -3584,7 +3584,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -3630,7 +3630,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -3676,7 +3676,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -3722,7 +3722,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -3768,7 +3768,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -3814,7 +3814,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -3860,7 +3860,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -3906,7 +3906,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -3952,7 +3952,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -3998,7 +3998,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -4044,7 +4044,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -4090,7 +4090,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -4136,7 +4136,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -4182,7 +4182,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -4228,7 +4228,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -4274,7 +4274,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -4320,7 +4320,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -4366,7 +4366,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -4412,7 +4412,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -4458,7 +4458,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -4504,7 +4504,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -4550,7 +4550,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -4596,7 +4596,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -4642,7 +4642,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -4688,7 +4688,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -4734,7 +4734,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -4780,7 +4780,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -4826,7 +4826,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -4872,7 +4872,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -4918,7 +4918,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -4964,7 +4964,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -5010,7 +5010,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -5056,7 +5056,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -5102,7 +5102,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -5148,7 +5148,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -5194,7 +5194,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -5240,7 +5240,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -5286,7 +5286,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -5332,7 +5332,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_a"
+          "name": "model_airfield_house_a"
          }
         }
        }
@@ -5378,7 +5378,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -5424,7 +5424,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -5470,7 +5470,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -5516,7 +5516,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_house_b"
+          "name": "model_airfield_house_b"
          }
         }
        }
@@ -5562,7 +5562,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -5608,7 +5608,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -5654,7 +5654,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -5700,7 +5700,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -5746,7 +5746,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -5792,7 +5792,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -5838,7 +5838,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -5884,7 +5884,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -5930,7 +5930,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -5976,7 +5976,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -6022,7 +6022,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -6068,7 +6068,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -6114,7 +6114,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -6160,7 +6160,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -6206,7 +6206,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -6252,7 +6252,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -6298,7 +6298,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -6344,7 +6344,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -6390,7 +6390,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -6436,7 +6436,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -6482,7 +6482,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -6528,7 +6528,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -6574,7 +6574,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -6620,7 +6620,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -6666,7 +6666,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -6712,7 +6712,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -6758,7 +6758,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -6804,7 +6804,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -6850,7 +6850,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -6896,7 +6896,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -6942,7 +6942,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -6988,7 +6988,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -7034,7 +7034,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -7080,7 +7080,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -7126,7 +7126,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -7172,7 +7172,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -7218,7 +7218,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -7264,7 +7264,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -7310,7 +7310,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -7356,7 +7356,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -7402,7 +7402,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -7448,7 +7448,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -7494,7 +7494,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -7540,7 +7540,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -7586,7 +7586,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -7632,7 +7632,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -7678,7 +7678,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -7724,7 +7724,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -7770,7 +7770,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -7816,7 +7816,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -7862,7 +7862,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -7908,7 +7908,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -7954,7 +7954,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -8000,7 +8000,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -8046,7 +8046,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -8092,7 +8092,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -8138,7 +8138,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -8184,7 +8184,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -8230,7 +8230,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -8276,7 +8276,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -8322,7 +8322,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -8368,7 +8368,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -8414,7 +8414,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -8460,7 +8460,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -8506,7 +8506,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -8552,7 +8552,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -8598,7 +8598,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -8644,7 +8644,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -8690,7 +8690,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -8736,7 +8736,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -8782,7 +8782,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -8828,7 +8828,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -8874,7 +8874,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -8920,7 +8920,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -8966,7 +8966,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -9012,7 +9012,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -9058,7 +9058,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -9104,7 +9104,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -9150,7 +9150,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -9196,7 +9196,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -9242,7 +9242,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -9288,7 +9288,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -9334,7 +9334,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -9380,7 +9380,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -9426,7 +9426,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -9472,7 +9472,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -9518,7 +9518,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -9564,7 +9564,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -9610,7 +9610,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -9656,7 +9656,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -9702,7 +9702,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -9748,7 +9748,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -9794,7 +9794,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -9840,7 +9840,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -9886,7 +9886,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -9932,7 +9932,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -9978,7 +9978,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -10024,7 +10024,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -10070,7 +10070,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -10116,7 +10116,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -10162,7 +10162,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -10208,7 +10208,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -10254,7 +10254,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -10300,7 +10300,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -10346,7 +10346,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -10392,7 +10392,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -10438,7 +10438,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -10484,7 +10484,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -10530,7 +10530,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -10576,7 +10576,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -10622,7 +10622,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -10668,7 +10668,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -10714,7 +10714,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -10760,7 +10760,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -10806,7 +10806,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -10852,7 +10852,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -10898,7 +10898,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -10944,7 +10944,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_acacia"
+          "name": "model_airfield_tree_acacia"
          }
         }
        }
@@ -10990,7 +10990,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -11036,7 +11036,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -11082,7 +11082,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -11128,7 +11128,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -11174,7 +11174,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -11220,7 +11220,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_broadleaf"
+          "name": "model_airfield_tree_broadleaf"
          }
         }
        }
@@ -11266,7 +11266,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_tree_young"
+          "name": "model_airfield_tree_young"
          }
         }
        }
@@ -11312,7 +11312,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -11358,7 +11358,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -11404,7 +11404,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -11450,7 +11450,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -11496,7 +11496,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -11542,7 +11542,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -11588,7 +11588,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -11634,7 +11634,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -11680,7 +11680,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -11726,7 +11726,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -11772,7 +11772,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -11818,7 +11818,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -11864,7 +11864,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -11910,7 +11910,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -11956,7 +11956,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -12002,7 +12002,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -12048,7 +12048,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -12094,7 +12094,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -12140,7 +12140,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -12186,7 +12186,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -12232,7 +12232,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -12278,7 +12278,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -12324,7 +12324,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -12370,7 +12370,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -12416,7 +12416,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -12462,7 +12462,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -12508,7 +12508,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -12554,7 +12554,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -12600,7 +12600,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -12646,7 +12646,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -12692,7 +12692,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -12738,7 +12738,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -12784,7 +12784,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -12830,7 +12830,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -12876,7 +12876,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -12922,7 +12922,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -12968,7 +12968,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -13014,7 +13014,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -13060,7 +13060,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -13106,7 +13106,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -13152,7 +13152,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -13198,7 +13198,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -13244,7 +13244,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -13290,7 +13290,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -13336,7 +13336,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -13382,7 +13382,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -13428,7 +13428,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -13474,7 +13474,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -13520,7 +13520,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -13566,7 +13566,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -13612,7 +13612,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -13658,7 +13658,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -13704,7 +13704,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -13750,7 +13750,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -13796,7 +13796,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -13842,7 +13842,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -13888,7 +13888,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -13934,7 +13934,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -13980,7 +13980,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -14026,7 +14026,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -14072,7 +14072,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -14118,7 +14118,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -14164,7 +14164,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -14210,7 +14210,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -14256,7 +14256,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -14302,7 +14302,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -14348,7 +14348,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -14394,7 +14394,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -14440,7 +14440,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -14486,7 +14486,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -14532,7 +14532,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -14578,7 +14578,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -14624,7 +14624,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -14670,7 +14670,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -14716,7 +14716,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -14762,7 +14762,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -14808,7 +14808,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -14854,7 +14854,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -14900,7 +14900,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -14946,7 +14946,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -14992,7 +14992,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -15038,7 +15038,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -15084,7 +15084,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -15130,7 +15130,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -15176,7 +15176,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -15222,7 +15222,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -15268,7 +15268,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_tall"
+          "name": "model_airfield_bush_tall"
          }
         }
        }
@@ -15314,7 +15314,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -15360,7 +15360,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }
@@ -15406,7 +15406,7 @@
          "shaderKey": "defaultShader",
          "asset": {
           "type": "MODEL",
-          "assetName": "model_airfield_bush_low"
+          "name": "model_airfield_bush_low"
          }
         }
        }

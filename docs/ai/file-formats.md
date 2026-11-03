@@ -1,8 +1,8 @@
 # File formats
 
 Abyssus owns the JSON format of project `.abss`, scene `.scene` and asset `meta.json` documents.
-The plugin reads them with `SceneJson` (`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/document/SceneJson.kt`),
-which keeps key order, `null` members and the exact text of numbers. Writes must keep those, too. The user-facing
+The plugin binds them to DTOs with `JsonProcessor` and writes them back with `JsonProcessor.pretty`. Key order is the DTO's
+declaration order, number spelling is the printer's, and members a typed DTO does not model are dropped (UI documents keep them). The user-facing
 description of what the tree shows is in `README.md` ("Abyssus view"); this page is the format reference.
 
 Examples: `projects/plugin-abyssus/src/test/testData/project/Untitled/` (models, terrain, skybox, a camera) and
@@ -10,15 +10,16 @@ Examples: `projects/plugin-abyssus/src/test/testData/project/Untitled/` (models,
 
 ## Native document identity
 
-Version 1 requires these root members in each project, scene and asset metadata document:
+Version 1 requires this root member in each project, scene and asset metadata document (a `format` marker is no longer
+required; one a file has is ignored and not written back):
 
 ```json
-{ "format": "abyssus", "formatVersion": 1 }
+{ "formatVersion": 1 }
 ```
 
 `AbyssusDocumentFormat` (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/format/AbyssusDocumentFormat.kt`)
 validates document identity and reserved scene fields on the caller's thread, without GL or platform services.
-Only the exact string `abyssus` and integral JSON version `1` are supported. Missing/null/foreign markers, string
+Only integral JSON version `1` is supported. Missing/null versions, string
 or fractional versions (including `1.0`), negative versions and future versions are unsupported. Asset metadata's
 `version` has its own meaning; it is not the document `formatVersion`.
 
@@ -57,12 +58,12 @@ The plugin reads:
   (see *UI assets* below). Missing means none and is never inserted on read; entries that are not strings are skipped.
 
 Other members (`settings`, `activeSceneName`, `selectedCamera`, ...) are ignored. Changing Physics in project
-properties writes only `physicsEnabled` through `editSceneJson` as one undoable command; off is explicit `false`.
+properties writes only `physicsEnabled` through `editSceneDocument` as one undoable command; off is explicit `false`.
 Reads never insert the key or repair malformed values. `SceneFormatListener` may also format a supported `.abss`.
 
 `sceneViewAntialiasing` is an optional editor preference for this native project's scene views: `OFF`, `X2`, `X4`
 or `X8`. Missing means 4×; saving 4× removes the key. Invalid present values are reported and displayed as 4× without
-rewriting the file. Select the project in Abyssus Properties to edit it through `editSceneJson` as one undoable command.
+rewriting the file. Select the project in Abyssus Properties to edit it through `editSceneDocument` as one undoable command.
 Text edits and Undo/Redo update its open views; other projects are independent. Unsupported native documents cannot be
 edited. The runtime ignores this editor preference; `.scene` and asset metadata are unaffected.
 
@@ -76,39 +77,45 @@ Top level, bound to `SceneDto` (`projects/lib-core/src/main/kotlin/net/nevinsky/
 | `ambientLightEnabled` / `ambientLight` | `color` + `intensity` |
 | `fogEnabled` / `fog` | `color`, `density`, `gradient` |
 | `skyboxEnabled` / `skyboxName` | `skyboxName` is a `SKYBOX`, `SKYBOX_PROCEDURAL` or `SKYBOX_HDR` asset folder name, or `null` |
-| `ecs` | Entities, kept as raw JSON (`JsonNode`) |
+| `ecs` | Entities by id, bound to `Map<Long, EntityDto>` (see `ecs`) |
 | `abyssus` | Abyssus-only extension data, kept as raw JSON; today it holds `waterSurfaces` (see "Water surfaces") |
 
 **Toggles:** an `<x>Enabled` boolean gates `<x>` (or `<x>Name`). The tree folds it into an eye on the gated row. The
 tree shows `skyboxName` as `skybox`, but the key in the file stays `skyboxName`.
 
-An entity entry and a component entry of `ecs` may also carry an optional boolean `enabled`, written only as `false` (a
-missing key means enabled). On an entity it sits beside `components`; on a component it is the last key of the component
-object and is reserved: `EcsLoader` strips it before binding, so a component class never sees it, and a registered class
-that declares a field named `enabled` is kept as read-only raw JSON with a warning. A disabled entity or component loads as
-data but does nothing (no rendering, light, camera, foliage, body or shape) and is neither drawn nor picked in the scene
-view. A non-boolean `enabled` makes the scene unsupported for editing. `formatVersion` stays 1; a file that never uses the
-key is unchanged by any edit.
+An entity is disabled by bit `1` of its integer `flags` (a missing `flags` is `0`: enabled); its other bits are kept as
+read and an edit never inserts `flags` into an entity that had none unless a bit is set (clearing the last set bit removes
+the key). An entity's optional `disabledComponents` lists the keys of its disabled components (the key as the entry spells
+it, short or fully qualified); a component's own object never carries a switch, so a class may declare any field name. A
+disabled entity or component loads as data but does nothing (no rendering, light, camera, foliage, body or shape) and is
+neither drawn nor picked in the scene view. A non-integral `flags`, a `disabledComponents` that is not a list of strings,
+an unknown `type` or an entity-level `enabled` makes the scene unsupported for editing. `formatVersion` stays 1; a file that never uses these keys is unchanged by any edit.
 
 ### `ecs`
 
 ```
-ecs: { "<id>": { components: { "<Name>Component": {...}, ... } }, ... }
-  (native files can also wrap the map in an `entities` member beside `metadata` and `archetypes`)
+ecs: { "<id>": { type: "<EntityType>", flags: <int>, disabledComponents: ["<Name>Component"],
+                 components: { "<Name>Component": {...}, ... } }, ... }
 ```
 
-The editor document layer supports both shapes. The current `EcsLoader` only enumerates the wrapped `entities`
-map, and `lib-core-editor`'s `EcsWriter` produces that shape without carrying block metadata or archetypes. This differs
-from the required round-trip behavior in `openspec/specs/scene-ecs-components/spec.md`.
+`type`, `flags` and `disabledComponents` are all optional and make up the entity's header (`HeaderComponent` in the
+engine, which also holds the id): `type` is `GROUP`, `LIGHT_DIRECTIONAL`, `LIGHT_POINT`, `LIGHT_SPOT`, `OBJECT`,
+`TERRAIN`, `CAMERA` or `HANDLE`. There is no `TypeComponent`: a scene that has one is unsupported.
+
+`ecs` is the id-keyed entity map itself. The old `entities` wrapper, `archetypes`, `metadata` and an entity `archetype` or
+`enabled` are not part of the format: a scene that has them is unsupported (no importer). `SceneLoader` binds the whole
+scene in one `JsonProcessor` step (`SceneDto.ecs`, `EntityDto.components` as `List<Component>` in file order); a
+component the registry does not know and one that cannot be bound are bound as a `RawComponent` that keeps the exact
+payload as JSON text (and whether the entity disables it), so the scene writes back unchanged. The editor's write path edits the
+`SceneDto` and prints it with `JsonProcessor.pretty`; `SceneDto` carries `formatVersion` so a printed scene reads back.
 
 The native component fields described by the specs and fixtures:
 
 | Component | Used for |
 |---|---|
 | `NameComponent.name` | Entity label (the id when missing) |
-| `TypeComponent.type` | `CAMERA`, `LIGHT_*` (kind of light), `HANDLE` (a light's direction handle) |
 | `PositionComponent` | `localPosition`, `localRotation` (quaternion `x y z w`) and `localScale`; plus `lookAtId` for cameras and lights |
-| `RenderComponent.renderable` | `kind: "asset"`, `asset.assetName` + `asset.type` (`MODEL` / `TERRAIN`) and optional `shaderKey`; unknown kinds stay raw without rendering |
+| `RenderComponent` | `type` (`MODEL` / `TERRAIN`), `assetName`, optional `shaderKey` and, for a `MODEL`, optional `meshId` (see below); editor-only `rayTracingMaterials` (per-material optical overrides) is kept and ignored by games |
 | `CameraComponent.camera` | `position`, `viewPointPosition` (the view direction), `near`, `far`, `fieldOfView` |
 | `LightComponent` | `color`, `intensity`, `range` (positive reach, default 100 omitted), either directly or under `light` |
 | `Point2PointPositionComponent` | `entity1Id` / `entity2Id` |
@@ -134,7 +141,7 @@ edit of another field keeps the original node; an edit of `lookAtId` itself writ
 **A light that looks at an entity takes its direction from it.** A `LIGHT_DIRECTIONAL` or `LIGHT_SPOT` light with a
 `PositionComponent.lookAtId` pointing at an existing entity faces it: the view direction is the unit vector from the
 light to that entity's `localPosition`. The light's own `localRotation` is still read and used when the target is
-missing or at the light itself. A light whose target is a `HANDLE` entity (an entity whose `TypeComponent.type` is
+missing or at the light itself. A light whose target is a `HANDLE` entity (an entity whose `type` is
 `HANDLE`, a light's direction handle) is a **handle-aimed light**: a rotate gizmo drag on it turns the
 direction and moves the handle, and the handle's `localPosition` is written instead of the light's rotation. A light
 aimed at anything else (a model, a camera, a terrain) only moves; turning it would mean moving an unrelated object.
@@ -144,30 +151,40 @@ direction (`SceneContent`).
 ### Component identifiers and extension data
 
 Component map keys such as `PositionComponent` are stable schema identifiers independent of their implementation
-packages. Optional `archetypes` lists use these short identifiers. `ecs.componentIdentifiers` and
+packages. `ecs.componentIdentifiers` and
 `RenderComponent.renderable.class` are rejected even when the scene has native markers; they are not aliases.
 These reserved paths are checked by the shared validator in editor and JVM readers. Raw ECS loads validate before
 changing the engine; writers and direct render serialization also reject them. Both the short and fully qualified
 built-in RenderComponent names are checked; unrelated extension components remain opaque.
 
 ```json
-{ "renderable": { "kind": "asset", "shaderKey": "pbr",
-    "asset": { "type": "MODEL", "assetName": "tree" } } }
+{ "shaderKey": "pbr", "type": "MODEL", "assetName": "tree" }
 ```
 
-Unknown components and native renderable kinds remain raw and round-trip unchanged. Their payloads are opaque:
+A `MODEL` render component may also carry a non-empty `meshId` beside `assetName`. It names one mesh of the model asset
+(the mesh `id` Assimp reads from the model file); only that mesh is drawn, with the materials its parts use, where the
+whole model sits otherwise. Without `meshId` the whole model is drawn. The mesh keeps its place inside the model: the
+node tree and animations stay. A `meshId` the model lacks is not repaired or replaced by the whole model: that entity
+is not drawn and the problem is logged, so a mesh id follows the model file (re-exporting a model can rename its
+meshes). A `meshId` on a `TERRAIN` is ignored and kept. Writers omit the key when it is cleared.
+
+```json
+{ "shaderKey": "defaultShader", "type": "MODEL", "assetName": "tree", "meshId": "glass" }
+```
+
+Unknown components remain raw and round-trip unchanged. Their payloads are opaque:
 a `class` string inside a custom component or a marker's nested payload does not activate class loading or cause
 format rejection. Adding or editing a component never creates a Java-class identifier table.
 
 ### Game components
 
 A game's own Jackson-bindable Ashley components are native extension data keyed by a registered name, usually
-their short class name, next to built-in components: `ecs.entities.<id>.components.<Name>`. Register them with
-`core.ecs.ComponentRegistry` before `EcsLoader` loads them. No annotation-based schema API is present in the
+their short class name, next to built-in components: `ecs.<id>.components.<Name>`. Register them with
+`core.ecs.ComponentRegistry` before the scene is loaded (`SceneLoader` takes the registry). No annotation-based schema API is present in the
 current source set. A scene containing `ecs.componentIdentifiers` is rejected before component loading.
 
-The document validator treats extension payloads as opaque. `EcsLoader` carries unregistered or unbindable
-components as raw JSON with a warning; `EcsWriter` writes that carried data back. The editor's built-in component
+The document validator treats extension payloads as opaque. The scene binding keeps unregistered or unbindable
+components as a `RawComponent` (the engine carries them with a warning); `EcsWriter` writes that carried data back. The editor's built-in component
 editing keeps custom entries unchanged. `EcsWriter` omits default properties and writes integral floats as integers.
 
 ### Retained component schema files (`abyssus/components.schema.json`)
@@ -219,7 +236,7 @@ heights (`TERRAIN_RECIPE_FILE`; a terrain loads without it):
 { "schemaVersion": 1,
   "generator": { "id": "opensimplex2-fbm-v1", "sourceRevision": "<FastNoiseLite commit>" },
   "settings": { "seed": 12345, "featureSize": 200.0, "minHeight": 0.0, "maxHeight": 120.0, "octaves": 5, "persistence": 0.5, "lacunarity": 2.0 },
-  "size": 1600, "resolution": 180, "heightsSha256": "<SHA-256 of terrain.data>" }
+  "size": 1600, "resolution": 180, "heightsSha256": "<SHA-256 of the base heights>" }
 ```
 
 The recipe is a fingerprint, not a source of truth: if the size, the resolution or the height bytes no longer match,
@@ -227,6 +244,25 @@ or the schema or generator identifier is unknown, or the file is malformed, the 
 why, and a draft starts from the defaults above. An identifier is never reinterpreted: new noise gets a new
 identifier. Heights come from world-local OpenSimplex2 fractal noise (`x / (resolution - 1) * size`), mapped onto
 `minHeight..maxHeight`, so a height means the same at any resolution.
+
+#### Sculpting
+
+A terrain shaped by hand in Sculpt Terrain mode keeps its sculpting as an additive delta over the base heights, in
+three optional Abyssus-only files beside `terrain.data` (a terrain loads with none of them, and `meta.json` does not change):
+
+```
+abyssus-terrain.sculpt.json  { "schemaVersion": 1, "baseKind": "recipe" | "stored", "resolution": 180,
+                               "deltaSha256": "...", "composedSha256": "...", "baseSha256": "..." (stored only) }
+abyssus-terrain.sculpt       resolution² big-endian floats: the delta in world units, one per vertex
+abyssus-terrain.base         same layout; only when baseKind is "stored" (a terrain with no usable recipe)
+```
+
+`terrain.data` always holds the composed heights, `base + delta`, one float add per vertex. `composedSha256` must equal
+the hash of `terrain.data` and `deltaSha256` the hash of the delta file, else the sculpt state is unsafe: sculpting is
+off and the panel offers Forget sculpting. For a sculpted terrain the recipe's `heightsSha256` fingerprints the **base**
+(what the generator produced), so a recipe base is regenerated from the recipe and checked against it; with no sculpt
+state that is `terrain.data`, so existing recipes stay valid. The code is `SculptManifestCodec` and `SculptStateReader`
+in `lib-core-editor`'s `terrain.sculpt`.
 
 ### Foliage
 
@@ -277,7 +313,7 @@ mask per layer (`layer-<id>.mask`), and the bake named by `additional.dataFile` 
   number text when a scene is written back; a missing or null name shows nothing, and a name that is not a string
   leaves the component unchanged in the file with one warning.
 - A path arrangement is an entity of type `GROUP` with a `PathArrangementComponent`: `points` (`x`, `y`, `z`, world
-  coordinates), `closed`, `asset` (`type` `MODEL`, `assetName`), `spacing` (default 10), `offset` (default 0), `sides`
+  coordinates), `closed`, `asset` (`type` `MODEL`, `name`), `spacing` (default 10), `offset` (default 0), `sides`
   (`CENTER` default, `LEFT`, `RIGHT`, `BOTH`), `alignToPath` (default true), `yawOffset` (degrees, default 0) and
   `slots`, the entity id of the copy in each place along the line (`-1` for none). Defaults are omitted. The copies
   are ordinary `OBJECT` entities in world coordinates with a `ParentComponent` pointing at the arrangement; the
@@ -352,7 +388,7 @@ asset `sky.frag`. Nothing is written back.
 
 - A sky without `clouds`, with a `uuid` no asset declares (logged), or naming an asset with no valid band draws as
   without clouds. A `clouds` value that is not text is ignored.
-- `technique`: `layered`, `shells` (the default) or `volumetric`. The scene view's Clouds toolbar choice can override
+- `technique`: `layered`, `cumulus` (heaped flat layer: lit tops, grey bases, ragged edges), `shells` (the default) or `volumetric` (ray-marched; heaped bands show round heads on flat bases). The scene view's Clouds toolbar choice can override
   it per view without writing it.
 - `low`, `mid`, `high`: bands. `type` is required; every other field takes the type's default when omitted.
   `base` / `top` are altitudes in metres, `base` below `top`, both inside the level's limits; `coverage` is 0 to 1;
@@ -553,11 +589,11 @@ unreadable or wrong-type entry as a problem and returns the admission of the oth
 
 ## Plugin-created light entities
 
-New lights use Name, Type, Position and Light components. The type is `LIGHT_DIRECTIONAL` (Directional and Sun)
+New lights use Name, Position and Light components and the entity `type`. The type is `LIGHT_DIRECTIONAL` (Directional and Sun)
 or `LIGHT_SPOT` (Spot); Sun differs only in its initial color, intensity and rotation. Light values are nested under
 `LightComponent.light`: color and intensity are written, while positive `range` is written only when it differs from
 100. No editor icon or direction-handle entities are created.
-`ecs.archetypes` reuses or appends the exact four-component set; no class identifier table is created.
+The entity has no `flags`; no class identifier table is created.
 
 Spotlight beam settings are native Abyssus fields: `coneAngle` is the full cone width in degrees (finite, greater than
 0 and less than 180; default 45), and `edgeSoftness` is the fraction of the angular radius used for the inward fade
@@ -590,15 +626,15 @@ Each model entity's `RenderComponent.rayTracingMaterials` is an optional map key
 IDs. A PBR material entry accepts finite `transmission` from 0 through 1 (default 0) and `ior` from 1 through 3
 (default 1.5). Default fields are omitted on reset. These overrides belong to the scene instance and never change
 model sources or asset metadata. Unresolved or ambiguous material IDs are preserved without retargeting; ray
-conversion refuses unsupported overrides. Geometry and textures stay shared while affected materials are copied.
+conversion refuses unsupported overrides. Geometry and textures stay shared while affected materials are copied. When
+the entity draws one mesh (`meshId`), overrides for materials that mesh does not use stay in the file and are ignored.
 
 ## Water surfaces
 
 A native scene may carry procedural water under the root `abyssus.waterSurfaces` object, keyed by a stable surface id
 (a UUID string). Water is not an ECS entity and not an asset. It is Abyssus-only extension data inside a version 1
-document: the loader keeps it, no other tool is promised to. The codec is `WaterCodec`
-(`projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/water/WaterCodec.kt`); the edits are
-`WaterEdits` in the same package; the scalars and rules are `WaterSettings` / `WaterValidation`
+document: the loader keeps it, no other tool is promised to. The editor's water codec, edits and UI are
+removed for now (the Phase 4 decision, G7); the scene keeps the block as a raw value. The scalars and rules are `WaterSettings` / `WaterValidation`
 (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/water/WaterSettings.kt`).
 
 ```json
@@ -633,7 +669,11 @@ the wrong type, or an out-of-range value is invalid: it stays a removable row, i
 repaired. If `abyssus` or `waterSurfaces` is not an object, no water is read and an add is refused; an incompatible
 container is never replaced.
 
-Edits go through `editSceneJson` as one named undoable command and touch only the targeted `abyssus.waterSurfaces.<id>`
+Edits go through `editSceneDocument` as one named undoable command and touch only the targeted `abyssus.waterSurfaces.<id>`
 members. Unknown members, key order and number text elsewhere survive, and removing the last surface leaves an empty
 `waterSurfaces` object so unrelated `abyssus` members are undisturbed. Opening or reading a scene writes nothing, and a
 scene without the extension has no water. There is no migration: nothing adds, converts or rewrites the extension.
+
+## Splat map written by Abyssus
+
+Paint Texture reads and writes the splat map as an 8-bit RGBA PNG whose colour values are exactly the weights (never premultiplied by alpha), square, 64 to 2048 pixels. Create splat map makes a `TEXTURE` asset folder `texture_<terrain>_splat` with `additional.file: "splat.png"` and sets the terrain's `splatMap`.

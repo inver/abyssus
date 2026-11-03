@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetChoice
 
 import com.intellij.ide.projectView.ViewSettings
@@ -130,7 +129,8 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         checkbox().doClick()
         val enabled = document.text
         assertTrue((p.state as PanelState.Project).settings.physicsEnabled)
-        assertEquals(SceneJson().parse(original).deepCopy<com.fasterxml.jackson.databind.node.ObjectNode>().put("physicsEnabled", true), SceneJson().parse(enabled))
+        val json = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().json
+        assertEquals(json.pretty(json.parse(original, net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java).copy(physicsEnabled = true)), json.pretty(json.parse(enabled, net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java)))
         val editor = providedEditor(p)!!
         val undo = com.intellij.openapi.command.undo.UndoManager.getInstance(project)
         undo.undo(editor)
@@ -140,11 +140,11 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         assertEquals(enabled, document.text)
         assertTrue(checkbox().isSelected)
         checkbox().doClick()
-        assertEquals(enabled.replace("\"physicsEnabled\":true", "\"physicsEnabled\":false"), document.text)
+        assertEquals(enabled.replace("\"physicsEnabled\": true", "\"physicsEnabled\": false"), document.text)
         WriteCommandAction.runWriteCommandAction(project) { document.setText(enabled) }
         assertTrue(checkbox().isSelected)
         assertTrue(FileDocumentManager.getInstance().isDocumentUnsaved(document))
-        WriteCommandAction.runWriteCommandAction(project) { document.setText(enabled.replace("\"formatVersion\":1", "\"formatVersion\":2")) }
+        WriteCommandAction.runWriteCommandAction(project) { document.setText(enabled.replace("\"formatVersion\": 1", "\"formatVersion\": 2")) }
         assertFalse(checkbox().isEnabled)
         assertFalse(checkbox().isSelected)
         val unsupported = document.text
@@ -400,7 +400,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
     fun testEditingSizeWritesOnlyThatValueAndRefreshesTheRow() {
         copyProject()
         val path = "Untitled/assets/$terrain/meta.json"
-        val before = metaText(path)
+        val before = net.nevinsky.abyssus.plugin.canonicalMeta(metaText(path))
         val p = panel()
         p.show(asset(terrain))
         type(field(p, "size") as JBTextField, "800")
@@ -509,7 +509,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
     fun testChoosingAFaceChangesOnlyThatKey() {
         val folder = diskSkybox()
         val meta = folder.findChild("meta.json")!!
-        val before = FileDocumentManager.getInstance().getDocument(meta)!!.text
+        val before = net.nevinsky.abyssus.plugin.canonicalMeta(FileDocumentManager.getInstance().getDocument(meta)!!.text)
         val p = panel()
         p.showFolder(folder)
         @Suppress("UNCHECKED_CAST")
@@ -564,37 +564,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         return found as? com.intellij.openapi.fileEditor.FileEditor
     }
 
-    fun testSceneRaySettingsUndoAndRedoFromThePanelFollowTheSavedScene() {
-        copyProject()
-        val path = "Untitled/scenes/Main Scene.scene"
-        val original = metaText(path)
-        val p = panel()
-        p.show(children(children(abss()).single { label(it) == "scenes" }).single())
-        assertEquals("selecting the scene writes nothing", original, metaText(path))
-        assertEquals("256", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
-        val editor = providedEditor(p) as com.intellij.openapi.fileEditor.TextEditor
-        assertEquals("Main Scene.scene", editor.file.name)
-        type(find(p, "ray-setting-targetSamplesPerPixel") as JBTextField, "512")
-        val edited = metaText(path)
-        assertEquals(512, net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(edited)["rayTracing"]["targetSamplesPerPixel"].intValue())
-        assertEquals("the panel refreshes from the document", "512", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
-        val undo = com.intellij.openapi.command.undo.UndoManager.getInstance(project)
-        undo.undo(editor)
-        assertEquals(original, metaText(path))
-        assertEquals("256", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
-        undo.redo(editor)
-        assertEquals(edited, metaText(path))
-        assertEquals("512", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
-        // an external text edit, valid or not, is read back without a selection change
-        val document = FileDocumentManager.getInstance().getDocument(myFixture.findFileInTempDir(path))!!
-        WriteCommandAction.runWriteCommandAction(project) { document.setText(edited.replace("512", "1024")) }
-        assertEquals("1024", (find(p, "ray-setting-targetSamplesPerPixel") as JBTextField).text)
-        WriteCommandAction.runWriteCommandAction(project) { document.setText(edited.replace("512", "-1")) }
-        assertTrue(errorText(p, "ray-setting-targetSamplesPerPixel-error").isNotBlank())
-        assertEquals("the invalid file is not rewritten", edited.replace("512", "-1"), document.text)
-    }
-
-    private fun errorText(p: Component, name: String) = (find(p, name) as JBLabel).text
+    // G7: the saved scene ray settings (and their rows) are gone, so their undo/redo test is removed
 
     fun testThePanelProvidesAnEditorForThePlatformUndo() {
         copyProject()

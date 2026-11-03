@@ -16,8 +16,8 @@ import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import net.nevinsky.abyssus.lib.core.ecs.component.*
+import com.badlogic.gdx.math.Vector3
 import java.io.File
 
 /** Add Asset on a scene of a copy of the Untitled project. */
@@ -41,7 +41,7 @@ class AddAssetActionTest : BasePlatformTestCase() {
     private fun sceneNode() = children(children(abss()).single { label(it) == "scenes" }).single()
     private fun scene() = viewableSceneFile(sceneNode())!!
     private fun document() = FileDocumentManager.getInstance().getDocument(scene())!!
-    private fun entities() = SceneJson().parse(document().text)["ecs"]
+    private fun entity(id: Long) = net.nevinsky.abyssus.plugin.parsedScene(document().text).entity(id)!!
 
     private class AddOn(val node: Any?) : AddAssetAction() {
         override fun selected(e: AnActionEvent) = node
@@ -53,7 +53,9 @@ class AddAssetActionTest : BasePlatformTestCase() {
         return event.presentation.isEnabledAndVisible
     }
 
-    private fun group(selected: (String) -> Unit = {}, at: Vec3 = Vec3(0f, 0f, 0f)) = AddAssetGroup(project, scene(), testMetaFiles(), { at }, selected).getChildren(null)
+    private fun group(
+        selected: (Long) -> Unit = {}, at: Vector3 = Vector3(0f, 0f, 0f), meshes: (String) -> List<String>? = { null },
+    ) = AddAssetGroup(project, scene(), testMetaFiles(), { at }, selected, meshes).getChildren(null)
 
     fun testTheGroupListsTheProjectsModelsAndTerrainsOnly() {
         copyProject()
@@ -76,14 +78,14 @@ class AddAssetActionTest : BasePlatformTestCase() {
         myFixture.openFileInEditor(scene())
         val editor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
         val before = document().text
-        var selected: String? = null
-        val tree = group({ selected = it }, Vec3(10f, 0f, -4f)).first { it.templatePresentation.text == "tree" }
+        var selected: Long? = null
+        val tree = group({ selected = it }, Vector3(10f, 0f, -4f)).first { it.templatePresentation.text == "tree" }
         tree.actionPerformed(TestActionEvent.createTestEvent(tree))
-        assertEquals("9", selected)
-        val entity = entities()["9"]["components"]
-        assertEquals("Model 9", entity["NameComponent"]["name"].asText())
-        assertEquals("tree", entity["RenderComponent"]["assetName"].asText())
-        assertEquals(10f, entity["PositionComponent"]["localPosition"]["x"].floatValue())
+        assertEquals(9L, selected)
+        val entity = entity(9)
+        assertEquals("Model 9", entity.component(NameComponent::class.java)!!.name)
+        assertEquals("tree", entity.component(RenderComponent::class.java)!!.assetName)
+        assertEquals(10f, entity.component(PositionComponent::class.java)!!.localPosition.x, 0f)
         UndoManager.getInstance(project).undo(editor)
         assertEquals(before, document().text)
     }
@@ -92,10 +94,10 @@ class AddAssetActionTest : BasePlatformTestCase() {
         copyProject()
         val terrain = group().filter { it !is Separator }.first { it.templatePresentation.text.startsWith("terrain_") }
         terrain.actionPerformed(TestActionEvent.createTestEvent(terrain))
-        val position = entities()["9"]["components"]["PositionComponent"]["localPosition"]
-        assertEquals(-800f, position["x"].floatValue())
-        assertEquals(-800f, position["z"].floatValue())
-        assertEquals("Terrain 9", entities()["9"]["components"]["NameComponent"]["name"].asText())
+        val position = entity(9).component(PositionComponent::class.java)!!.localPosition
+        assertEquals(-800f, position.x, 0f)
+        assertEquals(-800f, position.z, 0f)
+        assertEquals("Terrain 9", entity(9).component(NameComponent::class.java)!!.name)
     }
 
     fun testOnlySceneRowsOfferItAndAnUnreadableSceneDisablesIt() {
@@ -109,6 +111,48 @@ class AddAssetActionTest : BasePlatformTestCase() {
     fun testASceneOutsideAProjectHasNothingToAdd() {
         val loose = myFixture.addFileToProject("loose/Alone.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""").virtualFile
         assertFalse(hasRenderAssets(loose, testMetaFiles()))
-        assertTrue(AddAssetGroup(project, loose, testMetaFiles(), { Vec3(0f, 0f, 0f) }).getChildren(null).isEmpty())
+        assertTrue(AddAssetGroup(project, loose, testMetaFiles(), { Vector3(0f, 0f, 0f) }).getChildren(null).isEmpty())
+    }
+
+    fun testAModelWithSeveralMeshesIsASubmenuOfItsMeshesAndTheWholeModel() {
+        copyProject()
+        val items = group(meshes = { if (it == "tree") listOf("body", "glass") else listOf("only") })
+        val submenu = items.filterIsInstance<com.intellij.openapi.actionSystem.ActionGroup>().single()
+        assertEquals("tree", submenu.templatePresentation.text)
+        assertTrue(submenu.isPopup)
+        val choices = submenu.getChildren(null).filter { it !is Separator }.map { it.templatePresentation.text }
+        assertEquals(listOf("Whole model", "body", "glass"), choices)
+        // a single-mesh model stays one plain entry
+        val flat = items.filter { it !is Separator && it !is com.intellij.openapi.actionSystem.ActionGroup }.map { it.templatePresentation.text }
+        assertFalse("tree" in flat)
+        assertTrue(flat.any { it.startsWith("model_") })
+    }
+
+    fun testChoosingAMeshRecordsItsIdAndTheWholeModelEntryDoesNot() {
+        copyProject()
+        myFixture.openFileInEditor(scene())
+        val editor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
+        val before = document().text
+        var selected: Long? = null
+        val submenu = group({ selected = it }, meshes = { if (it == "tree") listOf("body", "glass") else null })
+            .filterIsInstance<com.intellij.openapi.actionSystem.ActionGroup>().single()
+        val glass = submenu.getChildren(null).first { it.templatePresentation.text == "glass" }
+        glass.actionPerformed(TestActionEvent.createTestEvent(glass))
+        assertEquals(9L, selected)
+        val render = entity(9).component(RenderComponent::class.java)!!
+        assertEquals("tree", render.assetName)
+        assertEquals("glass", render.meshId)
+        UndoManager.getInstance(project).undo(editor)
+        assertEquals(before, document().text)
+
+        val whole = submenu.getChildren(null).first { it.templatePresentation.text == "Whole model" }
+        whole.actionPerformed(TestActionEvent.createTestEvent(whole))
+        assertNull(entity(9).component(RenderComponent::class.java)!!.meshId)
+    }
+
+    fun testAModelWhoseMeshesAreUnknownIsOneEntry() {
+        copyProject()
+        val items = group(meshes = { null })
+        assertTrue(items.none { it is com.intellij.openapi.actionSystem.ActionGroup })
     }
 }

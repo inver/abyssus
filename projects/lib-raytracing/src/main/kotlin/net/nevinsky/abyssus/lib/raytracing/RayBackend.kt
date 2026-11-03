@@ -30,6 +30,7 @@ data class RayCapabilities(
 enum class RayUnavailableReason {
     ACCELERATION_STRUCTURES, RAY_QUERIES, COLOR_DEPTH_READBACK, RESOURCE_LIMITS,
     RUNTIME_NOT_FOUND, INITIALIZATION_FAILED,
+
     /** The `abyssus.raytracing.backend=off` property: ray tracing is switched off for this IDE session. */
     DISABLED,
 }
@@ -57,10 +58,15 @@ interface RayBackend : AutoCloseable {
 
 interface RaySession : AutoCloseable {
     fun submit(request: RayRequest)
-    fun submit(request: RaySceneRequest) { throw UnsupportedOperationException("Backend does not support scene materials") }
+    fun submit(request: RaySceneRequest) {
+        throw UnsupportedOperationException("Backend does not support scene materials")
+    }
+
     fun poll(): RayFrame?
+
     /** How many times this session built acceleration structures; transform-only updates must not increase it. */
     val geometryBuilds: Long get() = 0
+
     /** Called when a submitted frame missed its completion deadline; sessions that track health mark themselves unusable. */
     fun reportStalled(reason: String) {}
     fun dispose()
@@ -69,7 +75,9 @@ interface RaySession : AutoCloseable {
 
 /** Per-session upper bounds, independent of any other view's allocation. */
 data class RayLimits(val maxDimension: Int = 4096, val maxPixels: Int = 4_194_304, val maxInstances: Int = 128) {
-    init { require(maxDimension > 0 && maxPixels > 0 && maxInstances > 0) }
+    init {
+        require(maxDimension > 0 && maxPixels > 0 && maxInstances > 0)
+    }
 }
 
 /** Feasibility request. Complete scene material/texture snapshots are added by the asset tasks. */
@@ -79,10 +87,12 @@ class RayRequest(
 ) : RayRenderRequest {
     private val geometry = meshes.toList()
     private val placements = instances.toList()
+
     init {
         require(width > 0 && height > 0)
         require(geometry.isNotEmpty() && placements.isNotEmpty() && placements.all { it.mesh in geometry.indices })
     }
+
     fun meshes(): List<RaySliceMesh> = geometry.toList()
     fun instances(): List<RaySliceInstance> = placements.toList()
     override fun withRenderPlan(width: Int, height: Int, samples: Int, sampleOffset: Int, accumulationEpoch: Long) =
@@ -101,19 +111,21 @@ class RayBackendProbe(
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (missing: UnsatisfiedLinkError) {
-        RayCapability.Unavailable(RayUnavailableReason.RUNTIME_NOT_FOUND,missing.message)
+        RayCapability.Unavailable(RayUnavailableReason.RUNTIME_NOT_FOUND, missing.message)
     } catch (unreadable: IOException) {
-        RayCapability.Unavailable(RayUnavailableReason.INITIALIZATION_FAILED,unreadable.message)
+        RayCapability.Unavailable(RayUnavailableReason.INITIALIZATION_FAILED, unreadable.message)
     } catch (failed: IllegalStateException) {
-        RayCapability.Unavailable(RayUnavailableReason.INITIALIZATION_FAILED,failed.message)
+        RayCapability.Unavailable(RayUnavailableReason.INITIALIZATION_FAILED, failed.message)
     }
 }
 
 /** One view owns one session; the backend/device belongs to the application service. */
-class RaySessionOwner(private val backend: RayBackend, private val viewId: String, private val limits: RayLimits) : AutoCloseable {
+class RaySessionOwner(private val backend: RayBackend, private val viewId: String, private val limits: RayLimits) :
+    AutoCloseable {
     var session: RaySession? = null
         private set
-    fun open(): RaySession = session ?: backend.openSession(viewId,limits).also { session = it }
+
+    fun open(): RaySession = session ?: backend.openSession(viewId, limits).also { session = it }
     override fun close() {
         val owned = session
         session = null

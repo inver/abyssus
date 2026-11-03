@@ -5,16 +5,18 @@
 
 package net.nevinsky.abyssus.plugin
 
+import net.nevinsky.abyssus.lib.core.dto.entityWriter
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearImport
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelImport
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelSourceOpener
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS
 import net.nevinsky.abyssus.lib.gdx.ModelLogging
 import net.nevinsky.abyssus.plugin.log.IntellijLoggerFactory
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat as CoreDocumentFormat
 
 /** Application composition root. Groups build only on first use; entry points pass narrow collaborators onward. */
 @Service(Service.Level.APP)
@@ -25,9 +27,11 @@ class AbyssusPluginCtx : Disposable {
         ModelLogging.logger = loggers.getLogger("model")
     }
 
-    val json by lazy { JsonProcessor(loggers.getLogger("json")) }
+    /** The built-in components and the physics ones, so a physics scene reads as typed components the Properties panel can edit. */
+    val registry by lazy { ComponentRegistry().also { r -> r.registerAll(PHYSICS_COMPONENTS); PHYSICS_COMPONENTS.values.forEach { r.register(it.name, it) } } }
+    val json by lazy { JsonProcessor(loggers.getLogger("json"), listOf(entityWriter(registry))) }
     val format by lazy { AbyssusDocumentFormat() }
-    val documents by lazy { DocumentServices(json, format, loggers.getLogger("scenes")) }
+    val documents by lazy { DocumentServices(json, format, loggers.getLogger("scenes"), registry) }
     val assets by lazy { AssetServices(json, format, loggers.getLogger("assets")) }
     val terrain by lazy { TerrainServices(json) }
     val foliage by lazy { FoliageServices(json) }
@@ -45,11 +49,12 @@ class AbyssusPluginCtx : Disposable {
     val heightEncoder get() = terrain.heightEncoder
     val terrainWriter get() = terrain.writer
     val terrainRecipes get() = terrain.recipes
+    val terrainSculpt get() = terrain.sculpt
     val newTerrains get() = terrain.newTerrains
     val newFoliages get() = foliage.newFoliages
-    val flightGearImport by lazy { FlightGearImport(json, CoreDocumentFormat()) }
+    val flightGearImport by lazy { FlightGearImport(json) }
     val modelSources by lazy { ModelSourceOpener() }
-    val modelImport by lazy { ModelImport(json, CoreDocumentFormat()) }
+    val modelImport by lazy { ModelImport(json) }
     internal val rayService get() = ray.service
     internal val rayConverter get() = ray.converter
 

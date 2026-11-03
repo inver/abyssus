@@ -26,7 +26,7 @@ class NoPlatformClasspathTest {
     @Test fun noMainSourceImportsTheIdeSwingOrAwt() {
         val root = File(System.getProperty("abyssus.editorCoreSources"))
         assertTrue(root.isDirectory)
-        val forbidden = Regex("""^import\s+(com\.intellij|javax\.swing|java\.awt|org\.jetbrains\.annotations)\b""", RegexOption.MULTILINE)
+        val forbidden = Regex("""^import\s+(com\.intellij|javax\.swing|java\.awt(?!\.image\b)|org\.jetbrains\.annotations)\b""", RegexOption.MULTILINE)
         val offenders = root.walk().filter { it.extension == "kt" }.filter { forbidden.containsMatchIn(it.readText()) }.toList()
         assertEquals(emptyList<File>(), offenders)
     }

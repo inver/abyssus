@@ -166,11 +166,14 @@ fun fixtureFiles(license: Boolean = false): Map<String, ByteArray> = buildMap {
     if (license) put("fixture/COPYING", "Fixture licence text\n".toByteArray())
 }
 
+/** The time of every entry: fixed, so two archives of the same files are the same bytes whenever they are written. */
+private const val ENTRY_TIME = 315532800000L
+
 /** Writes [files] as a zip archive to [target] and returns it. */
 fun writeZip(target: File, files: Map<String, ByteArray>): File {
     ZipOutputStream(target.outputStream()).use { zip ->
         for ((path, bytes) in files) {
-            zip.putNextEntry(ZipEntry(path))
+            zip.putNextEntry(ZipEntry(path).apply { time = ENTRY_TIME })
             zip.write(bytes)
             zip.closeEntry()
         }

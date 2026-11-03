@@ -47,3 +47,14 @@ dependencies.components.all {
         belongsTo("com.badlogicgames.gdx:gdx-virtual-platform:${id.version}")
     }
 }
+
+// The jolt-jni platform of the machine running the build (physics tests and the game's natives), detected once here.
+extra["joltJniBuildPlatform"] = run {
+    val os = System.getProperty("os.name").lowercase()
+    val arm = System.getProperty("os.arch").let { it == "aarch64" || it == "arm64" }
+    when {
+        os.contains("mac") -> if (arm) "MacOSX_ARM64" else "MacOSX64"
+        os.contains("win") -> "Windows64"
+        else -> "Linux64"
+    }
+}

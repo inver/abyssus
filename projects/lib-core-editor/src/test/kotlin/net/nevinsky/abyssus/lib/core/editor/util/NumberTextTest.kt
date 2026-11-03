@@ -22,9 +22,9 @@ class NumberTextTest {
 
     @Test
     fun uiDocumentNumbersKeepTheirIntegerThreshold() {
-        assertEquals("1", uiNumberNode(1.0).toString())
-        assertEquals("1.25", uiNumberNode(1.25).toString())
-        assertEquals("9.999999995E8", uiNumberNode(999999999.5).toString())
-        assertEquals("1.0E9", uiNumberNode(1e9).toString())
+        assertEquals(1, uiNumber(1.0))
+        assertEquals(1.25, uiNumber(1.25))
+        assertEquals(999999999.5, uiNumber(999999999.5))
+        assertEquals(1e9, uiNumber(1e9))
     }
 }

@@ -1,3 +1,4 @@
+/* DISABLED (G7: scene water and saved ray settings are no longer modeled); kept for reference, not compiled.
 /*
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
@@ -9,7 +10,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.utils.BufferUtils
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import java.awt.image.BufferedImage
@@ -105,3 +106,5 @@ internal object WaterGlRig {
         return Triple((p shr 16) and 255, (p shr 8) and 255, p and 255)
     }
 }
+
+*/

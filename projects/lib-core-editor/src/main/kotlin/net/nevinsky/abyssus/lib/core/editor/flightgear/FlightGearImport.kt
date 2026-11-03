@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.flightgear
 
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
+import net.nevinsky.abyssus.lib.core.editor.modelimport.MODEL_FILE
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriter
 import java.util.UUID
@@ -14,7 +14,7 @@ import java.util.UUID
 const val MAX_MODEL_DEPTH = 8
 
 /** The model file an import writes into its asset folder. */
-const val IMPORTED_MODEL_FILE = "model.glb"
+const val IMPORTED_MODEL_FILE = MODEL_FILE
 
 /** How big the imported model is. */
 sealed interface ImportSize {
@@ -70,14 +70,13 @@ class StagedImport(val folder: String, val uuid: UUID, val files: Map<String, By
  */
 class FlightGearImport(
     private val json: JsonProcessor,
-    private val format: AbyssusDocumentFormat,
     private val ac3d: Ac3dReader = Ac3dReader(),
     private val sgi: SgiImage = SgiImage(),
     private val rest: RestState = RestState(),
     private val writer: GltfWriter = GltfWriter(),
 ) {
     private val collection = FlightGearCollection(ac3d, rest)
-    private val staging = FlightGearStaging(collection, FlightGearGeometry(), format, sgi, writer)
+    private val staging = FlightGearStaging(collection, FlightGearGeometry(), json, sgi, writer)
 
     fun inspect(archive: FlightGearArchive, aircraft: FlightGearAircraft, cancel: () -> Unit = {}): FlightGearInspection =
         collection.inspect(archive, aircraft, cancel)

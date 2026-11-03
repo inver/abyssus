@@ -6,7 +6,6 @@ package net.nevinsky.abyssus.plugin.properties
 
 import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssets
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 
 import net.nevinsky.abyssus.lib.core.editor.ray.RayModePhase
 import net.nevinsky.abyssus.lib.core.editor.ray.RayModeSnapshot
@@ -62,14 +61,14 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
-        file = myFixture.addFileToProject("Ray.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""").virtualFile
+        file = myFixture.addFileToProject("Ray.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""").virtualFile
         controls = SceneRayControls(project) { _, f -> opened += f }
     }
 
     private fun named(c: Component, name: String): Component? =
         if (c.name == name) c else (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
 
-    private fun view(): SceneDetailsView = SceneDetailsView(controls, PanelState.UISceneState(file, "Ray scene"), testRootDisposable)
+    private fun view(): SceneDetailsView = SceneDetailsView(controls, PanelState.UISceneState(file, "Ray scene", net.nevinsky.abyssus.lib.core.dto.SceneDto()), testRootDisposable)
     private fun switch(v: Component) = named(v, "ray-tracing-switch") as JBCheckBox
     private fun status(v: Component) = (named(v, "ray-tracing-status") as JBLabel).text
     private fun detail(v: Component) = named(v, "ray-tracing-detail") as JBLabel
@@ -150,12 +149,7 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
         assertTrue(detail(v).isVisible)
         assertTrue(detail(v).text, detail(v).text.contains("no hardware ray tracing"))
         assertTrue(switch(v).toolTipText.contains("Metal"))
-        // the saved limits stay editable and still save while the hardware cannot ray trace
-        val samples = named(v, "ray-setting-targetSamplesPerPixel") as com.intellij.ui.components.JBTextField
-        assertTrue(samples.isEnabled)
-        samples.text = "64"; samples.postActionEvent()
-        val saved = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(file)!!.text
-        assertEquals(64, net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(saved)["rayTracing"]["targetSamplesPerPixel"].intValue())
+        // G7: the saved ray limits are no longer scene data, so there are no rows for them
     }
 
     fun testFailureShowsItsReasonAndARetryThatReachesTheView() {
@@ -196,7 +190,7 @@ class SceneRaySwitchTest : BasePlatformTestCase() {
         val control = FakeControl()
         register(control)
         val parent = Disposer.newDisposable(testRootDisposable)
-        val v = SceneDetailsView(controls, PanelState.UISceneState(file, "Ray scene"), parent)
+        val v = SceneDetailsView(controls, PanelState.UISceneState(file, "Ray scene", net.nevinsky.abyssus.lib.core.dto.SceneDto()), parent)
         Disposer.dispose(parent)
         control.change(RayModeSnapshot(RayModePhase.Active, 1, info))
         assertFalse("a view the panel dropped is no longer updated", switch(v).isSelected)

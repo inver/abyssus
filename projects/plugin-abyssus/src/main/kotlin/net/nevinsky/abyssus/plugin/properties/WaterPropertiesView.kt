@@ -1,3 +1,4 @@
+/* DISABLED (G7: scene water is no longer modeled by lib-core-editor); kept for reference, not compiled.
 /*
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
@@ -83,7 +84,7 @@ internal class WaterPropertiesView @JvmOverloads constructor(
         val enabled = state.enabled
         val subtitle = state.preset?.let { AbyssusBundle.message("waterPropertiesSubtitle", waterPresetLabel(it)) }
             ?: AbyssusBundle.message("waterPropertiesSubtitleUnknown")
-        val sceneName = ProjectLayout.abssFor(target.file)?.let { net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(textOf(target.file)).get("name")?.asText() }
+        val sceneName = ProjectLayout.abssFor(target.file)?.let { net.nevinsky.abyssus.lib.core.editor.document.parseDocument(textOf(target.file)).textAt("name") }
         val top = HeaderPanel(
             Header(
                 listOfNotNull(ProjectLayout.abssFor(target.file)?.name, sceneName ?: target.file.nameWithoutExtension),
@@ -142,3 +143,4 @@ internal class WaterPropertiesView @JvmOverloads constructor(
         is WaterEdit.Rejected -> CommitOutcome.Refused(waterErrorText(edit.error))
     }
 }
+*/

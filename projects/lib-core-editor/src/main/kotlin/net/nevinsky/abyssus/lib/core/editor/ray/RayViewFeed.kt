@@ -4,9 +4,9 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.ray
 
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRaySettings
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.document.SceneRaySettingsState
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
@@ -45,8 +45,8 @@ class RayViewFeed(
         val camera: PerspectiveCamera,
         val lights: LightSet,
         val state: RaySceneAssetState.Ready,
-        val poses: Map<String, RayModelPose>,
-        val activeCamera: String?,
+        val poses: Map<Long, RayModelPose>,
+        val activeCamera: Long?,
         val width: Int,
         val height: Int,
         val metadata: RayDisplayMetadata,
@@ -61,8 +61,7 @@ class RayViewFeed(
     @Volatile
     private var epoch = 0L
     private var settingsRevision = 0L
-    private var settingsSignature: Pair<SceneRaySettingsState, Map<String, com.fasterxml.jackson.databind.JsonNode>>? =
-        null
+    private var settingsSignature: SceneRaySettings? = null
 
     // Owned by the converter thread (the one worker that runs [drain]).
     private var lastFrame: RaySceneFrame? = null
@@ -78,10 +77,7 @@ class RayViewFeed(
     /** Render thread. The ray frame to present for [context], or null while raster should be shown. */
     fun frame(context: RayFrameContext): RaySceneDisplay? {
         if (closed.get()) return null
-        val overrides = net.nevinsky.abyssus.lib.core.editor.document.sceneDocumentFromEcs(context.params.ecs).entities().mapNotNull { entity ->
-            entity.componentNode("RenderComponent")?.get("rayTracingMaterials")?.let { entity.id to it }
-        }.toMap()
-        val signature = context.params.rayTracing to overrides
+        val signature = context.params.rayTracing
         if (settingsSignature != signature) {
             settingsSignature = signature
             settingsRevision++
@@ -184,7 +180,7 @@ class RayViewFeed(
         )
         val conversion =
             snapshots.capture(
-                job.params, job.camera, job.lights, job.state, emptyMap(), job.activeCamera, environment,
+                job.params, job.camera, job.lights, job.state, emptyMap(), job.activeCamera?.toString(), environment,
                 listOfNotNull(texture), job.poses, { mesh, palette -> skinning.deform(mesh, palette) },
                 environmentRevision = sky?.let { (it.revision shl 32) xor System.identityHashCode(it).toLong() } ?: 0L,
                 sunVisibility = job.sunVisibility)
@@ -225,7 +221,7 @@ class RayViewFeed(
             RayWorkBudget().perCameraSample(scene, settings.maxReflectionBounces, settings.maxRefractionBounces).toInt()
         val input = RayRenderInput(
             request,
-            RayDisplayKey(job.width, job.height, job.activeCamera ?: "free"),
+            RayDisplayKey(job.width, job.height, job.activeCamera?.toString() ?: "free"),
             contentRevision,
             rays,
             job.metadata,

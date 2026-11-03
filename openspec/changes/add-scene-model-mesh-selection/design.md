@@ -8,7 +8,7 @@ draws models through `SceneModels`/`ModelEntity`/`SceneRenderer`; the game draws
 
 Module constraints: lib-core and lib-gdx are plain JVM libraries with no object/companion with behavior and no
 IntelliJ/Swing/AWT imports; lib-core-editor likewise has no platform imports. Scene document edits go through
-`editSceneJson` (one undoable command preserving formatting and number text).
+`editSceneDocument` (one undoable command preserving formatting and number text).
 
 ## Goals / Non-Goals
 
@@ -25,11 +25,11 @@ IntelliJ/Swing/AWT imports; lib-core-editor likewise has no platform imports. Sc
 
 ## Decisions
 
-**1. `meshId` lives on the render component, next to `assetName` (JSON: `renderable.asset.meshId`).**
+**1. `meshId` lives on the render component, next to `assetName` (JSON: `meshId` in the flat render component).**
 It is an optional non-empty string naming a `ModelMesh.id` of the model asset (unique per model; `ModelData.addMesh`
-rejects duplicates). `RenderComponent` (lib-core) gains `var meshId: String? = null`. The native contract places asset
-fields under `renderable.asset` (`type`, `assetName`), so `meshId` goes there; `renderAssetOf` already reads the flat
-legacy shape too and reads `meshId` from the same node as `assetName`. Absent means the whole model, unchanged.
+rejects duplicates). `RenderComponent` (lib-core) gains `var meshId: String? = null`. The render component is flat
+(`type`, `assetName`, `shaderKey`; the nested `renderable.asset` shape was removed by `typed-scene-ecs`), so `meshId` is read and
+written on the same node as `assetName`. Absent means the whole model, unchanged.
 `meshId` applies only to `MODEL` renders; on a `TERRAIN` it is ignored and preserved.
 - Alternative: a separate component. Rejected: mesh selection is part of how a renderable is shown.
 
@@ -62,13 +62,13 @@ rather than silently drawing everything. The Properties chooser keeps showing th
 **4. Invalidation covers variants inside `AssetStorage`.**
 `invalidate(names)` expands each model name to the base asset plus every cached variant of it (`ModelKey` match), so a
 changed model file replaces all of its variants. This is part of the design, not a follow-up: a stale variant after a
-model re-import would otherwise show geometry the asset no longer has. Eviction of variants no entity uses any more
-follows whatever the existing unused-asset policy is; if there is none, variants live until the storage is disposed
-(bounded by the number of meshes of the placed models).
+model re-import would otherwise show geometry the asset no longer has. `ViewAssets.invalidate` and `RaySceneAssets.invalidate` expand variants the same way. Eviction uses the existing
+`AssetStorage.retain(names)`: the retain sets built by the plugin and the game contain the encoded `ModelKey` names of the
+variants in use, otherwise variants would be disposed on every pass or never released.
 
 **5. The editor reads and writes `meshId` through the existing document layer.**
 `renderAssetOf` / `RenderAsset` gain `meshId`; `PlacementMapper` and `AssetPlacement` carry it; `PlacedEntities` and
-`ModelEntity` expose it. Writes go through `editSceneJson` (one undoable command, formatting and number text kept) and
+`ModelEntity` expose it. Writes go through `editSceneDocument` (one undoable command, formatting and number text kept) and
 through the headless API (`HeadlessEditing`), so a place-asset call can pass a `meshId` and a script can set or clear
 it. Clearing removes the key (default omission). `RenderComponent.rayTracingMaterials` is keyed by material id: after
 selecting a mesh, entries for materials the mesh does not use stay in the file but are unresolved (existing
@@ -121,4 +121,13 @@ the whole model). `docs/ai/file-formats.md` documents the field.
 
 ## Open Questions
 
-None blocking. The `AssetStorage` call sites that reach `resolveBase` are recorded in this design before archive.
+- (Resolved by `typed-scene-ecs`: the render component is flat, so `meshId` sits beside `assetName`.)
+- (Resolved.) The `AssetStorage` call sites that turn a name into a folder or `meta.json`, as found while implementing:
+  1. `DependencyResolver.route` reads `metas(name)` to choose the loader; reached from `requestName` (a first request or a
+     dependency) and `startRevision` (a reload after `invalidate`). `AssetStorage` hands it a wrapper of the `metas`
+     function (`resolveBase`) that reads the base folder's meta and returns it renamed to the encoded key.
+  2. `runPrepare` -> `LoaderRegistration.loadMeta(meta)` -> `ModelLoader.read(meta)`, which decodes `meta.name` (the key)
+     to find the files and the mesh.
+  3. `runPrepare` -> `LoaderRegistration.prepareNew(name)` -> `MetaAssetLoader.prepare(name)` -> `loadBaseMeta` (the
+     name-only path, used when the storage has no `metas`); it decodes the same way.
+  Hooks (`onPrepared`, `onBuilt`, `onDiscarded`) and `ModelPreparationTap.begin` receive the encoded name.

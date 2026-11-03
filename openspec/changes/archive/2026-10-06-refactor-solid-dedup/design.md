@@ -9,7 +9,7 @@ On 2026-10-06 the user instructed continuation against the recorded failing base
 prerequisites now restore a passing full check; the integration gates are complete (see tasks.md and verification.md).
 
 Constraints:
-- **Writes:** every scene or `meta.json` edit still goes through `editSceneJson`. No new write path.
+- **Writes:** every scene or `meta.json` edit still goes through `editSceneDocument`. No new write path.
 - **Modules:** `core`, `runtime` and `physics` stay plain JVM libraries wired by constructors, with no `object` or
   `companion object` (`checkNoSingletons`). `gdx-model` is untouched. `physics-plugin` may not name Jolt.
 - **Threading:** libGDX only inside `GdxRuntime.withContext` on the canvas's AWT thread. Splitting `SceneViewPanel`

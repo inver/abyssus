@@ -7,7 +7,9 @@ package net.nevinsky.abyssus.lib.core.editor.foliage
 
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.foliageChunkSize
+import net.nevinsky.abyssus.lib.core.assets.foliage.foliageChunksAcross
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.lib.core.editor.brush.GridRect
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -58,7 +60,7 @@ class FoliageDraft(
     fun editSettings(meta: FoliageMeta) {
         settings = meta
         val chunkSize = foliageChunkSize(terrain.size)
-        val across = max(1, ceil(terrain.size.toDouble() / chunkSize).toInt())
+        val across = foliageChunksAcross(terrain.size, chunkSize)
         for (j in 0 until across) for (i in 0 until across) chunks += FoliageChunk(i, j)
         revisionCounter++
     }
@@ -70,7 +72,7 @@ class FoliageDraft(
     }
 
     /** A brush stamp: the rectangle [rect] it changed in the mask of [layerId]; an empty rectangle is a no-op. */
-    fun stamped(layerId: Int, rect: MaskRect) {
+    fun stamped(layerId: Int, rect: GridRect) {
         if (rect.isEmpty) return
         val touched = chunksOf(rect)
         chunks += touched
@@ -95,9 +97,9 @@ class FoliageDraft(
     }
 
     /** The chunks covering the brush rectangle [rect]: its texel centres in terrain-local units, chunked like the scatter. */
-    private fun chunksOf(rect: MaskRect): Set<FoliageChunk> {
+    private fun chunksOf(rect: GridRect): Set<FoliageChunk> {
         val chunkSize = foliageChunkSize(terrain.size)
-        val across = max(1, ceil(terrain.size.toDouble() / chunkSize).toInt())
+        val across = foliageChunksAcross(terrain.size, chunkSize)
         val cell = terrain.size.toFloat() / (maskResolution - 1)
         val i0 = (rect.minX * cell / chunkSize).toInt().coerceIn(0, across - 1)
         val i1 = (rect.maxX * cell / chunkSize).toInt().coerceIn(0, across - 1)

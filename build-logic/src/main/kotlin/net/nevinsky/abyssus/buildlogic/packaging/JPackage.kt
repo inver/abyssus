@@ -10,14 +10,7 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import org.gradle.process.ExecOperations
 import javax.inject.Inject
 
@@ -103,8 +96,19 @@ abstract class JPackage @Inject constructor(private val exec: ExecOperations) : 
         dest.deleteRecursively()
         val isImage = type.get() == "app-image"
         val cmd = mutableListOf(
-            jdkTool(jdkHome.get(), "jpackage"), "--type", type.get(), "--name", appName.get(), "--app-version", appVersion.get(),
-            "--vendor", vendor.get(), "--description", appDescription.get(), "--dest", dest.path
+            jdkTool(jdkHome.get(), "jpackage"),
+            "--type",
+            type.get(),
+            "--name",
+            appName.get(),
+            "--app-version",
+            appVersion.get(),
+            "--vendor",
+            vendor.get(),
+            "--description",
+            appDescription.get(),
+            "--dest",
+            dest.path
         )
         if (isImage) {
             check(payload.isPresent && runtime.isPresent && mainJar.isPresent && mainClass.isPresent) {
@@ -123,10 +127,28 @@ abstract class JPackage @Inject constructor(private val exec: ExecOperations) : 
         }
         cmd += extraArgs.get()
         exec.exec { commandLine(cmd) }
+        if (isImage && System.getProperty("os.name").lowercase().contains("mac")) {
+            dropMicrophonePrompt(dest)
+        }
         if (!isImage && outputName.isPresent) {
             val made = dest.listFiles()?.singleOrNull { it.isFile }
                 ?: throw GradleException("jpackage should have written exactly one file into $dest")
             made.renameTo(java.io.File(dest, outputName.get()))
+        }
+    }
+
+    /**
+     * jpackage writes `NSMicrophoneUsageDescription` into every macOS app, which makes macOS ask the player for the
+     * microphone at first start. The game never records, so the key is removed and the app signed ad hoc again (editing
+     * `Info.plist` invalidates jpackage's own ad-hoc signature, which Apple silicon requires).
+     */
+    private fun dropMicrophonePrompt(dest: java.io.File) {
+        dest.listFiles { f -> f.name.endsWith(".app") }?.forEach { app ->
+            val plist = java.io.File(app, "Contents/Info.plist")
+            // plutil fails when the key is absent, which is fine: nothing to remove
+            ProcessBuilder("plutil", "-remove", "NSMicrophoneUsageDescription", plist.path).redirectErrorStream(true)
+                .start().waitFor()
+            exec.exec { commandLine("codesign", "--force", "--deep", "--sign", "-", app.path) }
         }
     }
 }

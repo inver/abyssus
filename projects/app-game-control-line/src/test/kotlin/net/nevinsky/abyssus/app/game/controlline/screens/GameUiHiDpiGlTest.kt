@@ -18,6 +18,7 @@ import net.nevinsky.abyssus.app.game.controlline.flow.Screen
 import net.nevinsky.abyssus.app.game.controlline.flow.planeChoices
 import net.nevinsky.abyssus.app.game.controlline.loadField
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
 import net.nevinsky.abyssus.lib.core.ui.state.UiScreenRef
 import org.junit.Assert.*
@@ -70,7 +71,8 @@ class GameUiHiDpiGlTest {
         val flow = GameFlow(
             planes,
             ScoreTable(temp.root.toPath().resolve("s.json")),
-            PatternScoreTable(temp.root.toPath().resolve("p.json"))
+            PatternScoreTable(temp.root.toPath().resolve("p.json")),
+            ScaleScoreTable(temp.root.toPath().resolve("sc.json"))
         )
         val real = Gdx.graphics
         Gdx.graphics = hiDpiGraphics()

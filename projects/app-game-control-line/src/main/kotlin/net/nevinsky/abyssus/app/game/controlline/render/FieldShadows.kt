@@ -20,13 +20,11 @@ import com.badlogic.gdx.utils.Pool
 import com.badlogic.gdx.graphics.g3d.ModelInstance
 import com.badlogic.gdx.graphics.g3d.Renderable
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
-import net.nevinsky.abyssus.lib.gdx.g3d.ModelDepthShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasView
-import net.nevinsky.abyssus.lib.gdx.shader.ShadowDepthPass
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowLightKind
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowLightRecord
-import net.nevinsky.abyssus.lib.render.shadow.DepthSubmission
+import net.nevinsky.abyssus.lib.render.shadow.DepthCasters
 import net.nevinsky.abyssus.lib.render.shadow.sunShadowBias
 import net.nevinsky.abyssus.lib.render.shadow.sunShadowCamera
 
@@ -50,13 +48,7 @@ class FieldShadows : Disposable {
         colorBufferTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest)
         colorBufferTexture.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge)
     }
-    private val pass = ShadowDepthPass()
-    private val shaders = ModelDepthShaderProvider(pass)
-    private val submission = DepthSubmission { shaders.get(it) }
-    private val pool = object : Pool<Renderable>() {
-        override fun newObject() = Renderable()
-    }
-    private val renderables = Array<Renderable>()
+    private val depth = DepthCasters()
     private var camera = OrthographicCamera()
     private var attribute: ShadowAtlasAttribute? = null
     private var light: DirectionalLight? = null
@@ -124,11 +116,10 @@ class FieldShadows : Disposable {
         terrains: List<Pair<TerrainMesh, Matrix4>>,
         extra: (Array<Renderable>, Pool<Renderable>) -> Unit = { _, _ -> },
     ) {
-        pool.freeAll(renderables)
-        renderables.clear()
-        for (instance in models) instance.getRenderables(renderables, pool)
-        for ((mesh, world) in terrains) renderables.add(mesh.depthRenderable(world, pool.obtain()))
-        extra(renderables, pool)
+        depth.begin()
+        for (instance in models) instance.getRenderables(depth.renderables, depth.pool)
+        for ((mesh, world) in terrains) depth.renderables.add(mesh.depthRenderable(world, depth.pool.obtain()))
+        extra(depth.renderables, depth.pool)
 
         val gl = Gdx.gl
         framebuffer.begin()
@@ -138,8 +129,8 @@ class FieldShadows : Disposable {
             gl.glColorMask(true, true, true, true)
             gl.glClearColor(1f, 1f, 1f, 1f)
             gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
-            pass.radialDepth = false
-            submission.submit(camera, renderables)
+            depth.pass.radialDepth = false
+            depth.submit(camera)
         } finally {
             framebuffer.end()
             gl.glEnable(GL20.GL_DITHER)
@@ -147,9 +138,7 @@ class FieldShadows : Disposable {
     }
 
     override fun dispose() {
-        shaders.dispose()
+        depth.dispose()
         framebuffer.dispose()
-        pool.freeAll(renderables)
-        renderables.clear()
     }
 }

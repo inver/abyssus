@@ -58,7 +58,7 @@ None.
 - `src/main/kotlin/net/nevinsky/abyssus/sceneview/`: `SceneContent` (light look-at targets and which entities are
   handles), `gizmo/GizmoHandles.kt` (`canRotate`), `ScenePreview` (moving the handle during the preview),
   `SceneInteraction` (the edit a rotate drag produces), `SceneTransformWriter` (writing the handle's position).
-  The edit still goes through `editSceneJson` via `SceneFileEditor.applyTransform`: no new write path.
+  The edit still goes through `editSceneDocument` via `SceneFileEditor.applyTransform`: no new write path.
 - File fields read: `PositionComponent.lookAtId` and `PositionComponent.localPosition` of lights; `TypeComponent.type`
   and `PositionComponent.localPosition` of the look-at target. File field written: the target handle's
   `PositionComponent.localPosition`. The writer adds that object, with `x`, `y` and `z`, when the handle's

@@ -50,9 +50,8 @@ class TerrainAssetEncodingTest {
     fun `new terrain meta follows the native writer`() {
         val text = writer.meta(java.util.UUID.fromString("2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"), 1699293063182L, 1600)
         assertEquals(
-            """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1699293063182,"uuid":"2cf70bf7-f7ee-4c41-934c-e40df1d35c8b","type":"TERRAIN",""" +
-                """"additional":{"terrainFile":"terrain.data","size":1600,"uv":1.0,"splatMap":null,"splatBase":null,""" +
-                """"splatR":null,"splatG":null,"splatB":null,"splatA":null}}""",
+            """{"formatVersion":1,"version":1,"lastModified":1699293063182,"uuid":"2cf70bf7-f7ee-4c41-934c-e40df1d35c8b","type":"TERRAIN",""" +
+                """"additional":{"terrainFile":"terrain.data","size":1600,"uv":1.0}}""",
             text,
         )
     }
@@ -60,8 +59,16 @@ class TerrainAssetEncodingTest {
     @Test
     fun `the fixture meta differs only in uv`() {
         val fixtureText = File(fixture, "meta.json").readText()
-        // The fixture is pretty printed; new asset metadata is compact, with the same field order and values.
-        assertEquals(json.readObject(fixtureText.replace("\"uv\": 60.0", "\"uv\": 1.0")).toString(), writer.meta(java.util.UUID.fromString("2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"), 1699293063182L, 1600))
+        // The fixture is pretty printed and keeps a legacy `format` marker and null splat keys; the new meta has neither.
+        @Suppress("UNCHECKED_CAST")
+        fun values(text: String) = json.parse(text, Map::class.java) as Map<String, Any?>
+        val old = values(fixtureText)
+        @Suppress("UNCHECKED_CAST")
+        val oldAdditional = (old["additional"] as Map<String, Any?>).filterValues { it != null }.toMutableMap().also { it["uv"] = 1.0 }
+        val expected = old.filterKeys { it != "format" && it != "additional" } + ("additional" to oldAdditional)
+        val written = values(writer.meta(java.util.UUID.fromString("2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"), 1699293063182L, 1600))
+        assertEquals(expected, written)
+        assertEquals(expected.keys.toList(), written.keys.toList().let { keys -> expected.keys.filter { it in keys } })
     }
 
     @Test

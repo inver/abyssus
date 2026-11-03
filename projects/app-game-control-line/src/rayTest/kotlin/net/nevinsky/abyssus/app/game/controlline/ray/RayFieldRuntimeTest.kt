@@ -9,6 +9,7 @@ import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.core.editor.ray.RayBackendSelector
 import net.nevinsky.abyssus.lib.core.editor.ray.RayBackendService
 import net.nevinsky.abyssus.lib.core.editor.ray.rayTestModel
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.raytracing.*
 import org.junit.Assert.*
 import org.junit.Test
@@ -56,7 +57,7 @@ class RayFieldRuntimeTest {
     private fun frame(x: Float): RayFieldFrame = RayFieldSceneBuilder().build(
         RayFieldInputs(
             listOf(RayPlacedModel("m0", rayTestModel(), Matrix4().translate(x, 0f, 0f))), emptyList(),
-            listOf(RayLight("sun", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), RayVec3(0f, -1f, 0f))),
+            listOf(RayLight("sun", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), Vector3(0f, -1f, 0f))),
             RayColor(.3f, .3f, .3f), RayColor(.6f, .7f, .85f), null, null,
             RayFieldCamera(listOf(0f, 2f, 5f), listOf(0f, 0f, -1f), listOf(0f, 1f, 0f), 60f, .1f, 100f),
         ),

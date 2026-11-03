@@ -11,26 +11,27 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDataFile
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageRuntimeLoad
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.dto.entityWriter
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_CANDIDATE_LIMIT
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_COPY_LIMIT
 import net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEditing
 import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertThrows
 import org.junit.Test
-import org.slf4j.helpers.NOPLogger
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.hypot
 
 /** What the migration makes of the committed field: native files, valid bakes, provenance, counts and clear areas. */
 class FieldFoliageGenerationTest {
-    private val editing = HeadlessEditing()
-    private val manifest = FieldManifest.fromJson(SceneJson().parse(committedManifest().readText()))
+    private val editing = HeadlessEditing(JsonProcessor(NOPLogger.NOP_LOGGER, listOf(entityWriter(ComponentRegistry()))), registry = ComponentRegistry())
+    private val manifest = FieldManifest.fromJson(JsonProcessor(NOPLogger.NOP_LOGGER).readObject(committedManifest().readText()))
 
     @Test
     fun theCommittedManifestIsWhatTheOriginalSceneRecords() = withOriginal { project ->
@@ -46,12 +47,13 @@ class FieldFoliageGenerationTest {
     @Test
     fun theCommittedProjectIsExactlyWhatTheMigrationMakesOfTheOriginal() = withOriginal { project ->
         FieldFoliageTool().generate(project, committedManifest())
-        applyPostMigrationSceneEdits(project)
         val made = checksums(project)
         val committed = checksums(committedProject())
-        for (path in made.keys.filter { it.startsWith("assets/foliage_airfield_") || it.startsWith("assets/model_airfield_grass/") || it == "scenes/Field.scene" }) {
+        for (path in made.keys.filter { it.startsWith("assets/foliage_airfield_") || it.startsWith("assets/model_airfield_grass/") }) {
             assertEquals(path, made[path], committed[path])
         }
+        // the scene was authored further after the migration: it keeps exactly what the migration does to it
+        assertEquals(migrationFootprint(project, manifest), migrationFootprint(committedProject(), manifest))
         assertEquals(committed.keys.filter { it.startsWith("assets/foliage_") }.toSet(), made.keys.filter { it.startsWith("assets/foliage_") }.toSet())
     }
 
@@ -61,7 +63,7 @@ class FieldFoliageGenerationTest {
         for (name in listOf("foliage_airfield_site", "foliage_airfield_outer", "model_airfield_grass")) {
             val dir = File(project, "assets/$name")
             assertNull(name, editing.validate(File(dir, "meta.json").readText(), DocumentKind.ASSET))
-            val source = SceneJson().parse(File(dir, "source.json").readText())
+            val source = JsonProcessor(NOPLogger.NOP_LOGGER).readObject(File(dir, "source.json").readText())
             assertEquals("CC0-1.0", source["license"].asText())
             assertEquals("tools/FieldFoliage.kt", source["generator"].asText())
         }
@@ -86,7 +88,7 @@ class FieldFoliageGenerationTest {
         FieldFoliageTool().generate(project, committedManifest())
         for (t in manifest.terrains) {
             val bake = FoliageDataFile().read(File(project, "assets/${t.foliage}/foliage.data").readBytes())!!
-            val meta = SceneJson().parse(File(project, "assets/${t.foliage}/meta.json").readText())["additional"]["layers"]
+            val meta = JsonProcessor(NOPLogger.NOP_LOGGER).readObject(File(project, "assets/${t.foliage}/meta.json").readText())["additional"]["layers"]
             for (layer in meta) {
                 val model = layer["models"][0]["asset"].asText()
                 if (model.endsWith("grass")) continue
@@ -130,12 +132,12 @@ class FieldFoliageGenerationTest {
     fun aFitThatCannotBeMadeFailsAndPublishesNothing() = withOriginal { project ->
         val before = checksums(project)
         // a manifest that asks for far more young trees on the site than its mask can hold
-        val tampered = SceneJson().parse(committedManifest().readText())
+        val tampered = JsonProcessor(NOPLogger.NOP_LOGGER).readObject(committedManifest().readText())
         val instances = tampered["instances"] as com.fasterxml.jackson.databind.node.ArrayNode
         repeat(5000) { i ->
             instances.addArray().add(900000 + i).add("tree_young").add(0f).add(0f).add(60f).add(0f).add(1f).add(0)
         }
-        val file = File(project, "tampered-manifest.json").apply { writeText(SceneJson().pretty(tampered)) }
+        val file = File(project, "tampered-manifest.json").apply { writeText(JsonProcessor(NOPLogger.NOP_LOGGER).pretty(tampered)) }
         val after = checksums(project).keys
         assertThrows(Exception::class.java) { FieldFoliageTool().generate(project, file) }
         // the tool refuses before anything is published: only the tampered manifest differs

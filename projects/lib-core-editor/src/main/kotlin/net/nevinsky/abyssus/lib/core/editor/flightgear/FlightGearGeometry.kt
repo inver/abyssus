@@ -19,6 +19,7 @@ import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
+import net.nevinsky.abyssus.lib.core.editor.util.Util
 import com.badlogic.gdx.utils.Array as GdxArray
 
 /** Builds CPU model data in the imported frame, preserving part, primitive and material order. */
@@ -87,9 +88,7 @@ internal class FlightGearGeometry {
         val data = ModelData()
         val ids = ArrayList<String>()
         for (m in materials) {
-            var id = m.name
-            var n = 2
-            while (id in ids) id = "${m.name}_${n++}"
+            val id = Util.uniqueName(m.name, separator = "_") { it in ids }
             ids += id
             val material = PbrModelMaterial()
             material.id = id

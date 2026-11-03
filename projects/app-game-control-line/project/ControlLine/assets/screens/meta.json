@@ -21,6 +21,11 @@
           "sample": true
         },
         {
+          "name": "scaleEnabled",
+          "type": "boolean",
+          "sample": true
+        },
+        {
           "name": "hasMessage",
           "type": "boolean",
           "sample": false
@@ -54,6 +59,121 @@
           "name": "planeFacts",
           "type": "string",
           "sample": "Stunt    Lines 18 m    Mass 1.10 kg    Fuel 360 s"
+        },
+        {
+          "name": "hasScaleFacts",
+          "type": "boolean",
+          "sample": true
+        },
+        {
+          "name": "scaleFacts",
+          "type": "string",
+          "sample": "Replica of the MiG-3    First flight 1940    Span 10.3 m    Scale 1:8"
+        },
+        {
+          "name": "hasDevice",
+          "type": "boolean",
+          "sample": true
+        },
+        {
+          "name": "deviceName",
+          "type": "string",
+          "sample": "Logitech F310"
+        },
+        {
+          "name": "deviceCount",
+          "type": "string",
+          "sample": "1 of 1    gamepad"
+        },
+        {
+          "name": "axisName",
+          "type": "string",
+          "sample": "Left stick Y"
+        },
+        {
+          "name": "liveTilt",
+          "type": "number",
+          "sample": 1.4
+        },
+        {
+          "name": "liveTiltText",
+          "type": "string",
+          "sample": "+0.40"
+        },
+        {
+          "name": "invert",
+          "type": "boolean",
+          "access": "write",
+          "sample": false
+        },
+        {
+          "name": "deadZone",
+          "type": "number",
+          "access": "write",
+          "min": 0,
+          "max": 50,
+          "step": 1,
+          "sample": 10
+        },
+        {
+          "name": "deadZoneText",
+          "type": "string",
+          "sample": "10 %"
+        },
+        {
+          "name": "curve",
+          "type": "number",
+          "access": "write",
+          "min": 0,
+          "max": 100,
+          "step": 5,
+          "sample": 0
+        },
+        {
+          "name": "curveText",
+          "type": "string",
+          "sample": "linear"
+        },
+        {
+          "name": "pauseName",
+          "type": "string",
+          "sample": "Start"
+        },
+        {
+          "name": "detecting",
+          "type": "boolean",
+          "sample": false
+        },
+        {
+          "name": "detectStatus",
+          "type": "string",
+          "sample": "Move the axis you want to use    (10 s)"
+        },
+        {
+          "name": "hasControlsDamaged",
+          "type": "boolean",
+          "sample": false
+        },
+        {
+          "name": "controlsDamaged",
+          "type": "string",
+          "sample": "The old controller settings could not be read; they were kept as controls.json.bad."
+        },
+        {
+          "name": "fullscreen",
+          "type": "boolean",
+          "access": "write",
+          "sample": false
+        },
+        {
+          "name": "hasDisplayDamaged",
+          "type": "boolean",
+          "sample": false
+        },
+        {
+          "name": "displayDamaged",
+          "type": "string",
+          "sample": "The old display settings could not be read; they were kept as display.json.bad."
         },
         {
           "name": "tensionText",
@@ -121,6 +241,36 @@
           "sample": true
         },
         {
+          "name": "isInstructed",
+          "type": "boolean",
+          "sample": true
+        },
+        {
+          "name": "handleTilt",
+          "type": "number",
+          "sample": 0.5
+        },
+        {
+          "name": "ghostVisible",
+          "type": "boolean",
+          "sample": true
+        },
+        {
+          "name": "ghostTilt",
+          "type": "number",
+          "sample": 0.75
+        },
+        {
+          "name": "ghostCue",
+          "type": "string",
+          "sample": "Up!"
+        },
+        {
+          "name": "instructorHolds",
+          "type": "boolean",
+          "sample": true
+        },
+        {
           "name": "endLabel",
           "type": "string",
           "sample": "Landed"
@@ -134,6 +284,11 @@
           "name": "isPattern",
           "type": "boolean",
           "sample": true
+        },
+        {
+          "name": "isScale",
+          "type": "boolean",
+          "sample": false
         },
         {
           "name": "patternHeader",
@@ -237,6 +392,17 @@
           "sample": true
         },
         {
+          "name": "instructorOffered",
+          "type": "boolean",
+          "sample": true
+        },
+        {
+          "name": "instructorOn",
+          "type": "boolean",
+          "access": "write",
+          "sample": false
+        },
+        {
           "name": "isAi",
           "type": "boolean",
           "sample": false
@@ -267,6 +433,11 @@
           "sample": "tab"
         },
         {
+          "name": "tabScaleStyle",
+          "type": "string",
+          "sample": "tab"
+        },
+        {
           "name": "scoresHint",
           "type": "string",
           "sample": "Left / Right: change the tab    Up / Down, Enter or a click: replay a flight"
@@ -290,6 +461,11 @@
           "name": "isBoardTab",
           "type": "boolean",
           "sample": true
+        },
+        {
+          "name": "isScaleTab",
+          "type": "boolean",
+          "sample": false
         },
         {
           "name": "freeRows",
@@ -401,6 +577,66 @@
           ]
         },
         {
+          "name": "scaleRows",
+          "type": "list",
+          "fields": [
+            {
+              "name": "rank",
+              "type": "string"
+            },
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "plane",
+              "type": "string"
+            },
+            {
+              "name": "score",
+              "type": "string"
+            },
+            {
+              "name": "speed",
+              "type": "string"
+            },
+            {
+              "name": "level",
+              "type": "string"
+            },
+            {
+              "name": "landing",
+              "type": "string"
+            },
+            {
+              "name": "time",
+              "type": "string"
+            },
+            {
+              "name": "date",
+              "type": "string"
+            },
+            {
+              "name": "style",
+              "type": "string"
+            }
+          ],
+          "sample": [
+            {
+              "rank": "1",
+              "name": "Ann",
+              "plane": "Mig-3",
+              "score": "900",
+              "speed": "400",
+              "level": "300",
+              "landing": "200",
+              "time": "1:10",
+              "date": "2026-01-02",
+              "style": "highlight"
+            }
+          ]
+        },
+        {
           "name": "debriefTitle",
           "type": "string",
           "sample": "Stunter - Mid"
@@ -451,6 +687,11 @@
           "name": "hasRecording",
           "type": "boolean",
           "sample": true
+        },
+        {
+          "name": "hasInstructorTrack",
+          "type": "boolean",
+          "sample": false
         },
         {
           "name": "deductionTitle",
@@ -688,6 +929,12 @@
           "color": "#FF8C1A"
         },
         {
+          "name": "instructorTrack",
+          "font": "mono-14",
+          "fontSize": 19,
+          "color": "#33CCFF"
+        },
+        {
           "name": "primary",
           "font": "display-28",
           "fontSize": 35,
@@ -884,6 +1131,27 @@
                     "style": "outline"
                   },
                   {
+                    "id": "mm-scale",
+                    "type": "button",
+                    "layout": {
+                      "width": 340,
+                      "height": 56
+                    },
+                    "properties": {
+                      "text": "Scale"
+                    },
+                    "bindings": {
+                      "enabled": "scaleEnabled"
+                    },
+                    "actions": {
+                      "click": {
+                        "type": "emitAction",
+                        "name": "scale"
+                      }
+                    },
+                    "style": "outline"
+                  },
+                  {
                     "id": "mm-scores",
                     "type": "button",
                     "layout": {
@@ -897,6 +1165,24 @@
                       "click": {
                         "type": "emitAction",
                         "name": "scores"
+                      }
+                    },
+                    "style": "outline"
+                  },
+                  {
+                    "id": "mm-settings",
+                    "type": "button",
+                    "layout": {
+                      "width": 340,
+                      "height": 56
+                    },
+                    "properties": {
+                      "text": "Settings"
+                    },
+                    "actions": {
+                      "click": {
+                        "type": "emitAction",
+                        "name": "settings"
                       }
                     },
                     "style": "outline"
@@ -1205,6 +1491,54 @@
                     }
                   },
                   {
+                    "id": "ps-scale-facts",
+                    "type": "label",
+                    "bindings": {
+                      "text": "scaleFacts",
+                      "visible": "hasScaleFacts"
+                    },
+                    "style": "body",
+                    "layout": {
+                      "height": 22
+                    }
+                  },
+                  {
+                    "id": "ps-instructor-row",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 8,
+                      "align": "center"
+                    },
+                    "bindings": {
+                      "visible": "instructorOffered"
+                    },
+                    "children": [
+                      {
+                        "id": "ps-instructor",
+                        "type": "checkbox",
+                        "layout": {
+                          "width": 30,
+                          "height": 30
+                        },
+                        "bindings": {
+                          "checked": "instructorOn"
+                        }
+                      },
+                      {
+                        "id": "ps-instructor-l",
+                        "type": "label",
+                        "layout": {
+                          "width": 220,
+                          "height": 22
+                        },
+                        "properties": {
+                          "text": "Instructor  (I)"
+                        },
+                        "style": "body"
+                      }
+                    ]
+                  },
+                  {
                     "id": "ps-buttons",
                     "type": "row",
                     "layout": {
@@ -1272,6 +1606,580 @@
                   }
                 ],
                 "style": "pane"
+              }
+            ]
+          }
+        },
+        {
+          "id": "settings",
+          "name": "Settings",
+          "navigation": "arrows",
+          "root": {
+            "id": "st-root-frame",
+            "type": "panel",
+            "children": [
+              {
+                "id": "settings-bg",
+                "type": "panel",
+                "style": "bg",
+                "layout": {
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              {
+                "id": "st-root",
+                "type": "column",
+                "layout": {
+                  "anchor": "center",
+                  "spacing": 10,
+                  "align": "center"
+                },
+                "children": [
+                  {
+                    "id": "st-title",
+                    "type": "label",
+                    "style": "title",
+                    "layout": {
+                      "height": 77
+                    },
+                    "properties": {
+                      "text": "Settings"
+                    }
+                  },
+                  {
+                    "id": "st-display-h",
+                    "type": "label",
+                    "style": "highlight",
+                    "layout": {
+                      "height": 19
+                    },
+                    "properties": {
+                      "text": "Display"
+                    }
+                  },
+                  {
+                    "id": "st-full",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-full-n",
+                        "type": "label",
+                        "style": "hudLabel",
+                        "layout": {
+                          "height": 19,
+                          "width": 150
+                        },
+                        "properties": {
+                          "text": "Fullscreen"
+                        }
+                      },
+                      {
+                        "id": "st-full-c",
+                        "type": "checkbox",
+                        "layout": {
+                          "width": 30,
+                          "height": 30
+                        },
+                        "bindings": {
+                          "checked": "fullscreen"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "st-display-damaged",
+                    "type": "label",
+                    "style": "highlight",
+                    "layout": {
+                      "height": 19
+                    },
+                    "bindings": {
+                      "text": "displayDamaged",
+                      "visible": "hasDisplayDamaged"
+                    }
+                  },
+                  {
+                    "id": "st-ctl-h",
+                    "type": "label",
+                    "style": "highlight",
+                    "layout": {
+                      "height": 19
+                    },
+                    "properties": {
+                      "text": "Controller"
+                    }
+                  },
+                  {
+                    "id": "st-device",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-prev",
+                        "type": "button",
+                        "style": "outline",
+                        "layout": {
+                          "width": 56,
+                          "height": 44
+                        },
+                        "properties": {
+                          "text": "<"
+                        },
+                        "actions": {
+                          "click": {
+                            "type": "emitAction",
+                            "name": "devicePrevious"
+                          }
+                        },
+                        "bindings": {
+                          "enabled": "hasDevice"
+                        }
+                      },
+                      {
+                        "id": "st-name",
+                        "type": "label",
+                        "style": "mid",
+                        "layout": {
+                          "height": 44,
+                          "width": 420
+                        },
+                        "bindings": {
+                          "text": "deviceName"
+                        }
+                      },
+                      {
+                        "id": "st-next",
+                        "type": "button",
+                        "style": "outline",
+                        "layout": {
+                          "width": 56,
+                          "height": 44
+                        },
+                        "properties": {
+                          "text": ">"
+                        },
+                        "actions": {
+                          "click": {
+                            "type": "emitAction",
+                            "name": "deviceNext"
+                          }
+                        },
+                        "bindings": {
+                          "enabled": "hasDevice"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "st-count",
+                    "type": "label",
+                    "style": "muted",
+                    "layout": {
+                      "height": 19
+                    },
+                    "bindings": {
+                      "text": "deviceCount",
+                      "visible": "hasDevice"
+                    }
+                  },
+                  {
+                    "id": "st-axis",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-axis-n",
+                        "type": "label",
+                        "style": "hudLabel",
+                        "layout": {
+                          "height": 19,
+                          "width": 150
+                        },
+                        "properties": {
+                          "text": "Handle axis"
+                        }
+                      },
+                      {
+                        "id": "st-axis-v",
+                        "type": "label",
+                        "style": "body",
+                        "layout": {
+                          "height": 22,
+                          "width": 200
+                        },
+                        "bindings": {
+                          "text": "axisName"
+                        }
+                      },
+                      {
+                        "id": "st-axis-d",
+                        "type": "button",
+                        "style": "outline",
+                        "layout": {
+                          "width": 120,
+                          "height": 44
+                        },
+                        "properties": {
+                          "text": "Detect"
+                        },
+                        "actions": {
+                          "click": {
+                            "type": "emitAction",
+                            "name": "detectAxis"
+                          }
+                        },
+                        "bindings": {
+                          "enabled": "hasDevice"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "st-live",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-live-n",
+                        "type": "label",
+                        "style": "hudLabel",
+                        "layout": {
+                          "height": 19,
+                          "width": 150
+                        },
+                        "properties": {
+                          "text": "Live"
+                        }
+                      },
+                      {
+                        "id": "st-live-bar",
+                        "type": "progressBar",
+                        "style": "bar",
+                        "layout": {
+                          "width": 260,
+                          "height": 14
+                        },
+                        "properties": {
+                          "maximum": 2
+                        },
+                        "bindings": {
+                          "value": "liveTilt"
+                        }
+                      },
+                      {
+                        "id": "st-live-v",
+                        "type": "label",
+                        "style": "body",
+                        "layout": {
+                          "height": 22,
+                          "width": 90
+                        },
+                        "bindings": {
+                          "text": "liveTiltText"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "st-invert",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-invert-n",
+                        "type": "label",
+                        "style": "hudLabel",
+                        "layout": {
+                          "height": 19,
+                          "width": 150
+                        },
+                        "properties": {
+                          "text": "Invert"
+                        }
+                      },
+                      {
+                        "id": "st-invert-c",
+                        "type": "checkbox",
+                        "layout": {
+                          "width": 30,
+                          "height": 30
+                        },
+                        "bindings": {
+                          "checked": "invert",
+                          "enabled": "hasDevice"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "st-dead",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-dead-n",
+                        "type": "label",
+                        "style": "hudLabel",
+                        "layout": {
+                          "height": 19,
+                          "width": 150
+                        },
+                        "properties": {
+                          "text": "Dead zone"
+                        }
+                      },
+                      {
+                        "id": "st-dead-s",
+                        "type": "slider",
+                        "layout": {
+                          "width": 260,
+                          "height": 24
+                        },
+                        "bindings": {
+                          "value": "deadZone",
+                          "enabled": "hasDevice"
+                        }
+                      },
+                      {
+                        "id": "st-dead-v",
+                        "type": "label",
+                        "style": "body",
+                        "layout": {
+                          "height": 22,
+                          "width": 110
+                        },
+                        "bindings": {
+                          "text": "deadZoneText"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "st-curve",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-curve-n",
+                        "type": "label",
+                        "style": "hudLabel",
+                        "layout": {
+                          "height": 19,
+                          "width": 150
+                        },
+                        "properties": {
+                          "text": "Curve"
+                        }
+                      },
+                      {
+                        "id": "st-curve-s",
+                        "type": "slider",
+                        "layout": {
+                          "width": 260,
+                          "height": 24
+                        },
+                        "bindings": {
+                          "value": "curve",
+                          "enabled": "hasDevice"
+                        }
+                      },
+                      {
+                        "id": "st-curve-v",
+                        "type": "label",
+                        "style": "body",
+                        "layout": {
+                          "height": 22,
+                          "width": 110
+                        },
+                        "bindings": {
+                          "text": "curveText"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "st-pause",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-pause-n",
+                        "type": "label",
+                        "style": "hudLabel",
+                        "layout": {
+                          "height": 19,
+                          "width": 150
+                        },
+                        "properties": {
+                          "text": "Pause button"
+                        }
+                      },
+                      {
+                        "id": "st-pause-v",
+                        "type": "label",
+                        "style": "body",
+                        "layout": {
+                          "height": 22,
+                          "width": 200
+                        },
+                        "bindings": {
+                          "text": "pauseName"
+                        }
+                      },
+                      {
+                        "id": "st-pause-d",
+                        "type": "button",
+                        "style": "outline",
+                        "layout": {
+                          "width": 120,
+                          "height": 44
+                        },
+                        "properties": {
+                          "text": "Detect"
+                        },
+                        "actions": {
+                          "click": {
+                            "type": "emitAction",
+                            "name": "detectPause"
+                          }
+                        },
+                        "bindings": {
+                          "enabled": "hasDevice"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "st-detect",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-detect-t",
+                        "type": "label",
+                        "style": "highlight",
+                        "layout": {
+                          "height": 22,
+                          "width": 520
+                        },
+                        "bindings": {
+                          "text": "detectStatus"
+                        }
+                      },
+                      {
+                        "id": "st-detect-c",
+                        "type": "button",
+                        "style": "outline",
+                        "layout": {
+                          "width": 120,
+                          "height": 44
+                        },
+                        "properties": {
+                          "text": "Cancel"
+                        },
+                        "actions": {
+                          "click": {
+                            "type": "emitAction",
+                            "name": "cancelDetect"
+                          }
+                        }
+                      }
+                    ],
+                    "bindings": {
+                      "visible": "detecting"
+                    }
+                  },
+                  {
+                    "id": "st-damaged",
+                    "type": "label",
+                    "style": "highlight",
+                    "layout": {
+                      "height": 19
+                    },
+                    "bindings": {
+                      "text": "controlsDamaged",
+                      "visible": "hasControlsDamaged"
+                    }
+                  },
+                  {
+                    "id": "st-buttons",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 10,
+                      "align": "center"
+                    },
+                    "children": [
+                      {
+                        "id": "st-reset",
+                        "type": "button",
+                        "style": "outline",
+                        "layout": {
+                          "width": 160,
+                          "height": 44
+                        },
+                        "properties": {
+                          "text": "Reset"
+                        },
+                        "actions": {
+                          "click": {
+                            "type": "emitAction",
+                            "name": "resetProfile"
+                          }
+                        },
+                        "bindings": {
+                          "enabled": "hasDevice"
+                        }
+                      },
+                      {
+                        "id": "st-back",
+                        "type": "button",
+                        "style": "primary",
+                        "layout": {
+                          "width": 180,
+                          "height": 44
+                        },
+                        "properties": {
+                          "text": "Back  (Esc)"
+                        },
+                        "actions": {
+                          "click": {
+                            "type": "emitAction",
+                            "name": "back"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
               }
             ]
           }
@@ -1486,6 +2394,112 @@
                             "style": "hudValue"
                           }
                         ]
+                      },
+                      {
+                        "id": "hfi-handle",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "bindings": {
+                          "visible": "isInstructed"
+                        },
+                        "children": [
+                          {
+                            "id": "hfi-handle-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Handle"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hfi-handle-bar",
+                            "type": "progressBar",
+                            "layout": {
+                              "width": 140,
+                              "height": 12
+                            },
+                            "properties": {
+                              "maximum": 1
+                            },
+                            "bindings": {
+                              "value": "handleTilt"
+                            },
+                            "style": "bar"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hfi-ghost",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "bindings": {
+                          "visible": "ghostVisible"
+                        },
+                        "children": [
+                          {
+                            "id": "hfi-ghost-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Ghost"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hfi-ghost-bar",
+                            "type": "progressBar",
+                            "layout": {
+                              "width": 140,
+                              "height": 12
+                            },
+                            "properties": {
+                              "maximum": 1
+                            },
+                            "bindings": {
+                              "value": "ghostTilt"
+                            },
+                            "style": "bar"
+                          },
+                          {
+                            "id": "hfi-cue",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 19
+                            },
+                            "bindings": {
+                              "text": "ghostCue"
+                            },
+                            "style": "highlight"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hfi-instructor",
+                        "type": "label",
+                        "layout": {
+                          "height": 40
+                        },
+                        "properties": {
+                          "text": "Instructor"
+                        },
+                        "bindings": {
+                          "visible": "instructorHolds"
+                        },
+                        "style": "toast"
                       }
                     ]
                   }
@@ -1537,6 +2551,320 @@
                     },
                     "layout": {
                       "height": 40
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "hudScale",
+          "name": "HUD (scale)",
+          "kind": "overlay",
+          "root": {
+            "id": "hudScale-root",
+            "type": "panel",
+            "children": [
+              {
+                "id": "hudScale-pane",
+                "type": "panel",
+                "style": "pane",
+                "layout": {
+                  "anchor": "topLeft",
+                  "x": 16,
+                  "y": 16,
+                  "padding": 10
+                },
+                "children": [
+                  {
+                    "id": "hudScale-rows",
+                    "type": "column",
+                    "layout": {
+                      "spacing": 10
+                    },
+                    "children": [
+                      {
+                        "id": "hs-tension",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "children": [
+                          {
+                            "id": "hs-tension-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Tension"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hs-bar",
+                            "type": "progressBar",
+                            "layout": {
+                              "width": 140,
+                              "height": 12
+                            },
+                            "properties": {
+                              "maximum": 60
+                            },
+                            "bindings": {
+                              "value": "tensionValue"
+                            },
+                            "style": "bar"
+                          },
+                          {
+                            "id": "hs-tension-v",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 24
+                            },
+                            "bindings": {
+                              "text": "tensionText"
+                            },
+                            "style": "hudValue"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hs-laps",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "children": [
+                          {
+                            "id": "hs-laps-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Laps"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hs-laps-v",
+                            "type": "label",
+                            "layout": {
+                              "width": 90,
+                              "height": 24
+                            },
+                            "bindings": {
+                              "text": "laps"
+                            },
+                            "style": "hudValue"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hs-score",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "children": [
+                          {
+                            "id": "hs-score-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Realism"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hs-score-v",
+                            "type": "label",
+                            "layout": {
+                              "width": 90,
+                              "height": 40
+                            },
+                            "bindings": {
+                              "text": "score"
+                            },
+                            "style": "hudBig"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hs-fuel",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "children": [
+                          {
+                            "id": "hs-fuel-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Fuel"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hs-fuel-v",
+                            "type": "label",
+                            "layout": {
+                              "width": 90,
+                              "height": 24
+                            },
+                            "bindings": {
+                              "text": "fuel"
+                            },
+                            "style": "hudValue"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hsi-handle",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "bindings": {
+                          "visible": "isInstructed"
+                        },
+                        "children": [
+                          {
+                            "id": "hsi-handle-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Handle"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hsi-handle-bar",
+                            "type": "progressBar",
+                            "layout": {
+                              "width": 140,
+                              "height": 12
+                            },
+                            "properties": {
+                              "maximum": 1
+                            },
+                            "bindings": {
+                              "value": "handleTilt"
+                            },
+                            "style": "bar"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hsi-ghost",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "bindings": {
+                          "visible": "ghostVisible"
+                        },
+                        "children": [
+                          {
+                            "id": "hsi-ghost-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Ghost"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hsi-ghost-bar",
+                            "type": "progressBar",
+                            "layout": {
+                              "width": 140,
+                              "height": 12
+                            },
+                            "properties": {
+                              "maximum": 1
+                            },
+                            "bindings": {
+                              "value": "ghostTilt"
+                            },
+                            "style": "bar"
+                          },
+                          {
+                            "id": "hsi-cue",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 19
+                            },
+                            "bindings": {
+                              "text": "ghostCue"
+                            },
+                            "style": "highlight"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hsi-instructor",
+                        "type": "label",
+                        "layout": {
+                          "height": 40
+                        },
+                        "properties": {
+                          "text": "Instructor"
+                        },
+                        "bindings": {
+                          "visible": "instructorHolds"
+                        },
+                        "style": "toast"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "hudScale-hint-panel",
+                "type": "panel",
+                "style": "pane",
+                "layout": {
+                  "anchor": "bottomLeft",
+                  "x": 16,
+                  "y": -16,
+                  "padding": 8
+                },
+                "children": [
+                  {
+                    "id": "hudScale-hint",
+                    "type": "label",
+                    "style": "muted",
+                    "properties": {
+                      "text": "W / S or Up / Down or the mouse: handle    Esc: pause"
+                    },
+                    "layout": {
+                      "height": 19
                     }
                   }
                 ]
@@ -1772,6 +3100,112 @@
                         "layout": {
                           "height": 19
                         }
+                      },
+                      {
+                        "id": "hpi-handle",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "bindings": {
+                          "visible": "isInstructed"
+                        },
+                        "children": [
+                          {
+                            "id": "hpi-handle-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Handle"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hpi-handle-bar",
+                            "type": "progressBar",
+                            "layout": {
+                              "width": 140,
+                              "height": 12
+                            },
+                            "properties": {
+                              "maximum": 1
+                            },
+                            "bindings": {
+                              "value": "handleTilt"
+                            },
+                            "style": "bar"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hpi-ghost",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "bindings": {
+                          "visible": "ghostVisible"
+                        },
+                        "children": [
+                          {
+                            "id": "hpi-ghost-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Ghost"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hpi-ghost-bar",
+                            "type": "progressBar",
+                            "layout": {
+                              "width": 140,
+                              "height": 12
+                            },
+                            "properties": {
+                              "maximum": 1
+                            },
+                            "bindings": {
+                              "value": "ghostTilt"
+                            },
+                            "style": "bar"
+                          },
+                          {
+                            "id": "hpi-cue",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 19
+                            },
+                            "bindings": {
+                              "text": "ghostCue"
+                            },
+                            "style": "highlight"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hpi-instructor",
+                        "type": "label",
+                        "layout": {
+                          "height": 40
+                        },
+                        "properties": {
+                          "text": "Instructor"
+                        },
+                        "bindings": {
+                          "visible": "instructorHolds"
+                        },
+                        "style": "toast"
                       }
                     ]
                   }
@@ -2085,6 +3519,62 @@
                             ]
                           },
                           {
+                            "id": "ns-free",
+                            "type": "column",
+                            "layout": {
+                              "spacing": 4,
+                              "align": "start"
+                            },
+                            "bindings": {
+                              "visible": "isScale"
+                            },
+                            "children": [
+                              {
+                                "id": "ns-facts",
+                                "type": "list",
+                                "layout": {
+                                  "spacing": 6
+                                },
+                                "bindings": {
+                                  "items": "facts"
+                                },
+                                "template": {
+                                  "id": "ns-frow",
+                                  "type": "row",
+                                  "layout": {
+                                    "spacing": 14
+                                  },
+                                  "children": [
+                                    {
+                                      "id": "ns-fn",
+                                      "type": "label",
+                                      "layout": {
+                                        "width": 130,
+                                        "height": 22
+                                      },
+                                      "bindings": {
+                                        "text": "item.name"
+                                      },
+                                      "style": "body"
+                                    },
+                                    {
+                                      "id": "ns-fv",
+                                      "type": "label",
+                                      "layout": {
+                                        "width": 200,
+                                        "height": 22
+                                      },
+                                      "bindings": {
+                                        "text": "item.value"
+                                      },
+                                      "style": "body"
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          {
                             "id": "ne-pattern",
                             "type": "column",
                             "layout": {
@@ -2366,6 +3856,62 @@
                                     },
                                     {
                                       "id": "go-fv",
+                                      "type": "label",
+                                      "layout": {
+                                        "width": 200,
+                                        "height": 22
+                                      },
+                                      "bindings": {
+                                        "text": "item.value"
+                                      },
+                                      "style": "body"
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "id": "gs-free",
+                            "type": "column",
+                            "layout": {
+                              "spacing": 4,
+                              "align": "start"
+                            },
+                            "bindings": {
+                              "visible": "isScale"
+                            },
+                            "children": [
+                              {
+                                "id": "gs-facts",
+                                "type": "list",
+                                "layout": {
+                                  "spacing": 6
+                                },
+                                "bindings": {
+                                  "items": "facts"
+                                },
+                                "template": {
+                                  "id": "gs-frow",
+                                  "type": "row",
+                                  "layout": {
+                                    "spacing": 14
+                                  },
+                                  "children": [
+                                    {
+                                      "id": "gs-fn",
+                                      "type": "label",
+                                      "layout": {
+                                        "width": 130,
+                                        "height": 22
+                                      },
+                                      "bindings": {
+                                        "text": "item.name"
+                                      },
+                                      "style": "body"
+                                    },
+                                    {
+                                      "id": "gs-fv",
                                       "type": "label",
                                       "layout": {
                                         "width": 200,
@@ -2733,6 +4279,37 @@
                         ],
                         "bindings": {
                           "style": "tabNoobStyle"
+                        }
+                      },
+                      {
+                        "id": "sc-t-scale",
+                        "type": "column",
+                        "layout": {
+                          "width": 150,
+                          "padding": 7,
+                          "align": "center"
+                        },
+                        "actions": {
+                          "click": {
+                            "type": "emitAction",
+                            "name": "tabScale"
+                          }
+                        },
+                        "children": [
+                          {
+                            "id": "sc-t-scale-l",
+                            "type": "label",
+                            "properties": {
+                              "text": "Scale"
+                            },
+                            "style": "tabLabel",
+                            "layout": {
+                              "height": 29
+                            }
+                          }
+                        ],
+                        "bindings": {
+                          "style": "tabScaleStyle"
                         }
                       }
                     ]
@@ -3211,6 +4788,273 @@
                             }
                           }
                         ]
+                      },
+                      {
+                        "id": "sc-scale",
+                        "type": "column",
+                        "layout": {
+                          "spacing": 6
+                        },
+                        "bindings": {
+                          "visible": "isScaleTab"
+                        },
+                        "children": [
+                          {
+                            "id": "sc-sh-head",
+                            "type": "row",
+                            "layout": {
+                              "spacing": 10
+                            },
+                            "children": [
+                              {
+                                "id": "sc-sh-h0",
+                                "type": "label",
+                                "layout": {
+                                  "width": 50,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "#"
+                                },
+                                "style": "muted"
+                              },
+                              {
+                                "id": "sc-sh-h1",
+                                "type": "label",
+                                "layout": {
+                                  "width": 120,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "Name"
+                                },
+                                "style": "muted"
+                              },
+                              {
+                                "id": "sc-sh-h2",
+                                "type": "label",
+                                "layout": {
+                                  "width": 110,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "Plane"
+                                },
+                                "style": "muted"
+                              },
+                              {
+                                "id": "sc-sh-h3",
+                                "type": "label",
+                                "layout": {
+                                  "width": 70,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "Speed"
+                                },
+                                "style": "muted"
+                              },
+                              {
+                                "id": "sc-sh-h4",
+                                "type": "label",
+                                "layout": {
+                                  "width": 70,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "Level"
+                                },
+                                "style": "muted"
+                              },
+                              {
+                                "id": "sc-sh-h5",
+                                "type": "label",
+                                "layout": {
+                                  "width": 80,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "Landing"
+                                },
+                                "style": "muted"
+                              },
+                              {
+                                "id": "sc-sh-h6",
+                                "type": "label",
+                                "layout": {
+                                  "width": 80,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "Score"
+                                },
+                                "style": "muted"
+                              },
+                              {
+                                "id": "sc-sh-h7",
+                                "type": "label",
+                                "layout": {
+                                  "width": 70,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "Time"
+                                },
+                                "style": "muted"
+                              },
+                              {
+                                "id": "sc-sh-h8",
+                                "type": "label",
+                                "layout": {
+                                  "width": 100,
+                                  "height": 19
+                                },
+                                "properties": {
+                                  "text": "Date"
+                                },
+                                "style": "muted"
+                              }
+                            ]
+                          },
+                          {
+                            "id": "sc-slist",
+                            "type": "list",
+                            "layout": {
+                              "spacing": 4
+                            },
+                            "bindings": {
+                              "items": "scaleRows"
+                            },
+                            "template": {
+                              "id": "sc-s-row",
+                              "type": "row",
+                              "layout": {
+                                "spacing": 10
+                              },
+                              "children": [
+                                {
+                                  "id": "sc-s-rank",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 50,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.rank",
+                                    "style": "item.style"
+                                  }
+                                },
+                                {
+                                  "id": "sc-s-name",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 120,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.name",
+                                    "style": "item.style"
+                                  }
+                                },
+                                {
+                                  "id": "sc-s-plane",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 110,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.plane",
+                                    "style": "item.style"
+                                  }
+                                },
+                                {
+                                  "id": "sc-s-speed",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 70,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.speed",
+                                    "style": "item.style"
+                                  }
+                                },
+                                {
+                                  "id": "sc-s-level",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 70,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.level",
+                                    "style": "item.style"
+                                  }
+                                },
+                                {
+                                  "id": "sc-s-landing",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 80,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.landing",
+                                    "style": "item.style"
+                                  }
+                                },
+                                {
+                                  "id": "sc-s-score",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 80,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.score",
+                                    "style": "item.style"
+                                  }
+                                },
+                                {
+                                  "id": "sc-s-time",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 70,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.time",
+                                    "style": "item.style"
+                                  }
+                                },
+                                {
+                                  "id": "sc-s-date",
+                                  "type": "label",
+                                  "layout": {
+                                    "width": 100,
+                                    "height": 19
+                                  },
+                                  "bindings": {
+                                    "text": "item.date",
+                                    "style": "item.style"
+                                  }
+                                }
+                              ]
+                            },
+                            "empty": {
+                              "id": "sc-s-none",
+                              "type": "label",
+                              "properties": {
+                                "text": "No flights yet"
+                              },
+                              "style": "body",
+                              "layout": {
+                                "height": 22
+                              }
+                            }
+                          }
+                        ]
                       }
                     ]
                   },
@@ -3376,6 +5220,20 @@
                                 "style": "flown",
                                 "properties": {
                                   "text": "Flown track"
+                                },
+                                "layout": {
+                                  "height": 19
+                                }
+                              },
+                              {
+                                "id": "db-l-instructor",
+                                "type": "label",
+                                "style": "instructorTrack",
+                                "properties": {
+                                  "text": "Instructor"
+                                },
+                                "bindings": {
+                                  "visible": "hasInstructorTrack"
                                 },
                                 "layout": {
                                   "height": 19

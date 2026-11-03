@@ -1,3 +1,4 @@
+/* DISABLED (G7: scene water is no longer modeled by lib-core-editor); kept for reference, not compiled.
 /*
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
@@ -59,3 +60,4 @@ fun waterErrorText(error: WaterEditError): String = when (error) {
     is WaterEditError.InvalidSurface -> error.issues.entries.firstOrNull()
         ?.let { "${waterFieldLabel(it.key)}: ${waterIssueText(it.value)}" } ?: AbyssusBundle.message("waterErrorInvalidSurface")
 }
+*/

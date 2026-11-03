@@ -18,6 +18,7 @@ import net.nevinsky.abyssus.app.game.controlline.pattern.AssistLevel
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
 import net.nevinsky.abyssus.app.game.controlline.pattern.ScoreSheet
 import net.nevinsky.abyssus.app.game.controlline.pattern.recordedFlight
+import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
 import net.nevinsky.abyssus.lib.core.ui.state.UiValue
 import org.junit.Assert.assertEquals
@@ -33,7 +34,7 @@ class GameUiModelTest {
 
     private val planes = loadField().engine.let { engine -> planeChoices(engine.ids.ids.associateWith { engine.ids[it]!! }) }
 
-    private val flow by lazy { GameFlow(planes, ScoreTable(temp.root.toPath().resolve("s.json")), PatternScoreTable(temp.root.toPath().resolve("p.json"))) }
+    private val flow by lazy { GameFlow(planes, ScoreTable(temp.root.toPath().resolve("s.json")), PatternScoreTable(temp.root.toPath().resolve("p.json")), ScaleScoreTable(temp.root.toPath().resolve("sc.json"))) }
     private val model by lazy { GameUiModel(flow) {} }
 
     private fun flag(name: String): Boolean = (model.snapshot(null, null, 0f).toMap().getValue(name) as UiValue.Bool).value

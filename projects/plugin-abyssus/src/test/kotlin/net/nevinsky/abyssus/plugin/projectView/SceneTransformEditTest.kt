@@ -6,20 +6,19 @@
 package net.nevinsky.abyssus.plugin.projectView
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
+import com.badlogic.gdx.math.Vector3
 import java.io.File
-import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
 
 class SceneTransformEditTest : BasePlatformTestCase() {
-    private val original = File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()
+    private val original get() = net.nevinsky.abyssus.plugin.prettyScene(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
 
     fun testMoveKeepsIndentationAndEveryOtherLine() {
         val file = myFixture.addFileToProject("p/Main Scene.scene", original).virtualFile
-        val moved = editSceneJson(project, file, "Move Entity") { root ->
-            SceneTransformWriter().apply(root, "0", TransformEdit(position = Vec3(-1.035308f, 0.9123962f, -3.2570944f)))
+        val moved = editSceneDocument(project, file, "Move Entity") { root ->
+            SceneTransformWriter().apply(root, 0L, TransformEdit(position = Vector3(-1.035308f, 0.9123962f, -3.2570944f)))
         }
         assertTrue(moved)
         val after = String(file.contentsToByteArray())
@@ -29,14 +28,13 @@ class SceneTransformEditTest : BasePlatformTestCase() {
         val changed = before.indices.filter { before[it] != now[it] }
         assertEquals(changed.toString(), 1, changed.size)
         assertTrue(now[changed.single()], now[changed.single()].startsWith("            \"x\": -1.035308") || now[changed.single()].contains("\"x\": -1.035"))
-        fun entities(text: String) = net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree(SceneJson().parse(text)).entities()!!
-        assertEquals(entities(original).size(), entities(after).size())
+        assertEquals(net.nevinsky.abyssus.plugin.parsedScene(original).ecs.size, net.nevinsky.abyssus.plugin.parsedScene(after).ecs.size)
     }
 
     fun testNothingIsWrittenWhenTheEditChangesNothing() {
         val file = myFixture.addFileToProject("p/Same.scene", original).virtualFile
-        assertFalse(editSceneJson(project, file, "Move Entity") { root ->
-            SceneTransformWriter().apply(root, "0", TransformEdit(position = Vec3(-3.035308f, 0.9123962f, -3.2570944f)))
+        assertFalse(editSceneDocument(project, file, "Move Entity") { root ->
+            SceneTransformWriter().apply(root, 0L, TransformEdit(position = Vector3(-3.035308f, 0.9123962f, -3.2570944f)))
         })
         assertEquals(original, String(file.contentsToByteArray()))
     }
@@ -53,8 +51,8 @@ class SceneTransformEditTest : BasePlatformTestCase() {
     fun testAWritePublishesExactlyOneEventForTheFile() {
         val file = myFixture.addFileToProject("p/Event.scene", original).virtualFile
         val events = eventsDuring {
-            assertTrue(editSceneJson(project, file, "Move Entity") { root ->
-                SceneTransformWriter().apply(root, "0", TransformEdit(position = Vec3(1f, 0.9123962f, -3.2570944f)))
+            assertTrue(editSceneDocument(project, file, "Move Entity") { root ->
+                SceneTransformWriter().apply(root, 0L, TransformEdit(position = Vector3(1f, 0.9123962f, -3.2570944f)))
             })
         }
         assertEquals(listOf(file), events)
@@ -62,7 +60,7 @@ class SceneTransformEditTest : BasePlatformTestCase() {
 
     fun testNoEventWhenNothingIsWritten() {
         val file = myFixture.addFileToProject("p/NoEvent.scene", original).virtualFile
-        val events = eventsDuring { assertFalse(editSceneJson(project, file, "Nothing") { false }) }
+        val events = eventsDuring { assertFalse(editSceneDocument(project, file, "Nothing") { false }) }
         assertTrue(events.isEmpty())
     }
 }

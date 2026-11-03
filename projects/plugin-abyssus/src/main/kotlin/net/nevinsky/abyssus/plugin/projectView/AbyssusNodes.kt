@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import com.fasterxml.jackson.databind.JsonNode
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import com.intellij.icons.AllIcons
 import com.intellij.ide.projectView.PresentationData
 import com.intellij.ide.projectView.ProjectViewNode
@@ -21,22 +21,17 @@ import com.intellij.openapi.vfs.VirtualFileVisitor
 import com.intellij.ui.SimpleTextAttributes
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.core.editor.document.scalarOf
-import net.nevinsky.abyssus.lib.core.editor.water.ValidWater
-import net.nevinsky.abyssus.lib.core.editor.water.WaterSurface
-import net.nevinsky.abyssus.lib.core.water.WaterPreset
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
 import net.nevinsky.abyssus.plugin.filetype.*
-import net.nevinsky.abyssus.plugin.water.WaterGroup
 import javax.swing.Icon
 
 /** Shown in a scene entry's label (`name (id)`) and edited via Rename, so not repeated as rows. */
-private val SCENE_HEADER = setOf("id", "name")
+private val SCENE_HEADER = setOf("formatVersion", "id", "name")
 
 /** The `.scene` a project-view node can open in the scene view (a standalone scene or a project's scene entry), else null. */
 fun viewableSceneFile(node: Any?): VirtualFile? = when (node) {
@@ -131,12 +126,9 @@ class DtoEntry(
 }
 
 /** Reads only the admitted row's JSON, without loading runtime components or assets. */
-private fun DtoEntry.entityType(): TypeComponent.Type? {
+private fun DtoEntry.entityType(): EntityType? {
     if (!isEntityEntry(this)) return null
-    val components = (value as? JsonNode)?.get("components") ?: return null
-    val component = components.get(TypeComponent::class.java.name) ?: components.get("TypeComponent")
-    val name = component?.get("type")?.takeIf { it.isTextual }?.textValue() ?: return null
-    return TypeComponent.Type.entries.firstOrNull { it.name == name }
+    return (value as? EntityNode)?.entity?.header()?.type
 }
 
 private fun entryIcon(entry: DtoEntry): Icon {
@@ -147,9 +139,6 @@ private fun entryIcon(entry: DtoEntry): Icon {
         dto is UiScreenGroup -> if (dto.kind == net.nevinsky.abyssus.lib.core.ui.model.UiScreenKind.OVERLAY) ScenesIcons.UI_OVERLAYS else ScenesIcons.UI_SCREENS
         dto is TypeGroup -> ScenesIcons.FOLDER
         dto is UiScreen || dto is UiScreenEntry -> ScenesIcons.UI_SCREEN
-        dto is WaterGroup -> ScenesIcons.WATER
-        dto is ValidWater -> if (dto.settings.preset == WaterPreset.SEA) ScenesIcons.WATER_SEA else ScenesIcons.WATER_LAKE
-        dto is WaterSurface -> AllIcons.Nodes.Variable
         dto is Asset<*> -> AssetIcons.forType(dto.meta.type.name)
         isEntityEntry(entry) -> EntityIcons.forType(entry.entityType())
         isComponentEntry(entry) -> ComponentIcons.forComponent(entry.name)
@@ -200,7 +189,7 @@ class DtoEntryNode(
     }
 
     private fun uiMetaFile(asset: Asset<*>): VirtualFile? =
-        LocalFileSystem.getInstance().findFileByIoFile(java.io.File(asset.baseDir, "meta.json"))
+        LocalFileSystem.getInstance().findFileByIoFile(java.io.File(asset.baseDir, META_FILE))
 
     override fun canNavigate() = uiTarget() != null
 
@@ -222,8 +211,8 @@ class DtoEntryNode(
         val v = value
         val dto = v.value
         val rows = when {
-            isEcsEntry(v) -> ecsRows(dto as JsonNode)
-            isEntityEntry(v) -> entityRows(dto as JsonNode)
+            // a path arrangement is a plain line: its copies are squashed into it and its components are edited in Properties
+            dto is EntityNode && dto.entity?.let(::isArrangementEntity) == true -> emptyList()
             else -> childrenOf(dto)
         }.filterNot { sceneFileOf(v) != null && it.name in SCENE_HEADER }.foldToggles()
         return rows.mapIndexed { i, row ->

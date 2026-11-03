@@ -3,8 +3,8 @@
 A control-line flight game on Abyssus's `lib-core` and `lib-physics`. The plane flies on two lines from the handle the
 pilot holds, and the handle moves only the elevator, through taut lines. Its field, pilot and planes, and every number
 of a plane, are scene data in the bundled native project `project/ControlLine`, authored in Abyssus. Required
-behaviour: `control-line-flight`, `control-line-scoring` and `control-line-game-flow` (OpenSpec change
-`add-control-line-game`).
+behaviour: `control-line-flight`, `control-line-scoring`, `control-line-game-flow` and, for Scale,
+`control-line-scale` (OpenSpec changes `add-control-line-game` and `add-control-line-scale-mode`).
 
 ## Run
 
@@ -13,10 +13,11 @@ behaviour: `control-line-flight`, `control-line-scoring` and `control-line-game-
 ```
 
 The `run` task points the game at the bundled project (system property `controlLine.project`). The main menu offers
-**Free flight** (the arcade game below) and **F2B pattern** (practice for the real schedule, see [F2B pattern](#f2b-pattern)).
-Free flight scores are kept in `<user-home>/.abyssus-control-line/scores.json` and F2B scores in
-`<user-home>/.abyssus-control-line/f2b-scores.json`; a file that cannot be read is renamed to `scores.json.bad` or
-`f2b-scores.json.bad`.
+**Free flight** (the arcade game below), **F2B pattern** (practice for the real schedule, see [F2B pattern](#f2b-pattern)) and
+**Scale** (fly a replica of a real aircraft, see [Scale](#scale)); **Settings** holds [fullscreen](#settings-and-fullscreen) and the [controller](#controllers) setup.
+Free flight scores are kept in `<user-home>/.abyssus-control-line/scores.json`, F2B scores in
+`<user-home>/.abyssus-control-line/f2b-scores.json` and Scale scores in `<user-home>/.abyssus-control-line/scale-scores.json`; a file
+that cannot be read is renamed to `scores.json.bad`, `f2b-scores.json.bad` or `scale-scores.json.bad`.
 
 ## Packages
 
@@ -130,18 +131,126 @@ starts the raster field and states the reason in the window title and the applic
 never silently ignores the request. If ray rendering fails after start (quality limit, stalled frame or lost device),
 the game falls back to the raster field and states the reason the same way.
 
+## Rendering
+
+The raster field is lit physically (OpenSpec `control-line-pbr-rendering`, `render-output-transform`):
+
+- **Linear light, one display transform.** Colour textures and the fog colour are decoded from sRGB, surfaces are lit in linear
+  space and written through exposure (`DEFAULT_EXPOSURE`, 1), the Khronos PBR Neutral tone map and the sRGB encode
+  (`FieldRenderSettings.outputTransform`; `FieldRenderSettings.LEGACY` draws the game as it was). The sky is drawn as it is: the
+  field's `sky.frag` already tone maps and encodes itself.
+- **Sky light.** `skybox_physical` has `lightsScene: true`, so its irradiance and reflection light the models and the terrain
+  instead of the flat ambient colour, and cross-fade as the sky's light rebuilds. A sky that does not opt in keeps the flat ambient.
+- **Control lines are lit cable** (`CableMesh`): a thin tube through the model pipeline, at least 0.75 px wide on screen,
+  depth-tested and shadowed, coloured by tension. Ray mode and the debrief tracks keep their 1 px overlay lines.
+- MSAA (4x on the default framebuffer) is kept, so the transform is applied per shader; the resolve averages tone mapped values.
+
+`FieldPipelineGlTest` (`-Dabyssus.glTests=true`) checks it and writes `build/pipeline-shots/*.png` for a person to look at.
+
+**Frame time** (Linux x64, NVIDIA GeForce RTX 3070 Ti, driver 3.3.0 NVIDIA 615.71.09, Temurin 21.0.9, default framebuffer of a
+1280 x 720 window, fixed 1/60 s step, 10 s warmup, five 30 s samples; `docs/perf/control-line-pbr/*-linux.json`). CPU time of
+`FieldRenderer.draw` (command submission; the harness has no GPU timer), with two cables in both runs:
+
+| pipeline | p50 | p95 | p99 | allocated per frame |
+|---|---|---|---|---|
+| `legacy` (flat ambient, no transform) | 6.93 ms | 9.90 ms | 11.46 ms | 2.24 MB |
+| `pbr` (default) | 7.03 ms | 9.51 ms | 11.50 ms | 2.24 MB |
+
+The change's budget is 20% over the `legacy` run; `pbr` is within it (p95 4% lower; the five samples' p95 spread 8.0 to 12.2 ms for
+`legacy` and 8.9 to 10.2 ms for `pbr`, so the two are the same within noise). This is a local measure: the committed
+`docs/perf/baseline` is from the maintainer's Mac and predates the harness re-base described in `docs/ai/testing.md`. The pictures
+are `docs/perf/control-line-pbr/legacy-field.png` and `pbr-field.png`. Commands:
+
+```
+./gradlew :app-game-control-line:test --tests '*render.PerfWorkloadsGlTest' -Dabyssus.glTests=true -Dabyssus.perf.pipeline=pbr -Dabyssus.perf.report=<file.json>
+./gradlew :app-game-control-line:test --tests '*render.PixelEvidenceGlTest' -Dabyssus.glTests=true -Dabyssus.perf.pixels=record -Dabyssus.perf.pixelsDir=<dir>
+```
+
+The GL test window asks for a 3.3 core context (the game's own minimum); a 3.2 request returned a context without
+`glVertexAttribDivisor` on Linux and aborted the JVM on the first instanced draw.
+
 ## Controls
 
 | Where | Keys and mouse |
 |---|---|
-| Menus | Up / Down and Enter, or the mouse; Escape goes back |
-| Plane select | Left / Right change the plane, Enter flies it, Escape returns to the screen before it (the main menu, or the assist level for an F2B pattern). For an F2B pattern, A or the **Watch AI** button (Tab to it, then Enter) has the AI fly the shown plane, see [Watch AI](#watch-ai) |
-| Scores | Left / Right change the tab (Free flight, Pro, Mid, Noob), Escape or Back returns. On the F2B tabs, Up / Down select a flight and Enter or a click opens its debrief |
+| Menus | Up / Down and Enter, or the mouse; Escape goes back. A controller does the same: D-pad (or left stick) for the arrows, A for Enter, B for Escape |
+| Plane select (the vitrine) | Left / Right change the plane, Enter flies it, Escape returns to the screen before it (the main menu, or the assist level for an F2B pattern). For an F2B pattern, A or the **Watch AI** button (Tab to it, then Enter) has the AI fly the shown plane, see [Watch AI](#watch-ai). I or the **Instructor** checkbox (Tab to it, then Enter) turns the [Instructor](#instructor) on or off |
+| Scores | Left / Right change the tab (Free flight, Pro, Mid, Noob, Scale), Escape or Back returns. On the F2B tabs, Up / Down select a flight and Enter or a click opens its debrief |
 | Debrief | Up / Down: manoeuvre; Space: pause or resume; R: restart; 1 / 2 / 3: speed ½× / 1× / 2×; V: pilot view or outside view; Escape returns |
-| Flying | W or Up: handle up; S or Down: handle down (full tilt in 0.15 s, back to neutral on release). Moving the mouse up or down sets the tilt by its distance from the window's centre; whichever was used last wins. Escape pauses. In a Watch AI demonstration the keys and the mouse do not move the handle; Escape still pauses |
+| Flying | W or Up: handle up; S or Down: handle down (full tilt in 0.15 s, back to neutral on release). Moving the mouse up or down sets the tilt by its distance from the window's centre; whichever was used last wins. A controller's handle axis sets the tilt too (see [Controllers](#controllers)). Escape, or the controller's pause button (Start on a gamepad), pauses. In a Watch AI demonstration the keys, the mouse and the controller do not move the handle; Escape still pauses |
 
 In Free flight, laps score 10. Inside and outside loops score 50, an inverted lap 80, a wingover 100 and a figure 8 150, times the
 combo multiplier (up to x5 for maneuvers within 10 s of each other). A landing with the engine stopped adds 200.
+
+## Controllers
+
+A gamepad, flight stick or wheel can fly the plane and move through the menus. Devices are read through libGDX's gdx-controllers (SDL game controllers, natives
+bundled) and, for devices without a gamepad mapping, through GLFW's joystick API, so there is nothing to install; with no device connected the keyboard and the mouse work as always.
+
+- **Which devices.** A device with a gamepad mapping (Logitech F310 and F710, Xbox-style pads and so on) is a *gamepad*; any other
+  (a flight stick such as the Thrustmaster T.16000M or Logitech Extreme 3D Pro, a wheel, pedals) is a *joystick* with its raw axes and buttons.
+- **The handle.** The chosen axis sets the tilt directly: full travel either way is full tilt, a dead zone (10 % to start with) does nothing,
+  and a curve (0 linear to 100 % cubic) softens the middle. A gamepad starts on the left stick's vertical axis, pushed up for handle up,
+  and Start for pause. A joystick starts with no axis: choose one with **Detect**. The last device used wins, but a stick resting inside
+  its dead zone never takes the handle from the keys.
+- **Settings.** Main menu, **Settings**, Controller section: the device (Previous and Next when there are several), the handle axis with a live bar of the
+  tilt it sets, **Detect** (move the axis, or press the button, you want; it records the axis's rest value, so a pedal that rests at one
+  end works; Escape, Cancel or 10 s stops it, and the pad's B also stops an axis detect), Invert, Dead zone, Curve, the pause button and
+  Reset. Changes apply and save at once, to `<user-home>/.abyssus-control-line/controls.json` (a file that cannot be read is renamed to
+  `controls.json.bad`).
+- **Menus.** The D-pad or the left stick of a gamepad, or the first hat of a joystick , moves focus and changes the plane and the score tab,
+  repeating when held; A (button 0 of a joystick) presses, B (button 1) goes back. While flying only the pause button acts. There is no
+  on-screen keyboard: on name entry confirm saves the offered name.
+- **Limits.** A profile is kept per device by its GUID, so two identical devices share one. On Linux the user needs read access to the
+  device (`/dev/input/js*` or `event*`), or the game sees no device. Unplugging a device mid-flight leaves the flight running with the
+  handle at neutral.
+
+### Settings and fullscreen
+
+The **Settings** screen (main menu) has two sections. **Display** has a **Fullscreen** checkbox: turning it on switches the window to
+fullscreen at the display's current mode and turning it off returns to a 1280 x 720 window, at once and with no restart (the switch is made
+between frames). The choice is kept in `<user-home>/.abyssus-control-line/display.json` (`{"version": 1, "fullscreen": false}`; a file that
+cannot be read is renamed to `display.json.bad`, the game opens in a window and the screen says so), and the game starts in the mode it holds.
+It works with the keyboard, the mouse and a controller, and needs no controller connected. **Controller** is the section above.
+
+Controllers are read by `controller/gdx/GdxControllers` (the only class that imports gdx-controllers) and `controller/glfw/GlfwJoysticks` (the only one that imports GLFW, for unmapped devices); everything else runs against a fake device in the tests.
+
+## Scale
+
+Scale is flying a replica of a real aircraft as the real thing flies: steady, level and then down. It uses Free flight's
+physics, lines and controls (the keys above) with the planes of class `SCALE`; the bundled field has one, `Mig-3` (a 1:10
+replica of the Mikoyan-Gurevich MiG-3, 1940). A Scale flight scores no laps, manoeuvres or combo. It is marked out of 1000 on
+the laps it flies in the air (spec `control-line-scale`):
+
+| Mark | Points | Full marks | Falls to 0 at |
+|---|---|---|---|
+| Steady speed | 400 | every lap time within 5 % of the mean | 30 % |
+| Level laps | 400 | mean absolute elevation of at most 15° | 45° |
+| Clean landing | 200 | the flight ends as a landing (not a crash or slack lines) | |
+
+Speed and level need at least two completed laps; a lap still being flown when the flight ends does not count. The flying HUD
+shows the laps flown and the realism score so far. The best 10 flights are kept in `scale-scores.json` and shown on the
+**Scale** tab of Scores (name, plane, the three marks, score, time, date). Watch AI and the debrief belong to the F2B pattern and
+are not offered. The thresholds are constants in `scale/ScaleMarks.kt`.
+
+### The vitrine
+
+Plane select is a vitrine: each plane stands on a table of its own and the camera glides from table to table. Its card shows the
+plane's class, lines, mass and fuel, and for a replica its prototype, first flight, real span and scale. The tables are the entities
+with a `VitrineTableComponent` (`topHeight`: the table-top above the table's origin), in entity id order: plane `i`, in the order
+of their names, stands on table `i`, facing the way the table faces (its +Z) with the tilt it was authored with, and its lowest
+point exactly on the table-top. Planes beyond the last table stand on the ground in line with the tables; with no tables the
+planes stay where the scene puts them. The display row is outside the planes' flight circle, east of the fence. Only the plane
+select scene is rearranged; a flight loads its own copy.
+
+### A replica in Abyssus
+
+Add a model entity with a `RigidBodyComponent`, a convex hull `ColliderComponent` and a `PlaneComponent` of class `SCALE`
+(lines, leadouts, thrust, wing area...: tuned by hand as for any plane), and a `ScaleComponent`
+(`prototype`, `firstFlight`, `wingspan` in metres, `scale` as a denominator). The model must be in the plane frame: nose +Z, up +Y,
+the wings along X, resting on y = 0 (the bundled `model_mig3` was turned 90° about Y at its root node after import; see its
+`source.json`). A `SCALE` plane without a `ScaleComponent` is flown too, with its prototype shown as unknown. To add a table,
+duplicate a `Display table` entity: it takes the next free slot by entity id.
 
 ## F2B pattern
 
@@ -381,10 +490,39 @@ take-off (and after the wingover for those that turn over), `F2bAiLandingTest` t
 judge's own tests (`PatternJudgeTest` with `SyntheticSchedule`), which feed it ideal tracks to check its reading; those
 show nothing about what a plane can fly.
 
+## Instructor
+
+A beginner crashes within seconds, so plane select offers an **Instructor** in every mode (Free flight, F2B pattern at every
+assist level, and Scale). Turn it on with I, a click on the checkbox, or a controller (focus the checkbox, then confirm). It
+is off when the game starts, keeps its state across modes and Retry for the rest of the session, and is not saved between
+sessions. Watch AI ignores it.
+
+During an instructed flight the game measures the **danger** from 0 to 1 every simulation step, from what ends a flight: the
+height left to pull out of the plane's dive (the largest of the ground, inverted and slack-line terms; a landing or a climb is
+no danger, and level flight at the 1.5 m base is 0). The HUD shows two thin bars, **Handle** (your tilt) and **Ghost** (the
+tilt the instructor would set), 0.5 being level. The ghost shows while there is danger or the instructor holds any of the
+handle, with the cue `Up!` or `Down!` when it differs from yours by more than 0.2.
+
+As danger grows the instructor takes a **share** of the handle: the handle is `(1 - share)` of your tilt plus `share` of
+the instructor's. The share rises to the danger at once. Once the danger has stayed 0 for 1 s it falls to 0 over 0.5 s (the
+**handback**). While it holds at least half the handle the HUD shows INSTRUCTOR: that span is a **takeover**. The
+instructor only flies the plane back to level flight at the base in the direction it flies (once the engine has stopped, it
+turns an inverted plane upright and glides in to land). It acts through the handle alone, under the same rules as you.
+
+An instructed flight with **no takeover** counts as any human flight: scored, offered name entry, saved. One with a
+takeover is **Assisted**: GAME OVER shows the real result and "Took over N times, not saved", offers no name entry, and writes
+no score table, board or recording. A share that stayed under 0.5 does not make a flight Assisted. In the F2B debrief of an
+assisted flight the part of the flown line flown during a takeover is drawn in cyan, named Instructor in the legend, and a
+manoeuvre a takeover overlapped says so above its deductions. The judges' marks are the ones the flight earned.
+
+`InstructorRescueTest` flies each bundled plane with a held full-down handle and checks that the instructor saves it, and
+that Watch AI's take-off and base laps need no takeover (its vertical figures dive at the plane's limit, so a takeover
+in a figure is accepted).
+
 ## The project in Abyssus
 
 Open a **copy** of `project/ControlLine` in Abyssus (`./gradlew :plugin-abyssus:runIde`), never the committed folder:
-the tests assert on its scene. `PlaneComponent` and `PilotComponent` are registered game components and currently
+the tests assert on its scene. `PlaneComponent`, `PilotComponent`, `ScaleComponent` and `VitrineTableComponent` are registered game components and currently
 remain read-only JSON in the editor. The committed `abyssus/components.schema.json` is retained data; it does not
 enable Properties editing. A plane duplicated in the field scene appears on plane select at the next game start.
 
@@ -425,15 +563,19 @@ Only the trainer's model has the clips; the other planes stay whole. Slack lines
 
 | Package (`net.nevinsky.abyssus.app.game.controlline.`) | Holds | GL |
 |---|---|---|
-| `components` | `PilotComponent`, `PlaneComponent`, `GameComponents`, `ControlLineComponents` (with the physics components) | no |
+| `components` | `PilotComponent`, `PlaneComponent`, `ScaleComponent`, `VitrineTableComponent`, `GameComponents`, `ControlLineComponents` (with the physics components) | no |
 | `flight` | `Aero`, `LineRig`, `Ground`, `Flight` / `FlightSystem`, `FlightOutcome`, `FlightSession`, `FlightJudge`, and who holds the handle: `FlightControlSource`, `FlightObservation`, `HumanControl` | no |
 | `track` | `SphereTrack`, `Maneuvers`, `Laps` | no |
+| `scale` | Scale: `ScaleMarks` (the realism arithmetic), `ScaleJudge` (a `FlightJudge`), `ScaleScoreTable` | no |
+| `vitrine` | `vitrinePoses` (where each plane stands on plane select) | no |
 | `score` | `ScoreKeeper`, `FlightScoring`, `ScoreTable` | no |
 | `pattern` | the F2B pattern: `Schedule` (`Figure`), `HemisphereGeometry`, `PathTokens`, `TrackBuilder`, `IdealTracks`, `IdealSampler`, `Matchers`, `Grader` / `MarkWeights`, `PatternJudge`, `ScoreSheet`, `PatternScoreTable`, and the debrief's `FlightRecording`, `RecordingStore`, `DebriefModel`, and the Noob guide `GuidePlanner` | no |
 | `flow` | `GameFlow` (the screen state machine, with the mode, the assist level and who flies, `Control`), `FlightReport` | no |
-| `ai` | the Watch AI bot: `F2bBot`, `F2bRoutinePlanner`, `F2bPilot`, `Handling`, `Course`, `F2bFigures`, `Fillets` | no |
+| `ai` | the Watch AI bot: `F2bBot`, `F2bRoutinePlanner`, `F2bPilot`, `Handling`, `Course`, `F2bFigures`, `Fillets`; and the Instructor: `InstructorControl`, `DangerGauge`, `InstructorShare`, `RescuePilot` | no |
 | (the package itself) | `ControlLineGame`, `FlightRunner` (the flight lifecycle, without GL), `Main` | `ControlLineGame` |
-| `input` | `HandleInput` (keyboard and mouse tilt) | no |
+| `input` | `HandleInput` (keyboard, mouse and controller tilt) | no |
+| `display` | `DisplaySettings` (`display.json`), `DisplayOptions`, `GdxDisplay` (the fullscreen switch, applied at the top of the next frame over libGDX's window) | `GdxDisplay` |
+| `controller` | `ControllerService` (the per-frame drive), `ControllerProfile` / `ControllerProfiles` (`controls.json`), the axis mapping, `DetectSession`, `PadNavigator`, `ControllerSettings`; `gdx.GdxControllers` is the only gdx-controllers user | `gdx-controllers`, `glfw` |
 | `render`, `screens` | `FieldScene`, `FieldRenderer` (terrain through `lib-render`'s `TerrainPass`, variant `GAME_SINGLE_SUN`), `FieldShadows` (the sun's shadow map, drawn by `lib-render`'s `DepthSubmission`), `Cameras`, `GameUiHost` (the authored screens over `lib-core`'s `UiPresenter`), `GameUiModel` (what the screens show and the actions and keys they send; no GL), `GameUiContract` | yes |
 | `play` (own source set, `src/play`) | `ControlLinePlay : PlayModule` | no |
 
@@ -441,8 +583,15 @@ Only the trainer's model has the clips; the other planes stay whole. Slack lines
 
 The game window is an OpenGL 3.2 core context (`Main.kt` asks for it, and `ControlLineGame.create` gives the legacy GLSL of
 the terrain and model shaders their version line and defines), because foliage is drawn with instanced rendering.
-The sky is drawn with layered clouds (`FieldRenderer`, `GAME_CLOUDS`): the asset's shell clouds, eight noise layers per band at
-the full window size, left the game GPU-bound at about 35 frames a second in that context.
+The sky is drawn with the technique its cloud asset names (`clouds_fair`: `VOLUMETRIC`, each band ray-marched at half
+resolution, a heaped cumulus band with round heads on flat bases; `FieldRenderer` takes an optional technique to override it).
+If the clouds hold the game over 33 ms a frame for two seconds in a row, `FieldRenderer` (through `CloudStepDown`) draws the
+next simpler technique for the rest of the session (volumetric, shells, cumulus, layered) and writes one warning to the log.
+`FieldSkyGlTest` (`-Dabyssus.glTests=true`) draws the field's sky with each technique into a 1280 x 720 target, writes
+`build/sky-shots/<technique>-<view>.png` and prints the time of a frame: on an RTX 3070 Ti, layered 0.6 ms, cumulus
+0.9 ms, volumetric 2.6 ms and shells 3.1 ms for the pilot's view of the sky (shells, eight noise layers per band, is what
+held the game near 35 frames a second in the 3.2 core context). The test draws only the sky: the field's foliage needs
+instanced drawing, which the test context lacks, so the game's frame rate with the whole field is not measured there.
 
 A terrain entity's `FoliageComponent` is drawn by `FieldRenderer` from the committed bake, with no scatter or write.
 `FieldScene.foliages` lists the foliage of the loaded scene (`SceneFoliageListing`; a component on an entity that draws
@@ -523,6 +672,8 @@ GL tests (`-Dabyssus.glTests=true`): `GameScreensCharacterizationTest` compares 
 with `characterization/screens.golden`, recorded from the original hand-written screens (the Watch AI steps were added to
 it later). Re-record it (`-Dabyssus.recordScreens=true`) only when a screen is meant to change.
 
+Instructor: plane select's `ps-instructor` checkbox is bound to the writable `instructorOn` (shown while `instructorOffered`); the HUDs show the `Handle` and `Ghost` bars (`handleTilt`, `ghostTilt`), the `ghostCue` and an INSTRUCTOR label while `instructorHolds`, all under `isInstructed` / `ghostVisible`; GAME OVER's Instructor row is a `facts` row and the debrief legend's Instructor colour shows while `hasInstructorTrack`.
+
 Watch AI: plane select's `ps-watch-ai` button sends the `watchAi` action and shows while `watchAiVisible` (an F2B pattern
 with a stunt plane); `isAi` shows the "AI demonstration" labels on the F2B HUD (in place of the player's hint, which
 `isHuman` shows), the pause menu, GAME OVER and the debrief. The labels are the asset's own text. Enter on plane select
@@ -579,13 +730,15 @@ rudder and engine offset 2°):
 | `Racer` | SPEED | 0.5 kg | 21 m | 6 N | 60 s | 0.09 m² | lift slope 4.2, zero-lift drag 0.02, elevator effect 0.3, pitch damping 10 |
 | `Stunter` | STUNT | 1.1 kg | 18 m | 5.2 N | 360 s | 0.325 m² | lift slope 8, elevator effect 3 |
 | `Trainer` | TRAINER | 0.8 kg | 15 m | 5.5 N | 120 s | 0.2 m² | zero-lift drag 0.06 |
+| `Mig-3` | SCALE | 0.85 kg | 16 m | 5.2 N | 240 s | 0.22 m² | lift slope 5, zero-lift drag 0.05, elevator effect 1, leadouts at x 0.485 |
 
-All three have no linear damping and friction 0.05 (they roll on their wheels). With the handle neutral they settle at:
+All four have no linear damping and friction 0.05 (they roll on their wheels). With the handle neutral they settle at:
 
 | Plane | Above 1 m after | Speed | Lap | Tension | Elevation |
 |---|---|---|---|---|---|
 | `Racer` | 2.8 s | 39 m/s | 3.4 s | 34 N | 9° |
 | `Stunter` | 4.8 s | 24 m/s | 4.9 s | 29 N | 8° |
 | `Trainer` | 4.2 s | 24 m/s | 4.0 s | 28 N | 3° |
+| `Mig-3` | 5.0 s | 23 m/s | 4.3 s | 30 N | 3° |
 
 Full up loops the `Stunter` in about 0.5 s, over the top at 45° of elevation or more, and its corners at full tilt are about 2.7 m in radius (`PatternFlyabilityTest`). Its fuel and its lift slope and elevator effect were raised for the F2B pattern (the old values turned no tighter than about 9 m).

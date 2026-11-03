@@ -54,7 +54,7 @@ No file format change. The change reads asset `meta.json` and `.hdr` files and w
 
 **Mundus files read, none written.** `assets/<name>/meta.json` (`type`, and the folder's `.hdr`);
 the scene's `skyboxEnabled` and `skyboxName`. No key is added, renamed or reordered anywhere, and the
-plugin still writes only through `editSceneJson`, which this change does not need.
+plugin still writes only through `editSceneDocument`, which this change does not need.
 
 **Plugin.** `MetaType.SKYBOX_HDR` and its project-view icon already exist, and the Abyssus tree already
 counts a scene's `skyboxName` as a use of any asset; neither changes. New: a pure Radiance decoder and

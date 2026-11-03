@@ -1,0 +1,21 @@
+{
+  "importer": "model",
+  "source": "low_poly_-_soviet__apartment_building_8k.glb",
+  "sourcePath": "/home/inv3r/Downloads/low_poly_-_soviet__apartment_building_8k.glb",
+  "sourceSha256": "1a028be937242489167b4b0eaa0010fb338254addb6f6c73f3ca4b2ecfc31b2e",
+  "sourceFormat": "GLB",
+  "stated": {
+    "unit": "m",
+    "upAxis": "Y"
+  },
+  "chosen": {
+    "unit": "m",
+    "upAxis": "Y"
+  },
+  "size": {
+    "height": 18.0
+  },
+  "animations": [],
+  "skipped": [],
+  "approximated": []
+}

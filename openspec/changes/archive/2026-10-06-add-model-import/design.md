@@ -34,7 +34,7 @@ See proposal.md for motivation. What exists today:
     hidden is abandoned and leaks its GL objects.
   - `OrbitCamera` is plain math. `SceneModels` drives `AnimationController` per entity.
 - **Placement.** `SceneComponentEdits.addAsset(project, file, asset, position, cache, metaFiles)` adds the entity
-  through `editSceneJson`, itself a `WriteCommandAction`. A scene view's Add Asset passes `orbit.target` of its
+  through `editSceneDocument`, itself a `WriteCommandAction`. A scene view's Add Asset passes `orbit.target` of its
   `SceneViewPanel`, and the panel disables adding while it plays. `AssetFileCommand.execute` is also a
   `WriteCommandAction`, and registers a global `AssetFileUndoAction`.
 

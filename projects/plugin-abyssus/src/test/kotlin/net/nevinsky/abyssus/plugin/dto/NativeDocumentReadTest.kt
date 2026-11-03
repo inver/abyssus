@@ -12,7 +12,7 @@ import net.nevinsky.abyssus.plugin.sceneview.SceneParamsSource
 class NativeDocumentReadTest : BasePlatformTestCase() {
     fun testNativeAndUnsupportedSiblingsUseCurrentDocumentText() {
         val reader = service<SceneReader>()
-        val native = """{"format":"abyssus","formatVersion":1,"name":"Native","ecs":{"entities":{}}}"""
+        val native = """{"format":"abyssus","formatVersion":1,"name":"Native","ecs":{}}"""
         val good = myFixture.addFileToProject("p/scenes/Good.scene", native).virtualFile
         val bad = myFixture.addFileToProject("p/scenes/Legacy.scene", "{\"name\":\"Legacy\"}").virtualFile
         assertTrue(reader.read(good).success)

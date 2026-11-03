@@ -5,121 +5,127 @@
 
 package net.nevinsky.abyssus.lib.core.editor.foliage
 
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaParser
 import net.nevinsky.abyssus.lib.core.assets.foliage.*
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaTextEditor
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.*
 import org.junit.Test
+import org.slf4j.helpers.NOPLogger
 
+/**
+ * The foliage block is edited as a typed [FoliageMeta]: a layer or collider member the typed block does not model
+ * (a `note`, a vendor key) is not kept when the meta is written back.
+ */
 class FoliageMetaEditsTest {
-    private val text = """{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","extension":60.0,"additional":{"terrain":"meadow","layers":[{"id":1,"note":"north slope","density":0.05,"models":[{"asset":"tree","weight":1.0,"custom":42}],"drawDistance":60.0}]}}"""
+    private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
+    private val parsing = DocumentParsing(json, NOPLogger.NOP_LOGGER)
+    private val edits = FoliageMetaEdits(AssetMetaTextEditor(AssetMetaParser(json)))
+    private val colliders = FoliageColliderEdits(json)
+
+    private val text = """{"formatVersion":1,"type":"FOLIAGE","additional":{"terrain":"meadow","layers":[{"id":1,"density":0.05,"models":[{"asset":"tree","weight":1.0}],"drawDistance":60.0}]}}"""
     private val before = FoliageMeta(terrain = "meadow", layers = listOf(
         FoliageLayerMeta(id = 1, models = listOf(FoliageModelMeta("tree")), drawDistance = 60f)))
+    private val layer = before.layers.single()
 
-    @Test fun densityKeepsUnknownMembersOrderAndNumberText() {
-        val after = before.copy(layers = listOf(before.layers.single().copy(density = 0.2f)))
-        val result = FoliageMetaEdits().edit(text, before, after) as TextEditOutcome.Edited
-        assertEquals(text.replace("\"density\":0.05", "\"density\":0.2"), result.text)
-    }
+    private fun settings(editedText: String) = parsing.foliageMeta(editedText)
 
-    @Test fun anIdLessLayerEntryStaysThroughAnEdit() {
-        val withJunk = text.replace("\"layers\":[", "\"layers\":[\"junk\",")
-        val after = before.copy(layers = listOf(before.layers.single().copy(density = 0.2f)))
-        val result = FoliageMetaEdits().edit(withJunk, before, after) as TextEditOutcome.Edited
-        val layers = SceneJson().parse(result.text)["additional"]["layers"]
-        assertEquals("junk", layers[0].asText())
-        assertEquals(0.2, layers[1]["density"].asDouble(), 0.0)
+    private fun edit(source: String, from: FoliageMeta, to: FoliageMeta) = (edits.edit(source, from, to) as TextEditOutcome.Edited).text
+
+    @Test fun aDensityChangeIsWrittenAndTheRestIsRead() {
+        val after = before.copy(layers = listOf(layer.copy(density = 0.2f)))
+        val written = settings(edit(text, before, after))
+        assertEquals(0.2f, written.layers.single().density, 0f)
+        assertEquals("tree", written.layers.single().models.single().asset)
+        assertEquals(60f, written.layers.single().drawDistance, 0f)
+        assertEquals("meadow", written.terrain)
     }
 
     @Test fun addingAppendsAndRemovingDeletesOnlyTheLayer() {
         val added = before.copy(layers = before.layers + FoliageLayerMeta(id = 2, models = listOf(FoliageModelMeta("rock"))))
-        val result = FoliageMetaEdits().edit(text, before, added) as TextEditOutcome.Edited
-        val layers = SceneJson().parse(result.text)["additional"]["layers"]
-        assertEquals(SceneJson().parse(text)["additional"]["layers"][0], layers[0])
-        assertEquals(2, layers[1]["id"].asInt())
-        val removed = FoliageMetaEdits().edit(result.text, added, before) as TextEditOutcome.Edited
-        assertEquals(text, removed.text)
+        val withTwo = edit(text, before, added)
+        assertEquals(listOf(1, 2), settings(withTwo).layers.map { it.id })
+        val back = edit(withTwo, added, before)
+        assertEquals(before.layers.map { it.id }, settings(back).layers.map { it.id })
     }
 
-    @Test fun equalSettingsKeepOriginalTextAndOmittedDefaults() {
-        assertEquals(TextEditOutcome.Unchanged, FoliageMetaEdits().edit(text, before, before))
+    @Test fun equalSettingsAreUnchanged() {
+        assertEquals(TextEditOutcome.Unchanged, edits.edit(text, before, before))
     }
 
-    @Test fun reorderingKeepsLayerExtensions() {
+    @Test fun reorderingKeepsEachLayer() {
         val added = before.copy(layers = before.layers + FoliageLayerMeta(id = 2))
-        val first = FoliageMetaEdits().edit(text, before, added) as TextEditOutcome.Edited
-        val swapped = FoliageMetaEdits().edit(first.text, added, added.copy(layers = added.layers.reversed())) as TextEditOutcome.Edited
-        assertEquals("north slope", SceneJson().parse(swapped.text)["additional"]["layers"][1]["note"].asText())
+        val first = edit(text, before, added)
+        val swapped = edit(first, added, added.copy(layers = added.layers.reversed()))
+        assertEquals(listOf(2, 1), settings(swapped).layers.map { it.id })
     }
 
-    @Test fun changingNestedValuesKeepsExtensionsAndUntouchedDefaults() {
-        val layer = before.layers.single().copy(models = listOf(FoliageModelMeta("tree", 3f)), scale = FoliageScale(max = 2f))
-        val result = FoliageMetaEdits().edit(text, before, before.copy(layers = listOf(layer))) as TextEditOutcome.Edited
-        val node = SceneJson().parse(result.text)["additional"]["layers"][0]
-        assertEquals(42, node["models"][0]["custom"].asInt())
-        assertEquals("tree", node["models"][0]["asset"].asText())
-        assertFalse(node["scale"].has("min"))
-        assertEquals("60.0", node["drawDistance"].asText())
+    @Test fun nestedValuesChange() {
+        val changed = layer.copy(models = listOf(FoliageModelMeta("tree", 3f)), scale = FoliageScale(max = 2f))
+        val written = settings(edit(text, before, before.copy(layers = listOf(changed)))).layers.single()
+        assertEquals(3f, written.models.single().weight, 0f)
+        assertEquals(2f, written.scale.max, 0f)
     }
 
-    @Test fun unsupportedDocumentRefusesEvenEqualSettings() {
-        assertTrue(FoliageMetaEdits().edit(text.replace("\"formatVersion\":1", "\"formatVersion\":2"), before, before) is TextEditOutcome.Refused)
+    @Test fun aTextThatIsNotAJsonObjectIsRefused() {
+        assertTrue(edits.edit("not json", before, before.copy(terrain = "other")) is TextEditOutcome.Refused)
     }
 
-    private val colliders = FoliageColliderEdits()
-    private val layer = before.layers.single()
-    private fun edit(source: String, from: FoliageMeta, to: FoliageMeta) = (FoliageMetaEdits().edit(source, from, to) as TextEditOutcome.Edited).text
+    private fun colliderOf(l: FoliageLayerMeta) = FoliageColliderReader().read(l.collider)
 
-    @Test fun addingAColliderWritesOnlyItAndKeepsTheRestOfTheText() {
+    @Test fun addingAColliderWritesIt() {
         val capsule = FoliageCollider(FoliageColliderShape.CAPSULE, radius = 0.4f, halfHeight = 3f)
-        val after = before.copy(layers = listOf(layer.copy(collider = colliders.patch(null, capsule))))
-        val out = edit(text, before, after)
-        val node = SceneJson().parse(out)["additional"]["layers"][0]
-        assertEquals("CAPSULE", node["collider"]["shape"].asText())
-        assertEquals(0.4, node["collider"]["radius"].asDouble(), 1e-6)
-        assertEquals(3.0, node["collider"]["halfHeight"].asDouble(), 0.0)
-        assertFalse(node["collider"].has("offset"))
-        assertEquals("60.0", node["drawDistance"].asText())
-        assertEquals(42, node["models"][0]["custom"].asInt())
-        assertEquals(text.length < out.length, true)
-        assertEquals("""{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","extension":60.0,"additional":{"terrain":"meadow","layers":[{"id":1,"note":"north slope","density":0.05,"models":[{"asset":"tree","weight":1.0,"custom":42}],"drawDistance":60.0,"collider":""", out.substringBefore("""{"shape""") )
+        val after = before.copy(layers = listOf(colliders.patch(layer, capsule)))
+        val read = settings(edit(text, before, after)).layers.single()
+        val collider = (colliderOf(read) as FoliageColliderRead.Valid).collider
+        assertEquals(FoliageColliderShape.CAPSULE, collider.shape)
+        assertEquals(0.4f, collider.radius, 1e-6f)
+        assertEquals(3f, collider.halfHeight, 0f)
+        assertEquals(0f, collider.offsetX, 0f)
+        assertEquals(60f, read.drawDistance, 0f)
     }
 
-    @Test fun changingAColliderKeepsNestedUnknownMembersAndOrder() {
-        val source = text.replace("\"drawDistance\":60.0", "\"drawDistance\":60.0,\"collider\":{\"shape\":\"BOX\",\"vendor\":{\"k\":2.50},\"halfExtents\":{\"x\":1.0,\"y\":2.0,\"z\":3.0}}")
-        val read = FoliageSettingsReader(net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages())
-            .read(SceneJson().parse(source)["additional"], setOf("tree")).settings
-        val box = (FoliageColliderReader().read(read.layers.single().collider) as FoliageColliderRead.Valid).collider
-        val moved = box.copy(halfY = 4f)
-        val after = read.copy(layers = listOf(read.layers.single().copy(collider = colliders.patch(read.layers.single().collider, moved))))
-        val node = SceneJson().parse(edit(source, read, after))["additional"]["layers"][0]["collider"]
-        assertEquals(listOf("shape", "vendor", "halfExtents"), node.fieldNames().asSequence().toList())
-        assertEquals("2.50", node["vendor"]["k"].asText())
-        assertEquals(4.0, node["halfExtents"]["y"].asDouble(), 0.0)
-        assertEquals(1.0, node["halfExtents"]["x"].asDouble(), 0.0)
+    @Test fun changingAColliderKeepsTheOtherSizes() {
+        val box = FoliageCollider(FoliageColliderShape.BOX, halfX = 1f, halfY = 2f, halfZ = 3f)
+        val withBox = layer.copy(collider = colliders.patch(layer, box).collider)
+        val moved = colliders.patch(withBox, box.copy(halfY = 4f))
+        val collider = (colliderOf(moved) as FoliageColliderRead.Valid).collider
+        assertEquals(1f, collider.halfX, 0f)
+        assertEquals(4f, collider.halfY, 0f)
+        assertEquals(3f, collider.halfZ, 0f)
     }
 
     @Test fun noneRemovesOnlyTheCollider() {
-        val source = text.replace("\"drawDistance\":60.0", "\"drawDistance\":60.0,\"collider\":{\"shape\":\"SPHERE\",\"radius\":1.0}")
-        val read = FoliageSettingsReader(net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages())
-            .read(SceneJson().parse(source)["additional"], setOf("tree")).settings
-        val after = read.copy(layers = listOf(read.layers.single().copy(collider = colliders.patch(read.layers.single().collider, null))))
-        assertEquals(text, edit(source, read, after))
+        val sphere = colliders.patch(layer, FoliageCollider(FoliageColliderShape.SPHERE, radius = 1f))
+        val removed = colliders.patch(sphere, null)
+        assertNull(removed.collider)
+        assertEquals(layer, removed)
     }
 
-    @Test fun omittedDefaultsStayOmittedAndAnOffsetIsWrittenOnlyWhenSet() {
-        val sphere = colliders.patch(null, FoliageCollider(FoliageColliderShape.SPHERE, radius = 2f))!!
-        assertEquals(listOf("shape", "radius"), sphere.fieldNames().asSequence().toList())
-        val offset = colliders.patch(sphere, FoliageCollider(FoliageColliderShape.SPHERE, radius = 2f, offsetY = 1.5f))!!
-        assertEquals(1.5, offset["offset"]["y"].asDouble(), 0.0)
-        assertEquals(0.0, offset["offset"]["x"].asDouble(), 0.0)
+    @Test fun anOffsetIsWrittenOnlyWhenSet() {
+        val sphere = colliders.patch(layer, FoliageCollider(FoliageColliderShape.SPHERE, radius = 2f))
+        val plain = (colliderOf(sphere) as FoliageColliderRead.Valid).collider
+        assertEquals(0f, plain.offsetY, 0f)
+        assertFalse(sphere.collider.toString().contains("offset"))
+        val offset = colliders.patch(sphere, FoliageCollider(FoliageColliderShape.SPHERE, radius = 2f, offsetY = 1.5f))
+        assertEquals(1.5f, (colliderOf(offset) as FoliageColliderRead.Valid).collider.offsetY, 0f)
     }
 
-    @Test fun anInvalidStoredColliderIsKeptUnlessTheUserReplacesIt() {
+    @Test fun onlyCollidersIsTrueWhenNothingElseChanged() {
+        val capsule = FoliageCollider(FoliageColliderShape.CAPSULE, radius = 0.4f, halfHeight = 3f)
+        val withCollider = before.copy(layers = listOf(colliders.patch(layer, capsule)))
+        assertTrue(colliders.onlyColliders(before, withCollider))
+        assertFalse(colliders.onlyColliders(before, withCollider.copy(terrain = "other")))
+        assertFalse(colliders.onlyColliders(before, before))
+    }
+
+    @Test fun anInvalidStoredColliderIsReadAsInvalid() {
         val source = text.replace("\"drawDistance\":60.0", "\"drawDistance\":60.0,\"collider\":{\"shape\":\"HULL\"}")
-        val read = FoliageSettingsReader(net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages())
-            .read(SceneJson().parse(source)["additional"], setOf("tree")).settings
-        val after = read.copy(layers = listOf(read.layers.single().copy(density = 0.2f)))
-        assertEquals(source.replace("\"density\":0.05", "\"density\":0.2"), edit(source, read, after))
+        val read = FoliageSettingsReader(ResourceEditorMessages()).read(settings(source), setOf("tree"))
+        assertTrue(colliderOf(read.settings.layers.single()) is FoliageColliderRead.Invalid)
+        assertTrue(read.problems.any { it.field == FOLIAGE_COLLIDER })
     }
 }

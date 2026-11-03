@@ -1,0 +1,45 @@
+/*
+ * Copyright 2023-2026 Alexey Nevinsky
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package net.nevinsky.abyssus.lib.core.editor.scene
+
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.scene.SceneParser
+
+/**
+ * The text transform behind every scene write: parse the text into a [SceneDto], let the edit change it, and write it
+ * back through [JsonProcessor.pretty], built with the registry the scene is read with. The plugin's `editSceneJson` wraps it in one undoable command; a caller without the
+ * IDE uses it directly.
+ */
+class SceneTextEditor(
+    private val parser: SceneParser,
+    private val json: JsonProcessor,
+) {
+    fun edit(text: String, edit: SceneEdit): TextEditOutcome {
+        val scene = runCatchingKeepingCancellation { parser.parse(text) }
+            .getOrElse { return TextEditOutcome.Refused(it) }
+        if (!edit.apply(scene)) return TextEditOutcome.Unchanged
+        return write(scene)
+    }
+
+    /**
+     * Edits the settings of the scene (name, ambient light, fog, sky), which [SceneDto] holds as read-only values: [change]
+     * returns the changed copy (sharing the entities), or null to decline. An equal copy is [TextEditOutcome.Unchanged].
+     */
+    fun replace(text: String, change: (SceneDto) -> SceneDto?): TextEditOutcome {
+        val scene = runCatchingKeepingCancellation { parser.parse(text) }
+            .getOrElse { return TextEditOutcome.Refused(it) }
+        val changed = change(scene) ?: return TextEditOutcome.Unchanged
+        if (changed == scene) return TextEditOutcome.Unchanged
+        return write(changed)
+    }
+
+    private fun write(scene: SceneDto): TextEditOutcome =
+        runCatchingKeepingCancellation { json.pretty(scene) }
+            .fold({ TextEditOutcome.Edited(it) }, { TextEditOutcome.Refused(it) })
+}

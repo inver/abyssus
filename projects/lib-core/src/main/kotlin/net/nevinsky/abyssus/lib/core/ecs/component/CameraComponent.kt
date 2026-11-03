@@ -10,8 +10,8 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import net.nevinsky.abyssus.lib.core.dto.CameraDto
-import net.nevinsky.abyssus.lib.core.dto.CameraWrapper
+import net.nevinsky.abyssus.lib.core.ecs.component.CameraDto
+import net.nevinsky.abyssus.lib.core.ecs.component.CameraWrapper
 
 const val CAMERA_NEAR = 1f
 const val CAMERA_FAR = 100f

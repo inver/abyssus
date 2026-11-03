@@ -5,7 +5,7 @@
 See proposal.md for the motivation. Things that already exist and constrain the approach:
 
 - `AssetEntities` (`lib-core-editor` `components`) adds one model or terrain entity through `SceneEntityTree.insert`,
-  which gives the next free id. Callers write the result through `editSceneJson` as one command.
+  which gives the next free id. Callers write the result through `editSceneDocument` as one command.
 - `ScenePicker.terrainDistance` and `TerrainTarget(entityId, TerrainData, world)` hit-test terrains on the CPU. That
   covers transformed terrains. `SceneQueries.rayAt` turns a screen point into a ray.
 - `TerrainLoader.prepare` (`lib-core`) reads `terrain.data` into `TerrainData` without GL, so it may run off the AWT
@@ -24,7 +24,7 @@ See proposal.md for the motivation. Things that already exist and constrain the 
 **Goals:**
 - All arrangement logic (sampling, slot layout, heights, the JSON diff, detaching) lives in `lib-core-editor` and is
   tested without GL, Swing or the platform.
-- One `editSceneJson` command per user action, including the regeneration it causes.
+- One `editSceneDocument` command per user action, including the regeneration it causes.
 - The runtime and games see arrangements as plain data and the copies as ordinary entities.
 
 **Non-Goals:**
@@ -142,7 +142,7 @@ nothing is hit, it uses the slot's `fallbackY`, interpolated from the points' Y.
 - Layout, heights from already loaded `TerrainData`, hit tests and JSON edits run on the AWT thread. They are CPU-only
   and touch no GL.
 - Reading `terrain.data` for the no-view case runs on a pooled thread (it is the same kind of work as
-  `AssetStorage.prepare`). The result is handed back to the AWT thread before `editSceneJson`.
+  `AssetStorage.prepare`). The result is handed back to the AWT thread before `editSceneDocument`.
 - Line and marker drawing happen in the existing editor-overlay pass, inside `GdxRuntime.withContext` on the canvas
   thread, through `LineSink`.
 

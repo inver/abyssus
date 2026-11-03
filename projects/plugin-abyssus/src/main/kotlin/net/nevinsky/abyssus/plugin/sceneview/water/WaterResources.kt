@@ -1,3 +1,4 @@
+/* DISABLED (G7: scene water is no longer modeled by lib-core-editor); kept for reference, not compiled.
 /*
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
@@ -15,7 +16,6 @@ import com.badlogic.gdx.graphics.glutils.GLFrameBuffer
 import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.editor.content.Rgba
 import net.nevinsky.abyssus.lib.core.water.WaterPassPlan
 import net.nevinsky.abyssus.lib.render.shadow.GlRenderTarget
 import net.nevinsky.abyssus.lib.render.shadow.ShadowGlState
@@ -171,7 +171,7 @@ internal class WaterResources(private val log: Logger) : Disposable {
      * Renders into [target] (clearing it to [clear] and to the far depth) with [block], and restores the caller's
      * framebuffer, viewport and GL state afterwards. False when [block] or the target failed; nothing is thrown.
      */
-    fun render(target: FrameBuffer, clear: Rgba, block: () -> Unit): Boolean {
+    fun render(target: FrameBuffer, clear: Color, block: () -> Unit): Boolean {
         return GlRenderTarget(target).render(Color(clear.r, clear.g, clear.b, clear.a), block).fold(
             onSuccess = { true },
             onFailure = { e ->
@@ -223,3 +223,4 @@ internal class WaterResources(private val log: Logger) : Disposable {
         lastAsked = null
     }
 }
+*/

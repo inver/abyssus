@@ -19,6 +19,7 @@ import net.nevinsky.abyssus.lib.gdx.model.PBRTextureAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ClipPlaneAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.OutputTransformAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -44,6 +45,14 @@ class ShaderDefinesTest {
     fun aClipPlaneDefinesTheFlagEvenWithoutLighting() {
         val attributes = Attributes().apply { set(ClipPlaneAttribute(0f, 1f, 0f, 0f)) }
         assertEquals("#define clipPlaneFlag\n", extraDefines(attributes, position, hasEnvironment = false, instanced = false))
+    }
+
+    @Test
+    fun theOutputTransformFlagOnlyComesWithTheAttribute() {
+        assertEquals("", extraDefines(Attributes(), lit, hasEnvironment = true, instanced = false))
+        val attributes = Attributes().apply { set(OutputTransformAttribute(1.5f)) }
+        assertEquals("#define outputTransformFlag\n", extraDefines(attributes, lit, hasEnvironment = true, instanced = false))
+        assertEquals("#define outputTransformFlag\n", extraDefines(attributes, position, hasEnvironment = false, instanced = true).replace("#define instancedFlag\n", ""))
     }
 
     @Test

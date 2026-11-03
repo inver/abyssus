@@ -5,29 +5,22 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ObjectNode
+import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.command.undo.DocumentReference
 import com.intellij.openapi.command.undo.DocumentReferenceManager
 import com.intellij.openapi.command.undo.DocumentReferenceProvider
 import com.intellij.openapi.command.undo.UndoManager
-import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
-import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
-import net.nevinsky.abyssus.plugin.filetype.ProjectSettingsListener
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.fileEditor.FileEditor
-import com.intellij.openapi.fileEditor.FileEditorLocation
-import com.intellij.openapi.fileEditor.FileEditorState
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
@@ -38,32 +31,39 @@ import com.intellij.util.Alarm
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.update.MergingUpdateQueue
 import com.intellij.util.ui.update.Update
+import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
-import net.nevinsky.abyssus.lib.core.editor.content.RenderAsset
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
+import net.nevinsky.abyssus.lib.core.editor.components.AddedEntity
+import net.nevinsky.abyssus.lib.core.editor.components.CopyResult
+import net.nevinsky.abyssus.lib.core.editor.components.EditResult
+import net.nevinsky.abyssus.lib.core.editor.components.EntityClipboard
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.water.WaterCodec
-import net.nevinsky.abyssus.lib.core.editor.water.WaterEdit
-import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.water.WaterField
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
+import net.nevinsky.abyssus.lib.core.dto.ProjectDto
 import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
+import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.SceneRayControls
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
 import net.nevinsky.abyssus.plugin.filetype.AbyssusSceneEdited
-import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.plugin.filetype.ProjectSettingsListener
+import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
+import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
+import net.nevinsky.abyssus.plugin.ui.AbyssusFileEditorBase
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
-import net.nevinsky.abyssus.plugin.water.WaterSceneEdits
+import net.nevinsky.abyssus.plugin.ui.reportRejection
 import java.awt.BorderLayout
-import java.beans.PropertyChangeListener
+import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.StringSelection
 import java.io.File
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -81,12 +81,13 @@ private const val RELOAD_PAUSE_MS = 200
 class SceneFileEditor(
     private val project: Project,
     private val file: VirtualFile,
-    private val json: JsonProcessor,
+    private val sceneParser: DocumentParsing,
+    private val jsonProcessor: JsonProcessor,
     private val rayControls: SceneRayControls,
     private val paramsSource: SceneParamsSource,
     private val host: SceneViewHost,
     private val viewFactory: (SceneRenderParams) -> SceneView,
-) : UserDataHolderBase(), FileEditor, DocumentReferenceProvider {
+) : AbyssusFileEditorBase(), DocumentReferenceProvider {
     private val content = JPanel(BorderLayout()).apply { isFocusable = true }
     private var view: SceneView? = null
     private val reloads = ReloadPolicy()
@@ -112,7 +113,7 @@ class SceneFileEditor(
     /** Reloads assets that change on disk or in an editor; null for a scene outside a project. */
     private val assetRefresh: AssetRefresh? = ProjectLayout.projectDirFor(file)?.let { dir ->
         AssetRefresh(
-            dir, json,
+            dir, jsonProcessor,
             unsavedMeta = { unsavedAssetMeta(dir) },
             background = { AppExecutorUtil.getAppExecutorService().execute(it) },
             ui = { ApplicationManager.getApplication().invokeLater({ if (!disposed) it.run() }, ModalityState.any()) },
@@ -125,20 +126,21 @@ class SceneFileEditor(
         private set
 
     // Physics availability and canvas antialiasing are handled separately from render content.
-    private var projectInputs: JsonNode? = projectInputs()
+    private var projectInputs: ProjectDto? = projectInputs()
 
-    private fun projectInputs(text: String? = null): JsonNode? = runCatchingKeepingCancellation {
+    /** The project without the settings the scene view handles separately, or null when it cannot be read. */
+    private fun projectInputs(text: String? = null): ProjectDto? = runCatchingKeepingCancellation {
         val abss = ProjectLayout.abssFor(file) ?: return@runCatchingKeepingCancellation null
-        val root = SceneJson().parse(text ?: textOf(abss))
-        AbyssusDocumentFormat().requireSupported(root, DocumentKind.PROJECT)
-        (root as ObjectNode).also { it.remove(listOf("physicsEnabled", "sceneViewAntialiasing")) }
+        service<AbyssusPluginCtx>().documents.parsing.project(text ?: textOf(abss))
+            .copy(physicsEnabled = null, sceneViewAntialiasing = null)
     }.getOrNull()
 
     private fun hasRenderChange(changed: VirtualFile, text: String? = null): Boolean =
         changed == file || projectInputs(text).let { it == null || it != projectInputs }
 
     init {
-        project.messageBus.connect(this).subscribe(ProjectSettingsListener.TOPIC,
+        project.messageBus.connect(this).subscribe(
+            ProjectSettingsListener.TOPIC,
             ProjectSettingsListener { abss, settings ->
                 if (!disposed && abss == ProjectLayout.abssFor(file)) view?.setAntialiasing(settings.antialiasing)
             })
@@ -163,7 +165,25 @@ class SceneFileEditor(
             rayControls.selected(file, this, entityId)
             view?.selectEntity(entityId)
         }
-        host.listenWater(file, this) { waterId -> view?.selectWater(waterId) }
+        project.messageBus.connect(this).subscribe(PathEditListener.TOPIC, object : PathEditListener {
+            override fun changed(target: PathEditTarget?) {
+                view?.setPathEditing(target?.takeIf { it.file == file }?.entityId)
+            }
+
+            override fun applyRequested(target: PathEditTarget) {
+                if (target.file == file) view?.applyPathEdit()
+            }
+
+            override fun dropRequested(target: PathEditTarget) {
+                if (target.file == file) view?.dropPathToTerrain()
+            }
+        })
+        project.messageBus.connect(this).subscribe(SculptRequests.TOPIC, BrushRequestListener { target ->
+            view?.setSculpting(target?.takeIf { it.file == file }?.entityId)
+        })
+        project.messageBus.connect(this).subscribe(PaintTextureRequests.TOPIC, BrushRequestListener { target ->
+            view?.setPaintingTexture(target?.takeIf { it.file == file }?.entityId)
+        })
         project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
                 if (events.any { it is VFileContentChangeEvent && isSource(it.file) && hasRenderChange(it.file) }) {
@@ -253,40 +273,67 @@ class SceneFileEditor(
             rayControls.selected(file, this, entityId)
             host.select(file, entityId)
         }
-        created.onPickWater = { waterId -> host.selectWater(file, waterId) }
-        created.onWaterMove = ::applyWaterMove
         created.onTransform = ::applyTransform
         created.onArrangementCreate = ::createArrangement
+        created.onCopy = ::copyEntity
+        created.onPaste = ::pasteEntity
+        created.onDelete = ::deleteEntity
         created.onArrangementEdit = ::editArrangement
         created.onRegenerate = ::regenerateArrangement
+        created.onPathEditEnded = { project.service<PathEditSession>().stop(file) }
+        created.onSculptEnded = { project.service<SculptRequests>().stop(file) }
+        created.onPaintTextureEnded = { project.service<PaintTextureRequests>().stop(file) }
         (created as? RayControlProvider)?.rayControl?.let { rayControls.register(file, it, created) }
         view = created
+        project.service<PathEditSession>().current?.takeIf { it.file == file }
+            ?.let { created.setPathEditing(it.entityId) }
         statusText = null
         setContent(created.view)
     }
 
     /** Writes [edit] to the entity [entityId] of the scene as one undoable command; false when nothing changed. */
-    internal fun applyTransform(entityId: String, edit: TransformEdit): Boolean {
+    internal fun applyTransform(entityId: Long, edit: TransformEdit): Boolean {
         val isRotate = edit.rotation != null || edit.target != null
         val command = AbyssusBundle.message(if (isRotate) "commandRotateEntity" else "commandMoveEntity")
-        return editSceneJson(project, file, command) { root -> SceneTransformWriter().apply(root, entityId, edit) }
+        return editSceneDocument(project, file, command) { scene -> SceneTransformWriter().apply(scene, entityId, edit) }
+    }
+
+    /** Puts entity [entityId] on the clipboard as text; a refusal is shown to the user. */
+    internal fun copyEntity(entityId: Long) {
+        val sceneDto = runCatchingKeepingCancellation { sceneParser.parse(textOf(file)) }.getOrNull() ?: return
+        when (val copied = EntityClipboard(jsonProcessor, EditorBundle).copy(sceneDto, entityId)) {
+            is CopyResult.Copied -> CopyPasteManager.getInstance().setContents(StringSelection(copied.text))
+            is CopyResult.Refused -> reportRejection(project, EditResult.Rejected(copied.reason))
+        }
     }
 
     /**
-     * Writes the new centre of the water surface [waterId] as one undoable command, changing only the coordinates that
-     * differ from the saved ones (so a Y drag leaves X and Z's number text alone). False when nothing was written.
+     * Adds the entity on the clipboard at [point] as one undoable command and selects it. False, with nothing shown,
+     * when the clipboard holds no copied entity.
      */
-    internal fun applyWaterMove(waterId: String, at: Vec3): Boolean {
-        val saved = runCatchingKeepingCancellation {
-            WaterCodec().read(SceneJson().parse(textOf(file)).get("abyssus")).valid.firstOrNull { it.id == waterId }
-        }.getOrNull() ?: return false
-        val moved = buildMap {
-            if (at.x != saved.x.toFloat()) put(WaterField.X, at.x.toDouble())
-            if (at.y != saved.level.toFloat()) put(WaterField.LEVEL, at.y.toDouble())
-            if (at.z != saved.z.toFloat()) put(WaterField.Z, at.z.toDouble())
+    internal fun pasteEntity(point: Vector3): Boolean {
+        val clipboard = EntityClipboard(jsonProcessor, EditorBundle)
+        val text = CopyPasteManager.getInstance().getContents<String>(DataFlavor.stringFlavor)
+        if (!clipboard.holdsEntity(text)) {
+            return false
         }
-        if (moved.isEmpty()) return false
-        return WaterSceneEdits(project).move(file, waterId, moved) == WaterEdit.Changed
+        var added = AddedEntity(EditResult.Unchanged)
+        editSceneDocument(project, file, AbyssusBundle.message("commandPasteEntity")) { scene ->
+            added = clipboard.paste(scene, text, point)
+            added.result == EditResult.Changed
+        }
+        reportRejection(project, added.result)
+        val id = added.entityId?.takeIf { added.result == EditResult.Changed } ?: return false
+        host.select(file, id)
+        view?.selectEntity(id)
+        return true
+    }
+
+    /** Removes entity [entityId] as one undoable command; refused, and shown to the user, while another entity refers to it. */
+    internal fun deleteEntity(entityId: Long): Boolean {
+        val result = host.removeEntity(file, entityId)
+        reportRejection(project, result)
+        return result == EditResult.Changed
     }
 
     /** The ground to place copies on: the view's, else one read from the project; null when the user cancelled the read. */
@@ -296,7 +343,7 @@ class SceneFileEditor(
      * Writes a finished drawing as an arrangement and its copies (one undoable command) and selects the new arrangement.
      * False when nothing was written; a refusal is shown to the user.
      */
-    internal fun createArrangement(asset: RenderAsset, points: List<Vec3>, closed: Boolean): Boolean {
+    internal fun createArrangement(asset: BaseMeta, points: List<Vector3>, closed: Boolean): Boolean {
         val heights = ground() ?: return false
         val result = ArrangementEditing.create(project, file, asset, points, closed, heights)
         ArrangementEditing.report(project, result)
@@ -306,16 +353,18 @@ class SceneFileEditor(
         return true
     }
 
-    /** Writes new points for the arrangement [entityId] and regenerates its copies, as one undoable command. */
-    internal fun editArrangement(entityId: String, points: List<Vec3>): Boolean {
-        val heights = ground() ?: return false
-        val result = ArrangementEditing.setPoints(project, file, entityId, points, heights)
+    /**
+     * Writes new points for the arrangement [entityId] and regenerates its copies, as one undoable command. The copies
+     * follow the line's own height, so a raised point raises them; Regenerate puts them back on the terrain.
+     */
+    internal fun editArrangement(entityId: Long, points: List<Vector3>): Boolean {
+        val result = ArrangementEditing.setPoints(project, file, entityId, points, LineHeights())
         ArrangementEditing.report(project, result)
         return result is ArrangementResult.Changed
     }
 
     /** Re-places the copies of the arrangement [entityId] on the current terrain; writes nothing when none would move. */
-    internal fun regenerateArrangement(entityId: String) {
+    internal fun regenerateArrangement(entityId: Long) {
         val heights = ground() ?: return
         ArrangementEditing.report(project, ArrangementEditing.regenerate(project, file, entityId, heights))
     }
@@ -355,12 +404,6 @@ class SceneFileEditor(
     override fun getPreferredFocusedComponent(): JComponent = content
     override fun getName() = AbyssusBundle.message("sceneViewEditorName")
     override fun getFile(): VirtualFile = file
-    override fun setState(state: FileEditorState) {}
-    override fun isModified() = false
-    override fun isValid() = file.isValid
-    override fun addPropertyChangeListener(listener: PropertyChangeListener) {}
-    override fun removePropertyChangeListener(listener: PropertyChangeListener) {}
-    override fun getCurrentLocation(): FileEditorLocation? = null
 
     override fun dispose() {
         disposed = true

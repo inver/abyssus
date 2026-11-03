@@ -43,3 +43,18 @@ if (extra.has("abyssusRunCatchingRoots")) {
     registerSourceCheck("checkNoRunCatching", files(roots.map { root -> fileTree(root) { include("**/*.kt") } }),
         Regex("""\brunCatching\s*\{"""), "Use runCatchingKeepingCancellation instead of runCatching:")
 }
+
+// Jackson tree types (JsonNode, ObjectNode, ArrayNode, ...) stay in the files a module lists: everything else binds to
+// typed classes through JsonProcessor. A module opts in by setting `abyssusJacksonTreeAllowed`, a list of source files
+// relative to src/main/kotlin (an empty list forbids the tree types in the module); the list may only shrink.
+afterEvaluate {
+    if (extra.has("abyssusJacksonTreeAllowed")) {
+        @Suppress("UNCHECKED_CAST")
+        val allowed = extra["abyssusJacksonTreeAllowed"] as List<String>
+        registerSourceCheck("checkJacksonTreeUse", fileTree("src/main/kotlin") {
+            include("**/*.kt")
+            exclude(allowed)
+        }, Regex("""\bcom\.fasterxml\.jackson\.databind\.(JsonNode\b|node\.|\*)"""),
+            "Jackson tree types are not allowed in these files of $path; bind to a typed class, or list the file in abyssusJacksonTreeAllowed:")
+    }
+}

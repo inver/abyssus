@@ -60,6 +60,7 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
         return SceneFileEditor(
             project,
             file,
+            core.documents.parsing,
             core.documents.json,
             project.service<SceneRayControls>(),
             SceneParamsSource.editorText(reader),
@@ -69,12 +70,12 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
             val overlays = overlays(project, file)
             val panel = SceneViewPanel(
                 params, SceneRenderer(
-                    ViewAssets(assets.loading), assets.sceneShaders, project.service<FoliageDrafts>(),
+                    ViewAssets(assets.loading), assets.sceneShaders, project.service<FoliageDrafts>(), project.service<net.nevinsky.abyssus.plugin.terrain.SculptDrafts>(),
+                    project.service<net.nevinsky.abyssus.plugin.splat.SplatDrafts>(),
                     log = core.loggers.getLogger("sceneview"),
                 ),
                 lightMenu = PlacementMenu({ host.canAddLight(file) }) { position -> host.lightActions(file, position) },
                 assetMenu = PlacementMenu({ host.canAddAsset(file) }) { position -> host.assetActions(file, position) },
-                waterMenu = PlacementMenu({ host.canAddWater(file) }) { position -> host.waterActions(file, position) },
                 pathMenu = PlacementMenu({ host.canAddPath(file) }) { start -> host.pathActions(file, start) },
                 ray = ray,
                 play = play,
@@ -82,6 +83,16 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
                 overlays = overlays,
                 foliageActions = { entity -> net.nevinsky.abyssus.plugin.projectView.foliageGroup(project, file, entity) },
                 showFps = { project.service<net.nevinsky.abyssus.plugin.sceneview.SceneViewSettings>().showFps },
+                sculptSession = { entity, mode, tool, ready ->
+                    project.service<net.nevinsky.abyssus.plugin.terrain.SculptEditing>().open(file, entity, mode, tool,
+                        report = { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(project, reason, AbyssusBundle.message("sculptTitle")) },
+                        ready = ready)
+                },
+                splatSession = { entity, mode, ready ->
+                    project.service<net.nevinsky.abyssus.plugin.splat.SplatEditing>().open(file, entity, mode,
+                        report = { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(project, reason, AbyssusBundle.message("splatTitle")) },
+                        ready = ready)
+                },
                 paintSession = { entity, mode, ready ->
                     project.service<net.nevinsky.abyssus.plugin.foliage.FoliageEditing>().open(file, entity, mode,
                         report = { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(project, reason, AbyssusBundle.message("paintFoliageTitle")) },
@@ -123,10 +134,10 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
         PluginManager.getPluginByClass(extension.javaClass)?.name ?: extension.javaClass.name
 
     /** The scene as the editor holds it, unsaved text included. */
-    private fun simulationRequest(project: Project, file: VirtualFile, selection: String?): SimulationRequest {
+    private fun simulationRequest(project: Project, file: VirtualFile, selection: Long?): SimulationRequest {
         val text = FileDocumentManager.getInstance().getDocument(file)?.text ?: VfsUtilCore.loadText(file)
         val projectDir = ProjectLayout.projectDirFor(file) ?: File(file.parent.parent.path)
-        return SimulationRequest(project, file, text, projectDir, selection)
+        return SimulationRequest(project, file, text, projectDir, selection?.toString())
     }
 
     override fun getEditorTypeId() = EDITOR_TYPE_ID

@@ -54,7 +54,7 @@ class RayControlTest : BasePlatformTestCase() {
     }
 
     private fun foliaged() = SceneContent(
-        foliages = listOf(FoliagePlacement("0", "foliage_meadow", "terrain", PlacementTransform.IDENTITY))
+        foliages = listOf(FoliagePlacement(0L, "foliage_meadow", "terrain", PlacementTransform.IDENTITY))
     )
 
     fun testTheNoteSaysFoliageIsNotRayTracedFromTheBundle() {
@@ -63,20 +63,20 @@ class RayControlTest : BasePlatformTestCase() {
     }
 
     fun testThePropertiesRaySectionShowsTheNoteWhileAViewShowsFoliage() {
-        val file = myFixture.addFileToProject("Foliage.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""").virtualFile
+        val file = myFixture.addFileToProject("Foliage.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""").virtualFile
         val controls = SceneRayControls(project) { _, _ -> }
         controls.register(file, panel(foliaged()).rayControl!!, Disposer.newDisposable(testRootDisposable))
-        val note = named(SceneDetailsView(controls, PanelState.UISceneState(file, "Foliage scene"), testRootDisposable),
+        val note = named(SceneDetailsView(controls, PanelState.UISceneState(file, "Foliage scene", net.nevinsky.abyssus.lib.core.dto.SceneDto()), testRootDisposable),
             "ray-tracing-foliage") as JLabel
         assertTrue("the note is shown while a view shows foliage", note.isVisible)
         assertEquals(AbyssusBundle.message("propertiesSceneRayFoliage"), note.text)
     }
 
     fun testThePropertiesRaySectionSaysNothingWhileNoViewShowsFoliage() {
-        val file = myFixture.addFileToProject("Plain.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{}}}""").virtualFile
+        val file = myFixture.addFileToProject("Plain.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""").virtualFile
         val controls = SceneRayControls(project) { _, _ -> }
         controls.register(file, panel(SceneContent()).rayControl!!, Disposer.newDisposable(testRootDisposable))
-        val note = named(SceneDetailsView(controls, PanelState.UISceneState(file, "Plain scene"), testRootDisposable),
+        val note = named(SceneDetailsView(controls, PanelState.UISceneState(file, "Plain scene", net.nevinsky.abyssus.lib.core.dto.SceneDto()), testRootDisposable),
             "ray-tracing-foliage") as JLabel
         assertFalse("no note without foliage", note.isVisible)
         assertEquals("", note.text)

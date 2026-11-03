@@ -170,7 +170,7 @@ class AirfieldEnvironmentTest {
     @Test
     fun linesAndPlanesAreUnchanged() {
         val field = FieldScene(loadField())
-        assertEquals(mapOf("Racer" to 21f, "Stunter" to 18f, "Trainer" to 15f),
+        assertEquals(mapOf("Mig-3" to 16f, "Racer" to 21f, "Stunter" to 18f, "Trainer" to 15f),
             field.planes.associate { it.name to it.lineLength })
     }
 

@@ -3,7 +3,6 @@ package net.nevinsky.abyssus.uitesting
 import com.intellij.remoterobot.fixtures.ComponentFixture
 import com.intellij.remoterobot.search.locators.byXpath
 import com.intellij.remoterobot.utils.waitFor
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

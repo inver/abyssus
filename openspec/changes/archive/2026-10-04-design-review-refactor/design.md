@@ -6,7 +6,7 @@ See `proposal.md` for the motivation and `docs/reviews/design-review-2026-10.md`
 D1–D14, L1–L9), which this design refers to by id.
 
 Constraints that shape the approach:
-- **Writes:** every scene write goes through `editSceneJson` (one undoable command, file style kept). This change adds
+- **Writes:** every scene write goes through `editSceneDocument` (one undoable command, file style kept). This change adds
   no write path.
 - **Threading:** libGDX runs only inside `GdxRuntime.withContext` on the AWT thread that renders the canvas.
   Picking, the Drop query and gizmo hit tests are CPU-only and run on the EDT.
@@ -14,8 +14,8 @@ Constraints that shape the approach:
 - **Main capability `abyssus-project-assets`:** `ProjectAssetListing` must keep listing an unreadable or unknown `meta.json` as
   `MetaType.UNKNOWN` with no references, and must keep the unused rule.
 - **Other open changes:** `add-realistic-water`, `add-scene-raytracing` and `add-asset-editing-and-terrain-generation`
-  plan code in `SceneRenderer`, `SceneContent`, `SceneFileEditor`, `editSceneJson`, `AssetCache` and `AssetFiles`.
-  `add-custom-components` plans code in `ComponentCodecs`, `PanelState` and `editSceneJson` (phases 2 and 5), and
+  plan code in `SceneRenderer`, `SceneContent`, `SceneFileEditor`, `editSceneDocument`, `AssetCache` and `AssetFiles`.
+  `add-custom-components` plans code in `ComponentCodecs`, `PanelState` and `editSceneDocument` (phases 2 and 5), and
   `add-sky-clouds` / `add-cloud-scene-lighting` in the renderer's light and sky passes (phase 8). Only `add-sky-clouds`
   has a delta on a capability this change modifies (`scene-entity-lights`); it adds a requirement and does not touch
   the one modified here. Their code will still conflict with phases 2 and 5–8.
@@ -119,7 +119,7 @@ bounds (L4). `SceneSkybox` gains `abandon()`. `SceneRenderer.create()` abandons 
 terrain shader before replacing them (L3), mirroring models and terrains.
 
 ### D-6. Writing, refreshing and the scene document cache (M2, H3)
-- `editSceneJson` moves to `filetype/SceneDocumentWriter.kt`, unchanged except for two things:
+- `editSceneDocument` moves to `filetype/SceneDocumentWriter.kt`, unchanged except for two things:
   - It uses `runCatchingKeepingCancellation`.
   - It publishes `AbyssusSceneEdited.TOPIC` (file) after the command, instead of calling the pane.
 - `AbyssusProjectViewPane` subscribes to the topic and calls `updateFromRoot(true)`, which is today's behavior.
@@ -226,7 +226,7 @@ for example `testRendersAndUpdatesInPlaceOnUnsavedEdits`.
 - **The debounce can break tests that expect synchronous reloads.** → Flush the queue in the tests. `ReloadPolicy` is
   unit-tested, and plugin edits and undo bypass the delay.
 - **A `SceneDocumentCache` copy could be mutated by mistake.** → Read callers get the cached node read-only by
-  convention, and `editSceneJson` always parses fresh from the document text (it does not use the cache), so the write
+  convention, and `editSceneDocument` always parses fresh from the document text (it does not use the cache), so the write
   path cannot be affected.
 - **Merging the `meta.json` readers could change the `abyssus-project-assets` behavior.** → Its tests run unchanged; the
   type fallback stays `UNKNOWN`.

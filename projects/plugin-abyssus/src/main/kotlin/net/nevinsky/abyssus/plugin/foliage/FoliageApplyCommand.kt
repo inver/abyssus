@@ -4,19 +4,16 @@
  */
 package net.nevinsky.abyssus.plugin.foliage
 
-import com.fasterxml.jackson.databind.node.ObjectNode
 import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.command.UndoConfirmationPolicy
 import com.intellij.openapi.command.undo.UndoManager
-import com.intellij.openapi.command.undo.UndoableAction
-import com.intellij.openapi.command.undo.DocumentReferenceManager
-import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.textOf
-import net.nevinsky.abyssus.plugin.filetype.editSceneJson
+import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
+import net.nevinsky.abyssus.plugin.filetype.editTextDocument
+import net.nevinsky.abyssus.plugin.undo.DocumentSaveUndoableAction
 
 /** Keeps the metadata document's native Undo and the binary transaction in the same command. */
 internal fun applyFoliageFiles(
@@ -28,7 +25,6 @@ internal fun applyFoliageFiles(
     after: String,
 ): AssetCommandResult {
     if (before == after) return command.execute(txn, affected = { listOf(meta) })
-    val target = SceneJson().parse(after) as ObjectNode
     var result: AssetCommandResult = AssetCommandResult.Cancelled
     CommandProcessor.getInstance().executeCommand(project, {
         if (textOf(meta) != before) {
@@ -40,11 +36,8 @@ internal fun applyFoliageFiles(
         if (result != AssetCommandResult.Done) return@executeCommand
         val manager = UndoManager.getInstance(project)
         // Undo runs actions in reverse: this saves the document after its native text Undo has finished.
-        manager.undoableActionPerformed(MetadataSaveAction(meta, onUndo = true))
-        val edited = editSceneJson(project, meta, txn.name) { root ->
-            (root as ObjectNode).removeAll().setAll<ObjectNode>(target)
-            true
-        }
+        manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = true))
+        val edited = editTextDocument(project, meta, txn.name) { TextEditOutcome.Edited(after) }
         if (!edited) {
             result = command.revert(txn).let {
                 if (it == AssetCommandResult.Done) AssetCommandResult.Conflict(meta.path) else it
@@ -53,7 +46,7 @@ internal fun applyFoliageFiles(
         }
         manager.undoableActionPerformed(undo!!)
         // Redo runs actions forward: this saves after the native text Redo and the binary Redo have finished.
-        manager.undoableActionPerformed(MetadataSaveAction(meta, onUndo = false))
+        manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = false))
     }, txn.name, null, UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION)
     command.flush()
     return result
@@ -65,31 +58,13 @@ internal fun applyFoliageFiles(
  * any more or the edit could not be made; then nothing was written.
  */
 internal fun applyFoliageMetadata(project: Project, meta: VirtualFile, name: String, before: String, after: String): Boolean {
-    val target = SceneJson().parse(after) as ObjectNode
     var done = false
     CommandProcessor.getInstance().executeCommand(project, {
         if (textOf(meta) != before) return@executeCommand
         val manager = UndoManager.getInstance(project)
-        manager.undoableActionPerformed(MetadataSaveAction(meta, onUndo = true))
-        done = editSceneJson(project, meta, name) { root ->
-            (root as ObjectNode).removeAll().setAll<ObjectNode>(target)
-            true
-        }
-        if (done) manager.undoableActionPerformed(MetadataSaveAction(meta, onUndo = false))
+        manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = true))
+        done = editTextDocument(project, meta, name) { TextEditOutcome.Edited(after) }
+        if (done) manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = false))
     }, name, null, UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION)
     return done
-}
-
-private class MetadataSaveAction(private val file: VirtualFile, private val onUndo: Boolean) : UndoableAction {
-    private val reference = DocumentReferenceManager.getInstance().create(
-        FileDocumentManager.getInstance().getDocument(file)!!,
-    )
-    override fun getAffectedDocuments() = arrayOf(reference)
-    override fun isGlobal() = false
-    override fun undo() { if (onUndo) save() }
-    override fun redo() { if (!onUndo) save() }
-    private fun save() {
-        val manager = FileDocumentManager.getInstance()
-        manager.getCachedDocument(file)?.let(manager::saveDocument)
-    }
 }

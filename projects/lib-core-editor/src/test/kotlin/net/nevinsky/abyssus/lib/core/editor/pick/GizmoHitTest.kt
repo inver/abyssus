@@ -7,14 +7,13 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
-import net.nevinsky.abyssus.lib.core.editor.content.Vec3
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class GizmoHitTest {
     /** One world unit per pixel keeps sizes readable: arrows are 90 long, tolerance 8. */
-    private fun handles(mode: GizmoMode) = GizmoHandles(Vec3(0f, 0f, 0f), mode, 1f)
+    private fun handles(mode: GizmoMode) = GizmoHandles(Vector3(0f, 0f, 0f), mode, 1f)
 
     private fun ray(from: Vector3, to: Vector3) = Ray(from, Vector3(to).sub(from).nor())
 
@@ -55,5 +54,23 @@ class GizmoHitTest {
         // one ray through both the X arrow (40, 0, 0) and the Y arrow (0, 40, 0), seen from either side
         assertEquals(GizmoAxis.X, GizmoHit().find(ray(Vector3(80f, -40f, 0f), Vector3(0f, 40f, 0f)), h))
         assertEquals(GizmoAxis.Y, GizmoHit().find(ray(Vector3(-40f, 80f, 0f), Vector3(40f, 0f, 0f)), h))
+    }
+
+    @Test
+    fun aRayThroughTheXYSquareHitsThatPlane() {
+        val h = handles(GizmoMode.MOVE)
+        assertEquals(GizmoPlane.XY, GizmoHit().findPlane(ray(Vector3(35f, 35f, 500f), Vector3(35f, 35f, 0f)), h))
+    }
+
+    @Test
+    fun aRayInsideTheSquaresInnerCornerHitsNoPlane() {
+        val h = handles(GizmoMode.MOVE)
+        assertNull(GizmoHit().findPlane(ray(Vector3(5f, 5f, 500f), Vector3(5f, 5f, 0f)), h))
+    }
+
+    @Test
+    fun rotateGizmosHaveNoPlaneHandles() {
+        val h = handles(GizmoMode.ROTATE)
+        assertNull(GizmoHit().findPlane(ray(Vector3(35f, 35f, 500f), Vector3(35f, 35f, 0f)), h))
     }
 }

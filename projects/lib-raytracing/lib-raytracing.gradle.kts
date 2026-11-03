@@ -13,6 +13,7 @@ plugins {
 dependencies {
     implementation(kotlin("stdlib"))
     api(libs.slf4j.api)
+    api(libs.gdx)
     // Vulkan bindings load nothing until a probe runs. lwjgl-vulkan publishes natives only for macOS (MoltenVK);
     // Windows and Linux use the system loader. lwjgl-vma has natives for every target.
     implementation(libs.lwjgl)
@@ -181,3 +182,6 @@ kover {
         }
     }
 }
+
+// No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in lib-core-editor (see gradle/checks.gradle.kts).
+extra["abyssusJacksonTreeAllowed"] = emptyList<String>()

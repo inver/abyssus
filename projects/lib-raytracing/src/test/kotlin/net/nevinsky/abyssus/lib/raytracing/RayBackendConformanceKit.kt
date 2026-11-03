@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.lib.raytracing
 
+import com.badlogic.gdx.math.Vector3
+
 import org.junit.Assert.*
 import org.junit.Test
 import kotlin.math.abs
@@ -381,9 +383,9 @@ abstract class RayBackendConformanceKit {
         org.junit.Assume.assumeTrue(sceneMaterials)
         withBackend { backend,_ -> backend.openSession("local-lights",RayLimits()).use { session ->
             val lights=listOf(
-                RayLight("point",RayLightKind.POINT,RayColor(1f,0f,0f),position=RayVec3(0f,0f,2f),range=4f),
-                RayLight("spot",RayLightKind.SPOT,RayColor(0f,1f,0f),position=RayVec3(0f,0f,2f),direction=RayVec3(0f,0f,-1f),range=4f),
-                RayLight("away",RayLightKind.SPOT,RayColor(0f,0f,1f),position=RayVec3(0f,0f,2f),direction=RayVec3(0f,0f,1f),range=4f))
+                RayLight("point",RayLightKind.POINT,RayColor(1f,0f,0f),position=Vector3(0f,0f,2f),range=4f),
+                RayLight("spot",RayLightKind.SPOT,RayColor(0f,1f,0f),position=Vector3(0f,0f,2f),direction=Vector3(0f,0f,-1f),range=4f),
+                RayLight("away",RayLightKind.SPOT,RayColor(0f,0f,1f),position=Vector3(0f,0f,2f),direction=Vector3(0f,0f,1f),range=4f))
             session.submit(materialRequest(RayMaterial(),lights=lights))
             assertReference(await(session),floatArrayOf(.3f,.3f,.1f,1f),floatArrayOf(.950951f),.0003f)
         } }
@@ -410,7 +412,7 @@ abstract class RayBackendConformanceKit {
     @Test fun pointLightShadowCoversOnlyTheOccludedFloor() = sceneCase("point-shadow") { session ->
         val request = shadowScene(
             occluder = RayMaterial(), occluderHeight = 1.5f, occluderHalfWidth = 1.6f,
-            lights = listOf(RayLight("point", RayLightKind.POINT, RayColor(50f, 50f, 50f), position = RayVec3(0f, 3f, 0f), range = 10f)),
+            lights = listOf(RayLight("point", RayLightKind.POINT, RayColor(50f, 50f, 50f), position = Vector3(0f, 3f, 0f), range = 10f)),
         )
         val frame = renderScene(session, request)
         assertPixels(frame, mapOf(2 to .1f, 3 to .1f, 4 to .1f, 5 to .1f), .001f)
@@ -421,7 +423,7 @@ abstract class RayBackendConformanceKit {
     @Test fun spotConeLimitsLightAndShadowToItsCone() = sceneCase("spot-cone") { session ->
         val request = shadowScene(
             occluder = null,
-            lights = listOf(RayLight("spot", RayLightKind.SPOT, RayColor(50f, 50f, 50f), direction = RayVec3(0f, -1f, 0f), position = RayVec3(0f, 3f, 0f), range = 10f, cutoffAngle = 40f)),
+            lights = listOf(RayLight("spot", RayLightKind.SPOT, RayColor(50f, 50f, 50f), direction = Vector3(0f, -1f, 0f), position = Vector3(0f, 3f, 0f), range = 10f, cutoffAngle = 40f)),
         )
         val frame = renderScene(session, request)
         assertPixels(frame, mapOf(0 to .1f, 2 to .1f, 5 to .1f, 7 to .1f), .001f)
@@ -433,8 +435,8 @@ abstract class RayBackendConformanceKit {
         val request = shadowScene(
             floor = RayMaterial(emissive = RayColor(0f, 0f, .2f)), occluder = RayMaterial(),
             lights = listOf(
-                RayLight("blocked", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), direction = RayVec3(0f, -1f, 0f)),
-                RayLight("open", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), direction = RayVec3(0f, -1f, -1f)),
+                RayLight("blocked", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), direction = Vector3(0f, -1f, 0f)),
+                RayLight("open", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), direction = Vector3(0f, -1f, -1f)),
             ),
         )
         val frame = renderScene(session, request)
@@ -451,7 +453,7 @@ abstract class RayBackendConformanceKit {
         assertPixels(shadowed, mapOf(0 to .88f, 3 to .08f), .002f)
         assertMatchesReference(shadowed, model, .002f)
         val ridge = shadowScene(floor = terrain, occluder = null, ridge = terrain, lights = listOf(
-            RayLight("low", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), direction = RayVec3(-1f, -1f, 0f).unit())))
+            RayLight("low", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), direction = Vector3(-1f, -1f, 0f).unit())))
         val frame = renderScene(session, ridge)
         // light travels toward +x: the ridge at x = 0 shadows the floor on its -x side
         assertPixels(frame, mapOf(3 to .08f, 4 to .08f + .8f * .70710677f, 6 to .08f + .8f * .70710677f, 1 to .08f + .8f * .70710677f), .002f)
@@ -471,8 +473,8 @@ abstract class RayBackendConformanceKit {
         val map = RaySunVisibility(light, 8, FloatArray(64) { visibility[it % 8] },
             floatArrayOf(1f / 16f, 0f, 0f, .5f - shift / 16f, 0f, 0f, 1f / 16f, .5f), edgeFade, outside, revision = 1)
         return shadowScene(occluder = null, lights = listOf(
-            RayLight("sun", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), direction = RayVec3(0f, -1f, 0f)),
-            RayLight("fill", RayLightKind.DIRECTIONAL, RayColor(0f, 0f, 1f), direction = RayVec3(0f, -1f, -1f)),
+            RayLight("sun", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), direction = Vector3(0f, -1f, 0f)),
+            RayLight("fill", RayLightKind.DIRECTIONAL, RayColor(0f, 0f, 1f), direction = Vector3(0f, -1f, -1f)),
         ), sunVisibility = map)
     }
 
@@ -533,7 +535,7 @@ abstract class RayBackendConformanceKit {
         // an occluder over columns 3 and 4 already blocks the sun; the cloud factor must not make that darker or lighter
         val map = RaySunVisibility("sun", 8, FloatArray(64) { .5f }, floatArrayOf(1f / 16f, 0f, 0f, .5f, 0f, 0f, 1f / 16f, .5f), .05f, 1f, 3)
         val request = shadowScene(occluder = RayMaterial(), occluderHeight = 1.5f, occluderHalfWidth = 1.6f,
-            lights = listOf(RayLight("sun", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), direction = RayVec3(0f, -1f, 0f))), sunVisibility = map)
+            lights = listOf(RayLight("sun", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), direction = Vector3(0f, -1f, 0f))), sunVisibility = map)
         val frame = renderScene(session, request)
         val colors = frame.colorValues()
         assertEquals("shadowed pixel keeps only the ambient", .1f, colors[3 * 4], .003f)
@@ -906,7 +908,7 @@ abstract class RayBackendConformanceKit {
     private fun shadowScene(
         floor: RayMaterial = RayMaterial(), occluder: RayMaterial? = RayMaterial(), occluderHeight: Float = 1f, occluderHalfWidth: Float = 3f,
         ridge: RayMaterial? = null,
-        lights: List<RayLight> = listOf(RayLight("sun", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), direction = RayVec3(0f, -1f, 0f))),
+        lights: List<RayLight> = listOf(RayLight("sun", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f), direction = Vector3(0f, -1f, 0f))),
         textures: List<RayTexture> = emptyList(), sunVisibility: RaySunVisibility? = null,
     ): RaySceneRequest {
         val meshes = mutableListOf(quadXZ("floor", -20f, 20f, -20f, 20f, 0f))
@@ -940,7 +942,7 @@ abstract class RayBackendConformanceKit {
     }
 
     private fun materialRequest(material:RayMaterial,textures:List<RayTexture> = emptyList(),environment:RayEnvironment=RayEnvironment(),
-        lights:List<RayLight> = listOf(RayLight("sun",RayLightKind.DIRECTIONAL,RayColor(2f,2f,2f),direction=RayVec3(0f,0f,-1f)))):RaySceneRequest {
+        lights:List<RayLight> = listOf(RayLight("sun",RayLightKind.DIRECTIONAL,RayColor(2f,2f,2f),direction=Vector3(0f,0f,-1f)))):RaySceneRequest {
         val mesh=RayMesh("triangle",floatArrayOf(-2f,-2f,0f,2f,-2f,0f,0f,2f,0f),intArrayOf(0,1,2),
             normals=floatArrayOf(0f,0f,1f,0f,0f,1f,0f,0f,1f),uvs=floatArrayOf(0f,0f,1f,0f,.5f,1f))
         val instance=RayInstance("triangle",0,0,floatArrayOf(1f,0f,0f,0f,0f,1f,0f,0f,0f,0f,1f,0f,0f,0f,0f,1f))

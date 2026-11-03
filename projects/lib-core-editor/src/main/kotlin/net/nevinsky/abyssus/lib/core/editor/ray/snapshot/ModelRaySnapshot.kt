@@ -5,6 +5,11 @@
 package net.nevinsky.abyssus.lib.core.editor.ray.snapshot
 
 import com.badlogic.gdx.graphics.Pixmap
+import com.badlogic.gdx.math.Matrix4
+import com.badlogic.gdx.math.Quaternion
+import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import java.util.*
 
 internal fun <T> immutableModelList(values: Collection<T>): List<T> = Collections.unmodifiableList(values.toList())
@@ -92,6 +97,13 @@ class RayModelNode internal constructor(
 ) {
     val parts: List<RayModelNodePart> = immutableModelList(parts)
     val children: List<RayModelNode> = immutableModelList(children)
+
+    /** This node's transform relative to its parent (a new matrix). */
+    internal fun localMatrix(): Matrix4 = PlacementTransform(
+        Vector3(translation.x, translation.y, translation.z),
+        Quaternion(rotation.x, rotation.y, rotation.z, rotation.w),
+        Vector3(scale.x, scale.y, scale.z),
+    ).toMatrix()
 }
 
 /** No mutable libGDX objects or GL handles escape asset preparation. Repeated instances share these bytes. */
@@ -108,6 +120,14 @@ class RayModelSnapshot internal constructor(
 
     /** Retained geometry/image payload; backend resource bounds are accounted separately. */
     override val byteSize: Long = meshes.sumOf { it.byteSize } + images.values.sumOf { it.byteSize }
+
+    /** The material with [id]; fails when the model has none. */
+    internal fun requireMaterial(id: String?): RayModelMaterial =
+        requireNotNull(materials.firstOrNull { it.id == id }) { "Missing material $id" }
+
+    /** The mesh that holds the part [meshPartId]; fails when the model has none. */
+    internal fun requireMeshOfPart(meshPartId: String?): RayModelMesh =
+        requireNotNull(meshes.firstOrNull { mesh -> mesh.parts.any { it.id == meshPartId } }) { "Missing mesh part $meshPartId" }
 }
 
 /** Shares the raster upload's row order and converts arbitrary Pixmap formats to immutable RGBA8888. */

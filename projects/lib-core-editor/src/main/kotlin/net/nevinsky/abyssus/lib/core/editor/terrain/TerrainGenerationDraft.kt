@@ -30,6 +30,8 @@ data class SourceSnapshot(
     val heightsSha256: String?,
     val recipeText: String?,
     val folderExists: Boolean,
+    /** A fingerprint of the sculpt files (manifest, delta, stored base), null when the terrain has none. */
+    val sculptSha256: String? = null,
 )
 
 /** A preview that finished: [heights] for exactly these [settings], [size] and [resolution]. */

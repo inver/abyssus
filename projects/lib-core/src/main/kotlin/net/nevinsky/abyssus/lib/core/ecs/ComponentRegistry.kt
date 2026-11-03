@@ -1,17 +1,7 @@
 package net.nevinsky.abyssus.lib.core.ecs
 
-import net.nevinsky.abyssus.lib.core.format.ENABLED_KEY
 import com.badlogic.ashley.core.Component
-import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.Point2PointPositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.TypeComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.*
 
 class ComponentRegistry {
 
@@ -29,9 +19,7 @@ class ComponentRegistry {
         componentMap[LightComponent::class.qualifiedName!!] = LightComponent::class.java
         componentMap[NameComponent::class.qualifiedName!!] = NameComponent::class.java
         componentMap[ParentComponent::class.qualifiedName!!] = ParentComponent::class.java
-        componentMap[Point2PointPositionComponent::class.qualifiedName!!] = Point2PointPositionComponent::class.java
         componentMap[PositionComponent::class.qualifiedName!!] = PositionComponent::class.java
-        componentMap[TypeComponent::class.qualifiedName!!] = TypeComponent::class.java
         componentMap[FoliageComponent::class.qualifiedName!!] = FoliageComponent::class.java
         componentMap[PathArrangementComponent::class.qualifiedName!!] = PathArrangementComponent::class.java
         componentMap.values.forEach {
@@ -39,15 +27,6 @@ class ComponentRegistry {
             writtenNames[it] = it.simpleName
         }
     }
-
-    /** Registered classes that declare a field named `enabled`, which the scene format reserves; they stay read-only raw JSON. */
-    private val reserved = LinkedHashSet<Class<out Component>>()
-
-    /** True when [type] declares a field named `enabled` and so cannot be bound or edited as a component. */
-    fun isReserved(type: Class<out Component>): Boolean = type in reserved
-
-    /** The registered classes that clash with the reserved `enabled` key, for reporting. */
-    val reservedClashes: List<Class<out Component>> get() = reserved.toList()
 
     /** The class [name] names, fully qualified or by its short class name; null for a name nobody registered. */
     fun get(name: String): Class<out Component>? {
@@ -62,7 +41,6 @@ class ComponentRegistry {
             )
         }
         componentMap[name] = clazz
-        if (declaresEnabled(clazz)) reserved.add(clazz)
         shortNames.putIfAbsent(clazz.simpleName, clazz)
         writtenNames.putIfAbsent(clazz, name)
     }
@@ -75,14 +53,5 @@ class ComponentRegistry {
 
     fun registerAll(map: Map<String, Class<out Component>>) {
         map.forEach { (key, value) -> register(key, value) }
-    }
-
-    private fun declaresEnabled(type: Class<*>): Boolean {
-        var c: Class<*>? = type
-        while (c != null && c != Any::class.java) {
-            if (c.declaredFields.any { it.name == ENABLED_KEY }) return true
-            c = c.superclass
-        }
-        return false
     }
 }

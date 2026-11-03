@@ -154,13 +154,19 @@ class ExrLoader(private val fileLoader: FileLoader) {
         fun accumulate(plane: FloatBuffer, slot: Int, x0: Int, y0: Int, w: Int, h: Int) {
             for (y in 0 until h) {
                 val oy = (y0 + y) / factor
-                if (oy >= outH) break
+                if (oy >= outH) {
+                    break
+                }
                 for (x in 0 until w) {
                     val ox = (x0 + x) / factor
-                    if (ox >= outW) break
+                    if (ox >= outW) {
+                        break
+                    }
                     // NaN and negative radiance are noise; infinity saturates at the largest half float
                     val v = plane.get(y * w + x)
-                    if (v > 0f) sum[(oy * outW + ox) * 3 + slot] += minOf(v, MAX_HALF)
+                    if (v > 0f) {
+                        sum[(oy * outW + ox) * 3 + slot] += minOf(v, MAX_HALF)
+                    }
                 }
             }
         }

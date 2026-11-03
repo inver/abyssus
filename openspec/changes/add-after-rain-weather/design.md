@@ -18,7 +18,7 @@ See proposal.md for motivation and scope. `SceneDto.abyssus` already carries raw
 
 Use `abyssus.weather: { "mode": "afterRain" }`. No generated puddle arrays, weather assets, seed UI or version bump. Missing mode means Default. Read validated documents through the existing mapper/DTO facilities (`JsonProcessor.bind`, `SceneReader.parse`, `SceneJson.bind`); use the raw extension tree only through the established scene document APIs. Do not introduce another parser or stock Jackson tree parse path.
 
-Add constructor-wired `WeatherSettings` and a pure reader/validator in `lib-core`; `lib-core-editor` adds the text edit adapter using `DocumentTextEditor`. Reset removes `mode`, then empty known containers only; unknown members survive. Reject non-object weather/abyssus containers. Unknown mode reports Default without automatic repair; an explicit supported mode selection may replace the unknown scalar. Check the expected mode at commit so stale panels cannot overwrite newer edits. All plugin scene writes use `editSceneJson` as one command.
+Add constructor-wired `WeatherSettings` and a pure reader/validator in `lib-core`; `lib-core-editor` adds the text edit adapter using `DocumentTextEditor`. Reset removes `mode`, then empty known containers only; unknown members survive. Reject non-object weather/abyssus containers. Unknown mode reports Default without automatic repair; an explicit supported mode selection may replace the unknown scalar. Check the expected mode at commit so stale panels cannot overwrite newer edits. All plugin scene writes use `editSceneDocument` as one command.
 
 Alternative: store weather in a cloud asset. Rejected because users chose to preserve sky and lighting, and shared skies must not force shared wet ground.
 
