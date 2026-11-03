@@ -18,7 +18,9 @@ if [ -n "${MACOS_KEYCHAIN:-}" ]; then sign_args+=(--keychain "$MACOS_KEYCHAIN");
 # the native libraries inside jars: unpack, sign, and put them back into the jar
 while IFS= read -r -d '' jar; do
   jar="$(cd "$(dirname "$jar")" && pwd)/$(basename "$jar")"
-  unzip -Z1 "$jar" | grep -qE '\.(dylib|jnilib)$' || continue
+  # list first: `unzip | grep -q` can die of SIGPIPE, and under pipefail the jar would be skipped without a word
+  entries="$(unzip -Z1 "$jar")"
+  grep -qE '\.(dylib|jnilib)$' <<< "$entries" || continue
   work="$(mktemp -d)"
   (
     cd "$work"
@@ -26,6 +28,18 @@ while IFS= read -r -d '' jar; do
     find . -type f \( -name '*.dylib' -o -name '*.jnilib' \) -print0 | xargs -0 -n1 codesign "${sign_args[@]}"
     find . -type f \( -name '*.dylib' -o -name '*.jnilib' \) | sed 's|^\./||' | zip -q "$jar" -@
   )
+  # prove the jar now holds Developer ID signed libraries with a secure timestamp (what notarization checks)
+  check="$(mktemp -d)"
+  unzip -q "$jar" '*.dylib' '*.jnilib' -d "$check" 2>/dev/null || true
+  while IFS= read -r -d '' lib; do
+    info="$(codesign -dvv "$lib" 2>&1)"
+    if ! grep -q 'Authority=Developer ID Application' <<< "$info" || ! grep -q '^Timestamp=' <<< "$info"; then
+      echo "error: $lib in $(basename "$jar") is not Developer ID signed with a timestamp" >&2
+      echo "$info" >&2
+      exit 1
+    fi
+  done < <(find "$check" -type f \( -name '*.dylib' -o -name '*.jnilib' \) -print0)
+  rm -rf "$check"
   rm -rf "$work"
   echo "signed native libraries in $(basename "$jar")"
 done < <(find "$app" -type f -name '*.jar' -print0)
