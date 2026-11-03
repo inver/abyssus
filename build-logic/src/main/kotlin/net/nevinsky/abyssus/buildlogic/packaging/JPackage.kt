@@ -155,7 +155,10 @@ abstract class JPackage @Inject constructor(private val exec: ExecOperations) : 
                 ?: throw GradleException("jpackage should have written exactly one file into $dest")
             val named = java.io.File(dest, outputName.get())
             made.renameTo(named)
-            if (type.get() == "dmg" && macSigningIdentity.isPresent) signDmg(named)
+            if (type.get() == "dmg" && macSigningIdentity.isPresent) {
+                resignAppInDmg(named)
+                signDmg(named)
+            }
         }
     }
 
@@ -179,6 +182,42 @@ abstract class JPackage @Inject constructor(private val exec: ExecOperations) : 
             } else {
                 exec.exec { commandLine("codesign", "--force", "--deep", "--sign", "-", app.path) }
             }
+        }
+    }
+
+    /**
+     * jpackage signs the app inside a `.dmg` again, ad hoc and without a secure timestamp, which replaces the Developer
+     * ID signatures made on the app image and which notarization rejects. So the image is opened for writing, the app in
+     * it is signed again with [macSignScript] and the image is compressed back.
+     */
+    private fun resignAppInDmg(dmg: java.io.File) {
+        check(macEntitlements.isPresent && macSignScript.isPresent) { "macSigningIdentity needs macEntitlements and macSignScript" }
+        val work = java.nio.file.Files.createTempDirectory("abyssus-dmg").toFile()
+        val writable = java.io.File(work, "writable.dmg")
+        val mount = java.io.File(work, "mount").also { it.mkdirs() }
+        val repacked = java.io.File(work, "repacked.dmg")
+        try {
+            exec.exec { commandLine("hdiutil", "convert", dmg.path, "-format", "UDRW", "-o", writable.path) }
+            // the signatures carry timestamps and are larger than the ad hoc ones: leave room
+            val limits = ProcessBuilder("hdiutil", "resize", "-limits", writable.path).redirectErrorStream(true).start()
+                .let { p -> p.inputStream.bufferedReader().readText().also { p.waitFor() } }
+            // "<minimum> <current> <maximum>" in 512-byte sectors
+            val sectors = limits.trim().lines().last().trim().split(Regex("\\s+"))[1].toLong() + 64L * 2048
+            exec.exec { commandLine("hdiutil", "resize", "-sectors", sectors.toString(), writable.path) }
+            exec.exec { commandLine("hdiutil", "attach", writable.path, "-mountpoint", mount.path, "-nobrowse", "-noverify", "-noautoopen") }
+            try {
+                val app = mount.listFiles { f -> f.name.endsWith(".app") }?.singleOrNull()
+                    ?: throw GradleException("the disk image should hold exactly one .app")
+                exec.exec {
+                    commandLine(macSignScript.get().asFile.path, app.path, macSigningIdentity.get(), macEntitlements.get().asFile.path)
+                }
+            } finally {
+                exec.exec { commandLine("hdiutil", "detach", mount.path); isIgnoreExitValue = true }
+            }
+            exec.exec { commandLine("hdiutil", "convert", writable.path, "-format", "UDZO", "-o", repacked.path) }
+            java.nio.file.Files.move(repacked.toPath(), dmg.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        } finally {
+            work.deleteRecursively()
         }
     }
 
