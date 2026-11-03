@@ -37,7 +37,7 @@ class NativeDocumentWriteGuardTest : BasePlatformTestCase() {
         val editor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
         val document = FileDocumentManager.getInstance().getDocument(file)!!
         val before = document.text
-        assertTrue(editSceneDocument(project, file, "Rename") { scene -> scene.add(net.nevinsky.abyssus.lib.core.dto.EntityType.OBJECT); true })
+        assertTrue(editSceneDocument(project, file, "Rename") { scene -> scene.add(net.nevinsky.abyssus.lib.core.format.EntityType.OBJECT); true })
         assertTrue(document.text.contains("OBJECT"))
         com.intellij.openapi.command.undo.UndoManager.getInstance(project).undo(editor)
         assertEquals(before, document.text)

@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.assets.testProject
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent

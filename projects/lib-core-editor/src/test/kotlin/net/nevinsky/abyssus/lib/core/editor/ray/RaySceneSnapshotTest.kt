@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.ray
 
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRaySettings
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.lib.core.editor.scene.lightSetOf

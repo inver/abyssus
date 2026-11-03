@@ -21,7 +21,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.isActive
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.ecs.component.assetName
 import net.nevinsky.abyssus.app.game.controlline.vitrine.VitrinePlane
 import net.nevinsky.abyssus.app.game.controlline.vitrine.VitrineTable

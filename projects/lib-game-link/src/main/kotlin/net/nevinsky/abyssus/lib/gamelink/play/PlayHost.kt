@@ -18,7 +18,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
-import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.core.dto.EcsLoader
 import net.nevinsky.abyssus.lib.core.scene.SceneLoader
 import org.slf4j.Logger
 import java.io.DataInputStream

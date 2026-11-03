@@ -5,9 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
-import net.nevinsky.abyssus.lib.core.dto.CameraDto
+import net.nevinsky.abyssus.lib.core.ecs.component.CameraDto
 import net.nevinsky.abyssus.lib.core.editor.content.unclampedColor
-import net.nevinsky.abyssus.lib.core.editor.ray.SceneRaySettings
 
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.graphics.Color

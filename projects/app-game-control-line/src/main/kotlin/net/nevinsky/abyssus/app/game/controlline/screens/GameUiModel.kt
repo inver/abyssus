@@ -5,6 +5,7 @@
 package net.nevinsky.abyssus.app.game.controlline.screens
 
 import com.badlogic.gdx.Input
+import net.nevinsky.abyssus.app.game.controlline.ai.InstructorControl
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneClass
 import net.nevinsky.abyssus.app.game.controlline.controller.ControllerSettings
 import net.nevinsky.abyssus.app.game.controlline.controller.DetectKind
@@ -86,6 +87,13 @@ class GameUiModel(
     private var toastJudge: PatternJudge? = null
     private var toastDecided = 0
 
+    // the instructor of the flight the HUD shows: the handle markers, the cue and the INSTRUCTOR flag
+    private var handle = 0f
+    private var ghostShown = false
+    private var ghostAt = 0f
+    private var instructed = false
+    private var holds = false
+
     /** The layers [screen] is shown with. */
     fun layersOf(screen: Screen): GameLayers = when (screen) {
         Screen.MainMenu -> GameLayers(SCREEN_MAIN_MENU)
@@ -113,23 +121,27 @@ class GameUiModel(
     }
 
     /** Every binding of the contract, for the flow's current screen and the flight [session] (with the F2B [judge] or the [scaleJudge]). */
-    fun snapshot(session: FlightSession?, judge: PatternJudge?, seconds: Float, scaleJudge: ScaleJudge? = null): UiSnapshot {
+    fun snapshot(
+        session: FlightSession?, judge: PatternJudge?, seconds: Float, scaleJudge: ScaleJudge? = null, instructor: InstructorControl? = null,
+    ): UiSnapshot {
         val screen = flow.screen
         if (screen is Screen.NameEntry && screen !== nameFor) {
             nameFor = screen
             playerName = screen.name
         }
         if (session != null) hud(screen, session, judge, seconds, scaleJudge)
+        instructorHud(screen, instructor)
         val values = LinkedHashMap<String, UiValue>()
         menus(values)
         planeSelect(values, screen)
         controllerSettings(values)
         displaySettings(values)
         hudValues(values, modeOf(screen))
+        instructorValues(values)
         val ai = demonstration(screen)
         values["isAi"] = flag(ai)
         values["isHuman"] = flag(!ai)
-        summary(values, (screen as? Screen.NameEntry)?.report ?: (screen as? Screen.GameOver)?.report)
+        summary(values, (screen as? Screen.NameEntry)?.report ?: (screen as? Screen.GameOver)?.report, (screen as? Screen.GameOver)?.flying?.instructor == true)
         values["playerName"] = text(playerName)
         val over = screen as? Screen.GameOver
         values["rankText"] = text(over?.rank?.let { "Saved in place $it" }.orEmpty())
@@ -177,6 +189,8 @@ class GameUiModel(
         values["planeCount"] = text(select?.let { "Choose a plane  (${it.index + 1} of ${choices.size})" }.orEmpty())
         values["planeName"] = text(plane?.name.orEmpty())
         values["watchAiVisible"] = flag(flow.watchAiOffered)
+        values["instructorOffered"] = flag(flow.instructorOffered)
+        values["instructorOn"] = flag(flow.instructor)
         values["hasScaleFacts"] = flag(plane != null && (plane.planeClass == PlaneClass.SCALE || plane.scale != null))
         values["scaleFacts"] = text(plane?.let(::replicaFacts).orEmpty())
         values["planeFacts"] = text(plane?.let {
@@ -296,7 +310,45 @@ class GameUiModel(
         values["toastVisible"] = flag(toastTime > 0f && toast.isNotEmpty())
     }
 
-    private fun summary(values: MutableMap<String, UiValue>, report: FlightReport?) {
+    /** What the HUD shows of the instructor: only while a flight with an [instructor] is on screen (flying or paused). */
+    private fun instructorHud(screen: Screen, instructor: InstructorControl?) {
+        val shown = instructor != null && (screen is Screen.Flying || screen is Screen.Paused)
+        instructed = shown
+        if (!shown || instructor == null) {
+            handle = 0f; ghostShown = false; ghostAt = 0f; holds = false
+            return
+        }
+        handle = instructor.playerTilt
+        ghostShown = instructor.ghost
+        ghostAt = instructor.rescueTilt
+        holds = instructor.holding
+    }
+
+    /** `Up!` when the instructor's tilt is more than [CUE_MARGIN] above the player's, `Down!` when more below, else blank. */
+    private fun cue(): String = when {
+        !ghostShown -> ""
+        ghostAt - handle > CUE_MARGIN -> "Up!"
+        handle - ghostAt > CUE_MARGIN -> "Down!"
+        else -> ""
+    }
+
+    private fun instructorValues(values: MutableMap<String, UiValue>) {
+        values["isInstructed"] = flag(instructed)
+        // the bars run from 0 (full down) through 0.5 (level) to 1 (full up)
+        values["handleTilt"] = UiValue.Num(((handle + 1f) / 2f).toDouble())
+        values["ghostVisible"] = flag(instructed && ghostShown)
+        values["ghostTilt"] = UiValue.Num(((ghostAt + 1f) / 2f).toDouble())
+        values["ghostCue"] = text(cue())
+        values["instructorHolds"] = flag(instructed && holds)
+    }
+
+    /** GAME OVER's Instructor row for an [instructed] flight: not needed, or how often it took over and that nothing was saved. */
+    private fun instructorFact(report: FlightReport): String = when (val n = report.takeovers.size) {
+        0 -> "Not needed"
+        else -> "Took over $n ${if (n == 1) "time" else "times"}, not saved"
+    }
+
+    private fun summary(values: MutableMap<String, UiValue>, report: FlightReport?, instructed: Boolean = false) {
         val free = report?.result as? FlightResult.Free
         val pattern = report?.result as? FlightResult.Pattern
         val scale = report?.result as? FlightResult.Scale
@@ -315,7 +367,8 @@ class GameUiModel(
                 "Landing" to scale.marks.landing.toString(), "Laps" to scale.laps.toString(), "Flight time" to time(report.flightTime),
             )
             else -> emptyList()
-        }).map { (name, value) -> mapOf("name" to name, "value" to value) })
+        }.let { facts -> if (report != null && instructed && facts.isNotEmpty()) facts + ("Instructor" to instructorFact(report)) else facts })
+            .map { (name, value) -> mapOf("name" to name, "value" to value) })
         values["patternHeader"] = text(if (pattern == null) "" else "F2B pattern - ${pattern.level.label} - ${report.plane}")
         values["sheetScore"] = text(if (pattern == null) "" else "Score ${pattern.sheet.score}    Flight time ${time(report.flightTime)}")
         values["sheet"] = rows(if (pattern == null) emptyList() else SCHEDULE.mapIndexed { i, figure ->
@@ -393,6 +446,7 @@ class GameUiModel(
         values["deductions"] = rows(model?.deductionLines().orEmpty().map { mapOf("text" to it, "style" to if (it.startsWith("Scored 0")) "fail" else "normal") })
         values["hasNotice"] = flag(model?.notice != null)
         values["notice"] = text(model?.notice?.let { "$it: only the marks were kept." }.orEmpty())
+        values["hasInstructorTrack"] = flag(model?.hasTakeovers == true)
         values["debriefStatus"] = text(model?.let(::debriefStatus).orEmpty())
         values["debriefKeys"] = text(if (model == null) "" else if (model.recording != null) REPLAY_KEYS else NO_REPLAY_KEYS)
     }
@@ -432,6 +486,12 @@ class GameUiModel(
     fun write(write: UiWrite): UiWriteResult {
         when (write.binding) {
             "invert", "deadZone", "curve" -> return writeSetting(write)
+            "instructorOn" -> {
+                val on = (write.value as? UiValue.Bool)?.value ?: return UiWriteResult.Rejected("instructorOn is on or off")
+                if (!flow.instructorOffered) return UiWriteResult.Rejected("The instructor is set on plane select")
+                if (on != flow.instructor) flow.toggleInstructor()
+                return UiWriteResult.Accepted(write.value)
+            }
             "fullscreen" -> {
                 val on = (write.value as? UiValue.Bool)?.value ?: return UiWriteResult.Rejected("fullscreen is on or off")
                 display.setFullscreen(on)
@@ -546,10 +606,12 @@ class GameUiModel(
             }
             Input.Keys.UP -> if (board) flow.selectRow(-1) else return false
             Input.Keys.DOWN -> if (board) flow.selectRow(1) else return false
+            Input.Keys.I -> if (screen is Screen.PlaneSelect) flow.toggleInstructor() else return false
             Input.Keys.A -> if (screen is Screen.PlaneSelect && flow.watchAiOffered) flow.watchAi() else return false
             Input.Keys.ENTER, Input.Keys.NUMPAD_ENTER -> when {
                 screen is Screen.NameEntry && fieldFocused -> flow.nameEntered(playerName)
                 screen is Screen.PlaneSelect && focus == WATCH_AI_BUTTON && flow.watchAiOffered -> flow.watchAi()
+                screen is Screen.PlaneSelect && focus == INSTRUCTOR_CHECKBOX -> flow.toggleInstructor()
                 screen is Screen.PlaneSelect -> flow.choosePlane()
                 board -> flow.openRow()
                 else -> return false

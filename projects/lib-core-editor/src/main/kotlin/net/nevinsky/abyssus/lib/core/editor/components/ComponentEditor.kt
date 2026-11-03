@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.lib.core.editor.components
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.dto.EntityDto
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent

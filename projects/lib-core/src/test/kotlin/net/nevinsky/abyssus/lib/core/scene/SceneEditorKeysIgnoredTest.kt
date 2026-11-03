@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.lib.core.scene
 
 import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
-import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.core.dto.EcsLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.After

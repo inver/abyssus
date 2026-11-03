@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.app.game.controlline.pattern
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.app.game.controlline.flight.Takeover
 import net.nevinsky.abyssus.app.game.controlline.track.wrapDegrees
 import java.util.Locale
 import net.nevinsky.abyssus.lib.core.util.azimuthOf
@@ -17,8 +18,8 @@ import kotlin.math.roundToInt
 /** Where the debrief looks from: the pilot's place, or from outside the circle. */
 enum class DebriefView { PILOT, OUTSIDE }
 
-/** What a drawn track is: the ideal one, the one flown, or a faint guide. */
-enum class TrackKind { IDEAL, FLOWN, GUIDE }
+/** What a drawn track is: the ideal one, the one flown, the part flown during an instructor takeover, or a faint guide. */
+enum class TrackKind { IDEAL, FLOWN, INSTRUCTOR, GUIDE }
 
 /** A track to draw: [points] are world offsets from the pilot's ground point. */
 class TrackLine(val kind: TrackKind, val points: List<Vector3>)
@@ -58,12 +59,21 @@ private const val GUIDE_STEP = 2f
 /** The message of a debrief with no replay. */
 const val NO_REPLAY_MESSAGE = "Replay not available"
 
+/** The first line of the deductions of a manoeuvre an instructor takeover overlapped. */
+const val INSTRUCTOR_NOTE = "The instructor took over during this manoeuvre"
+
 /**
  * The debrief of an F2B flight (design decision 3), without GL: its score sheet [rows] with one manoeuvre selected, the
  * [recording] it replays (null for a sheet-only debrief), the playback clock and the [view]. What to draw comes from
- * [segments], [planePose], [frame] and [deductionLines].
+ * [segments], [planePose], [frame] and [deductionLines]. The [takeovers] are the spans of an Assisted flight in which the
+ * instructor held the handle: empty for every other flight, and for one opened from a board row.
  */
-class DebriefModel(val title: String, val rows: List<DebriefRow>, val recording: FlightRecording?) {
+class DebriefModel(
+    val title: String, val rows: List<DebriefRow>, val recording: FlightRecording?, val takeovers: List<Takeover> = emptyList(),
+) {
+    /** Whether the debrief names the instructor: the legend's Instructor colour shows. */
+    val hasTakeovers: Boolean get() = takeovers.isNotEmpty() && recording != null
+
     /** Why there is no replay, or null when there is. */
     val notice: String? get() = if (recording == null) NO_REPLAY_MESSAGE else null
 
@@ -135,7 +145,7 @@ class DebriefModel(val title: String, val rows: List<DebriefRow>, val recording:
         if (ideal.isEmpty() && flown.isEmpty()) return emptyList()
         val lines = ArrayList<TrackLine>()
         if (ideal.isNotEmpty()) lines += TrackLine(TrackKind.IDEAL, ideal)
-        if (flown.isNotEmpty()) lines += TrackLine(TrackKind.FLOWN, flown)
+        lines += split(recording, j)
         lines += guides(recording.lineLength, ideal.ifEmpty { flown })
         return lines
     }
@@ -160,6 +170,10 @@ class DebriefModel(val title: String, val rows: List<DebriefRow>, val recording:
     /** What the selected mark was taken off for, largest first; the reason for a 0; nothing for a sheet-only debrief. */
     fun deductionLines(): List<String> {
         val j = judgement ?: return emptyList()
+        return listOfNotNull(INSTRUCTOR_NOTE.takeIf { overlapped(j) }) + marks(j)
+    }
+
+    private fun marks(j: RecordedJudgement): List<String> {
         j.reason?.let { return listOf("Scored 0: ${it.label}") }
         if (j.deductions.isEmpty()) return listOf("No deductions")
         return j.deductions.sortedByDescending { it.tenths }.map {
@@ -182,6 +196,37 @@ class DebriefModel(val title: String, val rows: List<DebriefRow>, val recording:
             if (t in j.start..j.end) out += recording.offset(i, Vector3())
         }
         return out
+    }
+
+    /** Whether a takeover overlapped the manoeuvre of [j]. */
+    private fun overlapped(j: RecordedJudgement): Boolean = j.end > j.start && takeovers.any { it.start < j.end && j.start < it.end }
+
+    private fun during(time: Float): Boolean = takeovers.any { time >= it.start && time <= it.end }
+
+    /**
+     * The flown line of [j] cut by the takeover spans into runs of [TrackKind.FLOWN] and [TrackKind.INSTRUCTOR]. A run
+     * starts at the last point of the one before, so the line stays unbroken.
+     */
+    private fun split(recording: FlightRecording, j: RecordedJudgement): List<TrackLine> {
+        if (j.end <= j.start) return emptyList()
+        val runs = ArrayList<TrackLine>()
+        var kind: TrackKind? = null
+        var points = ArrayList<Vector3>()
+        for (i in 0 until recording.count) {
+            val t = recording.time(i)
+            if (t < j.start || t > j.end) continue
+            val here = if (during(t)) TrackKind.INSTRUCTOR else TrackKind.FLOWN
+            val at = recording.offset(i, Vector3())
+            if (kind != null && here != kind) {
+                val joint = points.last()
+                runs += TrackLine(kind, points)
+                points = arrayListOf(joint)
+            }
+            kind = here
+            points += at
+        }
+        if (kind != null && points.isNotEmpty()) runs += TrackLine(kind, points)
+        return runs
     }
 
     private fun poseAt(recording: FlightRecording, time: Float): PlanePose {
@@ -222,12 +267,12 @@ class DebriefModel(val title: String, val rows: List<DebriefRow>, val recording:
     }
 }
 
-/** The debrief of a flight with its [recording]: the sheet comes from its judgements. */
-fun debriefOf(recording: FlightRecording): DebriefModel {
+/** The debrief of a flight with its [recording] (and the instructor's [takeovers] in it): the sheet comes from its judgements. */
+fun debriefOf(recording: FlightRecording, takeovers: List<Takeover> = emptyList()): DebriefModel {
     val rows = SCHEDULE.mapIndexed { index, figure ->
         recording.judgement(index)?.let { DebriefRow(figure, it.tenths, it.reason) } ?: DebriefRow(figure, 0, null, decided = false)
     }
-    return DebriefModel("${recording.plane} - ${recording.level.label}", rows, recording)
+    return DebriefModel("${recording.plane} - ${recording.level.label}", rows, recording, takeovers)
 }
 
 /** The debrief of a saved flight whose recording is missing or unreadable: its 15 marks, no replay. */

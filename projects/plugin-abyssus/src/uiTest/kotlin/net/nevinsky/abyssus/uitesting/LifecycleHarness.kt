@@ -2,7 +2,6 @@ package net.nevinsky.abyssus.uitesting
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import java.time.Duration
 
 /**

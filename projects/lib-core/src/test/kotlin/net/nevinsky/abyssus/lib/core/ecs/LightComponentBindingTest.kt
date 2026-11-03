@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.ecs
 
-import net.nevinsky.abyssus.lib.core.dto.LIGHT_INTENSITY
+import net.nevinsky.abyssus.lib.core.ecs.component.LIGHT_INTENSITY
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals

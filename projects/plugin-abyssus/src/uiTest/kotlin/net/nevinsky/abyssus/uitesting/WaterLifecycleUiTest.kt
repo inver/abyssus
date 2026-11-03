@@ -1,6 +1,6 @@
+/* DISABLED (G7: scene water is no longer modeled); kept for reference, not compiled.
 package net.nevinsky.abyssus.uitesting
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -245,3 +245,4 @@ class WaterLifecycleUiTest : UiTestBase() {
         LifecycleHarness.awaitState("removal stays usable", false) { surfaceIds(ide.documentText(scene.toString())!!).contains("broken-1") }
     }
 }
+*/

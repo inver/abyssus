@@ -13,7 +13,7 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerBake
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
-import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.core.dto.EcsLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.scene.RuntimeSceneLoader

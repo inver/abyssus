@@ -4,9 +4,9 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.ModelKey
-import net.nevinsky.abyssus.lib.core.dto.LIGHT_CONE_ANGLE
-import net.nevinsky.abyssus.lib.core.dto.LIGHT_EDGE_SOFTNESS
-import net.nevinsky.abyssus.lib.core.dto.LIGHT_RANGE
+import net.nevinsky.abyssus.lib.core.ecs.component.LIGHT_CONE_ANGLE
+import net.nevinsky.abyssus.lib.core.ecs.component.LIGHT_EDGE_SOFTNESS
+import net.nevinsky.abyssus.lib.core.ecs.component.LIGHT_RANGE
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FAR
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_NEAR

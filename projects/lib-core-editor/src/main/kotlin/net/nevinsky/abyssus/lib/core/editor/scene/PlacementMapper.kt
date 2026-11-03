@@ -18,10 +18,10 @@ import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
 
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.core.dto.LightDto
+import net.nevinsky.abyssus.lib.core.ecs.component.LightDto
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.format.EntityType
 
 /** The asset a `RenderComponent` shows: its `type` and `assetName`, and for a model the `meshId` of the one mesh drawn. */
 class DecodedAsset(val type: String, val name: String, val meshId: String? = null)

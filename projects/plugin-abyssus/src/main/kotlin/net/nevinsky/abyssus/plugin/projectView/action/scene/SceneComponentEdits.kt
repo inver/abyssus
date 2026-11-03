@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.plugin.projectView.scene
 
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import com.badlogic.gdx.math.Vector3

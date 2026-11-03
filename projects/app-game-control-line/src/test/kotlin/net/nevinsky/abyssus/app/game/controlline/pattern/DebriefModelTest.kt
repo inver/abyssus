@@ -5,6 +5,7 @@
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
 import com.badlogic.gdx.math.MathUtils
+import net.nevinsky.abyssus.app.game.controlline.flight.Takeover
 import net.nevinsky.abyssus.app.game.controlline.track.wrapDegrees
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -53,6 +54,49 @@ class DebriefModelTest {
         val frame = model.frame()
         assertTrue(frame.points.size > 100)
         assertTrue(frame.centre.y > 2f)
+    }
+
+    private fun loopsSpan(): Pair<Float, Float> = debriefOf(recordedFlight()).let { it.select(2); it.recording!!.judgement(2)!!.let { j -> j.start to j.end } }
+
+    @Test
+    fun aTakeoverInTheLoopsDrawsItsPartInTheInstructorColourAndSaysSo() {
+        val (start, end) = loopsSpan()
+        val middle = (start + end) / 2f
+        val model = debriefOf(recordedFlight(), listOf(Takeover(middle - 1f, middle + 1f)))
+        model.select(2)
+        val lines = model.segments()
+        assertEquals(listOf(TrackKind.IDEAL, TrackKind.FLOWN, TrackKind.INSTRUCTOR, TrackKind.FLOWN, TrackKind.GUIDE, TrackKind.GUIDE), lines.map { it.kind })
+        val flown = lines.filter { it.kind == TrackKind.FLOWN || it.kind == TrackKind.INSTRUCTOR }
+        // the runs meet: the flown line is unbroken
+        flown.zipWithNext { a, b -> assertEquals(a.points.last(), b.points.first()) }
+        val instructor = lines.single { it.kind == TrackKind.INSTRUCTOR }
+        assertTrue("${instructor.points.size} points in 2 s", instructor.points.size in 55..65)
+        assertTrue(model.hasTakeovers)
+        assertEquals(INSTRUCTOR_NOTE, model.deductionLines().first())
+        assertTrue("the judge's own lines follow the note", model.deductionLines().size > 1)
+    }
+
+    @Test
+    fun aTakeoverElsewhereLeavesThisManoeuvreAloneButTheLegendNamesTheColour() {
+        val (start, _) = loopsSpan()
+        val model = debriefOf(recordedFlight(), listOf(Takeover(0f, 0.5f)))
+        model.select(2)
+        assertTrue(start > 1f)
+        assertEquals(listOf(TrackKind.IDEAL, TrackKind.FLOWN, TrackKind.GUIDE, TrackKind.GUIDE), model.segments().map { it.kind })
+        assertFalse(model.deductionLines().contains(INSTRUCTOR_NOTE))
+        assertTrue(model.hasTakeovers)
+    }
+
+    @Test
+    fun aFlightWithNoTakeoverAndABoardDebriefShowNoInstructor() {
+        val plain = debriefOf(recordedFlight())
+        plain.select(2)
+        assertFalse(plain.hasTakeovers)
+        assertFalse(plain.segments().any { it.kind == TrackKind.INSTRUCTOR })
+        assertFalse(plain.deductionLines().contains(INSTRUCTOR_NOTE))
+        val board = sheetOnlyDebrief(ScoreSheet(), "Stunter", AssistLevel.PRO)
+        assertFalse(board.hasTakeovers)
+        assertFalse(board.deductionLines().contains(INSTRUCTOR_NOTE))
     }
 
     @Test

@@ -1,5 +1,7 @@
 package net.nevinsky.abyssus.lib.core.dto
 
+import net.nevinsky.abyssus.lib.core.format.EntityType
+import net.nevinsky.abyssus.lib.core.dto.entityWriter
 import com.badlogic.ashley.core.Component
 import org.junit.Assert.*
 import org.junit.Test
@@ -12,7 +14,7 @@ class SceneDtoTest {
     @Test
     fun aPrintedSceneCarriesItsFormatVersionAndReadsBack() {
         val registry = net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry()
-        val json = net.nevinsky.abyssus.lib.core.io.JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER, registry)
+        val json = net.nevinsky.abyssus.lib.core.io.JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER, listOf(entityWriter(registry)))
         val text = json.pretty(SceneDto(name = "A"))
         assertTrue(text, text.contains("\"formatVersion\": 1"))
         assertEquals("A", net.nevinsky.abyssus.lib.core.scene.SceneParser(json, registry).parse(text).name)

@@ -6,11 +6,11 @@ package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.dto.LightDto
+import net.nevinsky.abyssus.lib.core.ecs.component.LightDto
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.util.Util
 import net.nevinsky.abyssus.lib.core.dto.SceneDto

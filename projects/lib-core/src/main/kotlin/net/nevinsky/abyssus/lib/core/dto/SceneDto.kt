@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.dto
 
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import com.badlogic.ashley.core.Component
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty

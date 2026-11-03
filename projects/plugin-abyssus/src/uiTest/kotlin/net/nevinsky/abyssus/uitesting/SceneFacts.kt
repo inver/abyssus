@@ -1,6 +1,5 @@
 package net.nevinsky.abyssus.uitesting
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import java.nio.file.Files
 import java.nio.file.Path
 

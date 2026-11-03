@@ -32,29 +32,30 @@
 
 ## 3. Flow and report
 
-- [ ] 3.1 Add `Screen.Flying.instructor`, and add `GameFlow.instructor`, `toggleInstructor()` and `instructorOffered`.
+- [x] 3.1 Add `Screen.Flying.instructor`, and add `GameFlow.instructor`, `toggleInstructor()` and `instructorOffered`.
   `choosePlane` and `retry` carry the flag; `watchAi` ignores it (design decision 5). Verify: `flow/GameFlowTest` cases
   for the toggle on plane select in Free, Pattern (each level) and Scale, its kept state across modes, Retry, Watch AI
   ignoring it, and the off state of a new `GameFlow`.
-- [ ] 3.2 Add `Takeover` and `FlightReport.takeovers`, fill them in `reportOf` from the runner's instructor, and have
+- [x] 3.2 Add `Takeover` and `FlightReport.takeovers`, fill them in `reportOf` from the runner's instructor, and have
   `flightEnded` send flights with takeovers straight to `GameOver(rank = null)`. Verify: `GameFlowTest` checks that an
   assisted Free flight with a top score opens no name entry and leaves `ScoreTable` unchanged, that the same holds for
   Pattern (board and recording store unchanged) and Scale, and that an untouched instructed flight enters name entry as
   before.
-- [ ] 3.3 Have `FlightRunner.start` build `InstructorControl` around `HumanControl` for instructed human flights and expose it
+- [x] 3.3 Have `FlightRunner.start` build `InstructorControl` around `HumanControl` for instructed human flights and expose it
   for the HUD and the report. Verify: an instructed case in `ControllerFlightLifecycleTest` or a new
   `InstructorFlightLifecycleTest`: keys and mouse still reach `HandleInput`, pause freezes the share, and a non-instructed
   flight has no instructor.
 
 ## 4. Screens
 
-- [ ] 4.1 Add the bindings `instructorOffered`, `instructorOn`, `isInstructed`, `handleTilt`, `ghostVisible`,
-  `ghostTilt`, `ghostCue`, `instructorHolds` and `instructorFact`, the action `toggleInstructor`, and the focus id
-  `ps-instructor` to `GameUiContract`. Publish them in `GameUiModel`, with the `Up!` / `Down!` cue rule (0.2), and map
+- [x] 4.1 Add the bindings `instructorOffered`, `instructorOn` (writable: a checkbox commits through its `checked` binding, so
+  there is no `toggleInstructor` action), `isInstructed`, `handleTilt`, `ghostVisible`, `ghostTilt`, `ghostCue` and
+  `instructorHolds`, and the focus id `ps-instructor` to `GameUiContract`. The GAME OVER row goes into the existing `facts`
+  list, so there is no `instructorFact` binding. Publish them in `GameUiModel`, with the `Up!` / `Down!` cue rule (0.2), and map
   the I key on plane select. Add the GAME OVER facts row. Verify: `screens/*` model tests for the bindings in a safe,
   warning and takeover state, the cue thresholds, the I key, and the facts rows "Not needed" and "Took over 2 times, not
   saved".
-- [ ] 4.2 Edit `project/ControlLine/assets/screens/meta.json`. On top of the gamepad and scale changes already in the
+- [x] 4.2 Edit `project/ControlLine/assets/screens/meta.json`. On top of the gamepad and scale changes already in the
   working tree, keep their keys and numbers. Add the plane select checkbox, the two tilt bars, the cue and the
   INSTRUCTOR label on `hudFree`, `hudPattern` and `hudScale`. Verify: the existing screens-asset contract test (every
   binding and action the asset uses is published) passes, and `BundledProjectTest` still loads the project.
@@ -67,7 +68,7 @@
 
 ## 5. Debrief
 
-- [ ] 5.1 Add `TrackKind.INSTRUCTOR` and `INSTRUCTOR_COLOR`. Pass the takeovers into `DebriefModel` from GAME OVER. Split each
+- [x] 5.1 Add `TrackKind.INSTRUCTOR` and `INSTRUCTOR_COLOR`. Pass the takeovers into `DebriefModel` from GAME OVER. Split each
   manoeuvre's flown line by span time, name the colour in the legend, and set the overlapped-manoeuvre note (design
   decision 7). Verify: `pattern/DebriefModelTest` cases for a manoeuvre with a takeover (an INSTRUCTOR line and the note),
   one without, and a board-row debrief with no spans.
@@ -76,9 +77,9 @@
 
 ## 6. Docs and integration
 
-- [ ] 6.1 Update `projects/app-game-control-line/README.md`: the I key in the Controls table, and a new Instructor section
+- [x] 6.1 Update `projects/app-game-control-line/README.md`: the I key in the Controls table, and a new Instructor section
   covering danger, the ghost handle, takeover and handback, the untouched-or-assisted rule, and the debrief colour. Add the
   instructor to `docs/ai/architecture.md` only where it lists Control Line's control sources. Verify:
   `scripts/check-docs.sh`.
-- [ ] 6.2 Run `./gradlew check` and `scripts/check-docs.sh`. Both pass, including
+- [x] 6.2 Run `./gradlew check` and `scripts/check-docs.sh`. Both pass, including
   `:app-game-control-line:checkShippedClasspath`.

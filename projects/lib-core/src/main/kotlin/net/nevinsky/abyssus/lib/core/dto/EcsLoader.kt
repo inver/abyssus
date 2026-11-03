@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.ecs
+package net.nevinsky.abyssus.lib.core.dto
 
+import net.nevinsky.abyssus.lib.core.ecs.EcsLoadingWarns
+import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.dto.EntityDto

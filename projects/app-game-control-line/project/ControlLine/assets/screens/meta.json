@@ -241,6 +241,36 @@
           "sample": true
         },
         {
+          "name": "isInstructed",
+          "type": "boolean",
+          "sample": true
+        },
+        {
+          "name": "handleTilt",
+          "type": "number",
+          "sample": 0.5
+        },
+        {
+          "name": "ghostVisible",
+          "type": "boolean",
+          "sample": true
+        },
+        {
+          "name": "ghostTilt",
+          "type": "number",
+          "sample": 0.75
+        },
+        {
+          "name": "ghostCue",
+          "type": "string",
+          "sample": "Up!"
+        },
+        {
+          "name": "instructorHolds",
+          "type": "boolean",
+          "sample": true
+        },
+        {
           "name": "endLabel",
           "type": "string",
           "sample": "Landed"
@@ -360,6 +390,17 @@
           "name": "watchAiVisible",
           "type": "boolean",
           "sample": true
+        },
+        {
+          "name": "instructorOffered",
+          "type": "boolean",
+          "sample": true
+        },
+        {
+          "name": "instructorOn",
+          "type": "boolean",
+          "access": "write",
+          "sample": false
         },
         {
           "name": "isAi",
@@ -648,6 +689,11 @@
           "sample": true
         },
         {
+          "name": "hasInstructorTrack",
+          "type": "boolean",
+          "sample": false
+        },
+        {
           "name": "deductionTitle",
           "type": "string",
           "sample": "Take-off: deductions"
@@ -881,6 +927,12 @@
           "font": "mono-14",
           "fontSize": 19,
           "color": "#FF8C1A"
+        },
+        {
+          "name": "instructorTrack",
+          "font": "mono-14",
+          "fontSize": 19,
+          "color": "#33CCFF"
         },
         {
           "name": "primary",
@@ -1449,6 +1501,42 @@
                     "layout": {
                       "height": 22
                     }
+                  },
+                  {
+                    "id": "ps-instructor-row",
+                    "type": "row",
+                    "layout": {
+                      "spacing": 8,
+                      "align": "center"
+                    },
+                    "bindings": {
+                      "visible": "instructorOffered"
+                    },
+                    "children": [
+                      {
+                        "id": "ps-instructor",
+                        "type": "checkbox",
+                        "layout": {
+                          "width": 30,
+                          "height": 30
+                        },
+                        "bindings": {
+                          "checked": "instructorOn"
+                        }
+                      },
+                      {
+                        "id": "ps-instructor-l",
+                        "type": "label",
+                        "layout": {
+                          "width": 220,
+                          "height": 22
+                        },
+                        "properties": {
+                          "text": "Instructor  (I)"
+                        },
+                        "style": "body"
+                      }
+                    ]
                   },
                   {
                     "id": "ps-buttons",
@@ -2306,6 +2394,112 @@
                             "style": "hudValue"
                           }
                         ]
+                      },
+                      {
+                        "id": "hfi-handle",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "bindings": {
+                          "visible": "isInstructed"
+                        },
+                        "children": [
+                          {
+                            "id": "hfi-handle-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Handle"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hfi-handle-bar",
+                            "type": "progressBar",
+                            "layout": {
+                              "width": 140,
+                              "height": 12
+                            },
+                            "properties": {
+                              "maximum": 1
+                            },
+                            "bindings": {
+                              "value": "handleTilt"
+                            },
+                            "style": "bar"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hfi-ghost",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "bindings": {
+                          "visible": "ghostVisible"
+                        },
+                        "children": [
+                          {
+                            "id": "hfi-ghost-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Ghost"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hfi-ghost-bar",
+                            "type": "progressBar",
+                            "layout": {
+                              "width": 140,
+                              "height": 12
+                            },
+                            "properties": {
+                              "maximum": 1
+                            },
+                            "bindings": {
+                              "value": "ghostTilt"
+                            },
+                            "style": "bar"
+                          },
+                          {
+                            "id": "hfi-cue",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 19
+                            },
+                            "bindings": {
+                              "text": "ghostCue"
+                            },
+                            "style": "highlight"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hfi-instructor",
+                        "type": "label",
+                        "layout": {
+                          "height": 40
+                        },
+                        "properties": {
+                          "text": "Instructor"
+                        },
+                        "bindings": {
+                          "visible": "instructorHolds"
+                        },
+                        "style": "toast"
                       }
                     ]
                   }
@@ -2540,6 +2734,112 @@
                             "style": "hudValue"
                           }
                         ]
+                      },
+                      {
+                        "id": "hsi-handle",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "bindings": {
+                          "visible": "isInstructed"
+                        },
+                        "children": [
+                          {
+                            "id": "hsi-handle-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Handle"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hsi-handle-bar",
+                            "type": "progressBar",
+                            "layout": {
+                              "width": 140,
+                              "height": 12
+                            },
+                            "properties": {
+                              "maximum": 1
+                            },
+                            "bindings": {
+                              "value": "handleTilt"
+                            },
+                            "style": "bar"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hsi-ghost",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "bindings": {
+                          "visible": "ghostVisible"
+                        },
+                        "children": [
+                          {
+                            "id": "hsi-ghost-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Ghost"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hsi-ghost-bar",
+                            "type": "progressBar",
+                            "layout": {
+                              "width": 140,
+                              "height": 12
+                            },
+                            "properties": {
+                              "maximum": 1
+                            },
+                            "bindings": {
+                              "value": "ghostTilt"
+                            },
+                            "style": "bar"
+                          },
+                          {
+                            "id": "hsi-cue",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 19
+                            },
+                            "bindings": {
+                              "text": "ghostCue"
+                            },
+                            "style": "highlight"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hsi-instructor",
+                        "type": "label",
+                        "layout": {
+                          "height": 40
+                        },
+                        "properties": {
+                          "text": "Instructor"
+                        },
+                        "bindings": {
+                          "visible": "instructorHolds"
+                        },
+                        "style": "toast"
                       }
                     ]
                   }
@@ -2800,6 +3100,112 @@
                         "layout": {
                           "height": 19
                         }
+                      },
+                      {
+                        "id": "hpi-handle",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "bindings": {
+                          "visible": "isInstructed"
+                        },
+                        "children": [
+                          {
+                            "id": "hpi-handle-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Handle"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hpi-handle-bar",
+                            "type": "progressBar",
+                            "layout": {
+                              "width": 140,
+                              "height": 12
+                            },
+                            "properties": {
+                              "maximum": 1
+                            },
+                            "bindings": {
+                              "value": "handleTilt"
+                            },
+                            "style": "bar"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hpi-ghost",
+                        "type": "row",
+                        "layout": {
+                          "spacing": 6,
+                          "align": "center"
+                        },
+                        "bindings": {
+                          "visible": "ghostVisible"
+                        },
+                        "children": [
+                          {
+                            "id": "hpi-ghost-n",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 17
+                            },
+                            "properties": {
+                              "text": "Ghost"
+                            },
+                            "style": "hudLabel"
+                          },
+                          {
+                            "id": "hpi-ghost-bar",
+                            "type": "progressBar",
+                            "layout": {
+                              "width": 140,
+                              "height": 12
+                            },
+                            "properties": {
+                              "maximum": 1
+                            },
+                            "bindings": {
+                              "value": "ghostTilt"
+                            },
+                            "style": "bar"
+                          },
+                          {
+                            "id": "hpi-cue",
+                            "type": "label",
+                            "layout": {
+                              "width": 70,
+                              "height": 19
+                            },
+                            "bindings": {
+                              "text": "ghostCue"
+                            },
+                            "style": "highlight"
+                          }
+                        ]
+                      },
+                      {
+                        "id": "hpi-instructor",
+                        "type": "label",
+                        "layout": {
+                          "height": 40
+                        },
+                        "properties": {
+                          "text": "Instructor"
+                        },
+                        "bindings": {
+                          "visible": "instructorHolds"
+                        },
+                        "style": "toast"
                       }
                     ]
                   }
@@ -4814,6 +5220,20 @@
                                 "style": "flown",
                                 "properties": {
                                   "text": "Flown track"
+                                },
+                                "layout": {
+                                  "height": 19
+                                }
+                              },
+                              {
+                                "id": "db-l-instructor",
+                                "type": "label",
+                                "style": "instructorTrack",
+                                "properties": {
+                                  "text": "Instructor"
+                                },
+                                "bindings": {
+                                  "visible": "hasInstructorTrack"
                                 },
                                 "layout": {
                                   "height": 19

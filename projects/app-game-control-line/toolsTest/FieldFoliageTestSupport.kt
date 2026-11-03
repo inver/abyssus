@@ -4,7 +4,8 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.tools
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import org.slf4j.helpers.NOPLogger
 import java.io.File
 import java.nio.file.Files
 import java.security.MessageDigest
@@ -39,7 +40,7 @@ fun originalScene(): File = File(committedProject().parentFile.parentFile, "tool
  * terrain entity, and how many of the recorded trees and bushes are still entities.
  */
 fun migrationFootprint(project: File, manifest: FieldManifest): Map<String, String> {
-    val entities = SceneJson().parse(File(project, "scenes/Field.scene").readText())["ecs"]
+    val entities = JsonProcessor(NOPLogger.NOP_LOGGER).readObject(File(project, "scenes/Field.scene").readText())["ecs"]
     val out = sortedMapOf<String, String>()
     for (t in manifest.terrains) {
         out["FoliageComponent of ${t.entity}"] = entities[t.entity.toString()]?.get("components")?.get("FoliageComponent")?.toString() ?: "none"

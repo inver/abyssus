@@ -14,7 +14,7 @@ import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
 import com.badlogic.gdx.graphics.g3d.environment.PointLight
 import com.badlogic.gdx.graphics.g3d.environment.SpotLight
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.dto.LIGHT_RANGE
+import net.nevinsky.abyssus.lib.core.ecs.component.LIGHT_RANGE
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.unclampedColor

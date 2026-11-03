@@ -4,7 +4,7 @@ import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.dto.EntityDto
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.assets.Asset

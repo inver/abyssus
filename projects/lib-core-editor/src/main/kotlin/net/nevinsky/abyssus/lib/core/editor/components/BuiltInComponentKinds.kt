@@ -8,7 +8,7 @@ package net.nevinsky.abyssus.lib.core.editor.components
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.dto.LightDto
+import net.nevinsky.abyssus.lib.core.ecs.component.LightDto
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent

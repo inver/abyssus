@@ -1,4 +1,4 @@
-package net.nevinsky.abyssus.lib.core.dto
+package net.nevinsky.abyssus.lib.core.format
 
 /** What an entity is, as the `type` of its `ecs` entry says. */
 enum class EntityType {

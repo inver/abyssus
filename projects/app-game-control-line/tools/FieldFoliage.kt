@@ -37,9 +37,9 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageRuntimeLoad
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageScale
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
+import net.nevinsky.abyssus.lib.core.dto.entityWriter
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_COPY_LIMIT
 import net.nevinsky.abyssus.lib.core.editor.foliage.ScatterOutcome
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageScatter
@@ -217,8 +217,9 @@ class FieldMigration(val removedEntities: Int, val written: List<String>, val sc
 }
 
 class FieldFoliageTool {
-    private val json = SceneJson()
-    private val editing = HeadlessEditing()
+    private val registry = ComponentRegistry()
+    private val json = JsonProcessor(NOPLogger.NOP_LOGGER, listOf(entityWriter(registry)))
+    private val editing = HeadlessEditing(json, registry = registry)
     private val sha = HexSha()
 
     // ---- recording the manifest ----
@@ -256,7 +257,7 @@ class FieldFoliageTool {
     }
 
     private fun readTerrainSize(project: File, asset: String): Int =
-        json.parse(File(project, "assets/$asset/meta.json").readText())["additional"]["size"].asInt()
+        json.readObject(File(project, "assets/$asset/meta.json").readText())["additional"]["size"].asInt()
 
     private fun instanceOf(id: Int, entity: JsonNode): FieldInstance? {
         val render = entity["components"]["RenderComponent"] ?: return null
@@ -288,7 +289,7 @@ class FieldFoliageTool {
             if (id.toInt() in vegetation) continue
             val copy = entity.deepCopy<JsonNode>()
             (copy["components"] as? ObjectNode)?.remove("FoliageComponent")
-            text.append(id).append(':').append(json.compact(copy)).append('\n')
+            text.append(id).append(':').append(json.toString(copy)).append('\n')
         }
         return sha.of(text.toString().toByteArray())
     }
@@ -312,7 +313,7 @@ class FieldFoliageTool {
      * scene edit, then publishes them. The project may be the original one or an already migrated one.
      */
     fun generate(project: File, manifestFile: File): FieldMigration {
-        val manifest = FieldManifest.fromJson(json.parse(manifestFile.readText()))
+        val manifest = FieldManifest.fromJson(json.readObject(manifestFile.readText()))
         val sceneFile = File(project, SCENE)
         val sceneText = sceneFile.readText()
         val entities = entitiesOf(sceneText)
@@ -370,11 +371,11 @@ class FieldFoliageTool {
     /** The scene text with the vegetation entities removed and the foliage attached; refused edits fail the run. */
     private fun editScene(sceneText: String, manifest: FieldManifest, entities: Map<String, JsonNode>): String {
         var text = sceneText
-        val ids = manifest.instances.map { it.id.toString() }.toSet()
-        if (ids.any { it in entities }) {
+        val ids = manifest.instances.map { it.id.toLong() }.toSet()
+        if (ids.any { it.toString() in entities }) {
             text = applied(editing.removeEntities(text, ids), text)
         }
-        for (t in manifest.terrains) text = applied(editing.setFoliage(text, t.entity.toString(), t.foliage), text)
+        for (t in manifest.terrains) text = applied(editing.setFoliage(text, t.entity.toLong(), t.foliage), text)
         editing.validate(text, DocumentKind.SCENE)?.let { throw MigrationFailure("the edited scene is not valid: ${it.message}") }
         return text
     }
@@ -762,8 +763,7 @@ class FieldFoliageTool {
     // ---- scene reading ----
 
     private fun entitiesOf(sceneText: String): Map<String, JsonNode> {
-        val tree = SceneEntityTree(json.parse(sceneText))
-        val entities = tree.entities() ?: throw MigrationConflict("the scene has no entities")
+        val entities = json.readObject(sceneText).get("ecs")?.takeIf { it.isObject } ?: throw MigrationConflict("the scene has no entities")
         return entities.properties().associate { it.key to it.value }
     }
 

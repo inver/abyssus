@@ -21,7 +21,7 @@ import com.intellij.openapi.vfs.VirtualFileVisitor
 import com.intellij.ui.SimpleTextAttributes
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle

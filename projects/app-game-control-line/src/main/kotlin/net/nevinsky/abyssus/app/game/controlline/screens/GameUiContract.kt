@@ -10,6 +10,12 @@ const val SCREENS_ASSET = "screens"
 /** The Watch AI button of plane select: Enter on it watches the bot instead of flying. */
 const val WATCH_AI_BUTTON = "ps-watch-ai"
 
+/** The Instructor checkbox of plane select: Enter on it toggles the instructor instead of flying. */
+const val INSTRUCTOR_CHECKBOX = "ps-instructor"
+
+/** The ghost handle shows a cue when its tilt is this far from the player's. */
+const val CUE_MARGIN = 0.2f
+
 /** Screen and overlay ids of the UI asset, as the game shows them. */
 const val SCREEN_MAIN_MENU = "mainMenu"
 const val SCREEN_ASSIST = "assistSelect"
@@ -38,7 +44,7 @@ val PUBLISHED_BINDINGS: Map<String, String> = mapOf(
     "freeEnabled" to "boolean", "patternEnabled" to "boolean", "scaleEnabled" to "boolean", "hasMessage" to "boolean", "message" to "string",
     // plane select
     "hasModeLabel" to "boolean", "modeLabel" to "string", "planeCount" to "string", "planeName" to "string", "planeFacts" to "string",
-    "watchAiVisible" to "boolean", "hasScaleFacts" to "boolean", "scaleFacts" to "string",
+    "watchAiVisible" to "boolean", "instructorOffered" to "boolean", "instructorOn" to "boolean", "hasScaleFacts" to "boolean", "scaleFacts" to "string",
     // the controller settings
     "hasDevice" to "boolean", "deviceName" to "string", "deviceCount" to "string", "axisName" to "string", "liveTilt" to "number",
     "liveTiltText" to "string", "invert" to "boolean", "deadZone" to "number", "deadZoneText" to "string", "curve" to "number",
@@ -51,6 +57,8 @@ val PUBLISHED_BINDINGS: Map<String, String> = mapOf(
     // the HUD
     "tensionText" to "string", "tensionValue" to "number", "fuel" to "string", "laps" to "string", "score" to "string",
     "combo" to "string", "time" to "string", "next" to "string", "pauseLaps" to "string", "warning" to "string",
+    "isInstructed" to "boolean", "handleTilt" to "number", "ghostVisible" to "boolean", "ghostTilt" to "number", "ghostCue" to "string",
+    "instructorHolds" to "boolean",
     "prompted" to "boolean", "toast" to "string", "toastVisible" to "boolean",
     // the flight summary (name entry and game over)
     "endLabel" to "string", "isFree" to "boolean", "isPattern" to "boolean", "isScale" to "boolean", "patternHeader" to "string", "sheetScore" to "string",
@@ -65,7 +73,7 @@ val PUBLISHED_BINDINGS: Map<String, String> = mapOf(
     // the debrief
     "debriefTitle" to "string", "debriefRows" to "list:label,k,result,style,kStyle", "hasRecording" to "boolean",
     "deductionTitle" to "string", "deductions" to "list:text,style", "hasNotice" to "boolean", "notice" to "string",
-    "debriefStatus" to "string", "debriefKeys" to "string",
+    "hasInstructorTrack" to "boolean", "debriefStatus" to "string", "debriefKeys" to "string",
 )
 
 /** The named actions the asset emits; `openRow` arrives as `openRow#<row>` from the board rows. */

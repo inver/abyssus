@@ -178,7 +178,7 @@ class SceneInteractionUiTest : UiTestBase() {
         val toolbar = frame.sceneToolbar()
         toolbar.choose("World", "Local")
         assertTrue("the Local space is shown", poll(Duration.ofSeconds(3)) { runCatching { toolbar.component.findAll<com.intellij.remoterobot.fixtures.ComponentFixture>(com.intellij.remoterobot.search.locators.byXpath("//div[@class='ComboBoxButton' and @visible_text='Local']")).isNotEmpty() }.getOrDefault(false) })
-        val q = net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parseObject(original).get("ecs").get("2").get("components").get("PositionComponent").get("localRotation")
+        val q = SceneJson().parseObject(original).get("ecs").get("2").get("components").get("PositionComponent").get("localRotation")
         val local = net.nevinsky.abyssus.lib.core.editor.pick.gizmoAxes(
             net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace.LOCAL,
             com.badlogic.gdx.math.Quaternion(q.get("x").floatValue(), q.get("y").floatValue(), q.get("z").floatValue(), q.get("w").floatValue()),
@@ -282,7 +282,7 @@ class SceneInteractionUiTest : UiTestBase() {
         dragBy(press, direction, 40)
         LifecycleHarness.awaitState("the drag moved Camera 4", true) { ide.documentText(scene.toString()) != original }
         val moved = ide.documentText(scene.toString())!!
-        val camera = net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parseObject(moved).get("ecs").get("4").get("components")
+        val camera = SceneJson().parseObject(moved).get("ecs").get("4").get("components")
         val local = viewport.position(moved, 4)
         val stored = camera.get("CameraComponent").get("camera").get("position")
         assertTrue("localPosition.y changed (${origin.second} -> ${local.second})", local.second != origin.second)

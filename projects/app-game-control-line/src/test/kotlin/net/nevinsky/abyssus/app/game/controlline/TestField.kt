@@ -12,7 +12,7 @@ import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
 import net.nevinsky.abyssus.app.game.controlline.components.CONTROL_LINE_COMPONENTS
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
-import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.core.dto.EcsLoader
 import net.nevinsky.abyssus.lib.core.scene.SceneLoader
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives

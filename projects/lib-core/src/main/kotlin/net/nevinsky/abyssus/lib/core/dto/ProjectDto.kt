@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.dto
 
+import net.nevinsky.abyssus.lib.core.ecs.component.CameraDto
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.JsonNode

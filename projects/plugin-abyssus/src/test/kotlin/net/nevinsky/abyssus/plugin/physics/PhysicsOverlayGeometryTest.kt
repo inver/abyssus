@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin.physics
 
+import net.nevinsky.abyssus.lib.core.dto.entityWriter
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import net.nevinsky.abyssus.lib.core.io.FileLoader
@@ -18,7 +19,7 @@ class PhysicsOverlayGeometryTest {
     private val project = File(checkNotNull(System.getProperty("abyssus.testData")), "project/Physics")
     private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
     private val registry = net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry().also { r -> r.registerAll(net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS); net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS.values.forEach { r.register(it.name, it) } }
-    private val scene = net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER, registry), org.slf4j.helpers.NOPLogger.NOP_LOGGER, registry)
+    private val scene = net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER, listOf(entityWriter(registry))), org.slf4j.helpers.NOPLogger.NOP_LOGGER, registry)
         .parse(File(project, "scenes/Main Scene.scene").readText())
     private val content = sceneContentOf(scene)
     private val metas = AssetMetaLoader(json, FileLoader(project))

@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin
 
+import net.nevinsky.abyssus.lib.core.dto.entityWriter
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.editor.parseScene
@@ -41,7 +42,7 @@ internal fun editSceneText(project: Project, doc: com.intellij.openapi.editor.Do
 
 /** [scene] printed by a `JsonProcessor` that knows the components of [registry]. */
 internal fun printSceneWith(registry: net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry, scene: net.nevinsky.abyssus.lib.core.dto.SceneDto): String =
-    net.nevinsky.abyssus.lib.core.io.JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER, registry).pretty(scene)
+    net.nevinsky.abyssus.lib.core.io.JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER, listOf(entityWriter(registry))).pretty(scene)
 
 /** The asset `meta.json` [text] in the layout every edit prints (pretty, through the typed `AssetMeta`). */
 internal fun canonicalMeta(text: String): String {

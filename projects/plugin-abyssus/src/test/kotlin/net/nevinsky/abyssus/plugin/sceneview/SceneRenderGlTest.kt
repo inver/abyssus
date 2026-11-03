@@ -459,8 +459,8 @@ class SceneRenderGlTest {
             edit(it) { root ->
                 noFog(root)
                 root.ecs[99L] = net.nevinsky.abyssus.lib.core.editor.entityOf(
-                    99, net.nevinsky.abyssus.lib.core.dto.EntityType.LIGHT_DIRECTIONAL,
-                    net.nevinsky.abyssus.lib.core.ecs.component.LightComponent(net.nevinsky.abyssus.lib.core.dto.LightDto()),
+                    99, net.nevinsky.abyssus.lib.core.format.EntityType.LIGHT_DIRECTIONAL,
+                    net.nevinsky.abyssus.lib.core.ecs.component.LightComponent(net.nevinsky.abyssus.lib.core.ecs.component.LightDto()),
                     net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent(localRotation = com.badlogic.gdx.math.Quaternion(-0.7071f, 0f, 0f, 0.7071f)),
                 )
             }

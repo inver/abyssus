@@ -10,7 +10,7 @@ import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.dto.LIGHT_RANGE
+import net.nevinsky.abyssus.lib.core.ecs.component.LIGHT_RANGE
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FAR
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_NEAR

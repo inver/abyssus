@@ -1,11 +1,12 @@
 package net.nevinsky.abyssus.lib.core
 
+import net.nevinsky.abyssus.lib.core.dto.entityWriter
 import net.nevinsky.abyssus.lib.core.assets.standard.StandardAssetLoaders
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
-import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.core.dto.EcsLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.scene.SceneLoader
@@ -31,7 +32,7 @@ class BaseCtx(val projectDir: String, shadersPath: String?, shadersAnchor: Class
 
     init {
         componentRegistry = ComponentRegistry()
-        jsonProcessor = JsonProcessor(log, componentRegistry)
+        jsonProcessor = JsonProcessor(log, listOf(entityWriter(componentRegistry)))
         fileLoader = FileLoader(File(projectDir))
         metaLoader = AssetMetaLoader(jsonProcessor, fileLoader, log)
         //todo migrate to virtual threads

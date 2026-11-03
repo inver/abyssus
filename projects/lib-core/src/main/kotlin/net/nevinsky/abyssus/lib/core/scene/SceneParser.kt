@@ -2,7 +2,7 @@ package net.nevinsky.abyssus.lib.core.scene
 
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
-import net.nevinsky.abyssus.lib.core.ecs.EntityDtoModule
+import net.nevinsky.abyssus.lib.core.dto.EntityDtoModule
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor

@@ -8,7 +8,7 @@ import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import net.nevinsky.abyssus.lib.core.ecs.EcsLoadingWarns
-import net.nevinsky.abyssus.lib.core.ecs.EcsLoader
+import net.nevinsky.abyssus.lib.core.dto.EcsLoader
 import net.nevinsky.abyssus.lib.core.ecs.component.RawComponent
 import net.nevinsky.abyssus.lib.core.ecs.system.LookAtSystem
 import net.nevinsky.abyssus.lib.core.ecs.system.SynchronizeCameraComponentSystem

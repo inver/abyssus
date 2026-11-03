@@ -239,7 +239,7 @@ class GameFlow(
     fun debrief() {
         val s = screen as? Screen.GameOver ?: return
         val result = s.report.result as? FlightResult.Pattern ?: return
-        val model = result.recording?.let(::debriefOf)
+        val model = result.recording?.let { debriefOf(it, s.report.takeovers) }
             ?: sheetOnlyDebrief(result.sheet, s.report.plane, result.level)
         screen = Screen.Debrief(s, model)
     }

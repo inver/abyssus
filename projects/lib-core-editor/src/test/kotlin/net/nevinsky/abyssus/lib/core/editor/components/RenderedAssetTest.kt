@@ -6,7 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.components
 
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.entityOf

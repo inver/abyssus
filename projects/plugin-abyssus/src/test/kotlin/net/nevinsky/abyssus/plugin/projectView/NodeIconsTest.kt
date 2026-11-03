@@ -12,7 +12,7 @@ import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.fasterxml.jackson.databind.ObjectMapper
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.plugin.filetype.AssetIcons
 import net.nevinsky.abyssus.plugin.filetype.ComponentIcons
 import net.nevinsky.abyssus.plugin.filetype.EntityIcons

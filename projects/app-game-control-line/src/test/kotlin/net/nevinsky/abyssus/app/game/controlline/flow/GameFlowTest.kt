@@ -865,6 +865,12 @@ class GameFlowTest {
         flow.flightEnded(patternReport(AssistLevel.NOOB, 95).copy(takeovers = twoTakeovers))
         assertTrue(flow.screen is Screen.GameOver)
         assertTrue(patterns.board(AssistLevel.NOOB).isEmpty())
+        // with a recording, its debrief carries the takeovers
+        flow.retry()
+        val report = patternReport(AssistLevel.NOOB, 95)
+        flow.flightEnded(report.copy(takeovers = twoTakeovers, result = (report.result as FlightResult.Pattern).copy(recording = recordedFlight(AssistLevel.NOOB))))
+        flow.debrief()
+        assertEquals(twoTakeovers, (flow.screen as Screen.Debrief).model.takeovers)
     }
 
     @Test

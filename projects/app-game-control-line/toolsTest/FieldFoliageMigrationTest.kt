@@ -4,7 +4,11 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.tools
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
+import net.nevinsky.abyssus.lib.core.dto.entityWriter
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.scene.SceneParser
+import org.slf4j.helpers.NOPLogger
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -15,7 +19,15 @@ import java.io.File
 
 /** Reruns, conflicts and what a migration leaves of the scene. */
 class FieldFoliageMigrationTest {
-    private fun entities(project: File) = SceneJson().parse(File(project, "scenes/Field.scene").readText())["ecs"]
+    private val registry = ComponentRegistry()
+    private val json = JsonProcessor(NOPLogger.NOP_LOGGER, listOf(entityWriter(registry)))
+    private val parser = SceneParser(json, registry)
+
+    /**
+     * The entities as the scene printer writes them: the migration rewrites the scene through it, which fixes key order,
+     * number spelling and omitted defaults, so both sides of a comparison go through it.
+     */
+    private fun entities(project: File) = json.readObject(json.pretty(parser.parse(File(project, "scenes/Field.scene").readText())))["ecs"]
 
     private fun vegetation(project: File): Boolean = File(project, "scenes/Field.scene").readText().let {
         listOf("tree_broadleaf", "tree_young", "tree_acacia", "bush_tall", "bush_low").any { s -> it.contains("model_airfield_$s") }
@@ -49,7 +61,7 @@ class FieldFoliageMigrationTest {
     @Test
     fun theSceneLosesOnlyTheVegetationAndGainsOnlyTheFoliageComponents() = withOriginal { project ->
         val before = entities(project)
-        val manifest = FieldManifest.fromJson(SceneJson().parse(committedManifest().readText()))
+        val manifest = FieldManifest.fromJson(JsonProcessor(NOPLogger.NOP_LOGGER).readObject(committedManifest().readText()))
         val ids = manifest.instances.map { it.id.toString() }.toSet()
         val result = FieldFoliageTool().generate(project, committedManifest())
         assertEquals(215, result.removedEntities)
@@ -62,7 +74,8 @@ class FieldFoliageMigrationTest {
                 val components = after[id]["components"]
                 assertEquals(manifest.terrains.first { it.entity == id.toInt() }.foliage, components["FoliageComponent"]["assetName"].asText())
                 val others = entity["components"].properties().map { it.key }
-                assertEquals(others + "FoliageComponent", components.properties().map { it.key })
+                // the scene printer orders the components itself, so only which ones there are is pinned
+                assertEquals((others + "FoliageComponent").toSet(), components.properties().map { it.key }.toSet())
                 for (name in others) assertEquals("$id/$name", entity["components"][name], components[name])
             } else {
                 assertEquals("entity $id changed", entity, after[id])

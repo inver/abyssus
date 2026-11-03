@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin
 
+import net.nevinsky.abyssus.lib.core.dto.entityWriter
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearImport
@@ -28,7 +29,7 @@ class AbyssusPluginCtx : Disposable {
 
     /** The built-in components and the physics ones, so a physics scene reads as typed components the Properties panel can edit. */
     val registry by lazy { ComponentRegistry().also { r -> r.registerAll(PHYSICS_COMPONENTS); PHYSICS_COMPONENTS.values.forEach { r.register(it.name, it) } } }
-    val json by lazy { JsonProcessor(loggers.getLogger("json"), registry) }
+    val json by lazy { JsonProcessor(loggers.getLogger("json"), listOf(entityWriter(registry))) }
     val format by lazy { AbyssusDocumentFormat() }
     val documents by lazy { DocumentServices(json, format, loggers.getLogger("scenes"), registry) }
     val assets by lazy { AssetServices(json, format, loggers.getLogger("assets")) }

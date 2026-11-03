@@ -174,7 +174,7 @@ The GL test window asks for a 3.3 core context (the game's own minimum); a 3.2 r
 | Where | Keys and mouse |
 |---|---|
 | Menus | Up / Down and Enter, or the mouse; Escape goes back. A controller does the same: D-pad (or left stick) for the arrows, A for Enter, B for Escape |
-| Plane select (the vitrine) | Left / Right change the plane, Enter flies it, Escape returns to the screen before it (the main menu, or the assist level for an F2B pattern). For an F2B pattern, A or the **Watch AI** button (Tab to it, then Enter) has the AI fly the shown plane, see [Watch AI](#watch-ai) |
+| Plane select (the vitrine) | Left / Right change the plane, Enter flies it, Escape returns to the screen before it (the main menu, or the assist level for an F2B pattern). For an F2B pattern, A or the **Watch AI** button (Tab to it, then Enter) has the AI fly the shown plane, see [Watch AI](#watch-ai). I or the **Instructor** checkbox (Tab to it, then Enter) turns the [Instructor](#instructor) on or off |
 | Scores | Left / Right change the tab (Free flight, Pro, Mid, Noob, Scale), Escape or Back returns. On the F2B tabs, Up / Down select a flight and Enter or a click opens its debrief |
 | Debrief | Up / Down: manoeuvre; Space: pause or resume; R: restart; 1 / 2 / 3: speed ½× / 1× / 2×; V: pilot view or outside view; Escape returns |
 | Flying | W or Up: handle up; S or Down: handle down (full tilt in 0.15 s, back to neutral on release). Moving the mouse up or down sets the tilt by its distance from the window's centre; whichever was used last wins. A controller's handle axis sets the tilt too (see [Controllers](#controllers)). Escape, or the controller's pause button (Start on a gamepad), pauses. In a Watch AI demonstration the keys, the mouse and the controller do not move the handle; Escape still pauses |
@@ -490,6 +490,35 @@ take-off (and after the wingover for those that turn over), `F2bAiLandingTest` t
 judge's own tests (`PatternJudgeTest` with `SyntheticSchedule`), which feed it ideal tracks to check its reading; those
 show nothing about what a plane can fly.
 
+## Instructor
+
+A beginner crashes within seconds, so plane select offers an **Instructor** in every mode (Free flight, F2B pattern at every
+assist level, and Scale). Turn it on with I, a click on the checkbox, or a controller (focus the checkbox, then confirm). It
+is off when the game starts, keeps its state across modes and Retry for the rest of the session, and is not saved between
+sessions. Watch AI ignores it.
+
+During an instructed flight the game measures the **danger** from 0 to 1 every simulation step, from what ends a flight: the
+height left to pull out of the plane's dive (the largest of the ground, inverted and slack-line terms; a landing or a climb is
+no danger, and level flight at the 1.5 m base is 0). The HUD shows two thin bars, **Handle** (your tilt) and **Ghost** (the
+tilt the instructor would set), 0.5 being level. The ghost shows while there is danger or the instructor holds any of the
+handle, with the cue `Up!` or `Down!` when it differs from yours by more than 0.2.
+
+As danger grows the instructor takes a **share** of the handle: the handle is `(1 - share)` of your tilt plus `share` of
+the instructor's. The share rises to the danger at once. Once the danger has stayed 0 for 1 s it falls to 0 over 0.5 s (the
+**handback**). While it holds at least half the handle the HUD shows INSTRUCTOR: that span is a **takeover**. The
+instructor only flies the plane back to level flight at the base in the direction it flies (once the engine has stopped, it
+turns an inverted plane upright and glides in to land). It acts through the handle alone, under the same rules as you.
+
+An instructed flight with **no takeover** counts as any human flight: scored, offered name entry, saved. One with a
+takeover is **Assisted**: GAME OVER shows the real result and "Took over N times, not saved", offers no name entry, and writes
+no score table, board or recording. A share that stayed under 0.5 does not make a flight Assisted. In the F2B debrief of an
+assisted flight the part of the flown line flown during a takeover is drawn in cyan, named Instructor in the legend, and a
+manoeuvre a takeover overlapped says so above its deductions. The judges' marks are the ones the flight earned.
+
+`InstructorRescueTest` flies each bundled plane with a held full-down handle and checks that the instructor saves it, and
+that Watch AI's take-off and base laps need no takeover (its vertical figures dive at the plane's limit, so a takeover
+in a figure is accepted).
+
 ## The project in Abyssus
 
 Open a **copy** of `project/ControlLine` in Abyssus (`./gradlew :plugin-abyssus:runIde`), never the committed folder:
@@ -542,7 +571,7 @@ Only the trainer's model has the clips; the other planes stay whole. Slack lines
 | `score` | `ScoreKeeper`, `FlightScoring`, `ScoreTable` | no |
 | `pattern` | the F2B pattern: `Schedule` (`Figure`), `HemisphereGeometry`, `PathTokens`, `TrackBuilder`, `IdealTracks`, `IdealSampler`, `Matchers`, `Grader` / `MarkWeights`, `PatternJudge`, `ScoreSheet`, `PatternScoreTable`, and the debrief's `FlightRecording`, `RecordingStore`, `DebriefModel`, and the Noob guide `GuidePlanner` | no |
 | `flow` | `GameFlow` (the screen state machine, with the mode, the assist level and who flies, `Control`), `FlightReport` | no |
-| `ai` | the Watch AI bot: `F2bBot`, `F2bRoutinePlanner`, `F2bPilot`, `Handling`, `Course`, `F2bFigures`, `Fillets` | no |
+| `ai` | the Watch AI bot: `F2bBot`, `F2bRoutinePlanner`, `F2bPilot`, `Handling`, `Course`, `F2bFigures`, `Fillets`; and the Instructor: `InstructorControl`, `DangerGauge`, `InstructorShare`, `RescuePilot` | no |
 | (the package itself) | `ControlLineGame`, `FlightRunner` (the flight lifecycle, without GL), `Main` | `ControlLineGame` |
 | `input` | `HandleInput` (keyboard, mouse and controller tilt) | no |
 | `display` | `DisplaySettings` (`display.json`), `DisplayOptions`, `GdxDisplay` (the fullscreen switch, applied at the top of the next frame over libGDX's window) | `GdxDisplay` |
@@ -642,6 +671,8 @@ a screen, keep `ControlLineUiAssetTest` green (it admits the asset and checks bo
 GL tests (`-Dabyssus.glTests=true`): `GameScreensCharacterizationTest` compares the text of 30 steps through a whole session
 with `characterization/screens.golden`, recorded from the original hand-written screens (the Watch AI steps were added to
 it later). Re-record it (`-Dabyssus.recordScreens=true`) only when a screen is meant to change.
+
+Instructor: plane select's `ps-instructor` checkbox is bound to the writable `instructorOn` (shown while `instructorOffered`); the HUDs show the `Handle` and `Ghost` bars (`handleTilt`, `ghostTilt`), the `ghostCue` and an INSTRUCTOR label while `instructorHolds`, all under `isInstructed` / `ghostVisible`; GAME OVER's Instructor row is a `facts` row and the debrief legend's Instructor colour shows while `hasInstructorTrack`.
 
 Watch AI: plane select's `ps-watch-ai` button sends the `watchAi` action and shows while `watchAiVisible` (an F2B pattern
 with a stunt plane); `isAi` shows the "AI demonstration" labels on the F2B HUD (in place of the player's hint, which

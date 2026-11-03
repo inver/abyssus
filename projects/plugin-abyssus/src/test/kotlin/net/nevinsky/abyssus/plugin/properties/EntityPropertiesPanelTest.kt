@@ -266,7 +266,7 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
 
     private fun setEntityType(type: String) {
         val doc = FileDocumentManager.getInstance().getDocument(sceneFile())!!
-        editSceneText(project, doc) { it.entity(0)!!.header().type = net.nevinsky.abyssus.lib.core.dto.EntityType.valueOf(type) }
+        editSceneText(project, doc) { it.entity(0)!!.header().type = net.nevinsky.abyssus.lib.core.format.EntityType.valueOf(type) }
     }
 
     fun testBeamEditorsAreSpotlightOnlyAndUsePercent() {

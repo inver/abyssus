@@ -1,6 +1,5 @@
 package net.nevinsky.abyssus.uitesting
 
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

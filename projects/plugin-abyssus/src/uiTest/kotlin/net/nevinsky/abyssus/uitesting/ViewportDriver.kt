@@ -5,7 +5,6 @@ import com.intellij.remoterobot.search.locators.byXpath
 import com.intellij.remoterobot.utils.keyboard
 import com.intellij.remoterobot.utils.waitFor
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
-import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 import org.junit.Assume.assumeTrue
 import java.awt.Point
 import java.time.Duration

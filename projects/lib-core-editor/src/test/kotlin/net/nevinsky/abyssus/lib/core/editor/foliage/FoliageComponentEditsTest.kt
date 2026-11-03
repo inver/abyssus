@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.foliage
 
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent

@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.lib.core.ecs.component
 
 import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Entity
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.format.EntityType
 
 /**
  * What every loaded entity is before its other components: its [id] as the scene file keys it, its [type] (the `type` of its entry, null when it has none), whether it is enabled ([entityEnabled]), the bits of its `flags` this program

@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
+import net.nevinsky.abyssus.lib.core.dto.entityWriter
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RawComponentsWrapper
@@ -17,11 +18,11 @@ import org.slf4j.helpers.NOPLogger
 
 class SceneWriteTest {
     private val registry = ComponentRegistry()
-    private val json = JsonProcessor(NOPLogger.NOP_LOGGER, registry)
+    private val json = JsonProcessor(NOPLogger.NOP_LOGGER, listOf(entityWriter(registry)))
     private val parser = SceneParser(json, registry)
     private val serializer = json
 
-    private val reader = json.binderWith(net.nevinsky.abyssus.lib.core.ecs.EntityDtoModule(registry))
+    private val reader = json.binderWith(net.nevinsky.abyssus.lib.core.dto.EntityDtoModule(registry))
 
     /** Reads written text back without the marker check, which G9 removes: [SceneDto] has no `format` fields to write. */
     private fun reparse(written: String) = reader.bind(json.readObject(written), net.nevinsky.abyssus.lib.core.dto.SceneDto::class.java)

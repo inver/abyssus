@@ -186,7 +186,7 @@ class ControlLineGame(
             cables = cables,
         )
         (optIn as? FailableFieldView)?.failure?.let(::fallBackToRaster)
-        ui.update(s, flights.judge, seconds, flights.scaleJudge)
+        ui.update(s, flights.judge, seconds, flights.scaleJudge, flights.instructor)
         ui.draw(seconds)
     }
 

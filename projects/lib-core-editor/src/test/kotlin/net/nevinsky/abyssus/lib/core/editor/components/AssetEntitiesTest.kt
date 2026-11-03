@@ -8,7 +8,7 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.dto.EntityDto
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent

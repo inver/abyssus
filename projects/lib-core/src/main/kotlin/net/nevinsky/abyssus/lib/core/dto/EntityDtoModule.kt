@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.nevinsky.abyssus.lib.core.ecs
+package net.nevinsky.abyssus.lib.core.dto
 
 import com.badlogic.ashley.core.Component
 import com.badlogic.ashley.core.Entity
@@ -15,8 +15,9 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import net.nevinsky.abyssus.lib.core.dto.EntityDto
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
+import net.nevinsky.abyssus.lib.core.format.EntityType
+import net.nevinsky.abyssus.lib.core.io.JsonExtension
 import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RawComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RawComponentsWrapper
@@ -40,6 +41,11 @@ class EntityDtoModule(registry: ComponentRegistry) : SimpleModule("AbyssusEntity
     init {
         addDeserializer(EntityDto::class.java, EntityDeserializer(registry))
     }
+}
+
+/** Teaches a [net.nevinsky.abyssus.lib.core.io.JsonProcessor] to write entities, naming components with [registry]; share the one the scene is read with. */
+fun entityWriter(registry: ComponentRegistry): JsonExtension = JsonExtension { componentTree, rawTree ->
+    SimpleModule("AbyssusEntityWriter").addSerializer(EntityDto::class.java, EntitySerializer(registry, componentTree, rawTree))
 }
 
 private const val FLAGS_KEY = "flags"

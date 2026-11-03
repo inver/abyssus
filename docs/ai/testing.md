@@ -325,7 +325,7 @@ time**; `gpuMs` stays empty unless a timer query measured it on its own. A repor
 | Check pixels against a recording | the same with `-Dabyssus.perf.pixels=compare -Dabyssus.perf.pixelsReference=<dir>` |
 | Compare two reports | `./gradlew :lib-core:comparePerf -Pbaseline=<file.json> -Pcandidate=<file.json>` |
 
-The game workload and its pixel case were re-based by `openspec/changes/add-control-line-pbr-rendering`: they used to draw inside a `FrameBuffer` that the renderer's sun shadow pass unbinds, so everything after the sky was drawn outside the target. `docs/perf/baseline/game.json` and `docs/perf/baseline/pixels/control-line-field.*` predate that and are not comparable with a run made now (`MISMATCHED` by the `pipeline`/`target` settings); take a new Mac baseline before comparing the game workload.
+The game workload and its pixel case were re-based by `openspec/changes/archive/2026-10-31-add-control-line-pbr-rendering`: they used to draw inside a `FrameBuffer` that the renderer's sun shadow pass unbinds, so everything after the sky was drawn outside the target. `docs/perf/baseline/game.json` and `docs/perf/baseline/pixels/control-line-field.*` predate that and are not comparable with a run made now (`MISMATCHED` by the `pipeline`/`target` settings); take a new Mac baseline before comparing the game workload.
 
 A run lasts about 3 minutes per workload at the full protocol (the editor's four take about 13 minutes, plus a reload each).
 
@@ -651,6 +651,7 @@ Field editor types (`AssetFieldKind`); one case per type, with per-kind tables c
 | `CHOICE` | CMP-07, AST-02 | passed (Render asset type, arrangement sides) |
 | `ENTITY_REF` | CMP-04, CMP-05 | passed (Parent, Point2Point endpoints; unknown entity and text refused) |
 | `ASSET_NAME` | CMP-02, AST-02 | passed (Render asset at add, arrangement asset pick with Undo) |
+| `MESH_ID` | CMP-02 | covered below the UI: a choice among the meshes of the Render model, offered and committed by `MeshIdEditingTest` and `MeshChooserTest`; no Remote Robot case yet |
 
 Game UI widget kinds (`UiWidgetType`).
 

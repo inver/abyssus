@@ -377,11 +377,11 @@ class SceneFileEditorTest : BasePlatformTestCase() {
     /** A copy of Untitled's `Main Scene` (the shared fixture is not touched) with a LightComponent on 7 and a spotlight 8. */
     private fun sceneWithOmittedLightValues(): String {
         val scene = parsedScene(java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
-        scene.entity(7)!!.add(net.nevinsky.abyssus.lib.core.ecs.component.LightComponent(net.nevinsky.abyssus.lib.core.dto.LightDto(intensity = 1.2f)))
+        scene.entity(7)!!.add(net.nevinsky.abyssus.lib.core.ecs.component.LightComponent(net.nevinsky.abyssus.lib.core.ecs.component.LightDto(intensity = 1.2f)))
         scene.ecs[8] = net.nevinsky.abyssus.lib.core.editor.entityOf(
-            8, net.nevinsky.abyssus.lib.core.dto.EntityType.LIGHT_SPOT,
+            8, net.nevinsky.abyssus.lib.core.format.EntityType.LIGHT_SPOT,
             net.nevinsky.abyssus.lib.core.ecs.component.NameComponent("Spot Light 8"),
-            net.nevinsky.abyssus.lib.core.ecs.component.LightComponent(net.nevinsky.abyssus.lib.core.dto.LightDto()),
+            net.nevinsky.abyssus.lib.core.ecs.component.LightComponent(net.nevinsky.abyssus.lib.core.ecs.component.LightDto()),
         )
         return printScene(scene)
     }

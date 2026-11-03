@@ -288,7 +288,7 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         pane.tree.selectionPath = entityPath(pane, "0")!!
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
         assertTrue(editSceneDocument(project, file, "Add entity 99") { scene ->
-            scene.ecs[99L] = net.nevinsky.abyssus.lib.core.editor.entityOf(99, net.nevinsky.abyssus.lib.core.dto.EntityType.OBJECT, net.nevinsky.abyssus.lib.core.ecs.component.NameComponent("Copy 99"))
+            scene.ecs[99L] = net.nevinsky.abyssus.lib.core.editor.entityOf(99, net.nevinsky.abyssus.lib.core.format.EntityType.OBJECT, net.nevinsky.abyssus.lib.core.ecs.component.NameComponent("Copy 99"))
             true
         })
         val visitor = com.intellij.ui.tree.TreeVisitor { path -> net.nevinsky.abyssus.plugin.projectView.entityVisitAction(file, 99L, path.path.map(TreeUtil::getUserObject)) }
@@ -309,7 +309,7 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         val visitor = com.intellij.ui.tree.TreeVisitor { path -> net.nevinsky.abyssus.plugin.projectView.entityVisitAction(file, 99L, path.path.map(TreeUtil::getUserObject)) }
         assertTrue("the request is kept although the tree is idle", pane.refresh.selectAfterRebuild(visitor, evenIfIdle = true))
         assertTrue(editSceneDocument(project, file, "Add entity 99") { scene ->
-            scene.ecs[99L] = net.nevinsky.abyssus.lib.core.editor.entityOf(99, net.nevinsky.abyssus.lib.core.dto.EntityType.OBJECT, net.nevinsky.abyssus.lib.core.ecs.component.NameComponent("Copy 99"))
+            scene.ecs[99L] = net.nevinsky.abyssus.lib.core.editor.entityOf(99, net.nevinsky.abyssus.lib.core.format.EntityType.OBJECT, net.nevinsky.abyssus.lib.core.ecs.component.NameComponent("Copy 99"))
             true
         })
         settle(pane, 1)

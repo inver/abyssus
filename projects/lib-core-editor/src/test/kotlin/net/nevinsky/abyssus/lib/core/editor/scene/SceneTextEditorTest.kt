@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
+import net.nevinsky.abyssus.lib.core.dto.entityWriter
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
@@ -19,7 +20,7 @@ import org.slf4j.helpers.NOPLogger
 /** The text transform: parse, edit, write back through [JsonProcessor.pretty]. */
 class SceneTextEditorTest {
     private val registry = ComponentRegistry()
-    private val json = JsonProcessor(NOPLogger.NOP_LOGGER, registry)
+    private val json = JsonProcessor(NOPLogger.NOP_LOGGER, listOf(entityWriter(registry)))
     private val text = """{"format":"abyssus","formatVersion":1,"name":"A","ecs":{}}"""
 
     private fun editor() = SceneTextEditor(SceneParser(json, registry), json)
@@ -29,7 +30,7 @@ class SceneTextEditorTest {
         val outcome = editor().edit(text) { scene -> true.also { scene.ecs.clear() } }
         val edited = (outcome as TextEditOutcome.Edited).text
         assertTrue(edited.endsWith("\n"))
-        assertTrue(edited.contains("\"name\" : \"A\""))
+        assertTrue(edited.contains("\"name\": \"A\""))
     }
 
     @Test

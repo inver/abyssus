@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.testing.perf
 
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.utils.GdxNativesLoader

@@ -9,6 +9,7 @@ import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputAdapter
 import com.badlogic.gdx.InputProcessor
 import net.nevinsky.abyssus.lib.core.ui.model.showOverlayAction
+import net.nevinsky.abyssus.app.game.controlline.ai.InstructorControl
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
 import net.nevinsky.abyssus.app.game.controlline.controller.ControllerSettings
 import net.nevinsky.abyssus.app.game.controlline.controller.NoControllerSettings
@@ -55,7 +56,7 @@ class GameUiHost(
     private var shown: GameLayers? = null
 
     /** Shows the flow's screen (when it changed) and takes the model's values for this frame. */
-    fun update(session: FlightSession?, judge: PatternJudge?, seconds: Float, scaleJudge: ScaleJudge? = null) {
+    fun update(session: FlightSession?, judge: PatternJudge?, seconds: Float, scaleJudge: ScaleJudge? = null, instructor: InstructorControl? = null) {
         val layers = model.layersOf(flow.screen)
         if (layers != shown) {
             shown = layers
@@ -64,7 +65,7 @@ class GameUiHost(
                 presenter.navigator.activate(showOverlayAction(overlay))
             }
         }
-        presenter.publish(model.snapshot(session, judge, seconds, scaleJudge))
+        presenter.publish(model.snapshot(session, judge, seconds, scaleJudge, instructor))
     }
 
     fun draw(seconds: Float) = presenter.render(seconds)

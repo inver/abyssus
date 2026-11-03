@@ -6,8 +6,8 @@
 package net.nevinsky.abyssus.lib.core.editor.scene
 
 import com.badlogic.gdx.graphics.Color
-import net.nevinsky.abyssus.lib.core.dto.EntityType
-import net.nevinsky.abyssus.lib.core.dto.LightDto
+import net.nevinsky.abyssus.lib.core.format.EntityType
+import net.nevinsky.abyssus.lib.core.ecs.component.LightDto
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent

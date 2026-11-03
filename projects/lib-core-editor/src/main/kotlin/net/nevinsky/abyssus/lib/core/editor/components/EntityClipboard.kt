@@ -7,7 +7,7 @@ package net.nevinsky.abyssus.lib.core.editor.components
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.ecs.component.*

@@ -13,6 +13,9 @@ val IDEAL_COLOR = Color(0.25f, 0.9f, 0.35f, 1f)
 /** The debrief's flown track. */
 val FLOWN_COLOR = Color(1f, 0.55f, 0.1f, 1f)
 
+/** The part of the debrief's flown track that the instructor flew during a takeover. */
+val INSTRUCTOR_COLOR = Color(0.2f, 0.8f, 1f, 1f)
+
 /** The debrief's guides: the base and the 45° parallel, faint. */
 val GUIDE_COLOR = Color(1f, 1f, 1f, 0.35f)
 
@@ -20,6 +23,7 @@ val GUIDE_COLOR = Color(1f, 1f, 1f, 0.35f)
 fun TrackKind.color(): Color = when (this) {
     TrackKind.IDEAL -> IDEAL_COLOR
     TrackKind.FLOWN -> FLOWN_COLOR
+    TrackKind.INSTRUCTOR -> INSTRUCTOR_COLOR
     TrackKind.GUIDE -> GUIDE_COLOR
 }
 

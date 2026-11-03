@@ -5,7 +5,7 @@
 package net.nevinsky.abyssus.lib.core.format
 
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.format.EntityType
 
 enum class DocumentKind { PROJECT, SCENE, ASSET }
 enum class FormatProblem { MARKER, VERSION, LEGACY_FIELD, ENTITY_SHAPE }

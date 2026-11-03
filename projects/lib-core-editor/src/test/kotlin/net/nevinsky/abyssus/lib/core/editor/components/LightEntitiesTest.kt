@@ -5,7 +5,7 @@
 package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.dto.EntityType
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent

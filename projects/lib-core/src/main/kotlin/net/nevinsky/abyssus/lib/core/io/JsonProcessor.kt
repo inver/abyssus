@@ -22,9 +22,6 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.TreeTraversingParser
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import net.nevinsky.abyssus.lib.core.dto.EntityDto
-import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
-import net.nevinsky.abyssus.lib.core.ecs.EntitySerializer
 import org.slf4j.Logger
 import java.math.BigDecimal
 import kotlin.math.abs
@@ -65,13 +62,22 @@ class NodeBinder internal constructor(private val reader: ObjectReader, private 
 }
 
 /**
+ * Adds to a [JsonProcessor] the serializers of types it does not know: [module] gets the processor's own writers for a
+ * component's value ([componentTree]) and for a payload kept as text ([rawTree]), both keeping decimal text. This is how
+ * `dto` teaches the processor to write entities, so `io` imports neither `dto` nor `ecs`.
+ */
+fun interface JsonExtension {
+    fun module(componentTree: (Component) -> JsonNode, rawTree: (String) -> JsonNode): Module
+}
+
+/**
  * Binds native JSON (`.abss`, `.scene`, asset `meta.json`) to Kotlin classes: unknown properties are skipped, unknown
  * enum values take their default, and properties keep declaration order. Create one and pass it to what needs it.
  */
 class JsonProcessor(
     internal val log: Logger,
-    /** The registry that names components when entities are written; share the one the scene is read with. */
-    registry: ComponentRegistry = ComponentRegistry(),
+    /** What else the processor can write, such as entities (`dto`'s `entityWriter`); each gets this processor's component writers. */
+    extensions: List<JsonExtension> = emptyList(),
 ) {
     private val format = JsonFormat()
     private val prettyPrinter: DefaultPrettyPrinter = format.prettyPrinter
@@ -86,13 +92,8 @@ class JsonProcessor(
         .addMixIn(Color::class.java, PublicFieldsOnly::class.java)
         .build()
         .also { m ->
-            // a separate module from EntityDtoModule (which reads), so a reader's own registry is not shadowed
-            m.registerModule(
-                SimpleModule("AbyssusEntityWriter").addSerializer(
-                    EntityDto::class.java,
-                    EntitySerializer(registry, { componentTree(it) }, { componentWriter.readTree(it) })
-                )
-            )
+            // separate modules from the readers (EntityDtoModule), so a reader's own registry is not shadowed
+            extensions.forEach { m.registerModule(it.module({ c -> componentTree(c) }, { text -> componentWriter.readTree(text) })) }
         }
 
     private val componentReader = mapper.copy()

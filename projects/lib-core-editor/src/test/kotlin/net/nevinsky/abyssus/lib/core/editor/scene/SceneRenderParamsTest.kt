@@ -10,7 +10,6 @@ import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 
 import net.nevinsky.abyssus.lib.core.editor.parseScene
-import net.nevinsky.abyssus.lib.core.editor.ray.SceneRaySettings
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.slf4j.helpers.NOPLogger
 import org.junit.Assert.assertEquals
