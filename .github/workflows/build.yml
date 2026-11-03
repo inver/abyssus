@@ -1,12 +1,10 @@
-# GitHub Actions Workflow is created for testing and preparing the plugin release in the following steps:
+# GitHub Actions Workflow for testing and preparing the plugin release, run only for a tag `plugin-cX.Y.Z`:
 # - validate Gradle Wrapper,
-# - run 'test' and 'verifyPlugin' tasks,
-# - run Qodana inspections,
-# - run 'buildPlugin' task and prepare artifact for the further tests,
-# - run 'verifyPlugin' task,
-# - create a draft release.
-#
-# Workflow is triggered on push and pull_request events.
+# - check that the tag matches `pluginVersion` in gradle.properties,
+# - run 'check' (headless; the Remote Robot UI tests are not run on GitHub runners, see docs/ai/testing.md),
+# - run 'verifyPlugin' and Qodana inspections,
+# - run 'buildPlugin' task and prepare artifact,
+# - create a draft release on the tag; publishing it triggers release.yml.
 #
 # GitHub Actions reference: https://help.github.com/en/actions
 #
@@ -14,11 +12,8 @@
 
 name: Build
 on:
-  # Trigger the workflow on pushes to only the 'main' branch (this avoids duplicate checks being run e.g. for dependabot pull requests)
   push:
-    branches: [main]
-  # Trigger the workflow on any pull request
-  pull_request:
+    tags: ['plugin-c*']
 
 jobs:
 
@@ -68,6 +63,16 @@ jobs:
           VERSION="$(echo "$PROPERTIES" | grep "^version:" | cut -f2- -d ' ')"
           NAME="$(echo "$PROPERTIES" | grep "^pluginName:" | cut -f2- -d ' ')"
           CHANGELOG="$(./gradlew :plugin-abyssus:getChangelog --unreleased --no-header --console=plain -q)"
+
+          TAG="${{ github.ref_name }}"
+          if [[ ! "$TAG" =~ ^plugin-c([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "::error::Tag '$TAG' is not plugin-cX.Y.Z"
+            exit 1
+          fi
+          if [ "${BASH_REMATCH[1]}" != "$VERSION" ]; then
+            echo "::error::Tag '$TAG' does not match pluginVersion $VERSION in gradle.properties"
+            exit 1
+          fi
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "name=$NAME" >> $GITHUB_OUTPUT
@@ -141,7 +146,6 @@ jobs:
   # If accepted and published, release workflow would be triggered
   releaseDraft:
     name: Release Draft
-    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -166,9 +170,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create v${{ needs.build.outputs.version }} \
+          gh release create ${{ github.ref_name }} \
+            --verify-tag \
             --draft \
-            --title "v${{ needs.build.outputs.version }}" \
+            --title "Abyssus plugin v${{ needs.build.outputs.version }}" \
             --notes "$(cat << 'EOM'
           ${{ needs.build.outputs.changelog }}
           EOM

@@ -96,7 +96,7 @@ means a new installer is needed. An unknown manifest `schemaVersion` means the s
 ### 3. Finding and trusting a release
 
 - `ReleaseSource` calls `GET /repos/<owner>/<repo>/releases` (public, anonymous, with an `If-None-Match` ETag kept in
-  `state.json`; a 304 costs no rate limit), drops drafts and pre-releases and tags without the `control-line-v` prefix,
+  `state.json`; a 304 costs no rate limit), drops drafts and pre-releases and tags without the `cl-v` prefix,
   and takes the highest numeric version. The repository and prefix are generated into a launcher resource at build time.
 - Only asset **names** are taken from that JSON. The manifest and its signature are downloaded first; the manifest is
   verified over its exact bytes before it is parsed; part URLs are the release's own asset URLs for the names the signed
@@ -156,7 +156,7 @@ waiting version, reason). A new-installer notice gives the release page address.
 ### 8. Release pipeline
 
 ```
- tag control-line-v1.2.0
+ tag cl-v1.2.0
    |
    +--> build matrix (ubuntu-22.04, windows, macos arm64, macos intel)   environment: release
    |      sign app-image content + installer (Windows / macOS), notarize + staple (macOS)
@@ -164,23 +164,23 @@ waiting version, reason). A new-installer notice gives the release page address.
    +--> publish (ubuntu)                                                 environment: release
           download all -> game parts + installer.digest from the Linux job -> manifest.json
           -> sign manifest.json and SHA256SUMS with the update key -> verify with lib-updater
-          -> gh release create control-line-v1.2.0 (not a pre-release)
+          -> gh release create cl-v1.2.0 (not a pre-release)
 ```
 
 - The packaging steps move into a reusable workflow `_package-control-line.yml` with a `release` input. `build-control-line.yml`
   (pull requests and canary) calls it with `release: false`: no environment, no secrets, no signing, as today. The
   tag workflow calls it with `release: true`. If GitHub rejects an empty `environment:` expression, the release jobs are
   separate jobs guarded by `if:` instead.
-- The version comes from the tag (`control-line-v1.2.0` gives `-PcontrolLineVersion=1.2.0`); the workflow rejects a tag that
+- The version comes from the tag (`cl-v1.2.0` gives `-PcontrolLineVersion=1.2.0`); the workflow rejects a tag that
   is not `X.Y.Z`, and `.dmg` needs a major version above 0.
-- The `release` environment requires reviewer approval and is reachable only from tags matching `control-line-v*`
+- The `release` environment requires reviewer approval and is reachable only from tags matching `cl-v*`
   (a tag protection rule, set in the repository settings by the maintainer). Fork pull requests never see it.
 - **Update key:** an Ed25519 key pair made once by `scripts/generate-update-key.sh` (`openssl genpkey`); the public half is
   committed in the launcher's `update-keys.json`, the private half is the secret `UPDATE_SIGNING_KEY` in the `release`
   environment only. `SignManifest` (a task in `build-logic`, plain JDK `Signature`) reads it from the environment, signs in
   memory, and never writes it to disk or the log. `SHA256SUMS` is signed by the same key in the same step; the README
   documents `openssl pkeyutl -verify -rawin` for it.
-- `release.yml` gets a job-level `if: ${{ !startsWith(github.event.release.tag_name, 'control-line-v') }}` so a Control Line
+- `release.yml` gets a job-level `if: ${{ !startsWith(github.event.release.tag_name, 'cl-v') }}` so a Control Line
   release never starts the Marketplace publication; the new workflow does not trigger on `release` events at all.
 - **macOS:** `jpackage --mac-sign --mac-signing-keychain <temp keychain> --mac-signing-key-user-name "<Developer ID
   Application: ...>" --mac-entitlements packaging/macos/entitlements.plist` on the app-image and the disk image, then

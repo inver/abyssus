@@ -20,7 +20,7 @@ this project before it runs.
 - Release builds sign the installers: the Windows `.msi` (Authenticode), the macOS `.dmg` (Developer ID, notarized and
   stapled), and the Linux packages through a signed `SHA256SUMS`. Pull-request and canary builds stay unsigned and need
   no secrets.
-- A tag `control-line-vX.Y.Z` runs a release workflow that builds the packages, signs everything in a protected
+- A tag `cl-vX.Y.Z` runs a release workflow that builds the packages, signs everything in a protected
   environment, and publishes the release with the update parts and the manifest.
 - The player can turn updates off.
 - **BREAKING for the packaging change:** `add-control-line-native-packages` declares the packages unsigned and lists
@@ -54,7 +54,7 @@ amends. Archive this change after that one.)
   `settings.gradle.kts`; the launcher is the `jpackage` main jar, the game's jars become the updatable payload.
 - `build-logic` packaging plugin: parts and manifest tasks, signing hooks, the launcher as `mainJar`, `modules.txt`
   gains the HTTPS and signature modules; `CheckPackagePayload` accepts the launcher and updater jars.
-- `.github/workflows/`: a new `release-control-line.yml` (tag `control-line-v*`, protected `release` environment);
+- `.github/workflows/`: a new `release-control-line.yml` (tag `cl-v*`, protected `release` environment);
   `release.yml` (plugin Marketplace publish) is guarded so a Control Line release never triggers it;
   `build-control-line.yml` stays unsigned.
 - `openspec/changes/add-control-line-native-packages/specs/game-distribution/spec.md` is amended (not unsigned any more

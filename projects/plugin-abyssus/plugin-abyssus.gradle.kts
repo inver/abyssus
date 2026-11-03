@@ -276,7 +276,7 @@ kover {
     }
 }
 
-// Sandbox IDE with the robot-server plugin for UI tests (run configuration "Run IDE for UI Tests", run-ui-tests.yml)
+// Sandbox IDE with the robot-server plugin for UI tests (run configuration "Run IDE for UI Tests", scripts/run-ui-tests*.sh)
 val runIdeForUiTests by intellijPlatformTesting.runIde.registering {
     task {
         // -PuiProject=<dir> opens that project, -PuiSandbox=<dir> isolates IDE config/system, -PuiPort=<n> moves robot-server.

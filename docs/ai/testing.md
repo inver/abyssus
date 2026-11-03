@@ -71,11 +71,15 @@ classpath, and `check` never runs it. Nothing under `uiTest` ships in the plugin
 
 ### UI tests in CI
 
-`.github/workflows/run-ui-tests.yml` runs `scripts/run-ui-tests-docker.sh` on `ubuntu-24.04` for pull requests and manual
-dispatch, separately from the headless `check` in `build.yml`. `CI=true` is forwarded into the container, so a baseline update
-request fails there. A run that discovers no UI test fails (`failOnNoDiscoveredTests`). The job always uploads
-`projects/plugin-abyssus/build/reports/ui-tests/` as the `ui-test-diagnostics` artifact (failure screenshots, component
-hierarchies, expected/actual/diff images, IDE logs and the JUnit report); download it from the run's summary page.
+UI tests do not run on GitHub-hosted runners; no workflow starts them. Run `scripts/run-ui-tests-docker.sh` locally (or on a
+self-hosted machine) before a plugin release. With `CI=true` set, which the script forwards into the container, a baseline
+update request fails. A run that discovers no UI test fails (`failOnNoDiscoveredTests`). Every run writes
+`projects/plugin-abyssus/build/reports/ui-tests/` (failure screenshots, component hierarchies, expected/actual/diff images,
+IDE logs and the JUnit report).
+
+GitHub workflows build only for release tags: `build.yml` (headless `check`, Plugin Verifier, Qodana, draft release) for
+`plugin-cX.Y.Z`, which must equal `pluginVersion`, and `release-control-line.yml` for `cl-vX.Y.Z`. Pull requests and pushes
+to `main` start no workflow; run `./gradlew check` locally before merging.
 
 ### UI screenshot baselines
 

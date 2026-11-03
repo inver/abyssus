@@ -25,6 +25,18 @@ Native packages bundle a trimmed Java runtime, so the player needs no Java. They
 (spec: `game-distribution`, OpenSpec change `add-control-line-native-packages`). `jpackage` cannot cross-build: a package is
 built on the OS and architecture it targets, and CI builds each one on a runner of its own.
 
+CI builds only for a tag `cl-vX.Y.Z` (`.github/workflows/release-control-line.yml`; the version becomes
+`-PcontrolLineVersion=X.Y.Z`). The release `cl-vX.Y.Z` holds the installers of every platform, the update package
+`control-line-X.Y.Z-update.zip` (the universal distribution: game jars with every platform's natives and the project, no
+Java runtime), `SHA256SUMS`, its Ed25519 signature `SHA256SUMS.sig` and the public key `update-key.pub.pem`. The private
+key is the repository secret `UPDATE_SIGNING_KEY` (PEM from `openssl genpkey -algorithm ED25519`) in the `release`
+environment. Check a download with:
+
+```
+openssl pkeyutl -verify -pubin -inkey update-key.pub.pem -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig
+sha256sum --check --ignore-missing SHA256SUMS
+```
+
 ```
 ./gradlew :app-game-control-line:packageApplication        # the application folder, the payload of every package of this OS
 ./gradlew :app-game-control-line:jlinkRuntime            # only the bundled runtime

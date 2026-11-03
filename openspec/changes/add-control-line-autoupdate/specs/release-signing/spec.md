@@ -15,7 +15,7 @@ the signing key and the installer content the update cannot replace.
 
 #### Scenario: Release tag pushed
 
-- **WHEN** the tag `control-line-v1.2.0` is pushed and every platform builds
+- **WHEN** the tag `cl-v1.2.0` is pushed and every platform builds
 - **THEN** a release of that name is published with the update parts, the manifest `manifest.json`, its signature
   `manifest.json.sig` and the installers
 
@@ -107,5 +107,5 @@ release SHALL NOT produce Control Line packages or an update.
 
 #### Scenario: Control Line release published
 
-- **WHEN** a release tagged `control-line-v1.2.0` is published
+- **WHEN** a release tagged `cl-v1.2.0` is published
 - **THEN** the plugin publication workflow does not run

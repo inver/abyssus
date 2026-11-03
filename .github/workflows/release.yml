@@ -1,4 +1,5 @@
 # GitHub Actions Workflow created for handling the release process based on the draft release prepared with the Build workflow.
+# Only plugin releases (tag `plugin-cX.Y.Z`) publish; Control Line releases (`cl-vX.Y.Z`) are skipped.
 # Running the publishPlugin task requires all following secrets to be provided: PUBLISH_TOKEN, PRIVATE_KEY, PRIVATE_KEY_PASSWORD, CERTIFICATE_CHAIN.
 # See https://plugins.jetbrains.com/docs/intellij/plugin-signing.html for more information.
 
@@ -12,6 +13,7 @@ jobs:
   # Prepare and publish the plugin to the Marketplace repository
   release:
     name: Publish Plugin
+    if: ${{ startsWith(github.event.release.tag_name, 'plugin-c') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
