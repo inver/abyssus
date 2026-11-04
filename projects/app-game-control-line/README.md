@@ -28,6 +28,29 @@ written, the record goes to standard error. `-DcontrolLine.crashTest=true` (in a
 monitor is reported (a locked screen, a virtual display) the window opens at a fixed position, windowed for that start
 even when fullscreen was chosen, and the log says so.
 
+## Launcher and updates
+
+An installed game starts through `projects/app-game-control-line-launcher` (OpenSpec change `add-control-line-autoupdate`).
+The launcher picks the game folder to run, starts an update check on a daemon thread (it never delays the start; offline, or
+on any failure, the game starts on the version it has) and runs the game's main on the first thread from its own class
+loader (`ClassLoaderRunner`; `ChildProcessRunner` is the fallback behind the same `GameRunner` interface). The launcher reads
+`controlLine.installDir` (the install folder, holding `game/` and `installer.digest`) and, optionally, `controlLine.updateDir`.
+Update checks are **off by default in the build** (`updatesDefault=false` in `launcher.properties`) until the first real release.
+A release is applied only when GitHub's signed release attestation for its tag lists its `manifest.json`; the launcher bundles
+GitHub's trusted root for that (see `projects/lib-updater/README.md`, "Trust rules").
+
+The player's update folder is `<user-home>/.abyssus-control-line/updates/`; scores next to it are never touched:
+
+| File | Purpose |
+|---|---|
+| `settings.properties` | `enabled=true` / `enabled=false`. `CONTROL_LINE_UPDATES=off` or `-DcontrolLine.updates=off` also turn updates off; off means no request at all. |
+| `status.json` | Result of the last check: running version, newest seen, waiting version (applies at the next start), reason and failed file, or "a new installer is needed" with the release page. |
+| `state.json`, `current`, `versions/`, `staging/` | Launcher state and the downloaded versions (see `projects/lib-updater/README.md`). |
+
+A version that fails to start twice in a row (a throwable out of the game's main, or a crash within the first 30 seconds) is
+marked bad and the previous good version, or the installed one, runs instead. To go back to the installed version, delete the
+`updates` folder.
+
 ## Packages
 
 Native packages bundle a trimmed Java runtime, so the player needs no Java. They are built with the JDK's `jpackage`
@@ -52,19 +75,49 @@ sha256sum --check --ignore-missing SHA256SUMS
 ./gradlew :app-game-control-line:checkPackagePayload     # only the editor-code check of the payload
 ```
 
-- `stagePackageInput` copies the distribution's jars and `project/ControlLine` into `build/packaging/input`. The launcher
-  gets `-DcontrolLine.project=$APPDIR/project/ControlLine`, which the launcher expands to the folder of the jars on every OS, so
-  the game finds its project wherever it is installed. macOS packages also start with `-XstartOnFirstThread`.
+- `stagePackageInput` lays out `build/packaging/input` (the application folder, `$APPDIR`, of every OS): `launcher/` (the launcher,
+  `lib-updater` and their libraries; the `jpackage` main jar), `game/` (the distribution's jars and `game/project/ControlLine`,
+  the seed that updates replace) and `installer.digest`. The launcher gets `-DcontrolLine.installDir=$APPDIR`, finds `game/`
+  under it and starts the game with `controlLine.project` set, so the game finds its project wherever it is installed. macOS
+  packages also start with `-XstartOnFirstThread`. `jpackage` lists every jar of the input, `game/` included, on the launcher's
+  class path; the game's own class loader has the platform loader as parent, so the duplicates are never seen.
 - `jlinkRuntime` builds the runtime from `packaging/modules.txt` and fails when the jars use a module the list lacks (`jdeps`
   decides). Add a module there only with the reason, for example when it is loaded reflectively.
 - `packageApplication` runs `jpackage --type app-image`; every installer is built `--app-image` from that folder. The
   application's version is `controlLineVersion` in `gradle.properties` (`-PcontrolLineVersion=1.0.7` overrides it); `.msi` needs
   a numeric `x.y.z` and `.dmg` a major version above 0.
-- `checkPackagePayload` runs after `packageApplication`. It fails, naming the jar, when the payload holds an editor-only
-  library or class (the editing library, the Play bridge, the ray tracing modules, the ray view) or its jars differ from
-  `installDist`'s `lib/`. It is the package-side twin of `checkShippedClasspath`.
+- `checkPackagePayload` runs after `packageApplication`. It fails, naming the jar, when `game/` or `launcher/` holds an
+  editor-only library or class (the editing library, the Play bridge, the ray tracing modules, the ray view), when `game/`
+  differs from `installDist`'s `lib/`, when `launcher/` differs from the launcher's runtime classpath, or when
+  `installer.digest` is missing. It is the package-side twin of `checkShippedClasspath`.
+- `modules.txt` also lists `java.net.http` and `jdk.crypto.ec` (HTTPS to GitHub and ECDSA; `jdeps` cannot see them) and `java.naming` (BouncyCastle).
+- `installer.digest` (`writeInstallerDigest`) is the SHA-256 over what an update cannot change: the jars that carry native code
+  (`installerOnly` in `packaging/updater.properties`), the module list with the JDK version and the launcher protocol number.
+  A release whose digest differs from the installed one needs a new installer; the game says so in `status.json`.
 - The packages carry the Control Line icon from `packaging/icons/` (see "Assets and licences").
 
+### Update parts and manifest
+
+```
+./gradlew :app-game-control-line:buildUpdateParts -PcontrolLineVersion=1.2.0   # writes build/packaging/update
+```
+
+writes `game-code-<version>.zip` (the game's jars except the installer-only ones), `game-project-<version>.zip`
+(`project/ControlLine/...`) and the unsigned `manifest.json`: every file with its size and SHA-256, each part with its size and
+SHA-256, the `installerDigest` and the `keyId` (`-PupdateKeyId`, default `k1`). Installer-only jars are listed with part
+`installer`. A release publishes it unsigned by us: GitHub signs the immutable release (see "Release signing"); the format is in `projects/lib-updater/README.md`.
+
+### Release signing
+
+There is no update signing key. A release (`control-line-vX.Y.Z`, `release-control-line.yml`) is published as an **immutable
+GitHub release**, which GitHub signs with a release attestation listing the tag, the commit and the SHA-256 of every asset;
+the game applies an update only when that attestation lists `manifest.json` (details and the trusted root in
+`projects/lib-updater/README.md`). Maintainer setup: enable **Immutable releases** in the repository settings. The workflow
+refuses to publish when it is off and, after publishing, checks the attestation with
+`:lib-updater:verifyPublishedRelease`. `./gradlew :app-game-control-line:writeChecksums -PreleaseDir=<folder>` writes
+`SHA256SUMS`; `:lib-updater:verifyReleaseManifest` checks the folder before publishing.
+
+### macOS disk image
 ### macOS disk image
 
 ```

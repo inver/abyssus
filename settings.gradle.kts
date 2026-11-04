@@ -14,8 +14,10 @@ include(":lib-raytracing")
 include(":lib-core-editor")
 include(":lib-physics")
 include(":lib-game-link")
+include(":lib-updater")
 include(":plugin-abyssus")
 include(":app-game-control-line")
+include(":app-game-control-line-launcher")
 
 dependencyResolutionManagement {
     repositories {

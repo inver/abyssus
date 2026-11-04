@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import java.util.*
+import java.util.Properties
 import net.nevinsky.abyssus.buildlogic.packaging.*
 
 // Native packages of Control Line (deb, rpm, AppImage, msi, dmg): a convention plugin the game's build applies after
@@ -36,18 +36,70 @@ tasks.named<Jar>("jar") {
 val packagingBuild: Provider<Directory> = layout.buildDirectory.dir("packaging")
 val installDist = tasks.named<Sync>("installDist")
 
-// The payload: the distribution's jars at the top and the bundled project under project/ControlLine, which is where the
-// launcher's `-DcontrolLine.project=$APPDIR/project/ControlLine` finds it on every OS.
-val stagePackageInput =
-    tasks.register<Sync>("stagePackageInput") {
-        group = "packaging"
-        description = "Stages the distribution's jars and the bundled project as the input of the native packages."
-        dependsOn(installDist)
-        val installed = installDist.map { it.destinationDir }
-        from(installed.map { File(it, "lib") })
-        from(installed.map { File(it, "project") }) { into("project") }
-        into(packagingBuild.map { it.dir("input") })
-    }
+/** The launcher and its runtime classpath (the game's build adds `project(":app-game-control-line-launcher")`). */
+val launcherPackage: Configuration by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+    attributes { attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME)) }
+}
+
+/** `packaging/updater.properties`: which jars only an installer can replace, and the launcher protocol number. */
+val updaterProps: Provider<Properties> =
+    providers.fileContents(layout.projectDirectory.file("packaging/updater.properties")).asText
+        .map { text -> Properties().apply { load(text.reader()) } }
+val installerOnlyJarPatterns: Provider<List<String>> = updaterProps.map { it.getProperty("installerOnly").split(',').map(String::trim).filter(String::isNotEmpty) }
+
+/** What an update cannot change, as one hash (design decision 2); the installed copy is compared with the manifest's. */
+val writeInstallerDigest by tasks.registering(WriteInstallerDigest::class) {
+    group = "packaging"
+    description = "Writes installer.digest: the hash of the installer-only jars, the module list, the JDK version and the launcher protocol."
+    gameLib.set(installDist.map { it.destinationDir }.let { dir -> layout.dir(dir.map { File(it, "lib") }) })
+    modules.set(layout.projectDirectory.file("packaging/modules.txt"))
+    installerOnlyPatterns.set(installerOnlyJarPatterns)
+    jdkVersion.set(providers.systemProperty("java.version"))
+    protocol.set(updaterProps.map { it.getProperty("launcherProtocol").toInt() })
+    output.set(packagingBuild.map { it.file("installer.digest") })
+}
+
+// The payload (jpackage's --input), laid out the same on every OS under the application folder (`$APPDIR`):
+//   launcher/            the launcher, lib-updater and their libraries (the jpackage main jar's folder; installer-owned)
+//   game/                the seed game: the distribution's jars and game/project/ControlLine (what an update replaces)
+//   installer.digest     see writeInstallerDigest
+val stagePackageInput by tasks.registering(Sync::class) {
+    group = "packaging"
+    description = "Stages the launcher, the distribution's jars with the bundled project, and installer.digest as the input of the native packages."
+    dependsOn(installDist, writeInstallerDigest)
+    val installed = installDist.map { it.destinationDir }
+    from(launcherPackage) { into("launcher") }
+    from(installed.map { File(it, "lib") }) { into("game") }
+    from(installed.map { File(it, "project") }) { into("game/project") }
+    from(writeInstallerDigest.flatMap { it.output })
+    into(packagingBuild.map { it.dir("input") })
+}
+
+// The update parts and the unsigned manifest of a release (`buildUpdateParts`); GitHub signs the published release
+val buildUpdateParts by tasks.registering(BuildUpdateParts::class) {
+    group = "packaging"
+    description = "Writes game-code-<version>.zip, game-project-<version>.zip and the unsigned manifest.json into build/packaging/update."
+    gameLib.set(installDist.map { it.destinationDir }.let { dir -> layout.dir(dir.map { File(it, "lib") }) })
+    bundledProject.set(installDist.map { it.destinationDir }.let { dir -> layout.dir(dir.map { File(it, "project/ControlLine") }) })
+    digestFile.set(writeInstallerDigest.flatMap { it.output })
+    installerOnlyPatterns.set(installerOnlyJarPatterns)
+    version.set(controlLineVersion)
+    mainClass.set("net.nevinsky.abyssus.app.game.controlline.MainKt")
+    output.set(packagingBuild.map { it.dir("update") })
+}
+
+// Release steps, run on a folder that holds the manifest, the parts and the installers: -PreleaseDir=<folder>.
+// writeChecksums -> :lib-updater:verifyReleaseManifest, then the release is published as an immutable release: GitHub signs it
+// (a release attestation listing every asset), checked after publishing by :lib-updater:verifyPublishedRelease
+val releaseDirectory: Provider<Directory> = layout.dir(providers.gradleProperty("releaseDir").map { File(it) })
+
+val writeChecksums by tasks.registering(WriteChecksums::class) {
+    group = "release"
+    description = "Writes SHA256SUMS for the installers in the release folder given as -PreleaseDir=<folder>."
+    releaseDir.set(releaseDirectory)
+}
 
 /** The JDK that runs Gradle supplies `jdeps`, `jlink` and `jpackage`; it is the runtime the packages bundle. */
 val buildJdkHome: Provider<String> = providers.systemProperty("java.home")
@@ -61,65 +113,33 @@ val isWindows: Boolean = osName.contains("win")
  */
 val developerIdentity: Provider<String> =
     providers.environmentVariable("ABYSSUS_MAC_SIGN_IDENTITY").filter { it.isNotBlank() }
-
 /** The OS and architecture the package is built on, as they appear in a package's file name. */
-val platformName: String =
-    if (isMac) {
-        "macos"
-    } else if (isWindows) {
-        "windows"
-    } else {
-        "linux"
-    }
-val archName: String =
-    System.getProperty("os.arch").let {
-        if (it == "aarch64" || it == "arm64") {
-            "arm64"
-        } else {
-            "x64"
-        }
-    }
+val platformName: String = if (isMac) "macos" else if (isWindows) "windows" else "linux"
+val archName: String = System.getProperty("os.arch").let { if (it == "aarch64" || it == "arm64") "arm64" else "x64" }
 
-val jlinkRuntime =
-    tasks.register<JlinkRuntime>("jlinkRuntime") {
-        group = "packaging"
-        description = "Builds the bundled Java runtime from packaging/modules.txt."
-        dependsOn(stagePackageInput)
-        payload.set(packagingBuild.map { it.dir("input") })
-        modules.set(layout.projectDirectory.file("packaging/modules.txt"))
-        jdkHome.set(buildJdkHome)
-        runtime.set(packagingBuild.map { it.dir("runtime") })
-    }
+val jlinkRuntime by tasks.registering(JlinkRuntime::class) {
+    group = "packaging"
+    description = "Builds the bundled Java runtime from packaging/modules.txt."
+    dependsOn(stagePackageInput)
+    payload.set(packagingBuild.map { it.dir("input") })
+    modules.set(layout.projectDirectory.file("packaging/modules.txt"))
+    jdkHome.set(buildJdkHome)
+    runtime.set(packagingBuild.map { it.dir("runtime") })
+}
 
 /** The application's display name: the launcher, the `.app` folder and the menu entry. */
 val applicationName = "Control Line"
-val iconFile: RegularFile =
-    layout.projectDirectory.file(
-        "packaging/icons/control-line." +
-            if (isMac) {
-                "icns"
-            } else if (isWindows) {
-                "ico"
-            } else {
-                "png"
-            }
-    )
+val iconFile: RegularFile = layout.projectDirectory.file(
+    "packaging/icons/control-line." + if (isMac) "icns" else if (isWindows) "ico" else "png"
+)
 
-// The launcher's options. `$APPDIR` is expanded by the launcher to the folder of the jars on every OS. macOS needs the
-// window on the process's first thread; --enable-native-access silences JDK 25's restricted-method warnings.
+// The launcher's options. `$APPDIR` is expanded by the native launcher to the application folder on every OS; the launcher
+// finds game/ and installer.digest under it and starts the game with controlLine.project set. macOS needs the window on the
+// process's first thread (the launcher runs the game on it); --enable-native-access silences JDK 25's restricted-method warnings.
 val launcherOptions: List<String> = buildList {
-    add("-DcontrolLine.project=\$APPDIR/project/ControlLine")
+    add("-DcontrolLine.installDir=\$APPDIR")
     add("--enable-native-access=ALL-UNNAMED")
-    if (isMac) {
-        add("-XstartOnFirstThread")
-    }
-}
-
-/** The macOS signing inputs of a jpackage run; without [developerIdentity] nothing changes. */
-fun JPackage.macSigning() {
-    macSigningIdentity.set(developerIdentity)
-    macEntitlements.set(layout.projectDirectory.file("packaging/macos/entitlements.plist"))
-    macSignScript.set(rootProject.layout.projectDirectory.file("scripts/sign-macos-app.sh"))
+    if (isMac) add("-XstartOnFirstThread")
 }
 
 /** Defaults shared by every jpackage run of the game. */
@@ -134,68 +154,54 @@ fun JPackage.controlLine(packageType: String) {
     destination.set(packagingBuild.map { it.dir(packageType) })
 }
 
-val packageApplication =
-    tasks.register<JPackage>("packageApplication") {
-        description = "Builds the application folder (the payload of every package of this OS) with jpackage."
-        controlLine("app-image")
-        dependsOn(stagePackageInput, jlinkRuntime)
-        payload.set(packagingBuild.map { it.dir("input") })
-        runtime.set(packagingBuild.map { it.dir("runtime") })
-        mainJar.set("app-game-control-line.jar")
-        mainClass.set("net.nevinsky.abyssus.app.game.controlline.MainKt")
-        javaOptions.set(launcherOptions)
-        icon.set(iconFile)
-        if (isMac) {
-            extraArgs.addAll(
-                "--mac-package-identifier",
-                "net.nevinsky.abyssus.controlline",
-                "--mac-package-name",
-                "Control Line",
-            )
-            macSigning()
-        }
-    }
+/** The macOS signing inputs of a jpackage run; without [developerIdentity] nothing changes. */
+fun JPackage.macSigning() {
+    macSigningIdentity.set(developerIdentity)
+    macEntitlements.set(layout.projectDirectory.file("packaging/macos/entitlements.plist"))
+    macSignScript.set(rootProject.layout.projectDirectory.file("scripts/sign-macos-app.sh"))
+}
+
+val packageApplication by tasks.registering(JPackage::class) {
+    description = "Builds the application folder (the payload of every package of this OS) with jpackage."
+    controlLine("app-image")
+    dependsOn(stagePackageInput, jlinkRuntime)
+    payload.set(packagingBuild.map { it.dir("input") })
+    runtime.set(packagingBuild.map { it.dir("runtime") })
+    mainJar.set("launcher/app-game-control-line-launcher.jar")
+    mainClass.set("net.nevinsky.abyssus.app.game.controlline.launcher.LauncherMainKt")
+    javaOptions.set(launcherOptions)
+    icon.set(iconFile)
+    if (isMac) extraArgs.addAll("--mac-package-identifier", "net.nevinsky.abyssus.controlline", "--mac-package-name", "Control Line")
+    if (isMac) macSigning()
+}
 
 // A shipped game carries no editor code: the payload every installer is built from is checked after it is made, and an
 // installer task depends on the check, so a package is never built from a payload that failed it.
-val checkPackagePayload =
-    tasks.register<CheckPackagePayload>("checkPackagePayload") {
-        group = "verification"
-        description =
-            "Fails when the packaged application holds editor code or differs from the Gradle distribution's lib/."
-        appImage.set(packagingBuild.map { it.dir("app-image") })
-        distributionLib.set(
-            installDist.map { it.destinationDir }.let { dir -> layout.dir(dir.map { File(it, "lib") }) }
-        )
-        mustRunAfter(packageApplication)
-    }
-
+val checkPackagePayload by tasks.registering(CheckPackagePayload::class) {
+    group = "verification"
+    description = "Fails when the packaged application holds editor code or differs from the Gradle distribution's lib/."
+    appImage.set(packagingBuild.map { it.dir("app-image") })
+    distributionLib.set(installDist.map { it.destinationDir }.let { dir -> layout.dir(dir.map { File(it, "lib") }) })
+    launcherJars.from(launcherPackage)
+    mustRunAfter(packageApplication)
+}
 packageApplication.configure { finalizedBy(checkPackagePayload) }
 
-// The same check on a package unpacked elsewhere (`scripts/smoke-control-line-linux.sh` unpacks the .deb):
-// -PpackageDir=<folder>
+// The same check on a package unpacked elsewhere (`scripts/smoke-control-line-linux.sh` unpacks the .deb): -PpackageDir=<folder>
 tasks.register<CheckPackagePayload>("checkExtractedPackage") {
     group = "verification"
     description = "Runs the payload check on an unpacked package given as -PpackageDir=<folder>."
     appImage.set(layout.dir(providers.gradleProperty("packageDir").map { File(it) }))
     distributionLib.set(installDist.map { it.destinationDir }.let { dir -> layout.dir(dir.map { File(it, "lib") }) })
+    launcherJars.from(launcherPackage)
 }
 
-/**
- * An installer of [packageType], built from the checked app-image and named
- * `control-line-<version>-<os>-<arch>.<extension>`.
- */
+/** An installer of [packageType], built from the checked app-image and named `control-line-<version>-<os>-<arch>.<extension>`. */
 fun JPackage.installer(packageType: String, extension: String) {
     controlLine(packageType)
     dependsOn(packageApplication, checkPackagePayload)
     // plain values, so the lambdas below capture no script object (the configuration cache cannot store one)
-    val imageFolder =
-        applicationName +
-            if (isMac) {
-                ".app"
-            } else {
-                ""
-            }
+    val imageFolder = applicationName + if (isMac) ".app" else ""
     val os = platformName
     val arch = archName
     // jpackage wants the application folder itself: `Control Line.app` on macOS, `Control Line` elsewhere
@@ -208,30 +214,15 @@ if (isMac) {
     tasks.register<JPackage>("packageDmg") {
         description = "Builds the macOS disk image for this Mac's architecture."
         installer("dmg", "dmg")
+        extraArgs.addAll("--mac-package-identifier", "net.nevinsky.abyssus.controlline", "--mac-package-name", "Control Line")
         macSigning()
-        extraArgs.addAll(
-            "--mac-package-identifier",
-            "net.nevinsky.abyssus.controlline",
-            "--mac-package-name",
-            "Control Line",
-        )
     }
 }
 
 if (!isMac && !isWindows) {
-    // the package maintainer's address (jpackage writes it after the vendor's name): a placeholder, since the field is
-    // public in the .deb
+    // the package maintainer's address (jpackage writes it after the vendor's name): a placeholder, since the field is public in the .deb
     val maintainer = "noreply@invalid.example"
-    val linuxCommon =
-        listOf(
-            "--linux-package-name",
-            "control-line",
-            "--linux-menu-group",
-            "Game",
-            "--linux-app-category",
-            "games",
-            "--linux-shortcut",
-        )
+    val linuxCommon = listOf("--linux-package-name", "control-line", "--linux-menu-group", "Game", "--linux-app-category", "games", "--linux-shortcut")
 
     tasks.register<JPackage>("packageDeb") {
         description = "Builds the Debian package (needs dpkg-deb and fakeroot)."
@@ -247,63 +238,44 @@ if (!isMac && !isWindows) {
     }
 
     // The AppImage: jpackage cannot make one, so the app-image folder is wrapped by the pinned appimagetool.
-    val arch =
-        if (archName == "arm64") {
-            "aarch64"
-        } else {
-            "x86_64"
-        }
+    val arch = if (archName == "arm64") "aarch64" else "x86_64"
     val os = platformName
     val shortArch = archName
     val imageFolder = applicationName
     val toolProps: Provider<Properties> =
-        providers.fileContents(layout.projectDirectory.file("packaging/appimage/tools.properties")).asText.map { text ->
-            Properties().apply { load(text.reader()) }
-        }
+        providers.fileContents(layout.projectDirectory.file("packaging/appimage/tools.properties")).asText
+            .map { text -> Properties().apply { load(text.reader()) } }
     val toolsDir = packagingBuild.map { it.dir("tools") }
 
-    val downloadAppImageTool =
-        tasks.register<DownloadVerified>("downloadAppImageTool") {
-            group = "packaging"
-            description = "Downloads appimagetool (pinned version, checksum verified)."
-            url.set(
-                toolProps.map {
-                    "https://github.com/AppImage/appimagetool/releases/download/" +
-                        "${it.getProperty("appimagetool.version")}/appimagetool-$arch.AppImage"
-                }
-            )
-            sha256.set(toolProps.map { it.getProperty("$arch.appimagetool.sha256") })
-            output.set(toolsDir.map { it.file("appimagetool-$arch.AppImage") })
-        }
-    val downloadAppImageRuntime =
-        tasks.register<DownloadVerified>("downloadAppImageRuntime") {
-            group = "packaging"
-            description = "Downloads the AppImage runtime file appimagetool embeds (pinned version, checksum verified)."
-            url.set(
-                toolProps.map {
-                    "https://github.com/AppImage/type2-runtime/releases/download/" +
-                        "${it.getProperty("runtime.version")}/runtime-$arch"
-                }
-            )
-            sha256.set(toolProps.map { it.getProperty("$arch.runtime.sha256") })
-            output.set(toolsDir.map { it.file("runtime-$arch") })
-        }
+    val downloadAppImageTool by tasks.registering(DownloadVerified::class) {
+        group = "packaging"
+        description = "Downloads appimagetool (pinned version, checksum verified)."
+        url.set(toolProps.map { "https://github.com/AppImage/appimagetool/releases/download/${it.getProperty("appimagetool.version")}/appimagetool-$arch.AppImage" })
+        sha256.set(toolProps.map { it.getProperty("$arch.appimagetool.sha256") })
+        output.set(toolsDir.map { it.file("appimagetool-$arch.AppImage") })
+    }
+    val downloadAppImageRuntime by tasks.registering(DownloadVerified::class) {
+        group = "packaging"
+        description = "Downloads the AppImage runtime file appimagetool embeds (pinned version, checksum verified)."
+        url.set(toolProps.map { "https://github.com/AppImage/type2-runtime/releases/download/${it.getProperty("runtime.version")}/runtime-$arch" })
+        sha256.set(toolProps.map { it.getProperty("$arch.runtime.sha256") })
+        output.set(toolsDir.map { it.file("runtime-$arch") })
+    }
 
     // AppDir: the application folder under app/, AppRun, the desktop entry and the icon
-    val assembleAppDir =
-        tasks.register<Sync>("assembleAppDir") {
-            group = "packaging"
-            description = "Assembles the AppImage's AppDir from the checked application folder."
-            dependsOn(packageApplication, checkPackagePayload)
-            from(packagingBuild.map { it.dir("app-image/$imageFolder") }) { into("app") }
-            from(layout.projectDirectory.dir("packaging/appimage")) {
-                include("AppRun", "control-line.desktop")
-                filesMatching("AppRun") { permissions { unix("rwxr-xr-x") } }
-            }
-            from(iconFile) { rename { "control-line.png" } }
-            from(iconFile) { rename { ".DirIcon" } }
-            into(packagingBuild.map { it.dir("appdir") })
+    val assembleAppDir by tasks.registering(Sync::class) {
+        group = "packaging"
+        description = "Assembles the AppImage's AppDir from the checked application folder."
+        dependsOn(packageApplication, checkPackagePayload)
+        from(packagingBuild.map { it.dir("app-image/$imageFolder") }) { into("app") }
+        from(layout.projectDirectory.dir("packaging/appimage")) {
+            include("AppRun", "control-line.desktop")
+            filesMatching("AppRun") { permissions { unix("rwxr-xr-x") } }
         }
+        from(iconFile) { rename { "control-line.png" } }
+        from(iconFile) { rename { ".DirIcon" } }
+        into(packagingBuild.map { it.dir("appdir") })
+    }
 
     tasks.register<BuildAppImage>("packageAppImage") {
         group = "packaging"
@@ -313,29 +285,18 @@ if (!isMac && !isWindows) {
         tool.set(downloadAppImageTool.flatMap { it.output })
         runtimeFile.set(downloadAppImageRuntime.flatMap { it.output })
         this.arch.set(arch)
-        output.set(
-            packagingBuild.zip(controlLineVersion) { dir, version ->
-                dir.file("appimage/control-line-$version-$os-$shortArch.AppImage")
-            }
-        )
+        output.set(packagingBuild.zip(controlLineVersion) { dir, version -> dir.file("appimage/control-line-$version-$os-$shortArch.AppImage") })
     }
 }
 
 if (isWindows) {
-    // Fixed for the life of the product: Windows Installer uses it to find an installed Control Line and upgrade it in
-    // place
+    // Fixed for the life of the product: Windows Installer uses it to find an installed Control Line and upgrade it in place
     val upgradeUuid = "6c09579a-d9e1-4213-81ff-056f92b90a42"
     tasks.register<JPackage>("packageMsi") {
         description = "Builds the Windows installer (needs WiX 3.x on the PATH)."
         installer("msi", "msi")
         extraArgs.addAll(
-            "--win-menu",
-            "--win-menu-group",
-            "Control Line",
-            "--win-shortcut",
-            "--win-dir-chooser",
-            "--win-upgrade-uuid",
-            upgradeUuid,
+            "--win-menu", "--win-menu-group", "Control Line", "--win-shortcut", "--win-dir-chooser", "--win-upgrade-uuid", upgradeUuid
         )
     }
 }

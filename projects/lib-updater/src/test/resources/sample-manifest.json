@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "product": "control-line",
+  "version": "1.0.0",
+  "mainClass": "net.nevinsky.abyssus.app.game.controlline.MainKt",
+  "installerDigest": "3b88375f4d8bb6e01b4d84d59e00773bb610491e1c961a31a49f996b6a790411",
+  "parts": [
+    {
+      "name": "game-code-1.0.0.zip",
+      "size": 19141402,
+      "sha256": "a4aa05fca9c40c5130c6e256a975087308d2310a024552299199266583d8ec00"
+    },
+    {
+      "name": "game-project-1.0.0.zip",
+      "size": 25651455,
+      "sha256": "5a4ffc9589ec80c7a8d7eb5468ce41564deb09378beb969b6335621e9cba62fc"
+    }
+  ],
+  "files": [
+    {
+      "path": "gdx-platform-1.14.2-natives-desktop.jar",
+      "size": 526742,
+      "sha256": "f4847981d27c6524a30f5665036ec8c11f48c8eda7610bb63f742de95ffe1970",
+      "part": "installer"
+    },
+    {
+      "path": "annotations-13.0.jar",
+      "size": 17536,
+      "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478",
+      "part": "game-code-1.0.0.zip"
+    },
+    {
+      "path": "app-game-control-line.jar",
+      "size": 503616,
+      "sha256": "ab7d1582d6e9e1f2dc67d87c2e3e56757e13b15dceb2fa57b489445fac599087",
+      "part": "game-code-1.0.0.zip"
+    },
+    {
+      "path": "project/ControlLine/ControlLine.abss",
+      "size": 466,
+      "sha256": "31d25824090bcdeacf0d02b2281eb529664afd5b28241b8ba2a65d7c3231a1a6",
+      "part": "game-project-1.0.0.zip"
+    },
+    {
+      "path": "project/ControlLine/scenes/Field.scene",
+      "size": 155675,
+      "sha256": "2ba194cbec279aa2375ea3c636ba84b77259ff670eebfc2fe8331a0d5feb6bb5",
+      "part": "game-project-1.0.0.zip"
+    }
+  ]
+}
