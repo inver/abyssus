@@ -6,8 +6,8 @@
 package net.nevinsky.abyssus.plugin.filetype
 
 import com.intellij.openapi.util.IconLoader
-import javax.swing.Icon
 import net.nevinsky.abyssus.lib.core.format.EntityType
+import javax.swing.Icon
 
 /** Entity silhouettes selected by the entity type; untyped entities retain the ECS icon. */
 object EntityIcons {

@@ -96,7 +96,7 @@ class RemoveEntityActionTest : BasePlatformTestCase() {
     fun testOfferedOnEntityRowsOnly() {
         copyProject()
         assertTrue(visible(RemoveOn(entity("0"))))
-        assertFalse(visible(RemoveOn(descend(entity("0"), "NameComponent"))))
+        assertFalse(visible(RemoveOn(descend(entity("1"), "NameComponent"))))
         assertFalse(visible(RemoveOn(descend(sceneNode(), "ecs"))))
         assertFalse(visible(RemoveOn(sceneNode())))
         assertFalse(visible(RemoveOn(abss())))

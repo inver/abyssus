@@ -22,6 +22,7 @@ import net.nevinsky.abyssus.lib.core.editor.panel.PanelBuilders
 import net.nevinsky.abyssus.lib.core.editor.panel.Section
 import net.nevinsky.abyssus.lib.core.editor.ray.RayModePhase
 import net.nevinsky.abyssus.lib.core.editor.scene.scenePanelModel
+import net.nevinsky.abyssus.lib.core.editor.scene.withSettingValue
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.SceneRayControls
@@ -88,7 +89,8 @@ constructor(
 
     private val hooks =
         object : RowHooks {
-            override fun commit(ref: FieldRef, text: String): CommitOutcome = CommitOutcome.Unchanged
+            override fun commit(ref: FieldRef, text: String): CommitOutcome =
+                commitSceneSetting(controls.project, file, state.scene, ref, text)
 
             override fun custom(key: String): JComponent? =
                 if (key == "rendering") {
@@ -232,4 +234,31 @@ internal fun chooseSceneSkybox(project: com.intellij.openapi.project.Project, fi
         assets.metaFiles,
         assets.hdrPreviews,
     )
+}
+
+/**
+ * Saves the scene setting value [ref] names (ambient light, fog) with [text] as one undoable edit of [file]. [scene] is
+ * what the panel shows, used to refuse bad text before anything is written. Other refs are [CommitOutcome.Unchanged].
+ */
+internal fun commitSceneSetting(
+    project: com.intellij.openapi.project.Project,
+    file: VirtualFile,
+    scene: net.nevinsky.abyssus.lib.core.dto.SceneDto?,
+    ref: FieldRef,
+    text: String,
+): CommitOutcome {
+    if (ref.kind != net.nevinsky.abyssus.lib.core.editor.scene.SCENE_SETTING_KIND) {
+        return CommitOutcome.Unchanged
+    }
+    val change = { dto: net.nevinsky.abyssus.lib.core.dto.SceneDto ->
+        dto.withSettingValue(ref.field, text)
+    }
+    if (scene != null && change(scene) == null) {
+        return CommitOutcome.Refused(AbyssusBundle.message("sceneSettingNotANumber"))
+    }
+    val written =
+        net.nevinsky.abyssus.plugin.filetype.editSceneSettings(
+            project, file, AbyssusBundle.message("commandEditSceneSetting"), change,
+        )
+    return if (written) CommitOutcome.Saved else CommitOutcome.Unchanged
 }

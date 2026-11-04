@@ -7,13 +7,13 @@ package net.nevinsky.abyssus.lib.core.editor.components
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.PlacementWrites
 import net.nevinsky.abyssus.lib.core.editor.util.Util
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
 /** A copied entity as clipboard text, or the reason it cannot be copied. */
@@ -23,12 +23,12 @@ sealed interface CopyResult {
 }
 
 /**
-  * Copies a model entity of a scene as text and pastes it, in this or another scene, as a new entity. The text carries
-  * the
-  * entity's components as they are, each under the name a scene file gives it with its JSON as text; a paste only gives
-  * them a new id and moves
-  * the copy to the pasted point. A terrain, an entity without a render component, a path arrangement and an entity with
-  * a
+ * Copies a model or light entity of a scene as text and pastes it, in this or another scene, as a new entity. The text carries
+ * the
+ * entity's components as they are, each under the name a scene file gives it with its JSON as text; a paste only gives
+ * them a new id and moves
+ * the copy to the pasted point. A terrain, an entity with neither a render nor a light component, a path arrangement and an entity with
+ * a
  * parent are not copied, because their links to other entities would not hold in a copy. A component this editor does
  * not model travels as the text it was read from. Edits only the [SceneDto], as [AssetEntities] does.
  */
@@ -44,7 +44,9 @@ class EntityClipboard(
         val refusal = CopyResult.Refused(messages.message("entityClipboardNotCopyable", entityId))
         val entity = scene.entity(entityId) ?: return refusal
         val type = entity.component(HeaderComponent::class.java)?.type
-        if (type == EntityType.TERRAIN || entity.component(RenderComponent::class.java) == null) {
+        val copyable = entity.component(RenderComponent::class.java) != null ||
+                entity.component(LightComponent::class.java) != null
+        if (type == EntityType.TERRAIN || !copyable) {
             return refusal
         }
         if (KEEP_OUT.any { entity.component(it) != null }) {
@@ -84,7 +86,13 @@ class EntityClipboard(
             }
         }
         val position = typed.filterIsInstance<PositionComponent>().firstOrNull() ?: PositionComponent().also(typed::add)
-        placements.setPosition(position, point)
+        // A light sits at the height a new light of its type gets, as LightEntities.add places it.
+        val lift = if (typed.any { it is LightComponent }) {
+            LightPreset.entries.firstOrNull { it.type == copied.type }?.height ?: 0f
+        } else {
+            0f
+        }
+        placements.setPosition(position, Vector3(point.x, point.y + lift, point.z))
         if (raw.entries.isNotEmpty()) {
             typed += raw
         }
@@ -100,7 +108,7 @@ class EntityClipboard(
             return null
         }
         val names = entity.components.map { it.name.substringAfterLast('.') }
-        return entity.takeIf { RENDER in names && KEEP_OUT.none { out -> out.simpleName in names } }
+        return entity.takeIf { (RENDER in names || LIGHT in names) && KEEP_OUT.none { out -> out.simpleName in names } }
     }
 
     /** The clipboard text: a marker and version, the entity's type and its components by file name. */
@@ -116,4 +124,5 @@ class EntityClipboard(
 
 private const val VERSION = 1
 private val RENDER = RenderComponent::class.java.simpleName
+private val LIGHT = LightComponent::class.java.simpleName
 private val KEEP_OUT = listOf(PathArrangementComponent::class.java, ParentComponent::class.java)

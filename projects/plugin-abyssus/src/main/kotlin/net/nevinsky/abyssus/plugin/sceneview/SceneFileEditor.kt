@@ -420,6 +420,7 @@ class SceneFileEditor(
 
     /** Puts entity [entityId] on the clipboard as text; a refusal is shown to the user. */
     internal fun copyEntity(entityId: Long) {
+        thisLogger().warn("DEBUG-CLIP copyEntity $entityId")
         val sceneDto = runCatchingKeepingCancellation { sceneParser.parse(textOf(file)) }.getOrNull() ?: return
         when (val copied = EntityClipboard(jsonProcessor, EditorBundle).copy(sceneDto, entityId)) {
             is CopyResult.Copied -> CopyPasteManager.getInstance().setContents(StringSelection(copied.text))
@@ -434,6 +435,7 @@ class SceneFileEditor(
     internal fun pasteEntity(point: Vector3): Boolean {
         val clipboard = EntityClipboard(jsonProcessor, EditorBundle)
         val text = CopyPasteManager.getInstance().getContents<String>(DataFlavor.stringFlavor)
+        thisLogger().warn("DEBUG-CLIP pasteEntity at $point holds=${clipboard.holdsEntity(text)} text=${text?.take(200)}")
         if (!clipboard.holdsEntity(text)) {
             return false
         }

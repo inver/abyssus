@@ -116,9 +116,10 @@ class NodeIconsTest : BasePlatformTestCase() {
         val abss = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { text(it).endsWith(".abss") }
         val scene = children(children(abss).first { text(it).startsWith("Scenes") }).single()
         val ecs = children(scene).first { text(it).startsWith("ecs") }
-        val entity = children(ecs).first()
+        // a model, light or camera is a leaf; the terrain keeps its component rows
+        val entity = children(ecs)[1]
         text(entity)
-        assertSame(EntityIcons.forType(EntityType.OBJECT), icon(entity))
+        assertSame(EntityIcons.forType(EntityType.TERRAIN), icon(entity))
         val components = children(entity).associateBy { text(it) }
         assertSame(ComponentIcons.TRANSFORM, icon(components.getValue("Position")))
         assertSame(ComponentIcons.NAME, icon(components.getValue("Name")))

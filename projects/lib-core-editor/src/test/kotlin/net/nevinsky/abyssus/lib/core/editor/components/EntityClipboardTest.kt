@@ -6,6 +6,7 @@ package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
@@ -83,6 +84,37 @@ class EntityClipboardTest {
         source.entity(1)!!.components.removeAll { it is PositionComponent }
         val id = clipboard.paste(source, text, Vector3(7f, 8f, 9f)).entityId!!
         assertEquals(Vector3(7f, 8f, 9f), position(source, id))
+    }
+
+    @Test
+    fun aLightIsPastedInAnotherSceneAtItsTypesHeight() {
+        val source = parseScene(
+            """{"format":"abyssus","formatVersion":1,"ecs":{
+          "1":{"type":"LIGHT_SPOT","components":{"NameComponent":{"name":"lamp"},
+            "PositionComponent":{"localPosition":{"x":1,"y":9,"z":3}},
+            "LightComponent":{"light":{"intensity":2.5}}}},
+          "2":{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{"light":{"intensity":1.5}}}}}}"""
+        )
+        val target = scene()
+        val spot = clipboard.paste(target, (clipboard.copy(source, 1) as CopyResult.Copied).text, Vector3(10f, 1f, -4f))
+        assertEquals(EditResult.Changed, spot.result)
+        assertEquals(Vector3(10f, 6f, -4f), position(target, spot.entityId!!))
+        assertEquals(2.5f, target.component(spot.entityId!!, LightComponent::class.java)!!.light.intensity, 0f)
+        assertEquals(EntityType.LIGHT_SPOT, target.entity(spot.entityId!!)!!.header().type)
+        val sun = clipboard.paste(target, (clipboard.copy(source, 2) as CopyResult.Copied).text, Vector3(0f, 1f, 0f))
+        assertEquals(Vector3(0f, 1f, 0f), position(target, sun.entityId!!))
+    }
+
+    @Test
+    fun aSceneFileLightRoundTrips() {
+        val source = parseScene(
+            """{"formatVersion":1,"ecs":{"2":{"type":"LIGHT_SPOT","components":{"NameComponent":{"name":"Spot Light 2"},
+"PositionComponent":{"localPosition":{"x":-1.4,"y":3.9,"z":0},"localRotation":{"x":0.70710677,"y":0,"z":0,"w":-0.70710677}},
+"LightComponent":{"light":{"intensity":1,"range":100,"coneAngle":45,"edgeSoftness":0.2,"color":{"r":1,"g":1,"b":1,"a":1}}}}}}}"""
+        )
+        val text = (clipboard.copy(source, 2) as CopyResult.Copied).text
+        assertTrue(clipboard.holdsEntity(text))
+        assertEquals(EditResult.Changed, clipboard.paste(source, text, Vector3(1f, 0f, 1f)).result)
     }
 
     @Test

@@ -159,6 +159,9 @@ object ComponentIcons {
     @JvmField
     val PILOT: Icon = TreeIcons.load("component_pilot")
 
+    @JvmField
+    val CAMERA: Icon = TreeIcons.load("component_camera")
+
     fun forComponent(name: String): Icon = when (name.removeSuffix("Component")) {
         "Name" -> NAME
         "Position", "Rotation", "Scale", "Transform" -> POSITION
@@ -168,6 +171,7 @@ object ComponentIcons {
         "Collider" -> COLLIDER
         "Constraint" -> CONSTRAINT
         "Light", "AmbientLight" -> LIGHT
+        "Camera" -> CAMERA
         "Foliage" -> FOLIAGE
         "PathArrangement" -> PATH_ARRANGEMENT
         "Plane" -> PLANE

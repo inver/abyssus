@@ -135,30 +135,30 @@ class EntityEyeTest : BasePlatformTestCase() {
 
     fun testClickingTheEyeOnAComponentWritesOnlyThatEntry() {
         copyProject()
-        val render = children(entity("0")).single { label(it) == "RenderComponent" }
+        val render = children(entity("1")).single { label(it) == "RenderComponent" }
         assertTrue(toggleRow(project, entry(render)))
-        val written = scene(sceneText()).entity(0)!!.header()
+        val written = scene(sceneText()).entity(1)!!.header()
         assertEquals(listOf("RenderComponent"), written.disabledComponents.map { it.simpleName })
         assertTrue(written.entityEnabled)
         // turning it on again removes the key
-        val again = children(entity("0")).single { label(it) == "RenderComponent" }
+        val again = children(entity("1")).single { label(it) == "RenderComponent" }
         assertEquals(false, entry(again).enabled)
         assertTrue(toggleRow(project, entry(again)))
-        assertTrue(scene(sceneText()).entity(0)!!.header().disabledComponents.isEmpty())
+        assertTrue(scene(sceneText()).entity(1)!!.header().disabledComponents.isEmpty())
     }
 
     fun testADisabledEntityDimsItsRowAndItsComponentRowsWithGrayIcons() {
         copyProject()
-        toggleRow(project, entry(entity("0")))
+        toggleRow(project, entry(entity("1")))
         fun icon(node: AbstractTreeNode<*>): javax.swing.Icon {
             node.update()
             return node.presentation.getIcon(false)!!
         }
-        val disabled = entity("0")
+        val disabled = entity("1")
         val component = children(disabled).first { label(it) == "RenderComponent" }
         // the same entity on, for comparison: switching it back on shows the normal icons
         toggleRow(project, entry(disabled))
-        val on = entity("0")
+        val on = entity("1")
         val normalComponent = children(on).first { label(it) == "RenderComponent" }
         val dimmedComponent = icon(component)
         assertNotSame("a component under a disabled entity is gray", icon(normalComponent), dimmedComponent)

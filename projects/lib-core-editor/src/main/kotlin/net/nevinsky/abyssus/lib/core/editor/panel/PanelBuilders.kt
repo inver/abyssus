@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.panel
 
+import net.nevinsky.abyssus.lib.core.editor.scene.SCENE_SETTING_KIND
 import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_FIELDS
 import net.nevinsky.abyssus.lib.core.dto.EntityDto
@@ -162,14 +163,14 @@ class PanelBuilders(
     private fun settingSection(scene: SceneDto, setting: SceneSetting): Section {
         val rows: List<Row> = when (setting) {
             SceneSetting.AMBIENT -> listOf(
-                colorRow("color", scene.ambientLight?.color),
-                numberRow("intensity", scene.ambientLight?.intensity, "", "", null),
+                colorRow("color", scene.ambientLight?.color, "ambientLight.color"),
+                settingNumberRow("intensity", scene.ambientLight?.intensity, "ambientLight.intensity"),
             )
 
             SceneSetting.FOG -> listOf(
-                colorRow("color", scene.fog?.color),
-                numberRow("density", scene.fog?.density, "", "", null),
-                numberRow("gradient", scene.fog?.gradient, "", "", null),
+                colorRow("color", scene.fog?.color, "fog.color"),
+                settingNumberRow("density", scene.fog?.density, "fog.density"),
+                settingNumberRow("gradient", scene.fog?.gradient, "fog.gradient"),
             )
 
             SceneSetting.SKYBOX -> listOf(
@@ -671,9 +672,15 @@ class PanelBuilders(
     private fun numberRow(label: String, value: Float?, default: String, unit: String, kind: String?): NumberRow =
         NumberRow(label, value?.let(::decimalText) ?: default, unit, value == null, kind?.let { FieldRef(it, label) })
 
-    private fun colorRow(label: String, color: Color?): ColorRow {
+    private fun settingNumberRow(label: String, value: Float?, path: String): NumberRow =
+        NumberRow(label, value?.let(::decimalText) ?: "", "", value == null, FieldRef(SCENE_SETTING_KIND, path))
+
+    /** [path] makes the channels editable (`<setting>.color`); null leaves them read only. */
+    private fun colorRow(label: String, color: Color?, path: String? = null): ColorRow {
         val axes = listOf("r" to color?.r, "g" to color?.g, "b" to color?.b, "a" to color?.a)
-            .map { (name, value) -> Axis(name, value?.let(::decimalText) ?: "", null) }
+            .map { (name, value) ->
+                Axis(name, value?.let(::decimalText) ?: "", path?.let { FieldRef(SCENE_SETTING_KIND, "$it.$name") })
+            }
         return ColorRow(
             label,
             if (color == null) {

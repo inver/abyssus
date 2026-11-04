@@ -15,6 +15,7 @@ fun componentIconKey(kind: String): String = when (kind.substringAfterLast('.').
     "Collider" -> "collider"
     "Constraint" -> "constraint"
     "Light" -> "light"
+    "Camera" -> "camera"
     "Foliage" -> "foliage"
     "PathArrangement" -> "path"
     "Plane" -> "plane"
@@ -28,6 +29,7 @@ fun entityIconKey(type: String?): String = when {
     type == "GROUP" -> "group"
     type.startsWith("LIGHT") -> "dlight"
     type == "TERRAIN" -> "terrain"
+    type == "CAMERA" -> "camera"
     else -> "object"
 }
 

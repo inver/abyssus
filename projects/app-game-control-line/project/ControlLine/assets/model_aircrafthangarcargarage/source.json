@@ -1,0 +1,19 @@
+{
+  "importer": "model",
+  "source": "AircraftHangarCarGarage.fbx",
+  "sourcePath": "/home/inv3r/Downloads/AircraftHangarCarGarage.fbx",
+  "sourceSha256": "658b50d2c688c009450c5be0c7bc16b6ba7654258a701c33eb123bc0e6ac25cb",
+  "sourceFormat": "FBX",
+  "stated": {
+    "unit": "cm",
+    "upAxis": "Y"
+  },
+  "chosen": {
+    "unit": "cm",
+    "upAxis": "Y"
+  },
+  "size": "original",
+  "animations": [],
+  "skipped": [],
+  "approximated": []
+}

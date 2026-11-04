@@ -127,8 +127,14 @@ internal class SceneInputForwarder(
                 JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT,
             )
         }
-        bindShortcut(KeyEvent.VK_C) { interaction.copy() }
-        bindShortcut(KeyEvent.VK_V) { interaction.paste() }
+        bindShortcut(KeyEvent.VK_C) {
+            com.intellij.openapi.diagnostic.Logger.getInstance("DEBUG-CLIP").warn("DEBUG-CLIP ctrl+C selected=${interaction.selectedId}")
+            interaction.copy()
+        }
+        bindShortcut(KeyEvent.VK_V) {
+            com.intellij.openapi.diagnostic.Logger.getInstance("DEBUG-CLIP").warn("DEBUG-CLIP ctrl+V selected=${interaction.selectedId}")
+            interaction.paste()
+        }
     }
 
     /** While playing, every key but Escape goes to the simulation and is consumed, so no editor shortcut fires. */

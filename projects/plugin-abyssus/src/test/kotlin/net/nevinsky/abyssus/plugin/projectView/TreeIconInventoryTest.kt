@@ -45,6 +45,7 @@ class TreeIconInventoryTest {
             "component_rigid_body",
             "component_collider",
             "component_constraint",
+            "component_camera",
             "component_light",
             "component_foliage",
             "component_path_arrangement",

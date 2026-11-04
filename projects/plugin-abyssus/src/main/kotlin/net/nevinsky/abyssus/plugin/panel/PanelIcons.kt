@@ -5,14 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.panel
 
+import net.nevinsky.abyssus.plugin.filetype.*
 import javax.swing.Icon
-import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectIcons
-import net.nevinsky.abyssus.plugin.filetype.AssetIcons
-import net.nevinsky.abyssus.plugin.filetype.ComponentIcons
-import net.nevinsky.abyssus.plugin.filetype.PropertyIcons
-import net.nevinsky.abyssus.plugin.filetype.SceneIcons
-import net.nevinsky.abyssus.plugin.filetype.ScenesIcons
-import net.nevinsky.abyssus.plugin.filetype.TreeIcons
 
 /** Maps the icon keys of the panel model (`lib-core-editor`'s `PanelIcons`) to the design's icon set. */
 fun panelIcon(key: String?): Icon = when (key) {
@@ -30,6 +24,7 @@ fun panelIcon(key: String?): Icon = when (key) {
     "object" -> TreeIcons.load("entity_object")
     "group" -> TreeIcons.load("entity_group")
     "dlight" -> TreeIcons.load("entity_light_directional")
+    "camera" -> ComponentIcons.CAMERA
     "terrain" -> AssetIcons.forType("TERRAIN")
     "model" -> AssetIcons.forType("MODEL")
     "foliage" -> AssetIcons.forType("FOLIAGE")

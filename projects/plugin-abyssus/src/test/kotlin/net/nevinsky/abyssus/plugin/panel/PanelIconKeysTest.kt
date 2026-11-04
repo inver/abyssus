@@ -28,6 +28,7 @@ class PanelIconKeysTest : BasePlatformTestCase() {
                     "Collider",
                     "Constraint",
                     "Light",
+                    "Camera",
                     "Foliage",
                     "PathArrangement",
                     "Plane",
@@ -36,7 +37,7 @@ class PanelIconKeysTest : BasePlatformTestCase() {
                 .map { "${it}Component" }
         val keys =
             kinds.map(::componentIconKey) +
-                listOf(null, "GROUP", "LIGHT_DIRECTIONAL", "TERRAIN", "OBJECT").map(::entityIconKey) +
+                listOf(null, "GROUP", "LIGHT_DIRECTIONAL", "TERRAIN", "CAMERA", "OBJECT").map(::entityIconKey) +
                 listOf(
                         "MODEL",
                         "TERRAIN",

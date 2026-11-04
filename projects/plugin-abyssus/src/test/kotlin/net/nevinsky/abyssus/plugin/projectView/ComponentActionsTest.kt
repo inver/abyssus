@@ -110,7 +110,7 @@ class ComponentActionsTest : BasePlatformTestCase() {
     fun testAddIsOfferedOnEntityRowsOnly() {
         copyProject()
         assertTrue(visible(AddOn(entity("0"))))
-        assertFalse(visible(AddOn(component("0", "PositionComponent"))))
+        assertFalse(visible(AddOn(component("1", "PositionComponent"))))
         assertFalse(visible(AddOn(abss())))
         assertFalse(visible(AddOn(descend(abss(), "scenes"))))
         assertFalse(visible(AddOn(descend(abss(), "assets"))))
@@ -165,29 +165,29 @@ class ComponentActionsTest : BasePlatformTestCase() {
 
     fun testRemoveIsOfferedOnModeledComponentsOnly() {
         copyProject()
-        assertTrue(visible(RemoveOn(component("0", "NameComponent"))))
-        assertFalse(visible(RemoveOn(component("0", "PickableComponent"))))
-        assertFalse(visible(RemoveOn(entity("0"))))
+        assertTrue(visible(RemoveOn(component("1", "NameComponent"))))
+        assertFalse(visible(RemoveOn(component("1", "PickableComponent"))))
+        assertFalse(visible(RemoveOn(entity("1"))))
         assertFalse(visible(RemoveOn(abss())))
     }
 
     fun testRemoveWritesTheFile() {
         copyProject()
-        val remove = RemoveOn(component("0", "NameComponent"))
+        val remove = RemoveOn(component("1", "NameComponent"))
         remove.actionPerformed(TestActionEvent.createTestEvent(remove))
-        assertNull(entityDto(0).component(NameComponent::class.java))
-        assertTrue("PickableComponent" in componentNames(entityDto(0)))
+        assertNull(entityDto(1).component(NameComponent::class.java))
+        assertTrue("PickableComponent" in componentNames(entityDto(1)))
     }
 
     fun testTreeShowsTheNewComponentAndCount() {
         copyProject()
-        val add = AddOn(entity("0"))
+        val add = AddOn(entity("1"))
         val light =
-            add.choices(project, componentTargetOf(entity("0"))!!, testMetaFiles()).getChildren(null).first {
+            add.choices(project, componentTargetOf(entity("1"))!!, testMetaFiles()).getChildren(null).first {
                 it.templatePresentation.text == "Light"
             }
         light.actionPerformed(TestActionEvent.createTestEvent(light))
-        val node = entity("0") as DtoEntryNode
+        val node = entity("1") as DtoEntryNode
         assertTrue(children(node).any { label(it) == "LightComponent" })
         assertEquals(5, children(node).size)
     }

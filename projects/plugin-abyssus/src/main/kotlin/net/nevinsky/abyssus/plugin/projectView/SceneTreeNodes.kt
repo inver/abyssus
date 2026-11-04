@@ -7,13 +7,17 @@ package net.nevinsky.abyssus.plugin.projectView
 
 import net.nevinsky.abyssus.lib.core.dto.EntityDto
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RawComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RawComponentsWrapper
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementCopyCount
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementCopyIds
 import net.nevinsky.abyssus.lib.core.editor.components.SetEnabledAction
+import net.nevinsky.abyssus.lib.core.format.EntityType
 
 /** The `ecs` row of a scene: its entities. */
 class EcsNode(val scene: SceneDto) {
@@ -46,6 +50,30 @@ fun componentCountOf(entity: EntityDto): Int = componentNames(entity).size
 
 fun hasComponent(entity: EntityDto, simpleName: String): Boolean =
     componentNames(entity).any { it.substringAfterLast('.') == simpleName }
+
+/** True for an entity that is a camera, by type or by carrying a [CameraComponent] (a plain object otherwise). */
+fun isCameraEntity(entity: EntityDto): Boolean {
+    val type = entity.header().type
+    return type == EntityType.CAMERA ||
+        ((type == null || type == EntityType.OBJECT) && entity.components.any { it is CameraComponent })
+}
+
+/** True for a light, by type or by carrying a [LightComponent]. */
+fun isLightEntity(entity: EntityDto): Boolean {
+    val type = entity.header().type
+    return type == EntityType.LIGHT_DIRECTIONAL || type == EntityType.LIGHT_POINT || type == EntityType.LIGHT_SPOT ||
+        ((type == null || type == EntityType.OBJECT) && entity.components.any { it is LightComponent })
+}
+
+/** True for a plain object that renders a model, which is not a camera or a light. */
+fun isModelEntity(entity: EntityDto): Boolean {
+    val type = entity.header().type
+    return (type == null || type == EntityType.OBJECT) && !isCameraEntity(entity) && !isLightEntity(entity) &&
+        entity.components.any { it is RenderComponent }
+}
+
+/** A camera, light or model is a leaf in the tree: its components are edited in Properties. */
+fun isLeafEntity(entity: EntityDto): Boolean = isCameraEntity(entity) || isLightEntity(entity) || isModelEntity(entity)
 
 fun isArrangementEntity(entity: EntityDto): Boolean = entity.component(PathArrangementComponent::class.java) != null
 

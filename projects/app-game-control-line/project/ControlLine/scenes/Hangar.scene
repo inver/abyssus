@@ -1,0 +1,214 @@
+{
+  "formatVersion": 1,
+  "id": "8c6800a0-98e2-40fc-8148-6f785f5c094b",
+  "name": "Hangar",
+  "ambientLightEnabled": true,
+  "ambientLight": {
+    "color": {
+      "r": 1.0,
+      "g": 1.0,
+      "b": 1.0,
+      "a": 1.0
+    },
+    "intensity": 0.6
+  },
+  "fogEnabled": false,
+  "skyboxEnabled": false,
+  "ecs": {
+    "1": {
+      "type": "OBJECT",
+      "components": {
+        "NameComponent": {
+          "name": "hangar"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0.045512676,
+            "y": 0.088040546,
+            "z": 6.6339746
+          }
+        },
+        "RenderComponent": {
+          "shaderKey": "defaultShader",
+          "type": "MODEL",
+          "assetName": "model_aircrafthangarcargarage"
+        }
+      }
+    },
+    "2": {
+      "type": "LIGHT_SPOT",
+      "components": {
+        "NameComponent": {
+          "name": "Spot Light 2"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -0.086706996,
+            "y": 7,
+            "z": -0.63282126
+          },
+          "localRotation": {
+            "x": 0.70710677,
+            "y": 0,
+            "z": 0,
+            "w": -0.70710677
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 0.2,
+            "range": 100,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "3": {
+      "type": "OBJECT",
+      "components": {
+        "NameComponent": {
+          "name": "Table"
+        },
+        "RenderComponent": {
+          "type": "MODEL",
+          "assetName": "model_airfield_table_work"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0,
+            "y": 0.07660295,
+            "z": -1.2823714
+          }
+        }
+      }
+    },
+    "4": {
+      "type": "OBJECT",
+      "components": {
+        "NameComponent": {
+          "name": "Camera"
+        },
+        "CameraComponent": {
+          "camera": {
+            "viewPointPosition": {
+              "x": 0,
+              "y": 0,
+              "z": -1
+            },
+            "position": {
+              "x": 0,
+              "y": 1.6750345,
+              "z": 0.45310378
+            },
+            "far": 100,
+            "near": 1,
+            "fieldOfView": 67
+          }
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0,
+            "y": 1.6750345,
+            "z": 0.45310378
+          }
+        }
+      }
+    },
+    "5": {
+      "type": "OBJECT",
+      "components": {
+        "NameComponent": {
+          "name": "Floor"
+        },
+        "RenderComponent": {
+          "type": "TERRAIN",
+          "assetName": "plate_terrain"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -137.65004,
+            "y": 0,
+            "z": -337.68018
+          }
+        }
+      }
+    },
+    "6": {
+      "type": "LIGHT_SPOT",
+      "components": {
+        "NameComponent": {
+          "name": "Spot Light 2"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 1.3485708,
+            "y": 7,
+            "z": -0.68423367
+          },
+          "localRotation": {
+            "x": 0.70710677,
+            "y": 0,
+            "z": 0,
+            "w": -0.70710677
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 0.2,
+            "range": 100,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "7": {
+      "type": "LIGHT_SPOT",
+      "components": {
+        "NameComponent": {
+          "name": "Spot Light 2"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -1.5467215,
+            "y": 7,
+            "z": -0.7
+          },
+          "localRotation": {
+            "x": 0.70710677,
+            "y": 0,
+            "z": 0,
+            "w": -0.70710677
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 0.2,
+            "range": 100,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}
