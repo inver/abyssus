@@ -59,7 +59,7 @@ smoke() {
 
 echo "unpacking $(basename "$deb")"
 dpkg-deb -x "$deb" "$work/deb"
-(cd "$root" && ./gradlew :app-game-control-line:checkExtractedPackage "-PpackageDir=$work/deb" --console=plain -q --no-daemon)
+(cd "$root" && ./gradlew :app-game-control-line:checkExtractedPackage "-PpackageDir=$work/deb" ${SMOKE_GRADLE_ARGS:--Pabyssus.universalDist=true} --console=plain -q --no-daemon)
 echo "ok   payload of the .deb holds the shipped game only"
 smoke deb "$deb" "$work/deb/opt/control-line/bin/Control Line"
 

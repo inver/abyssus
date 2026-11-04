@@ -23,7 +23,7 @@
 
 - [x] 4.1 `ProjectReader`, `PhysicsOverlayGeometry`, `SceneRenderer`, project view nodes use typed entities. Verify: `./gradlew :plugin-abyssus:test`.
 - [x] 4.2 Control Line tools and tests (`FieldFoliage`, `TestField`, `trainer.patch.json` paths) on the new shape. Verify: `./gradlew :app-game-control-line:test`.
-- [ ] 4.3 runIde check on a copy of `Untitled`: open the scene, drag an object, toggle an eye, Undo; the file diff touches only the changed values.
+- [x] 4.3 runIde check on a copy of `Untitled`: open the scene, drag an object, toggle an eye, Undo; the file diff touches only the changed values.
 
 ## 5. Docs and specs
 

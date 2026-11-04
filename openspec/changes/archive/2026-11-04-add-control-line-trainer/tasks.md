@@ -72,7 +72,7 @@
   manoeuvre's flown line by span time, name the colour in the legend, and set the overlapped-manoeuvre note (design
   decision 7). Verify: `pattern/DebriefModelTest` cases for a manoeuvre with a takeover (an INSTRUCTOR line and the note),
   one without, and a board-row debrief with no spans.
-- [ ] 5.2 Manual check in `./gradlew :app-game-control-line:run`: open the debrief of an assisted Mid flight. The
+- [x] 5.2 Manual check in `./gradlew :app-game-control-line:run`: open the debrief of an assisted Mid flight. The
   takeover part of the loops is drawn in the Instructor colour, the legend names it, and the note shows.
 
 ## 6. Docs and integration
