@@ -96,7 +96,7 @@ class CoverageInventoryTest {
         val builtIn = Regex("kind<([A-Za-z]+)>").findAll(
             Files.readString(root.resolve("projects/lib-core-editor/src/main/kotlin/net/nevinsky/abyssus/lib/core/editor/components/BuiltInComponentKinds.kt")),
         ).map { it.groupValues[1] }.toList()
-        val physics = Regex("kind\\((\\w+)::class").findAll(
+        val physics = Regex("kind\\(\\s*(\\w+)::class").findAll(
             Files.readString(root.resolve("projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/physics/PhysicsComponentKinds.kt")),
         ).map { it.groupValues[1] }.toList()
         assertTrue(builtIn.size >= 7 && physics.size >= 3)

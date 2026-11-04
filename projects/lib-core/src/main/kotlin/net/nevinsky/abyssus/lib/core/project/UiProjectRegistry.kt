@@ -32,15 +32,23 @@ class UiProjectRegistry(
     private val files: FileLoader,
     private val decoder: UiCollectionDecoder = UiCollectionDecoder(),
 ) {
-    /** One entry per listed name, in order; a repeated name yields [UiRegistryProblem.DUPLICATE] after its first use. */
+    /**
+     * One entry per listed name, in order; a repeated name yields [UiRegistryProblem.DUPLICATE] after its first use.
+     */
     fun entries(project: ProjectDto): List<UiRegistryEntry> {
         val seen = HashSet<String>()
         return project.uiAssetNames.map { name ->
-            if (!seen.add(name)) UiRegistryEntry.Problem(name, UiRegistryProblem.DUPLICATE) else entry(name)
+            if (!seen.add(name)) {
+                UiRegistryEntry.Problem(name, UiRegistryProblem.DUPLICATE)
+            } else {
+                entry(name)
+            }
         }
     }
 
-    /** The admitted-or-refused UI asset registered as [name], or null when [name] is not a valid registered UI asset. */
+    /**
+     * The admitted-or-refused UI asset registered as [name], or null when [name] is not a valid registered UI asset.
+     */
     fun lookup(project: ProjectDto, name: String): UiAdmission? =
         (entries(project).firstOrNull { it.name == name } as? UiRegistryEntry.Registered)?.admission
 
@@ -49,8 +57,9 @@ class UiProjectRegistry(
             ?: return UiRegistryEntry.Problem(name, UiRegistryProblem.MISSING)
         val tree = runCatchingKeepingCancellation { json.readObject(meta.readText()) }.getOrNull()
             ?: return UiRegistryEntry.Problem(name, UiRegistryProblem.UNREADABLE)
-        if (tree.get("type")?.takeIf { it.isTextual }?.textValue() != "UI")
+        if (tree.get("type")?.takeIf { it.isTextual }?.textValue() != "UI") {
             return UiRegistryEntry.Problem(name, UiRegistryProblem.WRONG_TYPE)
+        }
         return UiRegistryEntry.Registered(name, decoder.decode(tree))
     }
 }

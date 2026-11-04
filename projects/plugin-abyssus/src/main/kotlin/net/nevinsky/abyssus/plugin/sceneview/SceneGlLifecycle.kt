@@ -25,7 +25,10 @@ internal interface SceneGlHooks {
     /** A frame is about to start, before its clock ticks. */
     fun frameStarting(canvas: GuardedGLCanvas)
 
-    /** Draws one frame into [canvas] with [ctx] current-capable and [frame] ticked; the lifecycle swaps buffers afterwards. */
+    /**
+     * Draws one frame into [canvas] with [ctx] current-capable and [frame] ticked; the lifecycle swaps buffers
+     * afterwards.
+     */
     fun paintFrame(canvas: GuardedGLCanvas, ctx: GdxContext, frame: GdxFrame)
 
     /** The frame was presented (after the buffer swap). */
@@ -40,50 +43,82 @@ internal class SceneGlLifecycle(
     private val renderer: SceneRenderer,
     private val hooks: SceneGlHooks,
 ) {
-    private val host = GlCanvasHost(object : GlCanvasHooks {
-        // Even a failure in capability/resource creation is a renderer error, not a refused pixel format.
-        override fun beforeCreate() { contextInitialized = true }
+    private val host =
+        GlCanvasHost(
+            object : GlCanvasHooks {
+                // Even a failure in capability/resource creation is a renderer error, not a refused pixel format.
+                override fun beforeCreate() {
+                    contextInitialized = true
+                }
 
-        override fun create() = renderer.create()
+                override fun create() = renderer.create()
 
-        override fun beforeFrame(canvas: GuardedGLCanvas) = hooks.frameStarting(canvas)
+                override fun beforeFrame(canvas: GuardedGLCanvas) = hooks.frameStarting(canvas)
 
-        override fun paint(canvas: GuardedGLCanvas, ctx: GdxContext, frame: GdxFrame) = hooks.paintFrame(canvas, ctx, frame)
+                override fun paint(canvas: GuardedGLCanvas, ctx: GdxContext, frame: GdxFrame) =
+                    hooks.paintFrame(canvas, ctx, frame)
 
-        override fun framePresented() = hooks.framePresented()
+                override fun framePresented() = hooks.framePresented()
 
-        override fun beforeRelease() = hooks.beforeDispose()
+                override fun beforeRelease() = hooks.beforeDispose()
 
-        override fun release() { hooks.disposeInContext(); renderer.dispose() }
+                override fun release() {
+                    hooks.disposeInContext()
+                    renderer.dispose()
+                }
 
-        override fun abandoned() { hooks.abandoned(); renderer.abandonShadows() }
+                override fun abandoned() {
+                    hooks.abandoned()
+                    renderer.abandonShadows()
+                }
 
-        override fun contextLost() = hooks.contextLost()
-    }, "Failed to release scene view GL resources")
+                override fun contextLost() = hooks.contextLost()
+            },
+            "Failed to release scene view GL resources",
+        )
 
     /** The capabilities of the current context; the canvas capture re-binds them before reading pixels. */
-    val capabilities: GLCapabilities? get() = host.capabilities
+    val capabilities: GLCapabilities?
+        get() = host.capabilities
 
     /** The samples per pixel the current context really has; null before it is made. */
-    val contextSamples: Int? get() = host.contextSamples
+    val contextSamples: Int?
+        get() = host.contextSamples
 
-    /** True once the current canvas ran `initGL`: a failure after that is a renderer error, not a refused pixel format. */
+    /**
+     * True once the current canvas ran `initGL`: a failure after that is a renderer error, not a refused pixel format.
+     */
     var contextInitialized = false
 
-    fun newCanvas(samples: Int, swapControl: Boolean = true): GuardedGLCanvas = host.newCanvas(glData(samples, swapControl))
+    fun newCanvas(samples: Int, swapControl: Boolean = true): GuardedGLCanvas =
+        host.newCanvas(glData(samples, swapControl))
 
     private companion object {
-        fun glData(sampleCount: Int, swapControl: Boolean) = GLData().apply {
-            samples = sampleCount
-            sampleBuffers = if (sampleCount > 0) 1 else 0
-            majorVersion = 3
-            // instanced foliage shadows call glVertexAttribDivisor, which is core only from 3.3; a context made as exactly 3.2 aborts the JVM on it
-            minorVersion = 3
-            profile = GLData.Profile.CORE
-            forwardCompatible = true
-            depthSize = 24
-            // the Swing timer paces frames; a vsync-blocked swap would stall the IDE thread. Left unset when the GLX server has no swap control.
-            swapInterval = if (swapControl) 0 else null
-        }
+        fun glData(sampleCount: Int, swapControl: Boolean) =
+            GLData().apply {
+                samples = sampleCount
+                sampleBuffers =
+                    if (sampleCount > 0) {
+                        1
+                    } else {
+                        0
+                    }
+                majorVersion = 3
+                // instanced foliage shadows call glVertexAttribDivisor, which is core only from 3.3; a context made as
+                // exactly 3.2 aborts the JVM on it
+                minorVersion = 3
+                profile = GLData.Profile.CORE
+                forwardCompatible = true
+                depthSize = 24
+                // the Swing timer paces frames; a vsync-blocked swap would stall the IDE thread. Left unset when the
+                // GLX
+                // server has no swap control.
+                swapInterval =
+                    if (swapControl) {
+                        0
+                    } else {
+                        null
+                    }
+            }
     }
 }

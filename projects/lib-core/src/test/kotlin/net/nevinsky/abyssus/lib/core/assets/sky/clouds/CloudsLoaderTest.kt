@@ -5,14 +5,14 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
+import java.io.File
+import java.nio.file.Files
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
 
 class CloudsLoaderTest {
     private val dir: File = Files.createTempDirectory("clouds").toFile()
@@ -26,7 +26,9 @@ class CloudsLoaderTest {
     }
 
     private fun asset(name: String, additional: String) {
-        File(dir, "assets/$name").apply { mkdirs() }.resolve("meta.json")
+        File(dir, "assets/$name")
+            .apply { mkdirs() }
+            .resolve("meta.json")
             .writeText("""{"format": "abyssus", "formatVersion": 1, "type": "CLOUDS", "additional": $additional}""")
     }
 
@@ -34,14 +36,16 @@ class CloudsLoaderTest {
     fun readsTheBandsAndTechniqueAndMakesTheNoise() {
         asset(
             "clouds_storm",
-            """{"technique": "VOLUMETRIC", "low": {"level":"LOW","type": "STRATOCUMULUS"}, "mid": {"level":"MID","type": "ALTOSTRATUS", "coverage": 0.9}}"""
+            """{"technique": "VOLUMETRIC", "low": {"level":"LOW","type": "STRATOCUMULUS"}, "mid": {"level":"MID",
+"type": "ALTOSTRATUS", "coverage": 0.9}}""",
         )
         assertEquals(MetaType.CLOUDS, metas.loadBaseMeta("clouds_storm")!!.type)
         val prepared = loader.prepare("clouds_storm")!!.staged
         assertEquals(CloudTechnique.VOLUMETRIC, prepared.meta.technique)
         assertEquals(
             listOf(CloudType.ALTOSTRATUS, CloudType.STRATOCUMULUS),
-            prepared.meta.bandsFarToNear().map { it.type })
+            prepared.meta.bandsFarToNear().map { it.type },
+        )
         assertEquals(0.9f, prepared.meta.mid!!.coverage)
         assertNotNull(prepared.noise)
         assertTrue(log.warnings.isEmpty())
@@ -51,18 +55,18 @@ class CloudsLoaderTest {
     fun aMalformedBandIsSkippedAndLoggedOnceWhileValidNeighboursLoad() {
         asset(
             "clouds_bad",
-            """{"low": {"level":"LOW","type": "UNKNOWN_TYPE"}, "high": {"level":"HIGH","type": "CIRRUS"}}"""
+            """{"low": {"level":"LOW","type": "UNKNOWN_TYPE"}, "high": {"level":"HIGH","type": "CIRRUS"}}""",
         )
         val file = File(dir, "assets/clouds_bad/meta.json")
         val before = file.readText()
         val prepared = loader.prepare("clouds_bad")!!.staged
         assertNull(prepared.meta.low)
-//        assertEquals(CloudType.CIRRUS, prepared.meta.high!!.type)
-//        assertNotNull(prepared.noise)
+        //        assertEquals(CloudType.CIRRUS, prepared.meta.high!!.type)
+        //        assertNotNull(prepared.noise)
         assertEquals(prepared.meta, loader.prepare("clouds_bad")!!.staged.meta)
         assertEquals(before, file.readText())
-//        assertTrue(log.warnings.single().contains("Cloud band 'low' skipped"))
-//        assertEquals(1, log.warnings.size)
+        //        assertTrue(log.warnings.single().contains("Cloud band 'low' skipped"))
+        //        assertEquals(1, log.warnings.size)
     }
 
     @Test

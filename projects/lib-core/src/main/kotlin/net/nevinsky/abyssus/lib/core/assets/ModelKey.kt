@@ -20,7 +20,11 @@ data class ModelKey(val name: String, val meshId: String? = null) {
     }
 
     /** The storage name: the bare [name] for the whole model, otherwise the name joined to the mesh id. */
-    fun encode(): String = if (meshId == null) name else name + SEPARATOR + meshId
+    fun encode(): String = if (meshId == null) {
+        name
+    } else {
+        name + SEPARATOR + meshId
+    }
 }
 
 /**
@@ -29,16 +33,26 @@ data class ModelKey(val name: String, val meshId: String? = null) {
  */
 fun decodeModelKey(encoded: String): ModelKey {
     val at = encoded.indexOf(SEPARATOR)
-    return if (at < 0) ModelKey(encoded) else ModelKey(encoded.substring(0, at), encoded.substring(at + 1))
+    return if (at < 0) {
+        ModelKey(encoded)
+    } else {
+        ModelKey(encoded.substring(0, at), encoded.substring(at + 1))
+    }
 }
 
 /** The asset folder behind a storage name, which may be an encoded variant of it. */
 fun baseAssetName(encoded: String): String =
-    encoded.indexOf(SEPARATOR).let { if (it < 0) encoded else encoded.substring(0, it) }
+    encoded.indexOf(SEPARATOR).let { if (it < 0) {
+        encoded
+    } else {
+        encoded.substring(0, it)
+    } }
 
 /** True when [encoded] names one mesh of an asset rather than the asset itself. */
 fun isModelVariant(encoded: String): Boolean = encoded.indexOf(SEPARATOR) >= 0
 
-/** This meta as seen for the variant [encoded]: the same content under the encoded name, so a loader can read the mesh. */
+/**
+ * This meta as seen for the variant [encoded]: the same content under the encoded name, so a loader can read the mesh.
+ */
 fun AssetMeta<Any>.forVariant(encoded: String): AssetMeta<Any> =
     AssetMeta(type, encoded, formatVersion, version, lastModified, additional, uuid)

@@ -5,21 +5,20 @@
 
 package net.nevinsky.abyssus.lib.core.editor.modelimport
 
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.lib.core.editor.document.ModelImportRecord
-import net.nevinsky.abyssus.lib.core.editor.document.ImportFrameRecord
-import net.nevinsky.abyssus.lib.core.editor.document.ImportItemRecord
-import net.nevinsky.abyssus.lib.core.editor.document.OriginalImportSize
-import net.nevinsky.abyssus.lib.core.editor.document.ImportLargestExtent
-import net.nevinsky.abyssus.lib.core.editor.document.ImportHeight
-
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriteException
-import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriter
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import java.io.File
 import java.util.UUID
+import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.editor.document.ImportFrameRecord
+import net.nevinsky.abyssus.lib.core.editor.document.ImportHeight
+import net.nevinsky.abyssus.lib.core.editor.document.ImportItemRecord
+import net.nevinsky.abyssus.lib.core.editor.document.ImportLargestExtent
+import net.nevinsky.abyssus.lib.core.editor.document.ModelImportRecord
+import net.nevinsky.abyssus.lib.core.editor.document.OriginalImportSize
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriteException
+import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriter
 
 /** The model file an import writes into its asset folder. */
 const val MODEL_FILE = "model.glb"
@@ -56,8 +55,8 @@ class ModelImport(
     private val assets = ModelAssetFiles(json)
 
     /**
-     * @param projectDir the folder of the project's `.abss` file: `source.json` records the source path relative to
-     * it when the source is inside it
+     * @param projectDir the folder of the project's `.abss` file: `source.json` records the source path relative to it
+     *   when the source is inside it
      */
     fun stage(
         source: ModelSource,
@@ -72,11 +71,12 @@ class ModelImport(
         cancel()
         val gathered = textures.gather(transformed.data, cancel)
         cancel()
-        val glb = try {
-            writer.write(transformed.data, gathered.uris, GENERATOR)
-        } catch (e: GltfWriteException) {
-            throw ModelImportException(e.message ?: "the model cannot be written as glTF", e)
-        }
+        val glb =
+            try {
+                writer.write(transformed.data, gathered.uris, GENERATOR)
+            } catch (e: GltfWriteException) {
+                throw ModelImportException(e.message ?: "the model cannot be written as glTF", e)
+            }
         val leftOut = (source.leftOut + gathered.leftOut).distinct()
 
         val files = LinkedHashMap<String, ByteArray>()
@@ -84,25 +84,28 @@ class ModelImport(
         files[MODEL_FILE] = glb
         files.putAll(gathered.files)
 
-        val record = ModelImportRecord(
-            source = source.file.name,
-            sourcePath = sourcePath(source.file, projectDir),
-            sourceSha256 = source.sha256,
-            sourceFormat = source.format.id,
-            stated = ImportFrameRecord(source.frame.unit?.id, source.frame.upAxis?.name),
-            chosen = ImportFrameRecord(settings.unit.id, settings.upAxis.name),
-            size = when (val fit = settings.fit) {
-                FitSize.Original -> OriginalImportSize.ORIGINAL
-                is FitSize.LargestExtent -> ImportLargestExtent(fit.metres)
-                is FitSize.Height -> ImportHeight(fit.metres)
-            },
-            animations = source.animations.map { it.name },
-            skipped = leftOut.map { ImportItemRecord(it.item, it.reason.id) },
-            approximated = source.approximated.map { ImportItemRecord(it.item, it.reason) },
-        )
+        val record =
+            ModelImportRecord(
+                source = source.file.name,
+                sourcePath = sourcePath(source.file, projectDir),
+                sourceSha256 = source.sha256,
+                sourceFormat = source.format.id,
+                stated = ImportFrameRecord(source.frame.unit?.id, source.frame.upAxis?.name),
+                chosen = ImportFrameRecord(settings.unit.id, settings.upAxis.name),
+                size =
+                    when (val fit = settings.fit) {
+                        FitSize.Original -> OriginalImportSize.ORIGINAL
+                        is FitSize.LargestExtent -> ImportLargestExtent(fit.metres)
+                        is FitSize.Height -> ImportHeight(fit.metres)
+                    },
+                animations = source.animations.map { it.name },
+                skipped = leftOut.map { ImportItemRecord(it.item, it.reason.id) },
+                approximated = source.approximated.map { ImportItemRecord(it.item, it.reason) },
+            )
         files[SOURCE_FILE] = assets.sourceBytes(record)
 
-        val report = ImportReport(transformed.size, source.animations, gathered.files.size, leftOut, source.approximated)
+        val report =
+            ImportReport(transformed.size, source.animations, gathered.files.size, leftOut, source.approximated)
         return StagedModelImport(settings.folderName, uuid, files, report)
     }
 
@@ -111,7 +114,11 @@ class ModelImport(
         val source = file.canonicalFile
         val root = projectDir.canonicalFile
         val relative = source.toPath().startsWith(root.toPath()) && source != root
-        return if (relative) root.toPath().relativize(source.toPath()).joinToString("/") else source.path
+        return if (relative) {
+            root.toPath().relativize(source.toPath()).joinToString("/")
+        } else {
+            source.path
+        }
     }
 }
 

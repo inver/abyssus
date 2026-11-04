@@ -5,7 +5,8 @@
 
 // Shared rendering mechanics of the editor and games: the terrain program's binding and drawing, the shadow depth
 // submission and the pure light, projection and binding-plan calculations behind them. A plain JVM library wired by
-// constructors; the hosts (the IntelliJ plugin, Control Line) own their scenes, passes and resources and adapt their own
+// constructors; the hosts (the IntelliJ plugin, Control Line) own their scenes, passes and resources and adapt their
+// own
 // types at the boundary. A shipped game links it.
 plugins {
     `java-library`
@@ -41,5 +42,6 @@ extra["abyssusSingletonExcludes"] = listOf<String>()
 // Games ship this library: `checkNoEditorCode` keeps editor imports and ray-tracing snapshot types out of it.
 extra["abyssusShippedLibrary"] = true
 
-// No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in lib-core-editor (see gradle/checks.gradle.kts).
+// No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in
+// lib-core-editor (see gradle/checks.gradle.kts).
 extra["abyssusJacksonTreeAllowed"] = emptyList<String>()

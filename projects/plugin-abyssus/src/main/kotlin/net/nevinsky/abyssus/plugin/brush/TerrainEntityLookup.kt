@@ -14,13 +14,19 @@ import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DI
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 
-/** A terrain entity of a scene with the project files around it: its [scene], its [terrain] asset, the `.abss` and the `assets` folder. */
+/**
+ * A terrain entity of a scene with the project files around it: its [scene], its [terrain] asset, the `.abss` and the
+ * `assets` folder.
+ */
 class TerrainEntity(val scene: SceneDto, val terrain: BaseMeta, val abss: VirtualFile, val assets: VirtualFile) {
     /** The folder `assets/[name]`, or null when there is none. */
     fun assetFolder(name: String): VirtualFile? = assets.findChild(name)
 }
 
-/** The terrain [entity] of [scene], or null when it is not a terrain or the scene sits in no project with an `assets` folder. */
+/**
+ * The terrain [entity] of [scene], or null when it is not a terrain or the scene sits in no project with an `assets`
+ * folder.
+ */
 fun resolveTerrainEntity(project: Project, scene: VirtualFile, entity: Long): TerrainEntity? {
     val document = SceneDocumentCache.of(project).read(scene)?.scene ?: return null
     val terrain = renderedAsset(document, entity)?.takeIf { it.isTerrain() } ?: return null

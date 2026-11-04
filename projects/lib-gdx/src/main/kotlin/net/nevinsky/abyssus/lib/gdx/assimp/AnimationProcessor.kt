@@ -30,7 +30,11 @@ internal class AnimationProcessor(private val nodes: NodeProcessor) {
     }
 
     private fun convert(aiAnimation: AIAnimation, index: Int): ModelAnimation {
-        val tps = if (aiAnimation.mTicksPerSecond() > 0) aiAnimation.mTicksPerSecond() else DEFAULT_TICKS_PER_SECOND
+        val tps = if (aiAnimation.mTicksPerSecond() > 0) {
+            aiAnimation.mTicksPerSecond()
+        } else {
+            DEFAULT_TICKS_PER_SECOND
+        }
 
         val animation = ModelAnimation()
         animation.id = uniqueId(aiAnimation.mName().dataString(), index)
@@ -78,7 +82,11 @@ internal class AnimationProcessor(private val nodes: NodeProcessor) {
     }
 
     private fun uniqueId(name: String?, index: Int): String {
-        val base = if (name == null || name.isEmpty()) "animation_" + index else name
+        val base = if (name == null || name.isEmpty()) {
+            "animation_" + index
+        } else {
+            name
+        }
         var id = base
         var n = 1
         while (!usedIds.add(id)) {

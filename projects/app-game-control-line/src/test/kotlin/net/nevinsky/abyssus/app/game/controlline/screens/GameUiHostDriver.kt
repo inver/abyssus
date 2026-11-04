@@ -4,22 +4,32 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.screens
 
+import java.util.Locale
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
 import net.nevinsky.abyssus.lib.core.ui.model.UiWidget
 import net.nevinsky.abyssus.lib.core.ui.model.UiWidgetType
 import net.nevinsky.abyssus.lib.core.ui.state.UiScreenRef
 import net.nevinsky.abyssus.lib.core.ui.state.expandLists
-import java.util.Locale
 
 /** The colour role a style name stands for in the dump: the roles the hand-written screens gave a label's colour. */
-private fun roleOf(style: String?): String = when (style) {
-    "highlight", "big", "toast" -> "highlight"
-    "muted", "fail", "selected", "ideal", "flown" -> style
-    else -> "normal"
-}
+private fun roleOf(style: String?): String =
+    when (style) {
+        "highlight",
+        "big",
+        "toast" -> "highlight"
+        "muted",
+        "fail",
+        "selected",
+        "ideal",
+        "flown" -> style
+        else -> "normal"
+    }
 
-/** Walks the authored screens in a [GameUiHost] and reads back what its presenter shows, in the dump format of [ScreenDriver]. */
+/**
+ * Walks the authored screens in a [GameUiHost] and reads back what its presenter shows, in the dump format of
+ * [ScreenDriver].
+ */
 class GameUiHostDriver(private val host: GameUiHost) : ScreenDriver {
     private val presenter = host.presenter
 
@@ -33,10 +43,15 @@ class GameUiHostDriver(private val host: GameUiHost) : ScreenDriver {
 
     override fun navigate(keycode: Int) = host.navigate(keycode)
 
-    override val focus: String? get() = presenter.navigator.focus
+    override val focus: String?
+        get() = presenter.navigator.focus
 
     override fun click(screen: String, widget: String) {
-        val bounds = checkNotNull(presenter.layout(UiScreenRef(SCREENS_ASSET, screen))?.nodes?.get(widget)) { "$widget is not laid out on $screen" }.bounds
+        val bounds =
+            checkNotNull(presenter.layout(UiScreenRef(SCREENS_ASSET, screen))?.nodes?.get(widget)) {
+                    "$widget is not laid out on $screen"
+                }
+                .bounds
         val x = (bounds.x + bounds.width / 2f).toInt()
         val y = (bounds.y + bounds.height / 2f).toInt()
         host.inputProcessor.touchDown(x, y, 0, 0)
@@ -47,21 +62,34 @@ class GameUiHostDriver(private val host: GameUiHost) : ScreenDriver {
         val view = presenter.view
         val lines = mutableListOf<String>()
         fun firstLabel(widget: UiWidget): String? =
-            if (widget.type == UiWidgetType.LABEL) view.text(widget) else widget.children.firstNotNullOfOrNull(::firstLabel)
+            if (widget.type == UiWidgetType.LABEL) {
+                view.text(widget)
+            } else {
+                widget.children.firstNotNullOfOrNull(::firstLabel)
+            }
 
         fun walk(widget: UiWidget) {
-            if (!view.visible(widget)) return
+            if (!view.visible(widget)) {
+                return
+            }
             val style = view.styleName(widget)
             val focused = presenter.navigator.focus == widget.id
             when {
-                widget.type == UiWidgetType.LABEL -> view.text(widget).takeIf { it.isNotEmpty() }?.let { lines += "label|${roleOf(style)}|$it" }
+                widget.type == UiWidgetType.LABEL ->
+                    view.text(widget).takeIf { it.isNotEmpty() }?.let { lines += "label|${roleOf(style)}|$it" }
                 widget.type == UiWidgetType.BUTTON ->
-                    lines += "button|${if (view.enabled(widget)) "enabled" else "disabled"}${if (focused) "|checked" else ""}|${view.text(widget)}"
+                    lines +=
+                        "button|${when { view.enabled(widget) -> "enabled"
+ else -> "disabled" }}${when { focused -> "|checked"
+ else -> "" }}|${view.text(widget)}"
                 widget.type == UiWidgetType.TEXT_FIELD -> lines += "field|${view.text(widget)}"
-                widget.type == UiWidgetType.PROGRESS_BAR -> lines += String.format(Locale.ROOT, "bar|%.2f", view.progress(widget))
+                widget.type == UiWidgetType.PROGRESS_BAR ->
+                    lines += String.format(Locale.ROOT, "bar|%.2f", view.progress(widget))
                 // a score-table tab is a clickable container: it reads as a toggle button
                 style == "tab" || style == "tabSelected" ->
-                    lines += "button|enabled${if (style == "tabSelected") "|checked" else ""}|${firstLabel(widget).orEmpty()}"
+                    lines +=
+                        "button|enabled${when { style == "tabSelected" -> "|checked"
+ else -> "" }}|${firstLabel(widget).orEmpty()}"
                 else -> widget.children.forEach(::walk)
             }
         }

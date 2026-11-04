@@ -44,10 +44,12 @@ class TerrainMeshUpdateTest {
             val data = TerrainData(resolution, FloatArray(resolution * resolution) { (it % 7) * 0.5f }, 200, 4f)
             val mesh = TerrainMesh(PreparedTerrain(data, emptyMap()), NO_ASSETS)
             try {
-                val edited = data.heights.copyOf().also { for (z in 10..14) for (x in 8..20) it[z * resolution + x] += 6f }
+                val edited =
+                    data.heights.copyOf().also { for (z in 10..14) for (x in 8..20) it[z * resolution + x] += 6f }
                 data.copyHeights(edited, 8, 10, 20, 14)
                 mesh.updateRegion(8, 10, 20, 14)
-                val fresh = TerrainMesh(PreparedTerrain(TerrainData(resolution, edited, 200, 4f), emptyMap()), NO_ASSETS)
+                val fresh =
+                    TerrainMesh(PreparedTerrain(TerrainData(resolution, edited, 200, 4f), emptyMap()), NO_ASSETS)
                 try {
                     assertArrayEquals(fresh.vertexSnapshot(), mesh.vertexSnapshot(), 0f)
                 } finally {
@@ -56,7 +58,14 @@ class TerrainMeshUpdateTest {
                 // a rectangle over half the grid takes the full path and gives the same buffer
                 data.copyHeights(FloatArray(resolution * resolution) { 3f }, 0, 0, resolution - 1, resolution - 1)
                 mesh.updateRegion(0, 0, resolution - 1, resolution - 1)
-                val flat = TerrainMesh(PreparedTerrain(TerrainData(resolution, FloatArray(resolution * resolution) { 3f }, 200, 4f), emptyMap()), NO_ASSETS)
+                val flat =
+                    TerrainMesh(
+                        PreparedTerrain(
+                            TerrainData(resolution, FloatArray(resolution * resolution) { 3f }, 200, 4f),
+                            emptyMap(),
+                        ),
+                        NO_ASSETS,
+                    )
                 try {
                     assertArrayEquals(flat.vertexSnapshot(), mesh.vertexSnapshot(), 0f)
                 } finally {

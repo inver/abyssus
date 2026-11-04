@@ -17,10 +17,11 @@ class HeightmapImage(val width: Int, val height: Int, val pixels: ByteArray)
 fun heightmapImage(heights: FloatArray, resolution: Int, minHeight: Float, maxHeight: Float): HeightmapImage {
     require(heights.size == resolution * resolution) { "heights are not $resolution squared" }
     val span = (maxHeight - minHeight).takeIf { it > 0f && it.isFinite() } ?: 1f
-    val pixels = ByteArray(heights.size) { i ->
-        val unit = ((heights[i] - minHeight) / span).coerceIn(0f, 1f)
-        Math.round(unit * 255f).toByte()
-    }
+    val pixels =
+        ByteArray(heights.size) { i ->
+            val unit = ((heights[i] - minHeight) / span).coerceIn(0f, 1f)
+            Math.round(unit * 255f).toByte()
+        }
     return HeightmapImage(resolution, resolution, pixels)
 }
 
@@ -49,9 +50,9 @@ data class PreviewRequest(val token: Long, val settings: TerrainGenerationSettin
 
 /**
  * The draft of one terrain generation: current settings and geometry, which background request is the latest, the
- * finished preview and the source it must still match. Free of Swing, GL and threads: the caller serializes access
- * (the plugin uses the UI thread) and runs the generation itself. Only the latest request's result is accepted, and
- * any change to the settings, geometry or source, a cancel or a newer request makes the earlier results stale.
+ * finished preview and the source it must still match. Free of Swing, GL and threads: the caller serializes access (the
+ * plugin uses the UI thread) and runs the generation itself. Only the latest request's result is accepted, and any
+ * change to the settings, geometry or source, a cancel or a newer request makes the earlier results stale.
  */
 class TerrainGenerationDraft(
     settings: TerrainGenerationSettings,
@@ -61,8 +62,10 @@ class TerrainGenerationDraft(
 ) {
     var settings: TerrainGenerationSettings = settings
         private set
+
     var size: Int = size
         private set
+
     var resolution: Int = resolution
         private set
 
@@ -74,20 +77,25 @@ class TerrainGenerationDraft(
     var preview: TerrainPreview? = null
         private set
 
-    val generating: Boolean get() = pending != null
+    val generating: Boolean
+        get() = pending != null
 
     /** Why generation cannot start for the current inputs; empty when it can. */
     fun settingsErrors(): List<SettingsError> = settings.errors()
 
     fun updateSettings(next: TerrainGenerationSettings) {
-        if (next == settings) return
+        if (next == settings) {
+            return
+        }
         settings = next
         invalidate()
     }
 
     /** Changes the geometry (a new terrain's inputs); the picture of other geometry is dropped. */
     fun updateGeometry(size: Int, resolution: Int) {
-        if (size == this.size && resolution == this.resolution) return
+        if (size == this.size && resolution == this.resolution) {
+            return
+        }
         this.size = size
         this.resolution = resolution
         invalidate()
@@ -96,13 +104,19 @@ class TerrainGenerationDraft(
     /** Changes only the seed, to a new value from [random] different from the current one. */
     fun randomizeSeed(random: Random) {
         var seed = random.nextInt()
-        if (seed == settings.seed) seed = seed xor 1
+        if (seed == settings.seed) {
+            seed = seed xor 1
+        }
         updateSettings(settings.copy(seed = seed))
     }
 
-    /** Starts a preview of the current inputs; null when they are invalid. A newer request supersedes the pending one. */
+    /**
+     * Starts a preview of the current inputs; null when they are invalid. A newer request supersedes the pending one.
+     */
     fun begin(): PreviewRequest? {
-        if (settings.errors().isNotEmpty() || size <= 0 || resolution !in MIN_TERRAIN_RESOLUTION..255) return null
+        if (settings.errors().isNotEmpty() || size <= 0 || resolution !in MIN_TERRAIN_RESOLUTION..255) {
+            return null
+        }
         preview = null
         latestToken++
         pending = latestToken
@@ -111,7 +125,14 @@ class TerrainGenerationDraft(
 
     /** Accepts [heights] for [request] when it is still the latest and the inputs did not change; false when stale. */
     fun complete(request: PreviewRequest, heights: FloatArray): Boolean {
-        if (pending != request.token || request.settings != settings || request.size != size || request.resolution != resolution) return false
+        if (
+            pending != request.token ||
+                request.settings != settings ||
+                request.size != size ||
+                request.resolution != resolution
+        ) {
+            return false
+        }
         pending = null
         preview = TerrainPreview(settings, size, resolution, heights)
         return true
@@ -119,7 +140,9 @@ class TerrainGenerationDraft(
 
     /** Records that [request] failed; only the latest request clears the pending state. */
     fun fail(request: PreviewRequest) {
-        if (pending == request.token) pending = null
+        if (pending == request.token) {
+            pending = null
+        }
     }
 
     /** Discards the pending request and the preview (Cancel, a changed selection, disposal). */
@@ -135,8 +158,9 @@ class TerrainGenerationDraft(
     fun matchesSource(current: SourceSnapshot): Boolean = !sourceStale && current == source
 
     /** The preview that may be applied now, or null: it must match the settings and geometry and the source. */
-    fun applicable(current: SourceSnapshot): TerrainPreview? =
-        preview?.takeIf { it.settings == settings && it.size == size && it.resolution == resolution && matchesSource(current) }
+    fun applicable(current: SourceSnapshot): TerrainPreview? = preview?.takeIf {
+        it.settings == settings && it.size == size && it.resolution == resolution && matchesSource(current)
+    }
 
     private fun invalidate() {
         preview = null

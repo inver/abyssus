@@ -4,11 +4,10 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
-
-import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.badlogic.gdx.math.Vector3
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
 import org.junit.Assert.*
 
 class SceneViewPanelAntialiasingTest : BasePlatformTestCase() {
@@ -16,7 +15,13 @@ class SceneViewPanelAntialiasingTest : BasePlatformTestCase() {
         val replacements = mutableListOf<Int>()
         val warnings = mutableListOf<Int>()
         val failures = mutableListOf<Throwable>()
-        val state = CanvasAntialiasing(AntialiasingLevel.X8, replacements::add, { samples, _ -> warnings += samples }, failures::add)
+        val state =
+            CanvasAntialiasing(
+                AntialiasingLevel.X8,
+                replacements::add,
+                { samples, _ -> warnings += samples },
+                failures::add,
+            )
         val error = IllegalArgumentException("pixel format refused")
         state.renderFailed(error, initialized = false)
         assertEquals(listOf(4), replacements)
@@ -41,7 +46,13 @@ class SceneViewPanelAntialiasingTest : BasePlatformTestCase() {
     fun testFailureAfterInitGLIsNotMistakenForRefusedMultisampling() {
         val failures = mutableListOf<Throwable>()
         var replaced = false
-        val state = CanvasAntialiasing(AntialiasingLevel.X8, { replaced = true }, { _, _ -> fail("no fallback warning") }, failures::add)
+        val state =
+            CanvasAntialiasing(
+                AntialiasingLevel.X8,
+                { replaced = true },
+                { _, _ -> fail("no fallback warning") },
+                failures::add,
+            )
         val error = IllegalStateException("renderer failed")
         state.renderFailed(error, initialized = true)
         assertEquals(listOf(error), failures)
@@ -73,7 +84,11 @@ class SceneViewPanelAntialiasingTest : BasePlatformTestCase() {
         try {
             fun canvas(): java.awt.Component {
                 fun find(c: java.awt.Component): java.awt.Component? =
-                    if (c is GuardedGLCanvas) c else (c as? java.awt.Container)?.components?.firstNotNullOfOrNull(::find)
+                    if (c is GuardedGLCanvas) {
+                        c
+                    } else {
+                        (c as? java.awt.Container)?.components?.firstNotNullOfOrNull(::find)
+                    }
                 return find(panel)!!
             }
             val original = canvas()
@@ -89,6 +104,8 @@ class SceneViewPanelAntialiasingTest : BasePlatformTestCase() {
             assertEquals(6L, renderer.state.viewCamera)
             assertEquals(net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode.ROTATE, renderer.state.gizmoMode)
             assertEquals(target, panel.orbit.target)
-        } finally { panel.dispose() }
+        } finally {
+            panel.dispose()
+        }
     }
 }

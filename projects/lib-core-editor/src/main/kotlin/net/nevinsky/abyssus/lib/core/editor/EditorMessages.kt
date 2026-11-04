@@ -25,11 +25,14 @@ fun interface EditorMessages {
  * there are no parameters, else through a [MessageFormat] of the bundle's locale.
  */
 class ResourceEditorMessages(private val locale: Locale = Locale.ROOT) : EditorMessages {
-    private val bundle: ResourceBundle = ResourceBundle.getBundle(EDITOR_BUNDLE, locale, EditorMessages::class.java.classLoader)
+    private val bundle: ResourceBundle =
+        ResourceBundle.getBundle(EDITOR_BUNDLE, locale, EditorMessages::class.java.classLoader)
 
     override fun message(key: String, vararg params: Any): String {
         val value = bundle.getString(key)
-        if (params.isEmpty() || '{' !in value) return value
+        if (params.isEmpty() || '{' !in value) {
+            return value
+        }
         return MessageFormat(value, locale).format(params)
     }
 }

@@ -7,13 +7,13 @@ package net.nevinsky.abyssus.lib.core.editor.terrain.sculpt
 
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
+import kotlin.math.abs
+import kotlin.math.tan
 import net.nevinsky.abyssus.lib.core.editor.terrain.FastNoiseSamplerFactory
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.abs
-import kotlin.math.tan
 
 class SculptNoiseSlopeTest {
     private val size = 64
@@ -57,21 +57,42 @@ class SculptNoiseSlopeTest {
     fun `slope limit brings a spike under the limit and leaves a gentle slope alone`() {
         val limit = 30f
         val allowed = tan(Math.toRadians(limit.toDouble())).toFloat() * 2f // cell is 2 world units
-        val d = draft(33) { x, z -> if (x == 16 && z == 16) 4f else 0f }
+        val d =
+            draft(33) { x, z ->
+                if (x == 16 && z == 16) {
+                    4f
+                } else {
+                    0f
+                }
+            }
         press(d, SlopeLimitTool(limit, iterations = 64), 24f)
         val at = 16 * 33 + 16
         for (n in intArrayOf(at - 1, at + 1, at - 33, at + 33)) {
-            assertTrue("slope ${d.composed[at] - d.composed[n]}", abs(d.composed[at] - d.composed[n]) <= allowed * 1.05f) // neighbours weigh a little under 1, so the fall-off leaves a small remainder
+            assertTrue(
+                "slope ${d.composed[at] - d.composed[n]}",
+                abs(d.composed[at] - d.composed[n]) <= allowed * 1.05f,
+            ) // neighbours weigh a little under 1, so the fall-off leaves a small remainder
         }
         assertTrue(d.composed[at] < 4f)
 
         val gentle = draft(33) { x, _ -> x * 0.1f }
-        assertTrue(SculptBrush(gentle, size, Matrix4()).stroke(Vector3(32f, 0f, 32f), Vector3(32f, 0f, 32f), 24f, 1f, SlopeLimitTool(limit), false).isEmpty)
+        assertTrue(
+            SculptBrush(gentle, size, Matrix4())
+                .stroke(Vector3(32f, 0f, 32f), Vector3(32f, 0f, 32f), 24f, 1f, SlopeLimitTool(limit), false)
+                .isEmpty
+        )
     }
 
     @Test
     fun `slope limit raises a pit and conserves nothing outside the radius`() {
-        val d = draft(33) { x, z -> if (x == 16 && z == 16) -4f else 0f }
+        val d =
+            draft(33) { x, z ->
+                if (x == 16 && z == 16) {
+                    -4f
+                } else {
+                    0f
+                }
+            }
         press(d, SlopeLimitTool(30f, iterations = 64), 24f)
         assertTrue(d.composed[16 * 33 + 16] > -4f)
         assertEquals(0f, d.composed[0], 0f)

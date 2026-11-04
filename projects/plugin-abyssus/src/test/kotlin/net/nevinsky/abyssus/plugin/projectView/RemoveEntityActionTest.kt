@@ -28,20 +28,32 @@ class RemoveEntityActionTest : BasePlatformTestCase() {
         myFixture.copyFileToProject("$dir/Untitled.abss", "$dir/Untitled.abss")
         myFixture.copyFileToProject("$dir/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
         sceneFile = myFixture.findFileInTempDir("$dir/scenes/Main Scene.scene")
-        File("$testDataPath/$dir/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
-            d.listFiles { f -> f.isFile }!!.filter { it.extension == "json" }.forEach {
-                myFixture.copyFileToProject("$dir/assets/${d.name}/${it.name}", "$dir/assets/${d.name}/${it.name}")
+        File("$testDataPath/$dir/assets")
+            .listFiles { f -> f.isDirectory }!!
+            .forEach { d ->
+                d.listFiles { f -> f.isFile }!!
+                    .filter { it.extension == "json" }
+                    .forEach {
+                        myFixture.copyFileToProject(
+                            "$dir/assets/${d.name}/${it.name}",
+                            "$dir/assets/${d.name}/${it.name}",
+                        )
+                    }
             }
-        }
     }
 
     private fun children(node: AbstractTreeNode<*>) = node.children.map { it as AbstractTreeNode<*> }
-    private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+
+    private fun label(node: AbstractTreeNode<*>): String =
+        (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+
     private fun descend(from: AbstractTreeNode<*>, vararg names: String) =
         names.fold(from) { node, name -> children(node).single { label(it) == name } }
 
     private fun abss() = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
+
     private fun sceneNode() = children(descend(abss(), "scenes")).single()
+
     private fun entity(id: String) = descend(sceneNode(), "ecs", id)
 
     private class RemoveOn(val node: Any?) : RemoveEntityAction() {
@@ -55,13 +67,19 @@ class RemoveEntityActionTest : BasePlatformTestCase() {
     }
 
     private fun scene() = sceneFile
+
     private fun document() = FileDocumentManager.getInstance().getDocument(scene())!!
+
     private fun ids() = net.nevinsky.abyssus.plugin.parsedScene(document().text).ecs.keys.toList()
 
     /** Performs Remove Entity on [node]; returns the refusal messages it showed. */
     private fun run(node: Any?): List<String> {
         val dialogs = mutableListOf<String>()
-        val previous = com.intellij.openapi.ui.TestDialogManager.setTestDialog { message -> dialogs += message; 0 }
+        val previous =
+            com.intellij.openapi.ui.TestDialogManager.setTestDialog { message ->
+                dialogs += message
+                0
+            }
         try {
             val action = RemoveOn(node)
             action.actionPerformed(TestActionEvent.createTestEvent(action))
@@ -106,7 +124,9 @@ class RemoveEntityActionTest : BasePlatformTestCase() {
         assertEquals((0L..10L).toList() - 0L, ids())
     }
 
-    /** The tree has focus, not a text editor: Undo and Redo of the removal must still reach it (EntityLifecycleUiTest). */
+    /**
+     * The tree has focus, not a text editor: Undo and Redo of the removal must still reach it (EntityLifecycleUiTest).
+     */
     fun testUndoAndRedoReachTheRemovalWithoutAnEditor() {
         copyProject()
         val before = document().text
@@ -150,7 +170,12 @@ class RemoveEntityActionTest : BasePlatformTestCase() {
         copyProject()
         myFixture.openFileInEditor(scene())
         val editor = TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
-        runWriteAction { document().setText(document().text.replaceFirst("\"ambientLightEnabled\": true", "\"ambientLightEnabled\": false")) }
+        runWriteAction {
+            document()
+                .setText(
+                    document().text.replaceFirst("\"ambientLightEnabled\": true", "\"ambientLightEnabled\": false")
+                )
+        }
         val unsaved = document().text
         run(entity("0"))
         assertTrue(document().text.contains("\"ambientLightEnabled\": false"))

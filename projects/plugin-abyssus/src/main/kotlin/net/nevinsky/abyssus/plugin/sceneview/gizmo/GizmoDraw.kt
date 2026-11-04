@@ -23,7 +23,9 @@ object GizmoDraw {
     private fun colorOf(axis: GizmoAxis, hovered: Boolean): Color {
         val k = if (hovered) {
             0.6f
-        } else 0f
+        } else {
+            0f
+        }
         return Color(
             axis.red + (1f - axis.red) * k,
             axis.green + (1f - axis.green) * k,
@@ -48,7 +50,9 @@ object GizmoDraw {
         }
     }
 
-    /** The square of [plane]: its edges along each axis in that axis's color, the whole square brighter while hovered. */
+    /**
+     * The square of [plane]: its edges along each axis in that axis's color, the whole square brighter while hovered.
+     */
     private fun plane(out: LineSink, handles: GizmoHandles, plane: GizmoPlane, hovered: Boolean) {
         val first = colorOf(plane.first, hovered)
         val second = colorOf(plane.second, hovered)
@@ -74,7 +78,11 @@ object GizmoDraw {
     }
 
     /** A world axis that is not parallel to [axis], to build a frame around it (Y, or X for an axis near Y). */
-    private fun sideOf(axis: Vector3): Vector3 = if (kotlin.math.abs(axis.y) < 0.9f) Vector3.Y else Vector3.X
+    private fun sideOf(axis: Vector3): Vector3 = if (kotlin.math.abs(axis.y) < 0.9f) {
+        Vector3.Y
+    } else {
+        Vector3.X
+    }
 
     private fun ring(out: LineSink, handles: GizmoHandles, axis: GizmoAxis, color: Color) {
         val n = handles.axisVector(axis)

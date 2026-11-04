@@ -46,13 +46,17 @@ typealias SculptStamp = BrushStamp<SculptGrid>
  */
 sealed interface SculptTool : BrushTool<SculptGrid>
 
-/** The [SculptDraft] as what a stroke changes: each change moves a vertex of the draft, and a zero change moves none. */
+/**
+ * The [SculptDraft] as what a stroke changes: each change moves a vertex of the draft, and a zero change moves none.
+ */
 class SculptTarget(private val draft: SculptDraft, size: Int) : BrushTarget<SculptGrid> {
     override val grid = SculptGrid(draft.resolution, size, draft.composed)
 
     override fun apply(gx: Int, gz: Int, changes: FloatArray, offset: Int): Boolean {
         val change = changes[offset]
-        if (change == 0f) return false
+        if (change == 0f) {
+            return false
+        }
         draft.add(gx, gz, change)
         return true
     }

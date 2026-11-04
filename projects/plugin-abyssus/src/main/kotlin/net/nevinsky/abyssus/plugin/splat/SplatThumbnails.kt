@@ -19,7 +19,8 @@ import javax.swing.SwingUtilities
 private const val THUMBNAIL_SIDE = 24
 
 /**
- * The small icons of the layer slots: a texture's image scaled to [THUMBNAIL_SIDE] pixels, decoded off the AWT thread and
+  * The small icons of the layer slots: a texture's image scaled to [THUMBNAIL_SIDE] pixels, decoded off the AWT thread
+  * and
  * kept by file path, valid while the file has the length and modification time it had. [scale] is the pure part.
  */
 class SplatThumbnails(private val decode: (File) -> Icon? = { file -> scale(file)?.let(::ImageIcon) }) {
@@ -31,7 +32,10 @@ class SplatThumbnails(private val decode: (File) -> Icon? = { file -> scale(file
     fun cached(file: File): Icon? =
         cache[file.path]?.takeIf { it.length == file.length() && it.modified == file.lastModified() }?.icon
 
-    /** Decodes [file] on a pooled thread unless a current icon is kept, and calls [done] with the icon on the AWT thread. */
+    /**
+     * Decodes [file] on a pooled thread unless a current icon is kept, and calls [done] with the icon on the AWT
+     * thread.
+     */
     fun load(file: File, done: (Icon?) -> Unit) {
         cached(file)?.let { done(it); return }
         AppExecutorUtil.getAppExecutorService().execute {

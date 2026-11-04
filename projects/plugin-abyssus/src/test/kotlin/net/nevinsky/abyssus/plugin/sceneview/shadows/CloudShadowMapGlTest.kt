@@ -16,8 +16,8 @@ import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.SunOcclusion
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.GpuTexture
-import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import net.nevinsky.abyssus.plugin.sceneview.GlHarness
 import net.nevinsky.abyssus.plugin.sceneview.SceneRenderer
 import org.junit.Assert.*
@@ -27,15 +27,15 @@ import org.junit.Test
 
 /** The cloud shadow map against the CPU sun occlusion it must agree with. Opt-in (`-Dabyssus.glTests=true`). */
 class CloudShadowMapGlTest {
-    @Before
-    fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", GlHarness.enabled)
+    @Before fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", GlHarness.enabled)
 
     private val planet = 6360e3f
-    private val fair = CloudMeta(
-        low = CloudBand(CloudType.CUMULUS),
-        mid = CloudBand(CloudType.ALTOCUMULUS),
-        high = CloudBand(CloudType.CIRRUS),
-    )
+    private val fair =
+        CloudMeta(
+            low = CloudBand(CloudType.CUMULUS),
+            mid = CloudBand(CloudType.ALTOCUMULUS),
+            high = CloudBand(CloudType.CIRRUS),
+        )
     private val sun = Vector3(0.3f, 0.7f, 0.2f).nor()
 
     private fun shaders() = ShaderStorage().withResources("/shader/scene", SceneRenderer::class.java)
@@ -49,7 +49,13 @@ class CloudShadowMapGlTest {
         val fbo = gl.glGenFramebuffer()
         try {
             gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, fbo)
-            gl.glFramebufferTexture2D(GL20.GL_FRAMEBUFFER, GL20.GL_COLOR_ATTACHMENT0, GL20.GL_TEXTURE_2D, texture.textureObjectHandle, 0)
+            gl.glFramebufferTexture2D(
+                GL20.GL_FRAMEBUFFER,
+                GL20.GL_COLOR_ATTACHMENT0,
+                GL20.GL_TEXTURE_2D,
+                texture.textureObjectHandle,
+                0,
+            )
             assertEquals(GL20.GL_FRAMEBUFFER_COMPLETE, gl.glCheckFramebufferStatus(GL20.GL_FRAMEBUFFER))
             val pixels = BufferUtils.newFloatBuffer(texture.width * texture.height * 4)
             gl.glReadPixels(0, 0, texture.width, texture.height, GL20.GL_RGBA, GL20.GL_FLOAT, pixels)
@@ -62,11 +68,14 @@ class CloudShadowMapGlTest {
 
     private fun run(test: () -> Unit) {
         var ran = false
-        val result = GlHarness.render(SceneRenderParams.DEFAULT, 2) { _, frame ->
-            if (frame != 0) return@render
-            test()
-            ran = true
-        }
+        val result =
+            GlHarness.render(SceneRenderParams.DEFAULT, 2) { _, frame ->
+                if (frame != 0) {
+                    return@render
+                }
+                test()
+                ran = true
+            }
         assertNull(result.error)
         assertTrue("the frame callback ran", ran)
     }
@@ -77,7 +86,8 @@ class CloudShadowMapGlTest {
         try {
             val texel = map.extent / map.size
             val occlusion = SunOcclusion()
-            fun worldOf(i: Int, j: Int) = floatArrayOf(-map.extent / 2 + (i + 0.5f) * texel, -map.extent / 2 + (j + 0.5f) * texel)
+            fun worldOf(i: Int, j: Int) =
+                floatArrayOf(-map.extent / 2 + (i + 0.5f) * texel, -map.extent / 2 + (j + 0.5f) * texel)
 
             assertTrue(map.update(fair, sun, 0f, 0f, planet, 100f, 12.5))
             val first = read(checkNotNull(map.texture))
@@ -100,7 +110,12 @@ class CloudShadowMapGlTest {
             val laterAt = occlusion.instant(fair, sun, worldOf(100, 200)[0], worldOf(100, 200)[1], planet, 100f, 312.5)
             assertEquals(laterAt, later[200 * map.size + 100], 1e-2f)
 
-            val reloaded = fair.copy(low = CloudBand(CloudType.STRATUS, coverage = 1f, windX = 0f, windZ = 0f), mid = null, high = null)
+            val reloaded =
+                fair.copy(
+                    low = CloudBand(CloudType.STRATUS, coverage = 1f, windX = 0f, windZ = 0f),
+                    mid = null,
+                    high = null,
+                )
             assertTrue(map.update(reloaded, sun, 0f, 0f, planet, 100f, 312.5))
             val overcast = read(map.texture!!)
             val expected = occlusion.instant(reloaded, sun, worldOf(10, 10)[0], worldOf(10, 10)[1], planet, 100f, 312.5)
@@ -119,10 +134,11 @@ class CloudShadowMapGlTest {
             assertTrue(map.update(fair, sun, 1000f + texel * 0.3f, -500f, planet, 100f, 0.0))
             val m = map.worldToMap(sun, Matrix4())
             val v = m.`val`
-            fun toMap(x: Float, y: Float, z: Float) = floatArrayOf(
-                v[Matrix4.M00] * x + v[Matrix4.M01] * y + v[Matrix4.M02] * z + v[Matrix4.M03],
-                v[Matrix4.M10] * x + v[Matrix4.M11] * y + v[Matrix4.M12] * z + v[Matrix4.M13],
-            )
+            fun toMap(x: Float, y: Float, z: Float) =
+                floatArrayOf(
+                    v[Matrix4.M00] * x + v[Matrix4.M01] * y + v[Matrix4.M02] * z + v[Matrix4.M03],
+                    v[Matrix4.M10] * x + v[Matrix4.M11] * y + v[Matrix4.M12] * z + v[Matrix4.M13],
+                )
             // the center snaps to a texel, so the map stays within a texel of it
             val center = toMap(1000f, 0f, -500f)
             assertEquals(0.5f, center[0], 1.5f / map.size)
@@ -143,9 +159,10 @@ class CloudShadowMapGlTest {
     fun anUnavailableMapFailsOnceLogsAndLeavesNothingBehind() = run {
         val log = RecordingLogger()
         val original = Gdx.gl
-        val broken = object : GL20 by original {
-            override fun glCheckFramebufferStatus(target: Int) = GL20.GL_FRAMEBUFFER_UNSUPPORTED
-        }
+        val broken =
+            object : GL20 by original {
+                override fun glCheckFramebufferStatus(target: Int) = GL20.GL_FRAMEBUFFER_UNSUPPORTED
+            }
         val map = CloudShadowMap(shaders(), log)
         try {
             Gdx.gl = broken

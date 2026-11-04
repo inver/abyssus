@@ -63,7 +63,9 @@ class PlayClient internal constructor(
 
     /** Asks the host to stop and exit, then makes sure the process and its children are gone. */
     fun stop() {
-        if (state == State.STOPPED || state == State.FAILED) return
+        if (state == State.STOPPED || state == State.FAILED) {
+            return
+        }
         state = State.STOPPED
         try {
             send(PlayFrame.Stop)
@@ -73,7 +75,9 @@ class PlayClient internal constructor(
         }
         socket.close()
         Thread({
-            if (!process.waitFor(2, TimeUnit.SECONDS)) kill(process)
+            if (!process.waitFor(2, TimeUnit.SECONDS)) {
+                kill(process)
+            }
         }, "abyssus-play-stop").apply { isDaemon = true; start() }
     }
 
@@ -97,14 +101,22 @@ class PlayClient internal constructor(
                 }
             }
         } catch (e: Exception) {
-            if (state == State.STOPPED) return
-            val code = if (process.waitFor(2, TimeUnit.SECONDS)) process.exitValue() else null
+            if (state == State.STOPPED) {
+                return
+            }
+            val code = if (process.waitFor(2, TimeUnit.SECONDS)) {
+                process.exitValue()
+            } else {
+                null
+            }
             fail(code?.let { AbyssusPhysicsBundle.message("playExited", it) } ?: (e.displayMessage()))
         }
     }
 
     private fun fail(message: String) {
-        if (state == State.STOPPED || state == State.FAILED) return
+        if (state == State.STOPPED || state == State.FAILED) {
+            return
+        }
         state = State.FAILED
         failure = message
         socket.close()

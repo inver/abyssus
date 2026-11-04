@@ -14,12 +14,32 @@ class RayWorkBudget {
         require(reflections in 0..16 && refractions in 0..16)
         val cutouts = scene.materials.any { it.alphaMode == RayAlphaMode.MASK }
         val blends = scene.materials.any { it.alphaMode == RayAlphaMode.BLEND }
-        val primary = if (cutouts || blends) RAY_PRIMARY_QUERY_LIMIT.toLong() else 1L
-        val shaded = if (blends) primary else 1L
-        val retry = if (cutouts) RAY_CUTOUT_HOLE_DEPTH.toLong() else 1L
+        val primary = if (cutouts || blends) {
+            RAY_PRIMARY_QUERY_LIMIT.toLong()
+        } else {
+            1L
+        }
+        val shaded = if (blends) {
+            primary
+        } else {
+            1L
+        }
+        val retry = if (cutouts) {
+            RAY_CUTOUT_HOLE_DEPTH.toLong()
+        } else {
+            1L
+        }
         val reflective = scene.materials.any { it.kind == RayMaterialKind.PBR }
         val transmissive = scene.materials.any { it.transmission > 0f }
-        val events = (if (reflective) reflections else 0) + (if (transmissive) refractions else 0)
+        val events = (if (reflective) {
+            reflections
+        } else {
+            0
+        }) + (if (transmissive) {
+            refractions
+        } else {
+            0
+        })
         val shadows = scene.lights.count { it.castsShadow }.toLong()
         return Math.addExact(
             primary, Math.multiplyExact(

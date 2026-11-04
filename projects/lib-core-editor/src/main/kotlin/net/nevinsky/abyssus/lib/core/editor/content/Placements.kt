@@ -4,16 +4,22 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.ModelKey
-import net.nevinsky.abyssus.lib.core.ecs.component.LIGHT_CONE_ANGLE
-import net.nevinsky.abyssus.lib.core.ecs.component.LIGHT_EDGE_SOFTNESS
-import net.nevinsky.abyssus.lib.core.ecs.component.LIGHT_RANGE
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FAR
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_NEAR
+import net.nevinsky.abyssus.lib.core.ecs.component.LIGHT_CONE_ANGLE
+import net.nevinsky.abyssus.lib.core.ecs.component.LIGHT_EDGE_SOFTNESS
+import net.nevinsky.abyssus.lib.core.ecs.component.LIGHT_RANGE
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 
 /** A [Color] whose components are not clamped to 0..1: light colors are scaled by intensity and can exceed 1. */
-fun unclampedColor(r: Float, g: Float, b: Float, a: Float): Color = Color().also { it.r = r; it.g = g; it.b = b; it.a = a }
+fun unclampedColor(r: Float, g: Float, b: Float, a: Float): Color =
+    Color().also {
+        it.r = r
+        it.g = g
+        it.b = b
+        it.a = a
+    }
 
 data class Pose(val position: Vector3, val rotation: Quaternion)
 
@@ -24,7 +30,9 @@ data class PlacementTransform(val position: Vector3, val rotation: Quaternion, v
     }
 }
 
-/** An entity showing the asset folder [assetName]. [entityId] is its key under `ecs/entities`; picking reports it back. */
+/**
+ * An entity showing the asset folder [assetName]. [entityId] is its key under `ecs/entities`; picking reports it back.
+ */
 data class AssetPlacement(
     val entityId: Long,
     val assetName: String,
@@ -37,14 +45,21 @@ data class AssetPlacement(
  * The name this placement's asset has in the asset storage: the asset folder, or for one mesh of a model its encoded
  * `ModelKey`. Entities showing different meshes of one model need different built models.
  */
-val AssetPlacement.storageName: String get() = ModelKey(assetName, meshId).encode()
+val AssetPlacement.storageName: String
+    get() = ModelKey(assetName, meshId).encode()
 
 /** A path arrangement entity: its [arrangement] component as the file holds it (read, never changed, by the view). */
 class ArrangementPlacement(val entityId: Long, val arrangement: PathArrangementComponent)
 
-enum class LightKind { DIRECTIONAL, POINT, SPOT }
+enum class LightKind {
+    DIRECTIONAL,
+    POINT,
+    SPOT,
+}
 
-/** [direction] is the unit vector the light shines along (directional and spot); [position] matters for point and spot. */
+/**
+ * [direction] is the unit vector the light shines along (directional and spot); [position] matters for point and spot.
+ */
 data class LightPlacement(
     val entityId: Long,
     val kind: LightKind,
@@ -61,9 +76,9 @@ data class LightPlacement(
 )
 
 /**
- * A camera entity. [direction] is the view direction from `viewPointPosition` (as in the file, not yet normalized);
- * it is overridden by the position of [lookAtId] while that resolves. [name] is the entity's `NameComponent` name,
- * or its id when unnamed.
+ * A camera entity. [direction] is the view direction from `viewPointPosition` (as in the file, not yet normalized); it
+ * is overridden by the position of [lookAtId] while that resolves. [name] is the entity's `NameComponent` name, or its
+ * id when unnamed.
  */
 data class CameraPlacement(
     val entityId: Long,
@@ -76,4 +91,3 @@ data class CameraPlacement(
     val fieldOfView: Float = CAMERA_FOV,
     val rotation: Quaternion = Quaternion(),
 )
-

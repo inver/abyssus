@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.math.Vector3
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
@@ -27,7 +28,6 @@ import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.*
 import org.junit.Test
 import org.slf4j.helpers.NOPLogger
-import java.io.File
 
 /**
  * Edits on the scene's components. Cases about the spelling of numbers and the omission of defaults in the text
@@ -44,29 +44,40 @@ class ComponentEditorTest {
     private fun entity(id: Int, components: String): String {
         val typed = Regex(""""TypeComponent"\s*:\s*\{\s*"type"\s*:\s*"(\w+)"\s*\},?""")
         val type = typed.find(components)?.groupValues?.get(1)
-        val header = if (type != null) """"type":"$type",""" else ""
+        val header =
+            if (type != null) {
+                """"type":"$type","""
+            } else {
+                ""
+            }
         return """"$id":{$header"components":{${typed.replace(components, "").trimEnd(',')}}}"""
     }
 
     /** Everything the scene holds, as text, to compare "nothing changed". */
-    private fun snapshot(scene: SceneDto): Map<Long, List<String>> = scene.ecs.mapValues { (_, e) ->
-        e.components.map {
-            when (it) {
-                is HeaderComponent -> "H ${it.id} ${it.type} ${it.entityEnabled} ${it.disabledComponents.map { c -> c.simpleName }} ${it.flags}"
-                is RawComponentsWrapper -> "R " + it.entries.joinToString { r -> "${r.name}=${r.json}/${r.disabled}" }
-                else -> it.javaClass.simpleName + json.componentValues(it)
+    private fun snapshot(scene: SceneDto): Map<Long, List<String>> =
+        scene.ecs.mapValues { (_, e) ->
+            e.components.map {
+                when (it) {
+                    is HeaderComponent ->
+                        "H ${it.id} ${it.type} ${it.entityEnabled} " +
+                            "${it.disabledComponents.map { c -> c.simpleName }} ${it.flags}"
+                    is RawComponentsWrapper ->
+                        "R " + it.entries.joinToString { r -> "${r.name}=${r.json}/${r.disabled}" }
+                    else -> it.javaClass.simpleName + json.componentValues(it)
+                }
             }
         }
-    }
 
     private fun <C : Component> SceneDto.get(id: Long, type: Class<C>): C = component(id, type)!!
 
     private fun assertRejected(result: EditResult) =
         assertTrue("expected Rejected, was $result", result is EditResult.Rejected)
 
-    private val untitled get() = parseScene(
-        File(net.nevinsky.abyssus.lib.core.assets.testProject("Untitled"), "scenes/Main Scene.scene").readText(),
-    )
+    private val untitled
+        get() =
+            parseScene(
+                File(net.nevinsky.abyssus.lib.core.assets.testProject("Untitled"), "scenes/Main Scene.scene").readText()
+            )
 
     @Test
     fun spotLightFieldsCarryTheirLabelsAndTheRangeTooltip() {
@@ -127,10 +138,11 @@ class ComponentEditorTest {
         for ((field, default) in listOf("coneAngle" to "45", "edgeSoftness" to "20")) {
             assertEquals(EditResult.Unchanged, editor.update(scene, 0L, "LightComponent", field, default))
         }
-        for ((field, invalid) in listOf(
-            "coneAngle" to listOf("0", "180", "-1", "181", "NaN", "Infinity", "abc"),
-            "edgeSoftness" to listOf("-1", "101", "NaN", "Infinity", "abc"),
-        )) {
+        for ((field, invalid) in
+            listOf(
+                "coneAngle" to listOf("0", "180", "-1", "181", "NaN", "Infinity", "abc"),
+                "edgeSoftness" to listOf("-1", "101", "NaN", "Infinity", "abc"),
+            )) {
             for (value in invalid) {
                 val result = editor.update(scene, 0L, "LightComponent", field, value)
                 assertRejected(result)
@@ -262,11 +274,12 @@ class ComponentEditorTest {
 
     @Test
     fun parentCyclesAreRejected() {
-        val scene = scene(
-            entity(1, """"ParentComponent":{"parentEntityId":2}"""),
-            entity(2, """"ParentComponent":{}"""),
-            entity(3, """"ParentComponent":{"parentEntityId":2}"""),
-        )
+        val scene =
+            scene(
+                entity(1, """"ParentComponent":{"parentEntityId":2}"""),
+                entity(2, """"ParentComponent":{}"""),
+                entity(3, """"ParentComponent":{"parentEntityId":2}"""),
+            )
         assertRejected(editor.update(scene, 2L, "ParentComponent", "parentEntityId", "1"))
         assertRejected(editor.update(scene, 2L, "ParentComponent", "parentEntityId", "2"))
         assertEquals(EditResult.Changed, editor.update(scene, 1L, "ParentComponent", "parentEntityId", "3"))
@@ -278,16 +291,21 @@ class ComponentEditorTest {
         val scene = scene(entity(0, """"NameComponent":{},"LightComponent":{"light":{}},"PickableComponent":{}"""))
         assertEquals(EditResult.Changed, editor.remove(scene, 0L, "LightComponent"))
         val kinds = scene.entity(0)!!.components.filterNot { it is HeaderComponent }.map { it.javaClass.simpleName }
-        assertEquals("the unmodeled Pickable stays in the raw wrapper", listOf("NameComponent", "RawComponentsWrapper"), kinds)
+        assertEquals(
+            "the unmodeled Pickable stays in the raw wrapper",
+            listOf("NameComponent", "RawComponentsWrapper"),
+            kinds,
+        )
         assertRejected(editor.remove(scene, 0L, "LightComponent"))
     }
 
     @Test
     fun removeRefusedWhileReferenced() {
-        val scene = scene(
-            entity(3, """"PositionComponent":{}"""),
-            entity(5, """"PositionComponent":{"lookAtId":3}"""),
-        )
+        val scene =
+            scene(
+                entity(3, """"PositionComponent":{}"""),
+                entity(5, """"PositionComponent":{"lookAtId":3}"""),
+            )
         val before = snapshot(scene)
         val result = editor.remove(scene, 3L, "PositionComponent")
         assertRejected(result)
@@ -328,7 +346,11 @@ class ComponentEditorTest {
 
     @Test
     fun anUnrelatedPositionEditKeepsTheLookAtReference() {
-        val scene = scene(entity(0, """"PositionComponent":{"lookAtId":3,"localPosition":{"x":1}}"""), entity(3, """"NameComponent":{}"""))
+        val scene =
+            scene(
+                entity(0, """"PositionComponent":{"lookAtId":3,"localPosition":{"x":1}}"""),
+                entity(3, """"NameComponent":{}"""),
+            )
         assertEquals(EditResult.Changed, editor.update(scene, 0L, "PositionComponent", "localPosition.x", "5"))
         assertEquals(3, scene.get(0, PositionComponent::class.java).lookAtId)
         assertEquals(5f, scene.get(0, PositionComponent::class.java).localPosition.x, 0f)
@@ -362,9 +384,14 @@ class ComponentEditorTest {
     private fun arranged(): SceneDto {
         val scene = untitled
         val points = listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f))
-        ArrangementEdits(ResourceEditorMessages()).create(
-            scene, BaseMeta(MetaType.MODEL, " tree "), points, false, LineHeights(),
-        )
+        ArrangementEdits(ResourceEditorMessages())
+            .create(
+                scene,
+                BaseMeta(MetaType.MODEL, " tree "),
+                points,
+                false,
+                LineHeights(),
+            )
         return scene
     }
 

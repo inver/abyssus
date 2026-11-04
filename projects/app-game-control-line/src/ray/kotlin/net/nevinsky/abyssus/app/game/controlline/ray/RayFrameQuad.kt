@@ -8,7 +8,9 @@ import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.raytracing.RayFrame
 import net.nevinsky.abyssus.lib.render.hostframe.HostFramePresenter
 
-/** Presents a [RayFrame] through `lib-render`'s [HostFramePresenter] (the same technique as the editor). GL thread only. */
+/**
+ * Presents a [RayFrame] through `lib-render`'s [HostFramePresenter] (the same technique as the editor). GL thread only.
+ */
 internal class RayFrameQuad : Disposable {
     private val presenter = HostFramePresenter()
 

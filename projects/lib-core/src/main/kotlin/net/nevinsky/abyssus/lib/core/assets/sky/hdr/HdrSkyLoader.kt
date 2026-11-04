@@ -39,7 +39,9 @@ class HdrSkyLoader(
     }
 
 
-    /** Releases a half-done build; nothing to do before the first upload step (the decoded image is plain JVM memory). */
+    /**
+     * Releases a half-done build; nothing to do before the first upload step (the decoded image is plain JVM memory).
+     */
     override fun discardStaged(staged: PreparedHdrSky) {
         staged.build?.dispose()
         staged.build = null

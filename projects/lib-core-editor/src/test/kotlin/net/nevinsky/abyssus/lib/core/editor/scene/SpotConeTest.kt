@@ -5,18 +5,19 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
+import com.badlogic.gdx.math.Quaternion
+import com.badlogic.gdx.math.Vector3
+import kotlin.math.*
 import net.nevinsky.abyssus.lib.core.editor.scene.SpotCone
 import net.nevinsky.abyssus.lib.core.editor.scene.forwardOf
-import com.badlogic.gdx.math.Vector3
-import com.badlogic.gdx.math.Quaternion
-
 import org.junit.Assert.*
 import org.junit.Test
-import kotlin.math.*
 
 class SpotConeTest {
-    @Test fun coneEdgesAndSoftnessMatchAngularRadius() {
-        fun ray(degrees: Double) = Vector3(sin(Math.toRadians(degrees)).toFloat(), 0f, -cos(Math.toRadians(degrees)).toFloat())
+    @Test
+    fun coneEdgesAndSoftnessMatchAngularRadius() {
+        fun ray(degrees: Double) =
+            Vector3(sin(Math.toRadians(degrees)).toFloat(), 0f, -cos(Math.toRadians(degrees)).toFloat())
         val axis = Vector3(0f, 0f, -1f)
         val cone = SpotCone(60f, 0.5f)
         assertEquals(1f, cone.attenuation(axis, ray(0.0)), 0f)
@@ -30,7 +31,8 @@ class SpotConeTest {
         assertTrue(SpotCone(60f, 1f).attenuation(axis, ray(15.0)) in 0.01f..0.99f)
     }
 
-    @Test fun rotatedBeamAndRangeCutoff() {
+    @Test
+    fun rotatedBeamAndRangeCutoff() {
         val cone = SpotCone(60f, 0.25f)
         val axis = forwardOf(Quaternion(0.70710677f, 0f, 0f, 0.70710677f))
         assertEquals(1f, cone.attenuation(axis, Vector3(0f, 1f, 0f)), 1e-5f)
@@ -41,12 +43,14 @@ class SpotConeTest {
         assertEquals(0f, cone.rangeAttenuation(11f, 10f), 0f)
     }
 
-    @Test fun invalidInputsAreRejectedOrUnlit() {
-        for ((angle, softness) in listOf(0f to 0f, 180f to 0f, Float.NaN to 0f, 60f to -1f, 60f to 1.1f, 60f to Float.NaN)) {
+    @Test
+    fun invalidInputsAreRejectedOrUnlit() {
+        for ((angle, softness) in
+            listOf(0f to 0f, 180f to 0f, Float.NaN to 0f, 60f to -1f, 60f to 1.1f, 60f to Float.NaN)) {
             assertThrows(IllegalArgumentException::class.java) { SpotCone(angle, softness) }
         }
         val cone = SpotCone(60f, 0f)
-        assertEquals(0f, cone.attenuation(Vector3(0f,0f,0f), Vector3(1f,0f,0f)), 0f)
+        assertEquals(0f, cone.attenuation(Vector3(0f, 0f, 0f), Vector3(1f, 0f, 0f)), 0f)
         assertEquals(0f, cone.rangeAttenuation(Float.NaN, 10f), 0f)
         assertEquals(0f, cone.rangeAttenuation(1f, 0f), 0f)
     }

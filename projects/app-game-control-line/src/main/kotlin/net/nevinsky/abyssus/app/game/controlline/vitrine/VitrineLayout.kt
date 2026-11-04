@@ -8,7 +8,9 @@ import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 
-/** How far apart the planes beyond the last table stand when there is no pair of tables to take the spacing from (m). */
+/**
+ * How far apart the planes beyond the last table stand when there is no pair of tables to take the spacing from (m).
+ */
 const val GROUND_SPACING = 2.5f
 
 /**
@@ -33,10 +35,15 @@ class VitrinePose(val position: Vector3, val rotation: Quaternion)
  * moves. Plain math, no GL: runs on the game's main thread at start-up.
  */
 fun vitrinePoses(planes: List<VitrinePlane>, tables: List<VitrineTable>): List<VitrinePose?> {
-    if (tables.isEmpty()) return planes.map { null }
+    if (tables.isEmpty()) {
+        return planes.map { null }
+    }
     val last = tables.last()
-    val stride = if (tables.size >= 2) Vector3(last.position).sub(tables[tables.size - 2].position).also { it.y = 0f }
-    else Vector3(0f, 0f, GROUND_SPACING)
+    val stride = if (tables.size >= 2) {
+        Vector3(last.position).sub(tables[tables.size - 2].position).also { it.y = 0f }
+    } else {
+        Vector3(0f, 0f, GROUND_SPACING)
+    }
     return planes.mapIndexed { i, plane ->
         val table = tables.getOrNull(i)
         val rotation = facing(plane.rotation, (table ?: last).yaw)
@@ -57,13 +64,17 @@ private fun facing(authored: Quaternion, yaw: Float): Quaternion {
 
 /** The lowest height of [points] once turned by [rotation], relative to the plane's origin; 0 without points. */
 private fun lowestPoint(points: List<Vector3>?, rotation: Quaternion): Float {
-    if (points.isNullOrEmpty()) return 0f
+    if (points.isNullOrEmpty()) {
+        return 0f
+    }
     val turned = Vector3()
     var lowest = Float.MAX_VALUE
     for (p in points) {
         turned.set(p)
         rotation.transform(turned)
-        if (turned.y < lowest) lowest = turned.y
+        if (turned.y < lowest) {
+            lowest = turned.y
+        }
     }
     return lowest
 }

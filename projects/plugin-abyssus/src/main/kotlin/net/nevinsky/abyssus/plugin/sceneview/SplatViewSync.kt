@@ -43,11 +43,23 @@ internal class SplatViewSync(private val drafts: SplatDrafts, reload: (Set<Strin
     override fun follow(target: SplatTarget, asset: String, draft: SplatDraft, prior: Seen?): Seen? {
         val texture = target.textureKey
         val same = prior != null && prior.draft === draft && prior.texture === texture
-        if (same && prior!!.revision == draft.revision) return null
-        if (texture == null) return null
+        if (same && prior.revision == draft.revision) {
+            return null
+        }
+        if (texture == null) {
+            return null
+        }
         val revision = draft.revision
-        val rect = if (same) draft.changedSince(prior!!.revision) else wholeMap(draft)
-        return if (rect.isEmpty || target.upload(draft, rect)) Seen(draft, revision, texture, asset) else null
+        val rect = if (same) {
+            draft.changedSince(prior.revision)
+        } else {
+            wholeMap(draft)
+        }
+        return if (rect.isEmpty || target.upload(draft, rect)) {
+            Seen(draft, revision, texture, asset)
+        } else {
+            null
+        }
     }
 
     private fun wholeMap(draft: SplatDraft) = GridRect(0, 0, draft.resolution - 1, draft.resolution - 1)

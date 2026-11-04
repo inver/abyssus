@@ -5,8 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.core.editor.meta.AssetChoice
-
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.command.WriteCommandAction
@@ -16,14 +14,15 @@ import com.intellij.openapi.wm.ToolWindowEP
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
+import java.awt.Component
+import java.awt.Container
+import java.io.File
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetChoice
+import net.nevinsky.abyssus.lib.core.editor.meta.SKYBOX_FACES
 import net.nevinsky.abyssus.plugin.projectView.AbyssusAssetNode
 import net.nevinsky.abyssus.plugin.projectView.AbyssusRootNode
 import net.nevinsky.abyssus.plugin.projectView.AbyssusSelection
 import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
-import java.awt.Component
-import java.awt.Container
-import java.io.File
-import net.nevinsky.abyssus.lib.core.editor.meta.SKYBOX_FACES
 import net.nevinsky.abyssus.plugin.testPanelServices
 
 class AssetPropertiesPanelTest : BasePlatformTestCase() {
@@ -46,48 +45,76 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         val dir = "Untitled"
         myFixture.copyFileToProject("$dir/Untitled.abss", "$dir/Untitled.abss")
         myFixture.copyFileToProject("$dir/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
-        File("$testDataPath/$dir/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
-            d.listFiles { f -> f.isFile }!!.filter { it.extension in setOf("json", "png") }.forEach {
-                val path = "$dir/assets/${d.name}/${it.name}"
-                if (it.extension == "json") {
-                    myFixture.addFileToProject(path, it.readText().trimEnd() + "\n")
-                } else {
-                    myFixture.copyFileToProject(path, path)
-                }
+        File("$testDataPath/$dir/assets")
+            .listFiles { f -> f.isDirectory }!!
+            .forEach { d ->
+                d.listFiles { f -> f.isFile }!!
+                    .filter { it.extension in setOf("json", "png") }
+                    .forEach {
+                        val path = "$dir/assets/${d.name}/${it.name}"
+                        if (it.extension == "json") {
+                            myFixture.addFileToProject(path, it.readText().trimEnd() + "\n")
+                        } else {
+                            myFixture.copyFileToProject(path, path)
+                        }
+                    }
             }
-        }
     }
 
     private fun children(node: AbstractTreeNode<*>) = node.children.map { it as AbstractTreeNode<*> }
-    private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
-    private fun abss() = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
-    private fun asset(name: String) =
-        children(children(abss()).single { label(it) == "assets" }).flatMap { children(it) }.single { (it as DtoEntryNode).label == name }
 
-    private fun panel() = AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
+    private fun label(node: AbstractTreeNode<*>): String =
+        (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+
+    private fun abss() = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
+
+    private fun asset(name: String) =
+        children(children(abss()).single { label(it) == "assets" })
+            .flatMap { children(it) }
+            .single { (it as DtoEntryNode).label == name }
+
+    private fun panel() =
+        AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
 
     private fun texts(c: Component): List<String> = buildList {
-        if (c is JBLabel && c.text != null) add(c.text)
-        if (c is Container) c.components.forEach { addAll(texts(it)) }
+        if (c is JBLabel && c.text != null) {
+            add(c.text)
+        }
+        if (c is Container) {
+            c.components.forEach { addAll(texts(it)) }
+        }
     }
 
     private fun find(c: Component, name: String): Component? =
-        if (c.name == name) c else (c as? Container)?.components?.firstNotNullOfOrNull { find(it, name) }
+        if (c.name == name) {
+            c
+        } else {
+            (c as? Container)?.components?.firstNotNullOfOrNull { find(it, name) }
+        }
 
     private fun field(p: Component, key: String) = find(p, "asset-field-$key")
+
     private fun errorOf(p: Component, key: String) = (find(p, "asset-error-$key") as JBLabel).text
-    private fun metaText(path: String) = FileDocumentManager.getInstance().getDocument(myFixture.findFileInTempDir(path))!!.text
+
+    private fun metaText(path: String) =
+        FileDocumentManager.getInstance().getDocument(myFixture.findFileInTempDir(path))!!.text
+
     private fun type(c: JBTextField, text: String) {
         c.text = text
         c.postActionEvent()
     }
 
     /** Moves focus away from [c] the way Swing reports it, without needing a focus owner in a headless test. */
-    private fun leave(c: Component) = c.focusListeners.forEach { it.focusLost(java.awt.event.FocusEvent(c, java.awt.event.FocusEvent.FOCUS_LOST)) }
+    private fun leave(c: Component) =
+        c.focusListeners.forEach { it.focusLost(java.awt.event.FocusEvent(c, java.awt.event.FocusEvent.FOCUS_LOST)) }
 
     private fun thumbnails(c: Component): List<Thumbnail> = buildList {
-        if (c is Thumbnail) add(c)
-        if (c is Container) c.components.forEach { addAll(thumbnails(it)) }
+        if (c is Thumbnail) {
+            add(c)
+        }
+        if (c is Container) {
+            c.components.forEach { addAll(thumbnails(it)) }
+        }
     }
 
     // 3.1 registration and empty state
@@ -130,7 +157,14 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         val enabled = document.text
         assertTrue((p.state as PanelState.Project).settings.physicsEnabled)
         val json = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().json
-        assertEquals(json.pretty(json.parse(original, net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java).copy(physicsEnabled = true)), json.pretty(json.parse(enabled, net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java)))
+        assertEquals(
+            json.pretty(
+                json
+                    .parse(original, net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java)
+                    .copy(physicsEnabled = true)
+            ),
+            json.pretty(json.parse(enabled, net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java)),
+        )
         val editor = providedEditor(p)!!
         val undo = com.intellij.openapi.command.undo.UndoManager.getInstance(project)
         undo.undo(editor)
@@ -144,7 +178,9 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         WriteCommandAction.runWriteCommandAction(project) { document.setText(enabled) }
         assertTrue(checkbox().isSelected)
         assertTrue(FileDocumentManager.getInstance().isDocumentUnsaved(document))
-        WriteCommandAction.runWriteCommandAction(project) { document.setText(enabled.replace("\"formatVersion\": 1", "\"formatVersion\": 2")) }
+        WriteCommandAction.runWriteCommandAction(project) {
+            document.setText(enabled.replace("\"formatVersion\": 1", "\"formatVersion\": 2"))
+        }
         assertFalse(checkbox().isEnabled)
         assertFalse(checkbox().isSelected)
         val unsupported = document.text
@@ -172,7 +208,10 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
 
     fun testUnknownTypeUsesTheGenericIconAndTypeText() {
         myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1}""")
-        myFixture.addFileToProject("p/assets/w/meta.json", """{"format":"abyssus","formatVersion":1,"type":"WIDGET","additional":{"a":1}}""")
+        myFixture.addFileToProject(
+            "p/assets/w/meta.json",
+            """{"format":"abyssus","formatVersion":1,"type":"WIDGET","additional":{"a":1}}""",
+        )
         val node = children(children(abss()).single { label(it) == "assets" }).flatMap { children(it) }.single()
         val p = panel()
         p.show(node)
@@ -180,7 +219,10 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         assertNull(details.faces)
         assertTrue(texts(p).contains("WIDGET asset"))
         assertNotNull(find(p, "badge-read-only"))
-        assertSame(net.nevinsky.abyssus.plugin.filetype.AssetIcons.UNKNOWN, net.nevinsky.abyssus.plugin.filetype.AssetIcons.forType(details.meta.type))
+        assertSame(
+            net.nevinsky.abyssus.plugin.filetype.AssetIcons.UNKNOWN,
+            net.nevinsky.abyssus.plugin.filetype.AssetIcons.forType(details.meta.type),
+        )
     }
 
     // 3.2 selection, previews
@@ -208,7 +250,9 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         val p = panel()
         p.show(node)
         val meta = myFixture.findFileInTempDir("p/assets/w/meta.json")
-        WriteCommandAction.runWriteCommandAction(project) { FileDocumentManager.getInstance().getDocument(meta)!!.setText("{broken") }
+        WriteCommandAction.runWriteCommandAction(project) {
+            FileDocumentManager.getInstance().getDocument(meta)!!.setText("{broken")
+        }
         val state = p.state as PanelState.Empty
         assertTrue(state.message, state.message.startsWith("Cannot read the asset's meta: "))
         assertNull(state.hint)
@@ -251,8 +295,14 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         val details = p.state as PanelState.Details
         assertTrue(texts(p).contains("SKYBOX_HDR asset"))
         assertNotNull(find(p, "badge-read-only"))
-        assertSame(net.nevinsky.abyssus.plugin.filetype.AssetIcons.forType("SKYBOX_HDR"), net.nevinsky.abyssus.plugin.filetype.AssetIcons.forType(details.meta.type))
-        assertNotSame(net.nevinsky.abyssus.plugin.filetype.AssetIcons.UNKNOWN, net.nevinsky.abyssus.plugin.filetype.AssetIcons.forType(details.meta.type))
+        assertSame(
+            net.nevinsky.abyssus.plugin.filetype.AssetIcons.forType("SKYBOX_HDR"),
+            net.nevinsky.abyssus.plugin.filetype.AssetIcons.forType(details.meta.type),
+        )
+        assertNotSame(
+            net.nevinsky.abyssus.plugin.filetype.AssetIcons.UNKNOWN,
+            net.nevinsky.abyssus.plugin.filetype.AssetIcons.forType(details.meta.type),
+        )
     }
 
     fun testHdrShowsOnePreviewLabelledWithSize() {
@@ -260,7 +310,7 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         p.showFolder(diskHdr())
         val hdr = (p.state as PanelState.Details).hdr!!
         assertEquals("sky.exr · 1024 × 512", hdr.label)
-        assertEquals(2 * hdr.image!!.height, hdr.image!!.width)
+        assertEquals(2 * hdr.image!!.height, hdr.image.width)
         val shown = texts(p)
         assertTrue(shown.toString(), shown.contains("PREVIEW") && shown.contains("sky.exr · 1024 × 512"))
     }
@@ -277,9 +327,20 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
     private fun diskHdr(truncated: Boolean = false): VirtualFile {
         val disk = com.intellij.openapi.util.io.FileUtil.createTempDirectory("abyssus-hdr-sky", null)
         val sky = File(disk, "assets/skybox_hdr").apply { mkdirs() }
-        File(sky, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{"file":"sky.exr"}}""")
+        File(sky, "meta.json")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR",
+"additional":{"file":"sky.exr"}}"""
+            )
         val bytes = File("$testDataPath/Untitled/assets/skybox_hdr/sky.exr").readBytes()
-        File(sky, "sky.exr").writeBytes(if (truncated) bytes.copyOf(bytes.size / 2) else bytes)
+        File(sky, "sky.exr")
+            .writeBytes(
+                if (truncated) {
+                    bytes.copyOf(bytes.size / 2)
+                } else {
+                    bytes
+                }
+            )
         return com.intellij.openapi.vfs.LocalFileSystem.getInstance().refreshAndFindFileByIoFile(sky)!!
     }
 
@@ -288,14 +349,18 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         p.showFolder(diskHdr(truncated = true))
         val details = p.state as PanelState.Details
         assertNull(details.hdr!!.image)
-        assertTrue(details.hdr!!.label, details.hdr!!.label.startsWith("Cannot read sky.exr: ") && details.hdr!!.label.contains("EXR image error"))
+        assertTrue(
+            details.hdr.label,
+            details.hdr.label.startsWith("Cannot read sky.exr: ") && details.hdr.label.contains("EXR image error"),
+        )
         assertTrue("the Meta rows are still shown", texts(p).contains("SKYBOX_HDR"))
     }
 
     fun testModelAndTerrainHaveNoPreviewSection() {
         copyProject()
         val p = panel()
-        for (name in listOf("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b")) {
+        for (name in
+            listOf("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b")) {
             p.show(asset(name))
             assertNull((p.state as PanelState.Details).faces)
             assertFalse(texts(p).contains("FACE PREVIEWS"))
@@ -341,7 +406,10 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         p.show(asset(terrain))
         assertEquals("1600", (field(p, "size") as JBTextField).text)
         assertEquals("60.0", (field(p, "uv") as JBTextField).text)
-        for (key in listOf("splatMap", "splatBase", "splatR", "splatG", "splatB", "splatA")) assertTrue(key, field(p, key) is com.intellij.openapi.ui.ComboBox<*>)
+        for (key in listOf("splatMap", "splatBase", "splatR", "splatG", "splatB", "splatA")) assertTrue(
+            key,
+            field(p, key) is com.intellij.openapi.ui.ComboBox<*>,
+        )
         assertNull("terrainFile is not editable", field(p, "terrainFile"))
         assertNull(field(p, "uuid"))
         assertTrue(texts(p).contains("TERRAIN asset"))
@@ -354,20 +422,32 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         p.show(asset("skybox_default"))
         for (face in SKYBOX_FACES) {
             val combo = field(p, face) as com.intellij.openapi.ui.ComboBox<*>
-            assertEquals("skybox_default.png", (combo.selectedItem as net.nevinsky.abyssus.lib.core.editor.meta.AssetChoice).value)
+            assertEquals(
+                "skybox_default.png",
+                (combo.selectedItem as net.nevinsky.abyssus.lib.core.editor.meta.AssetChoice).value,
+            )
         }
     }
 
     fun testProceduralSkyShowsEffectiveDefaultsForOmittedFields() {
         myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1}""")
-        myFixture.addFileToProject("p/assets/sky/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f"}}""")
+        myFixture.addFileToProject(
+            "p/assets/sky/meta.json",
+            """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL",
+"additional":{"vertex":"v","fragment":"f"}}""",
+        )
         val p = panel()
         p.show(children(children(abss()).single { label(it) == "assets" }).flatMap { children(it) }.single())
         assertEquals("20.0", (field(p, "sunIntensity") as JBTextField).text)
         assertEquals("0.76", (field(p, "mieG") as JBTextField).text)
         assertEquals("6360000.0", (field(p, "planetRadius") as JBTextField).text)
         assertEquals("5.8E-6, 1.35E-5, 3.31E-5", (field(p, "betaRayleigh") as JBTextField).text)
-        assertEquals("the file still omits them", """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f"}}""", metaText("p/assets/sky/meta.json"))
+        assertEquals(
+            "the file still omits them",
+            """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL",
+"additional":{"vertex":"v","fragment":"f"}}""",
+            metaText("p/assets/sky/meta.json"),
+        )
     }
 
     fun testUnsupportedAssetsStayReadOnly() {
@@ -415,7 +495,12 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         val before = metaText(path)
         val p = panel()
         p.show(asset(terrain))
-        for ((text, reason) in listOf("0" to "Must be greater than zero.", "abc" to "Enter a number.", "12.5" to "Enter a whole number.")) {
+        for ((text, reason) in
+            listOf(
+                "0" to "Must be greater than zero.",
+                "abc" to "Enter a number.",
+                "12.5" to "Enter a whole number.",
+            )) {
             type(field(p, "size") as JBTextField, text)
             assertEquals(reason, errorOf(p, "size"))
             assertEquals("1600", (field(p, "size") as JBTextField).text)
@@ -456,14 +541,18 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         val path = "Untitled/assets/$terrain/meta.json"
         val before = metaText(path)
         val stamp = FileDocumentManager.getInstance().getDocument(myFixture.findFileInTempDir(path))!!.modificationStamp
-        (com.intellij.openapi.command.undo.UndoManager.getInstance(project) as com.intellij.openapi.command.impl.UndoManagerImpl)
+        (com.intellij.openapi.command.undo.UndoManager.getInstance(project)
+                as com.intellij.openapi.command.impl.UndoManagerImpl)
             .clearUndoRedoQueueInTests(myFixture.findFileInTempDir(path))
         val p = panel()
         p.show(asset(terrain))
         type(field(p, "uv") as JBTextField, "60.0")
         leave(field(p, "uv")!!)
         assertEquals(before, metaText(path))
-        assertEquals(stamp, FileDocumentManager.getInstance().getDocument(myFixture.findFileInTempDir(path))!!.modificationStamp)
+        assertEquals(
+            stamp,
+            FileDocumentManager.getInstance().getDocument(myFixture.findFileInTempDir(path))!!.modificationStamp,
+        )
         assertFalse("no Undo entry", find(p, "asset-undo")!!.isEnabled)
     }
 
@@ -509,15 +598,20 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
     fun testChoosingAFaceChangesOnlyThatKey() {
         val folder = diskSkybox()
         val meta = folder.findChild("meta.json")!!
-        val before = net.nevinsky.abyssus.plugin.canonicalMeta(FileDocumentManager.getInstance().getDocument(meta)!!.text)
+        val before =
+            net.nevinsky.abyssus.plugin.canonicalMeta(FileDocumentManager.getInstance().getDocument(meta)!!.text)
         val p = panel()
         p.showFolder(folder)
         @Suppress("UNCHECKED_CAST")
-        val combo = field(p, "left") as com.intellij.openapi.ui.ComboBox<net.nevinsky.abyssus.lib.core.editor.meta.AssetChoice>
+        val combo =
+            field(p, "left") as com.intellij.openapi.ui.ComboBox<net.nevinsky.abyssus.lib.core.editor.meta.AssetChoice>
         val other = (0 until combo.itemCount).map { combo.getItemAt(it) }.single { it.value == "other.png" }
         combo.selectedItem = other
         val after = FileDocumentManager.getInstance().getDocument(meta)!!.text
-        assertEquals(before.trimEnd().replaceFirst("\"left\": \"skybox_default.png\"", "\"left\": \"other.png\""), after.trimEnd())
+        assertEquals(
+            before.trimEnd().replaceFirst("\"left\": \"skybox_default.png\"", "\"left\": \"other.png\""),
+            after.trimEnd(),
+        )
         assertEquals("other.png", (p.state as PanelState.Details).faces!!.single { it.face == "left" }.file)
     }
 
@@ -528,7 +622,8 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
         val path = "Untitled/assets/$terrain/meta.json"
         val original = metaText(path)
         // Fixture creation has its own commands; this test starts before the first panel edit.
-        (com.intellij.openapi.command.undo.UndoManager.getInstance(project) as com.intellij.openapi.command.impl.UndoManagerImpl)
+        (com.intellij.openapi.command.undo.UndoManager.getInstance(project)
+                as com.intellij.openapi.command.impl.UndoManagerImpl)
             .clearUndoRedoQueueInTests(myFixture.findFileInTempDir(path))
         val p = panel()
         p.show(asset(terrain))
@@ -548,19 +643,32 @@ class AssetPropertiesPanelTest : BasePlatformTestCase() {
 
     private fun providedEditor(p: AssetPropertiesPanel): com.intellij.openapi.fileEditor.FileEditor? {
         var found: Any? = null
-        p.uiDataSnapshot(object : com.intellij.openapi.actionSystem.DataSink {
-            override fun <T : Any> set(key: com.intellij.openapi.actionSystem.DataKey<T>, data: T?) {
-                if (key == com.intellij.openapi.actionSystem.PlatformCoreDataKeys.FILE_EDITOR) found = data
-            }
+        p.uiDataSnapshot(
+            object : com.intellij.openapi.actionSystem.DataSink {
+                override fun <T : Any> set(key: com.intellij.openapi.actionSystem.DataKey<T>, data: T?) {
+                    if (key == com.intellij.openapi.actionSystem.PlatformCoreDataKeys.FILE_EDITOR) {
+                        found = data
+                    }
+                }
 
-            override fun <T : Any> setNull(key: com.intellij.openapi.actionSystem.DataKey<T>) {}
-            override fun <T : Any> lazy(key: com.intellij.openapi.actionSystem.DataKey<T>, data: () -> T?) {}
-            override fun <T : Any> lazyNull(key: com.intellij.openapi.actionSystem.DataKey<T>) {}
-            override fun uiDataSnapshot(provider: com.intellij.openapi.actionSystem.UiDataProvider) {}
-            override fun dataSnapshot(provider: com.intellij.openapi.actionSystem.DataSnapshotProvider) {}
-            override fun uiDataSnapshot(provider: com.intellij.openapi.actionSystem.DataProvider) {}
-            override fun <T : Any> lazyValue(key: com.intellij.openapi.actionSystem.DataKey<T>, data: (com.intellij.openapi.actionSystem.DataMap) -> T?) {}
-        })
+                override fun <T : Any> setNull(key: com.intellij.openapi.actionSystem.DataKey<T>) {}
+
+                override fun <T : Any> lazy(key: com.intellij.openapi.actionSystem.DataKey<T>, data: () -> T?) {}
+
+                override fun <T : Any> lazyNull(key: com.intellij.openapi.actionSystem.DataKey<T>) {}
+
+                override fun uiDataSnapshot(provider: com.intellij.openapi.actionSystem.UiDataProvider) {}
+
+                override fun dataSnapshot(provider: com.intellij.openapi.actionSystem.DataSnapshotProvider) {}
+
+                override fun uiDataSnapshot(provider: com.intellij.openapi.actionSystem.DataProvider) {}
+
+                override fun <T : Any> lazyValue(
+                    key: com.intellij.openapi.actionSystem.DataKey<T>,
+                    data: (com.intellij.openapi.actionSystem.DataMap) -> T?,
+                ) {}
+            }
+        )
         return found as? com.intellij.openapi.fileEditor.FileEditor
     }
 

@@ -12,16 +12,30 @@ import org.junit.Test
 class TypeGroupOrderTest {
     @Test
     fun wellKnownGroupsComeFirstThenTheRestAlphabetically() {
-        val shuffled = listOf("SHADER", "CLOUDS", "MATERIAL", "SKYBOX", "TEXTURE", "FOLIAGE", "TERRAIN", "MODEL", "PIXMAP_TEXTURE")
+        val shuffled =
+            listOf("SHADER", "CLOUDS", "MATERIAL", "SKYBOX", "TEXTURE", "FOLIAGE", "TERRAIN", "MODEL", "PIXMAP_TEXTURE")
         assertEquals(
-            listOf("MODEL", "TERRAIN", "FOLIAGE", "TEXTURE", "SKYBOX", "CLOUDS", "MATERIAL", "PIXMAP_TEXTURE", "SHADER"),
+            listOf(
+                "MODEL",
+                "TERRAIN",
+                "FOLIAGE",
+                "TEXTURE",
+                "SKYBOX",
+                "CLOUDS",
+                "MATERIAL",
+                "PIXMAP_TEXTURE",
+                "SHADER",
+            ),
             shuffled.sortedWith(typeGroupOrder),
         )
     }
 
     @Test
     fun skyboxTypesShareOneGroup() {
-        assertEquals(setOf("SKYBOX"), listOf(MetaType.SKYBOX, MetaType.SKYBOX_HDR, MetaType.SKYBOX_PROCEDURAL).map(::groupOf).toSet())
+        assertEquals(
+            setOf("SKYBOX"),
+            listOf(MetaType.SKYBOX, MetaType.SKYBOX_HDR, MetaType.SKYBOX_PROCEDURAL).map(::groupOf).toSet(),
+        )
     }
 
     @Test
@@ -38,7 +52,12 @@ class FixedRankTest {
         val assets = fixedRank(FolderRow(FolderKind.ASSETS, emptyList()), "assets")
         org.junit.Assert.assertTrue(compareFixed(scenes, ui)!! < 0)
         org.junit.Assert.assertTrue(compareFixed(ui, assets)!! < 0)
-        org.junit.Assert.assertTrue(compareFixed(fixedRank(TypeGroup("TERRAIN", emptyList()), "TERRAIN"), fixedRank(TypeGroup("SKYBOX", emptyList()), "SKYBOX"))!! < 0)
+        org.junit.Assert.assertTrue(
+            compareFixed(
+                fixedRank(TypeGroup("TERRAIN", emptyList()), "TERRAIN"),
+                fixedRank(TypeGroup("SKYBOX", emptyList()), "SKYBOX"),
+            )!! < 0
+        )
         org.junit.Assert.assertNull(compareFixed(scenes, fixedRank("x", "ecs")))
     }
 }

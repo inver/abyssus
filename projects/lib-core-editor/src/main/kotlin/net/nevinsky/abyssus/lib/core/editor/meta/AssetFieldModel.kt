@@ -5,31 +5,40 @@
 
 package net.nevinsky.abyssus.lib.core.editor.meta
 
-import net.nevinsky.abyssus.lib.core.assets.MetaType
 import java.io.File
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 
 /**
  * One editable property of the shown asset: its [field], the [value] the file holds (or the default of an omitted key),
  * and for a texture or image property the [choices] it can take.
  */
-data class AssetFieldState(val field: AssetField, val value: AssetFieldValue, val choices: List<AssetChoice> = emptyList()) {
-    val key: String get() = this.field.key
-    val text: String get() = formatFieldValue(value)
+data class AssetFieldState(
+    val field: AssetField,
+    val value: AssetFieldValue,
+    val choices: List<AssetChoice> = emptyList(),
+) {
+    val key: String
+        get() = this.field.key
+
+    val text: String
+        get() = formatFieldValue(value)
 }
 
 /** [value] as an editor shows it; numbers keep Kotlin's shortest float text, a list is comma separated. */
-fun formatFieldValue(value: AssetFieldValue): String = when (value) {
-    is AssetFieldValue.Int -> value.value.toString()
-    is AssetFieldValue.Real -> value.value.toString()
-    is AssetFieldValue.Reals -> value.values.joinToString(", ")
-    is AssetFieldValue.Text -> value.value
-    AssetFieldValue.None -> ""
-    is AssetFieldValue.Invalid -> value.text
-}
+fun formatFieldValue(value: AssetFieldValue): String =
+    when (value) {
+        is AssetFieldValue.Int -> value.value.toString()
+        is AssetFieldValue.Real -> value.value.toString()
+        is AssetFieldValue.Reals -> value.values.joinToString(", ")
+        is AssetFieldValue.Text -> value.value
+        AssetFieldValue.None -> ""
+        is AssetFieldValue.Invalid -> value.text
+    }
 
 /**
- * The editable properties of the asset in [folder] for a `meta.json` of [type], with their current values from the typed [additional] block and,
- * for references, the [choices] found on disk. Empty for a type without editors. Reads files.
+ * The editable properties of the asset in [folder] for a `meta.json` of [type], with their current values from the
+ * typed [additional] block and, for references, the [choices] found on disk. Empty for a type without editors. Reads
+ * files.
  */
 fun assetFieldStates(
     folder: File,
@@ -40,23 +49,30 @@ fun assetFieldStates(
     choices: AssetReferenceChoices,
 ): List<AssetFieldState> {
     val fields = descriptions.fields(type)
-    if (fields.isEmpty()) return emptyList()
+    if (fields.isEmpty()) {
+        return emptyList()
+    }
     val assetsDir = folder.parentFile
     return fields.map { field ->
         val value = editor.current(additional, field)
         val current = (value as? AssetFieldValue.Text)?.value
-        val offered = when (field.kind) {
-            AssetFieldKind.ASSET_REFERENCE -> assetsDir?.let { choices.textures(it, current) } ?: emptyList()
-            AssetFieldKind.LOCAL_FILE -> choices.faces(folder, current)
-            else -> emptyList()
-        }
+        val offered =
+            when (field.kind) {
+                AssetFieldKind.ASSET_REFERENCE -> assetsDir?.let { choices.textures(it, current) } ?: emptyList()
+                AssetFieldKind.LOCAL_FILE -> choices.faces(folder, current)
+                else -> emptyList()
+            }
         AssetFieldState(field, value, offered)
     }
 }
 
-/** A row of an asset's details: a [net.nevinsky.abyssus.lib.core.editor.meta.PropertyRow] as `meta.json` lists it, or the editor of an [AssetFieldState]. */
+/**
+ * A row of an asset's details: a [net.nevinsky.abyssus.lib.core.editor.meta.PropertyRow] as `meta.json` lists it, or
+ * the editor of an [AssetFieldState].
+ */
 sealed interface DetailRow {
     data class Plain(val row: PropertyRow) : DetailRow
+
     data class Field(val state: AssetFieldState) : DetailRow
 }
 
@@ -69,9 +85,17 @@ fun detailRows(rows: List<PropertyRow>, fields: List<AssetFieldState>): List<Det
     val shown = HashSet<String>()
     val result = rows.map { row ->
         val field = editable[row.name]?.takeIf { row.kind == RowKind.ADDITIONAL }
-        if (field != null) shown += field.key
-        if (field != null) DetailRow.Field(field) else DetailRow.Plain(row)
+        if (field != null) {
+            shown += field.key
+        }
+        if (field != null) {
+            DetailRow.Field(field)
+        } else {
+            DetailRow.Plain(row)
+        }
     }
-    if (rows.none { it.kind == RowKind.HEADING }) return result
+    if (rows.none { it.kind == RowKind.HEADING }) {
+        return result
+    }
     return result + fields.filter { it.key !in shown }.map { DetailRow.Field(it) }
 }

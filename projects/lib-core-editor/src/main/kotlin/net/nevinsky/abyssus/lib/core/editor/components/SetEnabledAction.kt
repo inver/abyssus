@@ -25,7 +25,8 @@ sealed interface EnabledTarget {
 }
 
 /**
- * Enables or disables an entity or a component of a scene: disabling a component lists its class in the entity's disabled
+  * Enables or disables an entity or a component of a scene: disabling a component lists its class in the entity's
+  * disabled
  * components (enabling unlists it); an entity is switched by its header's enabled state; nothing else is touched. The
  * Properties check box and the tree eye both run it, through `editSceneJson` or
  * [net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEditing].
@@ -50,25 +51,38 @@ class SetEnabledAction {
      */
     fun apply(scene: SceneDto, target: EnabledTarget, enabled: Boolean): Boolean {
         val entity = scene.entity(target.entityId) ?: return false
-        if (!isTogglable(entity)) return false
+        if (!isTogglable(entity)) {
+            return false
+        }
         val header = entity.header()
         if (target is EnabledTarget.Entity) {
-            if (header.entityEnabled == enabled) return false
+            if (header.entityEnabled == enabled) {
+                return false
+            }
             header.entityEnabled = enabled
             return true
         }
         val kind = (target as EnabledTarget.Component).kind.substringAfterLast('.')
-        if (!isTogglable(kind)) return false
+        if (!isTogglable(kind)) {
+            return false
+        }
         val component = entity.components.firstOrNull { it.javaClass.simpleName == kind }
         if (component != null) {
-            return if (enabled) header.disabledComponents.remove(component.javaClass)
-            else header.disabledComponents.add(component.javaClass)
+            return if (enabled) {
+                header.disabledComponents.remove(component.javaClass)
+            } else {
+                header.disabledComponents.add(component.javaClass)
+            }
         }
         for (wrapper in entity.components.filterIsInstance<RawComponentsWrapper>()) {
             val at = wrapper.entries.indexOfFirst { it.name.substringAfterLast('.') == kind }
-            if (at < 0) continue
+            if (at < 0) {
+                continue
+            }
             val raw = wrapper.entries[at]
-            if (raw.disabled == !enabled) return false
+            if (raw.disabled == !enabled) {
+                return false
+            }
             wrapper.entries[at] = RawComponent(raw.name, raw.json, raw.reason, !enabled)
             return true
         }

@@ -25,8 +25,8 @@ class CubeFaceImage(val width: Int, val height: Int, val rgba: ByteArray) {
 }
 
 /**
- * The resampling of six cube faces into an equirectangular image of [width] by [height] (centre column faces -Z, top row
- * is +Y), bilinear within each face. Which face and where on it each output pixel reads depends only on the output
+ * The resampling of six cube faces into an equirectangular image of [width] by [height] (centre column faces -Z, top
+ * row is +Y), bilinear within each face. Which face and where on it each output pixel reads depends only on the output
  * size and the face [axes], so it is worked out once and reused for every [resample]. The raster cube map and a baked
  * sky share this, so both face the same way. Output rows run from the top.
  */
@@ -47,11 +47,27 @@ class EquirectCubeMapping(val width: Int, val height: Int, axes: List<CubeFaceAx
                 val dx = sin(phi) * sin(theta)
                 val dy = cos(phi)
                 val dz = -sin(phi) * cos(theta)
-                val index = when {
-                    abs(dx) >= abs(dy) && abs(dx) >= abs(dz) -> if (dx > 0) 0 else 1
-                    abs(dy) >= abs(dz) -> if (dy > 0) 2 else 3
-                    else -> if (dz > 0) 4 else 5
-                }
+                val index =
+                    when {
+                        abs(dx) >= abs(dy) && abs(dx) >= abs(dz) ->
+                            if (dx > 0) {
+                                0
+                            } else {
+                                1
+                            }
+                        abs(dy) >= abs(dz) ->
+                            if (dy > 0) {
+                                2
+                            } else {
+                                3
+                            }
+                        else ->
+                            if (dz > 0) {
+                                4
+                            } else {
+                                5
+                            }
+                    }
                 val face = axes[index]
                 val forward = dx * face.direction.x + dy * face.direction.y + dz * face.direction.z
                 val u = (dx * face.right.x + dy * face.right.y + dz * face.right.z) / forward
@@ -87,8 +103,12 @@ class EquirectCubeMapping(val width: Int, val height: Int, axes: List<CubeFaceAx
                 val d = (y1 * face.width + x1) * 4
                 val i = pixel * 4
                 for (channel in 0 until 3) {
-                    val top = (face.rgba[a + channel].toInt() and 255) * (1f - wx) + (face.rgba[b + channel].toInt() and 255) * wx
-                    val bottom = (face.rgba[c + channel].toInt() and 255) * (1f - wx) + (face.rgba[d + channel].toInt() and 255) * wx
+                    val top =
+                        (face.rgba[a + channel].toInt() and 255) * (1f - wx) +
+                            (face.rgba[b + channel].toInt() and 255) * wx
+                    val bottom =
+                        (face.rgba[c + channel].toInt() and 255) * (1f - wx) +
+                            (face.rgba[d + channel].toInt() and 255) * wx
                     out[i + channel] = (top * (1f - wy) + bottom * wy + .5f).toInt().toByte()
                 }
                 out[i + 3] = 255.toByte()

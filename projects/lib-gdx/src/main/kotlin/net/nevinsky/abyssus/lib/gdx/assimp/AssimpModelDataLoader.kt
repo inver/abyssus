@@ -50,7 +50,11 @@ class AssimpModelDataLoader
         embeddedTextureDir: FileHandle? = null
     ): LoadedScene {
         val start = System.currentTimeMillis()
-        val properties = if (normalize) emptyMap() else UNNORMALIZED_PROPERTIES
+        val properties = if (normalize) {
+            emptyMap()
+        } else {
+            UNNORMALIZED_PROPERTIES
+        }
         AssimpImporter.importScene(file.path(), flags, properties).use { imported ->
             val scene = imported.scene()!!
             val data: ModelData =
@@ -154,7 +158,11 @@ class AssimpModelDataLoader
 
         private fun parentDir(file: FileHandle): String {
             val parent = file.file().getParent()
-            return if (parent == null) "" else parent.replace('\\', '/')
+            return if (parent == null) {
+                ""
+            } else {
+                parent.replace('\\', '/')
+            }
         }
     }
 }

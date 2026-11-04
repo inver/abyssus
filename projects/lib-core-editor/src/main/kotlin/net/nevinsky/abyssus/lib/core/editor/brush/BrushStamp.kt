@@ -51,7 +51,9 @@ interface BrushTool<G : BrushGrid> {
 
     fun changes(stamp: BrushStamp<G>, out: FloatArray)
 
-    /** The world radius the stamp's footprint covers for the brush [radius]; a stamp of an image covers its own size. */
+    /**
+     * The world radius the stamp's footprint covers for the brush [radius]; a stamp of an image covers its own size.
+     */
     fun reach(radius: Float): Float = radius
 
     /** Whether a cell's weight falls smoothly from the centre to the radius, or is the plain strength. */

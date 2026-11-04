@@ -15,7 +15,8 @@ import org.junit.Test
 
 /** The trainer's crash clips (`importers/TrainerCrashAnimations.kt`), as the game's Assimp loader reads them. */
 class TrainerCrashAnimationsTest {
-    private val data = AssimpModelLoader().loadData(FileHandle(bundledProject().resolve("assets/model_trainer/model.glb").toFile()))
+    private val data =
+        AssimpModelLoader().loadData(FileHandle(bundledProject().resolve("assets/model_trainer/model.glb").toFile()))
 
     private fun nodes(): Map<String, ModelNode> {
         val out = HashMap<String, ModelNode>()
@@ -39,8 +40,22 @@ class TrainerCrashAnimationsTest {
         assertTrue(moved.getValue("crash_little").none { it.contains("Wing") || it == "Tail" })
         assertTrue(moved.getValue("crash_medium").containsAll(setOf("LeftWing", "Tail")))
         assertTrue(moved.getValue("crash_medium").none { it.endsWith("Wheel") || it == "RightWing" })
-        assertTrue(moved.getValue("crash_full").containsAll(
-            setOf("Trainer", "Propeller", "NoseWheel", "LeftWheel", "RightWheel", "LeftWing", "RightWing", "Tail")))
+        assertTrue(
+            moved
+                .getValue("crash_full")
+                .containsAll(
+                    setOf(
+                        "Trainer",
+                        "Propeller",
+                        "NoseWheel",
+                        "LeftWheel",
+                        "RightWheel",
+                        "LeftWing",
+                        "RightWing",
+                        "Tail",
+                    )
+                )
+        )
     }
 
     @Test
@@ -50,9 +65,14 @@ class TrainerCrashAnimationsTest {
             val node = checkNotNull(nodes[channel.nodeId]) { "${animation.id}: no node ${channel.nodeId}" }
             val start = channel.translation.first()
             assertEquals("${animation.id}/${channel.nodeId}", 0f, start.keytime, 0f)
-            assertTrue("${animation.id}/${channel.nodeId}: ${start.value}", start.value.epsilonEquals(node.translation ?: Vector3.Zero, 1e-5f))
-            assertTrue("${animation.id}/${channel.nodeId}: ${channel.rotation.first().value}",
-                channel.rotation.first().value.isIdentity(1e-5f))
+            assertTrue(
+                "${animation.id}/${channel.nodeId}: ${start.value}",
+                start.value.epsilonEquals(node.translation ?: Vector3.Zero, 1e-5f),
+            )
+            assertTrue(
+                "${animation.id}/${channel.nodeId}: ${channel.rotation.first().value}",
+                channel.rotation.first().value.isIdentity(1e-5f),
+            )
         }
     }
 

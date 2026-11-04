@@ -5,11 +5,10 @@
 
 package net.nevinsky.abyssus.plugin.foliage
 
-import net.nevinsky.abyssus.plugin.assetfiles.assetResultMessage
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.components.service
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageCollider
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderRead
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderReader
@@ -20,6 +19,7 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.foliageMaskFileName
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.lib.core.editor.document.*
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_COLLIDER
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_MODELS
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageColliderEdits
@@ -42,15 +42,15 @@ import net.nevinsky.abyssus.plugin.assetfiles.DerivedFile
 import net.nevinsky.abyssus.plugin.assetfiles.FileChange
 import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
+import net.nevinsky.abyssus.plugin.assetfiles.assetResultMessage
 import net.nevinsky.abyssus.plugin.assetfiles.sha256Hex
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
-import java.io.File
 
 /**
- * The logic behind the foliage section of the properties panel for one existing foliage asset: the draft settings,
- * the preview (the copy counts, a refusal and the bake Apply would write), and Apply. No Swing: the view reads its
- * state and is told through [onChange]. The preview runs through [background] and is published through [ui], so a
- * newer edit, Cancel, a changed selection or disposal drops an older one, exactly like the terrain controls.
+ * The logic behind the foliage section of the properties panel for one existing foliage asset: the draft settings, the
+ * preview (the copy counts, a refusal and the bake Apply would write), and Apply. No Swing: the view reads its state
+ * and is told through [onChange]. The preview runs through [background] and is published through [ui], so a newer edit,
+ * Cancel, a changed selection or disposal drops an older one, exactly like the terrain controls.
  *
  * The draft lives in the project's [FoliageDrafts], which every Scene view reads, so an edit reaches them without a
  * file write; Apply, Cancel and a selection change clear it.
@@ -71,10 +71,23 @@ class FoliageController(
     private val fingerprints = FoliageFingerprint()
     private val scatter = FoliageScatter(fingerprints)
     private val dataFile = FoliageDataFile()
-    private val edits = FoliageMetaEdits(net.nevinsky.abyssus.lib.core.editor.document.AssetMetaTextEditor(net.nevinsky.abyssus.lib.core.assets.AssetMetaParser(com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.json)))
+    private val edits =
+        FoliageMetaEdits(
+            net.nevinsky.abyssus.lib.core.editor.document.AssetMetaTextEditor(
+                net.nevinsky.abyssus.lib.core.assets.AssetMetaParser(
+                    com.intellij.openapi.components
+                        .service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>()
+                        .documents
+                        .json
+                )
+            )
+        )
     private val settingsReader = FoliageSettingsReader(EditorBundle)
     private val colliderReader = FoliageColliderReader()
-    private val colliderEdits = FoliageColliderEdits(com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.json)
+    private val colliderEdits =
+        FoliageColliderEdits(
+            com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.json
+        )
 
     private var source: FoliageSource.Ready = initial
     private var disposed = false
@@ -116,71 +129,116 @@ class FoliageController(
         generate()
     }
 
-    val terrainName: String get() = source.settings.terrain
+    val terrainName: String
+        get() = source.settings.terrain
 
-    val folderName: String get() = source.folderName
+    val folderName: String
+        get() = source.folderName
 
     /** The MODEL assets the model pickers offer, by folder name. */
-    val modelChoices: List<String> get() = source.modelAssets.sorted()
+    val modelChoices: List<String>
+        get() = source.modelAssets.sorted()
 
     /** True when the bake on disk does not match the settings, masks or terrain as they are now. */
-    val stale: Boolean get() = source.stale
+    val stale: Boolean
+        get() = source.stale
 
-    val refusal: ScatterRefusal? get() = outcome?.refusal
+    val refusal: ScatterRefusal?
+        get() = outcome?.refusal
 
     /** The copies the preview holds of [layerId]; null before a preview finished or when it was refused. */
     fun countOf(layerId: Int): Int? = outcome?.counts?.get(layerId)
 
     /** The copies the preview holds in total, or the count the refusal was measured against. */
-    val totalShown: Long get() = outcome?.let { if (it.refusal == null) it.total.toLong() else it.estimate } ?: 0L
+    val totalShown: Long
+        get() =
+            outcome?.let {
+                if (it.refusal == null) {
+                    it.total.toLong()
+                } else {
+                    it.estimate
+                }
+            } ?: 0L
 
     /** The problems of one layer's field, for the reason shown beside it. */
-    fun problemOf(layerId: Int, field: String): FoliageProblem? =
-        problems.firstOrNull { it.layerId == layerId && it.field == field }
+    fun problemOf(layerId: Int, field: String): FoliageProblem? = problems.firstOrNull {
+        it.layerId == layerId && it.field == field
+    }
 
     /** The problems of one layer's models, for the reason shown under them. */
-    fun modelsProblemOf(layerId: Int): FoliageProblem? =
-        problems.firstOrNull { it.layerId == layerId && (it.field == FOLIAGE_MODELS || it.field.startsWith("$FOLIAGE_MODELS[")) }
+    fun modelsProblemOf(layerId: Int): FoliageProblem? = problems.firstOrNull {
+        it.layerId == layerId && (it.field == FOLIAGE_MODELS || it.field.startsWith("$FOLIAGE_MODELS["))
+    }
 
     /** True while a finished preview of exactly the current settings, over the files as they are, may be written. */
-    val canApply: Boolean get() = if (colliderOnly) canApplyColliders else canApplyGeneration
+    val canApply: Boolean
+        get() =
+            if (colliderOnly) {
+                canApplyColliders
+            } else {
+                canApplyGeneration
+            }
 
     private val canApplyGeneration: Boolean
-        get() = !disposed && !generating && problems.isEmpty() && hasChanges &&
-                outcome?.refusal == null && outcomeSettings == settings && outcomeDataSha256 != null
-
-    /** True when the edit changes nothing but layer colliders and no brush stroke is pending: no preview or bake is involved. */
-    val colliderOnly: Boolean
-        get() = overriddenMasks().isEmpty() && colliderEdits.onlyColliders(
-            source.settings,
-            settings
-        )
-
-    /** A collider-only edit needs a valid result and a changed text, not a finished preview, and works with a stale or missing bake. */
-    private val canApplyColliders: Boolean get() = !disposed && problems.isEmpty() && editedText != source.metaText
-
-    private val hasChanges: Boolean
-        get() = editedText != source.metaText || overriddenMasks().isNotEmpty() ||
-                outcomeDataSha256 != source.dataSha256
+        get() =
+            !disposed &&
+                !generating &&
+                problems.isEmpty() &&
+                hasChanges &&
+                outcome?.refusal == null &&
+                outcomeSettings == settings &&
+                outcomeDataSha256 != null
 
     /**
-     * Applies [transform] to the settings and previews the result without writing anything; the reason to refuse it,
-     * or null when it was taken. A value that would add a problem the stored asset does not already have is refused
-     * as it stands, so nothing invalid is previewed or written.
+     * True when the edit changes nothing but layer colliders and no brush stroke is pending: no preview or bake is
+     * involved.
+     */
+    val colliderOnly: Boolean
+        get() =
+            overriddenMasks().isEmpty() &&
+                colliderEdits.onlyColliders(
+                    source.settings,
+                    settings,
+                )
+
+    /**
+     * A collider-only edit needs a valid result and a changed text, not a finished preview, and works with a stale or
+     * missing bake.
+     */
+    private val canApplyColliders: Boolean
+        get() = !disposed && problems.isEmpty() && editedText != source.metaText
+
+    private val hasChanges: Boolean
+        get() =
+            editedText != source.metaText || overriddenMasks().isNotEmpty() || outcomeDataSha256 != source.dataSha256
+
+    /**
+     * Applies [transform] to the settings and previews the result without writing anything; the reason to refuse it, or
+     * null when it was taken. A value that would add a problem the stored asset does not already have is refused as it
+     * stands, so nothing invalid is previewed or written.
      */
     fun edit(transform: (FoliageMeta) -> FoliageMeta): String? {
-        if (disposed) return null
-        val candidate = transform(settings)
-        if (candidate == settings) return null
-        val text = when (val outcome = edits.edit(source.metaText, source.settings, candidate)) {
-            is TextEditOutcome.Edited -> outcome.text
-            TextEditOutcome.Unchanged -> source.metaText
-            is TextEditOutcome.Refused -> return outcome.cause.documentDisplayMessage()
+        if (disposed) {
+            return null
         }
+        val candidate = transform(settings)
+        if (candidate == settings) {
+            return null
+        }
+        val text =
+            when (val outcome = edits.edit(source.metaText, source.settings, candidate)) {
+                is TextEditOutcome.Edited -> outcome.text
+                TextEditOutcome.Unchanged -> source.metaText
+                is TextEditOutcome.Refused -> return outcome.cause.documentDisplayMessage()
+            }
         val read = settingsReader.read(foliageOf(text), source.modelAssets)
-        val added = (read.problems + settingsReader.transitions(source.settings, read.settings))
-            .filter { problem -> source.read.problems.none { it.sameAs(problem) } }
-        if (added.isNotEmpty()) return added.first().reason
+        val added =
+            (read.problems + settingsReader.transitions(source.settings, read.settings)).filter { problem ->
+                source.read.problems.none { it.sameAs(problem) }
+            }
+        if (added.isNotEmpty()) {
+            return added.first().reason
+        }
         commit(text, read)
         return null
     }
@@ -191,20 +249,30 @@ class FoliageController(
      * members the editor does not model stay. The reason the value was refused, or null.
      */
     fun editCollider(layerId: Int, change: (FoliageCollider?) -> FoliageCollider?): String? = edit { settings ->
-        settings.copy(layers = settings.layers.map { layer ->
-            if (layer.id != layerId) return@map layer
-            val current = when (val read = colliderReader.read(layer.collider)) {
-                is FoliageColliderRead.Valid -> read.collider
-                FoliageColliderRead.Absent -> null
-                is FoliageColliderRead.Invalid -> FoliageCollider()
-            }
-            colliderEdits.patch(layer, change(current))
-        })
+        settings.copy(
+            layers =
+                settings.layers.map { layer ->
+                    if (layer.id != layerId) {
+                        return@map layer
+                    }
+                    val current =
+                        when (val read = colliderReader.read(layer.collider)) {
+                            is FoliageColliderRead.Valid -> read.collider
+                            FoliageColliderRead.Absent -> null
+                            is FoliageColliderRead.Invalid -> FoliageCollider()
+                        }
+                    colliderEdits.patch(layer, change(current))
+                }
+        )
     }
 
-    /** The collider of layer [layerId] as the panel shows it: null for none or an unusable one (see [colliderProblemOf]). */
+    /**
+     * The collider of layer [layerId] as the panel shows it: null for none or an unusable one (see
+     * [colliderProblemOf]).
+     */
     fun colliderOf(layerId: Int): FoliageCollider? =
-        (colliderReader.read(settings.layers.firstOrNull { it.id == layerId }?.collider) as? FoliageColliderRead.Valid)?.collider
+        (colliderReader.read(settings.layers.firstOrNull { it.id == layerId }?.collider) as? FoliageColliderRead.Valid)
+            ?.collider
 
     /** The problem the collider of [layerId] has, for the reason shown beside it. */
     fun colliderProblemOf(layerId: Int): FoliageProblem? = problemOf(layerId, FOLIAGE_COLLIDER)
@@ -214,10 +282,14 @@ class FoliageController(
         val model = modelChoices.firstOrNull() ?: return AbyssusBundle.message("foliageNoModels")
         return edit { settings ->
             settings.copy(
-                layers = settings.layers + FoliageLayerMeta(
-                    id = (settings.layers.maxOfOrNull { it.id } ?: 0) + 1,
-                models = listOf(net.nevinsky.abyssus.lib.core.assets.foliage.FoliageModelMeta(asset = model)),
-            ))
+                layers =
+                    settings.layers +
+                        FoliageLayerMeta(
+                            id = (settings.layers.maxOfOrNull { it.id } ?: 0) + 1,
+                            models =
+                                listOf(net.nevinsky.abyssus.lib.core.assets.foliage.FoliageModelMeta(asset = model)),
+                        )
+            )
         }
     }
 
@@ -230,7 +302,9 @@ class FoliageController(
         val layers = settings.layers.toMutableList()
         val from = layers.indexOfFirst { it.id == layerId }
         val to = from + step
-        if (from < 0 || to !in layers.indices) return@edit settings
+        if (from < 0 || to !in layers.indices) {
+            return@edit settings
+        }
         val moved = layers[from]
         layers[from] = layers[to]
         layers[to] = moved
@@ -247,15 +321,19 @@ class FoliageController(
     }
 
     /**
-     * The panel re-read the asset: changed files invalidate the preview. An open draft keeps its settings while only the
-     * bake or the masks changed; when `meta.json` itself changed, the draft is dropped and the newer settings shown, because
-     * applying it would write its older values over the other edit.
+     * The panel re-read the asset: changed files invalidate the preview. An open draft keeps its settings while only
+     * the bake or the masks changed; when `meta.json` itself changed, the draft is dropped and the newer settings
+     * shown, because applying it would write its older values over the other edit.
      */
     fun sourceRead(fresh: FoliageSource.Ready) {
-        if (source.sameAs(fresh)) return
+        if (source.sameAs(fresh)) {
+            return
+        }
         val metaChanged = fresh.metaText != source.metaText
         val hadDraft = drafts.of(fresh.folderName) != null
-        if (metaChanged && hadDraft) drafts.discard(fresh.folderName)
+        if (metaChanged && hadDraft) {
+            drafts.discard(fresh.folderName)
+        }
         val keepDraft = drafts.of(fresh.folderName) != null
         source = fresh
         if (!keepDraft) {
@@ -263,7 +341,12 @@ class FoliageController(
             problems = fresh.read.problems
         }
         editedText = editedText()
-        message = if (metaChanged && hadDraft) AbyssusBundle.message("foliageSourceChanged") else null
+        message =
+            if (metaChanged && hadDraft) {
+                AbyssusBundle.message("foliageSourceChanged")
+            } else {
+                null
+            }
         generate()
         onChange()
     }
@@ -282,10 +365,15 @@ class FoliageController(
      * now; anything else is a reason in [message] and no write.
      */
     fun apply(command: AssetFileCommand? = null, onDone: () -> Unit = {}): AssetCommandResult? =
-        if (colliderOnly) applyColliders(onDone) else applyGeneration(command, onDone)
+        if (colliderOnly) {
+            applyColliders(onDone)
+        } else {
+            applyGeneration(command, onDone)
+        }
 
     /** True while Re-bake may write: a finished preview of the current settings, whatever the edit changes. */
-    val canRebake: Boolean get() = canApplyGeneration
+    val canRebake: Boolean
+        get() = canApplyGeneration
 
     /** Applies the settings together with the preview's bake, even when only colliders changed. */
     fun rebake(command: AssetFileCommand? = null, onDone: () -> Unit = {}): AssetCommandResult? =
@@ -299,12 +387,14 @@ class FoliageController(
             onChange()
             return null
         }
-        val fresh = readCurrent() as? FoliageSource.Ready ?: run {
-            message = AbyssusBundle.message("foliageSourceChanged")
-            invalidate()
-            onChange()
-            return null
-        }
+        val fresh =
+            readCurrent() as? FoliageSource.Ready
+                ?: run {
+                    message = AbyssusBundle.message("foliageSourceChanged")
+                    invalidate()
+                    onChange()
+                    return null
+                }
         val masks = fresh.masks + overriddenMasks()
         val expected = fingerprints.of(settings, fresh.terrain, masks)
         if (fresh.metaText != source.metaText || !expected.contentEquals(preview.bake.fingerprint)) {
@@ -319,12 +409,15 @@ class FoliageController(
         for ((layerId, mask) in overriddenMasks()) {
             val name = foliageMaskFileName(layerId)
             val stored = source.masks[layerId].takeIf { File(folder.path, name).isFile }
-            if (stored != null && stored.contentEquals(mask)) continue
-            changes += FileChange(
-                "$base/$name",
-                stored?.let { FileSnapshot.Bytes(it) } ?: FileSnapshot.Absent,
-                FileSnapshot.Bytes(mask),
-            )
+            if (stored != null && stored.contentEquals(mask)) {
+                continue
+            }
+            changes +=
+                FileChange(
+                    "$base/$name",
+                    stored?.let { FileSnapshot.Bytes(it) } ?: FileSnapshot.Absent,
+                    FileSnapshot.Bytes(mask),
+                )
         }
         if (!metadataChanged && changes.isEmpty() && after == source.dataSha256) {
             message = null
@@ -332,58 +425,91 @@ class FoliageController(
             return AssetCommandResult.Done
         }
         val backup = runCatchingKeepingCancellation {
-            if (source.stale && source.dataSha256 != null) undoCache.preserve(
-                File(folder.path, source.settings.dataFileName()).toPath(), source.dataSha256!!,
-            ) else null
-        }.getOrElse {
-            message = AbyssusBundle.message("foliageApplyFailed", it.documentDisplayMessage())
-            onChange()
-            return null
+            if (source.stale && source.dataSha256 != null) {
+                undoCache.preserve(
+                    File(folder.path, source.settings.dataFileName()).toPath(),
+                    source.dataSha256!!,
+                )
+            } else {
+                null
+            }
         }
-        val rebuild = rebuildOf(backup) ?: run {
-            backup?.close()
-            message = AbyssusBundle.message("foliageApplyFailed", AbyssusBundle.message("foliageOldBakeUnreadable"))
-            onChange()
-            return null
-        }
+            .getOrElse {
+                message = AbyssusBundle.message("foliageApplyFailed", it.documentDisplayMessage())
+                onChange()
+                return null
+            }
+        val rebuild =
+            rebuildOf(backup)
+                ?: run {
+                    backup?.close()
+                    message =
+                        AbyssusBundle.message("foliageApplyFailed", AbyssusBundle.message("foliageOldBakeUnreadable"))
+                    onChange()
+                    return null
+                }
         val projectDir = File(folder.path).parentFile.parentFile
         val runner = command ?: AssetFileCommand(project, LocalAssetFileStore(projectDir))
-        val txn = AssetTransaction(
-            AbyssusBundle.message(if (!metadataChanged && changes.isEmpty()) "commandFoliageRebake" else "commandFoliageApply"),
-            changes = changes,
-            expectedFiles = if (metadataChanged) emptyMap() else mapOf(metaPath to FileSnapshot.Bytes(source.metaText.toByteArray())),
-            derived = listOf(DerivedFile("$base/${settings.dataFileName()}", source.dataSha256, after, rebuild)),
-        )
+        val txn =
+            AssetTransaction(
+                AbyssusBundle.message(
+                    if (!metadataChanged && changes.isEmpty()) {
+                        "commandFoliageRebake"
+                    } else {
+                        "commandFoliageApply"
+                    }
+                ),
+                changes = changes,
+                expectedFiles =
+                    if (metadataChanged) {
+                        emptyMap()
+                    } else {
+                        mapOf(metaPath to FileSnapshot.Bytes(source.metaText.toByteArray()))
+                    },
+                derived = listOf(DerivedFile("$base/${settings.dataFileName()}", source.dataSha256, after, rebuild)),
+            )
         var committed = false
-        val result = try {
-            applyFoliageFiles(
-                project,
-                runner,
-                txn,
-                folder.findChild(META_FILE)!!,
-                source.metaText,
-                editedText
-            ).also { result ->
-                if (result == AssetCommandResult.Done) {
-                    committed = true
-                    drafts.discard(source.folderName)
-                    message = null
-                    onDone()
+        val result =
+            try {
+                applyFoliageFiles(
+                        project,
+                        runner,
+                        txn,
+                        folder.findChild(META_FILE)!!,
+                        source.metaText,
+                        editedText,
+                    )
+                    .also { result ->
+                        if (result == AssetCommandResult.Done) {
+                            committed = true
+                            drafts.discard(source.folderName)
+                            message = null
+                            onDone()
+                        }
+                    }
+            } finally {
+                if (!committed) {
+                    backup?.close()
                 }
             }
-        } finally {
-            if (!committed) backup?.close()
+        message =
+            assetResultMessage(
+                result,
+                "foliageApplyCancelled",
+                conflict = { AbyssusBundle.message("foliageApplyConflict", it.substringAfterLast('/')) },
+                collision = { AbyssusBundle.message("foliageApplyConflict", it.substringAfterLast('/')) },
+                failed = {
+                    AbyssusBundle.message("foliageApplyFailed", it.cause.documentDisplayMessage()) +
+                        if (it.leftover.isEmpty()) {
+                            ""
+                        } else {
+                            " " + AbyssusBundle.message("foliageApplyLeftover", it.leftover.joinToString())
+                        }
+                },
+            )
+        if (result != AssetCommandResult.Done) {
+            onChange()
         }
-        message = assetResultMessage(
-            result, "foliageApplyCancelled",
-            conflict = { AbyssusBundle.message("foliageApplyConflict", it.substringAfterLast('/')) },
-            collision = { AbyssusBundle.message("foliageApplyConflict", it.substringAfterLast('/')) },
-            failed = {
-                AbyssusBundle.message("foliageApplyFailed", it.cause.documentDisplayMessage()) +
-                    if (it.leftover.isEmpty()) "" else " " + AbyssusBundle.message("foliageApplyLeftover", it.leftover.joinToString())
-            },
-        )
-        if (result != AssetCommandResult.Done) onChange()
         return result
     }
 
@@ -406,7 +532,9 @@ class FoliageController(
         }
         val fresh = readCurrent() as? FoliageSource.Ready
         if (meta == null || fresh == null || fresh.metaText != source.metaText) {
-            if (fresh != null) sourceRead(fresh)
+            if (fresh != null) {
+                sourceRead(fresh)
+            }
             message = AbyssusBundle.message("foliageSourceChanged")
             onChange()
             return null
@@ -417,13 +545,14 @@ class FoliageController(
                 meta,
                 AbyssusBundle.message("commandFoliageColliders"),
                 source.metaText,
-                editedText
+                editedText,
             )
-        }.getOrElse {
-            message = AbyssusBundle.message("foliageApplyFailed", it.documentDisplayMessage())
-            onChange()
-            return null
         }
+            .getOrElse {
+                message = AbyssusBundle.message("foliageApplyFailed", it.documentDisplayMessage())
+                onChange()
+                return null
+            }
         if (!written) {
             message = AbyssusBundle.message("foliageSourceChanged")
             onChange()
@@ -477,13 +606,21 @@ class FoliageController(
     }
 
     /** The edited settings as [FoliageMetaEdits] writes them onto the text that was read. */
-    private fun editedText(): String = when (val outcome = edits.edit(source.metaText, source.settings, settings)) {
-        is TextEditOutcome.Edited -> outcome.text
-        else -> source.metaText
-    }
+    private fun editedText(): String =
+        when (val outcome = edits.edit(source.metaText, source.settings, settings)) {
+            is TextEditOutcome.Edited -> outcome.text
+            else -> source.metaText
+        }
 
     private fun foliageOf(text: String): FoliageMeta =
-        runCatchingKeepingCancellation { com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing.foliageMeta(text) }.getOrNull() ?: FoliageMeta()
+        runCatchingKeepingCancellation {
+                com.intellij.openapi.components
+                    .service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>()
+                    .documents
+                    .parsing
+                    .foliageMeta(text)
+            }
+            .getOrNull() ?: FoliageMeta()
 
     /** Counts the copies of the current settings off the EDT; the newest request wins. */
     private fun generate() {
@@ -492,33 +629,41 @@ class FoliageController(
         val settings = settings
         val masks = source.masks + overriddenMasks()
         generating = true
-        background(Runnable {
-            val result = runCatchingKeepingCancellation { scatter.scatter(terrain, settings, masks) }
-            ui(Runnable {
-                if (disposed || token != generation) return@Runnable
-                generating = false
-                result.fold(
-                    onSuccess = { counted ->
-                        outcome = counted
-                        outcomeSettings = settings
-                        outcomeTerrain = terrain
-                        outcomeMasks = masks
-                        outcomeDataSha256 = runCatchingKeepingCancellation {
-                            sha256Hex(dataFile.write(counted.bake))
-                        }.getOrNull()
-                        // the limit notice beside the counts explains a refusal; there is nothing else to say
-                        message = null
-                    },
-                    onFailure = {
-                        outcome = null
-                        outcomeSettings = null
-                        outcomeDataSha256 = null
-                        message = AbyssusBundle.message("foliagePreviewFailed", it.documentDisplayMessage())
-                    },
+        background(
+            Runnable {
+                val result = runCatchingKeepingCancellation { scatter.scatter(terrain, settings, masks) }
+                ui(
+                    Runnable {
+                        if (disposed || token != generation) {
+                            return@Runnable
+                        }
+                        generating = false
+                        result.fold(
+                            onSuccess = { counted ->
+                                outcome = counted
+                                outcomeSettings = settings
+                                outcomeTerrain = terrain
+                                outcomeMasks = masks
+                                outcomeDataSha256 =
+                                    runCatchingKeepingCancellation {
+                                        sha256Hex(dataFile.write(counted.bake))
+                                    }
+                                        .getOrNull()
+                                // the limit notice beside the counts explains a refusal; there is nothing else to say
+                                message = null
+                            },
+                            onFailure = {
+                                outcome = null
+                                outcomeSettings = null
+                                outcomeDataSha256 = null
+                                message = AbyssusBundle.message("foliagePreviewFailed", it.documentDisplayMessage())
+                            },
+                        )
+                        onChange()
+                    }
                 )
-                onChange()
-            })
-        })
+            }
+        )
     }
 
     /** Drops a running preview: its result is no longer for what is shown. */

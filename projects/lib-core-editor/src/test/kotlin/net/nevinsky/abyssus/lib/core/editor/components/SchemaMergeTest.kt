@@ -11,9 +11,14 @@ import org.junit.Test
 
 /** The current editor models built-ins and leaves game components opaque. */
 class SchemaMergeTest {
-    @Test fun gameComponentsAreNeverOfferedByTheBuiltInEditor() {
+    @Test
+    fun gameComponentsAreNeverOfferedByTheBuiltInEditor() {
         val editor = ComponentEditor(ResourceEditorMessages())
-        val root = parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{"0":{"components":{"MarkerComponent":{"size":1.000}}}}}""")
+        val root =
+            parseScene(
+                """{"format":"abyssus","formatVersion":1,
+"ecs":{"0":{"components":{"MarkerComponent":{"size":1.000}}}}}"""
+            )
         assertNull(editor.kindOf("MarkerComponent"))
         assertFalse(editor.missingKinds(root, 0L).any { it.name == "MarkerComponent" })
         assertNull(editor.read(root, 0L, "MarkerComponent"))

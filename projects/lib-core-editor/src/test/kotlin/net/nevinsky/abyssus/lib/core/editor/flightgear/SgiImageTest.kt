@@ -33,7 +33,11 @@ class SgiImageTest {
 
     @Test
     fun greyAlphaAndRepeatRuns() {
-        val image = sgi.decode(sgiRle(3, 2, 2) { x, _, c -> if (c == 0) 200 else x * 100 })
+        val image = sgi.decode(sgiRle(3, 2, 2) { x, _, c -> if (c == 0) {
+            200
+        } else {
+            x * 100
+        } })
         assertEquals(0xC8C8C8, image.getRGB(0, 0) and 0xFFFFFF)
         assertEquals(0, image.getRGB(0, 0) ushr 24)
         assertEquals(200, image.getRGB(2, 1) ushr 24)
@@ -51,7 +55,11 @@ class SgiImageTest {
         bytes.putShort(10, 4)
         // channel-major, bottom row first: red is 10 on the bottom row and 20 on the top row
         for (c in 0 until 4) for (row in 0 until height) for (x in 0 until width) {
-            bytes.put(512 + (c * height + row) * width + x, (if (c == 0) 10 * (row + 1) else 255).toByte())
+            bytes.put(512 + (c * height + row) * width + x, (if (c == 0) {
+                10 * (row + 1)
+            } else {
+                255
+            }).toByte())
         }
         val image = sgi.decode(bytes.array())
         assertEquals(20, (image.getRGB(0, 0) shr 16) and 0xFF)

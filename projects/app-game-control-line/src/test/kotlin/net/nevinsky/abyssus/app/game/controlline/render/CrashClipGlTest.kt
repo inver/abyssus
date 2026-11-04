@@ -8,12 +8,12 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Files
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.files.FileHandle
-import com.badlogic.gdx.math.Vector3
-import com.badlogic.gdx.graphics.g3d.utils.AnimationController
 import com.badlogic.gdx.graphics.g3d.ModelInstance
-import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
+import com.badlogic.gdx.graphics.g3d.utils.AnimationController
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.bundledProject
 import net.nevinsky.abyssus.app.game.controlline.flight.CrashSeverity
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -24,18 +24,20 @@ import org.junit.Test
 class CrashClipGlTest {
     @Before fun requireGl() = assumeTrue("GL tests are opt-in", TestGl.enabled)
 
-    @Test fun eachCrashClipPlaysOnceAndHoldsItsLastFrame() = TestGl.run {
+    @Test
+    fun eachCrashClipPlaysOnceAndHoldsItsLastFrame() = TestGl.run {
         // the model's texture loads through Gdx.files, as in the game
         Gdx.files = Lwjgl3Files()
         val file = FileHandle(bundledProject().resolve("assets/model_trainer/model.glb").toFile())
         val loader = AssimpModelLoader()
         val model = loader.buildIntModel(loader.loadData(file), file)
         try {
-            val moved = mapOf(
-                CrashSeverity.LITTLE to listOf("NoseWheel", "RightWheel"),
-                CrashSeverity.MEDIUM to listOf("LeftWing", "Tail"),
-                CrashSeverity.FULL to listOf("Propeller", "LeftWing", "RightWing", "Tail", "LeftWheel"),
-            )
+            val moved =
+                mapOf(
+                    CrashSeverity.LITTLE to listOf("NoseWheel", "RightWheel"),
+                    CrashSeverity.MEDIUM to listOf("LeftWing", "Tail"),
+                    CrashSeverity.FULL to listOf("Propeller", "LeftWing", "RightWing", "Tail", "LeftWheel"),
+                )
             for ((severity, parts) in moved) {
                 val instance = ModelInstance(model)
                 val rest = parts.associateWith { centre(instance, it) }
@@ -48,7 +50,12 @@ class CrashClipGlTest {
                 }
                 val end = parts.associateWith { centre(instance, it) }
                 controller.update(1f)
-                for (part in parts) assertEquals("${severity.clip}: $part after the end", 0f, centre(instance, part).dst(end.getValue(part)), 1e-6f)
+                for (part in parts) assertEquals(
+                    "${severity.clip}: $part after the end",
+                    0f,
+                    centre(instance, part).dst(end.getValue(part)),
+                    1e-6f,
+                )
             }
         } finally {
             model.dispose()

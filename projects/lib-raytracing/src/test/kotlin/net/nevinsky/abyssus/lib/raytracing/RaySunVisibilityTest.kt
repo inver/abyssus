@@ -10,15 +10,25 @@ import org.junit.Test
 /** The cloud visibility contract: validation, identity, the shading payload layout and when it is re-uploaded. */
 class RaySunVisibilityTest {
     private val rows = floatArrayOf(.1f, 0f, 0f, .5f, 0f, 0f, .1f, .5f)
-    private fun map(light: String = "sun", revision: Long = 1, outside: Float = .6f, texels: FloatArray = FloatArray(4) { .25f * (it + 1) }) =
-        RaySunVisibility(light, 2, texels, rows, .1f, outside, revision)
+
+    private fun map(
+        light: String = "sun",
+        revision: Long = 1,
+        outside: Float = .6f,
+        texels: FloatArray = FloatArray(4) { .25f * (it + 1) },
+    ) = RaySunVisibility(light, 2, texels, rows, .1f, outside, revision)
 
     private val sun = RayLight("sun", RayLightKind.DIRECTIONAL, RayColor(1f, 1f, 1f))
     private val lamp = RayLight("lamp", RayLightKind.POINT, RayColor(1f, 1f, 1f), range = 5f)
-    private fun scene(visibility: RaySunVisibility?, lights: List<RayLight> = listOf(lamp, sun), textures: List<RayTexture> = emptyList()) =
-        RaySceneSnapshot(emptyList(), emptyList(), emptyList(), textures, lights, sunVisibility = visibility)
 
-    @Test fun invalidMapsAreRejected() {
+    private fun scene(
+        visibility: RaySunVisibility?,
+        lights: List<RayLight> = listOf(lamp, sun),
+        textures: List<RayTexture> = emptyList(),
+    ) = RaySceneSnapshot(emptyList(), emptyList(), emptyList(), textures, lights, sunVisibility = visibility)
+
+    @Test
+    fun invalidMapsAreRejected() {
         fun fails(block: () -> Unit) = assertTrue(runCatching(block).exceptionOrNull() is IllegalArgumentException)
         fails { RaySunVisibility("sun", 2, FloatArray(3), rows, .1f, 1f) }
         fails { RaySunVisibility("sun", 2, floatArrayOf(0f, 0f, 0f, 1.5f), rows, .1f, 1f) }
@@ -29,7 +39,8 @@ class RaySunVisibilityTest {
         fails { RaySunVisibility("sun", 2, FloatArray(4), rows, .1f, 1.2f) }
     }
 
-    @Test fun theMapIsAnImmutableCopyIdentifiedByItsRevision() {
+    @Test
+    fun theMapIsAnImmutableCopyIdentifiedByItsRevision() {
         val texels = FloatArray(4) { .5f }
         val a = RaySunVisibility("sun", 2, texels, rows, .1f, .6f, 7)
         texels[0] = 0f
@@ -42,7 +53,8 @@ class RaySunVisibilityTest {
         assertNotEquals(a, RaySunVisibility("other", 2, FloatArray(4) { .5f }, rows, .1f, .6f, 7))
     }
 
-    @Test fun theUniformMapAppliesOnlyItsOutsideFactor() {
+    @Test
+    fun theUniformMapAppliesOnlyItsOutsideFactor() {
         val uniform = RaySunVisibility.uniform("sun", .3f, 2)
         assertEquals(.3f, uniform.outside, 0f)
         val m = uniform.worldToMap()
@@ -51,7 +63,8 @@ class RaySunVisibilityTest {
         assertTrue(u < -1f)
     }
 
-    @Test fun theShadingPayloadPointsAtTheMapAndAppendsItsTexture() {
+    @Test
+    fun theShadingPayloadPointsAtTheMapAndAppendsItsTexture() {
         val plain = RaySceneEncoding(scene(null)).encode()
         assertEquals(-1f, plain.floats[30], 0f)
         val encoded = RaySceneEncoding(scene(map())).encode()
@@ -73,7 +86,8 @@ class RaySunVisibilityTest {
         assertArrayEquals(floatArrayOf(.25f, .5f, .75f, 1f), FloatArray(4) { encoded.floats[texels + it * 4] }, 0f)
     }
 
-    @Test fun theMapFollowsTheSceneTexturesAndIsIgnoredWithoutItsLight() {
+    @Test
+    fun theMapFollowsTheSceneTexturesAndIsIgnoredWithoutItsLight() {
         val own = RayTexture("t", 1, 1, floatArrayOf(1f, 1f, 1f, 1f))
         val encoded = RaySceneEncoding(scene(map(), textures = listOf(own))).encode()
         assertEquals("after the scene's one texture", 1f, encoded.floats[encoded.floats[30].toInt() + 1], 0f)
@@ -82,13 +96,15 @@ class RaySunVisibilityTest {
         assertEquals(RaySceneEncoding(scene(null)).encode().floats.size, missing.floats.size)
     }
 
-    @Test fun theMapCountsAgainstTheTextureLimit() {
+    @Test
+    fun theMapCountsAgainstTheTextureLimit() {
         val textures = List(RAY_MAX_TEXTURES) { RayTexture("t$it", 1, 1, floatArrayOf(1f, 1f, 1f, 1f)) }
         assertNull(scene(null, textures = textures).unsupportedReason())
         assertTrue(scene(map(), textures = textures).unsupportedReason()!!.contains("textures"))
     }
 
-    @Test fun aChangedMapForcesTheShadingPayloadToBeUploadedAgain() {
+    @Test
+    fun aChangedMapForcesTheShadingPayloadToBeUploadedAgain() {
         val first = scene(map())
         assertTrue("the same map keeps the upload", shadingUnchanged(first, scene(map())))
         assertFalse("a new revision", shadingUnchanged(first, scene(map(revision = 2))))

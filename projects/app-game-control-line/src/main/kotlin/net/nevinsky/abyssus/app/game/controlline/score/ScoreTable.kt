@@ -62,7 +62,9 @@ class ScoreTable(private val file: Path, private val json: ObjectMapper = jackso
 
     /** Adds [entry] when it qualifies and saves the table; returns its rank from 1, or null when it did not enter. */
     fun add(entry: ScoreEntry): Int? {
-        if (!qualifies(entry.score)) return null
+        if (!qualifies(entry.score)) {
+            return null
+        }
         val next = board.ranked(entries + entry)
         entries = next
         save()

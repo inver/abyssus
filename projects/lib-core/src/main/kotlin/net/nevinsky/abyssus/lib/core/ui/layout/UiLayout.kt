@@ -51,7 +51,10 @@ enum class UiLayoutIssue { INVALID_VIEWPORT, INVALID_MEASURE, OVERFLOW }
 
 data class UiLayoutDiagnostic(val code: UiLayoutIssue, val widgetId: String?)
 
-/** [bounds] is the widget's own rectangle; [visible] is [bounds] clipped to every ancestor, and is what hit testing uses. */
+/**
+ * [bounds] is the widget's own rectangle; [visible] is [bounds] clipped to every ancestor, and is what hit testing
+ * uses.
+ */
 data class UiLayoutNode(val id: String, val bounds: UiRect, val visible: UiRect)
 
 /** Resolved rectangles in reference space; [order] lists widget ids parent first, in paint order. */
@@ -73,7 +76,9 @@ fun fitReference(referenceWidth: Float, referenceHeight: Float, viewportWidth: F
             viewportWidth,
             viewportHeight
         ).all { it.isFinite() && it > 0f }
-    ) return null
+    ) {
+        return null
+    }
     val scale = min(viewportWidth / referenceWidth, viewportHeight / referenceHeight)
     return UiFit(
         scale,
@@ -86,7 +91,8 @@ fun fitReference(referenceWidth: Float, referenceHeight: Float, viewportWidth: F
 
 /**
  * Pure resolution of a screen's widget tree into rectangles: anchors inside panels, measured sizes plus fixed sizes,
- * padding, spacing and grow inside rows and columns, clipping to ancestors. Authored sizes are never changed; space that
+  * padding, spacing and grow inside rows and columns, clipping to ancestors. Authored sizes are never changed; space
+  * that
  * is too small clips and is reported. No GL, no IO.
  */
 class UiLayoutEngine(private val measurer: UiMeasurer) {
@@ -116,7 +122,9 @@ class UiLayoutEngine(private val measurer: UiMeasurer) {
         }
 
         private fun sane(value: Float, widget: UiWidget): Float =
-            if (value.isFinite() && value >= 0f) value else {
+            if (value.isFinite() && value >= 0f) {
+                value
+            } else {
                 diagnostics += UiLayoutDiagnostic(UiLayoutIssue.INVALID_MEASURE, widget.id); 0f
             }
 
@@ -159,7 +167,9 @@ class UiLayoutEngine(private val measurer: UiMeasurer) {
             UiAnchor.BOTTOM_RIGHT -> 1f to 1f
         }
 
-        /** The rectangle of a [size] box whose pivot sits at the anchor point of [area], moved by the layout offsets. */
+        /**
+         * The rectangle of a [size] box whose pivot sits at the anchor point of [area], moved by the layout offsets.
+         */
         private fun anchored(layout: UiLayout, area: UiRect, size: UiSizeF): UiRect {
             val anchor = layout.anchor ?: UiAnchor.TOP_LEFT
             val (ax, ay) = fraction(anchor)
@@ -174,7 +184,9 @@ class UiLayoutEngine(private val measurer: UiMeasurer) {
         private fun place(widget: UiWidget, bounds: UiRect, parentVisible: UiRect) {
             val visible = bounds.intersect(parentVisible)
             nodes[widget.id] = UiLayoutNode(widget.id, bounds, visible)
-            if (widget.children.isEmpty()) return
+            if (widget.children.isEmpty()) {
+                return
+            }
             val pad = widget.layout.padding
             val inner = UiRect(
                 bounds.x + pad,
@@ -198,31 +210,68 @@ class UiLayoutEngine(private val measurer: UiMeasurer) {
         private fun flow(widget: UiWidget, inner: UiRect, visible: UiRect, horizontal: Boolean) {
             val children = widget.children
             val sizes = children.map(::preferred)
-            val main = sizes.map { if (horizontal) it.width else it.height }.toMutableList()
-            val available = if (horizontal) inner.width else inner.height
-            val crossAvailable = if (horizontal) inner.height else inner.width
+            val main = sizes.map { if (horizontal) {
+                it.width
+            } else {
+                it.height
+            } }.toMutableList()
+            val available = if (horizontal) {
+                inner.width
+            } else {
+                inner.height
+            }
+            val crossAvailable = if (horizontal) {
+                inner.height
+            } else {
+                inner.width
+            }
             val spacing = widget.layout.spacing
             val remaining = available - main.sum() - spacing * (children.size - 1)
-            if (remaining < -EPSILON) diagnostics += UiLayoutDiagnostic(UiLayoutIssue.OVERFLOW, widget.id)
+            if (remaining < -EPSILON) {
+                diagnostics += UiLayoutDiagnostic(UiLayoutIssue.OVERFLOW, widget.id)
+            }
             val growTotal = children.sumOf { it.layout.grow.toDouble() }.toFloat()
-            if (remaining > 0f && growTotal > 0f)
+            if (remaining > 0f && growTotal > 0f) {
                 children.forEachIndexed { i, child -> main[i] += remaining * child.layout.grow / growTotal }
-            var cursor = if (horizontal) inner.x else inner.y
+            }
+            var cursor = if (horizontal) {
+                inner.x
+            } else {
+                inner.y
+            }
             children.forEachIndexed { i, child ->
-                val explicitCross = if (horizontal) child.layout.height else child.layout.width
+                val explicitCross = if (horizontal) {
+                    child.layout.height
+                } else {
+                    child.layout.width
+                }
                 val cross = explicitCross
-                    ?: if (widget.layout.align == UiAlign.STRETCH) crossAvailable else if (horizontal) sizes[i].height else sizes[i].width
-                val crossStart = (if (horizontal) inner.y else inner.x) + when (widget.layout.align) {
+                    ?: if (widget.layout.align == UiAlign.STRETCH) {
+                        crossAvailable
+                    } else if (horizontal) {
+                        sizes[i].height
+                    } else {
+                        sizes[i].width
+                    }
+                val crossStart = (if (horizontal) {
+                    inner.y
+                } else {
+                    inner.x
+                }) + when (widget.layout.align) {
                     UiAlign.CENTER -> (crossAvailable - cross) / 2f
                     UiAlign.END -> crossAvailable - cross
                     else -> 0f
                 }
-                val rect = if (horizontal) UiRect(cursor, crossStart, main[i], cross) else UiRect(
-                    crossStart,
-                    cursor,
-                    cross,
-                    main[i]
-                )
+                val rect = if (horizontal) {
+                    UiRect(cursor, crossStart, main[i], cross)
+                } else {
+                    UiRect(
+                        crossStart,
+                        cursor,
+                        cross,
+                        main[i]
+                    )
+                }
                 place(child, rect, visible)
                 cursor += main[i] + spacing
             }

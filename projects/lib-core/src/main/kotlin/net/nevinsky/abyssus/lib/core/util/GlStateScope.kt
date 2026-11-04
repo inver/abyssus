@@ -20,7 +20,11 @@ class GlStateScope(private val caps: List<Int> = emptyList()) {
     private val gl = Gdx.gl
     private val ints = BufferUtils.newIntBuffer(16)
     private val framebuffer = read(GL_FRAMEBUFFER_BINDING)
-    private val viewport = IntArray(4).also { gl.glGetIntegerv(GL20.GL_VIEWPORT, ints); for (i in it.indices) it[i] = ints.get(i) }
+    private val viewport =
+        IntArray(4).also {
+            gl.glGetIntegerv(GL20.GL_VIEWPORT, ints)
+            for (i in it.indices) it[i] = ints.get(i)
+        }
     private val enabled = caps.map(gl::glIsEnabled)
 
     private fun read(name: Int): Int {
@@ -36,7 +40,13 @@ class GlStateScope(private val caps: List<Int> = emptyList()) {
     fun restore() {
         gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, framebuffer)
         gl.glViewport(viewport[0], viewport[1], viewport[2], viewport[3])
-        caps.zip(enabled).forEach { (cap, on) -> if (on) gl.glEnable(cap) else gl.glDisable(cap) }
+        caps.zip(enabled).forEach { (cap, on) ->
+            if (on) {
+                gl.glEnable(cap)
+            } else {
+                gl.glDisable(cap)
+            }
+        }
     }
 }
 

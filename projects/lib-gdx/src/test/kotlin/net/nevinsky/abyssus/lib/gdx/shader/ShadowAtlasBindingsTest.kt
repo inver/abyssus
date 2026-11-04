@@ -14,76 +14,132 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.Vector4
+import java.lang.reflect.Proxy
+import java.nio.FloatBuffer
+import java.nio.IntBuffer
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import java.lang.reflect.Proxy
-import java.nio.FloatBuffer
-import java.nio.IntBuffer
 
 /**
  * Headless (a stub GL that compiles anything and records uniform calls): design decision D14 of
  * `improve-control-line-performance-stability`. The same atlas bound twice uploads once.
  */
 class ShadowAtlasBindingsTest {
-    private val names = listOf(
-        "u_shadowAtlas", "u_shadowEnabled", "u_shadowTexel", "u_shadowMatrices[0]", "u_shadowTiles[0]", "u_shadowPositions[0]",
-        "u_shadowFars[0]", "u_shadowBias[0]", "u_dirShadowTile[0]", "u_pointShadowTiles[0]", "u_spotShadowTile[0]",
-    )
+    private val names =
+        listOf(
+            "u_shadowAtlas",
+            "u_shadowEnabled",
+            "u_shadowTexel",
+            "u_shadowMatrices[0]",
+            "u_shadowTiles[0]",
+            "u_shadowPositions[0]",
+            "u_shadowFars[0]",
+            "u_shadowBias[0]",
+            "u_dirShadowTile[0]",
+            "u_pointShadowTiles[0]",
+            "u_spotShadowTile[0]",
+        )
 
     /** Uniform calls by location, in order: (location, the floats or ints given). */
     private val uniforms = ArrayList<Pair<Int, List<Float>>>()
     private var gl: GL20? = null
     private var app: Application? = null
 
-    @Before fun stubGl() {
+    @Before
+    fun stubGl() {
         gl = Gdx.gl20
         app = Gdx.app
-        val stub = Proxy.newProxyInstance(GL20::class.java.classLoader, arrayOf(GL20::class.java)) { _, m, args ->
-            when (m.name) {
-                "glCreateShader", "glCreateProgram" -> 1
-                "glGetShaderiv", "glGetProgramiv" -> {
-                    val out = args[2] as IntBuffer
-                    out.put(0, if (args[1] == GL20.GL_COMPILE_STATUS || args[1] == GL20.GL_LINK_STATUS) 1 else 0)
-                    null
+        val stub =
+            Proxy.newProxyInstance(GL20::class.java.classLoader, arrayOf(GL20::class.java)) { _, m, args ->
+                when (m.name) {
+                    "glCreateShader",
+                    "glCreateProgram" -> 1
+                    "glGetShaderiv",
+                    "glGetProgramiv" -> {
+                        val out = args[2] as IntBuffer
+                        out.put(
+                            0,
+                            if (args[1] == GL20.GL_COMPILE_STATUS || args[1] == GL20.GL_LINK_STATUS) {
+                                1
+                            } else {
+                                0
+                            },
+                        )
+                        null
+                    }
+                    "glGetShaderInfoLog",
+                    "glGetProgramInfoLog" -> ""
+                    "glGetUniformLocation" -> names.indexOf(args[1] as String)
+                    "glGetAttribLocation" -> -1
+                    "glUniform1i" -> {
+                        uniforms += (args[0] as Int) to listOf((args[1] as Int).toFloat())
+                        null
+                    }
+                    "glUniform1f" -> {
+                        uniforms += (args[0] as Int) to listOf(args[1] as Float)
+                        null
+                    }
+                    "glUniform2f" -> {
+                        uniforms += (args[0] as Int) to listOf(args[1] as Float, args[2] as Float)
+                        null
+                    }
+                    "glUniform1fv",
+                    "glUniform3fv",
+                    "glUniform4fv" -> {
+                        val v = args[2]
+                        uniforms +=
+                            (args[0] as Int) to
+                                if (v is FloatArray) {
+                                    v.toList().drop(args[3] as Int)
+                                } else {
+                                    floats(v as FloatBuffer)
+                                }
+                        null
+                    }
+                    "glUniformMatrix4fv" -> {
+                        val v = args[3]
+                        uniforms +=
+                            (args[0] as Int) to
+                                if (v is FloatArray) {
+                                    v.toList().drop(args[4] as Int)
+                                } else {
+                                    floats(v as FloatBuffer)
+                                }
+                        null
+                    }
+                    else ->
+                        when (m.returnType) {
+                            java.lang.Boolean.TYPE -> false
+                            Integer.TYPE -> 0
+                            else -> null
+                        }
                 }
-                "glGetShaderInfoLog", "glGetProgramInfoLog" -> ""
-                "glGetUniformLocation" -> names.indexOf(args[1] as String)
-                "glGetAttribLocation" -> -1
-                "glUniform1i" -> { uniforms += (args[0] as Int) to listOf((args[1] as Int).toFloat()); null }
-                "glUniform1f" -> { uniforms += (args[0] as Int) to listOf(args[1] as Float); null }
-                "glUniform2f" -> { uniforms += (args[0] as Int) to listOf(args[1] as Float, args[2] as Float); null }
-                "glUniform1fv", "glUniform3fv", "glUniform4fv" -> {
-                    val v = args[2]
-                    uniforms += (args[0] as Int) to if (v is FloatArray) v.toList().drop(args[3] as Int) else floats(v as FloatBuffer)
-                    null
-                }
-                "glUniformMatrix4fv" -> {
-                    val v = args[3]
-                    uniforms += (args[0] as Int) to if (v is FloatArray) v.toList().drop(args[4] as Int) else floats(v as FloatBuffer)
-                    null
-                }
-                else -> when (m.returnType) {
-                    java.lang.Boolean.TYPE -> false
-                    Integer.TYPE -> 0
-                    else -> null
-                }
-            }
-        } as GL20
+            } as GL20
         Gdx.gl20 = stub
         Gdx.gl = stub
         // ShaderProgram keeps its programs per application, in a map: the stub needs identity equality
-        Gdx.app = Proxy.newProxyInstance(Application::class.java.classLoader, arrayOf(Application::class.java)) { proxy, m, args ->
-            when (m.name) {
-                "equals" -> proxy === args[0]
-                "hashCode" -> System.identityHashCode(proxy)
-                else -> if (m.returnType == Integer.TYPE) 0 else null
-            }
-        } as Application
+        Gdx.app =
+            Proxy.newProxyInstance(Application::class.java.classLoader, arrayOf(Application::class.java)) {
+                proxy,
+                m,
+                args ->
+                when (m.name) {
+                    "equals" -> proxy === args[0]
+                    "hashCode" -> System.identityHashCode(proxy)
+                    else ->
+                        if (m.returnType == Integer.TYPE) {
+                            0
+                        } else {
+                            null
+                        }
+                }
+            } as Application
     }
 
-    @After fun restoreGl() {
+    @After
+    fun restoreGl() {
         Gdx.gl20 = gl
         Gdx.gl = gl
         Gdx.app = app
@@ -91,26 +147,43 @@ class ShadowAtlasBindingsTest {
 
     private fun floats(b: FloatBuffer): List<Float> = (b.position() until b.limit()).map(b::get)
 
-    private val texture = object : GLTexture(GL20.GL_TEXTURE_2D, 7) {
-        override fun getWidth() = 2048
-        override fun getHeight() = 2048
-        override fun getDepth() = 0
-        override fun isManaged() = false
-        override fun reload() = Unit
-    }
+    private val texture =
+        object : GLTexture(GL20.GL_TEXTURE_2D, 7) {
+            override fun getWidth() = 2048
+
+            override fun getHeight() = 2048
+
+            override fun getDepth() = 0
+
+            override fun isManaged() = false
+
+            override fun reload() = Unit
+        }
 
     private val sun = DirectionalLight()
 
-    private fun atlas(x: Float) = ShadowAtlasAttribute(
-        texture,
-        listOf(ShadowLightRecord("sun", ShadowLightKind.DIRECTIONAL, sun, listOf(ShadowAtlasView(Matrix4().setToTranslation(x, 0f, 0f), Vector4(0f, 0f, 1f, 1f))), Vector3(1f, 2f, 3f), 1f, 0.002f)),
-    )
+    private fun atlas(x: Float) =
+        ShadowAtlasAttribute(
+            texture,
+            listOf(
+                ShadowLightRecord(
+                    "sun",
+                    ShadowLightKind.DIRECTIONAL,
+                    sun,
+                    listOf(ShadowAtlasView(Matrix4().setToTranslation(x, 0f, 0f), Vector4(0f, 0f, 1f, 1f))),
+                    Vector3(1f, 2f, 3f),
+                    1f,
+                    0.002f,
+                )
+            ),
+        )
 
     private fun program() = ShaderProgram("void main() {}", "void main() {}")
 
     private fun location(name: String) = names.indexOf(name)
 
-    @Test fun theSameAtlasBoundTwiceUploadsOnce() {
+    @Test
+    fun theSameAtlasBoundTwiceUploadsOnce() {
         val bindings = ShadowAtlasBindings()
         val program = program()
         val atlas = atlas(5f)
@@ -124,7 +197,8 @@ class ShadowAtlasBindingsTest {
         assertEquals(1L, bindings.uploads)
     }
 
-    @Test fun theUploadHoldsTheAtlasValues() {
+    @Test
+    fun theUploadHoldsTheAtlasValues() {
         val bindings = ShadowAtlasBindings()
         val atlas = atlas(5f)
         bindings.bind(program(), atlas, listOf(atlas.records[0]), emptyList(), emptyList(), 3)
@@ -143,7 +217,8 @@ class ShadowAtlasBindingsTest {
         assertTrue(last("u_pointShadowTiles[0]").all { it == -1f })
     }
 
-    @Test fun aNewAtlasAnotherProgramOrUnitUploadsAgain() {
+    @Test
+    fun aNewAtlasAnotherProgramOrUnitUploadsAgain() {
         val bindings = ShadowAtlasBindings()
         val program = program()
         val a = atlas(5f)
@@ -163,7 +238,8 @@ class ShadowAtlasBindingsTest {
         assertEquals("each program keeps what it holds", 4L, bindings.uploads)
     }
 
-    @Test fun noAtlasDisablesShadows() {
+    @Test
+    fun noAtlasDisablesShadows() {
         val bindings = ShadowAtlasBindings()
         bindings.bind(program(), null, emptyList(), emptyList(), emptyList(), 2)
         assertEquals(listOf(0f), uniforms.last { it.first == location("u_shadowEnabled") }.second)

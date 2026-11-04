@@ -12,6 +12,10 @@ import com.intellij.ui.components.panels.VerticalLayout
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import java.awt.BorderLayout
+import javax.swing.JButton
+import javax.swing.JComponent
+import javax.swing.JPanel
 import net.nevinsky.abyssus.lib.core.editor.panel.CustomRow
 import net.nevinsky.abyssus.lib.core.editor.panel.FieldRef
 import net.nevinsky.abyssus.lib.core.editor.panel.PanelBuilders
@@ -28,63 +32,117 @@ import net.nevinsky.abyssus.plugin.filetype.setSceneToggle
 import net.nevinsky.abyssus.plugin.panel.RowHooks
 import net.nevinsky.abyssus.plugin.ui.CommitOutcome
 import net.nevinsky.abyssus.plugin.ui.RayModeText
-import java.awt.BorderLayout
-import javax.swing.JButton
-import javax.swing.JComponent
-import javax.swing.JPanel
 
 /**
- * A scene's Rendering settings. The **Ray Tracing** switch flips the same per-view mode as the Scene view's toolbar toggle
- * through [SceneRayControls], follows that mode (status, reason, Retry) while it changes, and with no Scene View open it
- * opens one; it writes nothing. Controls are named `ray-tracing-switch`, `ray-tracing-status`, `ray-tracing-detail`,
- * `ray-tracing-foliage` and `ray-tracing-retry`, which is how
- * tests reach them. `ray-tracing-foliage` carries the foliage note the open Scene view's Ray Control reports, which says
- * its ray-traced image leaves foliage out, while that view shows a scene with any.
+ * A scene's Rendering settings. The **Ray Tracing** switch flips the same per-view mode as the Scene view's toolbar
+ * toggle through [SceneRayControls], follows that mode (status, reason, Retry) while it changes, and with no Scene View
+ * open it opens one; it writes nothing. Controls are named `ray-tracing-switch`, `ray-tracing-status`,
+ * `ray-tracing-detail`, `ray-tracing-foliage` and `ray-tracing-retry`, which is how tests reach them.
+ * `ray-tracing-foliage` carries the foliage note the open Scene view's Ray Control reports, which says its ray-traced
+ * image leaves foliage out, while that view shows a scene with any.
  */
-internal class SceneDetailsView @JvmOverloads constructor(
-    private val controls: SceneRayControls, private val state: PanelState.UISceneState, parent: Disposable,
-    /** Opens the skybox chooser for the scene [state] shows and returns true when it assigned a skybox; replaced in tests. */
+internal class SceneDetailsView
+@JvmOverloads
+constructor(
+    private val controls: SceneRayControls,
+    private val state: PanelState.UISceneState,
+    parent: Disposable,
+    /**
+     * Opens the skybox chooser for the scene [state] shows and returns true when it assigned a skybox; replaced in
+     * tests.
+     */
     private val browseSkybox: (VirtualFile) -> Boolean = { chooseSceneSkybox(controls.project, it) },
     collapsed: MutableMap<String, Boolean> = HashMap(),
 ) : JPanel(BorderLayout()) {
     private val facts: SceneFacts<*> = controls
     private val file = state.file
-    private val switch = JBCheckBox(AbyssusBundle.message("propertiesSceneRayTracing")).apply { name = "ray-tracing-switch" }
-    private val status = JBLabel().apply { name = "ray-tracing-status"; foreground = secondary() }
-    private val detail = JBLabel().apply { name = "ray-tracing-detail"; foreground = secondary(); isVisible = false }
-    private val foliage = JBLabel().apply { name = "ray-tracing-foliage"; foreground = secondary(); isVisible = false }
-    private val retry = JButton(AbyssusBundle.message("sceneViewRayRetry")).apply { name = "ray-tracing-retry"; isVisible = false; isFocusable = false }
+    private val switch =
+        JBCheckBox(AbyssusBundle.message("propertiesSceneRayTracing")).apply { name = "ray-tracing-switch" }
+    private val status =
+        JBLabel().apply {
+            name = "ray-tracing-status"
+            foreground = secondary()
+        }
+    private val detail =
+        JBLabel().apply {
+            name = "ray-tracing-detail"
+            foreground = secondary()
+            isVisible = false
+        }
+    private val foliage =
+        JBLabel().apply {
+            name = "ray-tracing-foliage"
+            foreground = secondary()
+            isVisible = false
+        }
+    private val retry =
+        JButton(AbyssusBundle.message("sceneViewRayRetry")).apply {
+            name = "ray-tracing-retry"
+            isVisible = false
+            isFocusable = false
+        }
     private var updating = false
 
     private val skyboxModel = scenePanelModel(state.scene, ProjectLayout.abssFor(file) != null).skybox
     private val skybox = SkyboxRow(file, skyboxModel.value, skyboxModel.browsable, browseSkybox)
 
-    private val hooks = object : RowHooks {
-        override fun commit(ref: FieldRef, text: String): CommitOutcome = CommitOutcome.Unchanged
-        override fun custom(key: String): JComponent? = if (key == "rendering") renderingBody() else null
-        override fun openScreenEditor() {}
-        override fun assetField(key: String, label: String): JComponent? = if (key == "skyboxName") skybox.component(label) else null
-    }
+    private val hooks =
+        object : RowHooks {
+            override fun commit(ref: FieldRef, text: String): CommitOutcome = CommitOutcome.Unchanged
+
+            override fun custom(key: String): JComponent? =
+                if (key == "rendering") {
+                    renderingBody()
+                } else {
+                    null
+                }
+
+            override fun openScreenEditor() {}
+
+            override fun assetField(key: String, label: String): JComponent? =
+                if (key == "skyboxName") {
+                    skybox.component(label)
+                } else {
+                    null
+                }
+        }
 
     init {
         val abss = ProjectLayout.abssFor(file)
-        val base = PanelBuilders(EditorBundle, { false }).scene(
-            state.scene, abss?.name.orEmpty(), "scenes/${file.name}",
-        )
+        val base =
+            PanelBuilders(EditorBundle, { false })
+                .scene(
+                    state.scene,
+                    abss?.name.orEmpty(),
+                    "scenes/${file.name}",
+                )
         // the Rendering section (ray tracing) is not part of the board; it stays, framed like the others
-        val rendering = Section(
-            "scene.rendering", AbyssusBundle.message("propertiesSceneRendering"), "render", listOf(CustomRow("rendering")),
-        )
-        val view = PanelModelView(
-            base.copy(
-                header = base.header.copy(title = state.name),
-                sections = base.sections + rendering,
-            ),
-            hooks, collapsed, titleName = "scene-name",
-            onEnabled = { section, checked -> section.enable?.settingKey?.let { setSceneToggle(controls.project, file, it, checked) } },
-        )
+        val rendering =
+            Section(
+                "scene.rendering",
+                AbyssusBundle.message("propertiesSceneRendering"),
+                "render",
+                listOf(CustomRow("rendering")),
+            )
+        val view =
+            PanelModelView(
+                base.copy(
+                    header = base.header.copy(title = state.name),
+                    sections = base.sections + rendering,
+                ),
+                hooks,
+                collapsed,
+                titleName = "scene-name",
+                onEnabled = { section, checked ->
+                    section.enable?.settingKey?.let { setSceneToggle(controls.project, file, it, checked) }
+                },
+            )
         add(view, BorderLayout.CENTER)
-        switch.addActionListener { if (!updating) controls.request(file, switch.isSelected) }
+        switch.addActionListener {
+            if (!updating) {
+                controls.request(file, switch.isSelected)
+            }
+        }
         retry.addActionListener { controls.retry(file) }
         controls.addListener(file, parent) { refresh() }
         refresh()
@@ -94,7 +152,12 @@ internal class SceneDetailsView @JvmOverloads constructor(
 
     /** The ray tracing switch, its status and the saved limits: the body of the Rendering section. */
     private fun renderingBody(): JComponent {
-        val row = JPanel(BorderLayout(JBUI.scale(8), 0)).apply { isOpaque = false; add(switch, BorderLayout.WEST); add(retry, BorderLayout.EAST) }
+        val row =
+            JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
+                isOpaque = false
+                add(switch, BorderLayout.WEST)
+                add(retry, BorderLayout.EAST)
+            }
         return JPanel(VerticalLayout(JBUI.scale(6))).apply {
             isOpaque = false
             border = JBUI.Borders.empty(4, 0, 8, 0)
@@ -102,10 +165,19 @@ internal class SceneDetailsView @JvmOverloads constructor(
             add(status)
             add(detail)
             add(foliage)
-            add(JBLabel("<html>${AbyssusBundle.message("propertiesSceneRayHint")} ${AbyssusBundle.message("propertiesSceneRayNote")}</html>").apply {
-                foreground = secondary(); font = JBFont.small(); name = "ray-tracing-hint"
-            })
-            // G7: the saved ray limits (samples, rays per frame, bounces, instances) are no longer scene data, so they have no rows
+            add(
+                JBLabel(
+                        "<html>${AbyssusBundle.message("propertiesSceneRayHint")} " +
+                            "${AbyssusBundle.message("propertiesSceneRayNote")}</html>"
+                    )
+                    .apply {
+                        foreground = secondary()
+                        font = JBFont.small()
+                        name = "ray-tracing-hint"
+                    }
+            )
+            // G7: the saved ray limits (samples, rays per frame, bounces, instances) are no longer scene data, so they
+            // have no rows
         }
     }
 
@@ -118,15 +190,17 @@ internal class SceneDetailsView @JvmOverloads constructor(
             switch.isSelected = mode?.requested == true || (mode == null && pending)
             switch.isEnabled = mode == null || mode.toggleEnabled
             switch.toolTipText = mode?.let(RayModeText::tooltip) ?: AbyssusBundle.message("sceneViewRayTracingTooltip")
-            status.text = when {
-                mode == null && pending -> AbyssusBundle.message("propertiesSceneRayOpening")
-                mode == null -> ""
-                else -> RayModeText.status(mode) ?: ""
-            }
-            val reason = when (mode?.phase) {
-                RayModePhase.Unavailable -> mode.unavailable?.let(RayModeText::reason)
-                else -> null // a failure's reason is already part of the status line
-            }
+            status.text =
+                when {
+                    mode == null && pending -> AbyssusBundle.message("propertiesSceneRayOpening")
+                    mode == null -> ""
+                    else -> RayModeText.status(mode) ?: ""
+                }
+            val reason =
+                when (mode?.phase) {
+                    RayModePhase.Unavailable -> mode.unavailable?.let(RayModeText::reason)
+                    else -> null // a failure's reason is already part of the status line
+                }
             detail.text = reason?.let { "<html>$it</html>" } ?: ""
             detail.isVisible = !reason.isNullOrBlank()
             val note = controls.foliageNote(file)
@@ -143,7 +217,19 @@ internal class SceneDetailsView @JvmOverloads constructor(
 internal fun chooseSceneSkybox(project: com.intellij.openapi.project.Project, file: VirtualFile): Boolean {
     val abss = ProjectLayout.abssFor(file) ?: return false
     val assets = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().assets
-    val current = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing
-        .parse(textOf(file)).skyboxName
-    return net.nevinsky.abyssus.plugin.projectView.chooseSkyboxFor(project, file, abss, current, assets.metaFiles, assets.hdrPreviews)
+    val current =
+        com.intellij.openapi.components
+            .service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>()
+            .documents
+            .parsing
+            .parse(textOf(file))
+            .skyboxName
+    return net.nevinsky.abyssus.plugin.projectView.chooseSkyboxFor(
+        project,
+        file,
+        abss,
+        current,
+        assets.metaFiles,
+        assets.hdrPreviews,
+    )
 }

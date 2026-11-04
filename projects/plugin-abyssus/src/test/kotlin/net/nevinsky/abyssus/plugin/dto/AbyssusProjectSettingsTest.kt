@@ -30,14 +30,22 @@ class AbyssusProjectSettingsTest : BasePlatformTestCase() {
         assertTrue(settings.setPhysicsEnabled(abss, true))
         val newText = String(abss.contentsToByteArray(), abss.charset)
         val json = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().json
-        assertEquals(json.pretty(json.parse(originalText, net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java).copy(physicsEnabled = true)), newText)
+        assertEquals(
+            json.pretty(
+                json
+                    .parse(originalText, net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java)
+                    .copy(physicsEnabled = true)
+            ),
+            newText,
+        )
         assertTrue(settings.getSettings(abss).physicsEnabled)
     }
 
     fun testUndoRestoresOriginalText() {
         val abss = copyAbss("Untitled")
         myFixture.openFileInEditor(abss)
-        val editor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
+        val editor =
+            com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
         val document = FileDocumentManager.getInstance().getDocument(abss)!!
         val originalText = document.text
         settings.setPhysicsEnabled(abss, true)
@@ -52,25 +60,39 @@ class AbyssusProjectSettingsTest : BasePlatformTestCase() {
         assertFalse(settings.getSettings(abss).physicsEnabled)
         val notifications = mutableListOf<Pair<VirtualFile, ProjectSettings>>()
         val connection = project.messageBus.connect(testRootDisposable)
-        connection.subscribe(ProjectSettingsListener.TOPIC, ProjectSettingsListener { file, value ->
-            notifications += file to value
-        })
+        connection.subscribe(
+            ProjectSettingsListener.TOPIC,
+            ProjectSettingsListener { file, value ->
+                notifications += file to value
+            },
+        )
         val document = FileDocumentManager.getInstance().getDocument(abss)!!
         WriteCommandAction.runWriteCommandAction(project) {
             document.setText(document.text.trimEnd().dropLast(1) + ",\"physicsEnabled\":true}")
         }
-        assertTrue(notifications.any { (file, value) -> file == abss && value.physicsEnabled && value.problems.isEmpty() })
+        assertTrue(
+            notifications.any { (file, value) -> file == abss && value.physicsEnabled && value.problems.isEmpty() }
+        )
         assertTrue(settings.getSettings(abss).physicsEnabled)
         assertFalse(String(abss.contentsToByteArray(), abss.charset).contains("physicsEnabled"))
     }
 
     fun testNonBooleanValueReportsOnceAndLeavesFileUnchanged() {
         val notices = mutableListOf<com.intellij.notification.Notification>()
-        project.messageBus.connect(testRootDisposable).subscribe(com.intellij.notification.Notifications.TOPIC,
-            object : com.intellij.notification.Notifications {
-                override fun notify(notification: com.intellij.notification.Notification) { notices += notification }
-            })
-        val abss = myFixture.addFileToProject("p/Test.abss", """{"formatVersion":1,"name":"Test","physicsEnabled":"yes"}""").virtualFile
+        project.messageBus
+            .connect(testRootDisposable)
+            .subscribe(
+                com.intellij.notification.Notifications.TOPIC,
+                object : com.intellij.notification.Notifications {
+                    override fun notify(notification: com.intellij.notification.Notification) {
+                        notices += notification
+                    }
+                },
+            )
+        val abss =
+            myFixture
+                .addFileToProject("p/Test.abss", """{"formatVersion":1,"name":"Test","physicsEnabled":"yes"}""")
+                .virtualFile
         val originalText = String(abss.contentsToByteArray(), abss.charset)
         val result = settings.getSettings(abss)
         assertFalse(result.physicsEnabled)
@@ -79,14 +101,23 @@ class AbyssusProjectSettingsTest : BasePlatformTestCase() {
         WriteCommandAction.runWriteCommandAction(project) { document.insertString(1, " ") }
         WriteCommandAction.runWriteCommandAction(project) { FileDocumentManager.getInstance().saveDocument(document) }
         repeat(3) { settings.getSettings(abss) }
-        assertEquals(notices.joinToString { "${it.groupId}: ${it.content}" }, 1,
-            notices.count { it.groupId == "Abyssus Project Settings" })
-        assertEquals(originalText.take(1) + " " + originalText.drop(1), String(abss.contentsToByteArray(), abss.charset))
+        assertEquals(
+            notices.joinToString { "${it.groupId}: ${it.content}" },
+            1,
+            notices.count { it.groupId == "Abyssus Project Settings" },
+        )
+        assertEquals(
+            originalText.take(1) + " " + originalText.drop(1),
+            String(abss.contentsToByteArray(), abss.charset),
+        )
     }
 
     fun testUnsupportedProjectCannotEnablePhysics() {
         for (header in listOf("", "\"formatVersion\":2,")) {
-            val abss = myFixture.addFileToProject("p${header.length}/Test.abss", "{$header\"physicsEnabled\":true}").virtualFile
+            val abss =
+                myFixture
+                    .addFileToProject("p${header.length}/Test.abss", "{$header\"physicsEnabled\":true}")
+                    .virtualFile
             val before = String(abss.contentsToByteArray(), abss.charset)
             assertFalse(settings.getSettings(abss).physicsEnabled)
             assertFalse(settings.setPhysicsEnabled(abss, false))
@@ -97,7 +128,8 @@ class AbyssusProjectSettingsTest : BasePlatformTestCase() {
     fun testUndoAndRedoRefreshWithoutSaving() {
         val abss = copyAbss("Untitled")
         myFixture.openFileInEditor(abss)
-        val editor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
+        val editor =
+            com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
         settings.setPhysicsEnabled(abss, true)
         UndoManager.getInstance(project).undo(editor)
         assertFalse(settings.getSettings(abss).physicsEnabled)
@@ -107,7 +139,13 @@ class AbyssusProjectSettingsTest : BasePlatformTestCase() {
 
     fun testEqualValueCreatesNoEditAndProjectsAreIndependent() {
         val a = copyAbss("Untitled")
-        val b = myFixture.addFileToProject("Other/Other.abss", """{"format":"abyssus","formatVersion":1,"physicsEnabled":true}""").virtualFile
+        val b =
+            myFixture
+                .addFileToProject(
+                    "Other/Other.abss",
+                    """{"format":"abyssus","formatVersion":1,"physicsEnabled":true}""",
+                )
+                .virtualFile
         assertTrue(settings.getSettings(b).physicsEnabled)
         assertFalse(settings.getSettings(a).physicsEnabled)
         assertFalse(settings.setPhysicsEnabled(b, true))

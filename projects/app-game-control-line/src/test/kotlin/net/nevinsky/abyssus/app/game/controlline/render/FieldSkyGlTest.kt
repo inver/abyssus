@@ -14,6 +14,8 @@ import com.badlogic.gdx.graphics.PixmapIO
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Vector3
+import java.io.File
+import java.nio.file.Files
 import net.nevinsky.abyssus.app.game.controlline.ControlLineGame
 import net.nevinsky.abyssus.app.game.controlline.components.CONTROL_LINE_COMPONENTS
 import net.nevinsky.abyssus.lib.core.BaseCtx
@@ -25,13 +27,11 @@ import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
 
 /**
- * The field's sky (its own atmosphere and cloud asset, without the terrain) drawn with each cloud technique into a 1280 x 720 target: a picture of each to
- * `build/sky-shots/<technique>-<view>.png` for a person to compare with the reference photo, and the milliseconds a
- * frame takes. Opt-in: `-Dabyssus.glTests=true`.
+ * The field's sky (its own atmosphere and cloud asset, without the terrain) drawn with each cloud technique into a 1280
+ * x 720 target: a picture of each to `build/sky-shots/<technique>-<view>.png` for a person to compare with the
+ * reference photo, and the milliseconds a frame takes. Opt-in: `-Dabyssus.glTests=true`.
  */
 class FieldSkyGlTest {
     private class Shot(val image: Pixmap, val millis: Double)
@@ -39,14 +39,29 @@ class FieldSkyGlTest {
     @Test
     fun everyTechniqueIsPicturedAndCumulusIsFasterThanShells() {
         assumeTrue("GL tests are opt-in", TestGl.enabled)
-        val out = File("build/sky-shots").apply { deleteRecursively(); mkdirs() }
+        val out =
+            File("build/sky-shots").apply {
+                deleteRecursively()
+                mkdirs()
+            }
         val times = HashMap<CloudTechnique, Double>()
         TestGl.run(1200) {
-            for (technique in listOf(CloudTechnique.LAYERED, CloudTechnique.CUMULUS, CloudTechnique.SHELLS, CloudTechnique.VOLUMETRIC)) {
+            for (technique in
+                listOf(
+                    CloudTechnique.LAYERED,
+                    CloudTechnique.CUMULUS,
+                    CloudTechnique.SHELLS,
+                    CloudTechnique.VOLUMETRIC,
+                )) {
                 for ((view, shot) in render(technique)) {
-                    PixmapIO.writePNG(Gdx.files.absolute(File(out, "${technique.key}-$view.png").absolutePath), shot.image)
+                    PixmapIO.writePNG(
+                        Gdx.files.absolute(File(out, "${technique.key}-$view.png").absolutePath),
+                        shot.image,
+                    )
                     println("sky ${technique.key} $view: %.2f ms a frame".format(shot.millis))
-                    if (view == "sky") times[technique] = shot.millis
+                    if (view == "sky") {
+                        times[technique] = shot.millis
+                    }
                     shot.image.dispose()
                 }
             }
@@ -64,8 +79,10 @@ class FieldSkyGlTest {
         File(checkNotNull(System.getProperty("controlLine.project"))).copyRecursively(project, overwrite = true)
         val messages = mutableListOf<String>()
         val log = warningsTo(messages)
-        val ctx = BaseCtx(project.path, "/shader", ControlLineGame::class.java, log)
-            .also { it.componentRegistry.registerAll(CONTROL_LINE_COMPONENTS) }
+        val ctx =
+            BaseCtx(project.path, "/shader", ControlLineGame::class.java, log).also {
+                it.componentRegistry.registerAll(CONTROL_LINE_COMPONENTS)
+            }
         val loader = RuntimeSceneLoader(ctx.sceneLoader, ctx.ecsLoader, log)
         val target = FrameBuffer(Pixmap.Format.RGBA8888, 1280, 720, true)
         try {
@@ -77,17 +94,20 @@ class FieldSkyGlTest {
                 ctx.assetStorage.request(name)
                 ctx.assetStorage.update()
                 sky = ctx.assetStorage.getAs<SkyRenderer>(name)
-                if (sky == null) Thread.sleep(10)
+                if (sky == null) {
+                    Thread.sleep(10)
+                }
                 check(++frames < 2_000) { "the sky never loaded: $messages" }
             }
-            fun view(elevation: Float) = PerspectiveCamera(60f, 1280f, 720f).apply {
-                position.set(0f, 1.6f, 0f)
-                direction.set(0.3f, 0f, -1f).nor().rotate(Vector3(1f, 0f, 0.3f).nor(), elevation)
-                up.set(Vector3.Y)
-                near = 0.5f
-                far = 20_000f
-                update()
-            }
+            fun view(elevation: Float) =
+                PerspectiveCamera(60f, 1280f, 720f).apply {
+                    position.set(0f, 1.6f, 0f)
+                    direction.set(0.3f, 0f, -1f).nor().rotate(Vector3(1f, 0f, 0.3f).nor(), elevation)
+                    up.set(Vector3.Y)
+                    near = 0.5f
+                    far = 20_000f
+                    update()
+                }
             fun draw(camera: PerspectiveCamera, time: Double) {
                 target.begin()
                 Gdx.gl.glClearColor(0.6f, 0.7f, 0.85f, 1f)
@@ -101,13 +121,18 @@ class FieldSkyGlTest {
             }
             fun shot(camera: PerspectiveCamera): Shot {
                 repeat(30) { draw(camera, 30.0) }
-                target.begin(); Gdx.gl.glFinish(); target.end()
-                // the fastest of five batches: a GPU still raising its clock, or busy with something else, only slows a batch
+                target.begin()
+                Gdx.gl.glFinish()
+                target.end()
+                // the fastest of five batches: a GPU still raising its clock, or busy with something else, only slows a
+                // batch
                 var millis = Double.MAX_VALUE
                 repeat(5) {
                     val start = System.nanoTime()
                     repeat(20) { draw(camera, 30.0) }
-                    target.begin(); Gdx.gl.glFinish(); target.end()
+                    target.begin()
+                    Gdx.gl.glFinish()
+                    target.end()
                     millis = minOf(millis, (System.nanoTime() - start) / 20e6)
                 }
                 target.begin()

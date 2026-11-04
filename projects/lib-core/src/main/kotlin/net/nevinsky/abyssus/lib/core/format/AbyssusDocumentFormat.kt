@@ -7,24 +7,41 @@ package net.nevinsky.abyssus.lib.core.format
 import com.fasterxml.jackson.databind.JsonNode
 import net.nevinsky.abyssus.lib.core.format.EntityType
 
-enum class DocumentKind { PROJECT, SCENE, ASSET }
-enum class FormatProblem { MARKER, VERSION, LEGACY_FIELD, ENTITY_SHAPE }
+enum class DocumentKind {
+    PROJECT,
+    SCENE,
+    ASSET,
+}
+
+enum class FormatProblem {
+    MARKER,
+    VERSION,
+    LEGACY_FIELD,
+    ENTITY_SHAPE,
+}
+
 data class FormatRejection(val problem: FormatProblem, val path: String)
 
 class UnsupportedDocumentFormat(val kind: DocumentKind, val reason: FormatRejection) :
-    IllegalArgumentException("Unsupported ${kind.name.lowercase()} format: ${reason.path} (${reason.problem.name.lowercase()}); requires Abyssus format version 1")
+    IllegalArgumentException(
+        "Unsupported ${kind.name.lowercase()} format: ${reason.path} (${reason.problem.name.lowercase()}); requires " +
+            "Abyssus format version 1"
+    )
 
 /** Pure admission checks, on the caller's thread. Custom component and marker payloads stay opaque. */
 class AbyssusDocumentFormat {
     fun validate(document: JsonNode, kind: DocumentKind): FormatRejection? {
-        // a document is native when it carries formatVersion 1; there is no `format` marker any more, and one a file still has is ignored
+        // a document is native when it carries formatVersion 1; there is no `format` marker any more, and one a file
+        // still has is ignored
         val version = document.get("formatVersion")
         if (version == null || !version.isIntegralNumber || !version.canConvertToInt() || version.intValue() != 1) {
             return FormatRejection(FormatProblem.VERSION, "formatVersion")
         }
         return if (kind == DocumentKind.SCENE) {
             document.get("ecs")?.let(::validateEcs)
-        } else null
+        } else {
+            null
+        }
     }
 
     /** Raw ECS helpers have no enclosing header; they must still refuse reserved legacy dispatch fields. */
@@ -39,16 +56,20 @@ class AbyssusDocumentFormat {
             return null
         }
         for ((id, entity) in ecs.properties()) {
-            if (id.toLongOrNull() == null || !entity.isObject)
+            if (id.toLongOrNull() == null || !entity.isObject) {
                 return FormatRejection(FormatProblem.ENTITY_SHAPE, "ecs.$id")
-            if (entity.has("enabled"))
+            }
+            if (entity.has("enabled")) {
                 return FormatRejection(FormatProblem.LEGACY_FIELD, "ecs.$id.enabled")
+            }
             val type = entity.get("type")
-            if (type != null && !(type.isTextual && EntityType.entries.any { it.name == type.textValue() }))
+            if (type != null && !(type.isTextual && EntityType.entries.any { it.name == type.textValue() })) {
                 return FormatRejection(FormatProblem.ENTITY_SHAPE, "ecs.$id.type")
+            }
             val disabled = entity.get("disabledComponents")
-            if (disabled != null && !(disabled.isArray && disabled.all { it.isTextual }))
+            if (disabled != null && !(disabled.isArray && disabled.all { it.isTextual })) {
                 return FormatRejection(FormatProblem.ENTITY_SHAPE, "ecs.$id.disabledComponents")
+            }
             val flags = entity.get("flags")
             if (flags != null && !(flags.isIntegralNumber && flags.canConvertToInt())) {
                 return FormatRejection(FormatProblem.ENTITY_SHAPE, "ecs.$id.flags")

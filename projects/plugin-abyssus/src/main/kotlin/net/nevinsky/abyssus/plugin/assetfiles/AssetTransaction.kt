@@ -74,7 +74,9 @@ sealed interface FileSnapshot {
         override fun toString() = "Bytes($size)"
     }
 
-    /** A rectangle of a mask file rather than the whole file; resolved to [Bytes] by the engine before it is written. */
+    /**
+     * A rectangle of a mask file rather than the whole file; resolved to [Bytes] by the engine before it is written.
+     */
     class Patch(val patch: MaskPatch) : FileSnapshot {
         override fun equals(other: Any?) = other is Patch && other.patch == patch
         override fun hashCode() = patch.hashCode()
@@ -141,7 +143,9 @@ class AssetTransaction(
 sealed interface AssetCommandResult {
     data object Done : AssetCommandResult
 
-    /** Something the operation depends on changed since the preview or snapshot: [path] differs from what was staged. */
+    /**
+     * Something the operation depends on changed since the preview or snapshot: [path] differs from what was staged.
+     */
     data class Conflict(val path: String) : AssetCommandResult
 
     /** [path] is a folder a new asset would use, and it exists already. */

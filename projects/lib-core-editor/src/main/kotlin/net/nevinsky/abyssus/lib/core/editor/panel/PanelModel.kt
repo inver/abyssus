@@ -9,7 +9,8 @@ import net.nevinsky.abyssus.lib.core.editor.components.EnabledTarget
 
 /**
  * What the Abyssus Properties panel shows, with no Swing: the header, the sections of labelled rows, and the footer.
- * The plugin maps each [Row] to a component and keeps the commit, refuse and revert behavior of its field editors; every
+  * The plugin maps each [Row] to a component and keeps the commit, refuse and revert behavior of its field editors;
+  * every
  * fact the view needs (dim defaults, units, the `game` flag, badges) is decided here and unit-tested here.
  */
 data class PanelModel(
@@ -39,7 +40,8 @@ data class Header(
 )
 
 /**
- * The `Enabled` check box of a section: [checked] reflects the flag. A component or entity toggle writes through [target];
+  * The `Enabled` check box of a section: [checked] reflects the flag. A component or entity toggle writes through
+  * [target];
  * a scene setting writes its [settingKey] (`fogEnabled`) instead. Exactly one of the two is set.
  */
 data class EnableToggle(val checked: Boolean, val target: EnabledTarget? = null, val settingKey: String? = null)
@@ -92,7 +94,8 @@ data class Axis(val name: String, val value: String, val field: FieldRef? = null
 data class VectorRow(override val label: String, val axes: List<Axis>, override val dim: Boolean = false) : Row
 
 /**
- * A combo box over [choices]; [optional] adds the empty choice, shown as [emptyLabel] when it has one. [unknown] marks a
+  * A combo box over [choices]; [optional] adds the empty choice, shown as [emptyLabel] when it has one. [unknown] marks
+  * a
  * stored [value] that is not among the [choices] (a mesh the model no longer has): the row still shows it, with
  * [unknownText] as the warning.
  */
@@ -114,7 +117,8 @@ data class ColorRow(
 ) : Row
 
 /**
- * A reference to an asset: the field shows [iconKey] and the [name], with a Browse button when [browse] is set. [choices]
+  * A reference to an asset: the field shows [iconKey] and the [name], with a Browse button when [browse] is set.
+  * [choices]
  * lists the asset folders it may name; an empty list makes the row read only.
  */
 data class AssetRow(
@@ -149,7 +153,9 @@ data class TableRow(val columns: List<String>, val rows: List<List<String>>) : R
     override val dim: Boolean get() = false
 }
 
-/** A slot where the plugin hosts one of the existing typed editors (terrain, foliage, sky, water, optics, ray settings). */
+/**
+ * A slot where the plugin hosts one of the existing typed editors (terrain, foliage, sky, water, optics, ray settings).
+ */
 data class CustomRow(val key: String) : Row {
     override val label: String get() = ""
     override val dim: Boolean get() = false

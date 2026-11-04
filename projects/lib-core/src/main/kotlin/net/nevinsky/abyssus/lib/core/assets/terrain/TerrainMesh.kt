@@ -5,20 +5,18 @@
 
 package net.nevinsky.abyssus.lib.core.assets.terrain
 
-import net.nevinsky.abyssus.lib.core.util.TERRAIN_SPLAT_TEXTURE_UNIT
-
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.VertexAttribute
-import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.graphics.g3d.Material
+import com.badlogic.gdx.graphics.g3d.Renderable
+import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.utils.Disposable
-import com.badlogic.gdx.graphics.g3d.Renderable
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
+import net.nevinsky.abyssus.lib.core.util.TERRAIN_SPLAT_TEXTURE_UNIT
 import net.nevinsky.abyssus.lib.gdx.g3d.IntMesh
-
 
 /** The texture unit of the splat map; the layers take the units before it. */
 const val SPLAT_UNIT = TERRAIN_SPLAT_TEXTURE_UNIT
@@ -44,36 +42,58 @@ class TerrainMesh(prepared: PreparedTerrain, private val assets: BuiltAssets) : 
         val vertices = prepared.vertices
         val indices = prepared.indices
         indexCount = indices.size
-        mesh = IntMesh(
-            true, vertices.size / TERRAIN_FLOATS_PER_VERTEX, indices.size,
-            VertexAttribute.Position(), VertexAttribute.Normal(), VertexAttribute.TexCoords(0)
-        )
+        mesh =
+            IntMesh(
+                true,
+                vertices.size / TERRAIN_FLOATS_PER_VERTEX,
+                indices.size,
+                VertexAttribute.Position(),
+                VertexAttribute.Normal(),
+                VertexAttribute.TexCoords(0),
+            )
         mesh.setVertices(vertices)
         mesh.setIndices(indices)
     }
 
     private fun texture(field: String): Texture? = splats[field]?.let { assets.get(it) as? Texture }
 
-    /** The built splat map texture in the storage this mesh reads, or null while there is none or it is still loading. */
+    /**
+     * The built splat map texture in the storage this mesh reads, or null while there is none or it is still loading.
+     */
     fun splatTexture(): Texture? = texture(SPLAT_MAP)
 
     /** The asset folder name of the splat map texture, or null when the terrain has none. */
     fun splatAsset(): String? = splats[SPLAT_MAP]
 
     fun draw(shader: ShaderProgram, blank: Texture) {
-        val splat = texture(SPLAT_MAP)?.also {
-            if (it !== configuredSplat) {
-                it.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
-                it.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge)
-                configuredSplat = it
+        val splat =
+            texture(SPLAT_MAP)?.also {
+                if (it !== configuredSplat) {
+                    it.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
+                    it.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge)
+                    configuredSplat = it
+                }
             }
-        }
         shader.setUniformf("u_terrainSize", data.size.toFloat())
         // base layer first, then the channels, blended by the splat map (neutral gray without any texture)
-        shader.setUniformi("u_hasSplat", if (splat != null) 1 else 0)
+        shader.setUniformi(
+            "u_hasSplat",
+            if (splat != null) {
+                1
+            } else {
+                0
+            },
+        )
         for (unit in SPLAT_LAYERS.indices) {
             val texture = texture(SPLAT_LAYERS[unit])
-            shader.setUniformi(HAS_UNIFORMS[unit], if (texture != null) 1 else 0)
+            shader.setUniformi(
+                HAS_UNIFORMS[unit],
+                if (texture != null) {
+                    1
+                } else {
+                    0
+                },
+            )
             shader.setUniformi(LAYER_UNIFORMS[unit], unit)
             (texture ?: blank).bind(unit)
         }
@@ -94,8 +114,8 @@ class TerrainMesh(prepared: PreparedTerrain, private val assets: BuiltAssets) : 
     /**
      * Re-sends the vertices after the heights of the rectangle [minX]..[maxX] by [minZ]..[maxZ] (inclusive) changed in
      * [data]: positions and normals of that rectangle and of the one-vertex border around it, whose normals read the
-     * changed heights. Beyond [FULL_UPLOAD_FRACTION] of the grid the whole vertex buffer is rebuilt instead. libGDX copies a
-     * partial update into the mesh's buffer and uploads that buffer on the next draw. Needs a GL context.
+     * changed heights. Beyond [FULL_UPLOAD_FRACTION] of the grid the whole vertex buffer is rebuilt instead. libGDX
+     * copies a partial update into the mesh's buffer and uploads that buffer on the next draw. Needs a GL context.
      */
     fun updateRegion(minX: Int, minZ: Int, maxX: Int, maxZ: Int) {
         val plan = terrainRegionPlan(data.resolution, minX, minZ, maxX, maxZ)
@@ -113,7 +133,9 @@ class TerrainMesh(prepared: PreparedTerrain, private val assets: BuiltAssets) : 
 
     /** The vertices as the mesh holds them now; for tests. */
     internal fun vertexSnapshot(): FloatArray =
-        FloatArray(data.resolution * data.resolution * TERRAIN_FLOATS_PER_VERTEX).also { mesh.getVertices(0, it.size, it) }
+        FloatArray(data.resolution * data.resolution * TERRAIN_FLOATS_PER_VERTEX).also {
+            mesh.getVertices(0, it.size, it)
+        }
 
     override fun dispose() {
         mesh.dispose()
@@ -123,12 +145,18 @@ class TerrainMesh(prepared: PreparedTerrain, private val assets: BuiltAssets) : 
 /** Past this share of the grid, a region update rebuilds the whole vertex buffer instead of sending rows. */
 const val FULL_UPLOAD_FRACTION = 0.5f
 
-/** The vertices a region update sends: the changed rectangle grown by one vertex (clamped), or everything when [full]. */
+/**
+ * The vertices a region update sends: the changed rectangle grown by one vertex (clamped), or everything when [full].
+ */
 data class TerrainRegionPlan(val minX: Int, val minZ: Int, val maxX: Int, val maxZ: Int, val full: Boolean)
 
-/** Plans the update for a changed rectangle of a [resolution] by [resolution] terrain; pure, so it is tested without GL. */
+/**
+ * Plans the update for a changed rectangle of a [resolution] by [resolution] terrain; pure, so it is tested without GL.
+ */
 fun terrainRegionPlan(resolution: Int, minX: Int, minZ: Int, maxX: Int, maxZ: Int): TerrainRegionPlan {
-    require(minX in 0..maxX && maxX < resolution && minZ in 0..maxZ && maxZ < resolution) { "rectangle outside the terrain" }
+    require(minX in 0..maxX && maxX < resolution && minZ in 0..maxZ && maxZ < resolution) {
+        "rectangle outside the terrain"
+    }
     val x0 = maxOf(0, minX - 1)
     val z0 = maxOf(0, minZ - 1)
     val x1 = minOf(resolution - 1, maxX + 1)

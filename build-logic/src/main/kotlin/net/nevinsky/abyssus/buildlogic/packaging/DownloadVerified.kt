@@ -15,7 +15,10 @@ import java.io.File
 import java.net.URI
 import java.security.MessageDigest
 
-/** Downloads [url] into [output] and fails, deleting the file, unless its SHA-256 is [sha256]. A file already there with that hash is kept. */
+/**
+ * Downloads [url] into [output] and fails, deleting the file, unless its SHA-256 is [sha256]. A file already there with
+ * that hash is kept.
+ */
 abstract class DownloadVerified : DefaultTask() {
     @get:Input
     abstract val url: Property<String>
@@ -29,7 +32,9 @@ abstract class DownloadVerified : DefaultTask() {
     @TaskAction
     fun download() {
         val file = output.get().asFile
-        if (file.isFile && hashOf(file) == sha256.get()) return
+        if (file.isFile && hashOf(file) == sha256.get()) {
+            return
+        }
         file.parentFile.mkdirs()
         URI(url.get()).toURL().openStream().use { input -> file.outputStream().use { input.copyTo(it) } }
         val actual = hashOf(file)

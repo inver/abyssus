@@ -22,6 +22,7 @@ import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
 import com.badlogic.gdx.graphics.g3d.utils.TextureDescriptor
 import com.badlogic.gdx.graphics.g3d.utils.TextureProvider
 import com.badlogic.gdx.utils.BufferUtils
+import kotlin.math.max
 import net.nevinsky.abyssus.lib.gdx.ModelLogging
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import net.nevinsky.abyssus.lib.gdx.model.ModelMesh
@@ -30,7 +31,6 @@ import net.nevinsky.abyssus.lib.gdx.model.PBRFloatAttribute
 import net.nevinsky.abyssus.lib.gdx.model.PBRTextureAttribute
 import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
 import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial.AlphaMode
-import kotlin.math.max
 
 /**
  * A stock libGDX [Model] built from this module's [ModelData], whose meshes are [IntMesh]es with 32-bit indices. The
@@ -47,13 +47,16 @@ class IntModel private constructor() : Model() {
         load(modelData, textureProvider)
     }
 
-    /** The largest number of bones one node part uses, 0 if the model is not skinned. Size `Config.numBones` with it. */
+    /**
+     * The largest number of bones one node part uses, 0 if the model is not skinned. Size `Config.numBones` with it.
+     */
     val maxBones: Int
         get() = nodes.fold(0) { most, node -> max(most, maxBones(node)) }
 
     /** `true` if any material has metallic or roughness values, so the PBR shader should draw this model. */
-    fun hasPbrMaterials(): Boolean =
-        materials.any { it.has(PBRFloatAttribute.Metallic) || it.has(PBRFloatAttribute.Roughness) }
+    fun hasPbrMaterials(): Boolean = materials.any {
+        it.has(PBRFloatAttribute.Metallic) || it.has(PBRFloatAttribute.Roughness)
+    }
 
     /** The stock `load` for this module's [ModelData], which holds `IntArray` indices. */
     fun load(modelData: ModelData, textureProvider: TextureProvider) {
@@ -91,7 +94,12 @@ class IntModel private constructor() : Model() {
             meshPart.id = part.id
             meshPart.primitiveType = part.primitiveType
             meshPart.offset = offset
-            meshPart.size = if (hasIndices) part.indices.size else numVertices
+            meshPart.size =
+                if (hasIndices) {
+                    part.indices.size
+                } else {
+                    numVertices
+                }
             meshPart.mesh = mesh
             if (hasIndices) {
                 indices.put(part.indices)
@@ -141,9 +149,10 @@ class IntModel private constructor() : Model() {
             applyPbrProperties(mtl, result)
         }
         for (tex in mtl.textures ?: return result) {
-            val texture = loadedTextures.getOrPut(tex.fileName) {
-                textureProvider.load(tex.fileName).also { disposables.add(it) }
-            }
+            val texture =
+                loadedTextures.getOrPut(tex.fileName) {
+                    textureProvider.load(tex.fileName).also { disposables.add(it) }
+                }
             val descriptor = TextureDescriptor<Texture>(texture)
             descriptor.minFilter = texture.minFilter
             descriptor.magFilter = texture.magFilter
@@ -157,13 +166,25 @@ class IntModel private constructor() : Model() {
             val type = legacyTextureType(tex.usage)
             when {
                 type != null -> result.set(TextureAttribute(type, descriptor, offsetU, offsetV, scaleU, scaleV))
-                tex.usage == PbrModelMaterial.USAGE_METALLIC_ROUGHNESS -> result.set(
-                    pbrTexture(PBRTextureAttribute.MetallicRoughnessTexture, descriptor, offsetU, offsetV, scaleU, scaleV)
-                )
-                tex.usage == PbrModelMaterial.USAGE_OCCLUSION -> result.set(
-                    pbrTexture(PBRTextureAttribute.OcclusionTexture, descriptor, offsetU, offsetV, scaleU, scaleV)
-                )
-                else -> ModelLogging.logger.atDebug().log { "Texture usage ${tex.usage} of material '${mtl.id}' is not supported" }
+                tex.usage == PbrModelMaterial.USAGE_METALLIC_ROUGHNESS ->
+                    result.set(
+                        pbrTexture(
+                            PBRTextureAttribute.MetallicRoughnessTexture,
+                            descriptor,
+                            offsetU,
+                            offsetV,
+                            scaleU,
+                            scaleV,
+                        )
+                    )
+                tex.usage == PbrModelMaterial.USAGE_OCCLUSION ->
+                    result.set(
+                        pbrTexture(PBRTextureAttribute.OcclusionTexture, descriptor, offsetU, offsetV, scaleU, scaleV)
+                    )
+                else ->
+                    ModelLogging.logger.atDebug().log {
+                        "Texture usage ${tex.usage} of material '${mtl.id}' is not supported"
+                    }
             }
             if (mtl is PbrModelMaterial) {
                 // PBR shaders read their own attributes, keep the legacy ones for the non PBR shaders
@@ -173,26 +194,33 @@ class IntModel private constructor() : Model() {
         return result
     }
 
-    private fun legacyTextureType(usage: Int): Long? = when (usage) {
-        ModelTexture.USAGE_DIFFUSE -> TextureAttribute.Diffuse
-        ModelTexture.USAGE_SPECULAR -> TextureAttribute.Specular
-        ModelTexture.USAGE_BUMP -> TextureAttribute.Bump
-        ModelTexture.USAGE_NORMAL -> TextureAttribute.Normal
-        ModelTexture.USAGE_AMBIENT -> TextureAttribute.Ambient
-        ModelTexture.USAGE_EMISSIVE -> TextureAttribute.Emissive
-        ModelTexture.USAGE_REFLECTION -> TextureAttribute.Reflection
-        else -> null
-    }
+    private fun legacyTextureType(usage: Int): Long? =
+        when (usage) {
+            ModelTexture.USAGE_DIFFUSE -> TextureAttribute.Diffuse
+            ModelTexture.USAGE_SPECULAR -> TextureAttribute.Specular
+            ModelTexture.USAGE_BUMP -> TextureAttribute.Bump
+            ModelTexture.USAGE_NORMAL -> TextureAttribute.Normal
+            ModelTexture.USAGE_AMBIENT -> TextureAttribute.Ambient
+            ModelTexture.USAGE_EMISSIVE -> TextureAttribute.Emissive
+            ModelTexture.USAGE_REFLECTION -> TextureAttribute.Reflection
+            else -> null
+        }
 
-    private fun pbrAlias(usage: Int): Long? = when (usage) {
-        ModelTexture.USAGE_DIFFUSE -> PBRTextureAttribute.BaseColorTexture
-        ModelTexture.USAGE_NORMAL -> PBRTextureAttribute.NormalTexture
-        ModelTexture.USAGE_EMISSIVE -> PBRTextureAttribute.EmissiveTexture
-        else -> null
-    }
+    private fun pbrAlias(usage: Int): Long? =
+        when (usage) {
+            ModelTexture.USAGE_DIFFUSE -> PBRTextureAttribute.BaseColorTexture
+            ModelTexture.USAGE_NORMAL -> PBRTextureAttribute.NormalTexture
+            ModelTexture.USAGE_EMISSIVE -> PBRTextureAttribute.EmissiveTexture
+            else -> null
+        }
 
     private fun pbrTexture(
-        type: Long, descriptor: TextureDescriptor<Texture>, offsetU: Float, offsetV: Float, scaleU: Float, scaleV: Float
+        type: Long,
+        descriptor: TextureDescriptor<Texture>,
+        offsetU: Float,
+        offsetV: Float,
+        scaleU: Float,
+        scaleV: Float,
     ): PBRTextureAttribute {
         val attribute = PBRTextureAttribute(type, descriptor)
         attribute.offsetU = offsetU

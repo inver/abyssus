@@ -17,7 +17,9 @@ class RayModeState {
 
     private val listeners = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
 
-    /** Called after every transition, from whichever thread made it; a listener must only schedule UI work, never block. */
+    /**
+     * Called after every transition, from whichever thread made it; a listener must only schedule UI work, never block.
+     */
     fun addListener(listener: () -> Unit) { listeners += listener }
 
     private fun changed() { listeners.forEach { it() } }
@@ -30,14 +32,18 @@ class RayModeState {
     val unavailable get() = snapshot.unavailable
 
     @Synchronized fun request(): Long {
-        if (snapshot.requested) return snapshot.revision
+        if (snapshot.requested) {
+            return snapshot.revision
+        }
         snapshot = RayModeSnapshot(RayModePhase.Checking, snapshot.revision + 1)
         changed()
         return snapshot.revision
     }
 
     @Synchronized fun retry(): Long? {
-        if (snapshot.phase != RayModePhase.Failed) return null
+        if (snapshot.phase != RayModePhase.Failed) {
+            return null
+        }
         return request()
     }
 
@@ -48,32 +54,42 @@ class RayModeState {
 
     /** Hidden views keep the toolbar request, but revoke any worker result from the previous visible lifetime. */
     @Synchronized fun rechecking(): Long? {
-        if (!snapshot.requested) return null
+        if (!snapshot.requested) {
+            return null
+        }
         snapshot = RayModeSnapshot(RayModePhase.Checking, snapshot.revision + 1)
         changed()
         return snapshot.revision
     }
 
     @Synchronized fun preparing(revision: Long, info: RayBackendInfo) {
-        if (snapshot.revision != revision || snapshot.phase != RayModePhase.Checking) return
+        if (snapshot.revision != revision || snapshot.phase != RayModePhase.Checking) {
+            return
+        }
         snapshot = snapshot.copy(phase = RayModePhase.Preparing, backendInfo = info)
         changed()
     }
 
     @Synchronized fun prepared(revision: Long) {
-        if (snapshot.revision != revision || snapshot.phase != RayModePhase.Preparing) return
+        if (snapshot.revision != revision || snapshot.phase != RayModePhase.Preparing) {
+            return
+        }
         snapshot = snapshot.copy(phase = RayModePhase.Active)
         changed()
     }
 
     @Synchronized fun unavailable(revision: Long, reason: RayBackendSelection.Unavailable) {
-        if (snapshot.revision != revision || snapshot.phase != RayModePhase.Checking) return
+        if (snapshot.revision != revision || snapshot.phase != RayModePhase.Checking) {
+            return
+        }
         snapshot = snapshot.copy(phase = RayModePhase.Unavailable, unavailable = reason)
         changed()
     }
 
     @Synchronized fun failed(revision: Long, detail: String?) {
-        if (snapshot.revision != revision || !snapshot.requested) return
+        if (snapshot.revision != revision || !snapshot.requested) {
+            return
+        }
         snapshot = snapshot.copy(phase = RayModePhase.Failed, failure = detail)
         changed()
     }

@@ -9,6 +9,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.math.Vector3
+import java.lang.reflect.Proxy
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudType
@@ -18,22 +19,26 @@ import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
-import java.lang.reflect.Proxy
 
 class ProceduralSkyLightingGlTest {
-    @Before
-    fun requireGl() = assumeTrue(TestGl.enabled)
+    @Before fun requireGl() = assumeTrue(TestGl.enabled)
 
     private val noon = Vector3(0f, 1f, 0f)
     private val frame = 1.0 / 60
 
     /** Updates until [done] holds, at most [limit] frames; returns the frames used. */
     private fun ProceduralSkyLighting.until(
-        limit: Int = 40, sun: Vector3 = noon, clouds: Clouds? = null, time: Double = 0.0, done: () -> Boolean,
+        limit: Int = 40,
+        sun: Vector3 = noon,
+        clouds: Clouds? = null,
+        time: Double = 0.0,
+        done: () -> Boolean,
     ): Int {
         for (i in 1..limit) {
             update(sun, clouds, time, true, frame)
-            if (done()) return i
+            if (done()) {
+                return i
+            }
         }
         fail("not done after $limit frames")
         return limit
@@ -93,7 +98,9 @@ class ProceduralSkyLightingGlTest {
             assertNotSame(built, lighting.current)
             assertNotEquals(built!!.ambient.toList(), lighting.current!!.ambient.toList())
         } finally {
-            lighting.dispose(); first.dispose(); reloaded.dispose()
+            lighting.dispose()
+            first.dispose()
+            reloaded.dispose()
         }
     }
 
@@ -106,9 +113,14 @@ class ProceduralSkyLightingGlTest {
         try {
             lighting.until { lighting.current != null }
             val first = lighting.current
-            Gdx.gl = Proxy.newProxyInstance(GL20::class.java.classLoader, arrayOf(GL20::class.java)) { _, method, args ->
-                if (failing && method.name == "glCheckFramebufferStatus") 0 else method.invoke(original, *(args ?: emptyArray()))
-            } as GL20
+            Gdx.gl =
+                Proxy.newProxyInstance(GL20::class.java.classLoader, arrayOf(GL20::class.java)) { _, method, args ->
+                    if (failing && method.name == "glCheckFramebufferStatus") {
+                        0
+                    } else {
+                        method.invoke(original, *(args ?: emptyArray()))
+                    }
+                } as GL20
             failing = true
             val sunset = Vector3(1f, 0.05f, 0f).nor()
             repeat(10) { lighting.update(sunset, null, 0.0, true, frame) }

@@ -1,20 +1,18 @@
 package net.nevinsky.abyssus.lib.core.assets
 
+import java.io.File
+import java.nio.file.Files
+import java.util.UUID
 import net.nevinsky.abyssus.lib.core.io.FileLoader
-
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
-import java.util.UUID
 
 class AssetIndexTest {
     private val dirs = mutableListOf<File>()
 
-    @After
-    fun cleanUp() = dirs.forEach(File::deleteRecursively)
+    @After fun cleanUp() = dirs.forEach(File::deleteRecursively)
 
     private val dir: File = Files.createTempDirectory("index").toFile().also(dirs::add)
     private val files = FileLoader(dir)
@@ -23,7 +21,8 @@ class AssetIndexTest {
     private fun asset(folder: String, uuid: String?, type: String = "TEXTURE") {
         File(dir, "assets/$folder").mkdirs()
         val id = uuid?.let { "\"uuid\":\"$it\"," } ?: ""
-        File(dir, "assets/$folder/meta.json").writeText("""{"format":"abyssus","formatVersion":1,$id"type":"$type","additional":{"file":"a.png"}}""")
+        File(dir, "assets/$folder/meta.json")
+            .writeText("""{"format":"abyssus","formatVersion":1,$id"type":"$type","additional":{"file":"a.png"}}""")
     }
 
     @Test
@@ -38,7 +37,10 @@ class AssetIndexTest {
     @Test
     fun unknownMalformedAndMissingReferencesHaveNoFolder() {
         asset("tex", "00000000-0000-0000-0000-000000000001")
-        for (ref in listOf(null, "", "not-a-uuid", "00000000-0000-0000-0000-0000000000ff")) assertNull(ref, index.folder(ref))
+        for (ref in listOf(null, "", "not-a-uuid", "00000000-0000-0000-0000-0000000000ff")) assertNull(
+            ref,
+            index.folder(ref),
+        )
     }
 
     @Test

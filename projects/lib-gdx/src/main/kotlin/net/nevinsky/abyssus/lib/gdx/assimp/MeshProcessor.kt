@@ -58,7 +58,11 @@ internal class MeshProcessor {
         val binormals = aiMesh.mBitangents()
 
         val skin: Skin? = readSkin(aiMesh)
-        val boneIds = IntArray(if (skin == null) 0 else count * BONE_WEIGHTS)
+        val boneIds = IntArray(if (skin == null) {
+            0
+        } else {
+            count * BONE_WEIGHTS
+        })
         val boneWeights = FloatArray(boneIds.size)
         if (skin != null) {
             readBoneWeights(aiMesh, boneIds, boneWeights)
@@ -141,7 +145,11 @@ internal class MeshProcessor {
         mesh.attributes = attributes.toTypedArray<VertexAttribute>()
         mesh.vertices = vertices
         mesh.parts =
-            arrayOf<ModelMeshPart>(processPart(aiMesh, index, if (count == 0) BoundingBox() else BoundingBox(min, max)))
+            arrayOf<ModelMeshPart>(processPart(aiMesh, index, if (count == 0) {
+                BoundingBox()
+            } else {
+                BoundingBox(min, max)
+            }))
         sanitizeDirections(mesh)
         return mesh
     }
@@ -154,7 +162,8 @@ internal class MeshProcessor {
         /**
          * Degenerate triangles give zero length normals (and tangents), which turn into NaN as soon as a shader
          * normalizes them. A zero normal is replaced by the average of the normals of the valid triangles that use the
-         * vertex, or by up if there is none. Zero tangents and binormals are replaced by directions perpendicular to the
+          * vertex, or by up if there is none. Zero tangents and binormals are replaced by directions perpendicular to
+          * the
          * normal.
          */
         fun sanitizeDirections(mesh: ModelMesh) {
@@ -282,7 +291,11 @@ internal class MeshProcessor {
 
         /** Any unit vector perpendicular to the normal.  */
         private fun perpendicular(normal: Vector3, out: Vector3) {
-            val axis = if (abs(normal.x) < 0.9f) Vector3.X else Vector3.Y
+            val axis = if (abs(normal.x) < 0.9f) {
+                Vector3.X
+            } else {
+                Vector3.Y
+            }
             out.set(normal).crs(axis).nor()
         }
 
@@ -343,7 +356,11 @@ internal class MeshProcessor {
             }
             val part = ModelMeshPart()
             part.id = "part_" + index
-            part.indices = if (n == indices.size) indices else indices.copyOf(n)
+            part.indices = if (n == indices.size) {
+                indices
+            } else {
+                indices.copyOf(n)
+            }
             part.primitiveType = GL20.GL_TRIANGLES
             part.boundingBox = boundingBox
             return part

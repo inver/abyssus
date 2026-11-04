@@ -44,7 +44,9 @@ class CloudViewState {
 
     /** Picks [choice]; false (and nothing changes) when it is volumetric and volumetric is [sticky]-refused. */
     fun choose(choice: CloudChoice): Boolean {
-        if (choice == CloudChoice.VOLUMETRIC && sticky) return false
+        if (choice == CloudChoice.VOLUMETRIC && sticky) {
+            return false
+        }
         this.choice = choice
         fallbackNote = false
         return true

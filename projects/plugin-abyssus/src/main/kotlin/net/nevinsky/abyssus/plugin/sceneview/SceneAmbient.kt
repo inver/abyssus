@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-
 /**
  * What lights the scene's content besides its light entities: the ambient color, or a built HDR sky (or a procedural
  * sky with `lightsScene`) that replaces it.
@@ -19,11 +18,14 @@ sealed interface SceneAmbient<out E> {
 
     companion object {
         /**
-         * The sky when the scene's enabled, named [skybox] is a lighting sky (HDR, or procedural with `lightsScene`) whose
-         * environment is built ([builtSky] returns it), whether or not the ambient light is enabled; otherwise the
-         * [ambient] color.
+         * The sky when the scene's enabled, named [skybox] is a lighting sky (HDR, or procedural with `lightsScene`)
+         * whose environment is built ([builtSky] returns it), whether or not the ambient light is enabled; otherwise
+         * the [ambient] color.
          */
-        fun <E : Any> of(skybox: String?, ambient: com.badlogic.gdx.graphics.Color?, builtSky: (String) -> E?): SceneAmbient<E> =
-            skybox?.let(builtSky)?.let { Sky(it) } ?: Color(ambient)
+        fun <E : Any> of(
+            skybox: String?,
+            ambient: com.badlogic.gdx.graphics.Color?,
+            builtSky: (String) -> E?,
+        ): SceneAmbient<E> = skybox?.let(builtSky)?.let { Sky(it) } ?: Color(ambient)
     }
 }

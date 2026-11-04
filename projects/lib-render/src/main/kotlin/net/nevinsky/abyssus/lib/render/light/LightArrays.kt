@@ -6,7 +6,8 @@
 package net.nevinsky.abyssus.lib.render.light
 
 /**
- * The lights laid out for a shader's uniform arrays (`vec3[max]`, `float[max]`): the pure part of binding, so a host can
+  * The lights laid out for a shader's uniform arrays (`vec3[max]`, `float[max]`): the pure part of binding, so a host
+  * can
  * test it without GL. Slots past a light kind's count stay zero.
  */
 class LightArrays(

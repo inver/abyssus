@@ -6,8 +6,8 @@ package net.nevinsky.abyssus.app.game.controlline.scale
 
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.bundledProject
-import net.nevinsky.abyssus.app.game.controlline.flight.FieldFlight
 import net.nevinsky.abyssus.app.game.controlline.flight.CONTROL_TENSION
+import net.nevinsky.abyssus.app.game.controlline.flight.FieldFlight
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -16,7 +16,9 @@ import org.junit.Test
 
 /** The bundled `Mig-3` replica: its model is in the plane frame, and it takes off and flies laps on its lines. */
 class Mig3FlyabilityTest {
-    private val points: List<Vector3> by lazy { checkNotNull(PhysicsAssets(bundledProject().toFile()).modelPoints("model_mig3")) }
+    private val points: List<Vector3> by lazy {
+        checkNotNull(PhysicsAssets(bundledProject().toFile()).modelPoints("model_mig3"))
+    }
 
     @Test
     fun theModelRestsOnTheGroundAndIsCentred() {
@@ -40,18 +42,21 @@ class Mig3FlyabilityTest {
     }
 
     @Test
-    fun takesOffWithinSixSecondsAndStaysOnItsLines() = FieldFlight("Mig-3").use { f ->
-        var airborneAt: Float? = null
-        var t = 0f
-        f.fly(6f) {
-            t += 1f / 120f
-            if (airborneAt == null && f.height > 1f) airborneAt = t
+    fun takesOffWithinSixSecondsAndStaysOnItsLines() =
+        FieldFlight("Mig-3").use { f ->
+            var airborneAt: Float? = null
+            var t = 0f
+            f.fly(6f) {
+                t += 1f / 120f
+                if (airborneAt == null && f.height > 1f) {
+                    airborneAt = t
+                }
+            }
+            assertTrue("Mig-3 was not above 1 m within 6 s", airborneAt != null)
+            val distance = f.position.cpy().sub(f.rig.handle).len()
+            assertTrue("off its lines: $distance m from the handle", distance > f.settings.lineLength - 0.5f)
+            assertTrue("tension ${f.flight.tension}", f.flight.tension >= CONTROL_TENSION)
         }
-        assertTrue("Mig-3 was not above 1 m within 6 s", airborneAt != null)
-        val distance = f.position.cpy().sub(f.rig.handle).len()
-        assertTrue("off its lines: $distance m from the handle", distance > f.settings.lineLength - 0.5f)
-        assertTrue("tension ${f.flight.tension}", f.flight.tension >= CONTROL_TENSION)
-    }
 
     @Test
     fun fliesLapsOnAHeldTrimAndScoresRealism() {

@@ -31,8 +31,16 @@ import com.intellij.util.Alarm
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.update.MergingUpdateQueue
 import com.intellij.util.ui.update.Update
+import java.awt.BorderLayout
+import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.StringSelection
+import java.io.File
+import javax.swing.JComponent
+import javax.swing.JPanel
+import javax.swing.SwingConstants
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.dto.ProjectDto
 import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
@@ -40,13 +48,12 @@ import net.nevinsky.abyssus.lib.core.editor.components.AddedEntity
 import net.nevinsky.abyssus.lib.core.editor.components.CopyResult
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
 import net.nevinsky.abyssus.lib.core.editor.components.EntityClipboard
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
-import net.nevinsky.abyssus.lib.core.dto.ProjectDto
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.EditorBundle
@@ -61,22 +68,18 @@ import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
 import net.nevinsky.abyssus.plugin.ui.AbyssusFileEditorBase
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import net.nevinsky.abyssus.plugin.ui.reportRejection
-import java.awt.BorderLayout
-import java.awt.datatransfer.DataFlavor
-import java.awt.datatransfer.StringSelection
-import java.io.File
-import javax.swing.JComponent
-import javax.swing.JPanel
-import javax.swing.SwingConstants
 
-/** How long typing must pause before the view re-reads the scene; the view then catches up within 300 ms of the last keystroke. */
+/**
+ * How long typing must pause before the view re-reads the scene; the view then catches up within 300 ms of the last
+ * keystroke.
+ */
 private const val RELOAD_PAUSE_MS = 200
 
 /**
  * Live view of a `.scene`; re-reads it through [paramsSource] as its sources are edited or change on disk. Moving or
- * rotating an object in the view writes the scene as one undoable edit, and Undo in this tab reaches it.
- * The view comes from [viewFactory], so tests can replace the GL panel; [json] reads asset metadata and [rayControls]
- * registers the view's Ray Tracing switch.
+ * rotating an object in the view writes the scene as one undoable edit, and Undo in this tab reaches it. The view comes
+ * from [viewFactory], so tests can replace the GL panel; [json] reads asset metadata and [rayControls] registers the
+ * view's Ray Tracing switch.
  */
 class SceneFileEditor(
     private val project: Project,
@@ -91,35 +94,49 @@ class SceneFileEditor(
     private val content = JPanel(BorderLayout()).apply { isFocusable = true }
     private var view: SceneView? = null
     private val reloads = ReloadPolicy()
-    private val reloadQueue = MergingUpdateQueue(
-        "abyssus-scene-reload",
-        RELOAD_PAUSE_MS,
-        true,
-        content,
-        this,
-        null,
-        Alarm.ThreadToUse.SWING_THREAD
-    )
+    private val reloadQueue =
+        MergingUpdateQueue(
+            "abyssus-scene-reload",
+            RELOAD_PAUSE_MS,
+            true,
+            content,
+            this,
+            null,
+            Alarm.ThreadToUse.SWING_THREAD,
+        )
 
     private var disposed = false
 
     private val viewSettings = project.service<SceneViewSettings>()
     private val projectSettings = project.service<AbyssusProjectSettings>()
 
-    private fun antialiasingLevel(): AntialiasingLevel = ProjectLayout.abssFor(file)?.let {
-        projectSettings.getSettings(it).antialiasing
-    } ?: AntialiasingLevel.DEFAULT
+    private fun antialiasingLevel(): AntialiasingLevel =
+        ProjectLayout.abssFor(file)?.let {
+            projectSettings.getSettings(it).antialiasing
+        } ?: AntialiasingLevel.DEFAULT
 
     /** Reloads assets that change on disk or in an editor; null for a scene outside a project. */
-    private val assetRefresh: AssetRefresh? = ProjectLayout.projectDirFor(file)?.let { dir ->
-        AssetRefresh(
-            dir, jsonProcessor,
-            unsavedMeta = { unsavedAssetMeta(dir) },
-            background = { AppExecutorUtil.getAppExecutorService().execute(it) },
-            ui = { ApplicationManager.getApplication().invokeLater({ if (!disposed) it.run() }, ModalityState.any()) },
-            deliver = { revision -> view?.refreshAssets(revision) },
-        )
-    }
+    private val assetRefresh: AssetRefresh? =
+        ProjectLayout.projectDirFor(file)?.let { dir ->
+            AssetRefresh(
+                dir,
+                jsonProcessor,
+                unsavedMeta = { unsavedAssetMeta(dir) },
+                background = { AppExecutorUtil.getAppExecutorService().execute(it) },
+                ui = {
+                    ApplicationManager.getApplication()
+                        .invokeLater(
+                            {
+                                if (!disposed) {
+                                    it.run()
+                                }
+                            },
+                            ModalityState.any(),
+                        )
+                },
+                deliver = { revision -> view?.refreshAssets(revision) },
+            )
+        }
 
     /** Non-null while the tab shows a message instead of a render. */
     internal var statusText: String? = null
@@ -131,115 +148,205 @@ class SceneFileEditor(
     /** The project without the settings the scene view handles separately, or null when it cannot be read. */
     private fun projectInputs(text: String? = null): ProjectDto? = runCatchingKeepingCancellation {
         val abss = ProjectLayout.abssFor(file) ?: return@runCatchingKeepingCancellation null
-        service<AbyssusPluginCtx>().documents.parsing.project(text ?: textOf(abss))
+        service<AbyssusPluginCtx>()
+            .documents
+            .parsing
+            .project(text ?: textOf(abss))
             .copy(physicsEnabled = null, sceneViewAntialiasing = null)
-    }.getOrNull()
+    }
+        .getOrNull()
 
     private fun hasRenderChange(changed: VirtualFile, text: String? = null): Boolean =
         changed == file || projectInputs(text).let { it == null || it != projectInputs }
 
     init {
-        project.messageBus.connect(this).subscribe(
-            ProjectSettingsListener.TOPIC,
-            ProjectSettingsListener { abss, settings ->
-                if (!disposed && abss == ProjectLayout.abssFor(file)) view?.setAntialiasing(settings.antialiasing)
-            })
+        project.messageBus
+            .connect(this)
+            .subscribe(
+                ProjectSettingsListener.TOPIC,
+                ProjectSettingsListener { abss, settings ->
+                    if (!disposed && abss == ProjectLayout.abssFor(file)) {
+                        view?.setAntialiasing(settings.antialiasing)
+                    }
+                },
+            )
         viewSettings.addShowFpsListener(this) { enabled -> view?.setFpsEnabled(enabled) }
         reload()
         assetRefresh?.let { refresh ->
             val assets = AssetsFolder(ProjectLayout.projectDirFor(file)!!)
             refresh.start()
-            project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
-                override fun after(events: List<VFileEvent>) {
-                    if (events.any { assets.holds(it.path) }) refresh.changed()
-                }
-            })
-            EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
-                override fun documentChanged(event: DocumentEvent) {
-                    val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
-                    if (changed.name == META_FILE && assets.contains(changed.path)) refresh.changed()
-                }
-            }, this)
+            project.messageBus
+                .connect(this)
+                .subscribe(
+                    VirtualFileManager.VFS_CHANGES,
+                    object : BulkFileListener {
+                        override fun after(events: List<VFileEvent>) {
+                            if (events.any { assets.holds(it.path) }) {
+                                refresh.changed()
+                            }
+                        }
+                    },
+                )
+            EditorFactory.getInstance()
+                .eventMulticaster
+                .addDocumentListener(
+                    object : DocumentListener {
+                        override fun documentChanged(event: DocumentEvent) {
+                            val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
+                            if (changed.name == META_FILE && assets.contains(changed.path)) {
+                                refresh.changed()
+                            }
+                        }
+                    },
+                    this,
+                )
         }
         host.listen(file, this) { entityId ->
             rayControls.selected(file, this, entityId)
             view?.selectEntity(entityId)
         }
-        project.messageBus.connect(this).subscribe(PathEditListener.TOPIC, object : PathEditListener {
-            override fun changed(target: PathEditTarget?) {
-                view?.setPathEditing(target?.takeIf { it.file == file }?.entityId)
-            }
+        project.messageBus
+            .connect(this)
+            .subscribe(
+                PathEditListener.TOPIC,
+                object : PathEditListener {
+                    override fun changed(target: PathEditTarget?) {
+                        view?.setPathEditing(target?.takeIf { it.file == file }?.entityId)
+                    }
 
-            override fun applyRequested(target: PathEditTarget) {
-                if (target.file == file) view?.applyPathEdit()
-            }
+                    override fun applyRequested(target: PathEditTarget) {
+                        if (target.file == file) {
+                            view?.applyPathEdit()
+                        }
+                    }
 
-            override fun dropRequested(target: PathEditTarget) {
-                if (target.file == file) view?.dropPathToTerrain()
-            }
-        })
-        project.messageBus.connect(this).subscribe(SculptRequests.TOPIC, BrushRequestListener { target ->
-            view?.setSculpting(target?.takeIf { it.file == file }?.entityId)
-        })
-        project.messageBus.connect(this).subscribe(PaintTextureRequests.TOPIC, BrushRequestListener { target ->
-            view?.setPaintingTexture(target?.takeIf { it.file == file }?.entityId)
-        })
-        project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
-            override fun after(events: List<VFileEvent>) {
-                if (events.any { it is VFileContentChangeEvent && isSource(it.file) && hasRenderChange(it.file) }) {
-                    ApplicationManager.getApplication().invokeLater { if (!disposed) reloadNow() }
-                }
-            }
-        })
+                    override fun dropRequested(target: PathEditTarget) {
+                        if (target.file == file) {
+                            view?.dropPathToTerrain()
+                        }
+                    }
+                },
+            )
+        project.messageBus
+            .connect(this)
+            .subscribe(
+                SculptRequests.TOPIC,
+                BrushRequestListener { target ->
+                    view?.setSculpting(target?.takeIf { it.file == file }?.entityId)
+                },
+            )
+        project.messageBus
+            .connect(this)
+            .subscribe(
+                PaintTextureRequests.TOPIC,
+                BrushRequestListener { target ->
+                    view?.setPaintingTexture(target?.takeIf { it.file == file }?.entityId)
+                },
+            )
+        project.messageBus
+            .connect(this)
+            .subscribe(
+                VirtualFileManager.VFS_CHANGES,
+                object : BulkFileListener {
+                    override fun after(events: List<VFileEvent>) {
+                        if (
+                            events.any {
+                                it is VFileContentChangeEvent && isSource(it.file) && hasRenderChange(it.file)
+                            }
+                        ) {
+                            ApplicationManager.getApplication().invokeLater {
+                                if (!disposed) {
+                                    reloadNow()
+                                }
+                            }
+                        }
+                    }
+                },
+            )
         // a plugin edit (gizmo, panel, tree, Add Light, ...) is shown at once, not after the typing pause
-        project.messageBus.connect(this).subscribe(AbyssusSceneEdited.TOPIC, AbyssusSceneEdited { edited ->
-            if (isSource(edited) && hasRenderChange(edited)) reloadNow()
-        })
-        // unsaved edits in the text tabs of the scene or of its project file: typing waits for a pause, Undo and Redo do not
-        EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
-            // any edit, from a text tab, the panel, the tree or a gizmo, stops play before it applies
-            override fun beforeDocumentChange(event: DocumentEvent) {
-                val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
-                if (!isSource(changed)) return
-                val next = event.document.text.replaceRange(
-                    event.offset,
-                    event.offset + event.oldLength,
-                    event.newFragment.toString()
-                )
-                if (hasRenderChange(changed, next)) view?.stopPlay()
-            }
+        project.messageBus
+            .connect(this)
+            .subscribe(
+                AbyssusSceneEdited.TOPIC,
+                AbyssusSceneEdited { edited ->
+                    if (isSource(edited) && hasRenderChange(edited)) {
+                        reloadNow()
+                    }
+                },
+            )
+        // unsaved edits in the text tabs of the scene or of its project file: typing waits for a pause, Undo and Redo
+        // do not
+        EditorFactory.getInstance()
+            .eventMulticaster
+            .addDocumentListener(
+                object : DocumentListener {
+                    // any edit, from a text tab, the panel, the tree or a gizmo, stops play before it applies
+                    override fun beforeDocumentChange(event: DocumentEvent) {
+                        val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
+                        if (!isSource(changed)) {
+                            return
+                        }
+                        val next =
+                            event.document.text.replaceRange(
+                                event.offset,
+                                event.offset + event.oldLength,
+                                event.newFragment.toString(),
+                            )
+                        if (hasRenderChange(changed, next)) {
+                            view?.stopPlay()
+                        }
+                    }
 
-            override fun documentChanged(event: DocumentEvent) {
-                val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
-                if (!isSource(changed) || !hasRenderChange(changed)) return
-                val undoing = UndoManager.getInstance(project).let { it.isUndoInProgress || it.isRedoInProgress }
-                if (undoing) reloadNow() else reloadAfterPause()
-            }
-        }, this)
+                    override fun documentChanged(event: DocumentEvent) {
+                        val changed = FileDocumentManager.getInstance().getFile(event.document) ?: return
+                        if (!isSource(changed) || !hasRenderChange(changed)) {
+                            return
+                        }
+                        val undoing =
+                            UndoManager.getInstance(project).let { it.isUndoInProgress || it.isRedoInProgress }
+                        if (undoing) {
+                            reloadNow()
+                        } else {
+                            reloadAfterPause()
+                        }
+                    }
+                },
+                this,
+            )
     }
 
     /** Typing in a text tab: one re-read of the final text once the typing pauses. */
     private fun reloadAfterPause() {
-        if (reloads.typing() != Reload.LATER) return
-        reloadQueue.queue(object : Update("reload") {
-            override fun run() {
-                if (reloads.due() && !disposed) reload()
+        if (reloads.typing() != Reload.LATER) {
+            return
+        }
+        reloadQueue.queue(
+            object : Update("reload") {
+                override fun run() {
+                    if (reloads.due() && !disposed) {
+                        reload()
+                    }
+                }
             }
-        })
+        )
     }
 
     /** A change that must show at once; it also covers any re-read still waiting for the pause. */
     private fun reloadNow() {
-        if (reloads.immediate() != Reload.NOW) return
+        if (reloads.immediate() != Reload.NOW) {
+            return
+        }
         reloadQueue.cancelAllUpdates()
         reload()
     }
 
     /** The scene file this tab shows. */
-    internal val sceneFile: VirtualFile get() = file
+    internal val sceneFile: VirtualFile
+        get() = file
 
     /** The live view, or null while the tab shows a message instead of a render. */
-    internal val sceneView: SceneView? get() = view
+    internal val sceneView: SceneView?
+        get() = view
 
     /** Runs the re-read that is waiting for the typing pause, if any, without waiting; for tests. */
     internal fun flushPendingReload() = reloadQueue.flush()
@@ -259,13 +366,14 @@ class SceneFileEditor(
             it.setParams(params)
             return
         }
-        val created = try {
-            viewFactory(params)
-        } catch (e: Throwable) {
-            thisLogger().warn("Failed to create OpenGL scene view", e)
-            showStatus(AbyssusBundle.message("glUnavailable", e.documentDisplayMessage()))
-            return
-        }
+        val created =
+            try {
+                viewFactory(params)
+            } catch (e: Throwable) {
+                thisLogger().warn("Failed to create OpenGL scene view", e)
+                showStatus(AbyssusBundle.message("glUnavailable", e.documentDisplayMessage()))
+                return
+            }
         created.onFailure = { e -> ApplicationManager.getApplication().invokeLater { showGlFailure(e) } }
         created.setFpsEnabled(viewSettings.showFps)
         created.setAntialiasing(antialiasingLevel())
@@ -285,7 +393,10 @@ class SceneFileEditor(
         created.onPaintTextureEnded = { project.service<PaintTextureRequests>().stop(file) }
         (created as? RayControlProvider)?.rayControl?.let { rayControls.register(file, it, created) }
         view = created
-        project.service<PathEditSession>().current?.takeIf { it.file == file }
+        project
+            .service<PathEditSession>()
+            .current
+            ?.takeIf { it.file == file }
             ?.let { created.setPathEditing(it.entityId) }
         statusText = null
         setContent(created.view)
@@ -294,8 +405,17 @@ class SceneFileEditor(
     /** Writes [edit] to the entity [entityId] of the scene as one undoable command; false when nothing changed. */
     internal fun applyTransform(entityId: Long, edit: TransformEdit): Boolean {
         val isRotate = edit.rotation != null || edit.target != null
-        val command = AbyssusBundle.message(if (isRotate) "commandRotateEntity" else "commandMoveEntity")
-        return editSceneDocument(project, file, command) { scene -> SceneTransformWriter().apply(scene, entityId, edit) }
+        val command =
+            AbyssusBundle.message(
+                if (isRotate) {
+                    "commandRotateEntity"
+                } else {
+                    "commandMoveEntity"
+                }
+            )
+        return editSceneDocument(project, file, command) { scene ->
+            SceneTransformWriter().apply(scene, entityId, edit)
+        }
     }
 
     /** Puts entity [entityId] on the clipboard as text; a refusal is shown to the user. */
@@ -329,19 +449,24 @@ class SceneFileEditor(
         return true
     }
 
-    /** Removes entity [entityId] as one undoable command; refused, and shown to the user, while another entity refers to it. */
+    /**
+     * Removes entity [entityId] as one undoable command; refused, and shown to the user, while another entity refers to
+     * it.
+     */
     internal fun deleteEntity(entityId: Long): Boolean {
         val result = host.removeEntity(file, entityId)
         reportRejection(project, result)
         return result == EditResult.Changed
     }
 
-    /** The ground to place copies on: the view's, else one read from the project; null when the user cancelled the read. */
+    /**
+     * The ground to place copies on: the view's, else one read from the project; null when the user cancelled the read.
+     */
     private fun ground(): GroundHeight? = view?.groundHeights() ?: ArrangementHeights.of(project).forScene(file)
 
     /**
-     * Writes a finished drawing as an arrangement and its copies (one undoable command) and selects the new arrangement.
-     * False when nothing was written; a refusal is shown to the user.
+     * Writes a finished drawing as an arrangement and its copies (one undoable command) and selects the new
+     * arrangement. False when nothing was written; a refusal is shown to the user.
      */
     internal fun createArrangement(asset: BaseMeta, points: List<Vector3>, closed: Boolean): Boolean {
         val heights = ground() ?: return false
@@ -363,7 +488,9 @@ class SceneFileEditor(
         return result is ArrangementResult.Changed
     }
 
-    /** Re-places the copies of the arrangement [entityId] on the current terrain; writes nothing when none would move. */
+    /**
+     * Re-places the copies of the arrangement [entityId] on the current terrain; writes nothing when none would move.
+     */
     internal fun regenerateArrangement(entityId: Long) {
         val heights = ground() ?: return
         ArrangementEditing.report(project, ArrangementEditing.regenerate(project, file, entityId, heights))
@@ -376,7 +503,9 @@ class SceneFileEditor(
     }
 
     internal fun showGlFailure(e: Throwable) {
-        if (disposed) return
+        if (disposed) {
+            return
+        }
         val text = AbyssusBundle.message("glUnavailable", e.documentDisplayMessage())
         // a view that can keep its toolbar shows the message itself; any other is replaced by it
         if (view?.showUnavailable(text) == true) {
@@ -401,8 +530,11 @@ class SceneFileEditor(
     }
 
     override fun getComponent(): JComponent = content
+
     override fun getPreferredFocusedComponent(): JComponent = content
+
     override fun getName() = AbyssusBundle.message("sceneViewEditorName")
+
     override fun getFile(): VirtualFile = file
 
     override fun dispose() {
@@ -417,17 +549,21 @@ class SceneFileEditor(
 }
 
 /**
- * The text of every asset `meta.json` of the project in [projectDir] that has unsaved changes in an editor, by file. Read
- * on the UI thread, so the background read of the assets never touches documents.
+ * The text of every asset `meta.json` of the project in [projectDir] that has unsaved changes in an editor, by file.
+ * Read on the UI thread, so the background read of the assets never touches documents.
  */
 internal fun unsavedAssetMeta(projectDir: File): Map<File, String> {
     val assets = AssetsFolder(projectDir)
     val manager = FileDocumentManager.getInstance()
-    return manager.unsavedDocuments.mapNotNull { document ->
-        val file = manager.getFile(document)?.takeIf { it.name == META_FILE } ?: return@mapNotNull null
-        val io = File(file.path).absoluteFile
-        if (assets.contains(io.path)) {
-            io to document.text
-        } else null
-    }.toMap()
+    return manager.unsavedDocuments
+        .mapNotNull { document ->
+            val file = manager.getFile(document)?.takeIf { it.name == META_FILE } ?: return@mapNotNull null
+            val io = File(file.path).absoluteFile
+            if (assets.contains(io.path)) {
+                io to document.text
+            } else {
+                null
+            }
+        }
+        .toMap()
 }

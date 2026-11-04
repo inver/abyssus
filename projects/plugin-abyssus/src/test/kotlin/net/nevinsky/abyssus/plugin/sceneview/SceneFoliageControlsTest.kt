@@ -14,8 +14,11 @@ import java.awt.Container
 import javax.swing.JToggleButton
 
 class SceneFoliageControlsTest : BasePlatformTestCase() {
-    private fun named(c: Component, name: String): Component? = if (c.name == name) c else
+    private fun named(c: Component, name: String): Component? = if (c.name == name) {
+        c
+    } else {
         (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
+    }
 
     fun testPaintModeShowsBrushAndSelectionChangeDisposesIt() {
         val renderer = testRenderer()
@@ -27,7 +30,11 @@ class SceneFoliageControlsTest : BasePlatformTestCase() {
             override fun cancelled() {}
         }) { closed = true }
         val panel = SceneViewPanel(SceneRenderParams.DEFAULT, renderer,
-            paintSession = { id, _, ready -> ready(if (id == 1L) session else null) })
+            paintSession = { id, _, ready -> ready(if (id == 1L) {
+                session
+            } else {
+                null
+            }) })
         try {
             panel.selectEntity(1L)
             val button = named(panel, "paint-foliage") as JToggleButton
@@ -47,13 +54,17 @@ class SceneFoliageControlsTest : BasePlatformTestCase() {
         var closes = 0
         val panel = SceneViewPanel(SceneRenderParams.DEFAULT, renderer, paintSession = { _, _, ready ->
             opens++
-            ready(if (renderer.params.content.foliages.isEmpty()) null else FoliagePaintSession(listOf(1),
-                object : BrushStroke {
-                    override fun pressed(terrain: TerrainTarget, at: com.badlogic.gdx.math.Vector3) = true
-                    override fun dragged(to: com.badlogic.gdx.math.Vector3, reversed: Boolean) {}
-                    override fun released() {}
-                    override fun cancelled() {}
-                }) { closes++ })
+            ready(if (renderer.params.content.foliages.isEmpty()) {
+                null
+            } else {
+                FoliagePaintSession(listOf(1),
+                    object : BrushStroke {
+                        override fun pressed(terrain: TerrainTarget, at: com.badlogic.gdx.math.Vector3) = true
+                        override fun dragged(to: com.badlogic.gdx.math.Vector3, reversed: Boolean) {}
+                        override fun released() {}
+                        override fun cancelled() {}
+                    }) { closes++ }
+            })
         })
         fun params(name: String?) = SceneRenderParams.DEFAULT.copy(content =
             net.nevinsky.abyssus.lib.core.editor.scene.SceneContent(terrains = listOf(

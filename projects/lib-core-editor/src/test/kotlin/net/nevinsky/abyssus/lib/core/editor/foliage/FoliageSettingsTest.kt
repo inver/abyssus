@@ -8,7 +8,6 @@ package net.nevinsky.abyssus.lib.core.editor.foliage
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerKind
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.FoliageSettingsBinding
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageError.ALIGNMENT
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageError.DENSITY
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageError.DUPLICATE_ID
@@ -17,6 +16,7 @@ import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageError.NOT_A_MODEL
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageError.SCALE_RANGE
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageError.SLOPE
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageError.WEIGHT
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -27,10 +27,17 @@ class FoliageSettingsTest {
 
     /** The `additional` of a foliage meta, read the way the panel reads a `meta.json`. */
     private fun read(additional: String, modelAssets: Set<String> = models): FoliageRead {
-        val values = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).parse("""{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","additional":$additional}""", Map::class.java)
-        @Suppress("UNCHECKED_CAST")
-        val block = (values["additional"] as? Map<String, Any?>).orEmpty()
-        return reader.read(FoliageSettingsBinding(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)).read(block), modelAssets)
+        val values =
+            JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
+                .parse(
+                    """{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","additional":$additional}""",
+                    Map::class.java,
+                )
+        @Suppress("UNCHECKED_CAST") val block = (values["additional"] as? Map<String, Any?>).orEmpty()
+        return reader.read(
+            FoliageSettingsBinding(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)).read(block),
+            modelAssets,
+        )
     }
 
     private fun only(read: FoliageRead, error: FoliageError): FoliageProblem {
@@ -41,9 +48,11 @@ class FoliageSettingsTest {
 
     @Test
     fun aValidLayerOfTreeParsesAndHasNoProblems() {
-        val read = read(
-            """{"terrain":"terr","maskResolution":512,"layers":[{"id":1,"kind":"OBJECT","models":[{"asset":"tree","weight":1.0}]}]}"""
-        )
+        val read =
+            read(
+                """{"terrain":"terr","maskResolution":512,"layers":[{"id":1,"kind":"OBJECT","models":[{"asset":"tree",
+"weight":1.0}]}]}"""
+            )
         assertTrue(read.problems.toString(), read.valid)
         assertEquals("terr", read.settings.terrain)
         assertEquals(512, read.settings.maskResolution)
@@ -95,10 +104,11 @@ class FoliageSettingsTest {
 
     @Test
     fun twoLayersWithTheSameIdAreRefused() {
-        val read = read(
-            """{"terrain":"terr","layers":[{"id":1,"models":[{"asset":"tree","weight":1.0}]},""" +
-                """{"id":1,"models":[{"asset":"tree","weight":1.0}]}]}"""
-        )
+        val read =
+            read(
+                """{"terrain":"terr","layers":[{"id":1,"models":[{"asset":"tree","weight":1.0}]},""" +
+                    """{"id":1,"models":[{"asset":"tree","weight":1.0}]}]}"""
+            )
         assertEquals(FOLIAGE_ID, only(read, DUPLICATE_ID).field)
     }
 
@@ -140,12 +150,16 @@ class FoliageSettingsTest {
     /** A first layer with [overrides], then a fully stated, valid DETAIL layer. */
     private fun layer(overrides: String): String =
         """{"terrain":"terr","layers":[$overrides,""" +
-            """{"id":99,"kind":"DETAIL","models":[{"asset":"tree","weight":3.0}],""" +
-            """"density":0.25,"scale":{"min":0.5,"max":1.5},"alignToNormal":1.0,"minHeight":5.0,"maxHeight":40.0,"maxSlope":20.0,""" +
+            """{"id":99,"kind":"DETAIL","models":[{"asset":"tree","weight":3.0}],
+"density":0.25,"scale":{"min":0.5,"max":1.5},"alignToNormal":1.0,"minHeight":5.0,"maxHeight":40.0,""" +
+                """"maxSlope":20.0,""" +
             """"drawDistance":120.0,"seed":-956189611}]}"""
 
     private fun layerWith(kind: String, collider: String) =
-        read("""{"terrain":"terr","layers":[{"id":1,"kind":"$kind","models":[{"asset":"tree","weight":1.0}],"collider":$collider}]}""")
+        read(
+            """{"terrain":"terr","layers":[{"id":1,"kind":"$kind","models":[{"asset":"tree","weight":1.0}],
+"collider":$collider}]}"""
+        )
 
     @Test
     fun aValidColliderKeepsTheLayerValidAndIsKeptRaw() {
@@ -163,12 +177,21 @@ class FoliageSettingsTest {
     @Test
     fun colliderSizesMustBeFiniteAndPositiveAndOffsetsFinite() {
         only(layerWith("OBJECT", """{"shape":"SPHERE","radius":0}"""), FoliageError.COLLIDER_SIZE)
-        only(layerWith("OBJECT", """{"shape":"BOX","halfExtents":{"x":1,"y":1,"z":1e50}}"""), FoliageError.COLLIDER_SIZE)
+        only(
+            layerWith("OBJECT", """{"shape":"BOX","halfExtents":{"x":1,"y":1,"z":1e50}}"""),
+            FoliageError.COLLIDER_SIZE,
+        )
         only(layerWith("OBJECT", """{"shape":"CAPSULE","radius":0.4,"halfHeight":-1}"""), FoliageError.COLLIDER_SIZE)
         only(layerWith("OBJECT", """{"offset":{"x":1e50}}"""), FoliageError.COLLIDER_OFFSET)
         only(layerWith("OBJECT", """{"shape":"HULL"}"""), FoliageError.COLLIDER_MALFORMED)
         only(layerWith("OBJECT", """"box""""), FoliageError.COLLIDER_MALFORMED)
-        val problem = read("""{"terrain":"terr","layers":[{"id":1,"models":[{"asset":"tree"}],"collider":{"shape":"SPHERE","radius":0}}]}""").problems.single()
+        val problem =
+            read(
+                    """{"terrain":"terr","layers":[{"id":1,"models":[{"asset":"tree"}],"collider":{"shape":"SPHERE",
+"radius":0}}]}"""
+                )
+                .problems
+                .single()
         assertEquals(FOLIAGE_COLLIDER, problem.field)
         assertEquals(messages.message("foliageError.COLLIDER_SIZE"), problem.reason)
     }

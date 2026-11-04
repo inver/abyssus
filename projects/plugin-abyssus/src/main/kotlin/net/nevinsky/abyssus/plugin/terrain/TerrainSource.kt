@@ -51,7 +51,8 @@ sealed interface TerrainSource {
 }
 
 /**
- * Reads the terrain in [folder] (an asset folder on disk) from `meta.json` text [metaText] (the editors' text, saved or not)
+  * Reads the terrain in [folder] (an asset folder on disk) from `meta.json` text [metaText] (the editors' text, saved
+  * or not)
  * read as [meta]: size, the height file and the recipe beside it. Reads files, so off the EDT.
  */
 fun readTerrainSource(
@@ -75,19 +76,27 @@ fun readTerrainSource(
     }
     val count = heights.size / Float.SIZE_BYTES
     val resolution = sqrt(count.toDouble()).roundToInt()
-    if (heights.size % Float.SIZE_BYTES != 0 || resolution * resolution != count) return unusable(
-        "terrainDataNotSquare",
-        dataName
-    )
-    if (resolution !in MIN_TERRAIN_RESOLUTION..MAX_TERRAIN_RESOLUTION) return unusable(
-        "terrainDataResolution",
-        resolution.toString(),
-        MAX_TERRAIN_RESOLUTION.toString()
-    )
+    if (heights.size % Float.SIZE_BYTES != 0 || resolution * resolution != count) {
+        return unusable(
+            "terrainDataNotSquare",
+            dataName
+        )
+    }
+    if (resolution !in MIN_TERRAIN_RESOLUTION..MAX_TERRAIN_RESOLUTION) {
+        return unusable(
+            "terrainDataResolution",
+            resolution.toString(),
+            MAX_TERRAIN_RESOLUTION.toString()
+        )
+    }
 
     val recipeFile = File(folder, TERRAIN_RECIPE_FILE)
     val recipeBytes =
-        if (recipeFile.isFile) runCatchingKeepingCancellation { recipeFile.readBytes() }.getOrNull() else null
+        if (recipeFile.isFile) {
+            runCatchingKeepingCancellation { recipeFile.readBytes() }.getOrNull()
+        } else {
+            null
+        }
     val recipeText = recipeBytes?.toString(Charsets.UTF_8)
     fun optional(name: String) =
         File(folder, name).takeIf { it.isFile }?.let { runCatchingKeepingCancellation { it.readBytes() }.getOrNull() }

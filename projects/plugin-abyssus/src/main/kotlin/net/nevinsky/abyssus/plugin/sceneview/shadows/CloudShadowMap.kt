@@ -84,13 +84,17 @@ class CloudShadowMap(
         timeSeconds: Double,
     ): Boolean {
         check(!disposed)
-        if (failed) return false
+        if (failed) {
+            return false
+        }
         val gl = Gdx.gl
         val state = ShadowGlState()
         val caps = listOf(GL20.GL_BLEND, GL20.GL_DEPTH_TEST, GL20.GL_CULL_FACE, GL20.GL_SCISSOR_TEST)
         try {
             checkNotNull(Gdx.gl30) { "The cloud shadow map needs OpenGL 3" }
-            if (texture == null) allocate()
+            if (texture == null) {
+                allocate()
+            }
             snapOrigin(centerX, centerZ)
             fillBands(clouds, sun, planetRadius, cameraHeight, timeSeconds)
             caps.forEach(gl::glDisable)
@@ -122,7 +126,9 @@ class CloudShadowMap(
      */
     fun readback(target: Int): FloatArray? {
         val map = texture ?: return null
-        if (failed || target <= 0 || size % target != 0) return null
+        if (failed || target <= 0 || size % target != 0) {
+            return null
+        }
         val gl = Gdx.gl
         val ints = BufferUtils.newIntBuffer(1)
         gl.glGetIntegerv(GL_FRAMEBUFFER_BINDING, ints)
@@ -153,7 +159,15 @@ class CloudShadowMap(
      * clouds above its ground footprint are, as the map is looked up with the receiver's height.
      */
     fun worldToMap(sun: Vector3, out: Matrix4): Matrix4 {
-        val sy = if (abs(sun.y) < MIN_SUN_Y) (if (sun.y < 0f) -MIN_SUN_Y else MIN_SUN_Y) else sun.y
+        val sy = if (abs(sun.y) < MIN_SUN_Y) {
+            (if (sun.y < 0f) {
+                -MIN_SUN_Y
+            } else {
+                MIN_SUN_Y
+            })
+        } else {
+            sun.y
+        }
         out.idt()
         val v = out.`val`
         v.fill(0f)
@@ -183,7 +197,9 @@ class CloudShadowMap(
         bandC.fill(0f)
         val bands = listOf(clouds.low, clouds.mid, clouds.high)
         for ((i, band) in bands.withIndex()) {
-            if (band == null) continue
+            if (band == null) {
+                continue
+            }
             val type = band.type
             val offset = field.windOffset(band, timeSeconds)
             bandA[i * 4] = type.scale * type.stretch; bandA[i * 4 + 1] = type.scale
@@ -251,12 +267,16 @@ class CloudShadowMap(
         program = null
         mesh?.dispose()
         mesh = null
-        if (framebuffer != 0) Gdx.gl.glDeleteFramebuffer(framebuffer)
+        if (framebuffer != 0) {
+            Gdx.gl.glDeleteFramebuffer(framebuffer)
+        }
         framebuffer = 0
     }
 
     override fun dispose() {
-        if (disposed) return
+        if (disposed) {
+            return
+        }
         disposed = true
         release()
     }

@@ -22,10 +22,10 @@ import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowDepthPass
 
 /**
- * Depth shader for shadow and water passes on stock [Renderable]s: it handles posed vertices, instanced meshes
- * (one `mat4 a_instance`, see [InstanceAttributes]) and alpha cutouts, and writes packed window depth, radial light
- * distance or linear view depth as [ShadowDepthPass] asks. Its own program, built for one vertex layout, bone count
- * and instancing.
+ * Depth shader for shadow and water passes on stock [Renderable]s: it handles posed vertices, instanced meshes (one
+ * `mat4 a_instance`, see [InstanceAttributes]) and alpha cutouts, and writes packed window depth, radial light distance
+ * or linear view depth as [ShadowDepthPass] asks. Its own program, built for one vertex layout, bone count and
+ * instancing.
  */
 class ModelDepthShader(private val pass: ShadowDepthPass, renderable: Renderable) : Shader {
     private val meshAttributes = renderable.meshPart.mesh.vertexAttributes
@@ -75,11 +75,25 @@ class ModelDepthShader(private val pass: ShadowDepthPass, renderable: Renderable
         if (!instanced) {
             program.setUniformMatrix("u_worldTrans", renderable.worldTransform)
         }
-        program.setUniformi("u_radialDepth", if (pass.radialDepth) 1 else 0)
+        program.setUniformi(
+            "u_radialDepth",
+            if (pass.radialDepth) {
+                1
+            } else {
+                0
+            },
+        )
         program.setUniformf("u_lightPosition", pass.lightPosition)
         program.setUniformf("u_far", pass.far)
         val clip = pass.clipPlane
-        program.setUniformi("u_clipEnabled", if (clip != null) 1 else 0)
+        program.setUniformi(
+            "u_clipEnabled",
+            if (clip != null) {
+                1
+            } else {
+                0
+            },
+        )
         if (clip != null) {
             program.setUniformf("u_clipPlane", clip[0], clip[1], clip[2], clip[3])
         }
@@ -93,14 +107,41 @@ class ModelDepthShader(private val pass: ShadowDepthPass, renderable: Renderable
         }
         val diffuse = renderable.material?.get(TextureAttribute.Diffuse) as? TextureAttribute
         val texture = diffuse?.textureDescription?.texture
-        program.setUniformi("u_diffuseTexture", if (diffuse == null) 0 else context.textureBinder.bind(diffuse.textureDescription))
+        program.setUniformi(
+            "u_diffuseTexture",
+            if (diffuse == null) {
+                0
+            } else {
+                context.textureBinder.bind(diffuse.textureDescription)
+            },
+        )
         if (mesh.vertexAttributes.any { it.alias == "a_texCoord0" }) {
-            program.setUniformf("u_uvTransform", diffuse?.offsetU ?: 0f, diffuse?.offsetV ?: 0f, diffuse?.scaleU ?: 1f, diffuse?.scaleV ?: 1f)
+            program.setUniformf(
+                "u_uvTransform",
+                diffuse?.offsetU ?: 0f,
+                diffuse?.offsetV ?: 0f,
+                diffuse?.scaleU ?: 1f,
+                diffuse?.scaleV ?: 1f,
+            )
         }
-        program.setUniformf("u_alphaTest", (renderable.material?.get(FloatAttribute.AlphaTest) as? FloatAttribute)?.value ?: 0f)
-        program.setUniformf("u_diffuseAlpha", (renderable.material?.get(ColorAttribute.Diffuse) as? ColorAttribute)?.color?.a ?: 1f)
-        program.setUniformi("u_hasDiffuse", if (texture != null) 1 else 0)
-        val locations = IntArray(mesh.vertexAttributes.size()) { program.getAttributeLocation(mesh.vertexAttributes[it].alias) }
+        program.setUniformf(
+            "u_alphaTest",
+            (renderable.material?.get(FloatAttribute.AlphaTest) as? FloatAttribute)?.value ?: 0f,
+        )
+        program.setUniformf(
+            "u_diffuseAlpha",
+            (renderable.material?.get(ColorAttribute.Diffuse) as? ColorAttribute)?.color?.a ?: 1f,
+        )
+        program.setUniformi(
+            "u_hasDiffuse",
+            if (texture != null) {
+                1
+            } else {
+                0
+            },
+        )
+        val locations =
+            IntArray(mesh.vertexAttributes.size()) { program.getAttributeLocation(mesh.vertexAttributes[it].alias) }
         // the instance attributes are found by name, so only the vertex locations are handed over
         mesh.bind(program, locations, null)
         try {
@@ -120,9 +161,13 @@ class ModelDepthShader(private val pass: ShadowDepthPass, renderable: Renderable
 
     private fun vertexSource(): String = buildString {
         val hasUv = meshAttributes.any { it.alias == "a_texCoord0" }
-        val color = meshAttributes.findByUsage(VertexAttributes.Usage.ColorUnpacked)
-            ?: meshAttributes.findByUsage(VertexAttributes.Usage.ColorPacked)
-        append("attribute vec3 a_position; uniform mat4 u_projViewTrans; varying vec3 v_worldPos; varying vec2 v_uv; varying float v_alpha; varying float v_viewDepth;\n")
+        val color =
+            meshAttributes.findByUsage(VertexAttributes.Usage.ColorUnpacked)
+                ?: meshAttributes.findByUsage(VertexAttributes.Usage.ColorPacked)
+        append(
+            "attribute vec3 a_position; uniform mat4 u_projViewTrans; varying vec3 v_worldPos; varying vec2 v_uv; " +
+                "varying float v_alpha; varying float v_viewDepth;\n"
+        )
         if (instanced) {
             // one mat4 attribute, four locations: the stock instance buffer binds each column at location + unit
             append("attribute mat4 ${InstanceAttributes.ALIAS};\n")
@@ -130,21 +175,40 @@ class ModelDepthShader(private val pass: ShadowDepthPass, renderable: Renderable
         } else {
             append("uniform mat4 u_worldTrans;\n")
         }
-        if (color != null) append("attribute vec4 ${color.alias};\n")
-        if (hasUv) append("attribute vec2 a_texCoord0; uniform vec4 u_uvTransform;\n")
+        if (color != null) {
+            append("attribute vec4 ${color.alias};\n")
+        }
+        if (hasUv) {
+            append("attribute vec2 a_texCoord0; uniform vec4 u_uvTransform;\n")
+        }
         boneSlots.forEach { append("attribute vec2 a_boneWeight$it;\n") }
         if (boneSlots.isNotEmpty()) {
             append("uniform mat4 u_bones[$boneCount];\nvoid main(){ mat4 skin=mat4(0.0); float total=0.0;\n")
             boneSlots.forEach { slot ->
-                append("if(a_boneWeight$slot.y>0.0){skin+=a_boneWeight$slot.y*u_bones[int(a_boneWeight$slot.x)];total+=a_boneWeight$slot.y;}\n")
+                append(
+                    "if(a_boneWeight$slot.y>0.0){skin+=a_boneWeight$slot.y*u_bones[int(a_boneWeight$slot.x)];" +
+                        "total+=a_boneWeight$slot.y;}\n"
+                )
             }
-            append("if(total==0.0)skin=mat4(1.0); vec4 world=u_worldTrans*skin*vec4(a_position,1.0);\n")
+            append("if(total==0.0){skin=mat4(1.0);} vec4 world=u_worldTrans*skin*vec4(a_position,1.0);\n")
         } else {
             append("void main(){vec4 world=u_worldTrans*vec4(a_position,1.0);\n")
         }
         append("v_worldPos=world.xyz;\n")
-        append(if (color != null) "v_alpha=${color.alias}.a;\n" else "v_alpha=1.0;\n")
-        append(if (hasUv) "v_uv=a_texCoord0*u_uvTransform.zw+u_uvTransform.xy;\n" else "v_uv=vec2(0.0);\n")
+        append(
+            if (color != null) {
+                "v_alpha=${color.alias}.a;\n"
+            } else {
+                "v_alpha=1.0;\n"
+            }
+        )
+        append(
+            if (hasUv) {
+                "v_uv=a_texCoord0*u_uvTransform.zw+u_uvTransform.xy;\n"
+            } else {
+                "v_uv=vec2(0.0);\n"
+            }
+        )
         append("gl_Position=u_projViewTrans*world; v_viewDepth=gl_Position.w;}\n")
     }
 
@@ -156,7 +220,8 @@ class ModelDepthShader(private val pass: ShadowDepthPass, renderable: Renderable
         fun castsShadow(renderable: Renderable): Boolean =
             (renderable.material?.get(BlendingAttribute.Type) as? BlendingAttribute)?.blended != true
 
-        internal const val FRAGMENT = """
+        internal const val FRAGMENT =
+            """
             #ifdef GL_ES
             precision mediump float;
             #endif
@@ -175,8 +240,31 @@ class ModelDepthShader(private val pass: ShadowDepthPass, renderable: Renderable
             varying vec3 v_worldPos;
             varying float v_alpha;
             varying float v_viewDepth;
-            vec4 packDepth(float depth){ vec4 value=fract(min(depth,0.99999994)*vec4(16581375.0,65025.0,255.0,1.0)); value-=value.xxyz*vec4(0.0,1.0/255.0,1.0/255.0,1.0/255.0); return value; }
-            void main(){ if(u_clipEnabled==1 && dot(v_worldPos,u_clipPlane.xyz)+u_clipPlane.w<0.0) discard; float alpha=u_diffuseAlpha*v_alpha; if(u_hasDiffuse==1) alpha*=texture2D(u_diffuseTexture,v_uv).a; if(alpha<u_alphaTest) discard; float depth=gl_FragCoord.z; if(u_linearFar>0.0) depth=v_viewDepth/u_linearFar; if(u_radialDepth==1) depth=length(v_worldPos-u_lightPosition)/u_far; gl_FragColor=packDepth(clamp(depth,0.0,1.0)); }
+            vec4 packDepth(float depth){
+                vec4 value=fract(min(depth,0.99999994)*vec4(16581375.0,65025.0,255.0,1.0));
+                value-=value.xxyz*vec4(0.0,1.0/255.0,1.0/255.0,1.0/255.0);
+                return value;
+            }
+            void main(){
+                if(u_clipEnabled==1 && dot(v_worldPos,u_clipPlane.xyz)+u_clipPlane.w<0.0) {
+                    discard;
+                }
+                float alpha=u_diffuseAlpha*v_alpha;
+                if(u_hasDiffuse==1) {
+                    alpha*=texture2D(u_diffuseTexture,v_uv).a;
+                }
+                if(alpha<u_alphaTest) {
+                    discard;
+                }
+                float depth=gl_FragCoord.z;
+                if(u_linearFar>0.0) {
+                    depth=v_viewDepth/u_linearFar;
+                }
+                if(u_radialDepth==1) {
+                    depth=length(v_worldPos-u_lightPosition)/u_far;
+                }
+                gl_FragColor=packDepth(clamp(depth,0.0,1.0));
+            }
         """
     }
 }

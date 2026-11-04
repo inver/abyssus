@@ -5,23 +5,33 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
+import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.document.MetaDocument
 import net.nevinsky.abyssus.lib.core.editor.meta.PropertyRow
 import net.nevinsky.abyssus.lib.core.editor.meta.metaRowsOf
-import net.nevinsky.abyssus.plugin.EditorBundle
-import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 
 sealed interface AssetMeta {
-    /** The asset's `meta.json` as a table: [type] is the Meta `type` ([MetaType.UNKNOWN] when absent, not text or not known). */
-    data class Loaded(val folder: VirtualFile, val type: MetaType, val rows: List<PropertyRow>, val document: MetaDocument) :
-        AssetMeta {
-        /** The document bound to its typed meta: `additional` is the class of the `type` (a terrain's `TerrainMeta`, say). */
+    /**
+     * The asset's `meta.json` as a table: [type] is the Meta `type` ([MetaType.UNKNOWN] when absent, not text or not
+     * known).
+     */
+    data class Loaded(
+        val folder: VirtualFile,
+        val type: MetaType,
+        val rows: List<PropertyRow>,
+        val document: MetaDocument,
+    ) : AssetMeta {
+        /**
+         * The document bound to its typed meta: `additional` is the class of the `type` (a terrain's `TerrainMeta`,
+         * say).
+         */
         val meta: net.nevinsky.abyssus.lib.core.assets.AssetMeta<Any> by lazy { document.bound() }
     }
 
@@ -33,16 +43,17 @@ sealed interface AssetMeta {
 fun loadAssetMeta(folder: VirtualFile, metaFiles: MetaFiles): AssetMeta {
     folder.takeIf { it.isValid }?.findChild(META_FILE)
         ?: return AssetMeta.Failed(folder, AbyssusBundle.message("propertiesMetaMissing", folder.name))
-    return runCatchingKeepingCancellation { metaFiles.inEditor(folder) }.fold(
-        onSuccess = { document ->
-            document?.let { AssetMeta.Loaded(folder, it.type, metaRowsOf(it.values, EditorBundle), it) }
-                ?: AssetMeta.Failed(folder, AbyssusBundle.message("propertiesMetaMissing", folder.name))
-        },
-        onFailure = {
-            AssetMeta.Failed(
-                folder,
-                AbyssusBundle.message("propertiesMetaParseError", it.documentDisplayMessage())
-            )
-        },
-    )
+    return runCatchingKeepingCancellation { metaFiles.inEditor(folder) }
+        .fold(
+            onSuccess = { document ->
+                document?.let { AssetMeta.Loaded(folder, it.type, metaRowsOf(it.values, EditorBundle), it) }
+                    ?: AssetMeta.Failed(folder, AbyssusBundle.message("propertiesMetaMissing", folder.name))
+            },
+            onFailure = {
+                AssetMeta.Failed(
+                    folder,
+                    AbyssusBundle.message("propertiesMetaParseError", it.documentDisplayMessage()),
+                )
+            },
+        )
 }

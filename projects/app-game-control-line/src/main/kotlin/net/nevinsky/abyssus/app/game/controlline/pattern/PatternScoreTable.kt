@@ -13,7 +13,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import net.nevinsky.abyssus.app.game.controlline.io.AtomicJsonStore
 
-/** How much help an F2B flight gets: Pro none, Mid the next manoeuvre and a toast per mark, Noob that and the ideal track drawn ahead. */
+/**
+ * How much help an F2B flight gets: Pro none, Mid the next manoeuvre and a toast per mark, Noob that and the ideal
+ * track drawn ahead.
+ */
 enum class AssistLevel(val label: String, val key: String) {
     PRO("Pro", "pro"),
     MID("Mid", "mid"),
@@ -30,7 +33,8 @@ enum class AssistLevel(val label: String, val key: String) {
 const val F2B_SCORES_VERSION = 1
 
 /**
- * One saved F2B flight: the [score] with two decimals, [flightTime] in seconds, [date] as ISO-8601 text and the 15 [marks].
+  * One saved F2B flight: the [score] with two decimals, [flightTime] in seconds, [date] as ISO-8601 text and the 15
+  * [marks].
  * [flight] names its recording in `f2b-flights/`, null for a flight saved without one.
  */
 data class PatternScoreEntry(
@@ -54,9 +58,11 @@ fun defaultPatternScoresFile(home: String = System.getProperty("user.home")): Pa
     Path.of(home, ".abyssus-control-line", "f2b-scores.json")
 
 /**
- * The [TABLE_SIZE] best F2B flights of each assist level, best score first and earlier flights first among equal scores,
+  * The [TABLE_SIZE] best F2B flights of each assist level, best score first and earlier flights first among equal
+  * scores,
  * kept in [file] (`{version: 1, boards: {pro: [...], mid: [...], noob: [...]}}`; a missing board is empty). Writes go
- * through a temporary file and an atomic move. A file that cannot be read is renamed to `f2b-scores.json.bad` (replacing
+  * through a temporary file and an atomic move. A file that cannot be read is renamed to `f2b-scores.json.bad`
+  * (replacing
  * an older one) and the boards start empty with [damaged] set. `scores.json` is never touched.
  */
 class PatternScoreTable(
@@ -82,7 +88,9 @@ class PatternScoreTable(
                 damaged = { damaged = true },
             )?.boards?.mapValues { ranking.ranked(it.value) }.orEmpty()
             // a table that could not be read names nothing, but its recordings may still be wanted
-            if (!damaged) prune()
+            if (!damaged) {
+                prune()
+            }
         }
     }
 
@@ -103,12 +111,15 @@ class PatternScoreTable(
     }
 
     /**
-     * Adds [entry] to [level]'s board when it qualifies and saves the file; returns its rank from 1, or null when it did not
+      * Adds [entry] to [level]'s board when it qualifies and saves the file; returns its rank from 1, or null when it
+      * did not
      * enter. Its [recording] is saved first and named in the entry; when that fails the entry is kept without one. The
      * recording of a flight that leaves the board is deleted.
      */
     fun add(level: AssistLevel, entry: PatternScoreEntry, recording: FlightRecording? = null): Int? {
-        if (!qualifies(level, entry.score)) return null
+        if (!qualifies(level, entry.score)) {
+            return null
+        }
         val id = recording?.let {
             try {
                 recordings.save(it)
@@ -116,7 +127,11 @@ class PatternScoreTable(
                 null
             }
         }
-        val named = if (id != null) entry.copy(flight = id) else entry
+        val named = if (id != null) {
+            entry.copy(flight = id)
+        } else {
+            entry
+        }
         val before = board(level)
         val next = ranking.ranked(before + named)
         boards = boards + (level.key to next)

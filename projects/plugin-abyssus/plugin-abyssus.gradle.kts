@@ -2,13 +2,14 @@
  * Copyright 2023-2026 Alexey Nevinsky
  * SPDX-License-Identifier: Apache-2.0
  */
+import java.time.Duration
+import java.util.zip.ZipFile
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
-import java.time.Duration
-import java.util.zip.ZipFile
 
 fun properties(key: String) = providers.gradleProperty(key)
+
 fun environment(key: String) = providers.environmentVariable(key)
 
 plugins {
@@ -24,6 +25,7 @@ plugins {
 }
 
 group = properties("pluginGroup").get()
+
 version = properties("pluginVersion").get()
 
 repositories {
@@ -128,17 +130,19 @@ kotlin {
     }
 }
 
-// Configure IntelliJ Platform Gradle Plugin - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-extension.html
+// Configure IntelliJ Platform Gradle Plugin - read more:
+// https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-extension.html
 intellijPlatform {
     // -PuiSandbox=<dir> isolates the UI-test IDE (config, system, plugins, logs) from the shared sandbox
     providers.gradleProperty("uiSandbox").orNull?.let { sandboxContainer.set(file(it)) }
     pluginVerification {
         ides { recommended() }
         // Internal usages are checked against exact descriptions by checkPluginInternalApis below.
-        failureLevel = listOf(
-            VerifyPluginTask.FailureLevel.COMPATIBILITY_PROBLEMS,
-            VerifyPluginTask.FailureLevel.OVERRIDE_ONLY_API_USAGES
-        )
+        failureLevel =
+            listOf(
+                VerifyPluginTask.FailureLevel.COMPATIBILITY_PROBLEMS,
+                VerifyPluginTask.FailureLevel.OVERRIDE_ONLY_API_USAGES,
+            )
     }
     pluginConfiguration {
         name = properties("pluginName")
@@ -175,11 +179,14 @@ tasks {
         System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
         System.getProperty("abyssus.rayTimingTests")?.let { systemProperty("abyssus.rayTimingTests", it) }
         // the opt-in graphics workload runner (docs/ai/testing.md, "Graphics performance evidence")
-        System.getProperties().stringPropertyNames().filter { it.startsWith("abyssus.perf.") }
+        System.getProperties()
+            .stringPropertyNames()
+            .filter { it.startsWith("abyssus.perf.") }
             .forEach { systemProperty(it, System.getProperty(it)) }
         // device tests that render through the real Metal backend: opt in with -Dabyssus.metalTests=true
         System.getProperty("abyssus.metalTests")?.let { systemProperty("abyssus.metalTests", it) }
-        // and through the real Vulkan backend: -Dabyssus.vulkanTests=true (add -Dabyssus.raytracing.validation=true for the validation layer)
+        // and through the real Vulkan backend: -Dabyssus.vulkanTests=true (add -Dabyssus.raytracing.validation=true for
+        // the validation layer)
         System.getProperty("abyssus.vulkanTests")?.let { systemProperty("abyssus.vulkanTests", it) }
         System.getProperty("abyssus.raytracing.validation")?.let { systemProperty("abyssus.raytracing.validation", it) }
     }
@@ -189,8 +196,10 @@ tasks {
         providers.gradleProperty("rayExperiment").orNull?.let { jvmArgs("-Dabyssus.raytracing.experiment=$it") }
         // The sandbox IDE trusts every project (no "Trust project?" dialog) and opens the Abyssus view.
         jvmArgs("-Didea.trust.all.projects=true", "-Dabyssus.openView=true")
-        // Kotlin 2.4 emits coroutine debug metadata v2, but the sandbox IDE's bundled stdlib reads v1; its coroutine debug
-        // probes (the IDE's own, `idea.enable.coroutine.dump`) then fail every resume ("Debug metadata version mismatch"), so the
+        // Kotlin 2.4 emits coroutine debug metadata v2, but the sandbox IDE's bundled stdlib reads v1; its coroutine
+        // debug
+        // probes (the IDE's own, `idea.enable.coroutine.dump`) then fail every resume ("Debug metadata version
+        // mismatch"), so the
         // plugin's background coroutines (Sculpt Terrain, Paint Foliage sessions) never finish. Turn the probes off.
         jvmArgs("-Dkotlinx.coroutines.debug=off", "-Didea.enable.coroutine.dump=false")
     }
@@ -198,32 +207,33 @@ tasks {
     patchPluginXml {
 
         // Extract the <!-- Plugin description --> section from README.md and provide for the plugin's manifest
-        pluginDescription.set(providers.fileContents(rootProject.layout.projectDirectory.file("README.md")).asText.map {
-            val start = "<!-- Plugin description -->"
-            val end = "<!-- Plugin description end -->"
+        pluginDescription.set(
+            providers.fileContents(rootProject.layout.projectDirectory.file("README.md")).asText.map {
+                val start = "<!-- Plugin description -->"
+                val end = "<!-- Plugin description end -->"
 
-            with(it.lines()) {
-                if (!containsAll(listOf(start, end))) {
-                    throw GradleException("Plugin description section not found in README.md:\n$start ... $end")
+                with(it.lines()) {
+                    if (!containsAll(listOf(start, end))) {
+                        throw GradleException("Plugin description section not found in README.md:\n$start ... $end")
+                    }
+                    subList(indexOf(start) + 1, indexOf(end)).joinToString("\n").let(::markdownToHTML)
                 }
-                subList(indexOf(start) + 1, indexOf(end)).joinToString("\n").let(::markdownToHTML)
             }
-        })
+        )
 
         val changelog = project.changelog // local variable for configuration cache compatibility
         // Get the latest available change notes from the changelog file
-        changeNotes.set(properties("pluginVersion").map { pluginVersion ->
-            with(changelog) {
-                renderItem(
-                    (getOrNull(pluginVersion) ?: getUnreleased())
-                        .withHeader(false)
-                        .withEmptySections(false),
-                    Changelog.OutputType.HTML,
-                )
+        changeNotes.set(
+            properties("pluginVersion").map { pluginVersion ->
+                with(changelog) {
+                    renderItem(
+                        (getOrNull(pluginVersion) ?: getUnreleased()).withHeader(false).withEmptySections(false),
+                        Changelog.OutputType.HTML,
+                    )
+                }
             }
-        })
+        )
     }
-
 }
 
 // Runs against an IDE started by scripts/run-ui-tests.sh (or runIdeForUiTests); fails fast when none answers.
@@ -241,14 +251,27 @@ tasks.register<Test>("uiTest") {
     providers.gradleProperty("uiTestFilter").orNull?.let { filter.includeTestsMatching(it) }
     providers.gradleProperty("uiProject").orNull?.let { systemProperty("abyssus.ui.project", it) }
     systemProperty("abyssus.ui.reportsDir", layout.buildDirectory.dir("reports/ui-tests").get().asFile.absolutePath)
-    // -PuiFixtureSource=<project folder> swaps the project the IDE opened (scripts/run-ui-tests.sh passes it from ABYSSUS_UI_FIXTURE)
-    systemProperty("abyssus.ui.fixtureSource", providers.gradleProperty("uiFixtureSource").orNull ?: file("src/test/testData/project/Untitled").absolutePath)
+    // -PuiFixtureSource=<project folder> swaps the project the IDE opened (scripts/run-ui-tests.sh passes it from
+    // ABYSSUS_UI_FIXTURE)
+    systemProperty(
+        "abyssus.ui.fixtureSource",
+        providers.gradleProperty("uiFixtureSource").orNull ?: file("src/test/testData/project/Untitled").absolutePath,
+    )
     // Screenshots: -PuiScreenshots=compare|update|off (default compare); -PupdateUiScreenshots=true with
     // -PuiScreenshotScenarios=a,b rewrites only those baselines (canonical environment, never on CI).
     systemProperty("abyssus.ui.baselines", file("src/uiTest/resources/screenshots/linux").absolutePath)
     val updating = providers.gradleProperty("updateUiScreenshots").orNull == "true"
-    systemProperty("abyssus.ui.screenshots", if (updating) "update" else providers.gradleProperty("uiScreenshots").orElse("compare").get())
-    providers.gradleProperty("uiScreenshotScenarios").orNull?.let { systemProperty("abyssus.ui.screenshotScenarios", it) }
+    systemProperty(
+        "abyssus.ui.screenshots",
+        if (updating) {
+            "update"
+        } else {
+            providers.gradleProperty("uiScreenshots").orElse("compare").get()
+        },
+    )
+    providers.gradleProperty("uiScreenshotScenarios").orNull?.let {
+        systemProperty("abyssus.ui.screenshotScenarios", it)
+    }
     // Headless helper tests (package ...uitesting.headless) run through uiHelperTest instead
     filter.excludeTestsMatching("net.nevinsky.abyssus.uitesting.headless.*")
     failOnNoDiscoveredTests = true
@@ -256,17 +279,20 @@ tasks.register<Test>("uiTest") {
 }
 
 // Headless tests of the UI-test helpers (fixture copies, screenshot comparison); no IDE needed, part of check.
-val uiHelperTest = tasks.register<Test>("uiHelperTest") {
-    group = "verification"
-    description = "Runs the headless tests of the UI-test helpers."
-    testClassesDirs = uiTest.output.classesDirs
-    classpath = uiTest.runtimeClasspath
-    useJUnit()
-    filter.includeTestsMatching("net.nevinsky.abyssus.uitesting.headless.*")
-    systemProperty("abyssus.ui.fixtureSource", file("src/test/testData/project/Untitled").absolutePath)
-    systemProperty("abyssus.ui.baselines", file("src/uiTest/resources/screenshots/linux").absolutePath)
-}
+val uiHelperTest =
+    tasks.register<Test>("uiHelperTest") {
+        group = "verification"
+        description = "Runs the headless tests of the UI-test helpers."
+        testClassesDirs = uiTest.output.classesDirs
+        classpath = uiTest.runtimeClasspath
+        useJUnit()
+        filter.includeTestsMatching("net.nevinsky.abyssus.uitesting.headless.*")
+        systemProperty("abyssus.ui.fixtureSource", file("src/test/testData/project/Untitled").absolutePath)
+        systemProperty("abyssus.ui.baselines", file("src/uiTest/resources/screenshots/linux").absolutePath)
+    }
+
 tasks.named("check") { dependsOn(uiHelperTest) }
+
 // Kover's reports would otherwise run every Test task, including uiTest, which needs a running IDE
 kover {
     currentProject {
@@ -276,32 +302,35 @@ kover {
     }
 }
 
-// Sandbox IDE with the robot-server plugin for UI tests (run configuration "Run IDE for UI Tests", scripts/run-ui-tests*.sh)
-val runIdeForUiTests by intellijPlatformTesting.runIde.registering {
-    task {
-        // -PuiProject=<dir> opens that project, -PuiSandbox=<dir> isolates IDE config/system, -PuiPort=<n> moves robot-server.
-        // The IDE does not auto-open a scene view (no abyssus.openView).
-        providers.gradleProperty("uiProject").orNull?.let { args(it) }
-        val port = providers.gradleProperty("uiPort").orElse("8082")
-        jvmArgumentProviders += CommandLineArgumentProvider {
-            listOf(
-                "-Drobot-server.port=${port.get()}",
-                "-Dide.mac.message.dialogs.as.sheets=false",
-                "-Djb.privacy.policy.text=<!--999.999-->",
-                "-Djb.consents.confirmation.enabled=false",
-                "-Didea.trust.all.projects=true",
-                "-Dide.show.tips.on.startup.default.value=false",
-                "-Dide.no.platform.update=true",
-                // Kotlin 2.4 debug metadata v2 vs the IDE's stdlib v1 (see runIde above)
-                "-Dkotlinx.coroutines.debug=off",
-                "-Didea.enable.coroutine.dump=false",
-            )
+// Sandbox IDE with the robot-server plugin for UI tests (run configuration "Run IDE for UI Tests",
+// scripts/run-ui-tests*.sh)
+val runIdeForUiTests by
+    intellijPlatformTesting.runIde.registering {
+        task {
+            // -PuiProject=<dir> opens that project, -PuiSandbox=<dir> isolates IDE config/system, -PuiPort=<n> moves
+            // robot-server.
+            // The IDE does not auto-open a scene view (no abyssus.openView).
+            providers.gradleProperty("uiProject").orNull?.let { args(it) }
+            val port = providers.gradleProperty("uiPort").orElse("8082")
+            jvmArgumentProviders += CommandLineArgumentProvider {
+                listOf(
+                    "-Drobot-server.port=${port.get()}",
+                    "-Dide.mac.message.dialogs.as.sheets=false",
+                    "-Djb.privacy.policy.text=<!--999.999-->",
+                    "-Djb.consents.confirmation.enabled=false",
+                    "-Didea.trust.all.projects=true",
+                    "-Dide.show.tips.on.startup.default.value=false",
+                    "-Dide.no.platform.update=true",
+                    // Kotlin 2.4 debug metadata v2 vs the IDE's stdlib v1 (see runIde above)
+                    "-Dkotlinx.coroutines.debug=off",
+                    "-Didea.enable.coroutine.dump=false",
+                )
+            }
+        }
+        plugins {
+            robotServerPlugin()
         }
     }
-    plugins {
-        robotServerPlugin()
-    }
-}
 
 sourceSets["main"].java {
     srcDirs("src/main/gen")
@@ -309,21 +338,24 @@ sourceSets["main"].java {
 
 val gltfGrammarDir = "src/main/java/net/nevinsky/abyssus/language/psi"
 
-val generateGltfParser by tasks.registering(org.jetbrains.grammarkit.tasks.GenerateParserTask::class) {
-    sourceFile.set(file("$gltfGrammarDir/Gltf.bnf"))
-    targetRootOutputDir.set(file("src/main/gen"))
-    pathToParser.set("/net/nevinsky/abyssus/plugin/language/parser/GltfParser.java")
-    pathToPsiRoot.set("/net/nevinsky/abyssus/plugin/language/psi")
-    purgeOldFiles.set(true)
-}
+val generateGltfParser by
+    tasks.registering(org.jetbrains.grammarkit.tasks.GenerateParserTask::class) {
+        sourceFile.set(file("$gltfGrammarDir/Gltf.bnf"))
+        targetRootOutputDir.set(file("src/main/gen"))
+        pathToParser.set("/net/nevinsky/abyssus/plugin/language/parser/GltfParser.java")
+        pathToPsiRoot.set("/net/nevinsky/abyssus/plugin/language/psi")
+        purgeOldFiles.set(true)
+    }
 
-val generateGltfLexer by tasks.registering(org.jetbrains.grammarkit.tasks.GenerateLexerTask::class) {
-    sourceFile.set(file("$gltfGrammarDir/Gltf.flex"))
-    targetOutputDir.set(file("src/main/gen/net/nevinsky/abyssus/plugin/language/lexer"))
-    purgeOldFiles.set(true)
-}
+val generateGltfLexer by
+    tasks.registering(org.jetbrains.grammarkit.tasks.GenerateLexerTask::class) {
+        sourceFile.set(file("$gltfGrammarDir/Gltf.flex"))
+        targetOutputDir.set(file("src/main/gen/net/nevinsky/abyssus/plugin/language/lexer"))
+        purgeOldFiles.set(true)
+    }
 
 tasks.named("compileKotlin") { dependsOn(generateGltfParser, generateGltfLexer) }
+
 tasks.named("compileJava") { dependsOn(generateGltfParser, generateGltfLexer) }
 
 apply(from = "${project.rootDir}/gradle/plugin-verification.gradle.kts")
@@ -336,23 +368,25 @@ val checkNoJolt by tasks.registering {
     inputs.files(sources)
     doLast {
         val forbidden = Regex("""com\.github\.stephengold|net\.nevinsky\.abyssus\.lib\.physics\.jolt""")
-        val found = sources.files.sorted().flatMap { file ->
-            file.readLines().mapIndexedNotNull { i, line ->
-                if (forbidden.containsMatchIn(line)) "${file.relativeTo(root)}:${i + 1}: ${line.trim()}" else null
+        val found =
+            sources.files.sorted().flatMap { file ->
+                file.readLines().mapIndexedNotNull { i, line ->
+                    if (forbidden.containsMatchIn(line)) {
+                        "${file.relativeTo(root)}:${i + 1}: ${line.trim()}"
+                    } else {
+                        null
+                    }
+                }
             }
-        }
         if (found.isNotEmpty()) {
             throw GradleException(
-                "Abyssus must not load Jolt in the IDE; remove these references:\n" + found.joinToString(
-                    "\n"
-                )
+                "Abyssus must not load Jolt in the IDE; remove these references:\n" + found.joinToString("\n")
             )
         }
     }
 }
 
 tasks.named("check") { dependsOn(checkNoJolt) }
-
 
 tasks.test {
     systemProperty("abyssus.javac", File(System.getProperty("java.home"), "bin/javac").absolutePath)
@@ -368,9 +402,13 @@ tasks.prepareSandbox {
 }
 
 // The IDE the UI tests drive has its own sandbox; Play needs the same bundled host there.
-tasks.matching { it.name == "prepareSandbox_runIdeForUiTests" }.configureEach {
-    (this as org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask).from(playHostLibs) { into(pluginName.map { "$it/play-host" }) }
-}
+tasks
+    .matching { it.name == "prepareSandbox_runIdeForUiTests" }
+    .configureEach {
+        (this as org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask).from(playHostLibs) {
+            into(pluginName.map { "$it/play-host" })
+        }
+    }
 
 val checkNoJoltInZip by tasks.registering {
     val archive = tasks.buildPlugin.flatMap { it.archiveFile }
@@ -379,8 +417,10 @@ val checkNoJoltInZip by tasks.registering {
     doLast {
         ZipFile(archive.get().asFile).use { zip ->
             val names = zip.entries().asSequence().map { it.name }.toList()
-            val forbidden = names.filter { it.contains("/lib/") &&
-                (it.contains("jolt", ignoreCase = true) || it.contains("stephengold", ignoreCase = true)) }
+            val forbidden = names.filter {
+                it.contains("/lib/") &&
+                    (it.contains("jolt", ignoreCase = true) || it.contains("stephengold", ignoreCase = true))
+            }
             check(forbidden.isEmpty()) { "Jolt must stay outside IDE-loaded lib/: $forbidden" }
             check(names.any { it.contains("/lib/lib-physics") }) { "Missing physics library in lib/" }
             check(names.any { it.contains("/lib/lib-game-link") }) { "Missing game link library in lib/" }
@@ -391,7 +431,9 @@ val checkNoJoltInZip by tasks.registering {
         }
     }
 }
+
 tasks.named("check") { dependsOn(checkNoJoltInZip) }
 
-// No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in lib-core-editor (see gradle/checks.gradle.kts).
+// No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in
+// lib-core-editor (see gradle/checks.gradle.kts).
 extra["abyssusJacksonTreeAllowed"] = emptyList<String>()

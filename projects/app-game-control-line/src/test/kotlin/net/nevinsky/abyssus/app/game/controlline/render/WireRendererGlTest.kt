@@ -37,7 +37,9 @@ class WireRendererGlTest {
         update()
     }
 
-    /** The red channel (0..255) of the pixels in column [x], rows [from]..[to], after drawing [wire] in [sun]'s light. */
+    /**
+     * The red channel (0..255) of the pixels in column [x], rows [from]..[to], after drawing [wire] in [sun]'s light.
+     */
     private fun draw(wire: LineSegment, sun: Vector3, x: Int, from: Int, to: Int): List<Int> {
         val renderer = WireRenderer()
         try {

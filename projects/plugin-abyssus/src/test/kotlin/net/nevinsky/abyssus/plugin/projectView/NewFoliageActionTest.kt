@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.plugin.testCore
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.components.service
@@ -15,6 +14,7 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.foliage.FOLIAGE_DATA_FILE
@@ -28,8 +28,8 @@ import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.plugin.dto.ProjectReader
+import net.nevinsky.abyssus.plugin.testCore
 import org.slf4j.helpers.NOPLogger
-import java.io.File
 
 /** New Foliage... on copies of the Untitled and Foliage fixtures: Create, Undo and what makes the action available. */
 class NewFoliageActionTest : BasePlatformTestCase() {
@@ -56,7 +56,18 @@ class NewFoliageActionTest : BasePlatformTestCase() {
         resolution: Int = FOLIAGE_MASK_RESOLUTION_DIALOG_DEFAULT,
         select: (String) -> Unit = {},
         report: (String) -> Unit = { fail(it) },
-    ) = createFoliage(project, abss, terrainFolder, name, resolution, testCore.documents, testCore.foliage, report, select)
+    ) =
+        createFoliage(
+            project,
+            abss,
+            terrainFolder,
+            name,
+            resolution,
+            testCore.documents,
+            testCore.foliage,
+            report,
+            select,
+        )
 
     private fun metaOf(name: String) = processor.readObject(File(projectDir, "assets/$name/meta.json").readText())
 
@@ -64,9 +75,10 @@ class NewFoliageActionTest : BasePlatformTestCase() {
 
     /** Whether the action offers itself on a project whose Assets node is [abss]. */
     private fun offered(): Boolean {
-        val action = object : NewFoliageAction() {
-            override fun owningProject(node: Any?): VirtualFile? = abss
-        }
+        val action =
+            object : NewFoliageAction() {
+                override fun owningProject(node: Any?): VirtualFile? = abss
+            }
         val event = TestActionEvent.createTestEvent(action)
         action.update(event)
         return event.presentation.isEnabledAndVisible
@@ -94,13 +106,19 @@ class NewFoliageActionTest : BasePlatformTestCase() {
 
         assertEquals(sceneBefore, bytes("scenes/Main Scene.scene"))
         assertEquals(projectBefore, bytes("Untitled.abss"))
-        assertEquals("no masks for no layers", emptyList<String>(), File(projectDir, "assets/foliage_meadow")
-            .listFiles { f -> f.name.endsWith(".mask") }.orEmpty().map { it.name })
+        assertEquals(
+            "no masks for no layers",
+            emptyList<String>(),
+            File(projectDir, "assets/foliage_meadow")
+                .listFiles { f -> f.name.endsWith(".mask") }
+                .orEmpty()
+                .map { it.name },
+        )
 
         val files = FileLoader(projectDir)
         val metas = AssetMetaLoader(processor, files)
-        val prepared = checkNotNull(FoliageLoader(files, metas, TerrainLoader(files, metas)).prepare("foliage_meadow"))
-            .staged
+        val prepared =
+            checkNotNull(FoliageLoader(files, metas, TerrainLoader(files, metas)).prepare("foliage_meadow")).staged
         assertEquals("the empty bake holds no copies", 0, prepared.copyCount)
         assertFalse("a fresh bake is not stale", prepared.stale)
         assertEquals(setOf(terrain), prepared.dependencies)
@@ -145,14 +163,21 @@ class NewFoliageActionTest : BasePlatformTestCase() {
         assertEquals(
             AbyssusBundle.message(
                 "newFoliageFailed",
-                AbyssusBundle.message("newFoliageResolutionRange", FOLIAGE_MASK_RESOLUTION_MIN, FOLIAGE_MASK_RESOLUTION_MAX),
+                AbyssusBundle.message(
+                    "newFoliageResolutionRange",
+                    FOLIAGE_MASK_RESOLUTION_MIN,
+                    FOLIAGE_MASK_RESOLUTION_MAX,
+                ),
             ),
             reported.last(),
         )
         assertNull(create(terrain, "foliage_lake", resolution = 4096, report = reported::add))
         assertEquals(3, reported.size)
-        assertEquals("no folder was made", setOf("foliage_meadow", "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", "tree", terrain),
-            File(projectDir, "assets").listFiles { f -> f.isDirectory }!!.map { it.name }.toSet())
+        assertEquals(
+            "no folder was made",
+            setOf("foliage_meadow", "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", "tree", terrain),
+            File(projectDir, "assets").listFiles { f -> f.isDirectory }!!.map { it.name }.toSet(),
+        )
     }
 
     fun testAnUnreadableTerrainIsNotPlannedAgainst() {
@@ -178,10 +203,13 @@ class NewFoliageActionTest : BasePlatformTestCase() {
     fun testAProjectWithoutATerrainDoesNotOfferTheAction() {
         File(projectDir, "P.abss").writeText("""{"format":"abyssus","formatVersion":1,"name":"P"}""")
         File(projectDir, "scenes").mkdirs()
-        File(projectDir, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{}}""")
+        File(projectDir, "scenes/Main.scene")
+            .writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{}}""")
         File(projectDir, "assets/tree").mkdirs()
         File(projectDir, "assets/tree/meta.json")
-            .writeText("""{"format":"abyssus","formatVersion":1,"version":1,"uuid":"u-tree","type":"MODEL","additional":{}}""")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"u-tree","type":"MODEL","additional":{}}"""
+            )
         abss = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(projectDir, "P.abss"))!!
         abss.parent.refresh(false, true)
 

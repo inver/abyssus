@@ -7,7 +7,10 @@ package net.nevinsky.abyssus.lib.core.editor.ui
 
 import net.nevinsky.abyssus.lib.core.ui.model.UiActionType
 
-/** The action a widget stores: [type] with the [target] member it needs (a screen id, or an action name for `emitAction`). */
+/**
+ * The action a widget stores: [type] with the [target] member it needs (a screen id, or an action name for
+ * `emitAction`).
+ */
 fun uiActionDoc(type: UiActionType, target: String?, assetName: String?): UiActionDoc =
     UiActionDoc().apply {
         this.type = type.json

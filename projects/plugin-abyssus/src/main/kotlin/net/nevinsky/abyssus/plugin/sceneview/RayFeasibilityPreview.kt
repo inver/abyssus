@@ -47,7 +47,9 @@ internal class RayFeasibilityPreview(private val report: (String) -> Unit) {
             val drawn = System.nanoTime()
             if (ready.frame !== lastFrame) {
                 lastFrame = ready.frame
-                if (measureStarted == 0L) measureStarted = drawn
+                if (measureStarted == 0L) {
+                    measureStarted = drawn
+                }
                 uploads.add((drawn - offered) / 1_000_000.0)
                 latencies.add((drawn - ready.offeredNanos) / 1_000_000.0)
                 submissions.add((offered - began) / 1_000_000.0)

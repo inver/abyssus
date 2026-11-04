@@ -22,7 +22,9 @@ class ClickGesture(private val slop: Int = 4) {
     }
 
     fun dragged(x: Int, y: Int) {
-        if (active && (abs(x - startX) > slop || abs(y - startY) > slop)) moved = true
+        if (active && (abs(x - startX) > slop || abs(y - startY) > slop)) {
+            moved = true
+        }
     }
 
     /** True when the gesture that ends here was a click. */

@@ -6,6 +6,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.nio.file.Files
 import java.time.Duration
+import kotlin.math.IEEErem
+import kotlin.math.roundToInt
 
 /**
  * Scene View gestures (GES-01..07) with real pointer input on the canvas, at coordinates computed from the view's
@@ -40,11 +42,21 @@ class SceneInteractionUiTest : UiTestBase() {
 
     /** Clicks around [center] until the tree selects a row starting with [name]; returns where it hit. */
     private fun pickNear(tree: AbyssusTree, name: String, center: ViewPoint): ViewPoint? {
-        val offsets = (0..4).flatMap { ring -> listOf(-ring, 0, ring).flatMap { dx -> listOf(-ring, 0, ring).map { dy -> dx * 14 to dy * 14 } } }.distinct()
+        val offsets = (0..4).flatMap { ring ->
+            listOf(-ring, 0, ring).flatMap { dx ->
+                listOf(
+                    -ring,
+                    0,
+                    ring
+                ).map { dy -> dx * 14 to dy * 14 }
+            }
+        }.distinct()
         for ((dx, dy) in offsets) {
             val point = ViewPoint(center.x + dx, center.y + dy)
             viewport.click(point)
-            if (poll(Duration.ofMillis(1200)) { tree.selectedRows().any { it == name || it.startsWith("$name ") } }) return point
+            if (poll(Duration.ofMillis(1200)) {
+                    tree.selectedRows().any { it == name || it.startsWith("$name ") }
+                }) return point
         }
         return null
     }
@@ -65,12 +77,19 @@ class SceneInteractionUiTest : UiTestBase() {
         val tree = openView()
         val model = viewport.screenOf(viewport.position(original, 0))
         val hit = pickNear(tree, "Model 0", model)
-        assertTrue("a click near Model 0 at $model selected it in the tree (selected: ${tree.selectedRows()})", hit != null)
+        assertTrue(
+            "a click near Model 0 at $model selected it in the tree (selected: ${tree.selectedRows()})",
+            hit != null
+        )
         assertEquals("the view selected the picked entity too", "0", viewport.viewSelection())
         // the top-left corner of the default framing is sky; the view clears its selection, the tree keeps its own
         viewport.click(ViewPoint(6, 6))
-        assertTrue("a click on empty space cleared the view's selection (it holds ${viewport.viewSelection()})", poll(Duration.ofSeconds(3)) { viewport.viewSelection() == null })
-        assertTrue("the Abyssus tree selection is unchanged (selected: ${tree.selectedRows()})", tree.selectedRows().any { it.startsWith("Model 0") })
+        assertTrue(
+            "a click on empty space cleared the view's selection (it holds ${viewport.viewSelection()})",
+            poll(Duration.ofSeconds(3)) { viewport.viewSelection() == null })
+        assertTrue(
+            "the Abyssus tree selection is unchanged (selected: ${tree.selectedRows()})",
+            tree.selectedRows().any { it.startsWith("Model 0") })
         assertEquals("picking and clearing write nothing", original, Files.readString(scene))
     }
 
@@ -89,7 +108,9 @@ class SceneInteractionUiTest : UiTestBase() {
     fun toolKeysAndButtonsSwitchTheToolAndNavigationLeavesTheSceneAlone() {
         val (original, toolbar, _) = pickModel()
         toolbar.click("Rotate (E)")
-        assertTrue("Rotate is pressed", poll(Duration.ofSeconds(3)) { toolbar.isPressed("Rotate (E)") && !toolbar.isPressed("Move (W)") })
+        assertTrue(
+            "Rotate is pressed",
+            poll(Duration.ofSeconds(3)) { toolbar.isPressed("Rotate (E)") && !toolbar.isPressed("Move (W)") })
         toolbar.click("Select (Q)")
         assertTrue("Select is pressed", poll(Duration.ofSeconds(3)) { toolbar.isPressed("Select (Q)") })
         viewport.press(java.awt.event.KeyEvent.VK_W)
@@ -113,8 +134,17 @@ class SceneInteractionUiTest : UiTestBase() {
         val (original, toolbar, _) = pickModel()
         assertTrue("Move is the tool", toolbar.isPressed("Move (W)"))
         val (press, direction) = viewport.xHandle(viewport.position(original, 0))
-        viewport.drag(press, ViewPoint(press.x + Math.round(direction.first * 40).toInt(), press.y + Math.round(direction.second * 40).toInt()))
-        LifecycleHarness.awaitState("the drag moved the model (x changed)", true) { documentX(ide.documentText(scene.toString())!!) != documentX(original) }
+        viewport.drag(
+            press,
+            ViewPoint(
+                press.x + Math.round(direction.first * 40).toInt(),
+                press.y + Math.round(direction.second * 40).toInt()
+            )
+        )
+        LifecycleHarness.awaitState(
+            "the drag moved the model (x changed)",
+            true
+        ) { documentX(ide.documentText(scene.toString())!!) != documentX(original) }
         val moved = ide.documentText(scene.toString())!!
         val diff = LifecycleHarness.lineDiff(original, moved)
         assertEquals("one line changed: $diff", 1, diff.added.size)
@@ -123,7 +153,10 @@ class SceneInteractionUiTest : UiTestBase() {
 
         viewport.canvas.click(java.awt.Point(6, 6)) // focus the canvas for the shortcut (empty space, no write)
         frame.undo()
-        LifecycleHarness.awaitState("Undo from the Scene View restores the text", original) { ide.documentText(scene.toString()) }
+        LifecycleHarness.awaitState(
+            "Undo from the Scene View restores the text",
+            original
+        ) { ide.documentText(scene.toString()) }
         frame.redo()
         LifecycleHarness.awaitState("Redo reapplies the move", moved) { ide.documentText(scene.toString()) }
         frame.saveAll()
@@ -136,15 +169,28 @@ class SceneInteractionUiTest : UiTestBase() {
         toolbar.click("Snap 0.5")
         assertTrue("Snap is on", poll(Duration.ofSeconds(3)) { toolbar.isPressed("Snap 0.5") })
         val (press, direction) = viewport.xHandle(viewport.position(original, 0))
-        viewport.drag(press, ViewPoint(press.x + Math.round(direction.first * 47).toInt(), press.y + Math.round(direction.second * 47).toInt()))
-        LifecycleHarness.awaitState("the snapped drag committed", true) { documentX(ide.documentText(scene.toString())!!) != documentX(original) }
+        viewport.drag(
+            press,
+            ViewPoint(
+                press.x + (direction.first * 47).roundToInt(),
+                press.y + (direction.second * 47).roundToInt()
+            )
+        )
+        LifecycleHarness.awaitState(
+            "the snapped drag committed",
+            true
+        ) { documentX(ide.documentText(scene.toString())!!) != documentX(original) }
         val snapped = ide.documentText(scene.toString())!!
         val x = documentX(snapped)
-        assertEquals("x is a multiple of the 0.5 step ($x)", 0.0, Math.IEEEremainder(x.toDouble(), 0.5), 1e-4)
+        assertEquals("x is a multiple of the 0.5 step ($x)", 0.0, x.toDouble().IEEErem(0.5), 1e-4)
 
-        // a second, independent drag cancelled with Escape: no edit, the pose stays
+        // a second, independent drag canceled with Escape: no edit, the pose stays
         val (again, dir2) = viewport.xHandle(viewport.position(snapped, 0))
-        viewport.drag(again, ViewPoint(again.x + Math.round(dir2.first * 60).toInt(), again.y + Math.round(dir2.second * 60).toInt()), release = false)
+        viewport.drag(
+            again,
+            ViewPoint(again.x + (dir2.first * 60).roundToInt(), again.y + (dir2.second * 60).roundToInt()),
+            release = false
+        )
         viewport.press(java.awt.event.KeyEvent.VK_ESCAPE)
         viewport.releaseMouse()
         Thread.sleep(700)
@@ -152,7 +198,13 @@ class SceneInteractionUiTest : UiTestBase() {
     }
 
     private fun dragBy(press: ViewPoint, direction: Pair<Double, Double>, pixels: Int) =
-        viewport.drag(press, ViewPoint(press.x + Math.round(direction.first * pixels).toInt(), press.y + Math.round(direction.second * pixels).toInt()))
+        viewport.drag(
+            press,
+            ViewPoint(
+                press.x + Math.round(direction.first * pixels).toInt(),
+                press.y + Math.round(direction.second * pixels).toInt()
+            )
+        )
 
     @Test
     fun rotatingAroundTheYRingChangesOnlyTheRotationAndUndoRestoresIt() {
@@ -161,12 +213,21 @@ class SceneInteractionUiTest : UiTestBase() {
         assertTrue("Rotate is the tool", poll(Duration.ofSeconds(3)) { toolbar.isPressed("Rotate (E)") })
         val (press, direction) = viewport.yRing(viewport.position(original, 0))
         dragBy(press, direction, 45)
-        LifecycleHarness.awaitState("the rotation was written", true) { ide.documentText(scene.toString())!!.contains("localRotation") && ide.documentText(scene.toString()) != original }
+        LifecycleHarness.awaitState("the rotation was written", true) {
+            ide.documentText(scene.toString())!!
+                .contains("localRotation") && ide.documentText(scene.toString()) != original
+        }
         val rotated = ide.documentText(scene.toString())!!
-        assertTrue("only the rotation of entity 0 changed", LifecycleHarness.sameExcept(original, rotated, "/ecs/0/components/PositionComponent/localRotation"))
+        assertTrue(
+            "only the rotation of entity 0 changed",
+            LifecycleHarness.sameExcept(original, rotated, "/ecs/0/components/PositionComponent/localRotation")
+        )
         viewport.canvas.click(java.awt.Point(6, 6))
         frame.undo()
-        LifecycleHarness.awaitState("Undo from the Scene View restores the text", original) { ide.documentText(scene.toString()) }
+        LifecycleHarness.awaitState(
+            "Undo from the Scene View restores the text",
+            original
+        ) { ide.documentText(scene.toString()) }
     }
 
     @Test
@@ -174,25 +235,57 @@ class SceneInteractionUiTest : UiTestBase() {
         val original = Files.readString(scene)
         val tree = openView()
         tree.clickRow("Model 2")
-        assertTrue("the view follows the tree selection", poll(Duration.ofSeconds(5)) { viewport.viewSelection() == "2" })
+        assertTrue(
+            "the view follows the tree selection",
+            poll(Duration.ofSeconds(5)) { viewport.viewSelection() == "2" })
         val toolbar = frame.sceneToolbar()
         toolbar.choose("World", "Local")
-        assertTrue("the Local space is shown", poll(Duration.ofSeconds(3)) { runCatching { toolbar.component.findAll<com.intellij.remoterobot.fixtures.ComponentFixture>(com.intellij.remoterobot.search.locators.byXpath("//div[@class='ComboBoxButton' and @visible_text='Local']")).isNotEmpty() }.getOrDefault(false) })
-        val q = SceneJson().parseObject(original).get("ecs").get("2").get("components").get("PositionComponent").get("localRotation")
+        assertTrue(
+            "the Local space is shown",
+            poll(Duration.ofSeconds(3)) {
+                runCatching {
+                    toolbar.component.findAll<com.intellij.remoterobot.fixtures.ComponentFixture>(
+                        com.intellij.remoterobot.search.locators.byXpath(
+                            "//div[@class='ComboBoxButton' and @visible_text='Local']"
+                        )
+                    ).isNotEmpty()
+                }.getOrDefault(false)
+            })
+        val q = SceneJson().parseObject(original).get("ecs").get("2").get("components").get("PositionComponent")
+            .get("localRotation")
         val local = net.nevinsky.abyssus.lib.core.editor.pick.gizmoAxes(
             net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace.LOCAL,
-            com.badlogic.gdx.math.Quaternion(q.get("x").floatValue(), q.get("y").floatValue(), q.get("z").floatValue(), q.get("w").floatValue()),
+            com.badlogic.gdx.math.Quaternion(
+                q.get("x").floatValue(),
+                q.get("y").floatValue(),
+                q.get("z").floatValue(),
+                q.get("w").floatValue()
+            ),
         ).getValue(net.nevinsky.abyssus.lib.core.editor.pick.GizmoAxis.X)
         val origin = viewport.position(original, 2)
         val (press, direction) = viewport.xHandle(origin, Triple(local.x, local.y, local.z))
         dragBy(press, direction, 40)
-        LifecycleHarness.awaitState("the local drag moved the model", true) { ide.documentText(scene.toString()) != original }
+        LifecycleHarness.awaitState(
+            "the local drag moved the model",
+            true
+        ) { ide.documentText(scene.toString()) != original }
         val moved = viewport.position(ide.documentText(scene.toString())!!, 2)
-        val delta = doubleArrayOf((moved.first - origin.first).toDouble(), (moved.second - origin.second).toDouble(), (moved.third - origin.third).toDouble())
+        val delta = doubleArrayOf(
+            (moved.first - origin.first).toDouble(),
+            (moved.second - origin.second).toDouble(),
+            (moved.third - origin.third).toDouble()
+        )
         val length = Math.sqrt(delta.sumOf { it * it })
         val alignment = (delta[0] * local.x + delta[1] * local.y + delta[2] * local.z) / length
         assertTrue("the move follows the local X axis (alignment $alignment)", alignment > 0.99)
-        assertTrue("only the position of entity 2 changed", LifecycleHarness.sameExcept(original, ide.documentText(scene.toString())!!, "/ecs/2/components/PositionComponent/localPosition"))
+        assertTrue(
+            "only the position of entity 2 changed",
+            LifecycleHarness.sameExcept(
+                original,
+                ide.documentText(scene.toString())!!,
+                "/ecs/2/components/PositionComponent/localPosition"
+            )
+        )
     }
 
     @Test
@@ -204,22 +297,45 @@ class SceneInteractionUiTest : UiTestBase() {
         // without a selection it frames everything drawn, and still only the view moves
         val overview = viewport.camera()
         toolbar.click("Frame selection (F)")
-        assertTrue("framing everything moved the camera", poll(Duration.ofSeconds(5)) { viewport.camera().let { it.target != overview.target || it.distance != overview.distance } })
+        assertTrue(
+            "framing everything moved the camera",
+            poll(Duration.ofSeconds(5)) {
+                viewport.camera().let { it.target != overview.target || it.distance != overview.distance }
+            })
         assertEquals("framing everything writes nothing", original, ide.documentText(scene.toString()))
         tree.clickRow("Model 2")
-        assertTrue("the view follows the tree selection", poll(Duration.ofSeconds(5)) { viewport.viewSelection() == "2" })
+        assertTrue(
+            "the view follows the tree selection",
+            poll(Duration.ofSeconds(5)) { viewport.viewSelection() == "2" })
         val before = viewport.camera()
         toolbar.click("Frame selection (F)")
-        assertTrue("framing moved the camera", poll(Duration.ofSeconds(8)) { viewport.camera().let { it.target != before.target || it.distance != before.distance } })
+        assertTrue(
+            "framing moved the camera",
+            poll(Duration.ofSeconds(8)) {
+                viewport.camera().let { it.target != before.target || it.distance != before.distance }
+            })
         assertEquals("framing writes nothing", original, ide.documentText(scene.toString()))
 
-        frame.find<com.intellij.remoterobot.fixtures.ComponentFixture>(com.intellij.remoterobot.search.locators.byXpath("//div[@class='JButton' and @text='Drop']"), Duration.ofSeconds(10)).click()
-        LifecycleHarness.awaitState("Drop wrote the new height", true) { ide.documentText(scene.toString()) != original }
+        frame.find<com.intellij.remoterobot.fixtures.ComponentFixture>(
+            com.intellij.remoterobot.search.locators.byXpath(
+                "//div[@class='JButton' and @text='Drop']"
+            ), Duration.ofSeconds(10)
+        ).click()
+        LifecycleHarness.awaitState(
+            "Drop wrote the new height",
+            true
+        ) { ide.documentText(scene.toString()) != original }
         val dropped = ide.documentText(scene.toString())!!
-        assertTrue("only the position of entity 2 changed", LifecycleHarness.sameExcept(original, dropped, "/ecs/2/components/PositionComponent/localPosition"))
+        assertTrue(
+            "only the position of entity 2 changed",
+            LifecycleHarness.sameExcept(original, dropped, "/ecs/2/components/PositionComponent/localPosition")
+        )
         val was = viewport.position(original, 2)
         val now = viewport.position(dropped, 2)
-        assertTrue("Drop changed only y, to the resting height: $was -> $now", now.first == was.first && now.third == was.third && now.second != was.second)
+        assertTrue(
+            "Drop changed only y, to the resting height: $was -> $now",
+            now.first == was.first && now.third == was.third && now.second != was.second
+        )
         viewport.canvas.click(java.awt.Point(6, 6))
         frame.undo()
         LifecycleHarness.awaitState("Undo restores the text", original) { ide.documentText(scene.toString()) }
@@ -233,7 +349,8 @@ class SceneInteractionUiTest : UiTestBase() {
         ).first().click()
         // a popup that fits inside the window is lightweight, so look for its list anywhere in the frame
         frame.find<com.intellij.remoterobot.fixtures.JListFixture>(
-            com.intellij.remoterobot.search.locators.byXpath("//div[@class='MyList' or @class='JBList' or @class='JList']"), Duration.ofSeconds(10),
+            com.intellij.remoterobot.search.locators.byXpath("//div[@class='MyList' or @class='JBList' or @class='JList']"),
+            Duration.ofSeconds(10),
         ).clickItem(item, fullMatch = true)
     }
 
@@ -250,20 +367,30 @@ class SceneInteractionUiTest : UiTestBase() {
         val mark = net.nevinsky.abyssus.lib.core.editor.pick.OrientationProjection(free.yaw, free.pitch).marks()
             .first { it.axis == net.nevinsky.abyssus.lib.core.editor.pick.GizmoAxis.Y }
         viewport.click(ViewPoint(Math.round(rect.x + 32 + mark.x * 22f), Math.round(rect.y + 32 - mark.y * 22f)))
-        assertTrue("the Y mark turned the camera (pitch ${free.pitch})", poll(Duration.ofSeconds(5)) { Math.abs(viewport.camera().pitch) > 1.2f })
+        assertTrue(
+            "the Y mark turned the camera (pitch ${free.pitch})",
+            poll(Duration.ofSeconds(5)) { Math.abs(viewport.camera().pitch) > 1.2f })
         assertEquals("viewing writes nothing", original, ide.documentText(scene.toString()))
 
         // looking through Camera 4: the view takes the camera, framing is unavailable and the widget leaves the orbit alone
         chooseCamera("Camera 4")
-        assertTrue("Frame selection is unavailable through a scene camera", poll(Duration.ofSeconds(5)) { !toolbar.isEnabled("Frame selection (F)") })
+        assertTrue(
+            "Frame selection is unavailable through a scene camera",
+            poll(Duration.ofSeconds(5)) { !toolbar.isEnabled("Frame selection (F)") })
         val through = viewport.camera()
         viewport.click(ViewPoint(Math.round(rect.x + 32 + mark.x * 22f), Math.round(rect.y + 32 - mark.y * 22f)))
         Thread.sleep(700)
         assertEquals("the widget does nothing through a scene camera", through.pitch, viewport.camera().pitch, 1e-6f)
-        assertEquals("no authored camera pose changed merely from viewing", original, ide.documentText(scene.toString()))
+        assertEquals(
+            "no authored camera pose changed merely from viewing",
+            original,
+            ide.documentText(scene.toString())
+        )
 
         chooseCamera("Free camera")
-        assertTrue("Frame selection is available again", poll(Duration.ofSeconds(5)) { toolbar.isEnabled("Frame selection (F)") })
+        assertTrue(
+            "Frame selection is available again",
+            poll(Duration.ofSeconds(5)) { toolbar.isEnabled("Frame selection (F)") })
         frame.saveAll()
         assertEquals("switching cameras writes nothing", original, Files.readString(scene))
     }
@@ -273,7 +400,9 @@ class SceneInteractionUiTest : UiTestBase() {
         val original = Files.readString(scene)
         val tree = openView()
         tree.clickRow("Camera 4")
-        assertTrue("the view follows the tree selection", poll(Duration.ofSeconds(5)) { viewport.viewSelection() == "4" })
+        assertTrue(
+            "the view follows the tree selection",
+            poll(Duration.ofSeconds(5)) { viewport.viewSelection() == "4" })
         val toolbar = frame.sceneToolbar()
         toolbar.click("Move (W)")
         assertTrue("Move is the tool", poll(Duration.ofSeconds(3)) { toolbar.isPressed("Move (W)") })
@@ -319,9 +448,15 @@ class SceneInteractionUiTest : UiTestBase() {
         assertTrue("Rotate is the tool", poll(Duration.ofSeconds(3)) { toolbar.isPressed("Rotate (E)") })
         val (press, direction) = viewport.yRing(viewport.position(original, 0))
         dragBy(press, direction, 53)
-        LifecycleHarness.awaitState("the snapped rotation was written", true) { ide.documentText(scene.toString()) != original }
+        LifecycleHarness.awaitState(
+            "the snapped rotation was written",
+            true
+        ) { ide.documentText(scene.toString()) != original }
         val rotated = ide.documentText(scene.toString())!!
-        assertTrue("only the rotation of entity 0 changed", LifecycleHarness.sameExcept(original, rotated, "/ecs/0/components/PositionComponent/localRotation"))
+        assertTrue(
+            "only the rotation of entity 0 changed",
+            LifecycleHarness.sameExcept(original, rotated, "/ecs/0/components/PositionComponent/localRotation")
+        )
         val q = rotation(rotated, 0)
         assertEquals("a turn about Y only", 0.0, Math.abs(q[0]) + Math.abs(q[2]), 1e-3)
         val degrees = Math.toDegrees(2 * Math.atan2(q[1], q[3]))
@@ -334,22 +469,45 @@ class SceneInteractionUiTest : UiTestBase() {
         val original = Files.readString(scene)
         val tree = openView()
         tree.clickRow("Model 2")
-        assertTrue("the view follows the tree selection", poll(Duration.ofSeconds(5)) { viewport.viewSelection() == "2" })
+        assertTrue(
+            "the view follows the tree selection",
+            poll(Duration.ofSeconds(5)) { viewport.viewSelection() == "2" })
         val toolbar = frame.sceneToolbar()
         toolbar.choose("World", "Local")
-        assertTrue("the Local space is shown", poll(Duration.ofSeconds(3)) { runCatching { toolbar.component.findAll<com.intellij.remoterobot.fixtures.ComponentFixture>(com.intellij.remoterobot.search.locators.byXpath("//div[@class='ComboBoxButton' and @visible_text='Local']")).isNotEmpty() }.getOrDefault(false) })
+        assertTrue(
+            "the Local space is shown",
+            poll(Duration.ofSeconds(3)) {
+                runCatching {
+                    toolbar.component.findAll<com.intellij.remoterobot.fixtures.ComponentFixture>(
+                        com.intellij.remoterobot.search.locators.byXpath(
+                            "//div[@class='ComboBoxButton' and @visible_text='Local']"
+                        )
+                    ).isNotEmpty()
+                }.getOrDefault(false)
+            })
         toolbar.click("Rotate (E)")
         assertTrue("Rotate is the tool", poll(Duration.ofSeconds(3)) { toolbar.isPressed("Rotate (E)") })
         val before = rotation(original, 2)
         val localY = net.nevinsky.abyssus.lib.core.editor.pick.gizmoAxes(
             net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace.LOCAL,
-            com.badlogic.gdx.math.Quaternion(before[0].toFloat(), before[1].toFloat(), before[2].toFloat(), before[3].toFloat()),
+            com.badlogic.gdx.math.Quaternion(
+                before[0].toFloat(),
+                before[1].toFloat(),
+                before[2].toFloat(),
+                before[3].toFloat()
+            ),
         ).getValue(net.nevinsky.abyssus.lib.core.editor.pick.GizmoAxis.Y)
         val (press, direction) = viewport.ring(viewport.position(original, 2), Triple(localY.x, localY.y, localY.z))
         dragBy(press, direction, 45)
-        LifecycleHarness.awaitState("the local rotation was written", true) { ide.documentText(scene.toString()) != original }
+        LifecycleHarness.awaitState(
+            "the local rotation was written",
+            true
+        ) { ide.documentText(scene.toString()) != original }
         val rotated = ide.documentText(scene.toString())!!
-        assertTrue("only the rotation of entity 2 changed", LifecycleHarness.sameExcept(original, rotated, "/ecs/2/components/PositionComponent/localRotation"))
+        assertTrue(
+            "only the rotation of entity 2 changed",
+            LifecycleHarness.sameExcept(original, rotated, "/ecs/2/components/PositionComponent/localRotation")
+        )
         // relative = conjugate(before) * after must be a turn about the object's own Y axis
         val a = rotation(rotated, 2)
         val (bx, by, bz, bw) = before.let { listOf(-it[0], -it[1], -it[2], it[3]) }
@@ -360,6 +518,11 @@ class SceneInteractionUiTest : UiTestBase() {
             bw * a[3] - bx * a[0] - by * a[1] - bz * a[2],
         )
         assertTrue("the object turned (${rel.toList()})", Math.abs(rel[1]) > 0.02)
-        assertEquals("the turn is about the local Y axis only (${rel.toList()})", 0.0, Math.abs(rel[0]) + Math.abs(rel[2]), 2e-3)
+        assertEquals(
+            "the turn is about the local Y axis only (${rel.toList()})",
+            0.0,
+            Math.abs(rel[0]) + Math.abs(rel[2]),
+            2e-3
+        )
     }
 }

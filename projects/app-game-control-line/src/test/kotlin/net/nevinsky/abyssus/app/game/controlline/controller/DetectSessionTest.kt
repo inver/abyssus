@@ -89,7 +89,11 @@ class DetectSessionTest {
         val session = axisSession()
         assertEquals(DetectOutcome.Stopped, session.cancel())
         source.axis("stick", 1, 1f)
-        assertEquals("a stopped session takes nothing more", DetectOutcome.Stopped, session.update(device("stick"), 0.1f))
+        assertEquals(
+            "a stopped session takes nothing more",
+            DetectOutcome.Stopped,
+            session.update(device("stick"), 0.1f),
+        )
     }
 
     @Test

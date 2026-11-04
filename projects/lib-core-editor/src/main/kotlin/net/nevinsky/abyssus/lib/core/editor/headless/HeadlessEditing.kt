@@ -5,37 +5,39 @@
 
 package net.nevinsky.abyssus.lib.core.editor.headless
 
-import net.nevinsky.abyssus.lib.core.editor.components.EnabledTarget
-import net.nevinsky.abyssus.lib.core.editor.components.SetEnabledAction
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.core.format.FormatRejection
-import net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat
-import net.nevinsky.abyssus.lib.core.editor.EditorMessages
-import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
-import net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor
-import net.nevinsky.abyssus.lib.core.editor.components.EditResult
-import net.nevinsky.abyssus.lib.core.editor.components.AssetEntities
-import net.nevinsky.abyssus.lib.core.editor.components.EntityRemoval
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.scene.SceneParser
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneEdit
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneTextEditor
+import net.nevinsky.abyssus.lib.core.editor.EditorMessages
+import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.core.editor.components.AssetEntities
+import net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor
+import net.nevinsky.abyssus.lib.core.editor.components.EditResult
+import net.nevinsky.abyssus.lib.core.editor.components.EnabledTarget
+import net.nevinsky.abyssus.lib.core.editor.components.EntityRemoval
+import net.nevinsky.abyssus.lib.core.editor.components.SetEnabledAction
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
-import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageComponentEdits
 import net.nevinsky.abyssus.lib.core.editor.document.documentDisplayMessage
+import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageComponentEdits
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldDescriptions
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetMetaEditor
 import net.nevinsky.abyssus.lib.core.editor.meta.EditOutcome
-import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
 import net.nevinsky.abyssus.lib.core.editor.meta.message
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneEdit
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneTextEditor
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.format.FormatRejection
+import net.nevinsky.abyssus.lib.core.format.UnsupportedDocumentFormat
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.scene.SceneParser
 
-/** Why a document or an edit was refused: [message] is the text the plugin shows, [rejection] the format problem if any. */
+/**
+ * Why a document or an edit was refused: [message] is the text the plugin shows, [rejection] the format problem if any.
+ */
 data class Refusal(val message: String, val rejection: FormatRejection? = null)
 
 /** What a headless edit made of a document's text. */
@@ -70,10 +72,15 @@ class HeadlessEditing(
     private val assetEntities = AssetEntities(messages)
 
     /** Null when [text] is a readable document of [kind], else why it is refused. */
-    fun validate(text: String, kind: DocumentKind): Refusal? =
-        runCatchingKeepingCancellation {
-            if (kind == DocumentKind.SCENE) scenes.parse(text) else json.readObject(text)
-        }.exceptionOrNull()?.let(::refusal)
+    fun validate(text: String, kind: DocumentKind): Refusal? = runCatchingKeepingCancellation {
+        if (kind == DocumentKind.SCENE) {
+            scenes.parse(text)
+        } else {
+            json.readObject(text)
+        }
+    }
+        .exceptionOrNull()
+        ?.let(::refusal)
 
     /** Applies the transform a gizmo drag writes ([TransformEdit]) to entity [entityId] of [sceneText]. */
     fun transform(sceneText: String, entityId: Long, edit: TransformEdit): HeadlessEdit =
@@ -93,19 +100,20 @@ class HeadlessEditing(
         assetsByType: Map<String, Set<String>>? = null,
     ): HeadlessEdit {
         var rejected: String? = null
-        val outcome = editScene(sceneText) { scene ->
-            when (val result = components.update(scene, entityId, kind, field, value, assets, assetsByType)) {
-                EditResult.Changed -> true
-                EditResult.Unchanged -> false
-                is EditResult.Rejected -> false.also { rejected = result.reason }
+        val outcome =
+            editScene(sceneText) { scene ->
+                when (val result = components.update(scene, entityId, kind, field, value, assets, assetsByType)) {
+                    EditResult.Changed -> true
+                    EditResult.Unchanged -> false
+                    is EditResult.Rejected -> false.also { rejected = result.reason }
+                }
             }
-        }
         return rejected?.let { HeadlessEdit.Refused(Refusal(it)) } ?: outcome
     }
 
     /**
-     * Adds the asset [asset] to [sceneText] as a new entity at ([x], [y], [z]), as Add Asset does. A model with [meshId]
-     * draws only that mesh; without it the whole model. [terrainSize] centres a terrain on the point.
+     * Adds the asset [asset] to [sceneText] as a new entity at ([x], [y], [z]), as Add Asset does. A model with
+     * [meshId] draws only that mesh; without it the whole model. [terrainSize] centres a terrain on the point.
      */
     fun placeAsset(
         sceneText: String,
@@ -117,13 +125,14 @@ class HeadlessEditing(
         terrainSize: Float? = null,
     ): HeadlessEdit {
         var rejected: String? = null
-        val outcome = editScene(sceneText) { scene ->
-            when (val added = assetEntities.add(scene, asset, Vector3(x, y, z), terrainSize, meshId).result) {
-                EditResult.Changed -> true
-                EditResult.Unchanged -> false
-                is EditResult.Rejected -> false.also { rejected = added.reason }
+        val outcome =
+            editScene(sceneText) { scene ->
+                when (val added = assetEntities.add(scene, asset, Vector3(x, y, z), terrainSize, meshId).result) {
+                    EditResult.Changed -> true
+                    EditResult.Unchanged -> false
+                    is EditResult.Rejected -> false.also { rejected = added.reason }
+                }
             }
-        }
         return rejected?.let { HeadlessEdit.Refused(Refusal(it)) } ?: outcome
     }
 
@@ -144,11 +153,12 @@ class HeadlessEditing(
      */
     fun removeEntities(sceneText: String, ids: Set<Long>): HeadlessEdit {
         var blocked: String? = null
-        val outcome = editScene(sceneText) { scene ->
-            val removal = foliageEdits.remove(scene, ids)
-            blocked = removal.blockedBy
-            removal.changed
-        }
+        val outcome =
+            editScene(sceneText) { scene ->
+                val removal = foliageEdits.remove(scene, ids)
+                blocked = removal.blockedBy
+                removal.changed
+            }
         return blocked?.let { HeadlessEdit.Refused(Refusal(it)) } ?: outcome
     }
 
@@ -158,13 +168,14 @@ class HeadlessEditing(
      */
     fun removeEntity(sceneText: String, entityId: Long): HeadlessEdit {
         var rejected: String? = null
-        val outcome = editScene(sceneText) { scene ->
-            when (val result = entityRemoval.remove(scene, entityId)) {
-                EditResult.Changed -> true
-                EditResult.Unchanged -> false
-                is EditResult.Rejected -> false.also { rejected = result.reason }
+        val outcome =
+            editScene(sceneText) { scene ->
+                when (val result = entityRemoval.remove(scene, entityId)) {
+                    EditResult.Changed -> true
+                    EditResult.Unchanged -> false
+                    is EditResult.Rejected -> false.also { rejected = result.reason }
+                }
             }
-        }
         return rejected?.let { HeadlessEdit.Refused(Refusal(it)) } ?: outcome
     }
 
@@ -172,11 +183,18 @@ class HeadlessEditing(
      * Sets property [key] of the asset `meta.json` [metaText] to [value]; [expected] is the value the caller last read
      * (an edit made elsewhere since is refused as a conflict), as the Properties panel does.
      */
-    fun setAssetProperty(metaText: String, key: String, expected: AssetFieldValue, value: AssetFieldValue): HeadlessEdit {
-        val edit = assetMeta.editText(metaText, key, expected, value)
-            ?: return HeadlessEdit.Refused(refusal(IllegalArgumentException("expected a JSON object")))
+    fun setAssetProperty(
+        metaText: String,
+        key: String,
+        expected: AssetFieldValue,
+        value: AssetFieldValue,
+    ): HeadlessEdit {
+        val edit =
+            assetMeta.editText(metaText, key, expected, value)
+                ?: return HeadlessEdit.Refused(refusal(IllegalArgumentException("expected a JSON object")))
         return when (val outcome = edit.outcome) {
-            EditOutcome.Changed -> edit.text?.takeIf { it != metaText }?.let { HeadlessEdit.Edited(it) } ?: HeadlessEdit.Unchanged
+            EditOutcome.Changed ->
+                edit.text?.takeIf { it != metaText }?.let { HeadlessEdit.Edited(it) } ?: HeadlessEdit.Unchanged
             EditOutcome.NoChange -> HeadlessEdit.Unchanged
             is EditOutcome.Rejected -> HeadlessEdit.Refused(Refusal(outcome.error.message(messages)))
             is EditOutcome.Conflict -> HeadlessEdit.Refused(Refusal(messages.message("assetFieldConflict")))

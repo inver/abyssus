@@ -10,7 +10,9 @@ import java.util.*
  * or deleted asset is never answered from a stale index. Where two folders claim a `uuid` the first by name wins.
  */
 class AssetIndex(private val fileLoader: FileLoader, private val metaLoader: AssetMetaLoader) {
-    /** Every asset folder by the `uuid` its meta declares. Metas that are unreadable or declare no `uuid` are left out. */
+    /**
+     * Every asset folder by the `uuid` its meta declares. Metas that are unreadable or declare no `uuid` are left out.
+     */
     fun folders(): Map<UUID, String> {
         val out = LinkedHashMap<UUID, String>()
         for (name in fileLoader.assetNames()) {

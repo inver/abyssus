@@ -34,8 +34,9 @@ class GridModel(val size: Int) {
         }
         File(dir, "model.bin").writeBytes(buffer.array())
         val max = (size - 1).toFloat()
-        File(dir, "model.gltf").writeText(
-            """
+        File(dir, "model.gltf")
+            .writeText(
+                """
             {
               "asset": { "version": "2.0" },
               "scene": 0,
@@ -48,12 +49,14 @@ class GridModel(val size: Int) {
                 { "buffer": 0, "byteOffset": $positionBytes, "byteLength": ${indexCount * 4}, "target": 34963 }
               ],
               "accessors": [
-                { "bufferView": 0, "componentType": 5126, "count": $vertexCount, "type": "VEC3", "min": [0, 0, 0], "max": [$max, 0, $max] },
+                { "bufferView": 0, "componentType": 5126, "count": $vertexCount, "type": "VEC3", "min": [0, 0, 0],
+"max": [$max, 0, $max] },
                 { "bufferView": 1, "componentType": 5125, "count": $indexCount, "type": "SCALAR" }
               ]
             }
-            """.trimIndent()
-        )
+            """
+                    .trimIndent()
+            )
         return File(dir, "model.gltf")
     }
 }

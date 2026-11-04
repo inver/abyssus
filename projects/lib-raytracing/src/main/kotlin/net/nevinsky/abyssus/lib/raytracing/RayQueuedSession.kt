@@ -13,8 +13,15 @@ class RayFrameStallException(val reason: String) : IllegalStateException(reason)
 class RayDeviceHealth {
     private var loss: String? = null
     private var stall: String? = null
-    fun reportLost(reason: String) { loss = reason }
-    fun reportStalled(reason: String) { stall = reason }
+
+    fun reportLost(reason: String) {
+        loss = reason
+    }
+
+    fun reportStalled(reason: String) {
+        stall = reason
+    }
+
     fun checkUsable() {
         loss?.let { throw RayDeviceLostException(it) }
         stall?.let { throw RayFrameStallException(it) }
@@ -28,45 +35,59 @@ class RayQueuedSession(private val driver: RaySession, private val health: RayDe
     private var inFlight = false
     private var pending: Submission? = null
     private var latest: Submission? = null
-    private class Submission(val key: RayFrameKey,val width:Int,val height:Int,val submit:()->Unit)
+
+    private class Submission(val key: RayFrameKey, val width: Int, val height: Int, val submit: () -> Unit)
 
     private fun checkOwner() {
         check(Thread.currentThread() === worker && !closed) { "Ray session is closed or used from another worker" }
         health.checkUsable()
     }
 
-    override fun submit(request: RayRequest) = offer(Submission(request.key,request.width,request.height) { driver.submit(request) })
-    override fun submit(request: RaySceneRequest) = offer(Submission(request.key,request.width,request.height) { driver.submit(request) })
+    override fun submit(request: RayRequest) =
+        offer(Submission(request.key, request.width, request.height) { driver.submit(request) })
+
+    override fun submit(request: RaySceneRequest) =
+        offer(Submission(request.key, request.width, request.height) { driver.submit(request) })
+
     private fun offer(request: Submission) {
         checkOwner()
-        if (inFlight) pending = request else {
+        if (inFlight) {
+            pending = request
+        } else {
             request.submit()
             inFlight = true
         }
         latest = request
     }
 
-    override val geometryBuilds: Long get() = driver.geometryBuilds
+    override val geometryBuilds: Long
+        get() = driver.geometryBuilds
 
     override fun poll(): RayFrame? {
         checkOwner()
-        if (!inFlight) return null
-        val frame = try {
-            driver.poll()
-        } catch (lost: RayDeviceLostException) {
-            health.reportLost(lost.message ?: "Ray device lost")
-            throw lost
-        } catch (rejected: RuntimeException) {
-            // The driver finished the frame and rejected it (query budget, unsupported medium); later work must not wait on it.
-            inFlight = false
-            pending = null
-            throw rejected
-        } ?: return null
+        if (!inFlight) {
+            return null
+        }
+        val frame =
+            try {
+                driver.poll()
+            } catch (lost: RayDeviceLostException) {
+                health.reportLost(lost.message ?: "Ray device lost")
+                throw lost
+            } catch (rejected: RuntimeException) {
+                // The driver finished the frame and rejected it (query budget, unsupported medium); later work must not
+                // wait on it.
+                inFlight = false
+                pending = null
+                throw rejected
+            } ?: return null
         inFlight = false
         val desired = latest!!
-        val compatible = frame.key.sceneGeneration == desired.key.sceneGeneration &&
-            frame.key.contextGeneration == desired.key.contextGeneration &&
-            frame.width == desired.width && frame.height == desired.height
+        val compatible =
+            frame.key.sceneGeneration == desired.key.sceneGeneration &&
+                frame.key.contextGeneration == desired.key.contextGeneration &&
+                frame.width == desired.width &&
+                frame.height == desired.height
         val next = pending
         pending = null
         if (next != null) {
@@ -78,7 +99,9 @@ class RayQueuedSession(private val driver: RaySession, private val health: RayDe
 
     override fun dispose() {
         check(Thread.currentThread() === worker) { "Ray session must stay on its owner worker" }
-        if (closed) return
+        if (closed) {
+            return
+        }
         closed = true
         pending = null
         latest = null
@@ -86,5 +109,7 @@ class RayQueuedSession(private val driver: RaySession, private val health: RayDe
     }
 
     /** Called by the scheduler when a frame stalls; marks the session unusable so checkUsable rethrows. */
-    override fun reportStalled(reason: String) { health.reportStalled(reason) }
+    override fun reportStalled(reason: String) {
+        health.reportStalled(reason)
+    }
 }

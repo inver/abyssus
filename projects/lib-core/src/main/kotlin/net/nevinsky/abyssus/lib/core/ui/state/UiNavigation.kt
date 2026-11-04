@@ -22,7 +22,13 @@ fun interface UiActionSink {
     fun emit(name: String): Boolean
 }
 
-enum class UiNavIssue { MISSING_TARGET, WRONG_KIND, UNKNOWN_ACTION, UNHANDLED_ACTION, NO_ACTION }
+enum class UiNavIssue {
+    MISSING_TARGET,
+    WRONG_KIND,
+    UNKNOWN_ACTION,
+    UNHANDLED_ACTION,
+    NO_ACTION,
+}
 
 data class UiNavDiagnostic(val code: UiNavIssue, val target: String? = null)
 
@@ -70,6 +76,7 @@ class UiNavigator(
 
     /** The widget tree to walk for focus and Enter on [ref]; a host that expands lists supplies the expanded tree. */
     var rootProvider: (UiScreenRef) -> UiWidget? = { screenOf(it)?.root }
+
     private class Entry(val ref: UiScreenRef, val focus: String?)
 
     private var current: UiScreenRef? = null
@@ -80,8 +87,11 @@ class UiNavigator(
         private set
 
     init {
-        if (showEntry) (own.entryScreen ?: own.screens.firstOrNull { it.kind == UiScreenKind.SCREEN }?.id)
-            ?.let { current = UiScreenRef(assetName, it) }
+        if (showEntry) {
+            (own.entryScreen ?: own.screens.firstOrNull { it.kind == UiScreenKind.SCREEN }?.id)?.let {
+                current = UiScreenRef(assetName, it)
+            }
+        }
     }
 
     fun currentScreen(): UiScreenRef? = current
@@ -93,9 +103,15 @@ class UiNavigator(
      */
     fun display(ref: UiScreenRef): Boolean {
         val screen = screenOf(ref) ?: return false
-        history.clear(); overlays.clear(); focus = null
-        if (screen.kind == UiScreenKind.SCREEN) current = ref
-        else { current = null; overlays += Entry(ref, null) }
+        history.clear()
+        overlays.clear()
+        focus = null
+        if (screen.kind == UiScreenKind.SCREEN) {
+            current = ref
+        } else {
+            current = null
+            overlays += Entry(ref, null)
+        }
         return true
     }
 
@@ -103,7 +119,12 @@ class UiNavigator(
 
     fun canGoBack(): Boolean = history.isNotEmpty()
 
-    private fun collectionOf(asset: String): UiCollection? = if (asset == assetName) ownCollection else source.collection(asset)
+    private fun collectionOf(asset: String): UiCollection? =
+        if (asset == assetName) {
+            ownCollection
+        } else {
+            source.collection(asset)
+        }
 
     /** The screen definition [ref] names, in this navigator's own or a source asset. */
     fun screenOf(ref: UiScreenRef): UiScreen? = collectionOf(ref.assetName)?.screen(ref.screenId)
@@ -114,18 +135,22 @@ class UiNavigator(
         return result + listOfNotNull(current?.let { UiLayer(it, true, false) })
     }
 
-    fun activate(action: UiAction): UiNavOutcome = when (action.type) {
-        UiActionType.OPEN_SCREEN -> target(action, UiScreenKind.SCREEN)?.let(::open) ?: fail(action)
-        UiActionType.SHOW_OVERLAY -> target(action, UiScreenKind.OVERLAY)?.let(::showOverlay) ?: fail(action)
-        UiActionType.BACK -> back()
-        UiActionType.CLOSE_OVERLAY -> closeOverlay(action.screenId?.let { UiScreenRef(action.assetName ?: assetName, it) })
-        UiActionType.EMIT_ACTION -> action.name?.let(::emit) ?: UiNavOutcome.Failed(UiNavDiagnostic(UiNavIssue.NO_ACTION))
-        null -> UiNavOutcome.Failed(UiNavDiagnostic(UiNavIssue.UNKNOWN_ACTION, action.rawType))
-    }
+    fun activate(action: UiAction): UiNavOutcome =
+        when (action.type) {
+            UiActionType.OPEN_SCREEN -> target(action, UiScreenKind.SCREEN)?.let(::open) ?: fail(action)
+            UiActionType.SHOW_OVERLAY -> target(action, UiScreenKind.OVERLAY)?.let(::showOverlay) ?: fail(action)
+            UiActionType.BACK -> back()
+            UiActionType.CLOSE_OVERLAY ->
+                closeOverlay(action.screenId?.let { UiScreenRef(action.assetName ?: assetName, it) })
+            UiActionType.EMIT_ACTION ->
+                action.name?.let(::emit) ?: UiNavOutcome.Failed(UiNavDiagnostic(UiNavIssue.NO_ACTION))
+            null -> UiNavOutcome.Failed(UiNavDiagnostic(UiNavIssue.UNKNOWN_ACTION, action.rawType))
+        }
 
     private var lastFailure: UiNavDiagnostic? = null
 
-    private fun fail(action: UiAction): UiNavOutcome = UiNavOutcome.Failed(lastFailure ?: UiNavDiagnostic(UiNavIssue.MISSING_TARGET, action.screenId))
+    private fun fail(action: UiAction): UiNavOutcome =
+        UiNavOutcome.Failed(lastFailure ?: UiNavDiagnostic(UiNavIssue.MISSING_TARGET, action.screenId))
 
     /** The referenced screen when it exists and has [kind]; otherwise records why in [lastFailure]. */
     private fun target(action: UiAction, kind: UiScreenKind): UiScreenRef? {
@@ -134,8 +159,14 @@ class UiNavigator(
         val collection = collectionOf(asset)
         val id = action.screenId ?: collection?.entryScreen.takeIf { kind == UiScreenKind.SCREEN }
         val screen = id?.let { collection?.screen(it) }
-        if (screen == null) { lastFailure = UiNavDiagnostic(UiNavIssue.MISSING_TARGET, listOfNotNull(asset, id).joinToString(":")); return null }
-        if (screen.kind != kind) { lastFailure = UiNavDiagnostic(UiNavIssue.WRONG_KIND, "$asset:${screen.id}"); return null }
+        if (screen == null) {
+            lastFailure = UiNavDiagnostic(UiNavIssue.MISSING_TARGET, listOfNotNull(asset, id).joinToString(":"))
+            return null
+        }
+        if (screen.kind != kind) {
+            lastFailure = UiNavDiagnostic(UiNavIssue.WRONG_KIND, "$asset:${screen.id}")
+            return null
+        }
         return UiScreenRef(asset, screen.id)
     }
 
@@ -167,18 +198,36 @@ class UiNavigator(
 
     /** Closes [ref], or the topmost overlay when null, and restores the focus it covered. */
     fun closeOverlay(ref: UiScreenRef? = null): UiNavOutcome {
-        val index = if (ref == null) overlays.lastIndex else overlays.indexOfLast { it.ref == ref }
-        if (index < 0) return UiNavOutcome.NoOp
+        val index =
+            if (ref == null) {
+                overlays.lastIndex
+            } else {
+                overlays.indexOfLast { it.ref == ref }
+            }
+        if (index < 0) {
+            return UiNavOutcome.NoOp
+        }
         val closed = overlays.removeAt(index)
-        if (index == overlays.size) focus = closed.focus
+        if (index == overlays.size) {
+            focus = closed.focus
+        }
         return UiNavOutcome.Navigated
     }
 
     /** Escape: closes the topmost overlay, otherwise goes back; nothing at the root. */
-    fun escape(): UiNavOutcome = if (overlays.isNotEmpty()) closeOverlay() else back()
+    fun escape(): UiNavOutcome =
+        if (overlays.isNotEmpty()) {
+            closeOverlay()
+        } else {
+            back()
+        }
 
     private fun emit(name: String): UiNavOutcome =
-        if (sink.emit(name)) UiNavOutcome.Emitted(name) else UiNavOutcome.Failed(UiNavDiagnostic(UiNavIssue.UNHANDLED_ACTION, name))
+        if (sink.emit(name)) {
+            UiNavOutcome.Emitted(name)
+        } else {
+            UiNavOutcome.Failed(UiNavDiagnostic(UiNavIssue.UNHANDLED_ACTION, name))
+        }
 
     /**
      * Routes a pointer event: [hit] returns the interactive widget under it in a layer, or null. Layers are asked top
@@ -186,25 +235,39 @@ class UiNavigator(
      */
     fun route(hit: (UiLayer) -> String?): UiRoute {
         for (layer in layers()) {
-            hit(layer)?.let { return UiRoute.Handled(layer, it) }
-            if (layer.modal) return UiRoute.Blocked
+            hit(layer)?.let {
+                return UiRoute.Handled(layer, it)
+            }
+            if (layer.modal) {
+                return UiRoute.Blocked
+            }
         }
         return UiRoute.Passthrough
     }
 
     /**
      * Moves focus along the topmost layer's visible, enabled, focusable widgets in tree order (wrapping), and returns
-     * it; null when there is none. [visible] and [enabled] come from the binding view; a hidden container hides its subtree.
+     * it; null when there is none. [visible] and [enabled] come from the binding view; a hidden container hides its
+     * subtree.
      */
     fun moveFocus(forward: Boolean, visible: (UiWidget) -> Boolean, enabled: (UiWidget) -> Boolean): String? {
         val order = focusOrder(visible, enabled)
-        if (order.isEmpty()) { focus = null; return null }
-        val at = order.indexOf(focus)
-        focus = when {
-            at < 0 -> if (forward) order.first() else order.last()
-            forward -> order[(at + 1) % order.size]
-            else -> order[(at - 1 + order.size) % order.size]
+        if (order.isEmpty()) {
+            focus = null
+            return null
         }
+        val at = order.indexOf(focus)
+        focus =
+            when {
+                at < 0 ->
+                    if (forward) {
+                        order.first()
+                    } else {
+                        order.last()
+                    }
+                forward -> order[(at + 1) % order.size]
+                else -> order[(at - 1 + order.size) % order.size]
+            }
         return focus
     }
 
@@ -213,8 +276,12 @@ class UiNavigator(
         val root = rootProvider(layer.ref) ?: return emptyList()
         val order = mutableListOf<String>()
         fun walk(widget: UiWidget) {
-            if (!visible(widget)) return
-            if (widget.type in FOCUSABLE && enabled(widget)) order += widget.id
+            if (!visible(widget)) {
+                return
+            }
+            if (widget.type in FOCUSABLE && enabled(widget)) {
+                order += widget.id
+            }
             widget.children.forEach(::walk)
         }
         walk(root)
@@ -225,11 +292,18 @@ class UiNavigator(
     fun activateFocused(): UiNavOutcome {
         val id = focus ?: return UiNavOutcome.NoOp
         val root = layers().firstOrNull()?.let { rootProvider(it.ref) } ?: return UiNavOutcome.NoOp
-        fun find(widget: UiWidget): UiWidget? = if (widget.id == id) widget else widget.children.firstNotNullOfOrNull(::find)
+        fun find(widget: UiWidget): UiWidget? =
+            if (widget.id == id) {
+                widget
+            } else {
+                widget.children.firstNotNullOfOrNull(::find)
+            }
         val widget = find(root)?.takeIf { it.type == UiWidgetType.BUTTON } ?: return UiNavOutcome.NoOp
         return widget.actions["click"]?.let(::activate) ?: UiNavOutcome.NoOp
     }
 
     /** Sets focus by pointer; the id must be a focusable widget of the topmost layer is the caller's check. */
-    fun focusOn(widgetId: String?) { focus = widgetId }
+    fun focusOn(widgetId: String?) {
+        focus = widgetId
+    }
 }

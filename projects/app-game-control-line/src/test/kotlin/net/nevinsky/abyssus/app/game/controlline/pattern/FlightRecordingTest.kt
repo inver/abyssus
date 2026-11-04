@@ -43,7 +43,10 @@ class FlightRecordingTest {
         val last = recording.time(recording.count - 1)
         assertTrue(recording.judgements.isNotEmpty())
         for (j in recording.judgements) {
-            assertTrue("${j.figure}: ${j.start}..${j.end} in $first..$last", j.start >= first && j.end <= last + 0.05f && j.start <= j.end)
+            assertTrue(
+                "${j.figure}: ${j.start}..${j.end} in $first..$last",
+                j.start >= first && j.end <= last + 0.05f && j.start <= j.end,
+            )
         }
         val loops = checkNotNull(recording.judgement(Figure.INSIDE_LOOPS.ordinal))
         assertEquals(100, loops.tenths)
@@ -70,7 +73,12 @@ class FlightRecordingTest {
         var gaps = 0
         // every gap but the last, which ends the track wherever it falls
         for (i in 1 until loops.ideal.size / 3 - 1) {
-            val d = Math.sqrt((0..2).sumOf { k -> Math.pow((loops.ideal[i * 3 + k] - loops.ideal[(i - 1) * 3 + k]).toDouble(), 2.0) })
+            val d =
+                Math.sqrt(
+                    (0..2).sumOf { k ->
+                        Math.pow((loops.ideal[i * 3 + k] - loops.ideal[(i - 1) * 3 + k]).toDouble(), 2.0)
+                    }
+                )
             assertTrue("gap $d", d >= 0.2)
             gaps++
         }

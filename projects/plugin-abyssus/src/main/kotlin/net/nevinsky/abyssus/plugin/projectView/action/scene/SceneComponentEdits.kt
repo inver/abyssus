@@ -28,7 +28,8 @@ import net.nevinsky.abyssus.plugin.schema.ComponentSchemas
 
 /**
  * Adds, changes and removes components of a scene's entities as undoable commands on the scene file. The rules are
- * [net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor]'s; nothing is written unless an edit comes back [EditResult.Changed].
+  * [net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor]'s; nothing is written unless an edit comes back
+  * [EditResult.Changed].
  */
 object SceneComponentEdits {
     private fun readMeta(folder: VirtualFile, metaFiles: MetaFiles) =
@@ -41,7 +42,9 @@ object SceneComponentEdits {
             val type = readMeta(folder, metaFiles)?.type
             if (type == MetaType.MODEL || type == MetaType.TERRAIN) {
                 BaseMeta(type, folder.name)
-            } else null
+            } else {
+                null
+            }
         }.sortedBy { it.name }
     }
 
@@ -79,7 +82,9 @@ object SceneComponentEdits {
     ): AddedLight {
         var added = AddedLight(EditResult.Rejected(EditorBundle.message("componentSceneUnreadable")))
         editSceneDocument(project, file, AbyssusBundle.message("commandAddLight")) { scene ->
-            if (cache.read(file) == null) return@editSceneDocument false
+            if (cache.read(file) == null) {
+                return@editSceneDocument false
+            }
             added = LightEntities(EditorBundle).add(scene, preset, position)
             added.result == EditResult.Changed
         }
@@ -87,7 +92,8 @@ object SceneComponentEdits {
     }
 
     /**
-     * Adds [asset] of the project to the scene at [position] as one undoable command (a terrain centred on it, sized from
+      * Adds [asset] of the project to the scene at [position] as one undoable command (a terrain centred on it, sized
+      * from
      * its `meta.json`); the result names the new entity. A model with [meshId] draws only that mesh.
      */
     fun addAsset(
@@ -101,10 +107,14 @@ object SceneComponentEdits {
     ): AddedEntity {
         val size = if (asset.isTerrain()) {
             terrainSize(file, asset.name, metaFiles)
-        } else null
+        } else {
+            null
+        }
         var added = AddedEntity(EditResult.Rejected(EditorBundle.message("componentSceneUnreadable")))
         editSceneDocument(project, file, AbyssusBundle.message("commandAddAsset")) { scene ->
-            if (cache.read(file) == null) return@editSceneDocument false
+            if (cache.read(file) == null) {
+                return@editSceneDocument false
+            }
             added = AssetEntities(EditorBundle).add(scene, asset, position, size, meshId)
             added.result == EditResult.Changed
         }
@@ -120,7 +130,8 @@ object SceneComponentEdits {
     }
 
     /**
-     * Creates a new entity (`Entity <id>`) holding a [kindName] component started from [initial], as one undoable command;
+      * Creates a new entity (`Entity <id>`) holding a [kindName] component started from [initial], as one undoable
+      * command;
      * nothing is written when the component is refused.
      */
     fun addAsNewEntity(
@@ -145,7 +156,9 @@ object SceneComponentEdits {
             )
             added = AddedEntity(result, id.takeIf { result == EditResult.Changed })
             // a refused component leaves the new entity out of the scene again
-            if (result != EditResult.Changed) scene.ecs.remove(id)
+            if (result != EditResult.Changed) {
+                scene.ecs.remove(id)
+            }
             result == EditResult.Changed
         }
         return added
@@ -177,7 +190,9 @@ object SceneComponentEdits {
         // a path arrangement regenerates its copies on the ground, which is read before the command starts
         val heights = if (kindName == "PathArrangementComponent") {
             ArrangementHeights.of(project).forScene(file) ?: return EditResult.Unchanged
-        } else null
+        } else {
+            null
+        }
         return updateWith(project, file, entityId, kindName, field, text, metaFiles, heights)
     }
 

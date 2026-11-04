@@ -36,7 +36,14 @@ class TerrainRegenerateSculptTest {
     private val newSettings = oldSettings.copy(seed = 99)
     private val oldBase = generator.generate(resolution, size, oldSettings)
     private val newBase = generator.generate(resolution, size, newSettings)
-    private val delta = FloatArray(oldBase.size) { if (it % 5 == 0) 3.25f else 0f }
+    private val delta =
+        FloatArray(oldBase.size) {
+            if (it % 5 == 0) {
+                3.25f
+            } else {
+                0f
+            }
+        }
     private val deltaBytes = encoder.encode(delta)
     private val preview = TerrainPreview(newSettings, size, resolution, newBase)
 
@@ -47,9 +54,16 @@ class TerrainRegenerateSculptTest {
         return SculptFiles(size, resolution, composed, recipe, manifests.encode(manifest), deltaBytes, null)
     }
 
-    private fun asFiles(set: SculptFileSet) = SculptFiles(
-        size, resolution, set.terrain, set.recipe?.toString(Charsets.UTF_8), set.manifest?.toString(Charsets.UTF_8), set.delta, set.base,
-    )
+    private fun asFiles(set: SculptFileSet) =
+        SculptFiles(
+            size,
+            resolution,
+            set.terrain,
+            set.recipe?.toString(Charsets.UTF_8),
+            set.manifest?.toString(Charsets.UTF_8),
+            set.delta,
+            set.base,
+        )
 
     @Test
     fun `keeping sculpting gives the new noise plus the same delta bytes`() {
@@ -97,7 +111,14 @@ class TerrainRegenerateSculptTest {
     fun `a stored base is replaced by the recipe's`() {
         val baseBytes = encoder.encode(oldBase)
         val composed = encoder.encode(composeSculpt(oldBase, delta))
-        val manifest = SculptManifest(SculptBaseKind.STORED, resolution, sha256Hex(deltaBytes), sha256Hex(composed), sha256Hex(baseBytes))
+        val manifest =
+            SculptManifest(
+                SculptBaseKind.STORED,
+                resolution,
+                sha256Hex(deltaBytes),
+                sha256Hex(composed),
+                sha256Hex(baseBytes),
+            )
         val files = SculptFiles(size, resolution, composed, null, manifests.encode(manifest), deltaBytes, baseBytes)
         val out = planner.regenerate(files, reader.read(files), preview, discard = false)
         assertNull(out.base)

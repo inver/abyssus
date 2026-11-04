@@ -38,7 +38,8 @@ class PanelServices(
     /** The component editor of each scene, from the project's and the contributed component schemas. */
     val schemas: ComponentSchemas,
     /**
-     * The mesh ids of model [String] in project directory [File], or null when the model cannot be found or read. Called
+      * The mesh ids of model [String] in project directory [File], or null when the model cannot be found or read.
+      * Called
      * off the EDT; it may parse the model file.
      */
     val meshes: (File, String) -> List<String>? = { _, _ -> null },

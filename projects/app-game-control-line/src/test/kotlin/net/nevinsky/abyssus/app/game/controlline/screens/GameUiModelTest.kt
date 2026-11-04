@@ -29,17 +29,31 @@ import org.junit.rules.TemporaryFolder
 
 /** The Watch AI action, and who flies as the screens show it, without graphics. */
 class GameUiModelTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
-    private val planes = loadField().engine.let { engine -> planeChoices(engine.ids.ids.associateWith { engine.ids[it]!! }) }
+    private val planes =
+        loadField().engine.let { engine -> planeChoices(engine.ids.ids.associateWith { engine.ids[it]!! }) }
 
-    private val flow by lazy { GameFlow(planes, ScoreTable(temp.root.toPath().resolve("s.json")), PatternScoreTable(temp.root.toPath().resolve("p.json")), ScaleScoreTable(temp.root.toPath().resolve("sc.json"))) }
+    private val flow by lazy {
+        GameFlow(
+            planes,
+            ScoreTable(temp.root.toPath().resolve("s.json")),
+            PatternScoreTable(temp.root.toPath().resolve("p.json")),
+            ScaleScoreTable(temp.root.toPath().resolve("sc.json")),
+        )
+    }
     private val model by lazy { GameUiModel(flow) {} }
 
-    private fun flag(name: String): Boolean = (model.snapshot(null, null, 0f).toMap().getValue(name) as UiValue.Bool).value
+    private fun flag(name: String): Boolean =
+        (model.snapshot(null, null, 0f).toMap().getValue(name) as UiValue.Bool).value
 
-    private fun report(level: AssistLevel) = FlightReport("Stunter", FlightEnd.LANDED, 370f, FlightResult.Pattern(level, ScoreSheet(), recordedFlight(level)))
+    private fun report(level: AssistLevel) =
+        FlightReport(
+            "Stunter",
+            FlightEnd.LANDED,
+            370f,
+            FlightResult.Pattern(level, ScoreSheet(), recordedFlight(level)),
+        )
 
     private fun toF2bPlaneSelect() {
         flow.f2bPattern()
@@ -64,19 +78,27 @@ class GameUiModelTest {
         assertTrue(model.emit("watchAi"))
         assertEquals(Control.AI, (flow.screen as Screen.Flying).control)
 
-        flow.pause(); flow.mainMenu(); toF2bPlaneSelect()
+        flow.pause()
+        flow.mainMenu()
+        toF2bPlaneSelect()
         assertTrue(model.key(Input.Keys.A))
         assertEquals(Control.AI, (flow.screen as Screen.Flying).control)
 
-        flow.pause(); flow.mainMenu(); toF2bPlaneSelect()
+        flow.pause()
+        flow.mainMenu()
+        toF2bPlaneSelect()
         assertTrue(model.key(Input.Keys.ENTER, focus = WATCH_AI_BUTTON))
         assertEquals("Enter on the focused Watch AI button", Control.AI, (flow.screen as Screen.Flying).control)
 
-        flow.pause(); flow.mainMenu(); toF2bPlaneSelect()
+        flow.pause()
+        flow.mainMenu()
+        toF2bPlaneSelect()
         assertTrue(model.key(Input.Keys.ENTER, focus = "ps-fly"))
         assertEquals("Enter anywhere else flies", Control.HUMAN, (flow.screen as Screen.Flying).control)
 
-        flow.pause(); flow.mainMenu(); toF2bPlaneSelect()
+        flow.pause()
+        flow.mainMenu()
+        toF2bPlaneSelect()
         assertTrue(model.key(Input.Keys.ENTER))
         assertEquals(Control.HUMAN, (flow.screen as Screen.Flying).control)
     }

@@ -4,24 +4,24 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.vfs.VirtualFile
+import java.io.File
+import java.util.UUID
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.terrain.checkFolderName
 import net.nevinsky.abyssus.lib.core.editor.terrain.uniqueAssetUuid
 import net.nevinsky.abyssus.lib.core.editor.weather.WeatherPresetDraft
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.textOf
-import java.io.File
-import java.util.UUID
 
 class StagedWeatherPreset(val name: String, val uuid: String, val transaction: AssetTransaction)
 
@@ -49,43 +49,68 @@ class NewWeatherPresetFactory(
         require(reference != null && reference.isNotBlank()) {
             EditorBundle.message("weatherSourceReference")
         }
-        val matches = ProjectLayout.assetFolders(abss).mapNotNull { folder ->
-            val file = folder.findChild(META_FILE) ?: return@mapNotNull null
-            runCatchingKeepingCancellation {
-                val text = textOf(file)
-                val meta = parsing.assetFields(text)
-                text.takeIf { meta.uuidText == reference }
-            }.getOrNull()
-        }
+        val matches =
+            ProjectLayout.assetFolders(abss).mapNotNull { folder ->
+                val file = folder.findChild(META_FILE) ?: return@mapNotNull null
+                runCatchingKeepingCancellation {
+                    val text = textOf(file)
+                    val meta = parsing.assetFields(text)
+                    text.takeIf { meta.uuidText == reference }
+                }
+                    .getOrNull()
+            }
         return skyText to requireNotNull(matches.singleOrNull()) { AbyssusBundle.message("weatherSourceUnavailable") }
     }
 
-    fun validateSource(abss: VirtualFile, sky: VirtualFile) = ReadAction.compute<Unit, RuntimeException> {
-        val (skyText, sourceText) = texts(abss, sky)
-        draft.create(skyText, sourceText, UUID(0, 0), 0)
-        Unit
-    }
+    fun validateSource(abss: VirtualFile, sky: VirtualFile) =
+        ReadAction.compute<Unit, RuntimeException> {
+            val (skyText, sourceText) = texts(abss, sky)
+            draft.create(skyText, sourceText, UUID(0, 0), 0)
+            Unit
+        }
 
-    fun stage(abss: VirtualFile, sky: VirtualFile, rawName: String): StagedWeatherPreset = ReadAction.compute<StagedWeatherPreset, RuntimeException> {
-        val (skyText, sourceText) = texts(abss, sky)
-        val projectDir = File(abss.parent.path)
-        val assetsDir = File(projectDir, ASSETS_DIR)
-        val name = rawName.trim()
-        checkFolderName(assetsDir, name)?.let { throw IllegalArgumentException(AbyssusBundle.message("newTerrainNameError.$it")) }
-        val used = ProjectLayout.assetFolders(abss).mapNotNull { folder ->
-            runCatchingKeepingCancellation {
-                folder.findChild(META_FILE)?.let { parsing.assetFields(textOf(it)).uuidText }
-            }.getOrNull()
-        }.toSet()
-        var uuid = uniqueAssetUuid(processor, assetsDir, randomUuid)
-        while (uuid.toString() in used) uuid = uniqueAssetUuid(processor, assetsDir, randomUuid)
-        val text = draft.create(skyText, sourceText, uuid, clock())
-        val base = "assets/$name"
-        StagedWeatherPreset(name, uuid.toString(), AssetTransaction(
-            AbyssusBundle.message("commandNewWeatherPreset"),
-            listOf(FileChange("$base/meta.json", FileSnapshot.Absent, FileSnapshot.Bytes(text.toByteArray(Charsets.UTF_8)))),
-            createdDirs = (if (assetsDir.isDirectory) emptyList() else listOf("assets")) + base,
-            guard = { AssetReferenceGuard(projectDir).blocker(name, uuid.toString()) },
-        ))
-    }
+    fun stage(abss: VirtualFile, sky: VirtualFile, rawName: String): StagedWeatherPreset =
+        ReadAction.compute<StagedWeatherPreset, RuntimeException> {
+            val (skyText, sourceText) = texts(abss, sky)
+            val projectDir = File(abss.parent.path)
+            val assetsDir = File(projectDir, ASSETS_DIR)
+            val name = rawName.trim()
+            checkFolderName(assetsDir, name)?.let {
+                throw IllegalArgumentException(AbyssusBundle.message("newTerrainNameError.$it"))
+            }
+            val used =
+                ProjectLayout.assetFolders(abss)
+                    .mapNotNull { folder ->
+                        runCatchingKeepingCancellation {
+                            folder.findChild(META_FILE)?.let { parsing.assetFields(textOf(it)).uuidText }
+                        }
+                            .getOrNull()
+                    }
+                    .toSet()
+            var uuid = uniqueAssetUuid(processor, assetsDir, randomUuid)
+            while (uuid.toString() in used) uuid = uniqueAssetUuid(processor, assetsDir, randomUuid)
+            val text = draft.create(skyText, sourceText, uuid, clock())
+            val base = "assets/$name"
+            StagedWeatherPreset(
+                name,
+                uuid.toString(),
+                AssetTransaction(
+                    AbyssusBundle.message("commandNewWeatherPreset"),
+                    listOf(
+                        FileChange(
+                            "$base/meta.json",
+                            FileSnapshot.Absent,
+                            FileSnapshot.Bytes(text.toByteArray(Charsets.UTF_8)),
+                        )
+                    ),
+                    createdDirs =
+                        (if (assetsDir.isDirectory) {
+                            emptyList()
+                        } else {
+                            listOf("assets")
+                        }) + base,
+                    guard = { AssetReferenceGuard(projectDir).blocker(name, uuid.toString()) },
+                ),
+            )
+        }
 }

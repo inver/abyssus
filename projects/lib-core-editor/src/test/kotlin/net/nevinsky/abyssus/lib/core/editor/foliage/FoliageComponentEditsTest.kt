@@ -5,12 +5,12 @@
 
 package net.nevinsky.abyssus.lib.core.editor.foliage
 
-import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.editor.entityOf
 import net.nevinsky.abyssus.lib.core.editor.sceneOf
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -41,7 +41,8 @@ class FoliageComponentEditsTest {
 
     @Test
     fun removeTakesTheEntitiesOutAndReportsChange() {
-        val scene = sceneOf(entityOf(1, EntityType.OBJECT), entityOf(2, EntityType.OBJECT), entityOf(3, EntityType.OBJECT))
+        val scene =
+            sceneOf(entityOf(1, EntityType.OBJECT), entityOf(2, EntityType.OBJECT), entityOf(3, EntityType.OBJECT))
         val result = edits.remove(scene, setOf(1L, 2L, 99L))
         assertTrue(result.changed)
         assertNull(result.blockedBy)
@@ -60,10 +61,11 @@ class FoliageComponentEditsTest {
         val parented = sceneOf(entityOf(1, EntityType.OBJECT), entityOf(2, EntityType.OBJECT, ParentComponent(1)))
         val parentResult = edits.remove(parented, setOf(1L))
         assertFalse(parentResult.changed)
-        assertTrue(parentResult.blockedBy!!, parentResult.blockedBy!!.contains("ParentComponent.parentEntityId"))
+        assertTrue(parentResult.blockedBy!!, parentResult.blockedBy.contains("ParentComponent.parentEntityId"))
         assertEquals(setOf(1L, 2L), parented.ecs.keys)
 
-        val aimed = sceneOf(entityOf(1, EntityType.OBJECT), entityOf(2, EntityType.OBJECT, PositionComponent(lookAtId = 1)))
+        val aimed =
+            sceneOf(entityOf(1, EntityType.OBJECT), entityOf(2, EntityType.OBJECT, PositionComponent(lookAtId = 1)))
         assertTrue(edits.remove(aimed, setOf(1L)).blockedBy!!.contains("PositionComponent.lookAtId"))
         assertEquals("removing the referrer too is allowed", true, edits.remove(aimed, setOf(1L, 2L)).changed)
         assertTrue(aimed.ecs.isEmpty())

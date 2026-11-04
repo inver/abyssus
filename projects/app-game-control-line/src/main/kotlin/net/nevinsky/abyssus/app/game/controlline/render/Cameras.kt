@@ -7,12 +7,12 @@ package net.nevinsky.abyssus.app.game.controlline.render
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefFrame
-import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefView
 import kotlin.math.abs
 import kotlin.math.atan
 import kotlin.math.max
 import kotlin.math.min
+import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefFrame
+import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefView
 
 /** The pilot's eyes, above the ground under the handle (m). */
 const val EYE_HEIGHT = 1.65f
@@ -20,7 +20,10 @@ const val EYE_HEIGHT = 1.65f
 /** The field of view of every camera but the debrief's (degrees). */
 private const val DEFAULT_FOV = 67f
 
-/** The debrief widens its field of view up to this much to fit a figure (degrees), and never narrows it below [DEBRIEF_MIN_FOV]. */
+/**
+ * The debrief widens its field of view up to this much to fit a figure (degrees), and never narrows it below
+ * [DEBRIEF_MIN_FOV].
+ */
 const val DEBRIEF_MAX_FOV = 100f
 const val DEBRIEF_MIN_FOV = 30f
 
@@ -39,10 +42,11 @@ private const val GLIDE = 4f
  * of the chosen parked plane, gliding between them. Menus: slowly circling the field.
  */
 class Cameras(width: Float, height: Float) {
-    val camera = PerspectiveCamera(67f, width, height).apply {
-        near = 0.1f
-        far = 600f
-    }
+    val camera =
+        PerspectiveCamera(67f, width, height).apply {
+            near = 0.1f
+            far = 600f
+        }
     private val eye = Vector3()
     private val target = Vector3()
     private var menuAngle = 0f
@@ -88,8 +92,8 @@ class Cameras(width: Float, height: Float) {
 
     /**
      * The debrief's camera on [frame], a figure flown round the pilot at [pilot]'s feet (design decision 4): from the
-     * pilot's eyes, or from outside the circle on the figure's azimuth, looking at the middle of the figure. The field of
-     * view is widened, up to [DEBRIEF_MAX_FOV], to take in all of its points.
+     * pilot's eyes, or from outside the circle on the figure's azimuth, looking at the middle of the figure. The field
+     * of view is widened, up to [DEBRIEF_MAX_FOV], to take in all of its points.
      */
     fun debrief(view: DebriefView, pilot: Vector3, frame: DebriefFrame) {
         gliding = false
@@ -97,7 +101,8 @@ class Cameras(width: Float, height: Float) {
         val outward = Vector3(MathUtils.cos(azimuth), 0f, -MathUtils.sin(azimuth))
         when (view) {
             DebriefView.PILOT -> eye.set(pilot).add(0f, EYE_HEIGHT, 0f)
-            DebriefView.OUTSIDE -> eye.set(pilot).mulAdd(outward, OUTSIDE_DISTANCE * frame.lineLength).add(0f, OUTSIDE_HEIGHT, 0f)
+            DebriefView.OUTSIDE ->
+                eye.set(pilot).mulAdd(outward, OUTSIDE_DISTANCE * frame.lineLength).add(0f, OUTSIDE_HEIGHT, 0f)
         }
         target.set(pilot).add(frame.centre)
         var fit = fit(frame, pilot, outward)
@@ -115,7 +120,12 @@ class Cameras(width: Float, height: Float) {
     private fun fit(frame: DebriefFrame, pilot: Vector3, outward: Vector3): Fit {
         val forward = Vector3(target).sub(eye).nor()
         // looking straight up, the picture's top is away from the figure's side
-        val up = if (abs(forward.y) > 0.99f) Vector3(outward).scl(-forward.y) else Vector3.Y
+        val up =
+            if (abs(forward.y) > 0.99f) {
+                Vector3(outward).scl(-forward.y)
+            } else {
+                Vector3.Y
+            }
         val right = Vector3(forward).crs(up).nor()
         val top = Vector3(right).crs(forward).nor()
         val aspect = camera.viewportWidth / camera.viewportHeight
@@ -130,17 +140,23 @@ class Cameras(width: Float, height: Float) {
             }
             need = max(need, max(abs(v.dot(top)) / depth, abs(v.dot(right)) / (depth * aspect)))
         }
-        val fov = (2f * atan(need * DEBRIEF_MARGIN) * MathUtils.radiansToDegrees).coerceIn(DEBRIEF_MIN_FOV, DEBRIEF_MAX_FOV)
+        val fov =
+            (2f * atan(need * DEBRIEF_MARGIN) * MathUtils.radiansToDegrees).coerceIn(DEBRIEF_MIN_FOV, DEBRIEF_MAX_FOV)
         return Fit(fov, up)
     }
 
-    /** The direction from the eye in the middle of the cone that holds the [frame]'s points (an approximate smallest one). */
+    /**
+     * The direction from the eye in the middle of the cone that holds the [frame]'s points (an approximate smallest
+     * one).
+     */
     private fun enclosingAxis(frame: DebriefFrame, pilot: Vector3): Vector3 {
         val directions = frame.points.map { Vector3(pilot).add(it).sub(eye).nor() }
         val axis = Vector3()
         directions.forEach { axis.add(it) }
         axis.nor()
-        if (axis.isZero) axis.set(Vector3(target).sub(eye).nor())
+        if (axis.isZero) {
+            axis.set(Vector3(target).sub(eye).nor())
+        }
         for (i in 1..40) {
             val farthest = directions.minByOrNull { it.dot(axis) } ?: break
             axis.lerp(farthest, 1f / (i + 1)).nor()

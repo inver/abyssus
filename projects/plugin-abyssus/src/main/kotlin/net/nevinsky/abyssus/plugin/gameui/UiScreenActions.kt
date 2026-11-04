@@ -45,7 +45,9 @@ abstract class NewUiScreenActionBase(private val kind: String, textKey: String) 
 
     /** The only UI asset, or the one the user picks; null when cancelled. */
     private fun chooseAsset(project: Project, names: List<String>): String? {
-        if (names.size == 1) return names.single()
+        if (names.size == 1) {
+            return names.single()
+        }
         val index = Messages.showChooseDialog(
             project, AbyssusBundle.message("uiScreenAssetPrompt"), AbyssusBundle.message("uiCommandAddScreen"),
             null, names.toTypedArray(), names.first(),

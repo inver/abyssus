@@ -28,25 +28,33 @@ class PhysicsFoliageLifecycleTest {
     private val natives = JoltNatives()
     private val messages = mutableListOf<String>()
 
-    @After
-    fun cleanUp() = project.close()
+    @After fun cleanUp() = project.close()
 
     private fun load(text: String): SceneContext =
-        requireNotNull(physicsLoader(project.dir, warningsTo(messages)).loadFromText(text)) { messages.joinToString("\n") }
+        requireNotNull(physicsLoader(project.dir, warningsTo(messages)).loadFromText(text)) {
+            messages.joinToString("\n")
+        }
 
     private fun world(scene: SceneContext, failure: FoliageFailure? = null) =
         PhysicsWorld(scene.engine, PhysicsAssets(project.dir), warningsTo(messages), natives, failure)
 
     /** A 2 by 2 grid of chunks, each with one trunk well inside its own corner. */
-    private fun grid(id: Int = 1) = FoliageLayerBake(
-        id, 1, 2, 2,
-        listOf(
-            listOf(FoliageCopy(0, 20f, 20f, 0f, 1f)), listOf(FoliageCopy(0, 70f, 20f, 0f, 1f)),
-            listOf(FoliageCopy(0, 20f, 70f, 0f, 1f)), listOf(FoliageCopy(0, 70f, 70f, 0f, 1f)),
-        ),
-    )
+    private fun grid(id: Int = 1) =
+        FoliageLayerBake(
+            id,
+            1,
+            2,
+            2,
+            listOf(
+                listOf(FoliageCopy(0, 20f, 20f, 0f, 1f)),
+                listOf(FoliageCopy(0, 70f, 20f, 0f, 1f)),
+                listOf(FoliageCopy(0, 20f, 70f, 0f, 1f)),
+                listOf(FoliageCopy(0, 70f, 70f, 0f, 1f)),
+            ),
+        )
 
-    private fun heightOfBox(scene: SceneContext) = scene.named("Box").getComponent(PositionComponent::class.java).localPosition.y
+    private fun heightOfBox(scene: SceneContext) =
+        scene.named("Box").getComponent(PositionComponent::class.java).localPosition.y
 
     @Test
     fun removingTheOwnerRemovesEveryChunkAndLeavesOtherBodiesValid() {
@@ -71,13 +79,20 @@ class PhysicsFoliageLifecycleTest {
         project.foliage("[${layerJson(CAPSULE, id = 1)},${layerJson(CAPSULE, id = 2)}]")
         project.bake(listOf(grid(1), grid(2)))
         val scene = load(scene(extra = box(20f, 5f, 20f)))
-        world(scene) { layerId, chunk -> if (layerId == 1 && chunk == 3) "injected failure" else null }.use { world ->
-            // layer 1 built two chunks and was rolled back; layer 2 built all four
-            assertEquals(4, world.foliageBodies)
-            assertEquals(1, messages.count { it.contains("layer 1 does not collide: injected failure") })
-            repeat(180) { world.advance(1f / 60f) }
-            assertEquals(2.0f, heightOfBox(scene), 0.05f)
-        }
+        world(scene) { layerId, chunk ->
+                if (layerId == 1 && chunk == 3) {
+                    "injected failure"
+                } else {
+                    null
+                }
+            }
+            .use { world ->
+                // layer 1 built two chunks and was rolled back; layer 2 built all four
+                assertEquals(4, world.foliageBodies)
+                assertEquals(1, messages.count { it.contains("layer 1 does not collide: injected failure") })
+                repeat(180) { world.advance(1f / 60f) }
+                assertEquals(2.0f, heightOfBox(scene), 0.05f)
+            }
     }
 
     @Test
@@ -110,17 +125,34 @@ class PhysicsFoliageLifecycleTest {
         world(scene).use { world ->
             assertEquals(0, world.foliageBodies)
         }
-        assertTrue("refusal took ${(System.nanoTime() - start) / 1_000_000} ms", System.nanoTime() - start < 20_000_000_000L)
+        assertTrue(
+            "refusal took ${(System.nanoTime() - start) / 1_000_000} ms",
+            System.nanoTime() - start < 20_000_000_000L,
+        )
         assertEquals(1, messages.count { it.contains("over the limit of 200000") })
     }
 
     @Test
     fun twoLayersOf150000AdmitTheFirstAndRefuseTheSecondInLayerOrder() {
         project.foliage("[${layerJson(CAPSULE, id = 1)},${layerJson(CAPSULE, id = 2)}]")
-        fun dense(id: Int) = FoliageLayerBake(
-            id, 1, 10, 10,
-            List(100) { chunk -> List(1_500) { i -> FoliageCopy(0, (chunk % 10) * 10f + 0.5f + (i % 30) * 0.3f, (chunk / 10) * 10f + 0.5f + (i / 30) * 0.15f, 0f, 0.1f) } },
-        )
+        fun dense(id: Int) =
+            FoliageLayerBake(
+                id,
+                1,
+                10,
+                10,
+                List(100) { chunk ->
+                    List(1_500) { i ->
+                        FoliageCopy(
+                            0,
+                            (chunk % 10) * 10f + 0.5f + (i % 30) * 0.3f,
+                            (chunk / 10) * 10f + 0.5f + (i / 30) * 0.15f,
+                            0f,
+                            0.1f,
+                        )
+                    }
+                },
+            )
         project.bake(listOf(dense(1), dense(2)))
         val scene = load(scene(extra = box(5f, 5f, 5f)))
         world(scene).use { world ->

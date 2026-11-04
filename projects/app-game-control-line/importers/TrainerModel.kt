@@ -7,7 +7,10 @@
 package net.nevinsky.abyssus.app.game.controlline.tools
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import java.io.File
+import java.net.URI
+import java.security.MessageDigest
+import java.util.UUID
 import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearArchive
 import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearImport
 import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearImportRequest
@@ -15,10 +18,7 @@ import net.nevinsky.abyssus.lib.core.editor.flightgear.IMPORTED_MODEL_FILE
 import net.nevinsky.abyssus.lib.core.editor.flightgear.ImportOrigin
 import net.nevinsky.abyssus.lib.core.editor.flightgear.ImportSize
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
-import java.io.File
-import java.net.URI
-import java.security.MessageDigest
-import java.util.UUID
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
 /** FlightGear's Cessna 172R aircraft archive. */
 const val C172R_URL = "https://mirrors.ibiblio.org/flightgear/ftp/Aircraft-2024/c172r.zip"
@@ -30,24 +30,40 @@ const val C172R_SHA256 = "592fe840e6ab9f69619fe25045bd3b766a9931c1d36965b3b255cb
 const val TRAINER_SPAN = 1.0
 
 /** The Cessna's cabin interior and the propeller's spinning disc: not part of a control-line model. */
-val TRAINER_LEFT_OUT = setOf(
-    "Cabin", "Seat.1", "Seat.2", "Seat.3", "Seat.4", "Yoke.1", "Yoke.2", "Pedal.1", "Pedal.2", "Pedal.3", "Pedal.4",
-    "Throttle", "Mixture", "Compass", "Pedestal", "Propeller.2",
-)
+val TRAINER_LEFT_OUT =
+    setOf(
+        "Cabin",
+        "Seat.1",
+        "Seat.2",
+        "Seat.3",
+        "Seat.4",
+        "Yoke.1",
+        "Yoke.2",
+        "Pedal.1",
+        "Pedal.2",
+        "Pedal.3",
+        "Pedal.4",
+        "Throttle",
+        "Mixture",
+        "Compass",
+        "Pedestal",
+        "Propeller.2",
+    )
 
 /**
- * The trainer's centre of gravity in the Cessna model's FlightGear body frame (metres: x aft, y right, z up): a
- * quarter of the wing's chord behind its leading edge, at the cabin's mid-height. It becomes the model's origin, as
- * the generated planes have theirs (`PlaneModels`). An estimate.
+ * The trainer's centre of gravity in the Cessna model's FlightGear body frame (metres: x aft, y right, z up): a quarter
+ * of the wing's chord behind its leading edge, at the cabin's mid-height. It becomes the model's origin, as the
+ * generated planes have theirs (`PlaneModels`). An estimate.
  */
 val TRAINER_CENTRE_OF_GRAVITY = ImportOrigin.SourcePoint(0.35, 0.0, 0.0)
 
 /**
  * Re-imports the bundled trainer (`assets/model_trainer`) from FlightGear's Cessna 172R through `core`'s FlightGear
  * import: downloads the archive into the cache folder (checking [C172R_SHA256]), scales it to [TRAINER_SPAN], leaves
- * out [TRAINER_LEFT_OUT] and puts its origin at [TRAINER_CENTRE_OF_GRAVITY]. Writes `model.glb` (with the crash
- * clips of [withCrashAnimations]), `textures/`, `source.json` and `COPYING` (GPL-2.0), and keeps `meta.json`, whose
- * `additional.file` is edited through the editor's scene writer. Running it again gives the same bytes. Run by `./gradlew :games:control-line:importTrainer`.
+ * out [TRAINER_LEFT_OUT] and puts its origin at [TRAINER_CENTRE_OF_GRAVITY]. Writes `model.glb` (with the crash clips
+ * of [withCrashAnimations]), `textures/`, `source.json` and `COPYING` (GPL-2.0), and keeps `meta.json`, whose
+ * `additional.file` is edited through the editor's scene writer. Running it again gives the same bytes. Run by
+ * `./gradlew :games:control-line:importTrainer`.
  *
  * Usage: `TrainerModel <project folder> <cache folder> <GPL-2.0 text>`
  */
@@ -57,21 +73,41 @@ fun main(args: Array<String>) {
     val archiveFile = cached(File(args[1]))
     val json = JsonProcessor()
     val meta = json.readObject(File(folder, "meta.json").readText())
-    val staged = FlightGearArchive(archiveFile).use { archive ->
-        val aircraft = archive.aircraft().single { it.id == "c172r" }
-        val request = FlightGearImportRequest(aircraft, folder.name, ImportSize.Span(TRAINER_SPAN), TRAINER_LEFT_OUT, TRAINER_CENTRE_OF_GRAVITY)
-        FlightGearImport(json, AbyssusDocumentFormat()).stage(archive, request, UUID.fromString(meta["uuid"].asText()), meta["lastModified"].asLong())
-    }
-    for (old in listOf("model.gltf", "model.bin", IMPORTED_MODEL_FILE, "source.json", "COPYING")) File(folder, old).delete()
+    val staged =
+        FlightGearArchive(archiveFile).use { archive ->
+            val aircraft = archive.aircraft().single { it.id == "c172r" }
+            val request =
+                FlightGearImportRequest(
+                    aircraft,
+                    folder.name,
+                    ImportSize.Span(TRAINER_SPAN),
+                    TRAINER_LEFT_OUT,
+                    TRAINER_CENTRE_OF_GRAVITY,
+                )
+            FlightGearImport(json, AbyssusDocumentFormat())
+                .stage(archive, request, UUID.fromString(meta["uuid"].asText()), meta["lastModified"].asLong())
+        }
+    for (old in listOf("model.gltf", "model.bin", IMPORTED_MODEL_FILE, "source.json", "COPYING")) File(folder, old)
+        .delete()
     File(folder, "textures").deleteRecursively()
     for ((path, bytes) in staged.files) {
-        if (path == "meta.json") continue
-        val written = if (path == IMPORTED_MODEL_FILE) withCrashAnimations(bytes) else bytes
+        if (path == "meta.json") {
+            continue
+        }
+        val written =
+            if (path == IMPORTED_MODEL_FILE) {
+                withCrashAnimations(bytes)
+            } else {
+                bytes
+            }
         File(folder, path).apply { parentFile.mkdirs() }.writeBytes(written)
     }
     val source = json.readObject(File(folder, "source.json").readText()) as ObjectNode
     source.put("license", "GPL-2.0-or-later")
-    source.put("licenseNote", "FlightGear aircraft licence; the archive itself states none. Bundled as a separately licensed asset.")
+    source.put(
+        "licenseNote",
+        "FlightGear aircraft licence; the archive itself states none. Bundled as a separately licensed asset.",
+    )
     source.putArray("licenseFiles").add("COPYING")
     source.put("credit", "3D model by David Megginson (FlightGear c172r)")
     File(folder, "source.json").writeText(json.pretty(source))

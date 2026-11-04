@@ -4,15 +4,15 @@ import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.PixmapIO
 import com.badlogic.gdx.utils.GdxNativesLoader
-import net.nevinsky.abyssus.lib.core.io.FileLoader
+import java.io.File
+import java.nio.file.Files
 import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
+import net.nevinsky.abyssus.lib.core.io.FileLoader
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
 
 class TextureLoaderTest {
     private val dir: File = Files.createTempDirectory("texture").toFile()
@@ -32,10 +32,15 @@ class TextureLoaderTest {
         File(dir, "assets/$folder").mkdirs()
         if (write) {
             val pixmap = Pixmap(2, 3, Pixmap.Format.RGBA8888)
-            try { PixmapIO.writePNG(FileHandle(File(dir, "assets/$folder/a.png")), pixmap) } finally { pixmap.dispose() }
+            try {
+                PixmapIO.writePNG(FileHandle(File(dir, "assets/$folder/a.png")), pixmap)
+            } finally {
+                pixmap.dispose()
+            }
         }
         val named = file?.let { "\"file\":\"$it\"" } ?: ""
-        File(dir, "assets/$folder/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"type":"$type","additional":{$named}}""")
+        File(dir, "assets/$folder/meta.json")
+            .writeText("""{"format":"abyssus","formatVersion":1,"type":"$type","additional":{$named}}""")
     }
 
     @Test

@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.PixmapIO
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.utils.ScreenUtils
+import java.io.File
 import net.nevinsky.abyssus.app.game.controlline.bundledProject
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
 import net.nevinsky.abyssus.app.game.controlline.loadField
@@ -23,23 +24,27 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.slf4j.helpers.NOPLogger
-import java.io.File
 
 /**
  * Draws every step of the screen walk over a sky-blue stand-in for the field and writes the pictures to
  * `build/screenshots/<step>.png`, for a human to look at. Opt-in: `-Dabyssus.glTests=true`.
  */
 class GameScreenshotsGlTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
     @Before fun requireGl() = assumeTrue("GL tests are opt-in", TestGl.enabled)
 
     private val out = File("build/screenshots")
 
     /** The host driver, taking a picture each time the walk reads what is shown. */
-    private class Shooter(private val host: GameUiHost, private val inner: GameUiHostDriver, private val pictures: MutableList<File>, private val dir: File) : ScreenDriver {
-        override fun update(session: FlightSession?, judge: PatternJudge?, seconds: Float) = inner.update(session, judge, seconds)
+    private class Shooter(
+        private val host: GameUiHost,
+        private val inner: GameUiHostDriver,
+        private val pictures: MutableList<File>,
+        private val dir: File,
+    ) : ScreenDriver {
+        override fun update(session: FlightSession?, judge: PatternJudge?, seconds: Float) =
+            inner.update(session, judge, seconds)
 
         override fun keyDown(keycode: Int) = inner.keyDown(keycode)
 
@@ -47,7 +52,8 @@ class GameScreenshotsGlTest {
 
         override fun click(screen: String, widget: String) = inner.click(screen, widget)
 
-        override val focus: String? get() = inner.focus
+        override val focus: String?
+            get() = inner.focus
 
         override fun dump(): List<String> {
             val fbo = FrameBuffer(Pixmap.Format.RGBA8888, 1280, 720, false)
@@ -62,27 +68,33 @@ class GameScreenshotsGlTest {
             // the frame buffer reads bottom-up
             val flipped = Pixmap(1280, 720, Pixmap.Format.RGBA8888)
             for (y in 0 until 720) {
-                for (x in 0 until 1280){
+                for (x in 0 until 1280) {
                     flipped.drawPixel(x, y, pixmap.getPixel(x, 719 - y))
                 }
             }
             PixmapIO.writePNG(Gdx.files.absolute(file.absolutePath), flipped)
-            pixmap.dispose(); flipped.dispose()
+            pixmap.dispose()
+            flipped.dispose()
             pictures += file
             return inner.dump()
         }
     }
 
-    @Test fun everyStepIsWrittenAsAPicture() = TestGl.run {
+    @Test
+    fun everyStepIsWrittenAsAPicture() = TestGl.run {
         Gdx.files = Lwjgl3Files()
-        out.deleteRecursively(); out.mkdirs()
+        out.deleteRecursively()
+        out.mkdirs()
         val hosts = mutableListOf<GameUiHost>()
         val pictures = mutableListOf<File>()
         try {
-            val steps = ScreenWalk(loadField(), temp.root.toPath()).run { flow ->
-                val host = createGameUi(bundledProject(), "ControlLine.abss", flow, NOPLogger.NOP_LOGGER) {}.also(hosts::add)
-                Shooter(host, GameUiHostDriver(host), pictures, out)
-            }
+            val steps =
+                ScreenWalk(loadField(), temp.root.toPath()).run { flow ->
+                    val host =
+                        createGameUi(bundledProject(), "ControlLine.abss", flow, NOPLogger.NOP_LOGGER) {}
+                            .also(hosts::add)
+                    Shooter(host, GameUiHostDriver(host), pictures, out)
+                }
             steps.keys.forEachIndexed { i, name -> pictures[i].renameTo(File(out, "$name.png")) }
             assertTrue(steps.size == pictures.size)
         } finally {

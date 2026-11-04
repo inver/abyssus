@@ -18,7 +18,9 @@ class ProjectTextEditorTest {
     private val json = JsonProcessor(log)
     private val parsing = DocumentParsing(json, log)
     private val editor = ProjectTextEditor(parsing, json)
-    private val text = """{"format":"abyssus","formatVersion":1,"settings":{"export":{"jsonType":"json"}},"activeSceneName":"A","name":"P"}"""
+    private val text =
+        """{"format":"abyssus","formatVersion":1,"settings":{"export":{"jsonType":"json"}},"activeSceneName":"A",
+"name":"P"}"""
 
     @Test
     fun anEditKeepsTheOtherKeysAndPrintsPretty() {
@@ -44,7 +46,11 @@ class ProjectTextEditorTest {
     @Test
     fun theFormatterPrintsProjectsAndRefusesGarbage() {
         val formatter = DocumentFormatter(parsing, json)
-        assertTrue(formatter.pretty(text, net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT)!!.contains("\n  \"name\": \"P\""))
+        assertTrue(
+            formatter
+                .pretty(text, net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT)!!
+                .contains("\n  \"name\": \"P\"")
+        )
         assertNull(formatter.pretty("nope", net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT))
     }
 }

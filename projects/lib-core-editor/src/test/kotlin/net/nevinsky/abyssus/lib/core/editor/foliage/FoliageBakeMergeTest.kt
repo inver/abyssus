@@ -14,8 +14,8 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageModelMeta
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
-import net.nevinsky.abyssus.lib.core.editor.terrainData
 import net.nevinsky.abyssus.lib.core.assets.testProject
+import net.nevinsky.abyssus.lib.core.editor.terrainData
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -23,8 +23,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The merge [SceneFoliage] uses when a draft moves: only the chunks a patch holds are replaced, so a brush stroke
- * costs a re-scatter of the chunks it touched and nothing else (design decision 7).
+ * The merge [SceneFoliage] uses when a draft moves: only the chunks a patch holds are replaced, so a brush stroke costs
+ * a re-scatter of the chunks it touched and nothing else (design decision 7).
  */
 class FoliageBakeMergeTest {
     private val dataFile = FoliageDataFile()
@@ -36,10 +36,17 @@ class FoliageBakeMergeTest {
     @Test
     fun thePatchReplacesOnlyTheChunksItHolds() {
         val base = bake(1, layer(7) { i, j -> copies(0, i, j) })
-        val patch = bake(
-            2,
-            layer(7) { i, j -> if (i == 0 && j == 0 || i == 2 && j == 1) copies(9, i, j) else emptyList() },
-        )
+        val patch =
+            bake(
+                2,
+                layer(7) { i, j ->
+                    if (i == 0 && j == 0 || i == 2 && j == 1) {
+                        copies(9, i, j)
+                    } else {
+                        emptyList()
+                    }
+                },
+            )
         val merged = mergeFoliageChunks(base, patch, setOf(FoliageChunk(0, 0), FoliageChunk(2, 1)))
 
         assertArrayEquals("the patch describes the merged bake", patch.fingerprint, merged.fingerprint)
@@ -66,7 +73,11 @@ class FoliageBakeMergeTest {
     fun anotherChunkSizeTakesThePatchWhole() {
         val base = bake(1, layer(7) { i, j -> copies(0, i, j) })
         val patch = bake(2, listOf(layer(7) { i, j -> copies(5, i, j) }), chunkSize = 64f)
-        assertSame("another terrain or another chunking: the patch is the bake", patch, mergeFoliageChunks(base, patch, setOf(FoliageChunk(1, 1))))
+        assertSame(
+            "another terrain or another chunking: the patch is the bake",
+            patch,
+            mergeFoliageChunks(base, patch, setOf(FoliageChunk(1, 1))),
+        )
     }
 
     @Test
@@ -87,19 +98,30 @@ class FoliageBakeMergeTest {
         val base = bake(1, layer(7) { i, j -> copies(0, i, j) })
         val wide = FoliageLayerBake(7, 1, 5, 5, List(25) { listOf(FoliageCopy(4, it.toFloat(), 1f, 0f, 1f)) })
         val patch = bake(2, listOf(wide))
-        assertSame("a patch of another chunk grid cannot be merged chunkwise", wide, mergeFoliageChunks(base, patch, setOf(FoliageChunk(0, 0))).layers.single())
+        assertSame(
+            "a patch of another chunk grid cannot be merged chunkwise",
+            wide,
+            mergeFoliageChunks(base, patch, setOf(FoliageChunk(0, 0))).layers.single(),
+        )
     }
 
     @Test
     fun reScatteringTheDirtyChunksAndMergingGivesTheFullBakesBytes() {
-        val settings = FoliageMeta(
-            terrain = terrainName,
-            maskResolution = resolution,
-            layers = listOf(
-                FoliageLayerMeta(id = 1, models = listOf(FoliageModelMeta("tree")), density = 0.01f, seed = 0),
-                FoliageLayerMeta(id = 2, models = listOf(FoliageModelMeta("rock")), density = 0.01f, seed = 991),
-            ),
-        )
+        val settings =
+            FoliageMeta(
+                terrain = terrainName,
+                maskResolution = resolution,
+                layers =
+                    listOf(
+                        FoliageLayerMeta(id = 1, models = listOf(FoliageModelMeta("tree")), density = 0.01f, seed = 0),
+                        FoliageLayerMeta(
+                            id = 2,
+                            models = listOf(FoliageModelMeta("rock")),
+                            density = 0.01f,
+                            seed = 991,
+                        ),
+                    ),
+            )
         val masks = mapOf(1 to ByteArray(resolution * resolution) { (128 + it % 128).toByte() })
         val full = scatter.scatter(untitled, settings, masks)
         assertTrue("copies ${full.total}", full.total > 1_000)
@@ -109,7 +131,8 @@ class FoliageBakeMergeTest {
         val merged = mergeFoliageChunks(full.bake, patch.bake, chunks)
         assertArrayEquals(
             "the untouched chunks must be byte-identical to the full bake",
-            dataFile.write(full.bake), dataFile.write(merged),
+            dataFile.write(full.bake),
+            dataFile.write(merged),
         )
     }
 
@@ -120,10 +143,12 @@ class FoliageBakeMergeTest {
         return FoliageLayerBake(id, 1, 3, 3, chunks)
     }
 
-    private fun copies(model: Int, i: Int, j: Int): List<FoliageCopy> = listOf(FoliageCopy(model, i * 10f + j, 1f, 0f, 1f))
+    private fun copies(model: Int, i: Int, j: Int): List<FoliageCopy> =
+        listOf(FoliageCopy(model, i * 10f + j, 1f, 0f, 1f))
 
     private fun bake(fingerprint: Byte, layers: List<FoliageLayerBake>, chunkSize: Float = 32f): FoliageBake =
         FoliageBake(ByteArray(32) { fingerprint }, chunkSize, layers)
 
-    private fun bake(fingerprint: Byte, vararg layers: FoliageLayerBake): FoliageBake = bake(fingerprint, layers.toList())
+    private fun bake(fingerprint: Byte, vararg layers: FoliageLayerBake): FoliageBake =
+        bake(fingerprint, layers.toList())
 }

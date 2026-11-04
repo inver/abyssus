@@ -12,17 +12,25 @@ import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import org.junit.Assert.*
 import org.junit.Test
 
-/** Headless: the window configuration of `main` (spec `control-line-runtime-stability`, "starts without a reported monitor"). */
+/**
+ * Headless: the window configuration of `main` (spec `control-line-runtime-stability`, "starts without a reported
+ * monitor").
+ */
 class MainConfigTest {
     // libGDX keeps the window's position and fullscreen mode package-private
     private fun field(config: Lwjgl3ApplicationConfiguration, name: String): Any? =
         Lwjgl3WindowConfiguration::class.java.getDeclaredField(name).apply { isAccessible = true }.get(config)
 
-    private val noDisplayMode: () -> Graphics.DisplayMode = { fail("no display mode is asked for without a monitor"); error("") }
+    private val noDisplayMode: () -> Graphics.DisplayMode = {
+        fail("no display mode is asked for without a monitor")
+        error("")
+    }
 
-    @Test fun withoutAMonitorASavedFullscreenStartsWindowedAtAFixedPosition() {
+    @Test
+    fun withoutAMonitorASavedFullscreenStartsWindowedAtAFixedPosition() {
         val log = RecordingLogger()
-        val config = gameConfiguration(savedFullscreen = true, primaryMonitor = false, log = log, displayMode = noDisplayMode)
+        val config =
+            gameConfiguration(savedFullscreen = true, primaryMonitor = false, log = log, displayMode = noDisplayMode)
 
         assertNull("windowed for this start", field(config, "fullscreenMode"))
         assertEquals(NO_MONITOR_WINDOW_X, field(config, "windowX"))
@@ -31,37 +39,47 @@ class MainConfigTest {
         assertTrue(warning, warning.contains("No primary monitor") && warning.contains("instead of fullscreen"))
     }
 
-    @Test fun withoutAMonitorAWindowedStartIsPositionedAndLogged() {
+    @Test
+    fun withoutAMonitorAWindowedStartIsPositionedAndLogged() {
         val log = RecordingLogger()
-        val config = gameConfiguration(savedFullscreen = false, primaryMonitor = false, log = log, displayMode = noDisplayMode)
+        val config =
+            gameConfiguration(savedFullscreen = false, primaryMonitor = false, log = log, displayMode = noDisplayMode)
         assertEquals(NO_MONITOR_WINDOW_X, field(config, "windowX"))
         assertTrue(log.warnings.single().contains("No primary monitor"))
     }
 
-    @Test fun withAMonitorTheWindowIsCentredByLibGdx() {
+    @Test
+    fun withAMonitorTheWindowIsCentredByLibGdx() {
         val log = RecordingLogger()
-        val config = gameConfiguration(savedFullscreen = false, primaryMonitor = true, log = log, displayMode = noDisplayMode)
+        val config =
+            gameConfiguration(savedFullscreen = false, primaryMonitor = true, log = log, displayMode = noDisplayMode)
         assertEquals("-1 is libGDX's 'centre the window'", -1, field(config, "windowX"))
         assertNull(field(config, "fullscreenMode"))
         assertTrue(log.warnings.isEmpty())
     }
 
-    @Test fun theWindowCarriesTheApplicationIconFromTheClasspath() {
+    @Test
+    fun theWindowCarriesTheApplicationIconFromTheClasspath() {
         val log = RecordingLogger()
-        val config = gameConfiguration(savedFullscreen = false, primaryMonitor = true, log = log, displayMode = noDisplayMode)
+        val config =
+            gameConfiguration(savedFullscreen = false, primaryMonitor = true, log = log, displayMode = noDisplayMode)
 
-        val icons = arrayOf(
-            "icons/control-line-16.png",
-            "icons/control-line-32.png",
-            "icons/control-line-48.png",
-            "icons/control-line-64.png",
-            "icons/control-line-128.png",
-            "icons/control-line-256.png",
-        )
+        val icons =
+            arrayOf(
+                "icons/control-line-16.png",
+                "icons/control-line-32.png",
+                "icons/control-line-48.png",
+                "icons/control-line-64.png",
+                "icons/control-line-128.png",
+                "icons/control-line-256.png",
+            )
         assertArrayEquals(icons, field(config, "windowIconPaths") as Array<*>)
         assertEquals(Files.FileType.Classpath, field(config, "windowIconFileType"))
         icons.forEach { icon ->
-            assertNotNull("the icon is copied from packaging/icons/ by processResources", javaClass.getResource("/$icon"))
+            assertNotNull(
+                "the icon is copied from packaging/icons/ by processResources",
+                javaClass.getResource("/$icon"),
+            )
         }
     }
 }

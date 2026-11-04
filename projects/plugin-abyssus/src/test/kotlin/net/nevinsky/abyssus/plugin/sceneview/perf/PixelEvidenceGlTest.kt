@@ -7,6 +7,9 @@ package net.nevinsky.abyssus.plugin.sceneview.perf
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import java.awt.image.BufferedImage
+import java.io.File
+import java.nio.file.Files
 import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
@@ -18,9 +21,6 @@ import net.nevinsky.abyssus.plugin.sceneview.GlHarness
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
-import java.awt.image.BufferedImage
-import java.io.File
-import java.nio.file.Files
 
 /**
  * Pixel evidence of the editor's renderer (docs/ai/testing.md, "Graphics performance evidence"). Opt in with
@@ -37,14 +37,17 @@ import java.nio.file.Files
 class PixelEvidenceGlTest {
     private class Case(val name: String, val workload: EditorWorkload, val frames: Int, val patch: (File) -> Unit = {})
 
-    private val cases = EditorPerfRunner.workloads().associateBy { it.name }.let { w ->
-        listOf(
-            Case("untitled", w.getValue("untitled"), 300),
-            Case("animated", w.getValue("animated"), 300),
-            Case("stress", w.getValue("stress"), 700),
-            Case("cutout", w.getValue("untitled"), 300, patch = ::maskTexturedMaterials),
-        )
-    }
+    private val cases =
+        EditorPerfRunner.workloads()
+            .associateBy { it.name }
+            .let { w ->
+                listOf(
+                    Case("untitled", w.getValue("untitled"), 300),
+                    Case("animated", w.getValue("animated"), 300),
+                    Case("stress", w.getValue("stress"), 700),
+                    Case("cutout", w.getValue("untitled"), 300, patch = ::maskTexturedMaterials),
+                )
+            }
 
     private val evidence = PixelEvidence()
     private val mode = System.getProperty("abyssus.perf.pixels")
@@ -55,7 +58,11 @@ class PixelEvidenceGlTest {
         assumeTrue("GL tests are opt-in", GlHarness.enabled)
         val selected = System.getProperty("abyssus.perf.cases")?.split(',')?.toSet()
         for (case in cases.filter { selected == null || it.name in selected }) {
-            if (mode == "record") record(case) else compare(case)
+            if (mode == "record") {
+                record(case)
+            } else {
+                compare(case)
+            }
         }
     }
 
@@ -67,10 +74,16 @@ class PixelEvidenceGlTest {
             case.patch(dir)
             val text = File(dir, case.workload.sceneFile).readText()
             val params = renderParamsOf(parseScene(text), case.workload.camera(dir), dir)
-            val result = GlHarness.render(
-                params, case.frames, OrbitCamera(params.camera), framebufferSize = 1280 to 720,
-                log = org.slf4j.helpers.NOPLogger.NOP_LOGGER, timeoutSeconds = 300, fixedDeltaSeconds = 1f / 60f,
-            )
+            val result =
+                GlHarness.render(
+                    params,
+                    case.frames,
+                    OrbitCamera(params.camera),
+                    framebufferSize = 1280 to 720,
+                    log = org.slf4j.helpers.NOPLogger.NOP_LOGGER,
+                    timeoutSeconds = 300,
+                    fixedDeltaSeconds = 1f / 60f,
+                )
             check(result.error == null) { "${case.name}: ${result.error}" }
             return result.image
         } finally {
@@ -83,12 +96,20 @@ class PixelEvidenceGlTest {
         val first = render(case)
         val diffs = (1 until RUNS).map { evidence.diff(first, render(case)) }
         evidence.writeImage(first, File(out, "${case.name}.png"))
-        evidence.writeTolerance(PixelTolerance(case.name, RUNS, first.width, first.height, evidence.toleranceOf(diffs)), File(out, "${case.name}.tolerance.json"))
+        evidence.writeTolerance(
+            PixelTolerance(case.name, RUNS, first.width, first.height, evidence.toleranceOf(diffs)),
+            File(out, "${case.name}.tolerance.json"),
+        )
         println("pixels ${case.name}: repeated-run tolerance ${evidence.toleranceOf(diffs)}")
     }
 
     private fun compare(case: Case) {
-        val reference = File(checkNotNull(System.getProperty("abyssus.perf.pixelsReference")) { "set -Dabyssus.perf.pixelsReference=<dir>" })
+        val reference =
+            File(
+                checkNotNull(System.getProperty("abyssus.perf.pixelsReference")) {
+                    "set -Dabyssus.perf.pixelsReference=<dir>"
+                }
+            )
         val tolerance = evidence.readTolerance(File(reference, "${case.name}.tolerance.json")).tolerance
         val diff = evidence.diff(evidence.readImage(File(reference, "${case.name}.png")), render(case))
         assertTrue("${case.name}: $diff is outside the recorded tolerance $tolerance", evidence.within(diff, tolerance))
@@ -96,17 +117,21 @@ class PixelEvidenceGlTest {
 
     private fun maskTexturedMaterials(dir: File) {
         val mapper = jacksonObjectMapper()
-        dir.walkTopDown().filter { it.name == "model.gltf" }.forEach { file ->
-            val root = mapper.readTree(file)
-            var changed = false
-            root.path("materials").forEach { material ->
-                if (material is ObjectNode && material.path("pbrMetallicRoughness").has("baseColorTexture")) {
-                    material.put("alphaMode", "MASK").put("alphaCutoff", 0.5)
-                    changed = true
+        dir.walkTopDown()
+            .filter { it.name == "model.gltf" }
+            .forEach { file ->
+                val root = mapper.readTree(file)
+                var changed = false
+                root.path("materials").forEach { material ->
+                    if (material is ObjectNode && material.path("pbrMetallicRoughness").has("baseColorTexture")) {
+                        material.put("alphaMode", "MASK").put("alphaCutoff", 0.5)
+                        changed = true
+                    }
+                }
+                if (changed) {
+                    file.writeText(mapper.writeValueAsString(root))
                 }
             }
-            if (changed) file.writeText(mapper.writeValueAsString(root))
-        }
     }
 
     private companion object {

@@ -5,33 +5,50 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
+import java.io.File
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
 
 class AssetDependencyRevisionTest {
-    @get:Rule
-    val tmp = TemporaryFolder()
+    @get:Rule val tmp = TemporaryFolder()
 
     private val tracker = AssetRevisionTracker(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER))
-    private val assets get() = File(tmp.root, "assets")
+    private val assets
+        get() = File(tmp.root, "assets")
 
     private fun write(path: String, text: String, modified: Long? = null): File =
-        File(assets, path).apply { parentFile.mkdirs(); writeText(text); modified?.let { setLastModified(it) } }
+        File(assets, path).apply {
+            parentFile.mkdirs()
+            writeText(text)
+            modified?.let { setLastModified(it) }
+        }
 
     private fun terrain(name: String, vararg splat: Pair<String, String>, size: Int = 100) {
         val refs = splat.joinToString("") { ",\"${it.first}\":\"${it.second}\"" }
         write("$name/terrain.data", "xxxx", 1000)
-        write("$name/meta.json", """{"format":"abyssus","formatVersion":1,"uuid":"t-$name","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":$size,"uv":1.0$refs}}""")
+        write(
+            "$name/meta.json",
+            """{"format":"abyssus","formatVersion":1,"uuid":"t-$name","type":"TERRAIN",
+"additional":{"terrainFile":"terrain.data","size":$size,"uv":1.0$refs}}""",
+        )
     }
 
-    private fun texture(name: String, uuid: String, image: String = "a.png", bytes: String = "png", modified: Long = 1000) {
+    private fun texture(
+        name: String,
+        uuid: String,
+        image: String = "a.png",
+        bytes: String = "png",
+        modified: Long = 1000,
+    ) {
         write("$name/$image", bytes, modified)
-        write("$name/meta.json", """{"format":"abyssus","formatVersion":1,"uuid":"$uuid","type":"TEXTURE","additional":{"file":"$image"}}""")
+        write(
+            "$name/meta.json",
+            """{"format":"abyssus","formatVersion":1,"uuid":"$uuid","type":"TEXTURE","additional":{"file":"$image"}}""",
+        )
     }
 
     private fun snap() = tracker.snapshot(assets)
@@ -151,8 +168,17 @@ class AssetDependencyRevisionTest {
         terrain("hills", "splatBase" to "u-grass")
         texture("grass", "u-grass")
         val before = snap()
-        val edited = """{"format":"abyssus","formatVersion":1,"uuid":"u-grass","type":"TEXTURE","additional":{"file":"a.png"},"x":1}"""
-        val after = tracker.snapshot(assets) { f -> if (f.parentFile.name == "grass") edited else f.readText() }
+        val edited =
+            """{"format":"abyssus","formatVersion":1,"uuid":"u-grass","type":"TEXTURE","additional":{"file":"a.png"},
+"x":1}"""
+        val after =
+            tracker.snapshot(assets) { f ->
+                if (f.parentFile.name == "grass") {
+                    edited
+                } else {
+                    f.readText()
+                }
+            }
         assertEquals(setOf("grass", "hills"), diff(before, after))
     }
 
@@ -163,7 +189,11 @@ class AssetDependencyRevisionTest {
             terrain("hills", "splatBase" to "u-grass")
             texture("grass", "u-grass")
             File(other.root, "assets/grass").mkdirs()
-            File(other.root, "assets/grass/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"uuid":"u-grass","type":"TEXTURE","additional":{"file":"a.png"}}""")
+            File(other.root, "assets/grass/meta.json")
+                .writeText(
+                    """{"format":"abyssus","formatVersion":1,"uuid":"u-grass","type":"TEXTURE",
+"additional":{"file":"a.png"}}"""
+                )
             val mine = snap()
             val theirs = tracker.snapshot(File(other.root, "assets"))
             texture("grass", "u-grass", bytes = "changed again", modified = 7000)

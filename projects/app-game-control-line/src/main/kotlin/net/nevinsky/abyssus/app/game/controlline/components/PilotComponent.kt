@@ -7,7 +7,8 @@ package net.nevinsky.abyssus.app.game.controlline.components
 import com.badlogic.ashley.core.Component
 
 /**
- * The pilot at the circle's centre, holding the handle. Its entity is a kinematic body: the lines run from two points on
+  * The pilot at the circle's centre, holding the handle. Its entity is a kinematic body: the lines run from two points
+  * on
  * its vertical axis, [handleSpacing] apart around [handleHeight] above it.
  */
 class PilotComponent : Component {

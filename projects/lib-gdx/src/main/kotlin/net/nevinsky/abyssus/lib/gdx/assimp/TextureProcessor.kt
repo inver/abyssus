@@ -45,7 +45,11 @@ internal class TextureProcessor(
             log.warn("Embedded texture $assimpPath not found in scene")
             return null
         }
-        return if (modelDir.isEmpty()) relative else modelDir + "/" + relative
+        return if (modelDir.isEmpty()) {
+            relative
+        } else {
+            modelDir + "/" + relative
+        }
     }
 
     /** Embedded textures are referenced either by index (`*N`) or by their original file name.  */
@@ -58,7 +62,11 @@ internal class TextureProcessor(
         if (assimpPath.startsWith("*")) {
             try {
                 val index = assimpPath.substring(1).toInt()
-                return if (index >= 0 && index < count) AITexture.create(textures!!.get(index)) else null
+                return if (index >= 0 && index < count) {
+                    AITexture.create(textures!!.get(index))
+                } else {
+                    null
+                }
             } catch (e: NumberFormatException) {
                 return null
             }
@@ -81,7 +89,11 @@ internal class TextureProcessor(
         }
         return extracted.computeIfAbsent(texture.address()) { address: Long? ->
             val name = "embedded_" + extracted.size
-            val file = if (texture.mHeight() == 0) writeCompressed(texture, name) else writeRaw(texture, name)
+            val file = if (texture.mHeight() == 0) {
+                writeCompressed(texture, name)
+            } else {
+                writeRaw(texture, name)
+            }
             file.file().getPath().replace('\\', '/')
         }
     }
@@ -91,7 +103,11 @@ internal class TextureProcessor(
         val bytes = ByteArray(buffer.remaining())
         buffer.get(bytes)
         val hint = texture.achFormatHintString()
-        val file = embeddedDir!!.child(name + "." + (if (hint.isEmpty()) "png" else hint))
+        val file = embeddedDir!!.child(name + "." + (if (hint.isEmpty()) {
+            "png"
+        } else {
+            hint
+        }))
         file.writeBytes(bytes, false)
         return file
     }

@@ -4,19 +4,20 @@
  */
 package net.nevinsky.abyssus.plugin.physics
 
+import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import net.nevinsky.abyssus.lib.gamelink.play.PlayFrame
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 class BundledPlayHostTest {
     @Test
     fun theBundledPlayHostPlaysThePhysicsScene() {
         val project = File(checkNotNull(System.getProperty("abyssus.testData")), "project/Physics")
-        val plan = PlayLaunch.choose(project, File(checkNotNull(System.getProperty("abyssus.playHost")))) as PlayLaunch.Plan
+        val plan =
+            PlayLaunch.choose(project, File(checkNotNull(System.getProperty("abyssus.playHost")))) as PlayLaunch.Plan
         assertEquals(PHYSICS_ONLY_MODULE, plan.module)
         val client = PlayProcessLauncher().launch(plan, project)
         try {

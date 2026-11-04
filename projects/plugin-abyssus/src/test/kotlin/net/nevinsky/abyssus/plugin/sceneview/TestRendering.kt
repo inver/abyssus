@@ -13,7 +13,8 @@ import java.util.concurrent.Executor
 val printingLog: Logger = RecordingLogger(echo = true)
 
 /**
- * A renderer wired by hand, with no IntelliJ application: the same graph `AbyssusCore` builds in the IDE, with `prepare`
+  * A renderer wired by hand, with no IntelliJ application: the same graph `AbyssusCore` builds in the IDE, with
+  * `prepare`
  * on [executor] (the calling thread by default) and problems to [log].
  */
 fun testRenderer(

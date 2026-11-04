@@ -11,9 +11,9 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
-import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import java.io.File
 import java.nio.file.Files
+import net.nevinsky.abyssus.lib.gdx.model.ModelData
 
 /** Copies a test resource into its own temp folder, keeping its file name. */
 internal fun resourceCopy(path: String, name: String = path.substringAfterLast('/')): File {
@@ -36,9 +36,15 @@ internal fun ModelData.restBounds(): BoundingBox {
         for (part in node.parts.orEmpty()) {
             val mesh = meshOfPart[part.meshPartId] ?: continue
             val stride = mesh.attributes.sumOf { it.numComponents }
-            val offset = mesh.attributes.takeWhile { it.usage != VertexAttributes.Usage.Position }.sumOf { it.numComponents }
+            val offset =
+                mesh.attributes.takeWhile { it.usage != VertexAttributes.Usage.Position }.sumOf { it.numComponents }
             for (i in partById[part.meshPartId]!!.indices) {
-                val v = Vector3(mesh.vertices[i * stride + offset], mesh.vertices[i * stride + offset + 1], mesh.vertices[i * stride + offset + 2])
+                val v =
+                    Vector3(
+                        mesh.vertices[i * stride + offset],
+                        mesh.vertices[i * stride + offset + 1],
+                        mesh.vertices[i * stride + offset + 2],
+                    )
                 box.ext(v.mul(world))
             }
         }

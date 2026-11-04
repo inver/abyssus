@@ -8,17 +8,17 @@ package net.nevinsky.abyssus.model
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g3d.Material
-import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute
 import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute
-import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
+import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute
+import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute
 import com.badlogic.gdx.graphics.g3d.utils.TextureDescriptor
-import net.nevinsky.abyssus.lib.gdx.model.PBRColorAttribute
-import net.nevinsky.abyssus.lib.gdx.model.PBRFloatAttribute
-import net.nevinsky.abyssus.lib.gdx.model.PBRTextureAttribute
 import com.badlogic.gdx.graphics.g3d.utils.TextureProvider
 import net.nevinsky.abyssus.lib.gdx.g3d.IntModel
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
+import net.nevinsky.abyssus.lib.gdx.model.PBRColorAttribute
+import net.nevinsky.abyssus.lib.gdx.model.PBRFloatAttribute
+import net.nevinsky.abyssus.lib.gdx.model.PBRTextureAttribute
 import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -29,27 +29,35 @@ import org.junit.Test
 class PbrAttributesTest {
     @Test
     fun importedMaskWithNonUnitAlphaRemainsACutoutCaster() {
-        val input = PbrModelMaterial().apply {
-            id = "mask"
-            alphaMode = PbrModelMaterial.AlphaMode.MASK
-            baseColor = Color(1f, 1f, 1f, 0.6f)
-            opacity = 0.6f
-        }
-        val model = IntModel(ModelData().also { it.materials.add(input) }, TextureProvider { error("no texture expected") })
+        val input =
+            PbrModelMaterial().apply {
+                id = "mask"
+                alphaMode = PbrModelMaterial.AlphaMode.MASK
+                baseColor = Color(1f, 1f, 1f, 0.6f)
+                opacity = 0.6f
+            }
+        val model =
+            IntModel(ModelData().also { it.materials.add(input) }, TextureProvider { error("no texture expected") })
         try {
             val material = model.getMaterial("mask")
             assertTrue(material.has(FloatAttribute.AlphaTest))
             assertFalse(material.has(BlendingAttribute.Type))
             assertEquals(0.6f, (material.get(ColorAttribute.Diffuse) as ColorAttribute).color.a, 0f)
-        } finally { model.dispose() }
+        } finally {
+            model.dispose()
+        }
     }
 
     @Test
     fun ownTypesAreDistinct() {
-        val own = listOf(
-            PBRColorAttribute.BaseColorFactor, PBRFloatAttribute.Metallic, PBRFloatAttribute.Roughness,
-            PBRTextureAttribute.MetallicRoughnessTexture, PBRTextureAttribute.OcclusionTexture,
-        )
+        val own =
+            listOf(
+                PBRColorAttribute.BaseColorFactor,
+                PBRFloatAttribute.Metallic,
+                PBRFloatAttribute.Roughness,
+                PBRTextureAttribute.MetallicRoughnessTexture,
+                PBRTextureAttribute.OcclusionTexture,
+            )
         assertEquals(own.size, own.toSet().size)
         own.forEach { assertEquals("one bit per type", 1, java.lang.Long.bitCount(it)) }
     }
@@ -64,11 +72,12 @@ class PbrAttributesTest {
 
     @Test
     fun materialFindsAndCopiesThem() {
-        val material = Material(
-            PBRColorAttribute.createBaseColorFactor(Color.RED),
-            PBRFloatAttribute.createMetallic(0.25f),
-            PBRTextureAttribute(PBRTextureAttribute.OcclusionTexture, TextureDescriptor<Texture>()),
-        )
+        val material =
+            Material(
+                PBRColorAttribute.createBaseColorFactor(Color.RED),
+                PBRFloatAttribute.createMetallic(0.25f),
+                PBRTextureAttribute(PBRTextureAttribute.OcclusionTexture, TextureDescriptor<Texture>()),
+            )
         assertTrue(material.has(PBRFloatAttribute.Metallic))
         assertFalse(material.has(PBRFloatAttribute.Roughness))
         assertTrue(material.has(PBRTextureAttribute.OcclusionTexture))

@@ -1,47 +1,67 @@
 // Shared source checks. Inputs are captured during configuration so execution supports configuration caching.
 fun registerSourceCheck(name: String, sources: FileCollection, pattern: Regex, message: String) {
     val base = layout.projectDirectory.asFile
-    val check = tasks.register(name) {
-        inputs.files(sources)
-        doLast {
-            val found = sources.files.sorted().flatMap { file ->
-                file.readLines().mapIndexedNotNull { index, line ->
-                    if (pattern.containsMatchIn(line)) "${file.relativeTo(base)}:${index + 1}: ${line.trim()}" else null
+    val check =
+        tasks.register(name) {
+            inputs.files(sources)
+            doLast {
+                val found =
+                    sources.files.sorted().flatMap { file ->
+                        file.readLines().mapIndexedNotNull { index, line ->
+                            if (pattern.containsMatchIn(line)) {
+                                "${file.relativeTo(base)}:${index + 1}: ${line.trim()}"
+                            } else {
+                                null
+                            }
+                        }
+                    }
+                if (found.isNotEmpty()) {
+                    throw GradleException(message + "\n" + found.joinToString("\n"))
                 }
             }
-            if (found.isNotEmpty()) throw GradleException(message + "\n" + found.joinToString("\n"))
         }
-    }
     tasks.named("check") { dependsOn(check) }
 }
 
 // The root applies this script before a module's own build script sets its excludes.
 afterEvaluate {
     if (extra.has("abyssusSingletonExcludes")) {
-        @Suppress("UNCHECKED_CAST")
-        val excluded = extra["abyssusSingletonExcludes"] as List<String>
-        registerSourceCheck("checkNoSingletons", fileTree("src/main/kotlin") {
-            include("**/*.kt")
-            exclude(excluded)
-        }, Regex("""^\s*(?:(?:private|internal|public|protected)\s+)*(companion\s+object\b|object\s+[A-Za-z_])"""),
-            "Singletons are not allowed in $path; inject an instance instead:")
+        @Suppress("UNCHECKED_CAST") val excluded = extra["abyssusSingletonExcludes"] as List<String>
+        registerSourceCheck(
+            "checkNoSingletons",
+            fileTree("src/main/kotlin") {
+                include("**/*.kt")
+                exclude(excluded)
+            },
+            Regex("""^\s*(?:(?:private|internal|public|protected)\s+)*(companion\s+object\b|object\s+[A-Za-z_])"""),
+            "Singletons are not allowed in $path; inject an instance instead:",
+        )
     }
 }
 
 // A library that games ship holds no editor code: no import of an editor-only module and no ray-tracing snapshot type.
 afterEvaluate {
     if (extra.has("abyssusShippedLibrary")) {
-        registerSourceCheck("checkNoEditorCode", fileTree("src/main/kotlin") { include("**/*.kt") },
-            Regex("""^\s*import\s+net\.nevinsky\.abyssus\.(lib\.core\.editor|lib\.gamelink|lib\.raytracing|plugin)\b|\bRaySnapshot\w*|\bRay\w*Snapshot\b"""),
-            "A shipped library must not hold editor code ($path); the editor owns it (lib-core-editor, lib-game-link):")
+        registerSourceCheck(
+            "checkNoEditorCode",
+            fileTree("src/main/kotlin") { include("**/*.kt") },
+            Regex(
+                """^\s*import\s+net\.nevinsky\.abyssus\.(lib\.core\.editor|lib\.gamelink|lib\.raytracing|plugin)\b|""" +
+                """\bRaySnapshot\w*|\bRay\w*Snapshot\b"""
+            ),
+            "A shipped library must not hold editor code ($path); the editor owns it (lib-core-editor, lib-game-link):",
+        )
     }
 }
 
 if (extra.has("abyssusRunCatchingRoots")) {
-    @Suppress("UNCHECKED_CAST")
-    val roots = extra["abyssusRunCatchingRoots"] as List<String>
-    registerSourceCheck("checkNoRunCatching", files(roots.map { root -> fileTree(root) { include("**/*.kt") } }),
-        Regex("""\brunCatching\s*\{"""), "Use runCatchingKeepingCancellation instead of runCatching:")
+    @Suppress("UNCHECKED_CAST") val roots = extra["abyssusRunCatchingRoots"] as List<String>
+    registerSourceCheck(
+        "checkNoRunCatching",
+        files(roots.map { root -> fileTree(root) { include("**/*.kt") } }),
+        Regex("""\brunCatching\s*\{"""),
+        "Use runCatchingKeepingCancellation instead of runCatching:",
+    )
 }
 
 // Jackson tree types (JsonNode, ObjectNode, ArrayNode, ...) stay in the files a module lists: everything else binds to
@@ -49,12 +69,16 @@ if (extra.has("abyssusRunCatchingRoots")) {
 // relative to src/main/kotlin (an empty list forbids the tree types in the module); the list may only shrink.
 afterEvaluate {
     if (extra.has("abyssusJacksonTreeAllowed")) {
-        @Suppress("UNCHECKED_CAST")
-        val allowed = extra["abyssusJacksonTreeAllowed"] as List<String>
-        registerSourceCheck("checkJacksonTreeUse", fileTree("src/main/kotlin") {
-            include("**/*.kt")
-            exclude(allowed)
-        }, Regex("""\bcom\.fasterxml\.jackson\.databind\.(JsonNode\b|node\.|\*)"""),
-            "Jackson tree types are not allowed in these files of $path; bind to a typed class, or list the file in abyssusJacksonTreeAllowed:")
+        @Suppress("UNCHECKED_CAST") val allowed = extra["abyssusJacksonTreeAllowed"] as List<String>
+        registerSourceCheck(
+            "checkJacksonTreeUse",
+            fileTree("src/main/kotlin") {
+                include("**/*.kt")
+                exclude(allowed)
+            },
+            Regex("""\bcom\.fasterxml\.jackson\.databind\.(JsonNode\b|node\.|\*)"""),
+            "Jackson tree types are not allowed in these files of $path; bind to a typed class, or list the file in " +
+                "abyssusJacksonTreeAllowed:",
+        )
     }
 }

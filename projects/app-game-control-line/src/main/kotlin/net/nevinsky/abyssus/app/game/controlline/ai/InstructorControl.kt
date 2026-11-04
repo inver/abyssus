@@ -10,7 +10,8 @@ import net.nevinsky.abyssus.app.game.controlline.flight.Takeover
 
 /**
  * The instructor beside the student (design decision 1 of `add-control-line-trainer`): each step it asks the [student]
- * (the player's handle) for its tilt, measures the danger, steps the share and asks the [rescue] for its tilt, and holds
+  * (the player's handle) for its tilt, measures the danger, steps the share and asks the [rescue] for its tilt, and
+  * holds
  * the handle at `(1 - share) * student + share * rescue`. The rescue is only asked while there is danger or a share, so
  * the ghost handle has its tilt exactly then. Main thread only, like any [FlightControlSource].
  */
@@ -46,8 +47,14 @@ class InstructorControl(
         playerTilt = student.tilt(observation).takeIf { it.isFinite() }?.coerceIn(-1f, 1f) ?: 0f
         danger = gauge.danger(observation)
         shares.step(danger, observation.time)
-        rescueTilt = if (ghost) rescue.tilt(observation).takeIf { it.isFinite() }?.coerceIn(-1f, 1f) ?: 0f else 0f
-        if (!ghost) rescue.release()
+        rescueTilt = if (ghost) {
+            rescue.tilt(observation).takeIf { it.isFinite() }?.coerceIn(-1f, 1f) ?: 0f
+        } else {
+            0f
+        }
+        if (!ghost) {
+            rescue.release()
+        }
         return (1f - share) * playerTilt + share * rescueTilt
     }
 }

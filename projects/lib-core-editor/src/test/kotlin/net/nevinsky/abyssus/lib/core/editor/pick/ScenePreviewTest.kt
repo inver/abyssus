@@ -5,28 +5,29 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
-import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
-import net.nevinsky.abyssus.lib.core.editor.content.Pose
-import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.Quaternion
+import com.badlogic.gdx.math.Vector3
+import java.io.File
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-
+import net.nevinsky.abyssus.lib.core.editor.content.Pose
 import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.io.File
 
 class ScenePreviewTest {
-    private val mundus = sceneContentOf(parseScene(File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText()))
+    private val mundus =
+        sceneContentOf(parseScene(File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText()))
 
     @Test
     fun turningAHandleAimedLightMovesItsHandle() {
-        val turned = DragResult(
-            PlacementTransform(Vector3(0f, 10f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
-            Vector3(0f, 0f, -1f),
-        )
+        val turned =
+            DragResult(
+                PlacementTransform(Vector3(0f, 10f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
+                Vector3(0f, 0f, -1f),
+            )
         val previewed = ScenePreview().apply(mundus, 1L, turned)
         // The light keeps facing the turned direction and stays where it is.
         assertEquals(Vector3(0f, 0f, -1f), previewed.lights.first { it.entityId == 1L }.direction)
@@ -40,10 +41,11 @@ class ScenePreviewTest {
 
     @Test
     fun movingALookAtLightReAimsItAtItsUnmovedTarget() {
-        val moved = DragResult(
-            PlacementTransform(Vector3(0f, 20f, 0f), Quaternion(), Vector3(1f, 1f, 1f)),
-            null,
-        )
+        val moved =
+            DragResult(
+                PlacementTransform(Vector3(0f, 20f, 0f), Quaternion(), Vector3(1f, 1f, 1f)),
+                null,
+            )
         val previewed = ScenePreview().apply(mundus, 1L, moved)
         // The light is now above its handle and faces it, straight down.
         assertEquals(Vector3(0f, 20f, 0f), previewed.lights.first { it.entityId == 1L }.position)
@@ -54,12 +56,19 @@ class ScenePreviewTest {
 
     @Test
     fun aLightWithoutTargetUsesTheDraggedDirection() {
-        val noTarget = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{
-            "1":{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{},"PositionComponent":{"localPosition":{"y":10}}}}}}"""))
-        val turned = DragResult(
-            PlacementTransform(Vector3(0f, 10f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
-            Vector3(0f, 0f, -1f),
-        )
+        val noTarget =
+            sceneContentOf(
+                parseScene(
+                    """{"format":"abyssus","formatVersion":1,"ecs":{
+            "1":{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{},
+"PositionComponent":{"localPosition":{"y":10}}}}}}"""
+                )
+            )
+        val turned =
+            DragResult(
+                PlacementTransform(Vector3(0f, 10f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
+                Vector3(0f, 0f, -1f),
+            )
         val previewed = ScenePreview().apply(noTarget, 1L, turned)
         assertEquals(Vector3(0f, 0f, -1f), previewed.lights.single().direction)
         // The light itself is in entityPositions and did not move.
@@ -69,35 +78,50 @@ class ScenePreviewTest {
 
     @Test
     fun aimedTargetIsANullForALightWithoutATurnedDirection() {
-        val moved = DragResult(
-            PlacementTransform(Vector3(0f, 10f, 0f), Quaternion(), Vector3(1f, 1f, 1f)),
-            null,
-        )
+        val moved =
+            DragResult(
+                PlacementTransform(Vector3(0f, 10f, 0f), Quaternion(), Vector3(1f, 1f, 1f)),
+                null,
+            )
         assertNull(ScenePreview().aimedTarget(mundus, 1L, moved))
     }
 
     @Test
     fun aimedTargetIsANullWhenTheLightLooksAtANonHandle() {
-        val aimedAtModel = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{
+        val aimedAtModel =
+            sceneContentOf(
+                parseScene(
+                    """{"format":"abyssus","formatVersion":1,"ecs":{
             "0":{"components":{"RenderComponent":{"type":"MODEL","assetName":"a"},
                 "PositionComponent":{"localPosition":{"x":1}}}},
-            "1":{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{},"PositionComponent":{"lookAtId":0,"localPosition":{"x":5}}}}}}"""))
-        val turned = DragResult(
-            PlacementTransform(Vector3(5f, 0f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
-            Vector3(-1f, 0f, 0f),
-        )
+            "1":{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{},"PositionComponent":{"lookAtId":0,
+"localPosition":{"x":5}}}}}}"""
+                )
+            )
+        val turned =
+            DragResult(
+                PlacementTransform(Vector3(5f, 0f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
+                Vector3(-1f, 0f, 0f),
+            )
         assertNull(ScenePreview().aimedTarget(aimedAtModel, 1L, turned))
     }
 
     @Test
     fun aimedTargetUsesADistanceOfOneWhenTheHandleIsAtTheLight() {
-        val atLight = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{
+        val atLight =
+            sceneContentOf(
+                parseScene(
+                    """{"format":"abyssus","formatVersion":1,"ecs":{
             "2":{"type":"HANDLE","components":{"PositionComponent":{"localPosition":{"x":5}}}},
-            "1":{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{},"PositionComponent":{"lookAtId":2,"localPosition":{"x":5}}}}}}"""))
-        val turned = DragResult(
-            PlacementTransform(Vector3(5f, 0f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
-            Vector3(0f, 0f, -1f),
-        )
+            "1":{"type":"LIGHT_DIRECTIONAL","components":{"LightComponent":{},"PositionComponent":{"lookAtId":2,
+"localPosition":{"x":5}}}}}}"""
+                )
+            )
+        val turned =
+            DragResult(
+                PlacementTransform(Vector3(5f, 0f, 0f), Quaternion(0f, 0f, 0f, 1f), Vector3(1f, 1f, 1f)),
+                Vector3(0f, 0f, -1f),
+            )
         val target = ScenePreview().aimedTarget(atLight, 1L, turned)
         assertNotNull(target)
         assertEquals(Vector3(5f, 0f, -1f), target!!)
@@ -105,9 +129,15 @@ class ScenePreviewTest {
 
     @Test
     fun movingAPointLightDoesNotReAimIt() {
-        val point = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{
-            "1":{"type":"LIGHT_POINT","components":{"LightComponent":{},"PositionComponent":{"lookAtId":2,"localPosition":{"y":10}}}},
-            "2":{"type":"HANDLE","components":{"PositionComponent":{}}}}}"""))
+        val point =
+            sceneContentOf(
+                parseScene(
+                    """{"format":"abyssus","formatVersion":1,"ecs":{
+            "1":{"type":"LIGHT_POINT","components":{"LightComponent":{},"PositionComponent":{"lookAtId":2,
+"localPosition":{"y":10}}}},
+            "2":{"type":"HANDLE","components":{"PositionComponent":{}}}}}"""
+                )
+            )
         val moved = DragResult(PlacementTransform(Vector3(5f, 10f, 0f), Quaternion(), Vector3(1f, 1f, 1f)), null)
         val before = point.lights.single().direction
         assertEquals(before, ScenePreview().apply(point, 1L, moved).lights.single().direction)
@@ -115,7 +145,8 @@ class ScenePreviewTest {
 
     // ---- pose overrides (Play) ----
 
-    private val untitled = sceneContentOf(parseScene(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()))
+    private val untitled =
+        sceneContentOf(parseScene(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()))
 
     @Test
     fun aPoseOverrideReplacesAPlacementAndKeepsItsScale() {

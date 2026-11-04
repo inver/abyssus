@@ -7,33 +7,33 @@ package net.nevinsky.abyssus.lib.gdx.g3d
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.TestGl
-import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.graphics.g3d.Environment
 import com.badlogic.gdx.graphics.g3d.Material
+import com.badlogic.gdx.graphics.g3d.ModelBatch
+import com.badlogic.gdx.graphics.g3d.ModelInstance
+import com.badlogic.gdx.graphics.g3d.Renderable
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
+import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader
 import com.badlogic.gdx.graphics.g3d.utils.DefaultTextureBinder
 import com.badlogic.gdx.graphics.g3d.utils.RenderContext
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.BufferUtils
-import com.badlogic.gdx.graphics.g3d.ModelBatch
-import com.badlogic.gdx.graphics.g3d.ModelInstance
-import com.badlogic.gdx.graphics.g3d.Renderable
-import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader
+import kotlin.math.abs
+import net.nevinsky.abyssus.lib.gdx.model.PBRFloatAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.OutputTransformAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowDepthPass
-import net.nevinsky.abyssus.lib.gdx.model.PBRFloatAttribute
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
-import kotlin.math.abs
 
 /**
  * The instanced variants take the world matrix from the mesh's `mat4 a_instance` data (four attribute locations bound
@@ -43,7 +43,8 @@ import kotlin.math.abs
 class InstancedModelShaderGlTest {
     @Before fun requireGl() = assumeTrue("GL tests are opt-in", TestGl.enabled)
 
-    @Test fun instancedDrawMatchesOneRenderablePerInstance() = TestGl.run {
+    @Test
+    fun instancedDrawMatchesOneRenderablePerInstance() = TestGl.run {
         for (pbr in listOf(false, true)) {
             val separate = render(pbr, instanced = false)
             val instanced = render(pbr, instanced = true)
@@ -53,7 +54,8 @@ class InstancedModelShaderGlTest {
     }
 
     /** The instanced programs compile the output transform too: foliage and instanced models are drawn through them. */
-    @Test fun instancedDrawMatchesOneRenderablePerInstanceUnderTheOutputTransform() = TestGl.run {
+    @Test
+    fun instancedDrawMatchesOneRenderablePerInstanceUnderTheOutputTransform() = TestGl.run {
         for (pbr in listOf(false, true)) {
             val separate = render(pbr, instanced = false, exposure = 1.3f)
             val instanced = render(pbr, instanced = true, exposure = 1.3f)
@@ -64,59 +66,105 @@ class InstancedModelShaderGlTest {
         }
     }
 
-    @Test fun instancedDepthPassMatchesOneRenderablePerInstance() = TestGl.run {
+    @Test
+    fun instancedDepthPassMatchesOneRenderablePerInstance() = TestGl.run {
         val separate = renderDepth(instanced = false)
         val instanced = renderDepth(instanced = true)
         assertTrue("the comparison must see written depth", separate.any { (it.toInt() and 255) in 1..254 })
         assertPixelsClose("depth pass", separate, instanced)
     }
 
-    @Test fun theProviderPicksTheVariantMatchingTheMesh() = TestGl.run {
-        val provider = ModelShaderProvider(DefaultShader.Config().apply { numPointLights = 0; numSpotLights = 0 })
+    @Test
+    fun theProviderPicksTheVariantMatchingTheMesh() = TestGl.run {
+        val provider =
+            ModelShaderProvider(
+                DefaultShader.Config().apply {
+                    numPointLights = 0
+                    numSpotLights = 0
+                }
+            )
         val plain = triangle()
         val instancedMesh = triangleInstanced()
         try {
-            val plainShader = provider.getShader(renderable(plain, Matrix4(), material(false), environment())) as ModelShader
-            val instancedShader = provider.getShader(renderable(instancedMesh, Matrix4(), material(false), environment())) as ModelShader
+            val plainShader =
+                provider.getShader(renderable(plain, Matrix4(), material(false), environment())) as ModelShader
+            val instancedShader =
+                provider.getShader(renderable(instancedMesh, Matrix4(), material(false), environment())) as ModelShader
             assertFalse("a plain mesh keeps the uniform variant", plainShader.instanced)
             assertTrue("an instanced mesh gets the instanced variant", instancedShader.instanced)
             assertTrue(instancedShader.canRender(renderable(instancedMesh, Matrix4(), material(false), environment())))
-            assertFalse("the instanced variant must not claim a plain mesh",
-                instancedShader.canRender(renderable(plain, Matrix4(), material(false), environment())))
+            assertFalse(
+                "the instanced variant must not claim a plain mesh",
+                instancedShader.canRender(renderable(plain, Matrix4(), material(false), environment())),
+            )
             assertFalse(plainShader.canRender(renderable(instancedMesh, Matrix4(), material(false), environment())))
         } finally {
-            provider.dispose(); plain.dispose(); instancedMesh.dispose()
+            provider.dispose()
+            plain.dispose()
+            instancedMesh.dispose()
         }
     }
 
     /** The copies: translations plus one rotated and non-uniformly scaled copy, which pins the normal matrix down. */
-    private val transforms: List<Matrix4> = listOf(
-        Matrix4().setToTranslation(-0.55f, -0.35f, 0f),
-        Matrix4().setToTranslation(0.45f, -0.3f, 0.2f)
-            .mul(Matrix4().setToRotation(Vector3.Z, 45f)).mul(Matrix4().setToScaling(0.8f, 1.2f, 1f)),
-        Matrix4().setToTranslation(0f, 0.55f, -0.3f)
-    )
+    private val transforms: List<Matrix4> =
+        listOf(
+            Matrix4().setToTranslation(-0.55f, -0.35f, 0f),
+            Matrix4()
+                .setToTranslation(0.45f, -0.3f, 0.2f)
+                .mul(Matrix4().setToRotation(Vector3.Z, 45f))
+                .mul(Matrix4().setToScaling(0.8f, 1.2f, 1f)),
+            Matrix4().setToTranslation(0f, 0.55f, -0.3f),
+        )
 
     private fun triangle(): IntMesh =
         IntMesh(true, 3, 3, VertexAttribute.Position(), VertexAttribute.Normal(), VertexAttribute.TexCoords(0)).apply {
             setVertices(
                 floatArrayOf(
-                    -0.4f, -0.4f, 0f, 0f, 0f, 1f, 0f, 0f,
-                    0.4f, -0.4f, 0f, 0f, 0f, 1f, 1f, 0f,
-                    0f, 0.4f, 0f, 0f, 0f, 1f, 0.5f, 1f
+                    -0.4f,
+                    -0.4f,
+                    0f,
+                    0f,
+                    0f,
+                    1f,
+                    0f,
+                    0f,
+                    0.4f,
+                    -0.4f,
+                    0f,
+                    0f,
+                    0f,
+                    1f,
+                    1f,
+                    0f,
+                    0f,
+                    0.4f,
+                    0f,
+                    0f,
+                    0f,
+                    1f,
+                    0.5f,
+                    1f,
                 )
             )
             setIndices(intArrayOf(0, 1, 2))
         }
 
-    private fun triangleInstanced(): IntMesh = triangle().also { mesh ->
-        mesh.enableInstancedRendering(true, transforms.size, *InstanceAttributes.of())
-        val data = FloatArray(transforms.size * InstanceAttributes.FLOATS)
-        transforms.forEachIndexed { i, matrix -> InstanceAttributes.write(matrix, data, i * InstanceAttributes.FLOATS) }
-        mesh.setInstanceData(data)
-    }
+    private fun triangleInstanced(): IntMesh =
+        triangle().also { mesh ->
+            mesh.enableInstancedRendering(true, transforms.size, *InstanceAttributes.of())
+            val data = FloatArray(transforms.size * InstanceAttributes.FLOATS)
+            transforms.forEachIndexed { i, matrix ->
+                InstanceAttributes.write(matrix, data, i * InstanceAttributes.FLOATS)
+            }
+            mesh.setInstanceData(data)
+        }
 
-    private fun renderable(mesh: IntMesh, transform: Matrix4, material: Material, environment: Environment): Renderable =
+    private fun renderable(
+        mesh: IntMesh,
+        transform: Matrix4,
+        material: Material,
+        environment: Environment,
+    ): Renderable =
         Renderable().apply {
             meshPart.set("copy", mesh, 0, 3, GL20.GL_TRIANGLES)
             this.material = material
@@ -126,22 +174,39 @@ class InstancedModelShaderGlTest {
 
     private fun material(pbr: Boolean): Material {
         val material = Material(ColorAttribute.createDiffuse(Color.WHITE))
-        if (pbr) material.set(PBRFloatAttribute.createMetallic(0f), PBRFloatAttribute.createRoughness(1f))
+        if (pbr) {
+            material.set(PBRFloatAttribute.createMetallic(0f), PBRFloatAttribute.createRoughness(1f))
+        }
         return material
     }
 
-    private fun environment(exposure: Float? = null): Environment = Environment().apply {
-        add(DirectionalLight().set(Color(0.8f, 0.8f, 0.8f, 1f), 0f, 0f, -1f))
-        set(ColorAttribute.createAmbientLight(0.25f, 0.25f, 0.25f, 1f))
-        if (exposure != null) set(OutputTransformAttribute(exposure))
-    }
+    private fun environment(exposure: Float? = null): Environment =
+        Environment().apply {
+            add(DirectionalLight().set(Color(0.8f, 0.8f, 0.8f, 1f), 0f, 0f, -1f))
+            set(ColorAttribute.createAmbientLight(0.25f, 0.25f, 0.25f, 1f))
+            if (exposure != null) {
+                set(OutputTransformAttribute(exposure))
+            }
+        }
 
     private fun camera(): OrthographicCamera =
-        OrthographicCamera(2f, 2f).apply { position.set(0f, 0f, 2f); lookAt(0f, 0f, 0f); near = 0.1f; far = 4f; update() }
+        OrthographicCamera(2f, 2f).apply {
+            position.set(0f, 0f, 2f)
+            lookAt(0f, 0f, 0f)
+            near = 0.1f
+            far = 4f
+            update()
+        }
 
     private fun render(pbr: Boolean, instanced: Boolean, exposure: Float? = null): ByteArray {
         val framebuffer = FrameBuffer(Pixmap.Format.RGBA8888, 32, 32, true)
-        val provider = ModelShaderProvider(DefaultShader.Config().apply { numPointLights = 0; numSpotLights = 0 })
+        val provider =
+            ModelShaderProvider(
+                DefaultShader.Config().apply {
+                    numPointLights = 0
+                    numSpotLights = 0
+                }
+            )
         val material = material(pbr)
         val environment = environment(exposure)
         var mesh: IntMesh? = null
@@ -231,25 +296,31 @@ class InstancedModelShaderGlTest {
         assertTrue("$label: the instanced draw differed from one renderable per instance by $worst/255", worst <= 1)
     }
 
-    private fun gridWithInstances(spacing: Float): IntMesh = gridMesh(300).also { mesh ->
-        mesh.enableInstancedRendering(true, 2, *InstanceAttributes.of())
-        val data = FloatArray(2 * InstanceAttributes.FLOATS)
-        InstanceAttributes.write(Matrix4(), data, 0)
-        InstanceAttributes.write(Matrix4().setToTranslation(spacing, 0f, 0f), data, InstanceAttributes.FLOATS)
-        mesh.setInstanceData(data)
-    }
+    private fun gridWithInstances(spacing: Float): IntMesh =
+        gridMesh(300).also { mesh ->
+            mesh.enableInstancedRendering(true, 2, *InstanceAttributes.of())
+            val data = FloatArray(2 * InstanceAttributes.FLOATS)
+            InstanceAttributes.write(Matrix4(), data, 0)
+            InstanceAttributes.write(Matrix4().setToTranslation(spacing, 0f, 0f), data, InstanceAttributes.FLOATS)
+            mesh.setInstanceData(data)
+        }
 
     /** The red channel under the grid point ([x], [z]) of a 128 x 128 image of two grids side by side from above. */
-    private fun drawGridsFromAbove(provider: ModelShaderProvider, mesh: IntMesh, spacing: Float): (Float, Float) -> Int {
+    private fun drawGridsFromAbove(
+        provider: ModelShaderProvider,
+        mesh: IntMesh,
+        spacing: Float,
+    ): (Float, Float) -> Int {
         val width = spacing + 299f
-        val camera = OrthographicCamera(width, width).apply {
-            position.set(width / 2, 100f, width / 2)
-            direction.set(0f, -1f, 0f)
-            up.set(0f, 0f, -1f)
-            near = 1f
-            far = 200f
-            update()
-        }
+        val camera =
+            OrthographicCamera(width, width).apply {
+                position.set(width / 2, 100f, width / 2)
+                direction.set(0f, -1f, 0f)
+                up.set(0f, 0f, -1f)
+                near = 1f
+                far = 200f
+                update()
+            }
         val model = singleMeshModel(mesh)
         val framebuffer = FrameBuffer(Pixmap.Format.RGBA8888, 128, 128, true)
         try {
@@ -266,7 +337,8 @@ class InstancedModelShaderGlTest {
             val pixels = ByteArray(buffer.capacity()) { buffer.get(it) }
             return { x, z ->
                 val screen = camera.project(Vector3(x, 0f, z), 0f, 0f, 128f, 128f)
-                pixels[(screen.y.toInt().coerceIn(0, 127) * 128 + screen.x.toInt().coerceIn(0, 127)) * 4].toInt() and 255
+                pixels[(screen.y.toInt().coerceIn(0, 127) * 128 + screen.x.toInt().coerceIn(0, 127)) * 4].toInt() and
+                    255
             }
         } finally {
             framebuffer.end()
@@ -275,7 +347,8 @@ class InstancedModelShaderGlTest {
         }
     }
 
-    @Test fun twoInstancesOfA90000VertexMeshDrawWithOneInstancedVariant() = TestGl.run {
+    @Test
+    fun twoInstancesOfA90000VertexMeshDrawWithOneInstancedVariant() = TestGl.run {
         val provider = ModelShaderProvider()
         val spacing = 320f
         try {
@@ -290,7 +363,8 @@ class InstancedModelShaderGlTest {
         }
     }
 
-    @Test fun anInstancedAndAPlainMeshCreateExactlyTwoVariants() = TestGl.run {
+    @Test
+    fun anInstancedAndAPlainMeshCreateExactlyTwoVariants() = TestGl.run {
         val provider = ModelShaderProvider()
         try {
             drawGridsFromAbove(provider, gridWithInstances(320f), 320f)
@@ -302,7 +376,8 @@ class InstancedModelShaderGlTest {
         }
     }
 
-    @Test fun disablingInstancingAfterTheFirstDrawSwitchesToThePlainVariant() = TestGl.run {
+    @Test
+    fun disablingInstancingAfterTheFirstDrawSwitchesToThePlainVariant() = TestGl.run {
         val provider = ModelShaderProvider()
         val spacing = 320f
         val mesh = gridWithInstances(spacing)
@@ -311,19 +386,31 @@ class InstancedModelShaderGlTest {
         try {
             val batch = ModelBatch(provider)
             val instance = ModelInstance(model)
-            val camera = OrthographicCamera(spacing + 299f, spacing + 299f).apply {
-                position.set((spacing + 299f) / 2, 100f, (spacing + 299f) / 2)
-                direction.set(0f, -1f, 0f); up.set(0f, 0f, -1f); near = 1f; far = 200f; update()
-            }
+            val camera =
+                OrthographicCamera(spacing + 299f, spacing + 299f).apply {
+                    position.set((spacing + 299f) / 2, 100f, (spacing + 299f) / 2)
+                    direction.set(0f, -1f, 0f)
+                    up.set(0f, 0f, -1f)
+                    near = 1f
+                    far = 200f
+                    update()
+                }
             framebuffer.begin()
-            batch.begin(camera); batch.render(instance); batch.end()
+            batch.begin(camera)
+            batch.render(instance)
+            batch.end()
             assertEquals(1, provider.shaderCount)
             mesh.disableInstancedRendering()
-            batch.begin(camera); batch.render(instance); batch.end()
+            batch.begin(camera)
+            batch.render(instance)
+            batch.end()
             assertEquals("the plain variant was created for the same mesh", 2, provider.shaderCount)
             assertEquals(GL20.GL_NO_ERROR, Gdx.gl.glGetError())
         } finally {
-            framebuffer.end(); framebuffer.dispose(); provider.dispose(); model.dispose()
+            framebuffer.end()
+            framebuffer.dispose()
+            provider.dispose()
+            model.dispose()
         }
     }
 }

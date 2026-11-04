@@ -4,28 +4,32 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
-import net.nevinsky.abyssus.plugin.canonicalUi
-
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.ui.SampleProblem
-import net.nevinsky.abyssus.lib.core.editor.ui.SampleResult
-import net.nevinsky.abyssus.lib.core.ui.state.UiValue
 import java.awt.image.BufferedImage
 import java.util.concurrent.Executor
 import javax.imageio.ImageIO
 import javax.swing.JPanel
 import javax.swing.JTextField
+import net.nevinsky.abyssus.lib.core.editor.ui.SampleProblem
+import net.nevinsky.abyssus.lib.core.editor.ui.SampleResult
+import net.nevinsky.abyssus.lib.core.ui.state.UiValue
+import net.nevinsky.abyssus.plugin.canonicalUi
 
 class UiPreviewControllerTest : BasePlatformTestCase() {
-    private val source = canonicalUi("""{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main",
-        "bindings":[{"name":"volume","type":"number","access":"write","sample":0.5,"min":0,"max":1},{"name":"name","type":"string","access":"write","sample":"Pilot"}],
-        "screens":[{"id":"main","name":"Main","root":{"id":"root","type":"panel","children":[{"id":"vol","type":"slider","bindings":{"value":"volume"}}]}},
-                   {"id":"pause","name":"Pause","kind":"overlay","root":{"id":"p","type":"panel"}}]}}}""")!!
+    private val source =
+        canonicalUi(
+            """{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main",
+        "bindings":[{"name":"volume","type":"number","access":"write","sample":0.5,"min":0,"max":1},{"name":"name",
+"type":"string","access":"write","sample":"Pilot"}],
+        "screens":[{"id":"main","name":"Main","root":{"id":"root","type":"panel","children":[{"id":"vol",
+"type":"slider","bindings":{"value":"volume"}}]}},
+                   {"id":"pause","name":"Pause","kind":"overlay","root":{"id":"p","type":"panel"}}]}}}"""
+        )
 
     private lateinit var file: VirtualFile
     private val queue = ArrayDeque<Runnable>()
@@ -39,13 +43,18 @@ class UiPreviewControllerTest : BasePlatformTestCase() {
     }
 
     private fun controller(prefs: UiPreferences = MemoryUiPreferences(), manual: Boolean = false): UiEditorController {
-        val c = if (manual) UiEditorController(project, file, { queue.addLast(it) }, { uiQueue.addLast(it) }, preferences = prefs)
-        else UiEditorController(project, file, Executor { it.run() }, { it.run() }, preferences = prefs)
+        val c =
+            if (manual) {
+                UiEditorController(project, file, { queue.addLast(it) }, { uiQueue.addLast(it) }, preferences = prefs)
+            } else {
+                UiEditorController(project, file, Executor { it.run() }, { it.run() }, preferences = prefs)
+            }
         c.reload()
         return c
     }
 
-    private val document get() = FileDocumentManager.getInstance().getDocument(file)!!
+    private val document
+        get() = FileDocumentManager.getInstance().getDocument(file)!!
 
     private fun setText(text: String) = ApplicationManager.getApplication().runWriteAction { document.setText(text) }
 
@@ -74,13 +83,22 @@ class UiPreviewControllerTest : BasePlatformTestCase() {
         val editor = UiFileEditor(project, file, Executor { it.run() }) { JPanel() }
         val undoBefore = UndoManager.getInstance(project).isUndoAvailable(editor)
         val state = c.previewState!!
-        state.setSample("volume", "0.9"); state.actionSink().emit("startGame"); state.writer()
-        c.setPreviewViewport(1920, 1080); c.setBackdropScene("Main.scene"); c.resetPreview()
-        c.select("vol"); c.setMode(UiEditorMode.EDIT)
+        state.setSample("volume", "0.9")
+        state.actionSink().emit("startGame")
+        state.writer()
+        c.setPreviewViewport(1920, 1080)
+        c.setBackdropScene("Main.scene")
+        c.resetPreview()
+        c.select("vol")
+        c.setMode(UiEditorMode.EDIT)
         assertEquals("nothing the preview did reached the document", text, document.text)
         assertEquals(stamp, document.modificationStamp)
         assertEquals("and the authoring selection is back", "vol", c.selection.widgetId)
-        assertEquals("the preview added nothing to the undo history", undoBefore, UndoManager.getInstance(project).isUndoAvailable(editor))
+        assertEquals(
+            "the preview added nothing to the undo history",
+            undoBefore,
+            UndoManager.getInstance(project).isUndoAvailable(editor),
+        )
         editor.dispose()
     }
 
@@ -104,20 +122,33 @@ class UiPreviewControllerTest : BasePlatformTestCase() {
         val c = controller()
         c.setMode(UiEditorMode.PREVIEW)
         val before = c.previewState!!
-        before.setSample("volume", "0.9"); before.actionSink().emit("x")
-        assertTrue(c.edit("t") { e, m -> e.setProperty(m, "vol", "marker", com.fasterxml.jackson.databind.node.BooleanNode.TRUE) })
+        before.setSample("volume", "0.9")
+        before.actionSink().emit("x")
+        assertTrue(
+            c.edit("t") { e, m ->
+                e.setProperty(m, "vol", "marker", com.fasterxml.jackson.databind.node.BooleanNode.TRUE)
+            }
+        )
         val after = c.previewState!!
         assertNotSame(before, after)
         assertEquals(UiValue.Num(0.5), after.samples["volume"])
         assertTrue(after.log.isEmpty())
-        assertEquals("a reload of the same text keeps the session", after, run { c.reload(); c.previewState })
+        assertEquals(
+            "a reload of the same text keeps the session",
+            after,
+            run {
+                c.reload()
+                c.previewState
+            },
+        )
     }
 
     fun testResetKeepsTheSessionObjectButReturnsToAuthoredValues() {
         val c = controller()
         c.setMode(UiEditorMode.PREVIEW)
         val state = c.previewState!!
-        state.setSample("name", "Ace"); state.actionSink().emit("go")
+        state.setSample("name", "Ace")
+        state.actionSink().emit("go")
         c.resetPreview()
         assertEquals(UiValue.Text("Pilot"), state.samples["name"])
         assertTrue(state.log.isEmpty())
@@ -135,8 +166,16 @@ class UiPreviewControllerTest : BasePlatformTestCase() {
         assertTrue(c.setPreviewViewport(1024, 768))
         assertTrue(c.setPreviewViewport(MAX_PREVIEW_SIDE, 1))
         c.setPreviewViewport(1024, 768)
-        assertEquals("a new editor of the same asset starts where this one left off", UiViewport(1024, 768), controller(prefs).previewViewport)
-        assertEquals("another viewer (empty preferences) starts at the default", UiViewport(1280, 720), controller().previewViewport)
+        assertEquals(
+            "a new editor of the same asset starts where this one left off",
+            UiViewport(1024, 768),
+            controller(prefs).previewViewport,
+        )
+        assertEquals(
+            "another viewer (empty preferences) starts at the default",
+            UiViewport(1280, 720),
+            controller().previewViewport,
+        )
         prefs.set("abyssus.ui.${file.path}.viewport", "garbage")
         assertEquals("a damaged preference is ignored", UiViewport(1280, 720), controller(prefs).previewViewport)
     }
@@ -151,8 +190,11 @@ class UiPreviewControllerTest : BasePlatformTestCase() {
         c.setBackdropScene(null)
         assertNull(controller(prefs).backdropScene)
         assertEquals(text, document.text)
-        assertEquals("the scene is untouched", """{"format":"abyssus","formatVersion":1,"ecs":{}}""",
-            String(file.parent.parent.parent.findChild("scenes")!!.findChild("Main.scene")!!.contentsToByteArray()))
+        assertEquals(
+            "the scene is untouched",
+            """{"format":"abyssus","formatVersion":1,"ecs":{}}""",
+            String(file.parent.parent.parent.findChild("scenes")!!.findChild("Main.scene")!!.contentsToByteArray()),
+        )
     }
 
     fun testAFileOfTheAssetChangingOnDiskBumpsTheResourceRevisionButItsMetaDoesNot() {
@@ -176,18 +218,22 @@ class UiPreviewControllerTest : BasePlatformTestCase() {
     }
 
     fun testASlowOlderReadNeverReplacesTheCurrentPreview() {
-        val c = controller(manual = true)       // read #1 queued
-        queue.removeFirst().run(); uiQueue.removeFirst().run()
+        val c = controller(manual = true) // read #1 queued
+        queue.removeFirst().run()
+        uiQueue.removeFirst().run()
         c.setMode(UiEditorMode.PREVIEW)
         val live = c.previewState!!
         setText(source.replace("\"sample\": 0.5", "\"sample\": 0.75"))
-        c.reload()                              // read #2 of the newer text
+        c.reload() // read #2 of the newer text
         setText(source)
-        c.reload()                              // read #3 of the text back as before
+        c.reload() // read #3 of the text back as before
         assertEquals(2, queue.size)
-        val second = queue.removeFirst(); val third = queue.removeFirst()
-        third.run(); uiQueue.removeLast().run() // the newest finishes first
-        second.run(); uiQueue.removeLast().run() // the stale one must be dropped
+        val second = queue.removeFirst()
+        val third = queue.removeFirst()
+        third.run()
+        uiQueue.removeLast().run() // the newest finishes first
+        second.run()
+        uiQueue.removeLast().run() // the stale one must be dropped
         assertEquals(0.5, (c.previewState!!.samples["volume"] as UiValue.Num).value, 0.0)
         assertNotNull(live)
     }
@@ -208,7 +254,8 @@ class UiPreviewControllerTest : BasePlatformTestCase() {
     fun testThePanelOffersSizesBackdropsAndRejectsBadCustomSizes() {
         val c = controller()
         val p = panel(c)
-        p.widthField.text = "800"; p.heightField.text = "600"
+        p.widthField.text = "800"
+        p.heightField.text = "600"
         findButton(p, "preview-apply").doClick()
         assertEquals(UiViewport(800, 600), c.previewViewport)
         p.widthField.text = "0"
@@ -218,7 +265,10 @@ class UiPreviewControllerTest : BasePlatformTestCase() {
         findButton(p, "preview-apply").doClick()
         assertEquals(UiViewport(800, 600), c.previewViewport)
         val backdrop = find<javax.swing.JComboBox<String>>(p, "preview-backdrop")
-        assertEquals(listOf("(none)", "Main.scene", "Other.scene"), (0 until backdrop.itemCount).map { backdrop.getItemAt(it) })
+        assertEquals(
+            listOf("(none)", "Main.scene", "Other.scene"),
+            (0 until backdrop.itemCount).map { backdrop.getItemAt(it) },
+        )
         backdrop.selectedItem = "Other.scene"
         assertEquals("Other.scene", c.backdropScene)
         backdrop.selectedItem = "(none)"
@@ -231,10 +281,12 @@ class UiPreviewControllerTest : BasePlatformTestCase() {
         assertTrue("without a preview there is only the hint", p.sampleFields.isEmpty())
         c.setMode(UiEditorMode.PREVIEW)
         val volume = p.sampleFields.getValue("volume")
-        volume.text = "5"; volume.postActionEvent()
+        volume.text = "5"
+        volume.postActionEvent()
         assertTrue(p.sampleStatus.getValue("volume").text.contains("maximum"))
         assertEquals("the rejected value left the sample", UiValue.Num(0.5), c.previewState!!.samples["volume"])
-        volume.text = "0.2"; volume.postActionEvent()
+        volume.text = "0.2"
+        volume.postActionEvent()
         assertEquals(UiValue.Num(0.2), c.previewState!!.samples["volume"])
         assertEquals(SampleResult.Rejected(SampleProblem.NOT_A_NUMBER), c.previewState!!.setSample("volume", "x"))
         c.previewState!!.actionSink().emit("startGame")
@@ -248,8 +300,16 @@ class UiPreviewControllerTest : BasePlatformTestCase() {
     }
 
     private fun <T> find(root: java.awt.Container, name: String): T {
-        fun walk(c: java.awt.Container): java.awt.Component? = c.components.firstNotNullOfOrNull { ch -> if (ch.name == name) ch else (ch as? java.awt.Container)?.let(::walk) }
-        @Suppress("UNCHECKED_CAST") return checkNotNull(walk(root)) { name } as T
+        fun walk(c: java.awt.Container): java.awt.Component? =
+            c.components.firstNotNullOfOrNull { ch ->
+                if (ch.name == name) {
+                    ch
+                } else {
+                    (ch as? java.awt.Container)?.let(::walk)
+                }
+            }
+        @Suppress("UNCHECKED_CAST")
+        return checkNotNull(walk(root)) { name } as T
     }
 
     private fun findButton(root: java.awt.Container, name: String): javax.swing.JButton = find(root, name)

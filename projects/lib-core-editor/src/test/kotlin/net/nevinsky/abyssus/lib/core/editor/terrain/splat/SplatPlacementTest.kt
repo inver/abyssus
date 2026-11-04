@@ -15,7 +15,8 @@ import kotlin.math.abs
 
 /**
  * The brush places grid point `i` at `i * size / (resolution - 1)`; the shader reads texel `i` centred at
- * `(i + 0.5) / resolution * size` (`uv = local xz / size`). They differ by at most half a texel, `size / resolution / 2`.
+  * `(i + 0.5) / resolution * size` (`uv = local xz / size`). They differ by at most half a texel, `size / resolution /
+  * 2`.
  */
 class SplatPlacementTest {
     @Test

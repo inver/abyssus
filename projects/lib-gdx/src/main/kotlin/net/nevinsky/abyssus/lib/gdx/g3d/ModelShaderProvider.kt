@@ -44,7 +44,11 @@ class ModelShaderProvider(private val config: DefaultShader.Config = DefaultShad
             fitted.numDirectionalLights = config.numDirectionalLights
             fitted.numPointLights = config.numPointLights
             fitted.numSpotLights = config.numSpotLights
-            fitted.numBones = if (bones <= config.numBones) config.numBones else (bones + BONES_STEP - 1) / BONES_STEP * BONES_STEP
+            fitted.numBones = if (bones <= config.numBones) {
+                config.numBones
+            } else {
+                (bones + BONES_STEP - 1) / BONES_STEP * BONES_STEP
+            }
             fitted.numBoneWeights = maxOf(config.numBoneWeights, BONE_WEIGHTS)
             fitted.ignoreUnimplemented = config.ignoreUnimplemented
             fitted.defaultCullFace = config.defaultCullFace

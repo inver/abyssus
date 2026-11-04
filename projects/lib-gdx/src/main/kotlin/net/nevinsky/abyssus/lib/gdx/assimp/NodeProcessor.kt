@@ -59,9 +59,21 @@ internal class NodeProcessor(
         val translation = matrix.getTranslation(Vector3())
         val scale = matrix.getScale(Vector3())
         val rotation = matrix.getRotation(Quaternion(), true)
-        node.translation = if (translation.isZero()) null else translation
-        node.scale = if (scale.epsilonEquals(1f, 1f, 1f, 1e-6f)) null else scale
-        node.rotation = if (rotation.isIdentity()) null else rotation
+        node.translation = if (translation.isZero()) {
+            null
+        } else {
+            translation
+        }
+        node.scale = if (scale.epsilonEquals(1f, 1f, 1f, 1e-6f)) {
+            null
+        } else {
+            scale
+        }
+        node.rotation = if (rotation.isIdentity()) {
+            null
+        } else {
+            rotation
+        }
 
         val parts = ArrayList<ModelNodePart>()
         val meshIndices = aiNode.mMeshes()
@@ -99,7 +111,11 @@ internal class NodeProcessor(
     }
 
     private fun uniqueId(name: String?): String {
-        val base = if (name == null || name.isEmpty()) "node" else name
+        val base = if (name == null || name.isEmpty()) {
+            "node"
+        } else {
+            name
+        }
         var id = base
         var n = 1
         while (!usedIds.add(id)) {

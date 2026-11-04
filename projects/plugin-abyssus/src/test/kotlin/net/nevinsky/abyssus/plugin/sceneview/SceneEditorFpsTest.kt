@@ -23,7 +23,10 @@ class SceneEditorFpsTest : BasePlatformTestCase() {
     }
 
     private fun open(): Pair<SceneFileEditor, SceneViewPanel?> {
-        val file = myFixture.addFileToProject("fps/Main.scene", """{"format":"abyssus","formatVersion":1,"name":"x"}""").virtualFile
+        val file =
+            myFixture
+                .addFileToProject("fps/Main.scene", """{"format":"abyssus","formatVersion":1,"name":"x"}""")
+                .virtualFile
         val editor = SceneFileEditorProvider().createEditor(project, file) as SceneFileEditor
         return editor to (editor.sceneView as? SceneViewPanel)
     }
@@ -34,7 +37,9 @@ class SceneEditorFpsTest : BasePlatformTestCase() {
         try {
             assertNotNull("the editor made a real panel", panel)
             assertTrue(panel!!.statsText(), panel.statsText().startsWith("-- fps"))
-        } finally { editor.dispose() }
+        } finally {
+            editor.dispose()
+        }
     }
 
     fun testTurningItOnLaterReachesAnOpenRealPanel() {
@@ -46,6 +51,8 @@ class SceneEditorFpsTest : BasePlatformTestCase() {
             assertTrue(panel.statsText(), panel.statsText().startsWith("-- fps"))
             project.service<SceneViewSettings>().showFps = false
             assertFalse(panel.statsText().contains("fps"))
-        } finally { editor.dispose() }
+        } finally {
+            editor.dispose()
+        }
     }
 }

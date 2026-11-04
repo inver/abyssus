@@ -71,8 +71,18 @@ class MatchersTest {
     @Test
     fun eightsAreNotLoops() {
         assertFigure(Figure.HORIZONTAL_EIGHTS, 2, Verdict.COMPLETE, ideal.horizontalEights(60f, 2, connected = true))
-        assertFigure(Figure.HORIZONTAL_EIGHTS, 1, Verdict.WRONG_REPEATS, ideal.horizontalEights(60f, 1, connected = true))
-        assertFigure(Figure.HORIZONTAL_EIGHTS, 3, Verdict.WRONG_REPEATS, ideal.horizontalEights(60f, 3, connected = true))
+        assertFigure(
+            Figure.HORIZONTAL_EIGHTS,
+            1,
+            Verdict.WRONG_REPEATS,
+            ideal.horizontalEights(60f, 1, connected = true),
+        )
+        assertFigure(
+            Figure.HORIZONTAL_EIGHTS,
+            3,
+            Verdict.WRONG_REPEATS,
+            ideal.horizontalEights(60f, 3, connected = true),
+        )
     }
 
     @Test

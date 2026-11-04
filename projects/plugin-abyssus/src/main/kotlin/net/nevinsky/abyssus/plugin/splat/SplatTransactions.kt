@@ -15,7 +15,8 @@ import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
 
 /**
  * Turns what a splat operation plans into one [AssetTransaction], so a stroke, Create splat map and Make unique copy
- * share the engine's checks, rollback and undo. A stroke keeps whole before/after PNG bytes: a mask patch cannot patch a
+  * share the engine's checks, rollback and undo. A stroke keeps whole before/after PNG bytes: a mask patch cannot patch
+  * a
  * compressed image.
  */
 class SplatTransactions(private val store: AssetFileStore, private val projectHasAssetsDir: () -> Boolean = { true }) {
@@ -32,7 +33,9 @@ class SplatTransactions(private val store: AssetFileStore, private val projectHa
         after: ByteArray,
         expected: List<String>
     ): AssetTransaction? {
-        if (before.contentEquals(after)) return null
+        if (before.contentEquals(after)) {
+            return null
+        }
         val path = "$ASSETS_DIR/$splatFolder/$imageName"
         return AssetTransaction(
             name,
@@ -42,7 +45,8 @@ class SplatTransactions(private val store: AssetFileStore, private val projectHa
     }
 
     /**
-     * Create splat map or Make unique copy: a new texture asset folder with its `meta.json` and image, and the terrain's
+      * Create splat map or Make unique copy: a new texture asset folder with its `meta.json` and image, and the
+      * terrain's
      * `meta.json` going from [terrainMetaBefore] to the linked text. Undo removes the folder and restores the link.
      * [terrainFolder] names the terrain asset whose `meta.json` changes.
      */
@@ -66,7 +70,11 @@ class SplatTransactions(private val store: AssetFileStore, private val projectHa
                     FileSnapshot.Bytes(files.terrainMetaText.toByteArray())
                 ),
             ),
-            createdDirs = (if (projectHasAssetsDir()) emptyList() else listOf(ASSETS_DIR)) + base,
+            createdDirs = (if (projectHasAssetsDir()) {
+                emptyList()
+            } else {
+                listOf(ASSETS_DIR)
+            }) + base,
         )
     }
 }

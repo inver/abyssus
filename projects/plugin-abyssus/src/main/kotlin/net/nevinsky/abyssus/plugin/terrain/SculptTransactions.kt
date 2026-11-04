@@ -18,7 +18,8 @@ import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
 
 /**
  * Turns the planned content of a terrain folder's height files ([SculptFileSet]) into one [AssetTransaction] against
- * what the files hold in [store] now: only files whose content differs become a [FileChange], a file that should not exist
+  * what the files hold in [store] now: only files whose content differs become a [FileChange], a file that should not
+  * exist
  * is deleted and one that is new is created. Regenerate, a committed stroke, Reset and Forget all go through this, so
  * they share the engine's checks, rollback and undo. Null when nothing would change.
  *
@@ -43,8 +44,16 @@ class SculptTransactions(private val store: AssetFileStore) {
         val changes = wanted.mapNotNull { (path, bytes) ->
             val before = store.read(path)
             val after = bytes?.let { FileSnapshot.Bytes(it) } ?: FileSnapshot.Absent
-            if (before == after) null else FileChange(path, before, after)
+            if (before == after) {
+                null
+            } else {
+                FileChange(path, before, after)
+            }
         }
-        return if (changes.isEmpty()) null else AssetTransaction(name, changes, expectedFiles = expected)
+        return if (changes.isEmpty()) {
+            null
+        } else {
+            AssetTransaction(name, changes, expectedFiles = expected)
+        }
     }
 }

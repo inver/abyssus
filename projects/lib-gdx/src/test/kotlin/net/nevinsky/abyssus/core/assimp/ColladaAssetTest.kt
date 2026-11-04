@@ -25,15 +25,22 @@ class ColladaAssetTest {
 
     @Test
     fun xUpIsReportedAsStated() {
-        val stated = read(
-            """<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema"><asset>
-              |<contributor><author>x</author></contributor><up_axis>X_UP</up_axis></asset></COLLADA>""".trimMargin()
-        )
+        val stated =
+            read(
+                """
+                |<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema"><asset>
+                |<contributor><author>x</author></contributor><up_axis>X_UP</up_axis></asset></COLLADA>
+                """
+                    .trimMargin()
+            )
         assertEquals(StatedFrame(null, UpAxis.X), stated)
     }
 
     @Test
     fun anInvalidUnitIsIgnored() {
-        assertEquals(StatedFrame(null, UpAxis.Y), read("""<COLLADA><asset><unit meter="-2"/><up_axis>Y_UP</up_axis></asset></COLLADA>"""))
+        assertEquals(
+            StatedFrame(null, UpAxis.Y),
+            read("""<COLLADA><asset><unit meter="-2"/><up_axis>Y_UP</up_axis></asset></COLLADA>"""),
+        )
     }
 }

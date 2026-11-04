@@ -5,20 +5,19 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.g3d.Environment
+import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
+import com.badlogic.gdx.graphics.g3d.attributes.DirectionalLightsAttribute
+import com.badlogic.gdx.graphics.g3d.attributes.PointLightsAttribute
+import com.badlogic.gdx.graphics.g3d.attributes.SpotLightsAttribute
+import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.editor.content.LightKind
+import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 import net.nevinsky.abyssus.lib.core.editor.scene.MAX_DIRECTIONAL
 import net.nevinsky.abyssus.lib.core.editor.scene.MAX_POINT
 import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.lib.core.editor.scene.lightSetOf
-import com.badlogic.gdx.math.Vector3
-import com.badlogic.gdx.graphics.Color
-import net.nevinsky.abyssus.lib.core.editor.content.LightKind
-import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
-
-import com.badlogic.gdx.graphics.g3d.Environment
-import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
-import com.badlogic.gdx.graphics.g3d.attributes.SpotLightsAttribute
-import com.badlogic.gdx.graphics.g3d.attributes.DirectionalLightsAttribute
-import com.badlogic.gdx.graphics.g3d.attributes.PointLightsAttribute
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -29,18 +28,31 @@ class SceneLightingTest {
     private val origin = Vector3(0f, 0f, 0f)
 
     private fun light(
-        kind: LightKind, intensity: Float = 1f, position: Vector3 = origin, color: Color = Color(1f, 0.5f, 0f, 1f),
-        direction: Vector3 = Vector3(0f, -1f, 0f), id: Long = 1L,
+        kind: LightKind,
+        intensity: Float = 1f,
+        position: Vector3 = origin,
+        color: Color = Color(1f, 0.5f, 0f, 1f),
+        direction: Vector3 = Vector3(0f, -1f, 0f),
+        id: Long = 1L,
     ) = LightPlacement(id, kind, color, intensity, position, direction)
 
     @Test
     fun onlyTheSunIsScaledByClouds() {
-        val lights = listOf(
-            light(LightKind.DIRECTIONAL, intensity = 2f, id = 7L),
-            light(LightKind.DIRECTIONAL, intensity = 1f, id = 3L, position = Vector3(5f, 0f, 0f)),
-            light(LightKind.POINT, id = 4L),
-            LightPlacement(8L, LightKind.SPOT, Color(1f, 1f, 1f, 1f), 3f, origin, Vector3(0f, -1f, 0f), coneAngle = 40f),
-        )
+        val lights =
+            listOf(
+                light(LightKind.DIRECTIONAL, intensity = 2f, id = 7L),
+                light(LightKind.DIRECTIONAL, intensity = 1f, id = 3L, position = Vector3(5f, 0f, 0f)),
+                light(LightKind.POINT, id = 4L),
+                LightPlacement(
+                    8L,
+                    LightKind.SPOT,
+                    Color(1f, 1f, 1f, 1f),
+                    3f,
+                    origin,
+                    Vector3(0f, -1f, 0f),
+                    coneAngle = 40f,
+                ),
+            )
         val set = lightSetOf(lights, origin)
         val dimmed = set.withSunScale(7L, 0.25f)
         assertEquals(Color(0.5f, 0.25f, 0f, 1f), dimmed.directional.first { it.entityId == 7L }.color)
@@ -60,12 +72,13 @@ class SceneLightingTest {
 
     @Test
     fun theSunsDirectionalIndexFollowsTheBudgetedSet() {
-        val lights = listOf(
-            light(LightKind.DIRECTIONAL, intensity = 1f, position = Vector3(5f, 0f, 0f), id = 10L),
-            light(LightKind.DIRECTIONAL, intensity = 3f, position = Vector3(1f, 0f, 0f), id = 11L),
-            light(LightKind.DIRECTIONAL, intensity = 9f, position = Vector3(9f, 0f, 0f), id = 12L),
-            light(LightKind.POINT, intensity = 2f, id = 13L),
-        )
+        val lights =
+            listOf(
+                light(LightKind.DIRECTIONAL, intensity = 1f, position = Vector3(5f, 0f, 0f), id = 10L),
+                light(LightKind.DIRECTIONAL, intensity = 3f, position = Vector3(1f, 0f, 0f), id = 11L),
+                light(LightKind.DIRECTIONAL, intensity = 9f, position = Vector3(9f, 0f, 0f), id = 12L),
+                light(LightKind.POINT, intensity = 2f, id = 13L),
+            )
         val set = lightSetOf(lights, origin)
         assertEquals(listOf(11L, 10L), set.directional.map { it.entityId })
         assertEquals(0, set.directionalIndexOf(11L))
@@ -86,7 +99,15 @@ class SceneLightingTest {
 
     @Test
     fun directionalLightsAreCappedKeepingTheNearest() {
-        val lights = (1..5).map { light(LightKind.DIRECTIONAL, intensity = it.toFloat(), position = Vector3(it.toFloat(), 0f, 0f), id = it.toLong()) }
+        val lights =
+            (1..5).map {
+                light(
+                    LightKind.DIRECTIONAL,
+                    intensity = it.toFloat(),
+                    position = Vector3(it.toFloat(), 0f, 0f),
+                    id = it.toLong(),
+                )
+            }
         val set = lightSetOf(lights, origin)
         assertEquals(MAX_DIRECTIONAL, set.directional.size)
         assertEquals(listOf(1f, 2f), set.directional.map { it.color.r })
@@ -108,7 +129,11 @@ class SceneLightingTest {
         assertEquals(listOf(12f), set.point.map { it.range })
         val env = Environment()
         set.applyTo(env)
-        assertEquals(12f, env.get(PointLightsAttribute::class.java, PointLightsAttribute.Type)!!.lights.first().intensity, 0f)
+        assertEquals(
+            12f,
+            env.get(PointLightsAttribute::class.java, PointLightsAttribute.Type)!!.lights.first().intensity,
+            0f,
+        )
     }
 
     @Test
@@ -124,7 +149,17 @@ class SceneLightingTest {
 
     @Test
     fun localBudgetIsSharedWithStableIdentityTiesAndInvalidBeamsSkipped() {
-        val lights = (1..8).map { light(if (it % 2 == 0) LightKind.SPOT else LightKind.POINT, id = it.toLong()) }
+        val lights =
+            (1..8).map {
+                light(
+                    if (it % 2 == 0) {
+                        LightKind.SPOT
+                    } else {
+                        LightKind.POINT
+                    },
+                    id = it.toLong(),
+                )
+            }
         val a = lightSetOf(lights, origin)
         val b = lightSetOf(lights.reversed(), origin)
         assertEquals(5, a.point.size + a.spot.size)
@@ -132,18 +167,20 @@ class SceneLightingTest {
         assertEquals(listOf(2L, 4L), a.spot.map { it.entityId })
         assertEquals(a.point, b.point)
         assertEquals(a.spot.map { it.entityId }, b.spot.map { it.entityId })
-        val invalid = listOf(light(LightKind.SPOT).copy(coneAngle = 180f), light(LightKind.SPOT).copy(edgeSoftness = Float.NaN))
+        val invalid =
+            listOf(light(LightKind.SPOT).copy(coneAngle = 180f), light(LightKind.SPOT).copy(edgeSoftness = Float.NaN))
         assertTrue(lightSetOf(invalid, origin).spot.isEmpty())
     }
 
     @Test
     fun unusableLightsAreSkipped() {
-        val lights = listOf(
-            light(LightKind.DIRECTIONAL, intensity = 0f),
-            light(LightKind.DIRECTIONAL, intensity = Float.NaN),
-            light(LightKind.POINT, position = Vector3(Float.NaN, 0f, 0f)),
-            light(LightKind.DIRECTIONAL, intensity = 1f),
-        )
+        val lights =
+            listOf(
+                light(LightKind.DIRECTIONAL, intensity = 0f),
+                light(LightKind.DIRECTIONAL, intensity = Float.NaN),
+                light(LightKind.POINT, position = Vector3(Float.NaN, 0f, 0f)),
+                light(LightKind.DIRECTIONAL, intensity = 1f),
+            )
         val set = lightSetOf(lights, origin)
         assertEquals(1, set.directional.size)
         assertTrue(set.point.isEmpty())

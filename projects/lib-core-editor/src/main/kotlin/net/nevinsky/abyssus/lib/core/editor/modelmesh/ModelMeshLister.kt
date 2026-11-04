@@ -18,7 +18,8 @@ import java.util.concurrent.ConcurrentHashMap
 data class ModelMeshInfo(val id: String, val materials: List<String>)
 
 /**
- * The meshes of model assets, for the mesh choosers. Reads the geometry only (no image is decoded, no GL), so it may run
+  * The meshes of model assets, for the mesh choosers. Reads the geometry only (no image is decoded, no GL), so it may
+  * run
  * on any thread, but it parses the model file: call it off the UI thread. The answer for an asset is kept until
  * [invalidate] drops it.
  */
@@ -54,7 +55,11 @@ class ModelMeshLister(files: FileLoader, metas: AssetMetaLoader, assimp: AssimpM
         fun walk(node: ModelNode) {
             node.parts?.forEach { part ->
                 val material = part.materialId ?: return@forEach
-                materialOfPart.getOrPut(part.meshPartId) { mutableListOf() }.let { if (material !in it) it += material }
+                materialOfPart.getOrPut(part.meshPartId) { mutableListOf() }.let {
+                    if (material !in it) {
+                        it += material
+                    }
+                }
             }
             node.children?.forEach(::walk)
         }

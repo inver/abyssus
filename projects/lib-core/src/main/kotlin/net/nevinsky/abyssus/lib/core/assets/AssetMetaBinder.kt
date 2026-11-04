@@ -35,13 +35,17 @@ class AssetMetaBinder(
     fun bind(name: String, tree: JsonNode): AssetMeta<Any> {
         val baseMeta = json.bind(tree, AssetMeta::class.java)
         val block = tree["additional"]?.takeIf { it.isObject } ?: json.readObject("{}")
-        val additional: Any = if (baseMeta.type == MetaType.UI) UiMeta(ui.decode(tree)) else settings[baseMeta.type]?.let {
-            try {
-                return@let json.bind(block, it)
-            } catch (e: Exception) {
-                return@let it.kotlin.primaryConstructor?.callBy(mapOf())
-            }
-        } ?: json.bind(block, Map::class.java)
+        val additional: Any = if (baseMeta.type == MetaType.UI) {
+            UiMeta(ui.decode(tree))
+        } else {
+            settings[baseMeta.type]?.let {
+                try {
+                    return@let json.bind(block, it)
+                } catch (e: Exception) {
+                    return@let it.kotlin.primaryConstructor?.callBy(mapOf())
+                }
+            } ?: json.bind(block, Map::class.java)
+        }
         return AssetMeta(
             name = name,
             additional = additional,

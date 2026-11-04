@@ -7,21 +7,23 @@ package net.nevinsky.abyssus.plugin.dto
 
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
+import com.intellij.openapi.components.service
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.SimpleTextAttributes
+import java.util.UUID
+import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.lib.core.editor.testAsset
 import net.nevinsky.abyssus.plugin.filetype.AssetIcons
 import net.nevinsky.abyssus.plugin.projectView.AbyssusAssetNode
 import net.nevinsky.abyssus.plugin.projectView.AbyssusRootNode
-import com.intellij.openapi.components.service
-import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.assets.Asset
-import net.nevinsky.abyssus.lib.core.editor.testAsset
-import java.util.UUID
 
 class ProjectAssetsTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
 
-    /** The asset reader needs real UUIDs, so tests name assets by a short label and meet it as the UUID it hashes to. */
+    /**
+     * The asset reader needs real UUIDs, so tests name assets by a short label and meet it as the UUID it hashes to.
+     */
     private fun u(label: String): String = UUID.nameUUIDFromBytes(label.toByteArray()).toString()
 
     private fun asset(name: String, label: String, type: String, references: List<String> = emptyList()) =
@@ -40,13 +42,15 @@ class ProjectAssetsTest : BasePlatformTestCase() {
         project.service<ProjectReader>().read(abss).obj!!.assets
 
     private fun ecs(vararg refs: String) =
-        """{"format":"abyssus","formatVersion":1,"ecs":{${refs.mapIndexed { i, r -> "\"$i\":{\"components\":{\"RenderComponent\":$r}}" }.joinToString(",")}}}"""
+        """{"format":"abyssus","formatVersion":1,
+"ecs":{${refs.mapIndexed { i, r -> "\"$i\":{\"components\":{\"RenderComponent\":$r}}" }.joinToString(",")}}}"""
 
     private fun modelRef(name: String, shader: String = "defaultShader") =
         """{"shaderKey":"$shader","type":"MODEL","assetName":"$name"}"""
 
     private fun meta(type: String, label: String, additional: String = "{}") =
-        """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"uuid":"${u(label)}","type":"$type","additional":$additional}"""
+        """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"uuid":"${u(label)}","type":"$type",
+"additional":$additional}"""
 
     // 2.1 listing
 
@@ -54,9 +58,12 @@ class ProjectAssetsTest : BasePlatformTestCase() {
         val dir = "Untitled"
         myFixture.copyFileToProject("Tree/Untitled.abss", "$dir/Untitled.abss")
         myFixture.copyFileToProject("Tree/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
-        java.io.File("$testDataPath/Tree/assets").listFiles { f -> f.isDirectory }!!.forEach {
-            myFixture.copyFileToProject("Tree/assets/${it.name}/meta.json", "$dir/assets/${it.name}/meta.json")
-        }
+        java.io
+            .File("$testDataPath/Tree/assets")
+            .listFiles { f -> f.isDirectory }!!
+            .forEach {
+                myFixture.copyFileToProject("Tree/assets/${it.name}/meta.json", "$dir/assets/${it.name}/meta.json")
+            }
         val assets = readAssets(myFixture.findFileInTempDir("$dir/Untitled.abss"))
         assertEquals(9, assets.size)
         assertEquals(assets.map { it.name }.sorted(), assets.map { it.name })
@@ -66,8 +73,12 @@ class ProjectAssetsTest : BasePlatformTestCase() {
         assertEquals("SKYBOX_HDR", type(assets.single { it.name == "skybox_hdr" }))
         assertEquals("TERRAIN", type(assets.single { it.name.startsWith("terrain_") }))
         assertEquals(4, assets.count { type(it) == "MODEL" && it.name.startsWith("model_") })
-        // Main Scene names four of them directly, its skybox is `skybox_physical`; `tree`, one model and the other two skyboxes are not reached
-        assertEquals(setOf("skybox_hdr", "skybox_default", "tree", "model_828d51e4-8427-4769-bcb6-13f8f21f23e9"), assets.filter { it.unused }.map { it.name }.toSet())
+        // Main Scene names four of them directly, its skybox is `skybox_physical`; `tree`, one model and the other two
+        // skyboxes are not reached
+        assertEquals(
+            setOf("skybox_hdr", "skybox_default", "tree", "model_828d51e4-8427-4769-bcb6-13f8f21f23e9"),
+            assets.filter { it.unused }.map { it.name }.toSet(),
+        )
     }
 
     fun testProjectWithoutAssetsFolderHasEmptyList() {
@@ -92,93 +103,119 @@ class ProjectAssetsTest : BasePlatformTestCase() {
     // 2.2 direct usage
 
     fun testSceneNamesAssetsSkyboxesAndShadersDirectly() {
-        val abss = project(
-            mapOf("S" to """{"format":"abyssus","formatVersion":1,"skyboxName":"sky","ecs":{"0":{"components":{"RenderComponent":{"type":"MODEL","assetName":"m1","shaderKey":"myShader"}}}}}"""),
-            mapOf(
-                "m1" to meta("MODEL", "u1"), "m2" to meta("MODEL", "u2"), "sky" to meta("SKYBOX", "u3"),
-                "myShader" to meta("SHADER", "u4"), "otherShader" to meta("SHADER", "u5"),
-            ),
-            "direct",
-        )
+        val abss =
+            project(
+                mapOf(
+                    "S" to
+                        """{"format":"abyssus","formatVersion":1,"skyboxName":"sky",
+"ecs":{"0":{"components":{"RenderComponent":{"type":"MODEL","assetName":"m1","shaderKey":"myShader"}}}}}"""
+                ),
+                mapOf(
+                    "m1" to meta("MODEL", "u1"),
+                    "m2" to meta("MODEL", "u2"),
+                    "sky" to meta("SKYBOX", "u3"),
+                    "myShader" to meta("SHADER", "u4"),
+                    "otherShader" to meta("SHADER", "u5"),
+                ),
+                "direct",
+            )
         val unused = readAssets(abss).filter { it.unused }.map { it.name }
         assertEquals(listOf("m2", "otherShader"), unused)
     }
 
     fun testBundledShaderKeyIsIgnored() {
-        val abss = project(mapOf("S" to ecs(modelRef("m1", shader = "pbr"))), mapOf("m1" to meta("MODEL", "u1")), "bundled")
+        val abss =
+            project(mapOf("S" to ecs(modelRef("m1", shader = "pbr"))), mapOf("m1" to meta("MODEL", "u1")), "bundled")
         val assets = readAssets(abss)
         assertEquals(listOf("m1"), assets.map { it.name })
         assertFalse(assets.single().unused)
     }
 
     fun testReferenceFromAnySceneCounts() {
-        val abss = project(
-            mapOf("A" to ecs(modelRef("m1")), "B" to ecs(modelRef("m2"))),
-            mapOf("m1" to meta("MODEL", "u1"), "m2" to meta("MODEL", "u2"), "m3" to meta("MODEL", "u3")),
-            "anyscene",
-        )
+        val abss =
+            project(
+                mapOf("A" to ecs(modelRef("m1")), "B" to ecs(modelRef("m2"))),
+                mapOf("m1" to meta("MODEL", "u1"), "m2" to meta("MODEL", "u2"), "m3" to meta("MODEL", "u3")),
+                "anyscene",
+            )
         assertEquals(listOf("m3"), readAssets(abss).filter { it.unused }.map { it.name })
     }
 
     fun testMalformedSceneDoesNotDropOtherScenesReferences() {
-        val abss = project(
-            mapOf("A" to "{ nope", "B" to ecs(modelRef("m2"))),
-            mapOf("m1" to meta("MODEL", "u1"), "m2" to meta("MODEL", "u2")),
-            "badscene",
-        )
+        val abss =
+            project(
+                mapOf("A" to "{ nope", "B" to ecs(modelRef("m2"))),
+                mapOf("m1" to meta("MODEL", "u1"), "m2" to meta("MODEL", "u2")),
+                "badscene",
+            )
         assertEquals(listOf("m1"), readAssets(abss).filter { it.unused }.map { it.name })
     }
 
     // 2.3 transitive usage
 
     fun testSplatTextureIsUsedThroughItsTerrain() {
-        val abss = project(
-            mapOf("S" to """{"format":"abyssus","formatVersion":1,"ecs":{"0":{"components":{"RenderComponent":{"type":"TERRAIN","assetName":"terr"}}}}}"""),
-            mapOf(
-                "terr" to meta("TERRAIN", "ut", """{"splatMap":"${u("us1")}","splatR":"${u("us2")}","splatG":null}"""),
-                "splat1" to meta("TEXTURE", "us1"), "splat2" to meta("TEXTURE", "us2"), "lonely" to meta("TEXTURE", "ul"),
-            ),
-            "splat",
-        )
+        val abss =
+            project(
+                mapOf(
+                    "S" to
+                        """{"format":"abyssus","formatVersion":1,
+"ecs":{"0":{"components":{"RenderComponent":{"type":"TERRAIN","assetName":"terr"}}}}}"""
+                ),
+                mapOf(
+                    "terr" to
+                        meta("TERRAIN", "ut", """{"splatMap":"${u("us1")}","splatR":"${u("us2")}","splatG":null}"""),
+                    "splat1" to meta("TEXTURE", "us1"),
+                    "splat2" to meta("TEXTURE", "us2"),
+                    "lonely" to meta("TEXTURE", "ul"),
+                ),
+                "splat",
+            )
         assertEquals(listOf("lonely"), readAssets(abss).filter { it.unused }.map { it.name })
     }
 
     fun testMaterialIsUsedThroughItsModelButNotThroughAnUnusedOne() {
-        val abss = project(
-            mapOf("S" to ecs(modelRef("used"))),
-            mapOf(
-                "used" to meta("MODEL", "u1", """{"materials":["${u("um1")}"]}"""),
-                "dead" to meta("MODEL", "u2", """{"materials":["${u("um2")}"]}"""),
-                "mat1" to meta("MATERIAL", "um1"), "mat2" to meta("MATERIAL", "um2"),
-            ),
-            "materials",
-        )
+        val abss =
+            project(
+                mapOf("S" to ecs(modelRef("used"))),
+                mapOf(
+                    "used" to meta("MODEL", "u1", """{"materials":["${u("um1")}"]}"""),
+                    "dead" to meta("MODEL", "u2", """{"materials":["${u("um2")}"]}"""),
+                    "mat1" to meta("MATERIAL", "um1"),
+                    "mat2" to meta("MATERIAL", "um2"),
+                ),
+                "materials",
+            )
         assertEquals(listOf("dead", "mat2"), readAssets(abss).filter { it.unused }.map { it.name })
     }
 
     fun testCloudAssetIsUsedThroughTheSkyThatNamesIt() {
         fun sky(label: String, clouds: String) =
             meta("SKYBOX_PROCEDURAL", label, """{"vertex":"sky.vert","fragment":"sky.frag","clouds":"${u(clouds)}"}""")
-        val abss = project(
-            mapOf("S" to """{"format":"abyssus","formatVersion":1,"skyboxName":"sky","ecs":{}}"""),
-            mapOf(
-                "sky" to sky("us", "uw"),
-                "clouds_storm" to meta("CLOUDS", "uw", """{"low":{"type":"stratocumulus"}}"""),
-                "clouds_fair" to meta("CLOUDS", "uf", """{"low":{"type":"cumulus"}}"""),
-                "other_sky" to sky("uo", "uf"),
-            ),
-            "clouds",
+        val abss =
+            project(
+                mapOf("S" to """{"format":"abyssus","formatVersion":1,"skyboxName":"sky","ecs":{}}"""),
+                mapOf(
+                    "sky" to sky("us", "uw"),
+                    "clouds_storm" to meta("CLOUDS", "uw", """{"low":{"type":"stratocumulus"}}"""),
+                    "clouds_fair" to meta("CLOUDS", "uf", """{"low":{"type":"cumulus"}}"""),
+                    "other_sky" to sky("uo", "uf"),
+                ),
+                "clouds",
+            )
+        assertEquals(
+            "a cloud asset only an unused sky names is unused",
+            listOf("clouds_fair", "other_sky"),
+            readAssets(abss).filter { it.unused }.map { it.name },
         )
-        assertEquals("a cloud asset only an unused sky names is unused", listOf("clouds_fair", "other_sky"),
-            readAssets(abss).filter { it.unused }.map { it.name })
     }
 
     fun testCyclesTerminateAndUnknownUuidsAreIgnored() {
-        val assets = listOf(
-            asset("a", "ua", "MODEL", listOf("ub", "nope")),
-            asset("b", "ub", "MATERIAL", listOf("ua")),
-            asset("c", "uc", "MODEL"),
-        )
+        val assets =
+            listOf(
+                asset("a", "ua", "MODEL", listOf("ub", "nope")),
+                asset("b", "ub", "MATERIAL", listOf("ua")),
+                asset("c", "uc", "MODEL"),
+            )
         assertEquals(setOf("a", "b"), project.service<ProjectReader>().usedAssets(assets, setOf("a", "missing")))
         assertEquals(emptySet<String>(), project.service<ProjectReader>().usedAssets(assets, emptySet()))
     }
@@ -194,7 +231,12 @@ class ProjectAssetsTest : BasePlatformTestCase() {
 
     fun testReadingLeavesFilesUnchanged() {
         val abss = project(mapOf("S" to ecs(modelRef("m1"))), mapOf("m1" to meta("MODEL", "u1")), "ro")
-        val files = listOf(abss, abss.parent.findChild("scenes")!!.children.single(), abss.parent.findChild("assets")!!.findChild("m1")!!.findChild("meta.json")!!)
+        val files =
+            listOf(
+                abss,
+                abss.parent.findChild("scenes")!!.children.single(),
+                abss.parent.findChild("assets")!!.findChild("m1")!!.findChild("meta.json")!!,
+            )
         val before = files.map { it.contentsToByteArray().toList() }
         project.service<ProjectReader>().read(abss)
         assertEquals(before, files.map { it.contentsToByteArray().toList() })
@@ -203,29 +245,52 @@ class ProjectAssetsTest : BasePlatformTestCase() {
     // 2.5 rendering
 
     fun testUnusedAssetsCarryAMarkerAndGrayText() {
-        project(mapOf("S" to ecs(modelRef("used"))), mapOf("used" to meta("MODEL", "u1"), "dead" to meta("MODEL", "u2")), "render")
+        project(
+            mapOf("S" to ecs(modelRef("used"))),
+            mapOf("used" to meta("MODEL", "u1"), "dead" to meta("MODEL", "u2")),
+            "render",
+        )
         val root = AbyssusRootNode(project, ViewSettings.DEFAULT)
         val projectNode = root.children.single { it is AbyssusAssetNode }
         val assetsNode = projectNode.children.map { it as AbstractTreeNode<*> }.single { text(it).startsWith("Assets") }
-        val rows = assetsNode.children.map { it as AbstractTreeNode<*> }.flatMap { g -> g.children.map { it as AbstractTreeNode<*> } }
-            .associateBy { text(it).substringBefore("  ") }
+        val rows =
+            assetsNode.children
+                .map { it as AbstractTreeNode<*> }
+                .flatMap { g -> g.children.map { it as AbstractTreeNode<*> } }
+                .associateBy { text(it).substringBefore("  ") }
         assertEquals(setOf("dead", "used"), rows.keys)
         // the badge is painted at the right edge of the row, not part of its text
         assertFalse(text(rows.getValue("dead")).contains("unused"))
-        assertNotNull(net.nevinsky.abyssus.plugin.projectView.unusedBadgeFor((rows.getValue("dead") as net.nevinsky.abyssus.plugin.projectView.DtoEntryNode).value))
-        assertNull(net.nevinsky.abyssus.plugin.projectView.unusedBadgeFor((rows.getValue("used") as net.nevinsky.abyssus.plugin.projectView.DtoEntryNode).value))
-        fun gray(n: AbstractTreeNode<*>) = n.presentation.coloredText.all {
-            it.attributes == SimpleTextAttributes.GRAYED_ATTRIBUTES || it.attributes == SimpleTextAttributes.GRAYED_ITALIC_ATTRIBUTES
-        }
+        assertNotNull(
+            net.nevinsky.abyssus.plugin.projectView.unusedBadgeFor(
+                (rows.getValue("dead") as net.nevinsky.abyssus.plugin.projectView.DtoEntryNode).value
+            )
+        )
+        assertNull(
+            net.nevinsky.abyssus.plugin.projectView.unusedBadgeFor(
+                (rows.getValue("used") as net.nevinsky.abyssus.plugin.projectView.DtoEntryNode).value
+            )
+        )
+        fun gray(n: AbstractTreeNode<*>) =
+            n.presentation.coloredText.all {
+                it.attributes == SimpleTextAttributes.GRAYED_ATTRIBUTES ||
+                    it.attributes == SimpleTextAttributes.GRAYED_ITALIC_ATTRIBUTES
+            }
         assertTrue(gray(rows.getValue("dead")))
         val deadChildren = rows.getValue("dead").children.map { it as AbstractTreeNode<*> }
         assertTrue(deadChildren.isNotEmpty())
-        assertTrue(deadChildren.all { it.update(); gray(it) })
+        assertTrue(
+            deadChildren.all {
+                it.update()
+                gray(it)
+            }
+        )
         assertFalse(gray(rows.getValue("used")))
     }
 
     fun testEveryAssetTypeHasItsOwnIcon() {
-        val types = listOf("MODEL", "TERRAIN", "SKYBOX", "SKYBOX_HDR", "TEXTURE", "PIXMAP_TEXTURE", "MATERIAL", "SHADER")
+        val types =
+            listOf("MODEL", "TERRAIN", "SKYBOX", "SKYBOX_HDR", "TEXTURE", "PIXMAP_TEXTURE", "MATERIAL", "SHADER")
         val icons = types.map { AssetIcons.forType(it) } + AssetIcons.UNKNOWN
         assertEquals(types.size + 1, icons.toSet().size)
         assertSame(AssetIcons.UNKNOWN, AssetIcons.forType(null))
@@ -241,7 +306,11 @@ class ProjectAssetsTest : BasePlatformTestCase() {
         )
         val projectNode = AbyssusRootNode(project, ViewSettings.DEFAULT).children.single { it is AbyssusAssetNode }
         val assetsNode = projectNode.children.map { it as AbstractTreeNode<*> }.single { text(it).startsWith("Assets") }
-        val icons = assetsNode.children.map { it as AbstractTreeNode<*> }.flatMap { g -> g.children.map { it as AbstractTreeNode<*> } }.associate { text(it).substringBefore("  ") to it.presentation.getIcon(false) }
+        val icons =
+            assetsNode.children
+                .map { it as AbstractTreeNode<*> }
+                .flatMap { g -> g.children.map { it as AbstractTreeNode<*> } }
+                .associate { text(it).substringBefore("  ") to it.presentation.getIcon(false) }
         assertSame(AssetIcons.forType("MODEL"), icons["m"])
         assertSame(AssetIcons.forType("TERRAIN"), icons["t"])
         assertSame(AssetIcons.UNKNOWN, icons["x"])

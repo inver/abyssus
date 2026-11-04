@@ -34,9 +34,21 @@ class PreviewFramingTest {
         val box = framing.bounds(size)
         for (i in 0 until 8) {
             val corner = Vector3(
-                if (i and 1 == 0) box.min.x else box.max.x,
-                if (i and 2 == 0) box.min.y else box.max.y,
-                if (i and 4 == 0) box.min.z else box.max.z,
+                if (i and 1 == 0) {
+                    box.min.x
+                } else {
+                    box.max.x
+                },
+                if (i and 2 == 0) {
+                    box.min.y
+                } else {
+                    box.max.y
+                },
+                if (i and 4 == 0) {
+                    box.min.z
+                } else {
+                    box.max.z
+                },
             )
             val p = Vector3(corner).prj(camera.combined)
             assertTrue("$size corner $corner at $p", p.x in -1f..1f && p.y in -1f..1f && p.z in -1f..1f)

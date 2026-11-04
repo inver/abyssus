@@ -13,7 +13,9 @@ class VertexLayout(private val attributes: Array<VertexAttribute>) {
     fun offsetOf(usage: Int, unit: Int? = null): Int? {
         var offset = 0
         for (a in attributes) {
-            if (a.usage == usage && (unit == null || a.unit == unit)) return offset
+            if (a.usage == usage && (unit == null || a.unit == unit)) {
+                return offset
+            }
             offset += a.numComponents
         }
         return null
@@ -24,7 +26,9 @@ class VertexLayout(private val attributes: Array<VertexAttribute>) {
         val result = ArrayList<Int>()
         var offset = 0
         for (a in attributes) {
-            if (a.usage == usage) result += offset
+            if (a.usage == usage) {
+                result += offset
+            }
             offset += a.numComponents
         }
         return result

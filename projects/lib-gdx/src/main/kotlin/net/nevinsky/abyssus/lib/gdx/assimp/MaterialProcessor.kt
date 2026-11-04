@@ -31,7 +31,11 @@ internal class MaterialProcessor(private val textures: TextureProcessor) {
             val baseColor: Color? = readColor(aiMaterial, Assimp.AI_MATKEY_BASE_COLOR, stack)
             val pbr: Boolean = isPbr(baseColor, metallic, roughness)
 
-            val material = if (pbr) readPbr(aiMaterial, baseColor, metallic, roughness, stack) else ModelMaterial()
+            val material = if (pbr) {
+                readPbr(aiMaterial, baseColor, metallic, roughness, stack)
+            } else {
+                ModelMaterial()
+            }
             material.textures = Array<ModelTexture>()
             material.id = uniqueId(readName(aiMaterial, stack), index)
             material.diffuse = readColor(aiMaterial, Assimp.AI_MATKEY_COLOR_DIFFUSE, stack)
@@ -57,7 +61,11 @@ internal class MaterialProcessor(private val textures: TextureProcessor) {
     }
 
     private fun uniqueId(name: String?, index: Int): String {
-        val base = if (name == null || name.isEmpty()) "material_" + index else name
+        val base = if (name == null || name.isEmpty()) {
+            "material_" + index
+        } else {
+            name
+        }
         var id = base
         var n = 1
         while (!usedIds.add(id)) {
@@ -112,7 +120,8 @@ internal class MaterialProcessor(private val textures: TextureProcessor) {
         )
 
         /**
-         * Only meaningful for PBR materials: glTF maps the metallic-roughness texture to UNKNOWN and the occlusion texture
+          * Only meaningful for PBR materials: glTF maps the metallic-roughness texture to UNKNOWN and the occlusion
+          * texture
          * to LIGHTMAP.
          */
         private val PBR_TEXTURE_USAGES = arrayOf<IntArray>(

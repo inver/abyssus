@@ -7,7 +7,9 @@ package net.nevinsky.abyssus.plugin.brush
 
 import java.util.concurrent.ConcurrentHashMap
 
-/** The drafts of a project's terrain folders, by folder name: a stroke in progress, seen by every view of the project. */
+/**
+ * The drafts of a project's terrain folders, by folder name: a stroke in progress, seen by every view of the project.
+ */
 abstract class DraftRegistry<D : Any> {
     private val drafts = ConcurrentHashMap<String, D>()
 

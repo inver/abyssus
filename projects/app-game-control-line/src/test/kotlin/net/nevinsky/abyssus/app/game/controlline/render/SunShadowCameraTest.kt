@@ -5,17 +5,18 @@
 package net.nevinsky.abyssus.app.game.controlline.render
 
 import com.badlogic.gdx.math.Vector3
+import kotlin.math.abs
 import net.nevinsky.abyssus.lib.render.shadow.sunShadowBias
 import net.nevinsky.abyssus.lib.render.shadow.sunShadowCamera
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.abs
 
 class SunShadowCameraTest {
     private val towardSun = Vector3(60f, 100f, 40f).nor()
 
-    private fun project(point: Vector3): Vector3 = Vector3(point).prj(sunShadowCamera(towardSun, Vector3.Zero, SHADOW_EXTENT, SHADOW_MAP_SIZE).combined)
+    private fun project(point: Vector3): Vector3 =
+        Vector3(point).prj(sunShadowCamera(towardSun, Vector3.Zero, SHADOW_EXTENT, SHADOW_MAP_SIZE).combined)
 
     @Test
     fun pilotIsInTheMiddleOfTheMap() {
@@ -26,7 +27,8 @@ class SunShadowCameraTest {
 
     @Test
     fun fieldFacilitiesStreetAndRailwayAreInTheMap() {
-        for (point in listOf(Vector3(55f, 0f, 0f), Vector3(-55f, 0f, 0f), Vector3(0f, 0f, -55f), Vector3(0f, -2f, 70f))) {
+        for (point in
+            listOf(Vector3(55f, 0f, 0f), Vector3(-55f, 0f, 0f), Vector3(0f, 0f, -55f), Vector3(0f, -2f, 70f))) {
             val p = project(point)
             assertTrue("$point maps to $p", abs(p.x) < 1f && abs(p.y) < 1f && abs(p.z) < 1f)
         }
@@ -46,15 +48,19 @@ class SunShadowCameraTest {
     @Test
     fun centreSnapsToWholeTexels() {
         val texel = SHADOW_EXTENT / SHADOW_MAP_SIZE
-        val a = Vector3(Vector3.Zero).prj(sunShadowCamera(towardSun, Vector3(0.01f, 0f, 0f), SHADOW_EXTENT, SHADOW_MAP_SIZE).combined)
-        val b = Vector3(Vector3.Zero).prj(sunShadowCamera(towardSun, Vector3.Zero, SHADOW_EXTENT, SHADOW_MAP_SIZE).combined)
+        val a =
+            Vector3(Vector3.Zero)
+                .prj(sunShadowCamera(towardSun, Vector3(0.01f, 0f, 0f), SHADOW_EXTENT, SHADOW_MAP_SIZE).combined)
+        val b =
+            Vector3(Vector3.Zero).prj(sunShadowCamera(towardSun, Vector3.Zero, SHADOW_EXTENT, SHADOW_MAP_SIZE).combined)
         assertEquals(b.x, a.x, 1e-4f)
         assertTrue(texel > 0.01f)
     }
 
     @Test
     fun biasIsAFractionOfATexelInDepth() {
-        val bias = sunShadowBias(sunShadowCamera(towardSun, Vector3.Zero, SHADOW_EXTENT, SHADOW_MAP_SIZE), SHADOW_MAP_SIZE)
+        val bias =
+            sunShadowBias(sunShadowCamera(towardSun, Vector3.Zero, SHADOW_EXTENT, SHADOW_MAP_SIZE), SHADOW_MAP_SIZE)
         assertTrue("bias $bias", bias > 0f && bias < 1e-3f)
     }
 }

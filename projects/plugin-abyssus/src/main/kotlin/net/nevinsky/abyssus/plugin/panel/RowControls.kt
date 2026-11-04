@@ -30,7 +30,10 @@ import javax.swing.*
 /** The width of a single-line input and of one axis box. */
 private const val INPUT_WIDTH = 120
 
-/** The width of one axis box of a vector: wider than a plain input so a signed eight-digit value shows whole beside its tag. */
+/**
+ * The width of one axis box of a vector: wider than a plain input so a signed eight-digit value shows whole beside its
+ * tag.
+ */
 private const val AXIS_WIDTH = 150
 
 /** What the rows of a section need from the view that hosts them: saving a field, the hosted editors and links. */
@@ -51,14 +54,21 @@ interface RowHooks {
 /** The component name of the editor of [ref]: `field-<Kind>-<field>`, which tests and the page objects look up. */
 fun fieldName(ref: FieldRef): String = if (ref.kind == "asset") {
     "asset-field-${ref.field}"
-} else "field-${ref.kind}-${ref.field}"
+} else {
+    "field-${ref.kind}-${ref.field}"
+}
 
 /** The name of the message beside it: `error-<Kind>-<field>`. */
 fun errorName(ref: FieldRef): String =
-    if (ref.kind == "asset") "asset-error-${ref.field}" else "error-${ref.kind}-${ref.field}"
+    if (ref.kind == "asset") {
+        "asset-error-${ref.field}"
+    } else {
+        "error-${ref.kind}-${ref.field}"
+    }
 
 /**
- * One row of a section: a 150 px label column, the control at the look and feel's field height, and the reason a value was refused beside it. A row
+  * One row of a section: a 150 px label column, the control at the look and feel's field height, and the reason a value
+  * was refused beside it. A row
  * that spans the width (a note, a sub-heading, a table) has no label.
  */
 fun fieldRow(label: String, control: JComponent, error: JComponent? = null, labelName: String? = null): JComponent =
@@ -75,7 +85,9 @@ fun fieldRow(label: String, control: JComponent, error: JComponent? = null, labe
             GridBagConstraints().apply {
                 gridx = 1; weightx = 1.0; fill = GridBagConstraints.HORIZONTAL; anchor = GridBagConstraints.WEST
             })
-        if (error != null) add(error, GridBagConstraints().apply { gridx = 2; insets = JBUI.insetsLeft(8) })
+        if (error != null) {
+            add(error, GridBagConstraints().apply { gridx = 2; insets = JBUI.insetsLeft(8) })
+        }
     }
 
 /** The row of [row] for a section whose rows are hosted by [hooks]. [tooltip] help goes on the control. */
@@ -95,15 +107,31 @@ fun rowComponent(row: Row, hooks: RowHooks): JComponent = (row as? TextRow)?.fie
     is NumberRow -> editable(row.label, row.field, row.dim, row.tooltip, hooks) { ref, error ->
         val field = textEditor(row.value, error) { hooks.commit(ref, it) }.also { it.styled(row.dim) }
         field.pinFieldHeight(PanelMetrics.scaled(INPUT_WIDTH))
-        if (row.unit.isEmpty()) field else unitBox(field, row.unit)
+        if (row.unit.isEmpty()) {
+            field
+        } else {
+            unitBox(field, row.unit)
+        }
     } ?: fieldRow(row.label, readonlyValue(row.value + unitSuffix(row.unit), row.dim))
 
     is VectorRow -> vectorRow(row.label, row.axes, row.dim, hooks)
     is ChoiceRow -> editable(row.label, row.field, row.dim, null, hooks) { ref, error ->
         // a stored value the choices lack (a mesh the model no longer has) stays selectable and shows as a warning
-        val choices = (if (row.optional) listOf("") else emptyList()) + row.choices +
-                (if (row.unknown) listOf(row.value) else emptyList())
-        val shown = { choice: String -> if (choice.isEmpty() && row.emptyLabel != null) row.emptyLabel else choice }
+        val choices = (if (row.optional) {
+            listOf("")
+        } else {
+            emptyList()
+        }) + row.choices +
+                (if (row.unknown) {
+                    listOf(row.value)
+                } else {
+                    emptyList()
+                })
+        val shown = { choice: String -> if (choice.isEmpty() && row.emptyLabel != null) {
+            row.emptyLabel
+        } else {
+            choice
+        } }
         val renderer = SimpleListCellRenderer.create<String>("") { shown(it) }
         choiceEditor(choices.ifEmpty { listOf(row.value) }, row.value, error, renderer) { hooks.commit(ref, it) }
             .also {
@@ -122,10 +150,14 @@ fun rowComponent(row: Row, hooks: RowHooks): JComponent = (row as? TextRow)?.fie
     is ColorRow -> colorRow(row, hooks)
     is AssetRow -> assetRow(row, hooks)
     is ReadonlyRow ->
-        if (row.label.isEmpty()) JBTextArea(row.value).apply {
-            isEditable = false; font = monoFont(); isOpaque = false; border = JBUI.Borders.empty(2, 0)
-            name = "raw"
-        } else fieldRow(row.label, readonlyValue(row.value, row.dim), labelName = "ro-label-${row.label}")
+        if (row.label.isEmpty()) {
+            JBTextArea(row.value).apply {
+                isEditable = false; font = monoFont(); isOpaque = false; border = JBUI.Borders.empty(2, 0)
+                name = "raw"
+            }
+        } else {
+            fieldRow(row.label, readonlyValue(row.value, row.dim), labelName = "ro-label-${row.label}")
+        }
 
     is LinkRow -> JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
         isOpaque = false; border = JBUI.Borders.empty(6, 0)
@@ -149,16 +181,24 @@ fun rowComponent(row: Row, hooks: RowHooks): JComponent = (row as? TextRow)?.fie
 private val HOSTED = setOf("asset", "scene")
 
 
-private fun unitSuffix(unit: String) = if (unit.isEmpty()) "" else " $unit"
+private fun unitSuffix(unit: String) = if (unit.isEmpty()) {
+    ""
+} else {
+    " $unit"
+}
 
 private fun JBTextField.styled(dim: Boolean) {
     font = monoFont()
-    if (dim) foreground = DesignColors.SECONDARY
+    if (dim) {
+        foreground = DesignColors.SECONDARY
+    }
 }
 
 private fun readonlyValue(text: String, dim: Boolean): JComponent = JBLabel(text).apply {
     font = monoFont(); toolTipText = text.ifEmpty { null }
-    if (dim) foreground = DesignColors.SECONDARY
+    if (dim) {
+        foreground = DesignColors.SECONDARY
+    }
 }
 
 /** [field] followed by its unit (`kg`, `m`, `N`, `s`, `m²`, `°`). */
@@ -177,8 +217,9 @@ private fun editable(
     val error = JBLabel("").apply { foreground = Color.RED; name = errorName(ref) }
     val editor = build(ref, error)
     // every text box and combo has the same height
-    if (editor is JBTextField || editor is ComboBox<*>)
+    if (editor is JBTextField || editor is ComboBox<*>) {
         editor.pinFieldHeight()
+    }
     nameEditor(editor, ref)
     tooltip?.let { editor.toolTipText = it }
     return fieldRow(label, editor, error, labelName = "label-${ref.kind}-${ref.field}")
@@ -187,7 +228,9 @@ private fun editable(
 /** Names the editor of [ref] and, for a wrapper (a value with a unit), the text field inside it. */
 private fun nameEditor(editor: JComponent, ref: FieldRef) {
     editor.name = fieldName(ref)
-    if (editor is JPanel) editor.components.firstOrNull()?.let { (it as? JComponent)?.name = fieldName(ref) }
+    if (editor is JPanel) {
+        editor.components.firstOrNull()?.let { (it as? JComponent)?.name = fieldName(ref) }
+    }
 }
 
 private fun vectorRow(label: String, axes: List<Axis>, dim: Boolean, hooks: RowHooks): JComponent {
@@ -197,12 +240,19 @@ private fun vectorRow(label: String, axes: List<Axis>, dim: Boolean, hooks: RowH
         layout = BoxLayout(this, BoxLayout.X_AXIS)
         isOpaque = false
         for ((i, axis) in axes.withIndex()) {
-            if (i > 0) add(Box.createHorizontalStrut(JBUI.scale(8)))
+            if (i > 0) {
+                add(Box.createHorizontalStrut(JBUI.scale(8)))
+            }
             val ref = axis.field
-            val field = if (ref == null) JBTextField(axis.value).apply { isEditable = false }
-            else textEditor(axis.value, error) { hooks.commit(ref, it) }.also { it.name = fieldName(ref) }
+            val field = if (ref == null) {
+                JBTextField(axis.value).apply { isEditable = false }
+            } else {
+                textEditor(axis.value, error) { hooks.commit(ref, it) }.also { it.name = fieldName(ref) }
+            }
             field.font = monoFont()
-            if (dim) field.foreground = DesignColors.SECONDARY
+            if (dim) {
+                field.foreground = DesignColors.SECONDARY
+            }
             val tag = JBLabel(axis.name).apply { foreground = DesignColors.SECONDARY; name = "axis-label-${axis.name}" }
             add(axisBox(tag, field))
         }
@@ -211,7 +261,9 @@ private fun vectorRow(label: String, axes: List<Axis>, dim: Boolean, hooks: RowH
     return fieldRow(label, boxes, error, labelName = "label-vector-$label")
 }
 
-/** An outlined rounded box with the axis [tag] at the left and [field]'s value right-aligned; the outline follows focus. */
+/**
+ * An outlined rounded box with the axis [tag] at the left and [field]'s value right-aligned; the outline follows focus.
+ */
 private fun axisBox(tag: JBLabel, field: JBTextField): JComponent {
     field.horizontalAlignment = SwingConstants.RIGHT
     field.border = JBUI.Borders.empty()
@@ -228,7 +280,11 @@ private fun axisBox(tag: JBLabel, field: JBTextField): JComponent {
                 val w = width - 2 * inset - 1
                 val h = height - 2 * inset - 1
                 g2.fillRoundRect(inset, inset, w, h, arc, arc)
-                g2.color = if (field.hasFocus()) UIUtil.getFocusedBorderColor() else DesignColors.BORDER
+                g2.color = if (field.hasFocus()) {
+                    UIUtil.getFocusedBorderColor()
+                } else {
+                    DesignColors.BORDER
+                }
                 g2.drawRoundRect(inset, inset, w, h, arc, arc)
             } finally {
                 g2.dispose()
@@ -308,14 +364,16 @@ private fun assetRow(row: AssetRow, hooks: RowHooks): JComponent {
         isOpaque = false
         add(icon)
         add(combo)
-        if (row.browse) add(JButton(TreeActionIcons.BROWSE).apply {
-            name = "browse-${ref.kind}-${ref.field}"
-            toolTipText = AbyssusBundle.message("panelBrowse")
-            accessibleContext.accessibleName = AbyssusBundle.message("panelBrowse")
-            preferredSize =
-                Dimension(PanelMetrics.scaled(PanelMetrics.BROWSE), PanelMetrics.scaled(PanelMetrics.BROWSE))
-            addActionListener { combo.showPopup() }
-        })
+        if (row.browse) {
+            add(JButton(TreeActionIcons.BROWSE).apply {
+                name = "browse-${ref.kind}-${ref.field}"
+                toolTipText = AbyssusBundle.message("panelBrowse")
+                accessibleContext.accessibleName = AbyssusBundle.message("panelBrowse")
+                preferredSize =
+                    Dimension(PanelMetrics.scaled(PanelMetrics.BROWSE), PanelMetrics.scaled(PanelMetrics.BROWSE))
+                addActionListener { combo.showPopup() }
+            })
+        }
     }
     return fieldRow(row.label, line, error, labelName = "label-${ref.kind}-${ref.field}")
 }
@@ -329,12 +387,18 @@ private fun tableView(row: TableRow): JComponent {
     val rows = listOf(row.columns to true) + row.rows.map { it to false }
     for ((cells, header) in rows) {
         box.add(JPanel(GridLayout(1, columns, JBUI.scale(8), 0)).apply {
-            isOpaque = false; name = if (header) "table-header" else "table-row"
+            isOpaque = false; name = if (header) {
+                "table-header"
+            } else {
+                "table-row"
+            }
             border = JBUI.Borders.empty(4, 8)
             for (cell in cells.take(columns)) add(JBLabel(cell).apply {
                 if (header) {
                     font = JBFont.small(); foreground = DesignColors.SECONDARY
-                } else font = monoFont()
+                } else {
+                    font = monoFont()
+                }
                 toolTipText = cell.ifEmpty { null }
             })
         })

@@ -20,14 +20,18 @@ class GdxDisplayTest {
 
         override fun enterFullscreen(): Boolean {
             calls += "fullscreen"
-            if (refuse) return false
+            if (refuse) {
+                return false
+            }
             fullscreen = true
             return true
         }
 
         override fun enterWindowed(width: Int, height: Int): Boolean {
             calls += "window ${width}x$height"
-            if (refuse) return false
+            if (refuse) {
+                return false
+            }
             fullscreen = false
             return true
         }

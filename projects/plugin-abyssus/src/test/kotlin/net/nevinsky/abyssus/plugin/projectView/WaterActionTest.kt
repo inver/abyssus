@@ -38,14 +38,16 @@ class WaterActionTest : BasePlatformTestCase() {
     private fun text() = FileDocumentManager.getInstance().getDocument(scene)!!.text
     private fun surfaces() = WaterCodec().read(SceneJson().parse(text()).get("abyssus"))
     private fun children(node: AbstractTreeNode<*>) = node.children.map { it as AbstractTreeNode<*> }
-    private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+    private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as
+        AbyssusAssetNode).virtualFile.name
 
     private fun sceneRow(): AbstractTreeNode<*> {
         val projectRow = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
         return children(children(projectRow).single { label(it) == "scenes" }).single()
     }
 
-    private fun waterRow(): AbstractTreeNode<*> = children(children(sceneRow()).single { label(it) == WATER_ROW }).first()
+    private fun waterRow(): AbstractTreeNode<*> = children(children(sceneRow()).single { label(it) == WATER_ROW
+        }).first()
 
     private fun offered(action: AbyssusTreeAction<*>): Boolean {
         val event = TestActionEvent.createTestEvent(action)
@@ -88,7 +90,8 @@ class WaterActionTest : BasePlatformTestCase() {
     }
 
     fun testAddIsRefusedWhenTheExtensionIsNotAnObject() {
-        val odd = myFixture.addFileToProject("odd.scene", """{"format":"abyssus","formatVersion":1,"abyssus":[]}""").virtualFile
+        val odd = myFixture.addFileToProject("odd.scene", """{"format":"abyssus","formatVersion":1,
+"abyssus":[]}""").virtualFile
         assertFalse(canAddWater(odd, SceneDocumentCache.of(project)))
         assertTrue(canAddWater(scene, SceneDocumentCache.of(project)))
     }
@@ -114,7 +117,8 @@ class WaterActionTest : BasePlatformTestCase() {
         val edits = WaterSceneEdits(project)
         val first = edits.add(scene, WaterPreset.LAKE, 0.0, 0.0, 0.0).id!!
         val second = edits.add(scene, WaterPreset.SEA, 0.0, 0.0, 0.0).id!!
-        val target = waterTargetOf(children(children(sceneRow()).single { label(it) == WATER_ROW }.let { it }).first())!!
+        val target = waterTargetOf(children(children(sceneRow()).single { label(it) == WATER_ROW }.let { it
+            }).first())!!
         assertEquals(first, target.id)
         assertEquals(WaterEdit.Changed, edits.remove(target.file, target.id))
         assertEquals(listOf(second), surfaces().valid.map { it.id })
@@ -122,12 +126,17 @@ class WaterActionTest : BasePlatformTestCase() {
 
     fun testBundleKeysResolve() {
         for (key in listOf(
-            "addWaterTitle", "addWaterTooltip", "waterPresetLake", "waterPresetSea", "treeWater", "treeWaterAbyssusOnly",
+            "addWaterTitle", "addWaterTooltip", "waterPresetLake", "waterPresetSea", "treeWater",
+                "treeWaterAbyssusOnly",
             "treeWaterInvalid", "renameWaterTitle", "renameWaterPrompt", "removeWaterTitle", "waterRejectedTitle",
-            "waterErrorIncompatible", "waterErrorBlankName", "waterErrorNotFound", "waterErrorIdCollision", "waterErrorInvalidSurface",
-            "waterIssueNotFinite", "waterIssueNotPositive", "waterIssueNegative", "waterIssueUnitRange", "waterIssueNotNumber",
-            "commandAddWater", "commandEditWater", "commandMoveWater", "commandRenameWater", "commandToggleWater", "commandRemoveWater",
-        ) + WaterField.entries.map { "waterField" + it.name.split('_').joinToString("") { p -> p.lowercase().replaceFirstChar(Char::uppercase) } }) {
+            "waterErrorIncompatible", "waterErrorBlankName", "waterErrorNotFound", "waterErrorIdCollision",
+                "waterErrorInvalidSurface",
+            "waterIssueNotFinite", "waterIssueNotPositive", "waterIssueNegative", "waterIssueUnitRange",
+                "waterIssueNotNumber",
+            "commandAddWater", "commandEditWater", "commandMoveWater", "commandRenameWater", "commandToggleWater",
+                "commandRemoveWater",
+        ) + WaterField.entries.map { "waterField" + it.name.split('_').joinToString("") { p ->
+            p.lowercase().replaceFirstChar(Char::uppercase) } }) {
             val text = AbyssusBundle.message(key)
             assertTrue("$key -> $text", text.isNotBlank() && !text.startsWith("!"))
         }

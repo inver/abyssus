@@ -35,27 +35,37 @@ class RayViewRuntime<T> internal constructor(
     private var preparingInput: RayRenderInput? = null
 
     fun setRequested(enabled: Boolean) {
-        if (closed.get()) return
+        if (closed.get()) {
+            return
+        }
         if (!enabled) {
             mode.off()
             clearPublication()
             service.deactivate(this)
         } else if (!mode.requested && mode.toggleEnabled && mode.phase != RayModePhase.Failed) {
             val revision = mode.request()
-            if (visible) service.activate(this, revision, retry = false)
+            if (visible) {
+                service.activate(this, revision, retry = false)
+            }
         }
     }
 
     fun retry() {
-        if (closed.get()) return
+        if (closed.get()) {
+            return
+        }
         val revision = mode.retry() ?: return
         clearPublication()
-        if (visible) service.activate(this, revision, retry = true)
+        if (visible) {
+            service.activate(this, revision, retry = true)
+        }
     }
 
     /** Scene conversion can request whole-view fallback before any native submission is made. */
     fun fail(detail: String?) {
-        if (closed.get() || !mode.requested) return
+        if (closed.get() || !mode.requested) {
+            return
+        }
         service.noteFallback(this, detail)
         mode.failed(mode.snapshot.revision, detail)
         clearPublication()
@@ -63,24 +73,36 @@ class RayViewRuntime<T> internal constructor(
     }
 
     fun setVisible(value: Boolean) {
-        if (closed.get() || visible == value) return
+        if (closed.get() || visible == value) {
+            return
+        }
         visible = value
         if (!value) {
             mode.rechecking()
             clearPublication()
             service.deactivate(this)
-        } else if (mode.requested) service.activate(this, mode.snapshot.revision, retry = false)
+        } else if (mode.requested) {
+            service.activate(this, mode.snapshot.revision, retry = false)
+        }
     }
 
     fun offer(input: RayRenderInput, metadata: T) = synchronized(lock) {
-        if (closed.get() || !visible || !mode.requested) return@synchronized
+        if (closed.get() || !visible || !mode.requested) {
+            return@synchronized
+        }
         val owned = input.copy(metadata = metadata)
         val current = scheduler
-        if (current == null) preparingInput = owned else current.offer(owned)
+        if (current == null) {
+            preparingInput = owned
+        } else {
+            current.offer(owned)
+        }
     }
 
     fun latest(): RayViewCompleted<T>? = synchronized(lock) {
-        if (closed.get() || !visible || !mode.active) return@synchronized null
+        if (closed.get() || !visible || !mode.active) {
+            return@synchronized null
+        }
         val value = scheduler?.latest() ?: return@synchronized null
         @Suppress("UNCHECKED_CAST")
         RayViewCompleted(value, value.batch.input.metadata as T)
@@ -91,7 +113,9 @@ class RayViewRuntime<T> internal constructor(
 
     /** Installing and accepting the startup input share one CPU lock, preventing a lost offer during native probe. */
     internal fun install(value: RayRenderScheduler, revision: Long): Boolean = synchronized(lock) {
-        if (!wanted(revision)) return@synchronized false
+        if (!wanted(revision)) {
+            return@synchronized false
+        }
         scheduler = value
         preparingInput?.let(value::offer)
         preparingInput = null
@@ -111,7 +135,9 @@ class RayViewRuntime<T> internal constructor(
     }
 
     override fun close() {
-        if (!closed.compareAndSet(false, true)) return
+        if (!closed.compareAndSet(false, true)) {
+            return
+        }
         mode.off()
         clearPublication()
         service.remove(this)

@@ -5,36 +5,39 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
-import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.math.collision.BoundingBox
+import com.badlogic.gdx.math.collision.Ray
+import java.io.File
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong
-import com.badlogic.gdx.math.Vector3
-import com.badlogic.gdx.graphics.Color
-
-import com.badlogic.gdx.math.collision.BoundingBox
-import com.badlogic.gdx.math.collision.Ray
 import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class SceneMarkersTest {
     private class Recorder : LineSink {
         val lines = mutableListOf<Pair<Vector3, Vector3>>()
+
         override fun line(from: Vector3, to: Vector3, color: Color) {
             lines += from to to
         }
     }
 
-    private fun main() = sceneContentOf(parseScene(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText()))
+    private fun main() =
+        sceneContentOf(parseScene(File("src/test/testData/project/Tree/scenes/Main Scene.scene").readText()))
 
-    private fun content(entities: String) = sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{$entities}}"""))
+    private fun content(entities: String) =
+        sceneContentOf(parseScene("""{"format":"abyssus","formatVersion":1,"ecs":{$entities}}"""))
 
     private fun light(id: String, type: String, x: Float = 0f) =
-        """"$id":{"type":"$type","components":{"LightComponent":{"light":{}},"PositionComponent":{"localPosition":{"x":$x}}}}"""
+        """"$id":{"type":"$type","components":{"LightComponent":{"light":{}},
+"PositionComponent":{"localPosition":{"x":$x}}}}"""
 
     private fun ray(from: Vector3, to: Vector3) = Ray(from, Vector3(to).sub(from).nor())
 
@@ -67,7 +70,10 @@ class SceneMarkersTest {
         val c = main()
         // only the scene's lights (7 and 8) remain pickable markers
         assertEquals(listOf(7L, 8L), SceneMarkers().targets(c, skipCamera = 4L).map { it.entityId })
-        assertNull(ScenePicker().pick(ray(Vector3(0f, 0f, 10f), Vector3(0f, 0f, 0f)), SceneMarkers().targets(c, 4L), emptyList(), 100f))
+        assertNull(
+            ScenePicker()
+                .pick(ray(Vector3(0f, 0f, 10f), Vector3(0f, 0f, 0f)), SceneMarkers().targets(c, 4L), emptyList(), 100f)
+        )
     }
 
     @Test
@@ -83,7 +89,8 @@ class SceneMarkersTest {
 
     @Test
     fun directionalAndSpotLightsHaveADirectionLineButPointLightsDoNot() {
-        fun lines(type: String): Int = Recorder().also { SceneMarkers().draw(it, content(light("1", type)), 1f) }.lines.size
+        fun lines(type: String): Int =
+            Recorder().also { SceneMarkers().draw(it, content(light("1", type)), 1f) }.lines.size
         assertEquals(12, lines("LIGHT_POINT"))
         assertEquals(13, lines("LIGHT_DIRECTIONAL"))
         assertEquals(13, lines("LIGHT_SPOT"))
@@ -113,19 +120,34 @@ class SceneMarkersTest {
     @Test
     fun aClosedPathDrawsTheLineBackToTheFirstPoint() {
         val out = Recorder()
-        val path = arrangementAlong(listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f), Vector3(20f, 0f, 20f)), closed = true)
+        val path =
+            arrangementAlong(listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f), Vector3(20f, 0f, 20f)), closed = true)
         SceneMarkers().drawPath(out, path, LineHeights(), handles = false, slots = false)
         assertEquals(Vector3(0f, 0f, 0f), out.lines.last().second)
     }
 
     @Test
     fun handlesAddADiamondOnEachPoint() {
-        val plain = Recorder().also {
-            SceneMarkers().drawPath(it, arrangementAlong(listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f))), LineHeights(), handles = false)
-        }
-        val withHandles = Recorder().also {
-            SceneMarkers().drawPath(it, arrangementAlong(listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f))), LineHeights(), handles = true)
-        }
+        val plain =
+            Recorder().also {
+                SceneMarkers()
+                    .drawPath(
+                        it,
+                        arrangementAlong(listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f))),
+                        LineHeights(),
+                        handles = false,
+                    )
+            }
+        val withHandles =
+            Recorder().also {
+                SceneMarkers()
+                    .drawPath(
+                        it,
+                        arrangementAlong(listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f))),
+                        LineHeights(),
+                        handles = true,
+                    )
+            }
         // an octahedron has twelve edges: two points
         assertEquals(2 * 12, withHandles.lines.size - plain.lines.size)
     }

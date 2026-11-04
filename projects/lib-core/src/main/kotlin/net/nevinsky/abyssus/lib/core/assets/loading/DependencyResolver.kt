@@ -25,7 +25,9 @@ internal class DependencyResolver<R>(
         return when (matches.size) {
             0 -> if (metas != null) {
                 Route(absent, null)
-            } else throw MissingDependencyException(dependent ?: name, name)
+            } else {
+                throw MissingDependencyException(dependent ?: name, name)
+            }
 
             1 -> Route(matches[0], meta)
             else -> throw AmbiguousLoaderException(name)

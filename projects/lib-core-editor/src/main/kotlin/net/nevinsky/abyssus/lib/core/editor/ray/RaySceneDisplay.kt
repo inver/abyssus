@@ -24,12 +24,19 @@ class RayFrameContext(
     val params: SceneRenderParams, val content: SceneContent, val camera: PerspectiveCamera,
     val lights: LightSet, val models: Collection<ModelEntity>, val width: Int, val height: Int,
     val viewCamera: Long?,
-    /** The built HDR sky's six axis irradiance colours (+X, -X, +Y, -Y, +Z, -Z), the same ones raster models use as ambient. */
+    /**
+     * The built HDR sky's six axis irradiance colours (+X, -X, +Y, -Y, +Z, -Z), the same ones raster models use as
+     * ambient.
+     */
     val hdrAmbient: FloatArray? = null,
-    /** Bakes the scene's procedural sky (arbitrary asset GLSL) on the render thread; null for any other sky. Only asked in ray mode. */
+    /**
+     * Bakes the scene's procedural sky (arbitrary asset GLSL) on the render thread; null for any other sky. Only asked
+     * in ray mode.
+     */
     val bakedSky: (() -> RaySkySnapshot?)? = null,
     /**
-     * The clouds' shade on the sun (the cloud shadow map, or the uniform dimming where there is none) as an immutable CPU
+      * The clouds' shade on the sun (the cloud shadow map, or the uniform dimming where there is none) as an immutable
+      * CPU
      * copy; null when no clouds shade it. Like [bakedSky] it is only asked in ray mode, on the render thread.
      */
     val sunVisibility: (() -> RaySunVisibility?)? = null,

@@ -27,7 +27,8 @@ class SceneWaterPassGlTest {
     @Before fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", GlHarness.enabled)
 
     private val orbit get() = OrbitCamera(Vector3(0f, 0f, 0f), 25f, 0.6f, 0.35f)
-    private fun lake(level: Double = 0.0, tint: Triple<Double, Double, Double>? = null): WaterSettings = WaterGlScenes.lake(level, tint)
+    private fun lake(level: Double = 0.0, tint: Triple<Double, Double, Double>? = null): WaterSettings =
+        WaterGlScenes.lake(level, tint)
 
     private fun scene(
         water: WaterSettings = lake(),
@@ -42,7 +43,8 @@ class SceneWaterPassGlTest {
     /** The linear view depth, as a share of the far plane, of the plane y = [y] along the pixel's ray. */
     private fun planeDepth(shot: WaterShot, x: Int, yFromTop: Int, planeY: Float): Float {
         val camera = shot.renderer.frameCamera
-        val ray = ScenePicker().pickRay(camera, x * shot.image.width / shot.sceneDepth!!.width, yFromTop * shot.image.height / shot.sceneDepth.height, shot.image.width, shot.image.height)
+        val ray = ScenePicker().pickRay(camera, x * shot.image.width / shot.sceneDepth!!.width, yFromTop *
+            shot.image.height / shot.sceneDepth.height, shot.image.width, shot.image.height)
         val t = (planeY - ray.origin.y) / ray.direction.y
         val hit = Vector3(ray.origin).mulAdd(ray.direction, t)
         return Vector3(hit).sub(camera.position).dot(camera.direction) / camera.far
@@ -52,13 +54,15 @@ class SceneWaterPassGlTest {
         val shot = shoot(scene(terrainDy = -5.0))
         val depth = shot.terrainDepth!!
         // the floor is flat at -2 in its own space and the terrain entity sits 5 lower: a plane at y = -7
-        for ((x, y) in listOf(depth.width / 2 to depth.height * 3 / 4, depth.width / 4 to depth.height * 3 / 4, depth.width * 3 / 4 to depth.height * 7 / 8)) {
+        for ((x, y) in listOf(depth.width / 2 to depth.height * 3 / 4, depth.width / 4 to depth.height * 3 / 4,
+            depth.width * 3 / 4 to depth.height * 7 / 8)) {
             assertEquals("pixel $x,$y", planeDepth(shot, x, y, -7f), depth.depth(x, y), 6e-5f)
         }
         val shifted = shoot(scene(terrainDy = 0.0))
         assertTrue(
             "the terrain depth follows the terrain's transform",
-            kotlin.math.abs(shifted.terrainDepth!!.depth(depth.width / 2, depth.height * 3 / 4) - depth.depth(depth.width / 2, depth.height * 3 / 4)) > 0.001f,
+            kotlin.math.abs(shifted.terrainDepth!!.depth(depth.width / 2, depth.height * 3 / 4) -
+                depth.depth(depth.width / 2, depth.height * 3 / 4)) > 0.001f,
         )
     }
 
@@ -71,8 +75,12 @@ class SceneWaterPassGlTest {
         for (y in 0 until scene.height step 4) for (x in 0 until scene.width step 4) {
             val s = scene.depth(x, y)
             val t = terrain.depth(x, y)
-            if (s < t - 1e-4f) nearer++
-            if (s > t + 1e-4f) farther++
+            if (s < t - 1e-4f) {
+                nearer++
+            }
+            if (s > t + 1e-4f) {
+                farther++
+            }
         }
         assertTrue("models are in the scene depth", nearer > 40)
         assertEquals("nothing is behind the terrain", 0, farther)
@@ -86,7 +94,9 @@ class SceneWaterPassGlTest {
             if (kotlin.math.abs((a.bytes[j].toInt() and 255) - (b.bytes[j].toInt() and 255)) > 6 ||
                 kotlin.math.abs((a.bytes[j + 1].toInt() and 255) - (b.bytes[j + 1].toInt() and 255)) > 6 ||
                 kotlin.math.abs((a.bytes[j + 2].toInt() and 255) - (b.bytes[j + 2].toInt() and 255)) > 6
-            ) differ++
+            ) {
+                differ++
+            }
         }
         return differ.toDouble() / (a.width * a.height)
     }
@@ -109,7 +119,8 @@ class SceneWaterPassGlTest {
             }),
             configure = { it.display = it.display.copy(grid = false) },
         ).reflection.getValue(0)
-        assertEquals("grid, markers and the water's own colour never reach the reflection", 0.0, differing(plain, stripped), 0.0005)
+        assertEquals("grid, markers and the water's own colour never reach the reflection", 0.0, differing(plain,
+            stripped), 0.0005)
     }
 
     @Test fun blendedModelsAreDrawnAfterTheWaterAndStayOutOfEveryTarget() {
@@ -120,7 +131,8 @@ class SceneWaterPassGlTest {
         }))
         // the reflection is the same with and without the red quad: the other models have red parts of their own
         val withoutQuad = shoot(scene())
-        assertEquals("no blended pixels in the reflection", 0.0, differing(shot.reflection.getValue(0), withoutQuad.reflection.getValue(0)), 0.0002)
+        assertEquals("no blended pixels in the reflection", 0.0, differing(shot.reflection.getValue(0),
+            withoutQuad.reflection.getValue(0)), 0.0002)
         val reflection = shot.reflection.getValue(0)
         // the scene depth equals the terrain depth where the quad stands: it is not in the depth targets
         var inDepth = 0
@@ -131,17 +143,25 @@ class SceneWaterPassGlTest {
         camera.project(centre, 0f, 0f, shot.image.width.toFloat(), shot.image.height.toFloat())
         val px = (centre.x * scene.width / shot.image.width).toInt()
         val py = ((shot.image.height - centre.y) * scene.height / shot.image.height).toInt()
-        for (dy in -3..3) for (dx in -3..3) if (scene.depth(px + dx, py + dy) < terrain.depth(px + dx, py + dy) - 1e-4f) inDepth++
+        for (dy in -3..3) for (dx in -3..3) if (scene.depth(px + dx, py + dy) < terrain.depth(px + dx, py + dy) -
+            1e-4f) {
+            inDepth++
+        }
         // other models may overlap that area; the blended quad must not make the scene nearer than its neighbours do
         val noQuadDepth = withoutQuad.sceneDepth!!
         var differs = 0
-        for (dy in -3..3) for (dx in -3..3) if (kotlin.math.abs(scene.depth(px + dx, py + dy) - noQuadDepth.depth(px + dx, py + dy)) > 1e-4f) differs++
+        for (dy in -3..3) for (dx in -3..3) if (kotlin.math.abs(scene.depth(px + dx, py + dy) - noQuadDepth.depth(px +
+            dx, py + dy)) > 1e-4f) {
+            differs++
+        }
         assertEquals("the blended quad is absent from the scene depth", 0, differs)
         // yet the final frame shows it, drawn after the water
         var visible = 0
         for (y in 0 until shot.image.height) for (x in 0 until shot.image.width) {
             val (r, g, b) = WaterGlRig.rgb(shot.image, x, y)
-            if (r > 120 && g < 90 && b < 90 && r - g > 70) visible++
+            if (r > 120 && g < 90 && b < 90 && r - g > 70) {
+                visible++
+            }
         }
         assertTrue("the blended quad is in the frame ($visible red pixels, entity $quad, $inDepth)", visible > 100)
     }

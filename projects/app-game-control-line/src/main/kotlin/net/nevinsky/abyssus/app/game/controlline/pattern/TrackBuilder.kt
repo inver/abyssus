@@ -6,9 +6,6 @@ package net.nevinsky.abyssus.app.game.controlline.pattern
 
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.app.game.controlline.track.arcLength
-import net.nevinsky.abyssus.app.game.controlline.track.dropEnd
-import net.nevinsky.abyssus.app.game.controlline.track.dropStart
 import kotlin.math.abs
 import kotlin.math.acos
 import kotlin.math.atan2
@@ -17,9 +14,24 @@ import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
+import net.nevinsky.abyssus.app.game.controlline.track.arcLength
+import net.nevinsky.abyssus.app.game.controlline.track.dropEnd
+import net.nevinsky.abyssus.app.game.controlline.track.dropStart
 
 /** What a part of an ideal track is, for grading. */
-enum class Tag { BASE, PARALLEL, VERTICAL, LEG, CORNER, ARC, OVER_TOP, CLIMB, GLIDE, ROLL, CONNECT }
+enum class Tag {
+    BASE,
+    PARALLEL,
+    VERTICAL,
+    LEG,
+    CORNER,
+    ARC,
+    OVER_TOP,
+    CLIMB,
+    GLIDE,
+    ROLL,
+    CONNECT,
+}
 
 /**
  * A point of an ideal track: the unit direction [u] from the hemisphere's centre, what it is ([tag]), how far along the
@@ -33,20 +45,43 @@ class IdealPoint(val u: Vector3, val tag: Tag, val progress: Float, val inverted
  * [judgedFrom] are the way in from the base, and those from [judgedTo] the way out, which are flown but not judged.
  */
 class IdealTrack(
-    val points: List<IdealPoint>, val repeatStarts: List<Int>, val judgedFrom: Int = 0, val judgedTo: Int = points.size,
+    val points: List<IdealPoint>,
+    val repeatStarts: List<Int>,
+    val judgedFrom: Int = 0,
+    val judgedTo: Int = points.size,
     /** The place the figure passes more than once, where it must stay in one place, or null. */
     val crossing: Vector3? = null,
     /** Whether the repeats are on top of each other (the clover's leaves are not). */
     val superimposed: Boolean = true,
 ) {
-    val repeats: Int get() = repeatStarts.size
+    val repeats: Int
+        get() = repeatStarts.size
 
     /** The track without its lead-in and lead-out. */
     fun judged(): IdealTrack =
-        if (judgedFrom == 0 && judgedTo == points.size) this else IdealTrack(points.subList(judgedFrom, judgedTo), repeatStarts.map { max(0, it - judgedFrom) }, 0, judgedTo - judgedFrom, crossing, superimposed)
+        if (judgedFrom == 0 && judgedTo == points.size) {
+            this
+        } else {
+            IdealTrack(
+                points.subList(judgedFrom, judgedTo),
+                repeatStarts.map { max(0, it - judgedFrom) },
+                0,
+                judgedTo - judgedFrom,
+                crossing,
+                superimposed,
+            )
+        }
 
     /** The points of repeat [r]. */
-    fun repeat(r: Int): List<IdealPoint> = points.subList(repeatStarts[r], if (r + 1 < repeatStarts.size) repeatStarts[r + 1] else points.size)
+    fun repeat(r: Int): List<IdealPoint> =
+        points.subList(
+            repeatStarts[r],
+            if (r + 1 < repeatStarts.size) {
+                repeatStarts[r + 1]
+            } else {
+                points.size
+            },
+        )
 }
 
 /** A piece of path between two corners: dense unit vectors, and the [tag] they get. */
@@ -81,10 +116,17 @@ fun greatCircle(a: Vector3, b: Vector3, tag: Tag): Edge {
     val omega = acos(a.dot(b).coerceIn(-1f, 1f))
     val n = max(2, ceil(omega / D2R / IDEAL_STEP).toInt() + 1)
     val sinOmega = sin(omega)
-    return Edge(List(n) {
-        val t = it / (n - 1f)
-        if (omega < 1e-5f) Vector3(a) else Vector3(a).scl(sin((1f - t) * omega) / sinOmega).mulAdd(b, sin(t * omega) / sinOmega).nor()
-    }, tag)
+    return Edge(
+        List(n) {
+            val t = it / (n - 1f)
+            if (omega < 1e-5f) {
+                Vector3(a)
+            } else {
+                Vector3(a).scl(sin((1f - t) * omega) / sinOmega).mulAdd(b, sin(t * omega) / sinOmega).nor()
+            }
+        },
+        tag,
+    )
 }
 
 /**
@@ -109,13 +151,17 @@ private fun tangent(a: Vector3, b: Vector3): Vector3 {
     return chord.mulAdd(mid, -chord.dot(mid)).nor()
 }
 
-/** The points of a [rounded] path, with where each edge's corner begins: `junctionStart[j]` is the index of the first point of the corner before edge `j` (0 for the first edge). */
+/**
+ * The points of a [rounded] path, with where each edge's corner begins: `junctionStart[j]` is the index of the first
+ * point of the corner before edge `j` (0 for the first edge).
+ */
 class RoundedPath(val points: List<Pair<Vector3, Tag>>, val junctionStart: IntArray, val edgeStart: IntArray)
 
 /**
  * A path of [edges], one after the other, with the corners between them rounded to [cornerRadius] degrees (design
  * decision 4: corners are ideal at a 1 m radius). A corner is a quadratic curve through the old vertex, which cuts each
- * edge by `d = r sin(t/2) / cos²(t/2)` for a turn of `t`. Edges meet where the one before ends. Returns the points tagged.
+ * edge by `d = r sin(t/2) / cos²(t/2)` for a turn of `t`. Edges meet where the one before ends. Returns the points
+ * tagged.
  */
 fun rounded(edges: List<Edge>, cornerRadius: Float, cornerTag: Tag = Tag.CORNER): RoundedPath {
     val cut = edges.map { it.points }.toMutableList()
@@ -127,7 +173,9 @@ fun rounded(edges: List<Edge>, cornerRadius: Float, cornerTag: Tag = Tag.CORNER)
         val tIn = endTangent(a)
         val tOut = startTangent(b)
         val theta = abs(atan2(Vector3(tIn).crs(tOut).dot(vertex), tIn.dot(tOut)))
-        if (theta < 3f * D2R || cornerRadius <= 0f) continue
+        if (theta < 3f * D2R || cornerRadius <= 0f) {
+            continue
+        }
         var d = cornerRadius * D2R * sin(theta / 2f) / (cos(theta / 2f) * cos(theta / 2f))
         d = min(d, 0.45f * min(arcLength(a), arcLength(b)))
         val trimmedA = dropEnd(a, d)
@@ -135,10 +183,11 @@ fun rounded(edges: List<Edge>, cornerRadius: Float, cornerTag: Tag = Tag.CORNER)
         val p0 = trimmedA.last()
         val p1 = trimmedB.first()
         val steps = max(6, ceil(theta / D2R / 8f).toInt())
-        arcs[j] = List(steps - 1) {
-            val s = (it + 1f) / steps
-            Vector3(p0).scl((1 - s) * (1 - s)).mulAdd(vertex, 2 * s * (1 - s)).mulAdd(p1, s * s).nor()
-        }
+        arcs[j] =
+            List(steps - 1) {
+                val s = (it + 1f) / steps
+                Vector3(p0).scl((1 - s) * (1 - s)).mulAdd(vertex, 2 * s * (1 - s)).mulAdd(p1, s * s).nor()
+            }
         cut[j] = trimmedA
         cut[j + 1] = trimmedB
     }
@@ -146,7 +195,9 @@ fun rounded(edges: List<Edge>, cornerRadius: Float, cornerTag: Tag = Tag.CORNER)
     val starts = IntArray(edges.size)
     val edgeStarts = IntArray(edges.size)
     for (j in edges.indices) {
-        if (j > 0) starts[j] = out.size - (arcs[j - 1]?.size ?: 0)
+        if (j > 0) {
+            starts[j] = out.size - (arcs[j - 1]?.size ?: 0)
+        }
         edgeStarts[j] = out.size
         for (p in cut[j]) out += p to edges[j].tag
         arcs[j]?.forEach { out += it to cornerTag }
@@ -154,12 +205,21 @@ fun rounded(edges: List<Edge>, cornerRadius: Float, cornerTag: Tag = Tag.CORNER)
     return RoundedPath(out, starts, edgeStarts)
 }
 
-/** [path]'s points from its first corner to its last (the lead-in and lead-out edges dropped), with the junction starts moved to match. */
+/**
+ * [path]'s points from its first corner to its last (the lead-in and lead-out edges dropped), with the junction starts
+ * moved to match.
+ */
 fun RoundedPath.trimmedToCorners(): RoundedPath {
     val first = points.indexOfFirst { it.second == Tag.CORNER }
     val last = points.indexOfLast { it.second == Tag.CORNER }
-    if (first < 0) return this
-    return RoundedPath(points.subList(first, last + 1), IntArray(junctionStart.size) { max(0, junctionStart[it] - first) }, IntArray(edgeStart.size) { max(0, edgeStart[it] - first) })
+    if (first < 0) {
+        return this
+    }
+    return RoundedPath(
+        points.subList(first, last + 1),
+        IntArray(junctionStart.size) { max(0, junctionStart[it] - first) },
+        IntArray(edgeStart.size) { max(0, edgeStart[it] - first) },
+    )
 }
 
 /**
@@ -186,13 +246,16 @@ class TrackBuilder {
     var superimposed = true
 
     /** The last point. */
-    val end: Vector3 get() = points.last().first
+    val end: Vector3
+        get() = points.last().first
 
     /** The tangent at the end (the way on). */
-    val heading: Vector3 get() = tangent(points[points.size - 2].first, points.last().first)
+    val heading: Vector3
+        get() = tangent(points[points.size - 2].first, points.last().first)
 
     /** The number of points so far. */
-    val size: Int get() = points.size
+    val size: Int
+        get() = points.size
 
     /** Starts a new repeat at the next point. */
     fun repeat() = markRepeat(points.size)
@@ -205,7 +268,9 @@ class TrackBuilder {
     /** Adds [items] (a point equal to the last is skipped). */
     fun add(items: List<Pair<Vector3, Tag>>) {
         for ((u, tag) in items) {
-            if (points.isNotEmpty() && points.last().first.dst2(u) < 1e-10f) continue
+            if (points.isNotEmpty() && points.last().first.dst2(u) < 1e-10f) {
+                continue
+            }
             points += Triple(Vector3(u), tag, inverted)
         }
     }
@@ -222,14 +287,21 @@ class TrackBuilder {
 
     fun build(): IdealTrack {
         val cumulative = FloatArray(points.size)
-        for (i in max(1, judgedFrom + 1) until points.size) cumulative[i] = cumulative[i - 1] + acos(points[i - 1].first.dot(points[i].first).coerceIn(-1f, 1f))
+        for (i in max(1, judgedFrom + 1) until points.size) cumulative[i] =
+            cumulative[i - 1] + acos(points[i - 1].first.dot(points[i].first).coerceIn(-1f, 1f))
         val total = max(cumulative.last(), 1e-6f)
         val marks = starts.sorted().ifEmpty { listOf(0) }
         return IdealTrack(
-            points.mapIndexed { i, (u, tag, inverted) -> IdealPoint(u, tag, cumulative[i] / total, inverted, max(0, marks.count { it <= i } - 1)) },
+            points.mapIndexed { i, (u, tag, inverted) ->
+                IdealPoint(u, tag, cumulative[i] / total, inverted, max(0, marks.count { it <= i } - 1))
+            },
             marks,
             judgedFrom,
-            if (judgedTo < 0) points.size else judgedTo,
+            if (judgedTo < 0) {
+                points.size
+            } else {
+                judgedTo
+            },
             crossing,
             superimposed,
         )

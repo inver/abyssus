@@ -7,22 +7,23 @@ package net.nevinsky.abyssus.lib.core.editor.terrain.sculpt
 
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
+import kotlin.math.abs
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.abs
 
 class SculptErosionTest {
     private val resolution = 33
     private val size = 64
 
     private fun hill(): SculptDraft {
-        val base = FloatArray(resolution * resolution) { i ->
-            val dx = i % resolution - 16
-            val dz = i / resolution - 16
-            maxOf(0f, 12f - 2f * kotlin.math.sqrt((dx * dx + dz * dz).toFloat()))
-        }
+        val base =
+            FloatArray(resolution * resolution) { i ->
+                val dx = i % resolution - 16
+                val dz = i / resolution - 16
+                maxOf(0f, 12f - 2f * kotlin.math.sqrt((dx * dx + dz * dz).toFloat()))
+            }
         return SculptDraft(resolution, base, base.copyOf(), FloatArray(base.size))
     }
 
@@ -34,8 +35,12 @@ class SculptErosionTest {
     private fun steepest(h: FloatArray): Float {
         var worst = 0f
         for (z in 0 until resolution) for (x in 0 until resolution) {
-            if (x + 1 < resolution) worst = maxOf(worst, abs(h[z * resolution + x] - h[z * resolution + x + 1]))
-            if (z + 1 < resolution) worst = maxOf(worst, abs(h[z * resolution + x] - h[(z + 1) * resolution + x]))
+            if (x + 1 < resolution) {
+                worst = maxOf(worst, abs(h[z * resolution + x] - h[z * resolution + x + 1]))
+            }
+            if (z + 1 < resolution) {
+                worst = maxOf(worst, abs(h[z * resolution + x] - h[(z + 1) * resolution + x]))
+            }
         }
         return worst
     }
@@ -66,7 +71,13 @@ class SculptErosionTest {
 
     @Test
     fun `terrain gentler than the talus angle is left alone`() {
-        val flat = SculptDraft(resolution, FloatArray(1089) { (it % resolution) * 0.1f }, FloatArray(1089) { (it % resolution) * 0.1f }, FloatArray(1089))
+        val flat =
+            SculptDraft(
+                resolution,
+                FloatArray(1089) { (it % resolution) * 0.1f },
+                FloatArray(1089) { (it % resolution) * 0.1f },
+                FloatArray(1089),
+            )
         val at = Vector3(32f, 0f, 32f)
         assertTrue(SculptBrush(flat, size, Matrix4()).stroke(at, at, 30f, 1f, ThermalErosionTool(30f), false).isEmpty)
     }

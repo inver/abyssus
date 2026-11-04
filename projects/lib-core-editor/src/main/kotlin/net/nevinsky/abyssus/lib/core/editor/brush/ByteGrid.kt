@@ -26,7 +26,8 @@ class ByteGrid(
     override val cell: Float = size.toFloat() / (resolution - 1)
 
     /** The unsigned value of [channel] in the cell [gx],[gz]. */
-    fun at(gx: Int, gz: Int, channel: Int = 0): Int = values[(gz * resolution + gx) * channels + channel].toInt() and 0xFF
+    fun at(gx: Int, gz: Int, channel: Int = 0): Int =
+        values[(gz * resolution + gx) * channels + channel].toInt() and 0xFF
 
     /** The first channel of the cell nearest to terrain-local [x],[z], clamped onto the grid. */
     override fun sampleAt(x: Float, z: Float): Float {

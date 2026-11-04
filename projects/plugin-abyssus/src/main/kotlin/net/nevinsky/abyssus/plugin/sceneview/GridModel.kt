@@ -23,7 +23,8 @@ object GridModel {
     fun build(): Model {
         val builder = ModelBuilder()
         builder.begin()
-        val material = Material(ColorAttribute.createDiffuse(Color.WHITE), ColorAttribute.createEmissive(0.25f, 0.25f, 0.25f, 1f))
+        val material =
+            Material(ColorAttribute.createDiffuse(Color.WHITE), ColorAttribute.createEmissive(0.25f, 0.25f, 0.25f, 1f))
         val part = builder.part("grid", GL20.GL_LINES, (Usage.Position or Usage.Normal).toLong(), material)
         val info = VertexInfo()
         val n = HALF_EXTENT.toFloat()

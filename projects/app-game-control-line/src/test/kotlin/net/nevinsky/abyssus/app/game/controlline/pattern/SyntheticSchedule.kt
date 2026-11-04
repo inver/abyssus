@@ -50,7 +50,10 @@ class SyntheticSchedule(private val radius: Float = 18f, private val pauseLaps: 
         while (flight.time < seconds) pause(1f, inverted)
     }
 
-    /** Flies the track [build] makes after a pause: [build] takes the anchor that puts the track's first point where the flight is. */
+    /**
+     * Flies the track [build] makes after a pause: [build] takes the anchor that puts the track's first point where the
+     * flight is.
+     */
     fun figure(
         perturbation: Perturbation = Perturbation(), laps: Float = pauseLaps, engineRunning: Boolean = true,
         pauseInverted: Boolean? = null, build: (Float) -> IdealTrack,
@@ -65,20 +68,46 @@ class SyntheticSchedule(private val radius: Float = 18f, private val pauseLaps: 
     /** The whole schedule, flown perfectly, up to (not including) the landing. */
     fun everythingBeforeTheLanding(skip: Set<Figure> = emptySet(), time: Float? = null) {
         takeoff()
-        if (Figure.REVERSE_WINGOVER !in skip) figure { tracks.reverseWingover(it) }
-        if (Figure.INSIDE_LOOPS !in skip) figure { tracks.loops(it, 3) }
-        if (Figure.INVERTED_LAPS !in skip) figure(pauseInverted = false) { tracks.invertedLaps(it, 2) }
-        if (Figure.OUTSIDE_LOOPS !in skip) figure { tracks.loops(it, 3, inverted = true) }
-        if (Figure.INSIDE_SQUARES !in skip) figure { tracks.squares(it, 2) }
-        if (Figure.OUTSIDE_SQUARES !in skip) figure { tracks.squares(it, 2, inverted = true) }
-        if (Figure.INSIDE_TRIANGLES !in skip) figure { tracks.triangles(it, 2) }
-        if (Figure.HORIZONTAL_EIGHTS !in skip) figure { tracks.horizontalEights(it, 2, connected = true) }
-        if (Figure.SQUARE_EIGHTS !in skip) figure { tracks.squareEights(it, 2, connected = true) }
-        if (Figure.VERTICAL_EIGHTS !in skip) figure { tracks.verticalEights(it, 2) }
-        if (Figure.HOURGLASS !in skip) figure { tracks.hourglass(it) }
-        if (Figure.OVERHEAD_EIGHTS !in skip) figure { tracks.overheadEights(it, 2, connected = true) }
+        if (Figure.REVERSE_WINGOVER !in skip) {
+            figure { tracks.reverseWingover(it) }
+        }
+        if (Figure.INSIDE_LOOPS !in skip) {
+            figure { tracks.loops(it, 3) }
+        }
+        if (Figure.INVERTED_LAPS !in skip) {
+            figure(pauseInverted = false) { tracks.invertedLaps(it, 2) }
+        }
+        if (Figure.OUTSIDE_LOOPS !in skip) {
+            figure { tracks.loops(it, 3, inverted = true) }
+        }
+        if (Figure.INSIDE_SQUARES !in skip) {
+            figure { tracks.squares(it, 2) }
+        }
+        if (Figure.OUTSIDE_SQUARES !in skip) {
+            figure { tracks.squares(it, 2, inverted = true) }
+        }
+        if (Figure.INSIDE_TRIANGLES !in skip) {
+            figure { tracks.triangles(it, 2) }
+        }
+        if (Figure.HORIZONTAL_EIGHTS !in skip) {
+            figure { tracks.horizontalEights(it, 2, connected = true) }
+        }
+        if (Figure.SQUARE_EIGHTS !in skip) {
+            figure { tracks.squareEights(it, 2, connected = true) }
+        }
+        if (Figure.VERTICAL_EIGHTS !in skip) {
+            figure { tracks.verticalEights(it, 2) }
+        }
+        if (Figure.HOURGLASS !in skip) {
+            figure { tracks.hourglass(it) }
+        }
+        if (Figure.OVERHEAD_EIGHTS !in skip) {
+            figure { tracks.overheadEights(it, 2, connected = true) }
+        }
         time?.let { fillTo(it) }
-        if (Figure.CLOVER !in skip) figure { tracks.clover(it, connected = true) }
+        if (Figure.CLOVER !in skip) {
+            figure { tracks.clover(it, connected = true) }
+        }
     }
 
     /** The landing: a pause, then the glide with the engine stopped. */

@@ -10,7 +10,10 @@ import com.badlogic.gdx.graphics.GL30
 import org.lwjgl.opengl.GL30C
 import java.nio.IntBuffer
 
-/** Lives in libGDX's package only because `Lwjgl3GL20/GL30` are package-private; they wrap LWJGL's GL calls and need no GLFW. */
+/**
+ * Lives in libGDX's package only because `Lwjgl3GL20/GL30` are package-private; they wrap LWJGL's GL calls and need no
+ * GLFW.
+ */
 object GdxGlBridge {
     fun gl20(): GL20 = CoreProfileGL20()
 

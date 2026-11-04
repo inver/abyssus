@@ -48,7 +48,8 @@ import javax.swing.JPanel
 /**
  * The editors of one water surface. The name is `water-name` (message `water-name-error`), the visibility box
  * `water-enabled`, and each value `water-field-<FIELD>` with its message `water-error-<FIELD>`; tests reach them by
- * those names. A confirmed valid edit is one undoable scene command; an invalid one shows its reason and puts the stored
+  * those names. A confirmed valid edit is one undoable scene command; an invalid one shows its reason and puts the
+  * stored
  * value back.
  */
 internal class WaterPropertiesView @JvmOverloads constructor(
@@ -70,7 +71,8 @@ internal class WaterPropertiesView @JvmOverloads constructor(
         }
         box.add(section("waterSectionPosition", WaterField.X, WaterField.LEVEL, WaterField.Z))
         box.add(section("waterSectionSize", WaterField.WIDTH, WaterField.LENGTH))
-        box.add(section("waterSectionAppearance", WaterField.TINT_R, WaterField.TINT_G, WaterField.TINT_B, WaterField.CLARITY))
+        box.add(section("waterSectionAppearance", WaterField.TINT_R, WaterField.TINT_G, WaterField.TINT_B,
+            WaterField.CLARITY))
         box.add(section("waterSectionWaves", WaterField.WAVE_AMPLITUDE, WaterField.WAVE_LENGTH, WaterField.WAVE_SPEED))
         box.add(section("waterSectionFoam", WaterField.FOAM_AMOUNT, WaterField.FOAM_WIDTH))
         add(box, BorderLayout.NORTH)
@@ -84,7 +86,8 @@ internal class WaterPropertiesView @JvmOverloads constructor(
         val enabled = state.enabled
         val subtitle = state.preset?.let { AbyssusBundle.message("waterPropertiesSubtitle", waterPresetLabel(it)) }
             ?: AbyssusBundle.message("waterPropertiesSubtitleUnknown")
-        val sceneName = ProjectLayout.abssFor(target.file)?.let { net.nevinsky.abyssus.lib.core.editor.document.parseDocument(textOf(target.file)).textAt("name") }
+        val sceneName = ProjectLayout.abssFor(target.file)?.let {
+            net.nevinsky.abyssus.lib.core.editor.document.parseDocument(textOf(target.file)).textAt("name") }
         val top = HeaderPanel(
             Header(
                 listOfNotNull(ProjectLayout.abssFor(target.file)?.name, sceneName ?: target.file.nameWithoutExtension),
@@ -96,9 +99,13 @@ internal class WaterPropertiesView @JvmOverloads constructor(
             isOpaque = false
             border = JBUI.Borders.empty(8, 16, 4, 16)
             add(fieldRow(AbyssusBundle.message("waterNameLabel"), nameField, nameError))
-            add(JBLabel(subtitle).apply { foreground = DesignColors.SECONDARY; name = "water-subtitle"; isVisible = false })
-            add(JBLabel(AbyssusBundle.message("waterAbyssusOnlyNote")).apply { foreground = DesignColors.SECONDARY; font = JBFont.small(); name = "water-abyssus-only" })
-            if (enabled != null) add(visibilityRow(enabled))
+            add(JBLabel(subtitle).apply { foreground = DesignColors.SECONDARY; name = "water-subtitle"; isVisible =
+                false })
+            add(JBLabel(AbyssusBundle.message("waterAbyssusOnlyNote")).apply { foreground = DesignColors.SECONDARY;
+                font = JBFont.small(); name = "water-abyssus-only" })
+            if (enabled != null) {
+                add(visibilityRow(enabled))
+            }
         }
         return JPanel(VerticalLayout(0)).apply { add(top); add(rows) }
     }
@@ -108,7 +115,8 @@ internal class WaterPropertiesView @JvmOverloads constructor(
         val box: JBCheckBox = checkEditor(enabled, error) { outcome(edits.setEnabled(target.file, target.id, it)) }
         box.name = "water-enabled"
         box.text = AbyssusBundle.message("waterEnabledLabel")
-        return JPanel(BorderLayout(JBUI.scale(8), 0)).apply { isOpaque = false; add(box, BorderLayout.WEST); add(error, BorderLayout.CENTER) }
+        return JPanel(BorderLayout(JBUI.scale(8), 0)).apply { isOpaque = false; add(box, BorderLayout.WEST); add(error,
+            BorderLayout.CENTER) }
     }
 
     private fun section(titleKey: String, vararg fields: WaterField): JComponent {
@@ -133,7 +141,8 @@ internal class WaterPropertiesView @JvmOverloads constructor(
     /** Parses [text], checks it and writes it; anything refused leaves the file as it was. */
     private fun commit(field: WaterField, text: String): CommitOutcome = when (val parsed = input.parse(text)) {
         WaterInput.NotANumber -> CommitOutcome.Refused(AbyssusBundle.message("waterIssueNotNumber"))
-        WaterInput.NotFinite -> CommitOutcome.Refused(waterIssueText(net.nevinsky.abyssus.lib.core.water.WaterIssue.NOT_FINITE))
+        WaterInput.NotFinite ->
+            CommitOutcome.Refused(waterIssueText(net.nevinsky.abyssus.lib.core.water.WaterIssue.NOT_FINITE))
         is WaterInput.Value -> outcome(edits.setField(target.file, target.id, field, parsed.number))
     }
 

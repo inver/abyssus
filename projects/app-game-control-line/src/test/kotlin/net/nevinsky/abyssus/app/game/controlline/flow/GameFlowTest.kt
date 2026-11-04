@@ -5,10 +5,10 @@
 package net.nevinsky.abyssus.app.game.controlline.flow
 
 import com.badlogic.ashley.core.Entity
+import java.time.Instant
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneClass
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
 import net.nevinsky.abyssus.app.game.controlline.components.ScaleComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.app.game.controlline.flight.FieldFlight
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightEnd
 import net.nevinsky.abyssus.app.game.controlline.flight.Takeover
@@ -17,14 +17,15 @@ import net.nevinsky.abyssus.app.game.controlline.pattern.AssistLevel
 import net.nevinsky.abyssus.app.game.controlline.pattern.Figure
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
 import net.nevinsky.abyssus.app.game.controlline.pattern.ScoreSheet
+import net.nevinsky.abyssus.app.game.controlline.pattern.SheetEntry
 import net.nevinsky.abyssus.app.game.controlline.pattern.ZeroReason
 import net.nevinsky.abyssus.app.game.controlline.pattern.recordedFlight
-import net.nevinsky.abyssus.app.game.controlline.pattern.SheetEntry
 import net.nevinsky.abyssus.app.game.controlline.scale.ScaleMarks
 import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreEntry
 import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreEntry
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -32,13 +33,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.time.Instant
 
 class GameFlowTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
-    private val planes = loadField().engine.let { engine -> planeChoices(engine.ids.ids.associateWith { engine.ids[it]!! }) }
+    private val planes =
+        loadField().engine.let { engine -> planeChoices(engine.ids.ids.associateWith { engine.ids[it]!! }) }
 
     private fun table() = ScoreTable(temp.root.toPath().resolve("scores.json"))
 
@@ -46,13 +46,19 @@ class GameFlowTest {
 
     private fun scaleTable() = ScaleScoreTable(temp.root.toPath().resolve("scale-scores.json"))
 
-    private fun flow(table: ScoreTable = table(), patternTable: PatternScoreTable = patternTable(), planes: List<PlaneChoice> = this.planes, scaleTable: ScaleScoreTable = scaleTable()) =
-        GameFlow(planes, table, patternTable, scaleTable) { Instant.parse("2026-10-04T12:00:00Z") }
+    private fun flow(
+        table: ScoreTable = table(),
+        patternTable: PatternScoreTable = patternTable(),
+        planes: List<PlaneChoice> = this.planes,
+        scaleTable: ScaleScoreTable = scaleTable(),
+    ) = GameFlow(planes, table, patternTable, scaleTable) { Instant.parse("2026-10-04T12:00:00Z") }
 
-    private val stunter get() = planes.single { it.name == "Stunter" }
+    private val stunter
+        get() = planes.single { it.name == "Stunter" }
 
     /** The planes without the bundled replica, to add a synthetic one to. */
-    private val withoutReplicas get() = planes.filter { it.planeClass != PlaneClass.SCALE }
+    private val withoutReplicas
+        get() = planes.filter { it.planeClass != PlaneClass.SCALE }
 
     private fun GameFlow.flyStunter(): Screen.Flying {
         freeFlight()
@@ -68,18 +74,22 @@ class GameFlowTest {
         return screen as Screen.Flying
     }
 
-    private fun report(score: Int) = FlightReport("Stunter", FlightEnd.CRASHED, 42f, FlightResult.Free(score, laps = 4, bestCombo = 2))
+    private fun report(score: Int) =
+        FlightReport("Stunter", FlightEnd.CRASHED, 42f, FlightResult.Free(score, laps = 4, bestCombo = 2))
 
     /** An F2B report whose sheet has Take-off marked [tenths] and every other manoeuvre 0. */
     private fun patternReport(level: AssistLevel, tenths: Int): FlightReport {
         val sheet = ScoreSheet()
-        for (figure in Figure.entries) sheet[figure] = if (figure == Figure.TAKEOFF) SheetEntry(figure, tenths, null, null, 30f)
-        else SheetEntry(figure, 0, net.nevinsky.abyssus.app.game.controlline.pattern.ZeroReason.OMITTED, null, 30f)
+        for (figure in Figure.entries) sheet[figure] =
+            if (figure == Figure.TAKEOFF) {
+                SheetEntry(figure, tenths, null, null, 30f)
+            } else {
+                SheetEntry(figure, 0, net.nevinsky.abyssus.app.game.controlline.pattern.ZeroReason.OMITTED, null, 30f)
+            }
         return FlightReport("Stunter", FlightEnd.LANDED, 61f, FlightResult.Pattern(level, sheet))
     }
 
-    @Test
-    fun theGameOpensOnTheMainMenu() = assertEquals(Screen.MainMenu, flow().screen)
+    @Test fun theGameOpensOnTheMainMenu() = assertEquals(Screen.MainMenu, flow().screen)
 
     @Test
     fun freeFlightOpensPlaneSelectWithEveryPlane() {
@@ -153,7 +163,9 @@ class GameFlowTest {
         val flow = flow()
         flow.flyAndSave(AssistLevel.NOOB, 85)
         assertEquals(1, flow.patternTable.board(AssistLevel.NOOB).size)
-        assertTrue(flow.patternTable.board(AssistLevel.PRO).isEmpty() && flow.patternTable.board(AssistLevel.MID).isEmpty())
+        assertTrue(
+            flow.patternTable.board(AssistLevel.PRO).isEmpty() && flow.patternTable.board(AssistLevel.MID).isEmpty()
+        )
         flow.scores()
         val scores = flow.screen as Screen.Scores
         assertEquals(ScoreTab.NOOB, scores.tab)
@@ -244,8 +256,13 @@ class GameFlowTest {
         assertEquals(FlightEnd.CRASHED, over.report.end)
         assertEquals("Crashed", over.report.end.label)
         assertEquals(1, over.rank)
-        assertEquals(listOf(ScoreEntry("Amelia Earha", "Stunter", 320, 4, 2, 42f, "2026-10-04T12:00:00Z")), table.entries)
-        assertTrue(flow.patternTable.board(AssistLevel.PRO).isEmpty() && flow.patternTable.board(AssistLevel.MID).isEmpty())
+        assertEquals(
+            listOf(ScoreEntry("Amelia Earha", "Stunter", 320, 4, 2, 42f, "2026-10-04T12:00:00Z")),
+            table.entries,
+        )
+        assertTrue(
+            flow.patternTable.board(AssistLevel.PRO).isEmpty() && flow.patternTable.board(AssistLevel.MID).isEmpty()
+        )
         assertFalse(java.nio.file.Files.exists(temp.root.toPath().resolve("f2b-scores.json")))
 
         // the next name entry offers the last name
@@ -275,14 +292,15 @@ class GameFlowTest {
     }
 
     @Test
-    fun aNewFlightStartsFromTakeoffAtScoreZero() = FieldFlight("Stunter").use { f ->
-        f.fly(15f)
-        assertTrue(f.flight.scoring.keeper.score > 0)
-        f.flight.takeoff()
-        assertEquals(0, f.flight.scoring.keeper.score)
-        assertEquals(0f, f.flight.time, 0f)
-        assertTrue("not back on the ground: ${f.height} m", f.height < 0.3f)
-    }
+    fun aNewFlightStartsFromTakeoffAtScoreZero() =
+        FieldFlight("Stunter").use { f ->
+            f.fly(15f)
+            assertTrue(f.flight.scoring.keeper.score > 0)
+            f.flight.takeoff()
+            assertEquals(0, f.flight.scoring.keeper.score)
+            assertEquals(0f, f.flight.time, 0f)
+            assertTrue("not back on the ground: ${f.height} m", f.height < 0.3f)
+        }
 
     @Test
     fun scoresFromGameOverHighlightTheSavedRankAndBackReturns() {
@@ -375,7 +393,9 @@ class GameFlowTest {
         flow.flightEnded(report(320))
         flow.nameEntered("Ann")
         assertEquals(1, table.entries.size)
-        assertTrue(flow.patternTable.board(AssistLevel.PRO).isEmpty() && flow.patternTable.board(AssistLevel.MID).isEmpty())
+        assertTrue(
+            flow.patternTable.board(AssistLevel.PRO).isEmpty() && flow.patternTable.board(AssistLevel.MID).isEmpty()
+        )
         assertFalse(java.nio.file.Files.exists(temp.root.toPath().resolve("f2b-scores.json")))
     }
 
@@ -428,7 +448,11 @@ class GameFlowTest {
         flow.flightEnded(recordedReport(AssistLevel.MID, 85))
         flow.nameEntered("Ann")
         flow.retry()
-        flow.flightEnded(recordedReport(AssistLevel.MID, 0).let { it.copy(result = (it.result as FlightResult.Pattern).copy(sheet = ScoreSheet())) })
+        flow.flightEnded(
+            recordedReport(AssistLevel.MID, 0).let {
+                it.copy(result = (it.result as FlightResult.Pattern).copy(sheet = ScoreSheet()))
+            }
+        )
         // a zero score still qualifies on a board with room, so the name is asked first
         flow.nameEntered("Ann")
         flow.debrief()
@@ -627,15 +651,22 @@ class GameFlowTest {
         assertEquals(Control.HUMAN, flow.flyPattern(AssistLevel.MID).control)
     }
 
-    private fun scaleEntity(id: Int, facts: ScaleComponent?) = Entity().apply {
-        add(NameComponent("Replica $id"))
-        add(PlaneComponent().also { it.planeClass = PlaneClass.SCALE })
-        facts?.let(::add)
-    }
+    private fun scaleEntity(id: Int, facts: ScaleComponent?) =
+        Entity().apply {
+            add(NameComponent("Replica $id"))
+            add(PlaneComponent().also { it.planeClass = PlaneClass.SCALE })
+            facts?.let(::add)
+        }
 
     @Test
     fun aScalePlaneCarriesItsPrototypeFacts() {
-        val facts = ScaleComponent().also { it.prototype = "MiG-3"; it.firstFlight = 1940; it.wingspan = 10.3f; it.scale = 8 }
+        val facts =
+            ScaleComponent().also {
+                it.prototype = "MiG-3"
+                it.firstFlight = 1940
+                it.wingspan = 10.3f
+                it.scale = 8
+            }
         val choice = planeChoices(mapOf(7 to scaleEntity(7, facts))).single()
         assertEquals(PlaneClass.SCALE, choice.planeClass)
         assertEquals(ScaleFacts("MiG-3", 1940, 10.3f, 8), choice.scale)
@@ -646,9 +677,16 @@ class GameFlowTest {
         assertNull(planeChoices(mapOf(7 to scaleEntity(7, null))).single().scale)
     }
 
-    private val replica = PlaneChoice(
-        99, "Mig-3", PlaneClass.SCALE, 18f, 1.2f, 240f, ScaleFacts("MiG-3", 1940, 10.3f, 8),
-    )
+    private val replica =
+        PlaneChoice(
+            99,
+            "Mig-3",
+            PlaneClass.SCALE,
+            18f,
+            1.2f,
+            240f,
+            ScaleFacts("MiG-3", 1940, 10.3f, 8),
+        )
 
     private fun scaleReport(speed: Int = 400, level: Int = 300, landing: Int = 200, laps: Int = 5) =
         FlightReport("Mig-3", FlightEnd.LANDED, 61f, FlightResult.Scale(ScaleMarks(speed, level, landing), laps))
@@ -714,7 +752,10 @@ class GameFlowTest {
         assertEquals(1, over.rank)
 
         val entry = scale.entries.single()
-        assertEquals(ScaleScoreEntry("Ann", "Mig-3", "MiG-3", 900, 400, 300, 200, 5, 61f, "2026-10-04T12:00:00Z"), entry)
+        assertEquals(
+            ScaleScoreEntry("Ann", "Mig-3", "MiG-3", 900, 400, 300, 200, 5, 61f, "2026-10-04T12:00:00Z"),
+            entry,
+        )
         assertEquals(emptyList<ScoreEntry>(), free.entries)
 
         flow.retry()
@@ -868,7 +909,12 @@ class GameFlowTest {
         // with a recording, its debrief carries the takeovers
         flow.retry()
         val report = patternReport(AssistLevel.NOOB, 95)
-        flow.flightEnded(report.copy(takeovers = twoTakeovers, result = (report.result as FlightResult.Pattern).copy(recording = recordedFlight(AssistLevel.NOOB))))
+        flow.flightEnded(
+            report.copy(
+                takeovers = twoTakeovers,
+                result = (report.result as FlightResult.Pattern).copy(recording = recordedFlight(AssistLevel.NOOB)),
+            )
+        )
         flow.debrief()
         assertEquals(twoTakeovers, (flow.screen as Screen.Debrief).model.takeovers)
     }

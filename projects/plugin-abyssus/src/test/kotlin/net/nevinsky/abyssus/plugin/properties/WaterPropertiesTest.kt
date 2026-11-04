@@ -56,7 +56,8 @@ class WaterPropertiesTest : BasePlatformTestCase() {
     }
 
     private fun children(node: AbstractTreeNode<*>) = node.children.map { it as AbstractTreeNode<*> }
-    private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+    private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as
+        AbyssusAssetNode).virtualFile.name
 
     private fun waterRow(): AbstractTreeNode<*> {
         val projectRow = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
@@ -64,10 +65,15 @@ class WaterPropertiesTest : BasePlatformTestCase() {
         return children(children(sceneRow).single { label(it) == WATER_ROW }).first { label(it) == id }
     }
 
-    private fun panel() = AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
+    private fun panel() = AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, {
+        it.run() })
 
     private fun named(c: Component, name: String): Component? =
-        if (c.name == name) c else (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
+        if (c.name == name) {
+            c
+        } else {
+            (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
+        }
 
     private fun field(p: Component, f: WaterField) = named(p, "water-field-${f.name}") as JBTextField
     private fun error(p: Component, f: WaterField) = named(p, "water-error-${f.name}") as JBLabel
@@ -98,7 +104,8 @@ class WaterPropertiesTest : BasePlatformTestCase() {
         val p = panel()
         p.show(waterRow())
         val expected = mapOf(
-            WaterField.X to 5.5, WaterField.LEVEL to 3.0, WaterField.Z to -4.0, WaterField.WIDTH to 50.0, WaterField.LENGTH to 60.0,
+            WaterField.X to 5.5, WaterField.LEVEL to 3.0, WaterField.Z to -4.0, WaterField.WIDTH to 50.0,
+                WaterField.LENGTH to 60.0,
             WaterField.TINT_R to 0.5, WaterField.TINT_G to 0.4, WaterField.TINT_B to 0.3, WaterField.CLARITY to 12.0,
             WaterField.WAVE_AMPLITUDE to 0.2, WaterField.WAVE_LENGTH to 7.0, WaterField.WAVE_SPEED to 1.5,
             WaterField.FOAM_AMOUNT to 0.9, WaterField.FOAM_WIDTH to 2.0,
@@ -109,7 +116,8 @@ class WaterPropertiesTest : BasePlatformTestCase() {
             type(panel, f, v.toString())
             val after = surface()
             assertEquals(f.name, v, after.value(f), 0.0)
-            for (other in WaterField.entries.filter { it != f }) assertEquals("${f.name}/${other.name}", before.value(other), after.value(other), 0.0)
+            for (other in WaterField.entries.filter { it != f }) assertEquals("${f.name}/${other.name}",
+                before.value(other), after.value(other), 0.0)
         }
         assertTrue(p.state is PanelState.WaterDetails)
     }
@@ -140,7 +148,8 @@ class WaterPropertiesTest : BasePlatformTestCase() {
         val name = named(p, "water-name") as JBTextField
         name.text = "Pond"
         name.postActionEvent()
-        assertEquals("Pond", WaterCodec().read(SceneJson().parse(text()).get("abyssus")).surfaces.single { it.id == id }.name)
+        assertEquals("Pond", WaterCodec().read(SceneJson().parse(text()).get("abyssus")).surfaces.single { it.id == id
+            }.name)
         val blank = panel().also { it.show(waterRow()) }
         (named(blank, "water-name") as JBTextField).apply { text = " "; postActionEvent() }
         assertTrue((named(blank, "water-name-error") as JBLabel).text.isNotBlank())

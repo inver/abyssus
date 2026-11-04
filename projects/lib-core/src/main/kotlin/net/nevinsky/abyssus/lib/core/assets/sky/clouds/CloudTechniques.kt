@@ -53,7 +53,9 @@ class CloudTechniques(
 
     /** Gives up on [technique] after [error]: logs it once, releases what was built and falls back from now on. */
     fun fail(technique: CloudTechnique, error: Throwable) {
-        if (!failed.add(technique)) return
+        if (!failed.add(technique)) {
+            return
+        }
         val fallback = generateSequence(simplerThan(technique), ::simplerThan).firstOrNull { it !in failed }
         log.warn(
             "Sky '$skyName': ${technique.key} clouds are unavailable (${error.message}); " +

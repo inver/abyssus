@@ -7,7 +7,10 @@ package net.nevinsky.abyssus.app.game.controlline.components
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS
 
-/** The game's own components by the name a scene file gives them, without the physics ones (what Play's host adds to its own). */
+/**
+ * The game's own components by the name a scene file gives them, without the physics ones (what Play's host adds to its
+ * own).
+ */
 val GAME_COMPONENTS: Map<String, Class<out Component>> = mapOf(
     "PilotComponent" to PilotComponent::class.java,
     "PlaneComponent" to PlaneComponent::class.java,

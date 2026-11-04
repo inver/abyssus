@@ -11,6 +11,7 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaBinder
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
@@ -18,7 +19,6 @@ import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.ProjectAssetListing
 import org.junit.Ignore
 import org.slf4j.helpers.NOPLogger
-import java.io.File
 
 @Ignore
 class NewWeatherPresetActionTest : BasePlatformTestCase() {
@@ -27,6 +27,7 @@ class NewWeatherPresetActionTest : BasePlatformTestCase() {
     private lateinit var sky: VirtualFile
     private val sourceId = "00000000-0000-0000-0000-000000000001"
     private val processor = JsonProcessor(NOPLogger.NOP_LOGGER)
+
     private fun native(type: String, additional: String, id: String = sourceId) =
         """{"format":"abyssus","formatVersion":1,"uuid":"$id","type":"$type","additional":$additional}"""
 
@@ -38,27 +39,32 @@ class NewWeatherPresetActionTest : BasePlatformTestCase() {
         File(dir, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"ecs":{}}""")
         File(dir, "assets/sky").mkdirs()
         File(dir, "assets/clouds").mkdirs()
-        File(dir, "assets/sky/meta.json").writeText(
-            native(
-                "SKYBOX_PROCEDURAL",
-                """{"clouds":"$sourceId"}""",
-                "00000000-0000-0000-0000-000000000003"
+        File(dir, "assets/sky/meta.json")
+            .writeText(
+                native(
+                    "SKYBOX_PROCEDURAL",
+                    """{"clouds":"$sourceId"}""",
+                    "00000000-0000-0000-0000-000000000003",
+                )
             )
-        )
-        File(dir, "assets/clouds/meta.json").writeText(
-            native(
-                "CLOUDS",
-                """{"technique":"volumetric","low":{"type":"cumulus"}}"""
+        File(dir, "assets/clouds/meta.json")
+            .writeText(
+                native(
+                    "CLOUDS",
+                    """{"technique":"volumetric","low":{"type":"cumulus"}}""",
+                )
             )
-        )
         abss = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(dir, "P.abss"))!!
         abss.parent.refresh(false, true)
         sky = abss.parent.findFileByRelativePath("assets/sky/meta.json")!!
     }
 
     private fun factory() = NewWeatherPresetFactory(processor)
+
     private fun stage(name: String = "weather_sky") = factory().stage(abss, sky, name)
+
     private fun cloudFile() = abss.parent.findFileByRelativePath("assets/clouds/meta.json")!!
+
     private fun unsaved(file: VirtualFile, text: String) {
         ApplicationManager.getApplication().runWriteAction {
             FileDocumentManager.getInstance().getDocument(file)!!.setText(text)
@@ -71,14 +77,18 @@ class NewWeatherPresetActionTest : BasePlatformTestCase() {
         var selected: String? = null
         assertEquals(
             AssetCommandResult.Done,
-            createWeatherPreset(project, abss, sky, "weather_sky", select = { selected = it }, report = { fail(it) })
+            createWeatherPreset(project, abss, sky, "weather_sky", select = { selected = it }, report = { fail(it) }),
         )
         assertEquals("weather_sky", selected)
         for ((path, text) in before) assertEquals(path, text, File(dir, path).readText())
         val added = ProjectAssetListing(processor).list(abss).single { it.name == "weather_sky" }
         assertEquals("CLOUDS", added.type.name)
         assertFalse(added.uuid.toString() == sourceId)
-        val settings = net.nevinsky.abyssus.lib.core.assets.AssetMetaParser(processor).read("copy", File(dir, "assets/weather_sky/meta.json").readText()).typedAdditional<CloudMeta>()
+        val settings =
+            net.nevinsky.abyssus.lib.core.assets
+                .AssetMetaParser(processor)
+                .read("copy", File(dir, "assets/weather_sky/meta.json").readText())
+                .typedAdditional<CloudMeta>()
         assertEquals(0.4f, settings.low!!.coverage)
         assertEquals("VOLUMETRIC", settings.technique.name.uppercase())
         val reader = net.nevinsky.abyssus.plugin.dto.ProjectReader(project)
@@ -94,23 +104,30 @@ class NewWeatherPresetActionTest : BasePlatformTestCase() {
         val staged = stage()
         assertEquals(
             AssetCommandResult.Done,
-            AssetFileCommand(project, LocalAssetFileStore(dir)).execute(staged.transaction)
+            AssetFileCommand(project, LocalAssetFileStore(dir)).execute(staged.transaction),
         )
         val text = File(dir, "assets/weather_sky/meta.json").readText()
         assertTrue(text.contains("0.73"))
-        assertNull(net.nevinsky.abyssus.lib.core.assets.AssetMetaParser(processor).read("copy", text).typedAdditional<CloudMeta>().low)
+        assertNull(
+            net.nevinsky.abyssus.lib.core.assets
+                .AssetMetaParser(processor)
+                .read("copy", text)
+                .typedAdditional<CloudMeta>()
+                .low
+        )
         assertEquals(oldBytes, File(dir, "assets/clouds/meta.json").readText())
     }
 
     fun testSourceAndNativeDocumentRejectionsWriteNothing() {
         val valid = File(dir, "assets/clouds/meta.json").readText()
-        for (bad in listOf(
-            "broken",
-            native("MODEL", "{}"),
-            native("CLOUDS", "{}"),
-            valid.replace("\"formatVersion\":1", "\"formatVersion\":2"),
-            valid.replace(sourceId, "00000000-0000-0000-0000-000000000009")
-        )) {
+        for (bad in
+            listOf(
+                "broken",
+                native("MODEL", "{}"),
+                native("CLOUDS", "{}"),
+                valid.replace("\"formatVersion\":1", "\"formatVersion\":2"),
+                valid.replace(sourceId, "00000000-0000-0000-0000-000000000009"),
+            )) {
             unsaved(cloudFile(), bad)
             assertThrows(Exception::class.java) { stage() }
             assertFalse(File(dir, "assets/weather_sky").exists())
@@ -129,7 +146,7 @@ class NewWeatherPresetActionTest : BasePlatformTestCase() {
         File(dir, "assets/weather_sky/keep").writeText("mine")
         assertEquals(
             AssetCommandResult.Collision("assets/weather_sky"),
-            AssetFileCommand(project, LocalAssetFileStore(dir)).execute(staged.transaction)
+            AssetFileCommand(project, LocalAssetFileStore(dir)).execute(staged.transaction),
         )
         assertEquals("mine", File(dir, "assets/weather_sky/keep").readText())
     }
@@ -162,9 +179,10 @@ class NewWeatherPresetActionTest : BasePlatformTestCase() {
     fun testOnlyTheSkyAssetRowWithATextReferenceShowsTheAction() {
         val asset = ProjectAssetListing(processor).list(abss).single { it.name == "sky" }
         val node = DtoEntryNode(project, "project/assets", DtoRow("sky", asset), abss, listOf("assets"))
-        val action = object : NewWeatherPresetAction() {
-            override fun selected(e: com.intellij.openapi.actionSystem.AnActionEvent): Any = node
-        }
+        val action =
+            object : NewWeatherPresetAction() {
+                override fun selected(e: com.intellij.openapi.actionSystem.AnActionEvent): Any = node
+            }
 
         fun visible(): Boolean {
             val event = com.intellij.testFramework.TestActionEvent.createTestEvent(action)
@@ -180,10 +198,11 @@ class NewWeatherPresetActionTest : BasePlatformTestCase() {
         assertFalse(visible())
         unsaved(
             sky,
-            native("SKYBOX_PROCEDURAL", """{"clouds":"$sourceId"}""").replace(
-                "\"formatVersion\":1",
-                "\"formatVersion\":2"
-            )
+            native("SKYBOX_PROCEDURAL", """{"clouds":"$sourceId"}""")
+                .replace(
+                    "\"formatVersion\":1",
+                    "\"formatVersion\":2",
+                ),
         )
         assertFalse(visible())
         assertNull(weatherPresetTarget(null, net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader(processor)))
@@ -226,7 +245,8 @@ class NewWeatherPresetActionTest : BasePlatformTestCase() {
                 sky,
                 "weather_sky",
                 report = { reported = true },
-                select = { selected = true })
+                select = { selected = true },
+            )
         )
         assertTrue(reported)
         assertFalse(selected)
@@ -254,15 +274,15 @@ class NewWeatherPresetActionTest : BasePlatformTestCase() {
     fun testFailedMetadataWriteRollsBackCreation() {
         val staged = stage()
         val real = LocalAssetFileStore(dir)
-        val failing = object : AssetFileStore by real {
-            override fun write(path: String, bytes: ByteArray) {
-                real.write(path, bytes)
-                throw java.io.IOException("injected write failure")
+        val failing =
+            object : AssetFileStore by real {
+                override fun write(path: String, bytes: ByteArray) {
+                    real.write(path, bytes)
+                    throw java.io.IOException("injected write failure")
+                }
             }
-        }
         val result = AssetFileCommand(project, failing).execute(staged.transaction)
         assertTrue(result is AssetCommandResult.Failed && result.rolledBack)
         assertFalse(File(dir, "assets/weather_sky").exists())
     }
-
 }

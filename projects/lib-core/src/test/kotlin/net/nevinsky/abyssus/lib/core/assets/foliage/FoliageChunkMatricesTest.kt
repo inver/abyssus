@@ -5,15 +5,16 @@
 
 package net.nevinsky.abyssus.lib.core.assets.foliage
 
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
+import kotlin.math.sqrt
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.assets.testFileLoader
 import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.testProject
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.scene.SceneLoader
 import org.junit.Assert.assertEquals
@@ -22,7 +23,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.slf4j.helpers.NOPLogger
-import kotlin.math.sqrt
 
 private const val UNTITLED_TERRAIN = "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
 private const val FOLIAGE_FIXTURE_LAYER = 0
@@ -37,16 +37,22 @@ class FoliageChunkMatricesTest {
     private val files = testFileLoader(project)
     private val terrain =
         checkNotNull(TerrainLoader(files, testMetaLoader(project)).prepare(UNTITLED_TERRAIN)) { "the Untitled terrain" }
-            .staged.data
+            .staged
+            .data
     private val matrices = FoliageMatrices()
     private val out = Matrix4()
     private val origin = Vector3()
 
     /** The terrain entity of `Main Scene`: a translation, no rotation and no scale. */
     private fun terrainEntity(): Matrix4 {
-        val scene = SceneLoader(JsonProcessor(NOPLogger.NOP_LOGGER), files, ComponentRegistry()).load("Main Scene.scene")
-        val position = checkNotNull(scene.ecs[1L]) { "entity 1 of the scene" }
-            .components.filterIsInstance<PositionComponent>().single().localPosition
+        val scene =
+            SceneLoader(JsonProcessor(NOPLogger.NOP_LOGGER), files, ComponentRegistry()).load("Main Scene.scene")
+        val position =
+            checkNotNull(scene.ecs[1L]) { "entity 1 of the scene" }
+                .components
+                .filterIsInstance<PositionComponent>()
+                .single()
+                .localPosition
         return Matrix4().setToTranslation(position.x, position.y, position.z)
     }
 
@@ -121,10 +127,18 @@ class FoliageChunkMatricesTest {
     @Test
     fun everyBakedCopyStandsOnTheSurfaceOfTheFoliageFixtureTerrain() {
         val foliage = testProject("Foliage")
-        val prepared = checkNotNull(
-            FoliageLoader(testFileLoader(foliage), testMetaLoader(foliage), TerrainLoader(testFileLoader(foliage), testMetaLoader(foliage)))
-                .prepare("foliage_meadow"),
-        ) { "the Foliage fixture" }.staged
+        val prepared =
+            checkNotNull(
+                    FoliageLoader(
+                            testFileLoader(foliage),
+                            testMetaLoader(foliage),
+                            TerrainLoader(testFileLoader(foliage), testMetaLoader(foliage)),
+                        )
+                        .prepare("foliage_meadow")
+                ) {
+                    "the Foliage fixture"
+                }
+                .staged
         val ground = checkNotNull(prepared.terrain) { "the fixture terrain" }
         val layer = checkNotNull(prepared.bake) { "the fixture bake" }.layers[FOLIAGE_FIXTURE_LAYER]
         assertTrue("the OBJECT layer has copies", layer.copyCount > 0)
@@ -135,8 +149,11 @@ class FoliageChunkMatricesTest {
                 assertNotNull(matrices.copy(ground, 0f, Matrix4(), copy, out))
                 out.getTranslation(origin)
                 assertEquals(copy.x, origin.x, 1e-4f)
-                assertEquals(checkNotNull(ground.heightAt(copy.x, copy.z)) { "a baked copy is inside the terrain" },
-                    origin.y, 1e-3f)
+                assertEquals(
+                    checkNotNull(ground.heightAt(copy.x, copy.z)) { "a baked copy is inside the terrain" },
+                    origin.y,
+                    1e-3f,
+                )
                 assertEquals(copy.z, origin.z, 1e-4f)
                 checked++
             }

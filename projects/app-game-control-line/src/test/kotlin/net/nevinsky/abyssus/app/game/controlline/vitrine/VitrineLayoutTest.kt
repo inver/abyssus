@@ -13,15 +13,19 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VitrineLayoutTest {
-    private fun table(x: Float, z: Float, yaw: Float = 0f, top: Float = 0.75f) = VitrineTable(Vector3(x, 0f, z), yaw, top)
+    private fun table(x: Float, z: Float, yaw: Float = 0f, top: Float = 0.75f) =
+        VitrineTable(Vector3(x, 0f, z), yaw, top)
 
     /** A box-shaped plane [halfHeight] tall around its origin, its lowest point [offset] below the origin. */
-    private fun plane(halfHeight: Float, offset: Float = halfHeight, rotation: Quaternion = Quaternion()) = VitrinePlane(
-        Vector3(4f, 0.1f, 0f), rotation,
-        listOf(Vector3(-0.5f, -offset, -1f), Vector3(0.5f, -offset + 2 * halfHeight, 1f)),
-    )
+    private fun plane(halfHeight: Float, offset: Float = halfHeight, rotation: Quaternion = Quaternion()) =
+        VitrinePlane(
+            Vector3(4f, 0.1f, 0f),
+            rotation,
+            listOf(Vector3(-0.5f, -offset, -1f), Vector3(0.5f, -offset + 2 * halfHeight, 1f)),
+        )
 
-    private fun lowestOf(pose: VitrinePose, plane: VitrinePlane) = plane.points!!.minOf { pose.rotation.transform(Vector3(it)).y + pose.position.y }
+    private fun lowestOf(pose: VitrinePose, plane: VitrinePlane) =
+        plane.points!!.minOf { pose.rotation.transform(Vector3(it)).y + pose.position.y }
 
     @Test
     fun aPlaneRestsOnTheTableTopWhateverItsSize() {

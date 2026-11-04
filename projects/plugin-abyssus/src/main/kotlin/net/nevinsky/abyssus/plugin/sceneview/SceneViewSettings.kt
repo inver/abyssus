@@ -13,8 +13,10 @@ import com.intellij.openapi.util.Disposer
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
- * View settings of one IDE project, shared by all its scene views: today only whether they show the frame rate. They are
- * IDE preferences kept with the project, never fields of a `.abss`, `.scene` or asset file. Read, written and notified on the EDT.
+  * View settings of one IDE project, shared by all its scene views: today only whether they show the frame rate. They
+  * are
+  * IDE preferences kept with the project, never fields of a `.abss`, `.scene` or asset file. Read, written and notified
+  * on the EDT.
  */
 @Service(Service.Level.PROJECT)
 class SceneViewSettings(private val project: Project) {
@@ -24,7 +26,9 @@ class SceneViewSettings(private val project: Project) {
     var showFps: Boolean
         get() = PropertiesComponent.getInstance(project).getBoolean(SHOW_FPS_KEY, false)
         set(value) {
-            if (value == showFps) return
+            if (value == showFps) {
+                return
+            }
             // saved before anyone is told, so a listener that reads the setting sees the new value
             PropertiesComponent.getInstance(project).setValue(SHOW_FPS_KEY, value, false)
             listeners.forEach { it(value) }

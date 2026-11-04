@@ -13,17 +13,17 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.JsonWriter
-import net.nevinsky.abyssus.lib.gdx.model.ModelData
-import net.nevinsky.abyssus.lib.gdx.model.ModelMesh
-import net.nevinsky.abyssus.lib.gdx.model.ModelMeshPart
-import net.nevinsky.abyssus.lib.gdx.model.VertexLayout
-import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
 import java.io.ByteArrayOutputStream
 import java.io.StringWriter
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.*
 import kotlin.math.abs
+import net.nevinsky.abyssus.lib.gdx.model.ModelData
+import net.nevinsky.abyssus.lib.gdx.model.ModelMesh
+import net.nevinsky.abyssus.lib.gdx.model.ModelMeshPart
+import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
+import net.nevinsky.abyssus.lib.gdx.model.VertexLayout
 
 /** The model data cannot be written as valid glTF; nothing was written. */
 class GltfWriteException(message: String) : IllegalArgumentException(message)
@@ -31,22 +31,22 @@ class GltfWriteException(message: String) : IllegalArgumentException(message)
 /**
  * Writes a [ModelData] as one glTF 2.0 binary (GLB): a JSON chunk, then one BIN chunk.
  *
- * - **Nodes** keep their ids as names, their hierarchy and their translation, rotation and scale. A node's parts
- *   become the primitives of its mesh. Parts of one node that need different skins (or none) go to extra child nodes
- *   named `<id>_skin<n>`, which glTF needs: one mesh, one skin.
+ * - **Nodes** keep their ids as names, their hierarchy and their translation, rotation and scale. A node's parts become
+ *   the primitives of its mesh. Parts of one node that need different skins (or none) go to extra child nodes named
+ *   `<id>_skin<n>`, which glTF needs: one mesh, one skin.
  * - **Meshes** are split by attribute into accessors: POSITION (with min and max), NORMAL, TANGENT (vec4, its w from
- *   the binormal), TEXCOORD_n, COLOR_0, JOINTS_n (unsigned short) and WEIGHTS_n. Indices are unsigned short when
- *   they fit, unsigned int otherwise.
+ *   the binormal), TEXCOORD_n, COLOR_0, JOINTS_n (unsigned short) and WEIGHTS_n. Indices are unsigned short when they
+ *   fit, unsigned int otherwise.
  * - **Skins:** one per distinct bone set, with the joints, the inverse bind matrices from the part's `bones` and the
  *   joints' common ancestor as skeleton.
- * - **Animations:** one per [com.badlogic.gdx.graphics.g3d.model.data.ModelAnimation], LINEAR samplers for
- *   translation, rotation and scale.
+ * - **Animations:** one per [com.badlogic.gdx.graphics.g3d.model.data.ModelAnimation], LINEAR samplers for translation,
+ *   rotation and scale.
  * - **Materials:** metallic-roughness from [PbrModelMaterial]; a plain [ModelMaterial] goes through [PhongToPbr].
  *   Textures are external URIs from `images` (texture file name to URI); a texture missing from it is left out.
  *
  * The output depends only on the input: the same data gives the same bytes. The data is validated first (indices and
- * joints in range, finite positions, weights summing to 1 ± 1e-3); invalid data throws [GltfWriteException].
- * Morph targets, cameras, lights and extensions are never written.
+ * joints in range, finite positions, weights summing to 1 ± 1e-3); invalid data throws [GltfWriteException]. Morph
+ * targets, cameras, lights and extensions are never written.
  */
 class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
     fun write(data: ModelData, images: Map<String, String>, generator: String): ByteArray =
@@ -95,20 +95,34 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
             doc["scene"] = 0
             doc["scenes"] = listOf(mapOf("nodes" to data.nodes.map { nodeIndex[it]!! }))
             doc["nodes"] = nodes
-            if (meshes.isNotEmpty()) doc["meshes"] = meshes
-            if (skins.isNotEmpty()) doc["skins"] = skins
-            if (animations.isNotEmpty()) doc["animations"] = animations
-            if (materials.isNotEmpty()) doc["materials"] = materials
+            if (meshes.isNotEmpty()) {
+                doc["meshes"] = meshes
+            }
+            if (skins.isNotEmpty()) {
+                doc["skins"] = skins
+            }
+            if (animations.isNotEmpty()) {
+                doc["animations"] = animations
+            }
+            if (materials.isNotEmpty()) {
+                doc["materials"] = materials
+            }
             if (images.isNotEmpty()) {
                 doc["textures"] = images.values.map { mapOf("sampler" to 0, "source" to it) }
                 doc["images"] = images.keys.map { mapOf("uri" to it) }
                 doc["samplers"] =
                     listOf(mapOf("magFilter" to 9729, "minFilter" to 9987, "wrapS" to 10497, "wrapT" to 10497))
             }
-            if (accessors.isNotEmpty()) doc["accessors"] = accessors
-            if (bufferViews.isNotEmpty()) doc["bufferViews"] = bufferViews
+            if (accessors.isNotEmpty()) {
+                doc["accessors"] = accessors
+            }
+            if (bufferViews.isNotEmpty()) {
+                doc["bufferViews"] = bufferViews
+            }
             pad(bin, 0)
-            if (bin.size() > 0) doc["buffers"] = listOf(mapOf("byteLength" to bin.size()))
+            if (bin.size() > 0) {
+                doc["buffers"] = listOf(mapOf("byteLength" to bin.size()))
+            }
             return glb(json(doc), bin.toByteArray())
         }
 
@@ -129,13 +143,18 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
                 children += nodes.size - 1
                 meshInto(extra, "${node.meshId ?: node.id}_skin$k", group)
             }
-            if (children.isNotEmpty()) out["children"] = children
-            node.translation?.takeIf { !it.isZero }?.let { out["translation"] = finite(listOf(it.x, it.y, it.z), node) }
-            node.rotation?.takeIf { !it.isIdentity }?.let {
-                val q = Quaternion(it).nor()
-                out["rotation"] = finite(listOf(q.x, q.y, q.z, q.w), node)
+            if (children.isNotEmpty()) {
+                out["children"] = children
             }
-            node.scale?.takeIf { !it.epsilonEquals(1f, 1f, 1f, 0f) }
+            node.translation?.takeIf { !it.isZero }?.let { out["translation"] = finite(listOf(it.x, it.y, it.z), node) }
+            node.rotation
+                ?.takeIf { !it.isIdentity }
+                ?.let {
+                    val q = Quaternion(it).nor()
+                    out["rotation"] = finite(listOf(q.x, q.y, q.z, q.w), node)
+                }
+            node.scale
+                ?.takeIf { !it.epsilonEquals(1f, 1f, 1f, 0f) }
                 ?.let { out["scale"] = finite(listOf(it.x, it.y, it.z), node) }
         }
 
@@ -146,14 +165,19 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
             val matrices = ArrayList<Matrix4>()
 
             fun take(part: ModelNodePart, bones: List<Pair<Int, Matrix4>>?): Boolean {
-                if ((bones != null) != skinned) return false
+                if ((bones != null) != skinned) {
+                    return false
+                }
                 if (bones != null) {
                     for ((joint, matrix) in bones) {
                         val at = joints.indexOf(joint)
-                        if (at >= 0 && !same(matrices[at], matrix)) return false
+                        if (at >= 0 && !same(matrices[at], matrix)) {
+                            return false
+                        }
                     }
                     for ((joint, matrix) in bones) if (joint !in joints) {
-                        joints += joint; matrices += matrix
+                        joints += joint
+                        matrices += matrix
                     }
                 }
                 parts += part
@@ -166,7 +190,9 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
         fun bonesOf(part: ModelNodePart): List<Pair<Int, Matrix4>>? {
             val bones = part.bones ?: return null
             val mesh = meshOfPart[part.meshPartId]?.first ?: return null
-            if (mesh.attributes.none { it.usage == Usage.BoneWeight } || bones.size == 0) return null
+            if (mesh.attributes.none { it.usage == Usage.BoneWeight } || bones.size == 0) {
+                return null
+            }
             return (0 until bones.size).map { i ->
                 val id = bones.getKeyAt(i)
                 val joint = nodeById[id] ?: throw GltfWriteException("bone $id of ${part.meshPartId} names no node")
@@ -177,9 +203,13 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
         fun groups(node: ModelNode): List<Group> {
             val groups = ArrayList<Group>()
             for (part in node.parts.orEmpty()) {
-                if (meshOfPart[part.meshPartId] == null) throw GltfWriteException("part ${part.meshPartId} of ${node.id} names no mesh part")
+                if (meshOfPart[part.meshPartId] == null) {
+                    throw GltfWriteException("part ${part.meshPartId} of ${node.id} names no mesh part")
+                }
                 val bones = bonesOf(part)
-                if (groups.none { it.take(part, bones) }) groups += Group(bones != null).also { it.take(part, bones) }
+                if (groups.none { it.take(part, bones) }) {
+                    groups += Group(bones != null).also { it.take(part, bones) }
+                }
             }
             return groups
         }
@@ -188,61 +218,76 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
             val primitives = group.parts.map { primitive(it, group) }
             meshes += mapOf("name" to name, "primitives" to primitives)
             node["mesh"] = meshes.size - 1
-            if (group.skinned) node["skin"] = skin(group)
+            if (group.skinned) {
+                node["skin"] = skin(group)
+            }
         }
 
         fun primitive(part: ModelNodePart, group: Group): Map<String, Any> {
             val (mesh, meshPart) = meshOfPart[part.meshPartId]!!
             val layout = Layout(mesh)
             val count = layout.count
-            for (i in meshPart.indices) if (i < 0 || i >= count) throw GltfWriteException("index $i of ${meshPart.id} is outside its $count vertices")
+            for (i in meshPart.indices) if (i < 0 || i >= count) {
+                throw GltfWriteException("index $i of ${meshPart.id} is outside its $count vertices")
+            }
 
             val attributes = LinkedHashMap<String, Any>()
-            attributes["POSITION"] = attributeAccessor(mesh, "POSITION") {
-                val p = layout.floats(
-                    layout.offset(Usage.Position, 0) ?: throw GltfWriteException("${mesh.id} has no positions"), 3
-                )
-                if (p.any { !it.isFinite() }) throw GltfWriteException("${mesh.id} has a position that is not finite")
-                floatAccessor(p, 3, "VEC3", ARRAY_BUFFER, bounds = true)
-            }
+            attributes["POSITION"] =
+                attributeAccessor(mesh, "POSITION") {
+                    val p =
+                        layout.floats(
+                            layout.offset(Usage.Position, 0) ?: throw GltfWriteException("${mesh.id} has no positions"),
+                            3,
+                        )
+                    if (p.any { !it.isFinite() }) {
+                        throw GltfWriteException("${mesh.id} has a position that is not finite")
+                    }
+                    floatAccessor(p, 3, "VEC3", ARRAY_BUFFER, bounds = true)
+                }
             layout.offset(Usage.Normal, 0)?.let { at ->
                 attributes["NORMAL"] =
                     attributeAccessor(mesh, "NORMAL") { floatAccessor(layout.floats(at, 3), 3, "VEC3", ARRAY_BUFFER) }
                 layout.offset(Usage.Tangent, 0)?.let { tangentAt ->
-                    attributes["TANGENT"] = attributeAccessor(mesh, "TANGENT") {
-                        floatAccessor(
-                            layout.tangents(at, tangentAt, layout.offset(Usage.BiNormal, 0)),
-                            4,
-                            "VEC4",
-                            ARRAY_BUFFER
-                        )
-                    }
+                    attributes["TANGENT"] =
+                        attributeAccessor(mesh, "TANGENT") {
+                            floatAccessor(
+                                layout.tangents(at, tangentAt, layout.offset(Usage.BiNormal, 0)),
+                                4,
+                                "VEC4",
+                                ARRAY_BUFFER,
+                            )
+                        }
                 }
             }
             for (unit in layout.units(Usage.TextureCoordinates)) {
-                attributes["TEXCOORD_$unit"] = attributeAccessor(mesh, "TEXCOORD_$unit") {
-                    floatAccessor(
-                        layout.floats(layout.offset(Usage.TextureCoordinates, unit)!!, 2),
-                        2,
-                        "VEC2",
-                        ARRAY_BUFFER
-                    )
-                }
+                attributes["TEXCOORD_$unit"] =
+                    attributeAccessor(mesh, "TEXCOORD_$unit") {
+                        floatAccessor(
+                            layout.floats(layout.offset(Usage.TextureCoordinates, unit)!!, 2),
+                            2,
+                            "VEC2",
+                            ARRAY_BUFFER,
+                        )
+                    }
             }
             layout.offset(Usage.ColorUnpacked, null)?.let { at ->
                 attributes["COLOR_0"] =
                     attributeAccessor(mesh, "COLOR_0") { floatAccessor(layout.floats(at, 4), 4, "VEC4", ARRAY_BUFFER) }
-            } ?: layout.offset(Usage.ColorPacked, null)?.let { at ->
-                attributes["COLOR_0"] = attributeAccessor(mesh, "COLOR_0") {
-                    floatAccessor(
-                        layout.packedColors(at),
-                        4,
-                        "VEC4",
-                        ARRAY_BUFFER
-                    )
-                }
             }
-            if (group.skinned) skinAttributes(part, mesh, layout, group, attributes)
+                ?: layout.offset(Usage.ColorPacked, null)?.let { at ->
+                    attributes["COLOR_0"] =
+                        attributeAccessor(mesh, "COLOR_0") {
+                            floatAccessor(
+                                layout.packedColors(at),
+                                4,
+                                "VEC4",
+                                ARRAY_BUFFER,
+                            )
+                        }
+                }
+            if (group.skinned) {
+                skinAttributes(part, mesh, layout, group, attributes)
+            }
 
             val primitive = LinkedHashMap<String, Any>()
             primitive["attributes"] = attributes
@@ -261,7 +306,7 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
             mesh: ModelMesh,
             layout: Layout,
             group: Group,
-            attributes: MutableMap<String, Any>
+            attributes: MutableMap<String, Any>,
         ) {
             val units = layout.units(Usage.BoneWeight)
             val bones = bonesOf(part)!!
@@ -276,15 +321,24 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
                     val at = v * layout.stride + layout.offset(Usage.BoneWeight, unit)!!
                     val bone = layout.vertices[at].toInt()
                     val weight = layout.vertices[at + 1]
-                    if (!weight.isFinite() || weight < 0f) throw GltfWriteException("${mesh.id} vertex $v has weight $weight")
+                    if (!weight.isFinite() || weight < 0f) {
+                        throw GltfWriteException("${mesh.id} vertex $v has weight $weight")
+                    }
                     if (weight > 0f && (bone < 0 || bone >= toJoint.size)) {
                         throw GltfWriteException("${mesh.id} vertex $v names bone $bone of ${toJoint.size}")
                     }
-                    joints[slot / 4][v * 4 + slot % 4] = if (weight > 0f) toJoint[bone] else 0
+                    joints[slot / 4][v * 4 + slot % 4] =
+                        if (weight > 0f) {
+                            toJoint[bone]
+                        } else {
+                            0
+                        }
                     weights[slot / 4][v * 4 + slot % 4] = weight
                     sum += weight
                 }
-                if (abs(sum - 1f) > WEIGHT_TOLERANCE) throw GltfWriteException("${mesh.id} vertex $v has weights summing to $sum, not 1")
+                if (abs(sum - 1f) > WEIGHT_TOLERANCE) {
+                    throw GltfWriteException("${mesh.id} vertex $v has weights summing to $sum, not 1")
+                }
             }
             for (s in 0 until sets) {
                 attributes["JOINTS_$s"] = shortAccessor(joints[s], 4, "VEC4", ARRAY_BUFFER)
@@ -312,7 +366,11 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
             var result: Int? = null
             for (depth in 0 until chains.minOf { it.size }) {
                 val candidate = chains[0][depth]
-                if (chains.all { it[depth] == candidate }) result = candidate else break
+                if (chains.all { it[depth] == candidate }) {
+                    result = candidate
+                } else {
+                    break
+                }
             }
             return result
         }
@@ -327,30 +385,50 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
                 path: String,
                 keys: Iterable<ModelNodeKeyframe<T>?>?,
                 components: Int,
-                value: (T) -> List<Float>
+                value: (T) -> List<Float>,
             ) {
                 val times = ArrayList<Float>()
                 val values = ArrayList<Float>()
                 for (key in keys ?: return) {
                     val v = key?.value ?: continue
-                    if (!key.keytime.isFinite() || key.keytime < 0f || (times.isNotEmpty() && key.keytime <= times.last())) continue
+                    if (
+                        !key.keytime.isFinite() ||
+                            key.keytime < 0f ||
+                            (times.isNotEmpty() && key.keytime <= times.last())
+                    ) {
+                        continue
+                    }
                     val components = value(v)
-                    if (components.any { !it.isFinite() }) throw GltfWriteException("animation ${animation.id} has a value that is not finite")
+                    if (components.any { !it.isFinite() }) {
+                        throw GltfWriteException("animation ${animation.id} has a value that is not finite")
+                    }
                     times += key.keytime
                     values += components
                 }
-                if (times.isEmpty()) return
-                val input = timeAccessors.getOrPut(times) {
-                    floatAccessor(
-                        times.toFloatArray(),
-                        1,
-                        "SCALAR",
-                        null,
-                        bounds = true
-                    )
+                if (times.isEmpty()) {
+                    return
                 }
+                val input =
+                    timeAccessors.getOrPut(times) {
+                        floatAccessor(
+                            times.toFloatArray(),
+                            1,
+                            "SCALAR",
+                            null,
+                            bounds = true,
+                        )
+                    }
                 val output =
-                    floatAccessor(values.toFloatArray(), components, if (components == 4) "VEC4" else "VEC3", null)
+                    floatAccessor(
+                        values.toFloatArray(),
+                        components,
+                        if (components == 4) {
+                            "VEC4"
+                        } else {
+                            "VEC3"
+                        },
+                        null,
+                    )
                 samplers += mapOf("input" to input, "interpolation" to "LINEAR", "output" to output)
                 channels += mapOf("sampler" to samplers.size - 1, "target" to mapOf("node" to node, "path" to path))
             }
@@ -363,7 +441,9 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
                 }
                 channel(node, "scale", nodeAnimation.scaling, 3) { v: Vector3 -> listOf(v.x, v.y, v.z) }
             }
-            if (channels.isEmpty()) return
+            if (channels.isEmpty()) {
+                return
+            }
             val out = LinkedHashMap<String, Any>()
             animation.id?.let { out["name"] = it }
             out["channels"] = channels
@@ -378,8 +458,10 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
             val out = LinkedHashMap<String, Any>()
             out["name"] = source.id ?: "material${materials.size}"
             val pbr = LinkedHashMap<String, Any>()
-            val base = material.baseColor ?: material.diffuse?.let { Color(it).also { c -> c.a = material.opacity } }
-            ?: Color.WHITE
+            val base =
+                material.baseColor
+                    ?: material.diffuse?.let { Color(it).also { c -> c.a = material.opacity } }
+                    ?: Color.WHITE
             pbr["baseColorFactor"] = listOf(base.r, base.g, base.b, base.a)
             texture(material, ModelTexture.USAGE_DIFFUSE)?.let { pbr["baseColorTexture"] = it }
             material.metallic?.let { pbr["metallicFactor"] = it }
@@ -395,9 +477,15 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
                 emissive != null -> out["emissiveFactor"] = listOf(emissive.r, emissive.g, emissive.b)
                 emissiveTexture != null -> out["emissiveFactor"] = listOf(1f, 1f, 1f)
             }
-            if (material.alphaMode != PbrModelMaterial.AlphaMode.OPAQUE) out["alphaMode"] = material.alphaMode.name
-            if (material.alphaMode == PbrModelMaterial.AlphaMode.MASK) out["alphaCutoff"] = material.alphaCutoff
-            if (material.doubleSided) out["doubleSided"] = true
+            if (material.alphaMode != PbrModelMaterial.AlphaMode.OPAQUE) {
+                out["alphaMode"] = material.alphaMode.name
+            }
+            if (material.alphaMode == PbrModelMaterial.AlphaMode.MASK) {
+                out["alphaCutoff"] = material.alphaCutoff
+            }
+            if (material.doubleSided) {
+                out["doubleSided"] = true
+            }
             source.id?.let { materialIndex.putIfAbsent(it, materials.size) }
             materials += out
         }
@@ -427,7 +515,7 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
             components: Int,
             type: String,
             target: Int?,
-            bounds: Boolean = false
+            bounds: Boolean = false,
         ): Int {
             val buffer = ByteBuffer.allocate(values.size * 4).order(ByteOrder.LITTLE_ENDIAN)
             values.forEach(buffer::putFloat)
@@ -449,29 +537,53 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
         fun shortAccessor(values: IntArray, components: Int, type: String, target: Int?): Int {
             val buffer = ByteBuffer.allocate(values.size * 2).order(ByteOrder.LITTLE_ENDIAN)
             values.forEach { buffer.putShort(it.toShort()) }
-            accessors += mapOf(
-                "bufferView" to view(buffer.array(), target), "componentType" to UNSIGNED_SHORT,
-                "count" to values.size / components, "type" to type
-            )
+            accessors +=
+                mapOf(
+                    "bufferView" to view(buffer.array(), target),
+                    "componentType" to UNSIGNED_SHORT,
+                    "count" to values.size / components,
+                    "type" to type,
+                )
             return accessors.size - 1
         }
 
         /** Unsigned short when every index fits below 65535 (the primitive restart value), unsigned int otherwise. */
         fun indexAccessor(indices: IntArray, vertexCount: Int): Int {
             val short = vertexCount <= 0xFFFF
-            val buffer = ByteBuffer.allocate(indices.size * if (short) 2 else 4).order(ByteOrder.LITTLE_ENDIAN)
-            if (short) indices.forEach { buffer.putShort(it.toShort()) } else indices.forEach(buffer::putInt)
-            accessors += mapOf(
-                "bufferView" to view(buffer.array(), ELEMENT_ARRAY_BUFFER),
-                "componentType" to if (short) UNSIGNED_SHORT else UNSIGNED_INT,
-                "count" to indices.size,
-                "type" to "SCALAR"
-            )
+            val buffer =
+                ByteBuffer.allocate(
+                        indices.size *
+                            if (short) {
+                                2
+                            } else {
+                                4
+                            }
+                    )
+                    .order(ByteOrder.LITTLE_ENDIAN)
+            if (short) {
+                indices.forEach { buffer.putShort(it.toShort()) }
+            } else {
+                indices.forEach(buffer::putInt)
+            }
+            accessors +=
+                mapOf(
+                    "bufferView" to view(buffer.array(), ELEMENT_ARRAY_BUFFER),
+                    "componentType" to
+                        if (short) {
+                            UNSIGNED_SHORT
+                        } else {
+                            UNSIGNED_INT
+                        },
+                    "count" to indices.size,
+                    "type" to "SCALAR",
+                )
             return accessors.size - 1
         }
 
         fun finite(values: List<Float>, node: ModelNode): List<Float> {
-            if (values.any { !it.isFinite() }) throw GltfWriteException("node ${node.id} has a transform that is not finite")
+            if (values.any { !it.isFinite() }) {
+                throw GltfWriteException("node ${node.id} has a transform that is not finite")
+            }
             return values
         }
     }
@@ -482,7 +594,12 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
         val vertices: FloatArray = mesh.vertices
         private val layout = VertexLayout(attributes)
         val stride = layout.stride
-        val count = if (stride == 0) 0 else vertices.size / stride
+        val count =
+            if (stride == 0) {
+                0
+            } else {
+                vertices.size / stride
+            }
 
         /** @param unit the attribute's unit, or `null` for the first of that usage */
         fun offset(usage: Int, unit: Int?): Int? = layout.offsetOf(usage, unit)
@@ -495,7 +612,7 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
                 out,
                 v * components,
                 v * stride + offset,
-                v * stride + offset + components
+                v * stride + offset + components,
             )
             return out
         }
@@ -511,12 +628,15 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
                 var w = 1f
                 if (binormalAt != null) {
                     n.set(vertices[base + normalAt], vertices[base + normalAt + 1], vertices[base + normalAt + 2])
-                    val b = Vector3(
-                        vertices[base + binormalAt],
-                        vertices[base + binormalAt + 1],
-                        vertices[base + binormalAt + 2]
-                    )
-                    if (n.crs(t).dot(b) < 0f) w = -1f
+                    val b =
+                        Vector3(
+                            vertices[base + binormalAt],
+                            vertices[base + binormalAt + 1],
+                            vertices[base + binormalAt + 2],
+                        )
+                    if (n.crs(t).dot(b) < 0f) {
+                        w = -1f
+                    }
                 }
                 out[v * 4] = t.x
                 out[v * 4 + 1] = t.y
@@ -589,13 +709,28 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
         }
 
         private fun glb(json: ByteArray, bin: ByteArray): ByteArray {
-            val jsonPadded = if (json.size % 4 == 0) json else json + ByteArray(4 - json.size % 4) { ' '.code.toByte() }
+            val jsonPadded =
+                if (json.size % 4 == 0) {
+                    json
+                } else {
+                    json + ByteArray(4 - json.size % 4) { ' '.code.toByte() }
+                }
             val withBin = bin.isNotEmpty()
-            val length = 12 + 8 + jsonPadded.size + if (withBin) 8 + bin.size else 0
+            val length =
+                12 +
+                    8 +
+                    jsonPadded.size +
+                    if (withBin) {
+                        8 + bin.size
+                    } else {
+                        0
+                    }
             val out = ByteBuffer.allocate(length).order(ByteOrder.LITTLE_ENDIAN)
             out.putInt(0x46546C67).putInt(2).putInt(length)
             out.putInt(jsonPadded.size).putInt(0x4E4F534A).put(jsonPadded)
-            if (withBin) out.putInt(bin.size).putInt(0x004E4942).put(bin)
+            if (withBin) {
+                out.putInt(bin.size).putInt(0x004E4942).put(bin)
+            }
             return out.array()
         }
     }

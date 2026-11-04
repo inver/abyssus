@@ -12,6 +12,12 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
+import java.awt.Color
+import java.awt.Component
+import java.awt.Container
+import javax.swing.JButton
+import javax.swing.JComponent
+import javax.swing.JPanel
 import net.nevinsky.abyssus.lib.core.editor.components.EnabledTarget
 import net.nevinsky.abyssus.lib.core.editor.panel.AssetRow
 import net.nevinsky.abyssus.lib.core.editor.panel.Axis
@@ -36,12 +42,6 @@ import net.nevinsky.abyssus.lib.core.editor.panel.TableRow
 import net.nevinsky.abyssus.lib.core.editor.panel.TextRow
 import net.nevinsky.abyssus.lib.core.editor.panel.VectorRow
 import net.nevinsky.abyssus.plugin.projectView.DesignColors
-import java.awt.Color
-import java.awt.Component
-import java.awt.Container
-import javax.swing.JButton
-import javax.swing.JComponent
-import javax.swing.JPanel
 
 /** The section frame, the header and the color pairs. */
 class PropertySectionTest : BasePlatformTestCase() {
@@ -51,13 +51,26 @@ class PropertySectionTest : BasePlatformTestCase() {
 
     // ---- section frame ----
 
-    private fun section(game: Boolean = false, enable: EnableToggle? = null, disabled: Boolean = false) = Section(
-        "3.Collider", "Collider", "collider", emptyList(), "ColliderComponent", game, "ColliderComponent", enable, disabled,
-    )
+    private fun section(game: Boolean = false, enable: EnableToggle? = null, disabled: Boolean = false) =
+        Section(
+            "3.Collider",
+            "Collider",
+            "collider",
+            emptyList(),
+            "ColliderComponent",
+            game,
+            "ColliderComponent",
+            enable,
+            disabled,
+        )
 
-    private fun frame(model: Section, body: JComponent = JBLabel("body"), collapsed: Boolean = false,
-                      onCollapse: (Boolean) -> Unit = {}, onEnabled: ((Boolean) -> Unit)? = null) =
-        PropertySection(model, panelIcon("collider"), body, collapsed, onCollapse, onEnabled)
+    private fun frame(
+        model: Section,
+        body: JComponent = JBLabel("body"),
+        collapsed: Boolean = false,
+        onCollapse: (Boolean) -> Unit = {},
+        onEnabled: ((Boolean) -> Unit)? = null,
+    ) = PropertySection(model, panelIcon("collider"), body, collapsed, onCollapse, onEnabled)
 
     fun testASectionCollapsesAndExpandsAndReportsIt() {
         val states = mutableListOf<Boolean>()
@@ -80,15 +93,28 @@ class PropertySectionTest : BasePlatformTestCase() {
 
     fun testAnAccessibleNameDescribesTheChevronAndTheCheckBox() {
         val section = frame(section(enable = EnableToggle(true, EnabledTarget.Component(3L, "ColliderComponent"))))
-        assertEquals("Collapse Collider", find<JBLabel>(section, "section-chevron-3.Collider").accessibleContext.accessibleName)
+        assertEquals(
+            "Collapse Collider",
+            find<JBLabel>(section, "section-chevron-3.Collider").accessibleContext.accessibleName,
+        )
         assertEquals("Enable Collider", section.enabledBox!!.accessibleContext.accessibleName)
         section.setCollapsed(true)
-        assertEquals("Expand Collider", find<JBLabel>(section, "section-chevron-3.Collider").accessibleContext.accessibleName)
+        assertEquals(
+            "Expand Collider",
+            find<JBLabel>(section, "section-chevron-3.Collider").accessibleContext.accessibleName,
+        )
     }
 
     fun testTheEnabledBoxReflectsTheFlagAndReportsAChange() {
         val changes = mutableListOf<Boolean>()
-        val section = frame(section(enable = EnableToggle(false, EnabledTarget.Component(3L, "ColliderComponent")), disabled = true), onEnabled = { changes += it })
+        val section =
+            frame(
+                section(
+                    enable = EnableToggle(false, EnabledTarget.Component(3L, "ColliderComponent")),
+                    disabled = true,
+                ),
+                onEnabled = { changes += it },
+            )
         assertFalse(section.enabledBox!!.isSelected)
         section.enabledBox.doClick()
         assertEquals(listOf(true), changes)
@@ -119,11 +145,15 @@ class PropertySectionTest : BasePlatformTestCase() {
     // ---- header ----
 
     fun testTheHeaderShowsBreadcrumbTitleSubtitleAndBadges() {
-        val header = Header(
-            listOf("ControlLine.abss", "Field", "ecs"), "object", "Racer", "Entity 3 · OBJECT",
-            listOf(Badge(BadgeKind.READ_ONLY, "read-only"), Badge(BadgeKind.UNUSED, "no scene uses this")),
-            note = "Edits change every instance that uses this asset.",
-        )
+        val header =
+            Header(
+                listOf("ControlLine.abss", "Field", "ecs"),
+                "object",
+                "Racer",
+                "Entity 3 · OBJECT",
+                listOf(Badge(BadgeKind.READ_ONLY, "read-only"), Badge(BadgeKind.UNUSED, "no scene uses this")),
+                note = "Edits change every instance that uses this asset.",
+            )
         val view = HeaderPanel(header, panelIcon("object"))
         assertEquals("ControlLine.abss  ›  Field  ›  ecs", find<JBLabel>(view, "header-breadcrumb").text)
         assertEquals("Racer", find<JBLabel>(view, "header-title").text)
@@ -141,7 +171,14 @@ class PropertySectionTest : BasePlatformTestCase() {
     // ---- colors ----
 
     private fun luminance(c: Color): Double {
-        fun channel(v: Int): Double = (v / 255.0).let { if (it <= 0.03928) it / 12.92 else Math.pow((it + 0.055) / 1.055, 2.4) }
+        fun channel(v: Int): Double =
+            (v / 255.0).let {
+                if (it <= 0.03928) {
+                    it / 12.92
+                } else {
+                    Math.pow((it + 0.055) / 1.055, 2.4)
+                }
+            }
         return 0.2126 * channel(c.red) + 0.7152 * channel(c.green) + 0.0722 * channel(c.blue)
     }
 
@@ -151,7 +188,15 @@ class PropertySectionTest : BasePlatformTestCase() {
     }
 
     private fun rgb(name: String, dark: Boolean): Color =
-        DesignColors.PAIRS.getValue(name).let { Color(if (dark) it.second else it.first) }
+        DesignColors.PAIRS.getValue(name).let {
+            Color(
+                if (dark) {
+                    it.second
+                } else {
+                    it.first
+                }
+            )
+        }
 
     fun testLightColorPairsHaveFourAndAHalfToOneContrast() {
         val panel = Color(0xF7F8FA)

@@ -14,15 +14,15 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
+import java.awt.Color
+import java.awt.FlowLayout
+import javax.swing.BorderFactory
+import javax.swing.JPanel
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.NativeFileChanges
 import net.nevinsky.abyssus.plugin.dto.ProjectDto
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
-import java.awt.Color
-import java.awt.FlowLayout
-import javax.swing.BorderFactory
-import javax.swing.JPanel
 
 /** The numbers under the tree. */
 data class FooterCounts(val scenes: Int, val assets: Int, val unused: Int)
@@ -44,20 +44,23 @@ fun footerCounts(project: Project): FooterCounts {
             }
 
             is SceneDto -> scenes++
-            else -> if (file.extension == ProjectLayout.SCENE_EXTENSION) scenes++
+            else ->
+                if (file.extension == ProjectLayout.SCENE_EXTENSION) {
+                    scenes++
+                }
         }
     }
     return FooterCounts(scenes, assets, unused)
 }
 
 /** `N scenes · N assets · N unused` strip under the tree; recounts when scene, project or `meta.json` files change. */
-class AbyssusFooter(private val project: Project, private val parent: Disposable) : JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(16), JBUI.scale(5))) {
+class AbyssusFooter(private val project: Project, private val parent: Disposable) :
+    JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(16), JBUI.scale(5))) {
     private val scenes = JBLabel()
     private val assets = JBLabel()
     private val unused = JBLabel().apply { foreground = AMBER }
 
-    @Volatile
-    private var disposed = false
+    @Volatile private var disposed = false
 
     /** The counts currently shown; null until the first count arrives. */
     var counts: FooterCounts? = null
@@ -65,22 +68,29 @@ class AbyssusFooter(private val project: Project, private val parent: Disposable
 
     init {
         border = BorderFactory.createMatteBorder(1, 0, 0, 0, JBColor.border())
-        listOf(scenes, assets, unused).forEach { it.font = JBUI.Fonts.smallFont(); add(it) }
+        listOf(scenes, assets, unused).forEach {
+            it.font = JBUI.Fonts.smallFont()
+            add(it)
+        }
         scenes.foreground = SECONDARY
         assets.foreground = SECONDARY
         com.intellij.openapi.util.Disposer.register(parent, Disposable { disposed = true })
         project.getService(NativeFileChanges::class.java).subscribe(parent) { events ->
-            if (events.any { relevant(it) }) refresh()
+            if (events.any { relevant(it) }) {
+                refresh()
+            }
         }
         refresh()
     }
 
     /** The design's 28 px strip. */
-    override fun getPreferredSize(): java.awt.Dimension = super.getPreferredSize().also { it.height = JBUI.scale(FOOTER_HEIGHT) }
+    override fun getPreferredSize(): java.awt.Dimension =
+        super.getPreferredSize().also { it.height = JBUI.scale(FOOTER_HEIGHT) }
 
     private fun relevant(event: VFileEvent): Boolean {
         return net.nevinsky.abyssus.plugin.dto.isNativeDocumentPath(event.path) ||
-                event.file?.isDirectory == true || event.file == null
+            event.file?.isDirectory == true ||
+            event.file == null
     }
 
     /** Recounts in the background and shows the result; later requests replace earlier ones. */
@@ -88,7 +98,11 @@ class AbyssusFooter(private val project: Project, private val parent: Disposable
         ReadAction.nonBlocking<FooterCounts> { footerCounts(project) }
             .expireWith(parent)
             .coalesceBy(this)
-            .finishOnUiThread(ModalityState.any()) { if (!disposed) show(it) }
+            .finishOnUiThread(ModalityState.any()) {
+                if (!disposed) {
+                    show(it)
+                }
+            }
             .submit(AppExecutorUtil.getAppExecutorService())
     }
 

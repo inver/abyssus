@@ -67,7 +67,10 @@ interface RaySession : AutoCloseable {
     /** How many times this session built acceleration structures; transform-only updates must not increase it. */
     val geometryBuilds: Long get() = 0
 
-    /** Called when a submitted frame missed its completion deadline; sessions that track health mark themselves unusable. */
+    /**
+     * Called when a submitted frame missed its completion deadline; sessions that track health mark themselves
+     * unusable.
+     */
     fun reportStalled(reason: String) {}
     fun dispose()
     override fun close() = dispose()
@@ -107,7 +110,11 @@ class RayBackendProbe(
     override fun probe(): RayCapability = try {
         val caps = capabilities()
         val reason = caps.unavailableReason()
-        if (reason != null) RayCapability.Unavailable(reason) else RayCapability.Available(initialize(caps))
+        if (reason != null) {
+            RayCapability.Unavailable(reason)
+        } else {
+            RayCapability.Available(initialize(caps))
+        }
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (missing: UnsatisfiedLinkError) {

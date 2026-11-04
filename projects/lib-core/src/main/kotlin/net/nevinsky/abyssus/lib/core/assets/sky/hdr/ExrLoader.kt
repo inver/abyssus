@@ -5,14 +5,6 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import org.lwjgl.PointerBuffer
-import org.lwjgl.system.MemoryStack
-import org.lwjgl.system.MemoryUtil
-import org.lwjgl.util.tinyexr.EXRHeader
-import org.lwjgl.util.tinyexr.EXRImage
-import org.lwjgl.util.tinyexr.EXRVersion
-import org.lwjgl.util.tinyexr.TinyEXR
 import java.io.File
 import java.lang.Float
 import java.nio.FloatBuffer
@@ -28,6 +20,14 @@ import kotlin.intArrayOf
 import kotlin.takeIf
 import kotlin.to
 import kotlin.use
+import net.nevinsky.abyssus.lib.core.io.FileLoader
+import org.lwjgl.PointerBuffer
+import org.lwjgl.system.MemoryStack
+import org.lwjgl.system.MemoryUtil
+import org.lwjgl.util.tinyexr.EXRHeader
+import org.lwjgl.util.tinyexr.EXRImage
+import org.lwjgl.util.tinyexr.EXRVersion
+import org.lwjgl.util.tinyexr.TinyEXR
 
 /** The largest finite half float. */
 private const val MAX_HALF = 65504f
@@ -44,41 +44,44 @@ class ExrLoader(private val fileLoader: FileLoader) {
         decode(fileLoader.loadAssetFile(assetName, fileName), maxWidth)
 
     /**
-     * Decodes [file], halving it until it is at most [maxWidth] wide. Scanline and tiled (one level or mipmapped)
-     * files are read. Throws [IllegalStateException] ([ExrFormatException] for the image checks) for a file that is not a single-part OpenEXR image, has no colour
-     * channels or only subsampled ones, is not 2:1 or is over [MAX_HDR_HEIGHT] tall.
+     * Decodes [file], halving it until it is at most [maxWidth] wide. Scanline and tiled (one level or mipmapped) files
+     * are read. Throws [IllegalStateException] ([ExrFormatException] for the image checks) for a file that is not a
+     * single-part OpenEXR image, has no colour channels or only subsampled ones, is not 2:1 or is over [MAX_HDR_HEIGHT]
+     * tall.
      */
-    fun decode(file: File, maxWidth: Int = MAX_HDR_WIDTH): HdrImage = withHeader(file) { header, stack, error ->
-        if (header.tiled() && header.tile_level_mode() == TinyEXR.TINYEXR_TILE_RIPMAP_LEVELS) {
-            throw IllegalStateException("ripmapped EXR files are not supported")
-        }
-        // ask for floats whatever the file stores, so every channel is read the same way
-        for (c in 0 until header.num_channels()) {
-            header.requested_pixel_types().put(c, TinyEXR.TINYEXR_PIXELTYPE_FLOAT)
-        }
-        val channels = colourChannels(header)
-        val image = EXRImage.calloc(stack)
-        TinyEXR.InitEXRImage(image)
-        try {
-            if (TinyEXR.LoadEXRImageFromFile(image, header, file.absolutePath, error) != TinyEXR.TINYEXR_SUCCESS) {
-                throw IllegalStateException("EXR image error: ${message(error)}")
+    fun decode(file: File, maxWidth: Int = MAX_HDR_WIDTH): HdrImage =
+        withHeader(file) { header, stack, error ->
+            if (header.tiled() && header.tile_level_mode() == TinyEXR.TINYEXR_TILE_RIPMAP_LEVELS) {
+                throw IllegalStateException("ripmapped EXR files are not supported")
             }
-            convert(image, channels, maxWidth)
-        } finally {
-            TinyEXR.FreeEXRImage(image)
+            // ask for floats whatever the file stores, so every channel is read the same way
+            for (c in 0 until header.num_channels()) {
+                header.requested_pixel_types().put(c, TinyEXR.TINYEXR_PIXELTYPE_FLOAT)
+            }
+            val channels = colourChannels(header)
+            val image = EXRImage.calloc(stack)
+            TinyEXR.InitEXRImage(image)
+            try {
+                if (TinyEXR.LoadEXRImageFromFile(image, header, file.absolutePath, error) != TinyEXR.TINYEXR_SUCCESS) {
+                    throw IllegalStateException("EXR image error: ${message(error)}")
+                }
+                convert(image, channels, maxWidth)
+            } finally {
+                TinyEXR.FreeEXRImage(image)
+            }
         }
-    }
 
     /** Full image dimensions from the data window; reads no pixel data and allocates no image. */
-    fun dimensions(file: File): Pair<Int, Int> = withHeader(file) { header, _, _ ->
-        val window = header.data_window()
-        val width = window.max_x().toLong() - window.min_x() + 1
-        val height = window.max_y().toLong() - window.min_y() + 1
-        check(height in 1..MAX_HDR_HEIGHT.toLong() && width == height * 2) {
-            "Unsupported EXR dimensions: $width x $height"
+    fun dimensions(file: File): Pair<Int, Int> =
+        withHeader(file) { header, _, _ ->
+            val window = header.data_window()
+            val width = window.max_x().toLong() - window.min_x() + 1
+            val height = window.max_y().toLong() - window.min_y() + 1
+            check(height in 1..MAX_HDR_HEIGHT.toLong() && width == height * 2) {
+                "Unsupported EXR dimensions: $width x $height"
+            }
+            width.toInt() to height.toInt()
         }
-        width.toInt() to height.toInt()
-    }
 
     private fun <T> withHeader(file: File, read: (EXRHeader, MemoryStack, PointerBuffer) -> T): T {
         val path = file.absolutePath
@@ -87,7 +90,9 @@ class ExrLoader(private val fileLoader: FileLoader) {
             if (TinyEXR.ParseEXRVersionFromFile(version, path) != TinyEXR.TINYEXR_SUCCESS) {
                 throw IllegalStateException("not an OpenEXR image: ${file.name}")
             }
-            if (version.multipart()) throw IllegalStateException("multipart EXR files are not supported")
+            if (version.multipart()) {
+                throw IllegalStateException("multipart EXR files are not supported")
+            }
 
             val error = stack.callocPointer(1)
             val header = EXRHeader.calloc(stack)
@@ -116,13 +121,22 @@ class ExrLoader(private val fileLoader: FileLoader) {
         val r = find("R")
         val g = find("G")
         val b = find("B")
-        val channels = if (r >= 0 && g >= 0 && b >= 0) {
-            intArrayOf(r, g, b)
-        } else {
-            val gray = find("Y").takeIf { it >= 0 } ?: if (names.size == 1) 0 else -1
-            if (gray < 0) throw IllegalStateException("EXR has no R, G and B channels (found ${names.joinToString()})")
-            intArrayOf(gray, gray, gray)
-        }
+        val channels =
+            if (r >= 0 && g >= 0 && b >= 0) {
+                intArrayOf(r, g, b)
+            } else {
+                val gray =
+                    find("Y").takeIf { it >= 0 }
+                        ?: if (names.size == 1) {
+                            0
+                        } else {
+                            -1
+                        }
+                if (gray < 0) {
+                    throw IllegalStateException("EXR has no R, G and B channels (found ${names.joinToString()})")
+                }
+                intArrayOf(gray, gray, gray)
+            }
         for (c in channels) {
             if (infos.get(c).x_sampling() != 1 || infos.get(c).y_sampling() != 1) {
                 throw IllegalStateException("subsampled channel '${names[c]}' is not supported")
@@ -142,7 +156,9 @@ class ExrLoader(private val fileLoader: FileLoader) {
             throw IllegalStateException("$width x $height is not a 2:1 equirectangular image")
         }
         if (height > MAX_HDR_HEIGHT) {
-            throw IllegalStateException("image too large: $width x $height, at most ${MAX_HDR_HEIGHT * 2} x ${MAX_HDR_HEIGHT}")
+            throw IllegalStateException(
+                "image too large: $width x $height, at most ${MAX_HDR_HEIGHT * 2} x ${MAX_HDR_HEIGHT}"
+            )
         }
         var factor = 1
         while (width / factor > maxWidth && height / factor > 1) factor *= 2
@@ -176,7 +192,9 @@ class ExrLoader(private val fileLoader: FileLoader) {
             for (i in 0 until image.num_tiles()) {
                 tiles.position(i)
                 // a mipmapped file lists every level; level 0 is the full-size image
-                if (tiles.level_x() != 0 || tiles.level_y() != 0) continue
+                if (tiles.level_x() != 0 || tiles.level_y() != 0) {
+                    continue
+                }
                 val planes = tiles.images(image.num_channels())
                 val w = tiles.width()
                 val h = tiles.height()
@@ -187,7 +205,7 @@ class ExrLoader(private val fileLoader: FileLoader) {
                         tiles.offset_x(),
                         tiles.offset_y(),
                         w,
-                        h
+                        h,
                     )
                 }
             }
@@ -200,7 +218,7 @@ class ExrLoader(private val fileLoader: FileLoader) {
                     0,
                     0,
                     width,
-                    height
+                    height,
                 )
             }
         }
@@ -212,7 +230,9 @@ class ExrLoader(private val fileLoader: FileLoader) {
 
     private fun message(error: PointerBuffer): String {
         val ptr = error.get(0)
-        if (ptr == 0L) return "unknown error"
+        if (ptr == 0L) {
+            return "unknown error"
+        }
         return try {
             MemoryUtil.memUTF8(ptr)
         } finally {

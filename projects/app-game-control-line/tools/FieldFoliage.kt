@@ -7,10 +7,10 @@
 package net.nevinsky.abyssus.app.game.controlline.tools
 
 import com.badlogic.gdx.files.FileHandle
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.graphics.VertexAttributes
-import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNodePart
 import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
@@ -22,38 +22,6 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
-import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageBakeState
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageCopy
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDataFile
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageFingerprint
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerKind
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerMeta
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLoader
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMaskFile
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageModelMeta
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageRuntimeLoad
-import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageScale
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
-import net.nevinsky.abyssus.lib.core.dto.entityWriter
-import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_COPY_LIMIT
-import net.nevinsky.abyssus.lib.core.editor.foliage.ScatterOutcome
-import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageScatter
-import net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEdit
-import net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEditing
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriter
-import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.gdx.model.ModelData
-import net.nevinsky.abyssus.lib.gdx.model.ModelMesh
-import net.nevinsky.abyssus.lib.gdx.model.ModelMeshPart
-import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
-import org.slf4j.helpers.NOPLogger
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.File
@@ -71,6 +39,38 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageBakeState
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageCopy
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDataFile
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageFingerprint
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerKind
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerMeta
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLoader
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMaskFile
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageModelMeta
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageRuntimeLoad
+import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageScale
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
+import net.nevinsky.abyssus.lib.core.dto.entityWriter
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
+import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_COPY_LIMIT
+import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageScatter
+import net.nevinsky.abyssus.lib.core.editor.foliage.ScatterOutcome
+import net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEdit
+import net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEditing
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriter
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
+import net.nevinsky.abyssus.lib.gdx.model.ModelData
+import net.nevinsky.abyssus.lib.gdx.model.ModelMesh
+import net.nevinsky.abyssus.lib.gdx.model.ModelMeshPart
+import net.nevinsky.abyssus.lib.gdx.model.PbrModelMaterial
+import org.slf4j.helpers.NOPLogger
 
 /*
  * Migrates the bundled Control Line field's 215 trees and bushes to two native foliage assets and adds generated grass.
@@ -83,7 +83,8 @@ import kotlin.math.sqrt
  * migrated one, writes byte-identical files. All outputs are staged and checked first; nothing is published when a
  * check fails, and a project whose vegetation or the rest of whose scene differs from the manifest is refused.
  *
- * GL-free. Run it on a copy first: `./gradlew :app-game-control-line:generateFieldFoliage -PfieldFoliageProject=<copy>`.
+ * GL-free. Run it on a copy first: `./gradlew :app-game-control-line:generateFieldFoliage
+ * -PfieldFoliageProject=<copy>`.
  */
 fun main(args: Array<String>) {
     require(args.size == 3 && args[0] in setOf("record", "generate")) {
@@ -123,20 +124,37 @@ const val FIELD_GRASS_BASE_WEIGHT = 0.6f
 /** Each species' copies per terrain must land within this share of the recorded count. */
 const val FIELD_COUNT_TOLERANCE = 0.25
 
-private val SPECIES = listOf(
-    "model_airfield_tree_broadleaf", "model_airfield_tree_young", "model_airfield_tree_acacia",
-    "model_airfield_bush_tall", "model_airfield_bush_low",
-)
+private val SPECIES =
+    listOf(
+        "model_airfield_tree_broadleaf",
+        "model_airfield_tree_young",
+        "model_airfield_tree_acacia",
+        "model_airfield_bush_tall",
+        "model_airfield_bush_low",
+    )
 
 /** One terrain of the field and the foliage asset it carries. */
 data class FieldTerrain(
-    val entity: Int, val asset: String, val foliage: String, val originX: Float, val originZ: Float, val size: Int,
-    val maskResolution: Int, val sigma: Float,
+    val entity: Int,
+    val asset: String,
+    val foliage: String,
+    val originX: Float,
+    val originZ: Float,
+    val size: Int,
+    val maskResolution: Int,
+    val sigma: Float,
 )
 
 /** One recorded tree or bush: where it stood (world), how it was turned and scaled, and the terrain it belongs to. */
 data class FieldInstance(
-    val id: Int, val model: String, val x: Float, val y: Float, val z: Float, val yaw: Float, val scale: Float, val terrain: Int,
+    val id: Int,
+    val model: String,
+    val x: Float,
+    val y: Float,
+    val z: Float,
+    val yaw: Float,
+    val scale: Float,
+    val terrain: Int,
 )
 
 /** The recorded source of a migration. */
@@ -157,17 +175,33 @@ class FieldManifest(
         val root = n.objectNode()
         root.put("format", MANIFEST_FORMAT)
         root.put("version", 1)
-        root.putObject("generator").put("id", FIELD_FOLIAGE_GENERATOR).put("seed", FIELD_FOLIAGE_SEED).put("assetTime", FIELD_FOLIAGE_TIME)
-        root.putObject("source")
-            .put("scene", "scenes/Field.scene").put("sceneSha256", sceneSha256)
-            .put("vegetationSha256", vegetationSha256).put("restSha256", restSha256)
+        root
+            .putObject("generator")
+            .put("id", FIELD_FOLIAGE_GENERATOR)
+            .put("seed", FIELD_FOLIAGE_SEED)
+            .put("assetTime", FIELD_FOLIAGE_TIME)
+        root
+            .putObject("source")
+            .put("scene", "scenes/Field.scene")
+            .put("sceneSha256", sceneSha256)
+            .put("vegetationSha256", vegetationSha256)
+            .put("restSha256", restSha256)
         root.putObject("pilot").put("x", pilotX).put("z", pilotZ)
-        root.set<ObjectNode>("inputs", n.objectNode().also { o -> inputs.toSortedMap().forEach { (k, v) -> o.put(k, v) } })
+        root.set<ObjectNode>(
+            "inputs",
+            n.objectNode().also { o -> inputs.toSortedMap().forEach { (k, v) -> o.put(k, v) } },
+        )
         val terrainsNode = root.putArray("terrains")
-        for (t in terrains) terrainsNode.addObject()
-            .put("entity", t.entity).put("asset", t.asset).put("foliage", t.foliage)
-            .put("originX", t.originX).put("originZ", t.originZ).put("size", t.size)
-            .put("maskResolution", t.maskResolution).put("sigma", t.sigma)
+        for (t in terrains) terrainsNode
+            .addObject()
+            .put("entity", t.entity)
+            .put("asset", t.asset)
+            .put("foliage", t.foliage)
+            .put("originX", t.originX)
+            .put("originZ", t.originZ)
+            .put("size", t.size)
+            .put("maskResolution", t.maskResolution)
+            .put("sigma", t.sigma)
         val species = root.putArray("species")
         for (model in SPECIES) {
             val row = species.addObject().put("model", model).put("total", instances.count { it.model == model })
@@ -175,8 +209,16 @@ class FieldManifest(
             for (t in terrains) per.put(t.entity.toString(), countOf(model, t.entity))
         }
         val list = root.putArray("instances")
-        for (i in instances.sortedBy { it.id }) list.addArray()
-            .add(i.id).add(i.model.removePrefix("model_airfield_")).add(i.x).add(i.y).add(i.z).add(i.yaw).add(i.scale).add(i.terrain)
+        for (i in instances.sortedBy { it.id }) list
+            .addArray()
+            .add(i.id)
+            .add(i.model.removePrefix("model_airfield_"))
+            .add(i.x)
+            .add(i.y)
+            .add(i.z)
+            .add(i.yaw)
+            .add(i.scale)
+            .add(i.terrain)
         return root
     }
 
@@ -185,18 +227,33 @@ class FieldManifest(
             require(root["format"]?.asText() == MANIFEST_FORMAT) { "not a field foliage manifest" }
             val source = root["source"]
             return FieldManifest(
-                source["sceneSha256"].asText(), source["vegetationSha256"].asText(), source["restSha256"].asText(),
-                root["pilot"]["x"].floatValue(), root["pilot"]["z"].floatValue(),
+                source["sceneSha256"].asText(),
+                source["vegetationSha256"].asText(),
+                source["restSha256"].asText(),
+                root["pilot"]["x"].floatValue(),
+                root["pilot"]["z"].floatValue(),
                 root["terrains"].map {
                     FieldTerrain(
-                        it["entity"].asInt(), it["asset"].asText(), it["foliage"].asText(), it["originX"].floatValue(),
-                        it["originZ"].floatValue(), it["size"].asInt(), it["maskResolution"].asInt(), it["sigma"].floatValue(),
+                        it["entity"].asInt(),
+                        it["asset"].asText(),
+                        it["foliage"].asText(),
+                        it["originX"].floatValue(),
+                        it["originZ"].floatValue(),
+                        it["size"].asInt(),
+                        it["maskResolution"].asInt(),
+                        it["sigma"].floatValue(),
                     )
                 },
                 root["instances"].map {
                     FieldInstance(
-                        it[0].asInt(), "model_airfield_" + it[1].asText(), it[2].floatValue(), it[3].floatValue(),
-                        it[4].floatValue(), it[5].floatValue(), it[6].floatValue(), it[7].asInt(),
+                        it[0].asInt(),
+                        "model_airfield_" + it[1].asText(),
+                        it[2].floatValue(),
+                        it[3].floatValue(),
+                        it[4].floatValue(),
+                        it[5].floatValue(),
+                        it[6].floatValue(),
+                        it[7].asInt(),
                     )
                 },
                 root["inputs"].properties().associate { it.key to it.value.asText() },
@@ -213,7 +270,9 @@ class MigrationFailure(message: String) : RuntimeException(message)
 
 /** What [FieldFoliageTool.generate] did. */
 class FieldMigration(val removedEntities: Int, val written: List<String>, val sceneChanged: Boolean) {
-    override fun toString() = "removed $removedEntities entities; wrote ${written.size} files; scene ${if (sceneChanged) "edited" else "unchanged"}"
+    override fun toString() =
+        "removed $removedEntities entities; wrote ${written.size} files; scene ${when { sceneChanged -> "edited"
+ else -> "unchanged" }}"
 }
 
 class FieldFoliageTool {
@@ -230,7 +289,9 @@ class FieldFoliageTool {
         val manifest = recordFrom(project, sceneText)
         val text = json.pretty(manifest.toJson())
         if (manifestFile.exists() && manifestFile.readText() != text) {
-            throw MigrationConflict("${manifestFile.path} already records a different source; the manifest is immutable")
+            throw MigrationConflict(
+                "${manifestFile.path} already records a different source; the manifest is immutable"
+            )
         }
         manifestFile.parentFile?.mkdirs()
         manifestFile.writeText(text)
@@ -245,14 +306,26 @@ class FieldFoliageTool {
             spec.copy(originX = position["x"].floatValue(), originZ = position["z"].floatValue(), size = size)
         }
         val site = specs.first()
-        val instances = entities.entries.mapNotNull { (id, e) -> instanceOf(id.toInt(), e) }.sortedBy { it.id }
-            .map { it.copy(terrain = terrainOf(it, site)) }
-        val pilot = entities.values.firstOrNull { it["components"].has("PilotComponent") }
-            ?.get("components")?.get("PositionComponent")?.get("localPosition")
+        val instances =
+            entities.entries
+                .mapNotNull { (id, e) -> instanceOf(id.toInt(), e) }
+                .sortedBy { it.id }
+                .map { it.copy(terrain = terrainOf(it, site)) }
+        val pilot =
+            entities.values
+                .firstOrNull { it["components"].has("PilotComponent") }
+                ?.get("components")
+                ?.get("PositionComponent")
+                ?.get("localPosition")
         return FieldManifest(
-            sha.of(sceneText.toByteArray()), vegetationHash(instances), restHash(entities, instances.map { it.id }.toSet()),
-            pilot?.get("x")?.floatValue() ?: 0f, pilot?.get("z")?.floatValue() ?: 0f,
-            specs, instances, inputHashes(project, specs),
+            sha.of(sceneText.toByteArray()),
+            vegetationHash(instances),
+            restHash(entities, instances.map { it.id }.toSet()),
+            pilot?.get("x")?.floatValue() ?: 0f,
+            pilot?.get("z")?.floatValue() ?: 0f,
+            specs,
+            instances,
+            inputHashes(project, specs),
         )
     }
 
@@ -262,31 +335,66 @@ class FieldFoliageTool {
     private fun instanceOf(id: Int, entity: JsonNode): FieldInstance? {
         val render = entity["components"]["RenderComponent"] ?: return null
         val model = render["assetName"]?.asText() ?: return null
-        if (render["type"]?.asText() != "MODEL" || model !in SPECIES) return null
+        if (render["type"]?.asText() != "MODEL" || model !in SPECIES) {
+            return null
+        }
         val position = entity["components"]["PositionComponent"]
         val at = position["localPosition"]
         val r = position["localRotation"]
-        val yaw = if (r == null) 0f else Quaternion(
-            r["x"].floatValue(), r["y"].floatValue(), r["z"].floatValue(), r["w"].floatValue(),
-        ).getYawRad()
+        val yaw =
+            if (r == null) {
+                0f
+            } else {
+                Quaternion(
+                        r["x"].floatValue(),
+                        r["y"].floatValue(),
+                        r["z"].floatValue(),
+                        r["w"].floatValue(),
+                    )
+                    .getYawRad()
+            }
         val scale = position["localScale"]?.get("x")?.floatValue() ?: 1f
-        return FieldInstance(id, model, at["x"].floatValue(), at["y"].floatValue(), at["z"].floatValue(), yaw, scale, -1)
+        return FieldInstance(
+            id,
+            model,
+            at["x"].floatValue(),
+            at["y"].floatValue(),
+            at["z"].floatValue(),
+            yaw,
+            scale,
+            -1,
+        )
     }
 
     /** The terrain entity a world point belongs to: the site's square, else the outer ground. */
     private fun terrainOf(i: FieldInstance, site: FieldTerrain): Int {
-        val inside = i.x >= site.originX && i.x <= site.originX + site.size && i.z >= site.originZ && i.z <= site.originZ + site.size
-        return if (inside) FIELD_TERRAINS[0].entity else FIELD_TERRAINS[1].entity
+        val inside =
+            i.x >= site.originX &&
+                i.x <= site.originX + site.size &&
+                i.z >= site.originZ &&
+                i.z <= site.originZ + site.size
+        return if (inside) {
+            FIELD_TERRAINS[0].entity
+        } else {
+            FIELD_TERRAINS[1].entity
+        }
     }
 
     private fun vegetationHash(instances: List<FieldInstance>): String =
-        sha.of(instances.sortedBy { it.id }.joinToString("\n") { "${it.id}|${it.model}|${it.x}|${it.y}|${it.z}|${it.yaw}|${it.scale}" }.toByteArray())
+        sha.of(
+            instances
+                .sortedBy { it.id }
+                .joinToString("\n") { "${it.id}|${it.model}|${it.x}|${it.y}|${it.z}|${it.yaw}|${it.scale}" }
+                .toByteArray()
+        )
 
     /** SHA-256 of every entity but the vegetation, with the foliage components a migration adds left out. */
     private fun restHash(entities: Map<String, JsonNode>, vegetation: Set<Int>): String {
         val text = StringBuilder()
         for ((id, entity) in entities.entries.sortedBy { it.key.toInt() }) {
-            if (id.toInt() in vegetation) continue
+            if (id.toInt() in vegetation) {
+                continue
+            }
             val copy = entity.deepCopy<JsonNode>()
             (copy["components"] as? ObjectNode)?.remove("FoliageComponent")
             text.append(id).append(':').append(json.toString(copy)).append('\n')
@@ -309,8 +417,8 @@ class FieldFoliageTool {
     // ---- migrating ----
 
     /**
-     * Migrates [project] in place from [manifestFile]: stages and checks the grass model, the two foliage assets and the
-     * scene edit, then publishes them. The project may be the original one or an already migrated one.
+     * Migrates [project] in place from [manifestFile]: stages and checks the grass model, the two foliage assets and
+     * the scene edit, then publishes them. The project may be the original one or an already migrated one.
      */
     fun generate(project: File, manifestFile: File): FieldMigration {
         val manifest = FieldManifest.fromJson(json.readObject(manifestFile.readText()))
@@ -329,11 +437,16 @@ class FieldFoliageTool {
                 val target = File(project, "assets/$name")
                 target.deleteRecursively()
                 File(stage, "assets/$name").copyRecursively(target)
-                File(stage, "assets/$name").walkTopDown().filter { it.isFile }.sorted()
+                File(stage, "assets/$name")
+                    .walkTopDown()
+                    .filter { it.isFile }
+                    .sorted()
                     .forEach { written += it.relativeTo(File(stage, "assets")).path }
             }
             val changed = edited != sceneText
-            if (changed) sceneFile.writeText(edited)
+            if (changed) {
+                sceneFile.writeText(edited)
+            }
             val removed = manifest.instances.count { it.id.toString() in entities }
             return FieldMigration(removed, written, changed)
         } finally {
@@ -343,28 +456,41 @@ class FieldFoliageTool {
 
     /**
      * Refuses a project whose vegetation, rest of scene or inputs differ from what the manifest recorded. The rest of
-     * the scene is checked only while the scene still holds the recorded vegetation, that is while it is being migrated:
-     * a migrated scene belongs to the editor again, so what is authored in it after the migration is left alone.
+     * the scene is checked only while the scene still holds the recorded vegetation, that is while it is being
+     * migrated: a migrated scene belongs to the editor again, so what is authored in it after the migration is left
+     * alone.
      */
     private fun checkSource(project: File, manifest: FieldManifest, entities: Map<String, JsonNode>) {
         val ids = manifest.instances.map { it.id }
         val present = ids.filter { it.toString() in entities }
         if (present.isNotEmpty()) {
             if (present.size != ids.size) {
-                throw MigrationConflict("${present.size} of the ${ids.size} recorded trees and bushes are in the scene: it was edited since the manifest was recorded")
+                throw MigrationConflict(
+                    "${present.size} of the ${ids.size} recorded trees and bushes are in the scene: it was edited " +
+                        "since the manifest was recorded"
+                )
             }
-            val now = entities.entries.mapNotNull { (id, e) -> instanceOf(id.toInt(), e) }.filter { it.id in ids }
-                .map { it.copy(terrain = manifest.instances.first { m -> m.id == it.id }.terrain) }
+            val now =
+                entities.entries
+                    .mapNotNull { (id, e) -> instanceOf(id.toInt(), e) }
+                    .filter { it.id in ids }
+                    .map { it.copy(terrain = manifest.instances.first { m -> m.id == it.id }.terrain) }
             if (vegetationHash(now) != manifest.vegetationSha256) {
-                throw MigrationConflict("the trees and bushes of the scene differ from the manifest: re-record it from the original scene")
+                throw MigrationConflict(
+                    "the trees and bushes of the scene differ from the manifest: re-record it from the original scene"
+                )
             }
             if (restHash(entities, ids.toSet()) != manifest.restSha256) {
-                throw MigrationConflict("the rest of the scene differs from the manifest: re-record it from the original scene")
+                throw MigrationConflict(
+                    "the rest of the scene differs from the manifest: re-record it from the original scene"
+                )
             }
         }
         for ((path, hash) in manifest.inputs) {
             val file = File(project, path)
-            if (!file.isFile || sha.of(file.readBytes()) != hash) throw MigrationConflict("$path differs from the manifest")
+            if (!file.isFile || sha.of(file.readBytes()) != hash) {
+                throw MigrationConflict("$path differs from the manifest")
+            }
         }
     }
 
@@ -376,15 +502,18 @@ class FieldFoliageTool {
             text = applied(editing.removeEntities(text, ids), text)
         }
         for (t in manifest.terrains) text = applied(editing.setFoliage(text, t.entity.toLong(), t.foliage), text)
-        editing.validate(text, DocumentKind.SCENE)?.let { throw MigrationFailure("the edited scene is not valid: ${it.message}") }
+        editing.validate(text, DocumentKind.SCENE)?.let {
+            throw MigrationFailure("the edited scene is not valid: ${it.message}")
+        }
         return text
     }
 
-    private fun applied(edit: HeadlessEdit, current: String): String = when (edit) {
-        is HeadlessEdit.Edited -> edit.text
-        HeadlessEdit.Unchanged -> current
-        is HeadlessEdit.Refused -> throw MigrationConflict("the scene edit was refused: ${edit.refusal.message}")
-    }
+    private fun applied(edit: HeadlessEdit, current: String): String =
+        when (edit) {
+            is HeadlessEdit.Edited -> edit.text
+            HeadlessEdit.Unchanged -> current
+            is HeadlessEdit.Refused -> throw MigrationConflict("the scene edit was refused: ${edit.refusal.message}")
+        }
 
     // ---- staging ----
 
@@ -394,7 +523,8 @@ class FieldFoliageTool {
         val models = Crowns(project)
         // the terrains the foliage stands on, as the loaders will read them
         val staging = File(stage, "project")
-        for (t in manifest.terrains) File(project, "assets/${t.asset}").copyRecursively(File(staging, "assets/${t.asset}"))
+        for (t in manifest.terrains) File(project, "assets/${t.asset}")
+            .copyRecursively(File(staging, "assets/${t.asset}"))
         // only the models' metas: the runtime read checks that a layer's model exists, and nothing else of it
         for (model in SPECIES) File(project, "assets/$model/meta.json").copyTo(File(staging, "assets/$model/meta.json"))
         val files = FileLoader(staging)
@@ -412,10 +542,14 @@ class FieldFoliageTool {
             val layers = ArrayList<StagedLayer>()
             for ((index, model) in SPECIES.withIndex()) {
                 val points = manifest.instances.filter { it.model == model && it.terrain == t.entity }
-                if (points.isEmpty()) continue
+                if (points.isEmpty()) {
+                    continue
+                }
                 layers += fitSpecies(manifest, t, data, index + 1, model, points, models.radius(model))
             }
-            if (t === site) layers += fitGrass(manifest, t, data, splat, grassRadius)
+            if (t === site) {
+                layers += fitGrass(manifest, t, data, splat, grassRadius)
+            }
             writeFoliage(File(assets, t.foliage), t, data, layers, manifest)
             validate(manifest, t, File(assets, t.foliage), staging, layers, models, grassRadius)
         }
@@ -423,8 +557,13 @@ class FieldFoliageTool {
     }
 
     private fun fitSpecies(
-        manifest: FieldManifest, t: FieldTerrain, terrain: TerrainData, id: Int, model: String,
-        points: List<FieldInstance>, crown: Float,
+        manifest: FieldManifest,
+        t: FieldTerrain,
+        terrain: TerrainData,
+        id: Int,
+        model: String,
+        points: List<FieldInstance>,
+        crown: Float,
     ): StagedLayer {
         val scales = points.map { it.scale }
         val scale = FoliageScale(scales.min(), scales.max())
@@ -433,33 +572,68 @@ class FieldFoliageTool {
         val step = t.size / (t.maskResolution - 1f)
         for (margin in listOf(1.5f, 3f, 6f)) {
             val mask = speciesMask(manifest, t, local, clear + margin * step, margin * step)
-            val layer = fit("${t.asset}/$id", terrain, t, id, model, FoliageLayerKind.OBJECT, 0f, scale, 0f, mask, points.size)
-            if (layer != null && clearOfPilot(manifest, t, layer, clear - 0f) && (t.entity == FIELD_TERRAINS[0].entity || outsideSite(manifest, t, layer))) {
+            val layer =
+                fit("${t.asset}/$id", terrain, t, id, model, FoliageLayerKind.OBJECT, 0f, scale, 0f, mask, points.size)
+            if (
+                layer != null &&
+                    clearOfPilot(manifest, t, layer, clear - 0f) &&
+                    (t.entity == FIELD_TERRAINS[0].entity || outsideSite(manifest, t, layer))
+            ) {
                 return layer
             }
         }
-        throw MigrationFailure("${t.foliage}: cannot fit ${points.size} ${model.removePrefix("model_airfield_")} copies within ${(FIELD_COUNT_TOLERANCE * 100).toInt()}% outside the clear area")
+        throw MigrationFailure(
+            "${t.foliage}: cannot fit ${points.size} ${model.removePrefix("model_airfield_")} copies within " +
+                "${(FIELD_COUNT_TOLERANCE * 100).toInt()}% outside the clear area"
+        )
     }
 
-    private fun fitGrass(manifest: FieldManifest, t: FieldTerrain, terrain: TerrainData, splat: Splat, footprint: Float): StagedLayer {
+    private fun fitGrass(
+        manifest: FieldManifest,
+        t: FieldTerrain,
+        terrain: TerrainData,
+        splat: Splat,
+        footprint: Float,
+    ): StagedLayer {
         val scale = FoliageScale(0.8f, 1.4f)
         val clear = FIELD_GRASS_CLEAR_RADIUS + footprint * scale.max
         val step = t.size / (t.maskResolution - 1f)
         for (margin in listOf(1.5f, 3f, 6f)) {
             val mask = grassMask(manifest, t, splat, clear + margin * step)
-            val layer = fit(
-                "${t.asset}/grass", terrain, t, GRASS_LAYER, GRASS_MODEL, FoliageLayerKind.DETAIL, 1f, scale, 60f, mask, GRASS_TARGET,
-                fixedCells = GRASS_CELLS,
-            )
-            if (layer != null && clearOfPilot(manifest, t, layer, clear)) return layer
+            val layer =
+                fit(
+                    "${t.asset}/grass",
+                    terrain,
+                    t,
+                    GRASS_LAYER,
+                    GRASS_MODEL,
+                    FoliageLayerKind.DETAIL,
+                    1f,
+                    scale,
+                    60f,
+                    mask,
+                    GRASS_TARGET,
+                    fixedCells = GRASS_CELLS,
+                )
+            if (layer != null && clearOfPilot(manifest, t, layer, clear)) {
+                return layer
+            }
         }
-        throw MigrationFailure("${t.foliage}: grass cannot keep ${FIELD_GRASS_CLEAR_RADIUS.toInt()} m clear of the pilot")
+        throw MigrationFailure(
+            "${t.foliage}: grass cannot keep ${FIELD_GRASS_CLEAR_RADIUS.toInt()} m clear of the pilot"
+        )
     }
 
     // ---- masks ----
 
     /** Soft blobs of [sigma] around the recorded positions, zero inside [clear] of the pilot and under the site. */
-    private fun speciesMask(manifest: FieldManifest, t: FieldTerrain, points: List<Pair<Float, Float>>, clear: Float, margin: Float): ByteArray {
+    private fun speciesMask(
+        manifest: FieldManifest,
+        t: FieldTerrain,
+        points: List<Pair<Float, Float>>,
+        clear: Float,
+        margin: Float,
+    ): ByteArray {
         val res = t.maskResolution
         val step = t.size / (res - 1f)
         val site = manifest.terrains.first()
@@ -470,16 +644,26 @@ class FieldFoliageTool {
             val lz = j * step
             val wx = t.originX + lx
             val wz = t.originZ + lz
-            if (hypot(wx - manifest.pilotX, wz - manifest.pilotZ) < clear) continue
+            if (hypot(wx - manifest.pilotX, wz - manifest.pilotZ) < clear) {
+                continue
+            }
             // the outer ground keeps clear of everything the site square covers, texel support included
-            if (t !== site && wx > site.originX - margin - step && wx < site.originX + site.size + margin + step &&
-                wz > site.originZ - margin - step && wz < site.originZ + site.size + margin + step
-            ) continue
+            if (
+                t !== site &&
+                    wx > site.originX - margin - step &&
+                    wx < site.originX + site.size + margin + step &&
+                    wz > site.originZ - margin - step &&
+                    wz < site.originZ + site.size + margin + step
+            ) {
+                continue
+            }
             var v = 0f
             for ((px, pz) in points) {
                 val dx = lx - px
                 val dz = lz - pz
-                if (abs(dx) > reach || abs(dz) > reach) continue
+                if (abs(dx) > reach || abs(dz) > reach) {
+                    continue
+                }
                 v = max(v, exp(-(dx * dx + dz * dz) / (2f * t.sigma * t.sigma)))
             }
             mask[j * res + i] = (255f * v).roundToInt().coerceIn(0, 255).toByte()
@@ -495,11 +679,14 @@ class FieldFoliageTool {
         for (j in 0 until res) for (i in 0 until res) {
             val lx = i * step
             val lz = j * step
-            if (hypot(t.originX + lx - manifest.pilotX, t.originZ + lz - manifest.pilotZ) < clear) continue
+            if (hypot(t.originX + lx - manifest.pilotX, t.originZ + lz - manifest.pilotZ) < clear) {
+                continue
+            }
             // the worst of the texel's neighbourhood, so a bilinear mask never leaks onto hard ground
             var weight = 1f
             for (dz in -1..1) for (dx in -1..1) {
-                weight = min(weight, splat.baseWeight((lx + dx * step * 0.5f) / t.size, (lz + dz * step * 0.5f) / t.size))
+                weight =
+                    min(weight, splat.baseWeight((lx + dx * step * 0.5f) / t.size, (lz + dz * step * 0.5f) / t.size))
             }
             val v = ((weight - FIELD_GRASS_BASE_WEIGHT) / 0.3f).coerceIn(0f, 1f)
             mask[j * res + i] = (255f * v).roundToInt().toByte()
@@ -515,20 +702,41 @@ class FieldFoliageTool {
      * pick equal values. Null when no trial lands within [FIELD_COUNT_TOLERANCE] of the target.
      */
     private fun fit(
-        key: String, terrain: TerrainData, t: FieldTerrain, id: Int, model: String, kind: FoliageLayerKind, align: Float,
-        scale: FoliageScale, drawDistance: Float, mask: ByteArray, target: Int, fixedCells: Int? = null,
+        key: String,
+        terrain: TerrainData,
+        t: FieldTerrain,
+        id: Int,
+        model: String,
+        kind: FoliageLayerKind,
+        align: Float,
+        scale: FoliageScale,
+        drawDistance: Float,
+        mask: ByteArray,
+        target: Int,
+        fixedCells: Int? = null,
     ): StagedLayer? {
         val coverage = mask.sumOf { it.toInt() and 0xFF } / 255.0 / mask.size
-        if (coverage <= 0.0) return null
+        if (coverage <= 0.0) {
+            return null
+        }
         val scatter = FoliageScatter(FoliageFingerprint())
-        val base = FoliageLayerMeta(
-            id = id, kind = kind.name, models = listOf(FoliageModelMeta(model, 1f)), scale = scale,
-            alignToNormal = align, drawDistance = drawDistance,
-        )
+        val base =
+            FoliageLayerMeta(
+                id = id,
+                kind = kind.name,
+                models = listOf(FoliageModelMeta(model, 1f)),
+                scale = scale,
+                alignToNormal = align,
+                drawDistance = drawDistance,
+            )
 
         fun trial(cells: Int, seed: Int): ScatterOutcome {
             val layer = base.copy(density = densityOf(cells, t.size), seed = seed)
-            return scatter.scatter(terrain, FoliageMeta(terrain = t.asset, maskResolution = t.maskResolution, layers = listOf(layer)), mapOf(id to mask))
+            return scatter.scatter(
+                terrain,
+                FoliageMeta(terrain = t.asset, maskResolution = t.maskResolution, layers = listOf(layer)),
+                mapOf(id to mask),
+            )
         }
 
         val seed0 = ((FIELD_FOLIAGE_SEED xor key.hashCode().toLong()) and 0x7fffffffL).toInt()
@@ -536,9 +744,14 @@ class FieldFoliageTool {
         fun consider(cells: Int, seed: Int): Int {
             val count = trial(cells, seed).counts[id] ?: 0
             val current = best
-            val better = current == null || abs(count - target) < abs(current.third - target) ||
-                abs(count - target) == abs(current.third - target) && (cells < current.first || cells == current.first && seed < current.second)
-            if (better) best = Triple(cells, seed, count)
+            val better =
+                current == null ||
+                    abs(count - target) < abs(current.third - target) ||
+                    abs(count - target) == abs(current.third - target) &&
+                        (cells < current.first || cells == current.first && seed < current.second)
+            if (better) {
+                best = Triple(cells, seed, count)
+            }
             return count
         }
 
@@ -548,12 +761,19 @@ class FieldFoliageTool {
             var cells = max(1, sqrt(target / coverage).roundToInt())
             repeat(6) { // the keep rate drifts with the jitter: aim again from the last count
                 val count = consider(cells, seed0)
-                if (count > 0) cells = max(1, (cells * sqrt(target.toDouble() / count)).roundToInt())
+                if (count > 0) {
+                    cells = max(1, (cells * sqrt(target.toDouble() / count)).roundToInt())
+                }
             }
-            for (candidate in max(1, cells - 4)..cells + 4) for (offset in 0 until 6) consider(candidate, seed0 + offset)
+            for (candidate in max(1, cells - 4)..cells + 4) for (offset in 0 until 6) consider(
+                candidate,
+                seed0 + offset,
+            )
         }
         val (cells, seed, count) = best ?: return null
-        if (fixedCells == null && abs(count - target) > FIELD_COUNT_TOLERANCE * target) return null
+        if (fixedCells == null && abs(count - target) > FIELD_COUNT_TOLERANCE * target) {
+            return null
+        }
         val copies = trial(cells, seed).bake.layers.single().chunks.flatten()
         return StagedLayer(base.copy(density = densityOf(cells, t.size), seed = seed), mask, count, copies)
     }
@@ -564,7 +784,10 @@ class FieldFoliageTool {
         return (side * side).toFloat()
     }
 
-    /** Whether every copy of [layer] stands at least [radius] (plus its own scaled crown, already in the caller's radius) from the pilot. */
+    /**
+     * Whether every copy of [layer] stands at least [radius] (plus its own scaled crown, already in the caller's
+     * radius) from the pilot.
+     */
     private fun clearOfPilot(manifest: FieldManifest, t: FieldTerrain, layer: StagedLayer, radius: Float): Boolean =
         layer.copies.all { hypot(t.originX + it.x - manifest.pilotX, t.originZ + it.z - manifest.pilotZ) >= radius }
 
@@ -580,10 +803,21 @@ class FieldFoliageTool {
 
     // ---- writing ----
 
-    private class StagedLayer(val meta: FoliageLayerMeta, val mask: ByteArray, val fitted: Int, val copies: List<FoliageCopy>)
+    private class StagedLayer(
+        val meta: FoliageLayerMeta,
+        val mask: ByteArray,
+        val fitted: Int,
+        val copies: List<FoliageCopy>,
+    )
 
     /** The meta, masks, bake and provenance of one foliage asset. */
-    private fun writeFoliage(dir: File, t: FieldTerrain, terrain: TerrainData, layers: List<StagedLayer>, manifest: FieldManifest) {
+    private fun writeFoliage(
+        dir: File,
+        t: FieldTerrain,
+        terrain: TerrainData,
+        layers: List<StagedLayer>,
+        manifest: FieldManifest,
+    ) {
         dir.mkdirs()
         val meta = FoliageMeta(terrain = t.asset, maskResolution = t.maskResolution, layers = layers.map { it.meta })
         File(dir, "meta.json").writeText(json.pretty(metaNode(t.foliage, meta)))
@@ -594,11 +828,14 @@ class FieldFoliageTool {
         dir.copyRecursively(File(staging, "assets/${t.foliage}"), overwrite = true)
         val files = FileLoader(staging)
         val metas = AssetMetaLoader(JsonProcessor(NOPLogger.NOP_LOGGER), files)
-        val prepared = checkNotNull(FoliageLoader(files, metas, TerrainLoader(files, metas)).prepare(t.foliage)?.staged) {
-            "${t.foliage} cannot be read back"
-        }
+        val prepared =
+            checkNotNull(FoliageLoader(files, metas, TerrainLoader(files, metas)).prepare(t.foliage)?.staged) {
+                "${t.foliage} cannot be read back"
+            }
         val outcome = FoliageScatter(FoliageFingerprint()).scatter(prepared.terrain!!, prepared.meta, prepared.masks)
-        if (outcome.refusal != null) throw MigrationFailure("${t.foliage} is over a foliage limit: ${outcome.refusal}")
+        if (outcome.refusal != null) {
+            throw MigrationFailure("${t.foliage} is over a foliage limit: ${outcome.refusal}")
+        }
         File(dir, "foliage.data").writeBytes(FoliageDataFile().write(outcome.bake))
         File(dir, "source.json").writeText(json.pretty(sourceNode(t, manifest, layers)))
         File(staging, "assets/${t.foliage}").deleteRecursively()
@@ -619,7 +856,9 @@ class FieldFoliageTool {
             node.put("density", layer.density)
             node.putObject("scale").put("min", layer.scale.min).put("max", layer.scale.max)
             node.put("alignToNormal", layer.alignToNormal)
-            if (layer.layerIsDetail()) node.put("drawDistance", layer.drawDistance)
+            if (layer.layerIsDetail()) {
+                node.put("drawDistance", layer.drawDistance)
+            }
             node.put("seed", layer.seed)
         }
         return root
@@ -629,9 +868,16 @@ class FieldFoliageTool {
 
     private fun sourceNode(t: FieldTerrain, manifest: FieldManifest, layers: List<StagedLayer>): ObjectNode {
         val root = JsonNodeFactory.instance.objectNode()
-        root.put("generator", "tools/FieldFoliage.kt").put("generatorId", FIELD_FOLIAGE_GENERATOR).put("seed", FIELD_FOLIAGE_SEED)
+        root
+            .put("generator", "tools/FieldFoliage.kt")
+            .put("generatorId", FIELD_FOLIAGE_GENERATOR)
+            .put("seed", FIELD_FOLIAGE_SEED)
         root.put("license", "CC0-1.0").put("manifest", "environment/foliage-manifest.json")
-        root.put("note", "Generated from the recorded placements of the field's trees and bushes; edit the layers in Abyssus and Re-bake.")
+        root.put(
+            "note",
+            "Generated from the recorded placements of the field's trees and bushes; edit the layers in Abyssus and " +
+                "Re-bake.",
+        )
         root.put("terrainEntity", t.entity)
         val counts = root.putObject("fitted")
         for (layer in layers) counts.put(layer.meta.models.single().asset, layer.fitted)
@@ -647,16 +893,26 @@ class FieldFoliageTool {
     private fun writeGrass(dir: File) {
         File(dir, "textures").mkdirs()
         ImageIO.write(grassTexture(), "png", File(dir, "textures/grass.png"))
-        File(dir, "model.glb").writeBytes(
-            GltfWriter().write(grassModel(), mapOf("textures/grass.png" to "textures/grass.png"), FIELD_FOLIAGE_GENERATOR),
-        )
+        File(dir, "model.glb")
+            .writeBytes(
+                GltfWriter()
+                    .write(grassModel(), mapOf("textures/grass.png" to "textures/grass.png"), FIELD_FOLIAGE_GENERATOR)
+            )
         val meta = JsonNodeFactory.instance.objectNode()
         meta.put("format", "abyssus").put("formatVersion", 1).put("version", 1).put("lastModified", FIELD_FOLIAGE_TIME)
         meta.put("uuid", uuidOf(GRASS_MODEL)).put("type", "MODEL")
-        meta.putObject("additional").put("file", "model.glb").put("format", "GLTF").put("binary", true).putArray("materials")
+        meta
+            .putObject("additional")
+            .put("file", "model.glb")
+            .put("format", "GLTF")
+            .put("binary", true)
+            .putArray("materials")
         File(dir, "meta.json").writeText(json.pretty(meta))
         val source = JsonNodeFactory.instance.objectNode()
-        source.put("generator", "tools/FieldFoliage.kt").put("generatorId", FIELD_FOLIAGE_GENERATOR).put("license", "CC0-1.0")
+        source
+            .put("generator", "tools/FieldFoliage.kt")
+            .put("generatorId", FIELD_FOLIAGE_GENERATOR)
+            .put("license", "CC0-1.0")
         source.put("note", "Three crossed quads with a procedurally drawn blade texture; no outside material.")
         File(dir, "source.json").writeText(json.pretty(source))
     }
@@ -673,26 +929,62 @@ class FieldFoliageTool {
             val dz = kotlin.math.sin(angle) * width / 2f
             val base = k * 4
             // x y z, normal (up, so a clump is lit like the ground), u v
-            for ((cx, cz, cy, u, v) in listOf(
-                listOf(-dx, -dz, 0f, 0f, 1f), listOf(dx, dz, 0f, 1f, 1f), listOf(dx, dz, height, 1f, 0f), listOf(-dx, -dz, height, 0f, 0f),
-            )) vertices += listOf(cx, cy, cz, 0f, 1f, 0f, u, v)
+            for ((cx, cz, cy, u, v) in
+                listOf(
+                    listOf(-dx, -dz, 0f, 0f, 1f),
+                    listOf(dx, dz, 0f, 1f, 1f),
+                    listOf(dx, dz, height, 1f, 0f),
+                    listOf(-dx, -dz, height, 0f, 0f),
+                )) vertices += listOf(cx, cy, cz, 0f, 1f, 0f, u, v)
             indices += listOf(base, base + 1, base + 2, base, base + 2, base + 3)
         }
-        data.addMesh(ModelMesh().apply {
-            id = "grass_mesh"
-            attributes = arrayOf(VertexAttribute.Position(), VertexAttribute.Normal(), VertexAttribute.TexCoords(0))
-            this.vertices = vertices.toFloatArray()
-            parts = arrayOf(ModelMeshPart().apply { id = "grass_part"; this.indices = indices.toIntArray(); primitiveType = GL20.GL_TRIANGLES })
-        })
-        data.materials.add(PbrModelMaterial().apply {
-            id = "grass"; baseColor = Color.WHITE; metallic = 0f; roughness = 1f
-            alphaMode = PbrModelMaterial.AlphaMode.MASK; alphaCutoff = 0.5f; doubleSided = true
-            textures = GdxArray<ModelTexture>().apply { add(ModelTexture().apply { usage = ModelTexture.USAGE_DIFFUSE; fileName = "textures/grass.png" }) }
-        })
-        data.nodes.add(ModelNode().apply {
-            id = "Grass"
-            parts = arrayOf(ModelNodePart().apply { meshPartId = "grass_part"; materialId = "grass" })
-        })
+        data.addMesh(
+            ModelMesh().apply {
+                id = "grass_mesh"
+                attributes = arrayOf(VertexAttribute.Position(), VertexAttribute.Normal(), VertexAttribute.TexCoords(0))
+                this.vertices = vertices.toFloatArray()
+                parts =
+                    arrayOf(
+                        ModelMeshPart().apply {
+                            id = "grass_part"
+                            this.indices = indices.toIntArray()
+                            primitiveType = GL20.GL_TRIANGLES
+                        }
+                    )
+            }
+        )
+        data.materials.add(
+            PbrModelMaterial().apply {
+                id = "grass"
+                baseColor = Color.WHITE
+                metallic = 0f
+                roughness = 1f
+                alphaMode = PbrModelMaterial.AlphaMode.MASK
+                alphaCutoff = 0.5f
+                doubleSided = true
+                textures =
+                    GdxArray<ModelTexture>().apply {
+                        add(
+                            ModelTexture().apply {
+                                usage = ModelTexture.USAGE_DIFFUSE
+                                fileName = "textures/grass.png"
+                            }
+                        )
+                    }
+            }
+        )
+        data.nodes.add(
+            ModelNode().apply {
+                id = "Grass"
+                parts =
+                    arrayOf(
+                        ModelNodePart().apply {
+                            meshPartId = "grass_part"
+                            materialId = "grass"
+                        }
+                    )
+            }
+        )
         return data
     }
 
@@ -724,36 +1016,79 @@ class FieldFoliageTool {
 
     /** Reads [dir] back through the runtime loaders and checks counts, formats and the clear areas. */
     private fun validate(
-        manifest: FieldManifest, t: FieldTerrain, dir: File, staging: File, layers: List<StagedLayer>, crowns: Crowns, grassRadius: Float,
+        manifest: FieldManifest,
+        t: FieldTerrain,
+        dir: File,
+        staging: File,
+        layers: List<StagedLayer>,
+        crowns: Crowns,
+        grassRadius: Float,
     ) {
         dir.copyRecursively(File(staging, "assets/${t.foliage}"), overwrite = true)
         val files = FileLoader(staging)
         val metas = AssetMetaLoader(JsonProcessor(NOPLogger.NOP_LOGGER), files)
         val read = FoliageRuntimeLoad(files, metas, TerrainLoader(files, metas)).read(t.foliage)
         val foliage = read.foliage ?: throw MigrationFailure("${t.foliage} cannot be read back: ${read.warnings}")
-        if (read.warnings.isNotEmpty()) throw MigrationFailure("${t.foliage}: ${read.warnings}")
-        if (foliage.state != FoliageBakeState.MATCHING) throw MigrationFailure("${t.foliage}: the bake does not match its inputs")
-        editing.validate(File(dir, "meta.json").readText(), DocumentKind.ASSET)?.let { throw MigrationFailure("${t.foliage}/meta.json: ${it.message}") }
+        if (read.warnings.isNotEmpty()) {
+            throw MigrationFailure("${t.foliage}: ${read.warnings}")
+        }
+        if (foliage.state != FoliageBakeState.MATCHING) {
+            throw MigrationFailure("${t.foliage}: the bake does not match its inputs")
+        }
+        editing.validate(File(dir, "meta.json").readText(), DocumentKind.ASSET)?.let {
+            throw MigrationFailure("${t.foliage}/meta.json: ${it.message}")
+        }
         val bakeFile = File(dir, "foliage.data")
-        val bake = FoliageDataFile().read(bakeFile.readBytes()) ?: throw MigrationFailure("${t.foliage}/foliage.data is not a readable bake")
-        if (bake.copyCount > FOLIAGE_COPY_LIMIT) throw MigrationFailure("${t.foliage} is over the copy limit")
+        val bake =
+            FoliageDataFile().read(bakeFile.readBytes())
+                ?: throw MigrationFailure("${t.foliage}/foliage.data is not a readable bake")
+        if (bake.copyCount > FOLIAGE_COPY_LIMIT) {
+            throw MigrationFailure("${t.foliage} is over the copy limit")
+        }
         val site = manifest.terrains.first()
         for (layer in layers) {
             val baked = bake.layers.first { it.id == layer.meta.id }
             val model = layer.meta.models.single().asset
-            val target = if (model == GRASS_MODEL) null else manifest.countOf(model, t.entity)
+            val target =
+                if (model == GRASS_MODEL) {
+                    null
+                } else {
+                    manifest.countOf(model, t.entity)
+                }
             if (target != null && abs(baked.copyCount - target) > FIELD_COUNT_TOLERANCE * target) {
-                throw MigrationFailure("${t.foliage}: ${baked.copyCount} copies of ${model.removePrefix("model_airfield_")} against ${target} recorded")
+                throw MigrationFailure(
+                    "${t.foliage}: ${baked.copyCount} copies of ${model.removePrefix("model_airfield_")} against " +
+                        "${target} recorded"
+                )
             }
-            val crown = if (model == GRASS_MODEL) grassRadius else crowns.radius(model)
-            val clear = if (model == GRASS_MODEL) FIELD_GRASS_CLEAR_RADIUS else FIELD_CLEAR_RADIUS
+            val crown =
+                if (model == GRASS_MODEL) {
+                    grassRadius
+                } else {
+                    crowns.radius(model)
+                }
+            val clear =
+                if (model == GRASS_MODEL) {
+                    FIELD_GRASS_CLEAR_RADIUS
+                } else {
+                    FIELD_CLEAR_RADIUS
+                }
             for (copy in baked.chunks.flatten()) {
                 val wx = t.originX + copy.x
                 val wz = t.originZ + copy.z
                 if (hypot(wx - manifest.pilotX, wz - manifest.pilotZ) < clear + crown * copy.scale) {
-                    throw MigrationFailure("${t.foliage}: a ${model.removePrefix("model_airfield_")} copy reaches inside ${clear.toInt()} m of the pilot")
+                    throw MigrationFailure(
+                        "${t.foliage}: a ${model.removePrefix("model_airfield_")} copy reaches inside " +
+                            "${clear.toInt()} m of the pilot"
+                    )
                 }
-                if (t !== site && wx >= site.originX && wx <= site.originX + site.size && wz >= site.originZ && wz <= site.originZ + site.size) {
+                if (
+                    t !== site &&
+                        wx >= site.originX &&
+                        wx <= site.originX + site.size &&
+                        wz >= site.originZ &&
+                        wz <= site.originZ + site.size
+                ) {
                     throw MigrationFailure("${t.foliage}: a copy stands under the site terrain")
                 }
             }
@@ -763,27 +1098,36 @@ class FieldFoliageTool {
     // ---- scene reading ----
 
     private fun entitiesOf(sceneText: String): Map<String, JsonNode> {
-        val entities = json.readObject(sceneText).get("ecs")?.takeIf { it.isObject } ?: throw MigrationConflict("the scene has no entities")
+        val entities =
+            json.readObject(sceneText).get("ecs")?.takeIf { it.isObject }
+                ?: throw MigrationConflict("the scene has no entities")
         return entities.properties().associate { it.key to it.value }
     }
 
     private companion object {
         const val SCENE = "scenes/Field.scene"
 
-        /** The grass is a fixed 150 by 150 cell grid (about 0.25 copies per square metre); the mask decides where it stands. */
+        /**
+         * The grass is a fixed 150 by 150 cell grid (about 0.25 copies per square metre); the mask decides where it
+         * stands.
+         */
         const val GRASS_CELLS = 150
         const val GRASS_TARGET = 1
     }
 }
 
-/** The terrains of the field with the fixed settings of their foliage assets (origin and size are read from the scene). */
-val FIELD_TERRAINS = listOf(
-    FieldTerrain(0, "terrain_airfield_site", "foliage_airfield_site", 0f, 0f, 0, 128, 9f),
-    FieldTerrain(300, "terrain_airfield_outer", "foliage_airfield_outer", 0f, 0f, 0, 128, 22f),
-)
+/**
+ * The terrains of the field with the fixed settings of their foliage assets (origin and size are read from the scene).
+ */
+val FIELD_TERRAINS =
+    listOf(
+        FieldTerrain(0, "terrain_airfield_site", "foliage_airfield_site", 0f, 0f, 0, 128, 9f),
+        FieldTerrain(300, "terrain_airfield_outer", "foliage_airfield_outer", 0f, 0f, 0, 128, 22f),
+    )
 
 private class HexSha {
-    fun of(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+    fun of(bytes: ByteArray): String =
+        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 }
 
 /** The ground-plane reach of model crowns, from the model files: the largest horizontal distance of any vertex. */
@@ -796,24 +1140,37 @@ private class Crowns(private val project: File) {
         val data = AssimpModelLoader().loadData(FileHandle(glb))
         var reach = 0f
         fun visit(node: ModelNode, parent: Matrix4) {
-            val world = Matrix4(parent).mul(
-                Matrix4().set(node.translation ?: Vector3.Zero, node.rotation ?: Quaternion(), node.scale ?: Vector3(1f, 1f, 1f)),
-            )
+            val world =
+                Matrix4(parent)
+                    .mul(
+                        Matrix4()
+                            .set(
+                                node.translation ?: Vector3.Zero,
+                                node.rotation ?: Quaternion(),
+                                node.scale ?: Vector3(1f, 1f, 1f),
+                            )
+                    )
             for (part in node.parts.orEmpty()) {
                 val mesh = data.meshes.firstOrNull { m -> m.parts.any { it.id == part.meshPartId } } ?: continue
                 val stride = mesh.attributes.sumOf { it.numComponents }
                 var at = 0
                 var position = -1
                 for (a in mesh.attributes) {
-                    if (a.usage == VertexAttributes.Usage.Position) position = at
+                    if (a.usage == VertexAttributes.Usage.Position) {
+                        position = at
+                    }
                     at += a.numComponents
                 }
-                if (position < 0 || stride == 0) continue
+                if (position < 0 || stride == 0) {
+                    continue
+                }
                 val used = mesh.parts.first { it.id == part.meshPartId }.indices.distinct()
                 val v = Vector3()
                 for (i in used) {
                     val o = i * stride + position
-                    if (o + 2 >= mesh.vertices.size) continue
+                    if (o + 2 >= mesh.vertices.size) {
+                        continue
+                    }
                     v.set(mesh.vertices[o], mesh.vertices[o + 1], mesh.vertices[o + 2]).mul(world)
                     reach = max(reach, hypot(v.x, v.z))
                 }
@@ -825,13 +1182,18 @@ private class Crowns(private val project: File) {
     }
 }
 
-/** The site's splat map: R compacted dirt (paths too), G asphalt, B ballast, A concrete, blended over the base in turn. */
+/**
+ * The site's splat map: R compacted dirt (paths too), G asphalt, B ballast, A concrete, blended over the base in turn.
+ */
 private class Splat(file: File) {
     private val image: BufferedImage = ImageIO.read(file)
     private val width = image.width
     private val height = image.height
 
-    /** How much of the base ground survives the sequential blend `mix(color, layer, channel)` at ([u], [v]) of the terrain. */
+    /**
+     * How much of the base ground survives the sequential blend `mix(color, layer, channel)` at ([u], [v]) of the
+     * terrain.
+     */
     fun baseWeight(u: Float, v: Float): Float {
         val r = channel(u, v, 16)
         val g = channel(u, v, 8)

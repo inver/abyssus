@@ -14,7 +14,7 @@ enum class SplatImageProblem { NOT_PNG, UNREADABLE, NOT_RGBA8, NOT_SQUARE, TOO_S
 
 /** A splat image that cannot be painted, with what the reader found ([detail]: the sides, say). */
 class SplatImageException(val problem: SplatImageProblem, val detail: String = "") :
-    Exception("${problem.name}${if (detail.isEmpty()) "" else ": $detail"}")
+    Exception("${problem.name}${when { detail.isEmpty() -> ""; else -> ": $detail" }}")
 
 /** The pixels of a splat map: [side] by [side] texels of non-premultiplied RGBA, row after row. */
 class SplatPixels(val side: Int, val rgba: ByteArray) {
@@ -30,7 +30,9 @@ class SplatPixels(val side: Int, val rgba: ByteArray) {
  * with the host, because this module has no AWT.
  */
 interface SplatImageCodec {
-    /** Decodes [bytes] of the file [fileName]; throws [SplatImageException] with the reason when it cannot be painted. */
+    /**
+     * Decodes [bytes] of the file [fileName]; throws [SplatImageException] with the reason when it cannot be painted.
+     */
     fun decode(fileName: String, bytes: ByteArray): SplatPixels
 
     /** Encodes [pixels] as an 8-bit RGBA PNG; the colour values are written as they are. */

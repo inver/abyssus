@@ -11,6 +11,14 @@ import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
 import com.badlogic.gdx.utils.Array
 import com.fasterxml.jackson.databind.ObjectMapper
+import java.io.File
+import java.io.IOException
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.file.Files
+import javax.imageio.ImageIO
+import javax.xml.stream.XMLStreamException
+import net.nevinsky.abyssus.lib.core.util.sha256Hex
 import net.nevinsky.abyssus.lib.gdx.assimp.AssimpFlags
 import net.nevinsky.abyssus.lib.gdx.assimp.AssimpImportException
 import net.nevinsky.abyssus.lib.gdx.assimp.AssimpModelDataLoader
@@ -18,16 +26,8 @@ import net.nevinsky.abyssus.lib.gdx.assimp.ColladaAsset
 import net.nevinsky.abyssus.lib.gdx.assimp.LeftOut
 import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import net.nevinsky.abyssus.lib.gdx.gltf.PhongToPbr
-import net.nevinsky.abyssus.lib.gdx.model.VertexLayout
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
-import java.io.File
-import java.io.IOException
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.file.Files
-import net.nevinsky.abyssus.lib.core.util.sha256Hex
-import javax.imageio.ImageIO
-import javax.xml.stream.XMLStreamException
+import net.nevinsky.abyssus.lib.gdx.model.VertexLayout
 
 /** A source cannot be imported; [message] is the reason. */
 class ModelImportException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
@@ -74,11 +74,11 @@ data class SourceFrame(val unit: LengthUnit?, val upAxis: UpAxis?, val origin: F
 data class AnimationInfo(val name: String, val seconds: Float)
 
 /**
- * A source model file, read once. [data] is the model as the import writes it before the transform: Assimp's view
- * of the file without any unit or axis applied (`normalize = false`), with materials mapped to metallic-roughness,
- * unused materials dropped, skin weights summing to 1, and missing or unreadable texture slots cleared. It is not
- * changed afterwards; [ImportTransform] wraps it rather than modify it, so a preview may draw it while a new
- * transform is computed.
+ * A source model file, read once. [data] is the model as the import writes it before the transform: Assimp's view of
+ * the file without any unit or axis applied (`normalize = false`), with materials mapped to metallic-roughness, unused
+ * materials dropped, skin weights summing to 1, and missing or unreadable texture slots cleared. It is not changed
+ * afterwards; [ImportTransform] wraps it rather than modify it, so a preview may draw it while a new transform is
+ * computed.
  *
  * Embedded textures (FBX, GLB, glTF data URIs) are extracted into a temp folder that [close] deletes; nothing is
  * written next to the source.
@@ -91,8 +91,9 @@ class ModelSource(
     phongToPbr: PhongToPbr = PhongToPbr(),
     cancel: () -> Unit = {},
 ) : AutoCloseable {
-    val format: SourceFormat = sourceFormatOf(file.name)
-        ?: throw ModelImportException("${file.name} is not an OBJ, FBX, 3DS, DAE, glTF or GLB file")
+    val format: SourceFormat =
+        sourceFormatOf(file.name)
+            ?: throw ModelImportException("${file.name} is not an OBJ, FBX, 3DS, DAE, glTF or GLB file")
     val sha256: String
     val frame: SourceFrame
     val data: ModelData
@@ -107,35 +108,48 @@ class ModelSource(
         try {
             cancel()
             sha256 = sha256(file)
-            val loaded = try {
-                loader.loadScene(file.name, FileHandle(file), AssimpFlags.DEFAULT, FileHandle(embeddedDir))
-            } catch (e: AssimpImportException) {
-                throw ModelImportException(e.message ?: "the file could not be read", e)
-            }
+            val loaded =
+                try {
+                    loader.loadScene(file.name, FileHandle(file), AssimpFlags.DEFAULT, FileHandle(embeddedDir))
+                } catch (e: AssimpImportException) {
+                    throw ModelImportException(e.message ?: "the file could not be read", e)
+                }
             cancel()
             data = loaded.data
-            if (data.meshes.isEmpty) throw ModelImportException("${file.name} holds no triangle geometry")
-
-            frame = when (format) {
-                SourceFormat.FBX -> SourceFrame(lengthUnitOf(loaded.stated.unitMetres), loaded.stated.upAxis, FrameOrigin.FILE)
-                SourceFormat.DAE -> try {
-                    collada.read(file).let { SourceFrame(lengthUnitOf(it.unitMetres), it.upAxis, FrameOrigin.FILE) }
-                } catch (e: XMLStreamException) {
-                    SourceFrame(null, null, FrameOrigin.FILE)
-                }
-                SourceFormat.GLTF, SourceFormat.GLB -> SourceFrame(LengthUnit.M, UpAxis.Y, FrameOrigin.FORMAT)
-                SourceFormat.THREE_DS -> SourceFrame(LengthUnit.M, UpAxis.Z, FrameOrigin.FORMAT)
-                SourceFormat.OBJ -> SourceFrame(null, null, FrameOrigin.FILE)
+            if (data.meshes.isEmpty) {
+                throw ModelImportException("${file.name} holds no triangle geometry")
             }
+
+            frame =
+                when (format) {
+                    SourceFormat.FBX ->
+                        SourceFrame(lengthUnitOf(loaded.stated.unitMetres), loaded.stated.upAxis, FrameOrigin.FILE)
+                    SourceFormat.DAE ->
+                        try {
+                            collada.read(file).let {
+                                SourceFrame(lengthUnitOf(it.unitMetres), it.upAxis, FrameOrigin.FILE)
+                            }
+                        } catch (e: XMLStreamException) {
+                            SourceFrame(null, null, FrameOrigin.FILE)
+                        }
+                    SourceFormat.GLTF,
+                    SourceFormat.GLB -> SourceFrame(LengthUnit.M, UpAxis.Y, FrameOrigin.FORMAT)
+                    SourceFormat.THREE_DS -> SourceFrame(LengthUnit.M, UpAxis.Z, FrameOrigin.FORMAT)
+                    SourceFormat.OBJ -> SourceFrame(null, null, FrameOrigin.FILE)
+                }
 
             val left = ArrayList<LeftOutItem>()
             for (item in loaded.leftOut) {
-                left += LeftOutItem(item.item, when (item.kind) {
-                    LeftOut.Kind.CAMERA -> LeftOutReason.CAMERA
-                    LeftOut.Kind.LIGHT -> LeftOutReason.LIGHT
-                    LeftOut.Kind.NON_TRIANGLE_MESH -> LeftOutReason.POINTS_OR_LINES
-                    LeftOut.Kind.MORPH_TARGETS -> LeftOutReason.MORPH_TARGETS
-                })
+                left +=
+                    LeftOutItem(
+                        item.item,
+                        when (item.kind) {
+                            LeftOut.Kind.CAMERA -> LeftOutReason.CAMERA
+                            LeftOut.Kind.LIGHT -> LeftOutReason.LIGHT
+                            LeftOut.Kind.NON_TRIANGLE_MESH -> LeftOutReason.POINTS_OR_LINES
+                            LeftOut.Kind.MORPH_TARGETS -> LeftOutReason.MORPH_TARGETS
+                        },
+                    )
             }
             if (format == SourceFormat.GLTF || format == SourceFormat.GLB) {
                 gltfExtensions(file, format, mapper).forEach { left += LeftOutItem(it, LeftOutReason.GLTF_EXTENSION) }
@@ -145,22 +159,27 @@ class ModelSource(
             keepUsedMaterials(data)
             for (i in 0 until data.materials.size) {
                 val converted = phongToPbr.convert(data.materials[i])
-                converted.approximated.forEach { approximated += ApproximatedItem(data.materials[i].id ?: "material $i", it) }
+                converted.approximated.forEach {
+                    approximated += ApproximatedItem(data.materials[i].id ?: "material $i", it)
+                }
                 data.materials[i] = converted.material
             }
             left += clearUnusableTextures(data)
             normalizeWeights(data)
 
-            animations = data.animations.map { animation ->
-                val end = animation.nodeAnimations?.maxOfOrNull { a ->
-                    listOfNotNull(
-                        a.translation?.maxOfOrNull { it?.keytime ?: 0f },
-                        a.rotation?.maxOfOrNull { it?.keytime ?: 0f },
-                        a.scaling?.maxOfOrNull { it?.keytime ?: 0f },
-                    ).maxOrNull() ?: 0f
-                } ?: 0f
-                AnimationInfo(animation.id ?: "", end)
-            }
+            animations =
+                data.animations.map { animation ->
+                    val end =
+                        animation.nodeAnimations?.maxOfOrNull { a ->
+                            listOfNotNull(
+                                    a.translation?.maxOfOrNull { it?.keytime ?: 0f },
+                                    a.rotation?.maxOfOrNull { it?.keytime ?: 0f },
+                                    a.scaling?.maxOfOrNull { it?.keytime ?: 0f },
+                                )
+                                .maxOrNull() ?: 0f
+                        } ?: 0f
+                    AnimationInfo(animation.id ?: "", end)
+                }
             this.leftOut = left.distinct()
             this.approximated = approximated.distinct()
         } catch (e: Throwable) {
@@ -183,23 +202,30 @@ class ModelSource(
 
     /** The `extensionsUsed` of a glTF file or of a GLB's JSON chunk; Assimp drops the ones it doesn't know silently. */
     private fun gltfExtensions(file: File, format: SourceFormat, mapper: ObjectMapper): List<String> {
-        val json = try {
-            if (format == SourceFormat.GLTF) {
-                mapper.readTree(file)
-            } else {
-                val header = ByteArray(20)
-                file.inputStream().use { input ->
-                    if (input.readNBytes(header, 0, 20) < 20) return emptyList()
-                    val b = ByteBuffer.wrap(header).order(ByteOrder.LITTLE_ENDIAN)
-                    if (b.getInt(0) != 0x46546C67 || b.getInt(16) != 0x4E4F534A) return emptyList()
-                    val length = b.getInt(12)
-                    if (length <= 0 || length > file.length()) return emptyList()
-                    mapper.readTree(input.readNBytes(length))
+        val json =
+            try {
+                if (format == SourceFormat.GLTF) {
+                    mapper.readTree(file)
+                } else {
+                    val header = ByteArray(20)
+                    file.inputStream().use { input ->
+                        if (input.readNBytes(header, 0, 20) < 20) {
+                            return emptyList()
+                        }
+                        val b = ByteBuffer.wrap(header).order(ByteOrder.LITTLE_ENDIAN)
+                        if (b.getInt(0) != 0x46546C67 || b.getInt(16) != 0x4E4F534A) {
+                            return emptyList()
+                        }
+                        val length = b.getInt(12)
+                        if (length <= 0 || length > file.length()) {
+                            return emptyList()
+                        }
+                        mapper.readTree(input.readNBytes(length))
+                    }
                 }
+            } catch (e: IOException) {
+                return emptyList()
             }
-        } catch (e: IOException) {
-            return emptyList()
-        }
         return json?.get("extensionsUsed")?.mapNotNull { it.textValue() }.orEmpty().sorted()
     }
 
@@ -226,7 +252,11 @@ class ModelSource(
             for (texture in textures) {
                 val name = texture.fileName ?: continue
                 val reason = verdicts.getOrPut(name) { textureProblem(File(name)) }
-                if (reason == null) kept.add(texture) else result += LeftOutItem(File(name).name, reason)
+                if (reason == null) {
+                    kept.add(texture)
+                } else {
+                    result += LeftOutItem(File(name).name, reason)
+                }
             }
             material.textures = kept
         }
@@ -234,10 +264,16 @@ class ModelSource(
     }
 
     private fun textureProblem(file: File): LeftOutReason? {
-        if (!file.isFile) return LeftOutReason.MISSING
+        if (!file.isFile) {
+            return LeftOutReason.MISSING
+        }
         return try {
             ImageIO.createImageInputStream(file).use { stream ->
-                if (stream != null && ImageIO.getImageReaders(stream).hasNext()) null else LeftOutReason.UNSUPPORTED_TEXTURE
+                if (stream != null && ImageIO.getImageReaders(stream).hasNext()) {
+                    null
+                } else {
+                    LeftOutReason.UNSUPPORTED_TEXTURE
+                }
             }
         } catch (e: IOException) {
             LeftOutReason.UNSUPPORTED_TEXTURE
@@ -253,7 +289,9 @@ class ModelSource(
             val layout = VertexLayout(mesh)
             val stride = layout.stride
             val offsets = layout.offsetsOf(VertexAttributes.Usage.BoneWeight)
-            if (offsets.isEmpty() || stride == 0) continue
+            if (offsets.isEmpty() || stride == 0) {
+                continue
+            }
             val v = mesh.vertices
             for (base in 0 until v.size / stride * stride step stride) {
                 var sum = 0f
@@ -277,5 +315,6 @@ class ModelSourceOpener(
     private val phongToPbr: PhongToPbr = PhongToPbr(),
 ) {
     /** @throws ModelImportException with the reason when the file cannot be imported */
-    fun open(file: File, cancel: () -> Unit = {}): ModelSource = ModelSource(file, loader, collada, mapper, phongToPbr, cancel)
+    fun open(file: File, cancel: () -> Unit = {}): ModelSource =
+        ModelSource(file, loader, collada, mapper, phongToPbr, cancel)
 }

@@ -52,7 +52,8 @@ class MirroredCameraTest {
     @Test fun theFrustumIsTheMirroredViewsSoCullingMatchesWhatIsDrawn() {
         val mirrored = MirroredCamera(main(), 0f)
         // the main camera looks down at the origin; through the mirror it looks up at its reflection below the plane
-        assertTrue("a point above the plane that the mirror shows is inside the frustum", mirrored.frustum.pointInFrustum(Vector3(0f, 1f, 0f)))
+        assertTrue("a point above the plane that the mirror shows is inside the frustum",
+            mirrored.frustum.pointInFrustum(Vector3(0f, 1f, 0f)))
         assertFalse("a point behind the mirrored camera is not", mirrored.frustum.pointInFrustum(Vector3(5f, 30f, 60f)))
     }
 }

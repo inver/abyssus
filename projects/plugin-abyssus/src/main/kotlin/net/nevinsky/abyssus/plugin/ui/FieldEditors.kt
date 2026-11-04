@@ -85,7 +85,9 @@ internal fun <T : Any> choiceEditor(
     combo.addActionListener {
         @Suppress("UNCHECKED_CAST")
         val chosen = combo.selectedItem as? T ?: return@addActionListener
-        if (chosen != selected) settle(commit(chosen), error) { combo.selectedItem = selected }
+        if (chosen != selected) {
+            settle(commit(chosen), error) { combo.selectedItem = selected }
+        }
     }
     return combo
 }
@@ -94,7 +96,9 @@ internal fun <T : Any> choiceEditor(
 internal fun checkEditor(selected: Boolean, error: JBLabel, commit: (Boolean) -> CommitOutcome): JBCheckBox {
     val box = JBCheckBox("", selected)
     box.addActionListener {
-        if (box.isSelected != selected) settle(commit(box.isSelected), error) { box.isSelected = selected }
+        if (box.isSelected != selected) {
+            settle(commit(box.isSelected), error) { box.isSelected = selected }
+        }
     }
     return box
 }

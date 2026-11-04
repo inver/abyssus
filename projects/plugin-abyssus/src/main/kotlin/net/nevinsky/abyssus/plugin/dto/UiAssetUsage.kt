@@ -13,9 +13,19 @@ import net.nevinsky.abyssus.lib.core.ui.model.UiCollection
 import net.nevinsky.abyssus.lib.core.ui.model.UiMeta
 import net.nevinsky.abyssus.lib.core.ui.model.UiWidget
 
-enum class UiUsageProblem { MISSING, WRONG_TYPE, DUPLICATE, UNSUPPORTED, MISSING_SCREEN, CYCLE }
+enum class UiUsageProblem {
+    MISSING,
+    WRONG_TYPE,
+    DUPLICATE,
+    UNSUPPORTED,
+    MISSING_SCREEN,
+    CYCLE,
+}
 
-/** A problem of the UI usage graph: [asset] is the registered name or the navigating UI asset, [target] the asset it names. */
+/**
+ * A problem of the UI usage graph: [asset] is the registered name or the navigating UI asset, [target] the asset it
+ * names.
+ */
 data class UiUsageIssue(val asset: String, val problem: UiUsageProblem, val target: String? = null)
 
 /** The folders some root reaches, and the UI problems found while following the registry and navigation links. */
@@ -34,7 +44,8 @@ class UiAssetUsage(assets: List<Asset<Any>>, private val registered: List<String
     private fun isUi(asset: Asset<Any>?) = asset != null && asset.type == MetaType.UI
 
     /** The registered, supported UI assets. */
-    fun roots(): List<Asset<Any>> = registered.distinct().mapNotNull { byName[it] }.filter { isUi(it) && collectionOf(it) != null }
+    fun roots(): List<Asset<Any>> =
+        registered.distinct().mapNotNull { byName[it] }.filter { isUi(it) && collectionOf(it) != null }
 
     /** The UI assets [asset] navigates to; a refused one is still reached, but not followed. */
     fun links(asset: Asset<Any>): List<Asset<Any>> =
@@ -44,7 +55,10 @@ class UiAssetUsage(assets: List<Asset<Any>>, private val registered: List<String
         val result = LinkedHashSet<UiUsageIssue>()
         val seen = HashSet<String>()
         for (name in registered) {
-            if (!seen.add(name)) { result += UiUsageIssue(name, UiUsageProblem.DUPLICATE); continue }
+            if (!seen.add(name)) {
+                result += UiUsageIssue(name, UiUsageProblem.DUPLICATE)
+                continue
+            }
             val asset = byName[name]
             when {
                 asset == null -> result += UiUsageIssue(name, UiUsageProblem.MISSING)
@@ -60,11 +74,13 @@ class UiAssetUsage(assets: List<Asset<Any>>, private val registered: List<String
                 when {
                     target == null -> result += UiUsageIssue(asset.name, UiUsageProblem.MISSING, targetName)
                     !isUi(target) -> result += UiUsageIssue(asset.name, UiUsageProblem.WRONG_TYPE, targetName)
-                    collectionOf(target) == null -> result += UiUsageIssue(asset.name, UiUsageProblem.UNSUPPORTED, targetName)
+                    collectionOf(target) == null ->
+                        result += UiUsageIssue(asset.name, UiUsageProblem.UNSUPPORTED, targetName)
                     else -> {
                         edges += targetName
-                        if (screenId != null && collectionOf(target)!!.screen(screenId) == null)
+                        if (screenId != null && collectionOf(target)!!.screen(screenId) == null) {
                             result += UiUsageIssue(asset.name, UiUsageProblem.MISSING_SCREEN, targetName)
+                        }
                     }
                 }
             }
@@ -84,7 +100,9 @@ class UiAssetUsage(assets: List<Asset<Any>>, private val registered: List<String
             val widget = stack.removeLast()
             for (action in widget.actions.values) {
                 val name = action.assetName ?: continue
-                if (action.type == UiActionType.OPEN_SCREEN || action.type == UiActionType.SHOW_OVERLAY) found += name to action.screenId
+                if (action.type == UiActionType.OPEN_SCREEN || action.type == UiActionType.SHOW_OVERLAY) {
+                    found += name to action.screenId
+                }
             }
             widget.children.asReversed().forEach { stack.addLast(it) }
         }
@@ -96,17 +114,28 @@ class UiAssetUsage(assets: List<Asset<Any>>, private val registered: List<String
         val onCycle = LinkedHashSet<String>()
         val done = HashSet<String>()
         for (start in graph.keys) {
-            if (start in done) continue
+            if (start in done) {
+                continue
+            }
             val path = ArrayList<String>()
             val iterators = ArrayList<Iterator<String>>()
-            path += start; iterators += graph.getValue(start).iterator()
+            path += start
+            iterators += graph.getValue(start).iterator()
             while (path.isNotEmpty()) {
                 val it = iterators.last()
-                if (!it.hasNext()) { done += path.removeLast(); iterators.removeLast(); continue }
+                if (!it.hasNext()) {
+                    done += path.removeLast()
+                    iterators.removeLast()
+                    continue
+                }
                 val next = it.next()
                 val at = path.indexOf(next)
-                if (at >= 0) onCycle += path.subList(at, path.size)
-                else if (next !in done && next in graph) { path += next; iterators += graph.getValue(next).iterator() }
+                if (at >= 0) {
+                    onCycle += path.subList(at, path.size)
+                } else if (next !in done && next in graph) {
+                    path += next
+                    iterators += graph.getValue(next).iterator()
+                }
             }
         }
         return onCycle

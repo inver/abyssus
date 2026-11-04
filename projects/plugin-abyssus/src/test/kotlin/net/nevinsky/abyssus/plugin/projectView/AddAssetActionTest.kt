@@ -4,7 +4,7 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.plugin.testMetaFiles
+import com.badlogic.gdx.math.Vector3
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.actionSystem.ActionManager
@@ -16,9 +16,9 @@ import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.ecs.component.*
-import com.badlogic.gdx.math.Vector3
 import java.io.File
+import net.nevinsky.abyssus.lib.core.ecs.component.*
+import net.nevinsky.abyssus.plugin.testMetaFiles
 
 /** Add Asset on a scene of a copy of the Untitled project. */
 class AddAssetActionTest : BasePlatformTestCase() {
@@ -28,19 +28,31 @@ class AddAssetActionTest : BasePlatformTestCase() {
         val dir = "Untitled"
         myFixture.copyFileToProject("Tree/Untitled.abss", "$dir/Untitled.abss")
         myFixture.copyFileToProject("Tree/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
-        File("$testDataPath/Tree/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
-            d.listFiles { f -> f.isFile && f.extension == "json" }!!.forEach {
-                myFixture.copyFileToProject("Tree/assets/${d.name}/${it.name}", "$dir/assets/${d.name}/${it.name}")
+        File("$testDataPath/Tree/assets")
+            .listFiles { f -> f.isDirectory }!!
+            .forEach { d ->
+                d.listFiles { f -> f.isFile && f.extension == "json" }!!.forEach {
+                        myFixture.copyFileToProject(
+                            "Tree/assets/${d.name}/${it.name}",
+                            "$dir/assets/${d.name}/${it.name}",
+                        )
+                    }
             }
-        }
     }
 
     private fun children(node: AbstractTreeNode<*>) = node.children.map { it as AbstractTreeNode<*> }
-    private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+
+    private fun label(node: AbstractTreeNode<*>): String =
+        (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+
     private fun abss() = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
+
     private fun sceneNode() = children(children(abss()).single { label(it) == "scenes" }).single()
+
     private fun scene() = viewableSceneFile(sceneNode())!!
+
     private fun document() = FileDocumentManager.getInstance().getDocument(scene())!!
+
     private fun entity(id: Long) = net.nevinsky.abyssus.plugin.parsedScene(document().text).entity(id)!!
 
     private class AddOn(val node: Any?) : AddAssetAction() {
@@ -54,7 +66,9 @@ class AddAssetActionTest : BasePlatformTestCase() {
     }
 
     private fun group(
-        selected: (Long) -> Unit = {}, at: Vector3 = Vector3(0f, 0f, 0f), meshes: (String) -> List<String>? = { null },
+        selected: (Long) -> Unit = {},
+        at: Vector3 = Vector3(0f, 0f, 0f),
+        meshes: (String) -> List<String>? = { null },
     ) = AddAssetGroup(project, scene(), testMetaFiles(), { at }, selected, meshes).getChildren(null)
 
     fun testTheGroupListsTheProjectsModelsAndTerrainsOnly() {
@@ -64,8 +78,15 @@ class AddAssetActionTest : BasePlatformTestCase() {
         assertEquals(listOf("Models", "Terrains"), sections)
         val names = items.filter { it !is Separator }.map { it.templatePresentation.text }
         // the fixture's own folders by meta type, so an asset added to the fixture does not break this test
-        val byType = File("$testDataPath/Untitled/assets").listFiles { f -> File(f, "meta.json").isFile }!!
-            .groupBy({ Regex("\"type\"\\s*:\\s*\"(\\w+)\"").find(File(it, "meta.json").readText())?.groupValues?.get(1) }, { it.name })
+        val byType =
+            File("$testDataPath/Untitled/assets")
+                .listFiles { f -> File(f, "meta.json").isFile }!!
+                .groupBy(
+                    {
+                        Regex("\"type\"\\s*:\\s*\"(\\w+)\"").find(File(it, "meta.json").readText())?.groupValues?.get(1)
+                    },
+                    { it.name },
+                )
         val expected = byType["MODEL"].orEmpty().sorted() + byType["TERRAIN"].orEmpty().sorted()
         assertTrue("tree" in expected && "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b" in expected)
         assertEquals(expected, names)
@@ -76,7 +97,8 @@ class AddAssetActionTest : BasePlatformTestCase() {
     fun testAddingAModelWritesTheNextEntityAndUndoRestoresTheScene() {
         copyProject()
         myFixture.openFileInEditor(scene())
-        val editor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
+        val editor =
+            com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
         val before = document().text
         var selected: Long? = null
         val tree = group({ selected = it }, Vector3(10f, 0f, -4f)).first { it.templatePresentation.text == "tree" }
@@ -109,21 +131,36 @@ class AddAssetActionTest : BasePlatformTestCase() {
     }
 
     fun testASceneOutsideAProjectHasNothingToAdd() {
-        val loose = myFixture.addFileToProject("loose/Alone.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""").virtualFile
+        val loose =
+            myFixture
+                .addFileToProject("loose/Alone.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""")
+                .virtualFile
         assertFalse(hasRenderAssets(loose, testMetaFiles()))
         assertTrue(AddAssetGroup(project, loose, testMetaFiles(), { Vector3(0f, 0f, 0f) }).getChildren(null).isEmpty())
     }
 
     fun testAModelWithSeveralMeshesIsASubmenuOfItsMeshesAndTheWholeModel() {
         copyProject()
-        val items = group(meshes = { if (it == "tree") listOf("body", "glass") else listOf("only") })
+        val items =
+            group(
+                meshes = {
+                    if (it == "tree") {
+                        listOf("body", "glass")
+                    } else {
+                        listOf("only")
+                    }
+                }
+            )
         val submenu = items.filterIsInstance<com.intellij.openapi.actionSystem.ActionGroup>().single()
         assertEquals("tree", submenu.templatePresentation.text)
         assertTrue(submenu.isPopup)
         val choices = submenu.getChildren(null).filter { it !is Separator }.map { it.templatePresentation.text }
         assertEquals(listOf("Whole model", "body", "glass"), choices)
         // a single-mesh model stays one plain entry
-        val flat = items.filter { it !is Separator && it !is com.intellij.openapi.actionSystem.ActionGroup }.map { it.templatePresentation.text }
+        val flat =
+            items
+                .filter { it !is Separator && it !is com.intellij.openapi.actionSystem.ActionGroup }
+                .map { it.templatePresentation.text }
         assertFalse("tree" in flat)
         assertTrue(flat.any { it.startsWith("model_") })
     }
@@ -131,11 +168,23 @@ class AddAssetActionTest : BasePlatformTestCase() {
     fun testChoosingAMeshRecordsItsIdAndTheWholeModelEntryDoesNot() {
         copyProject()
         myFixture.openFileInEditor(scene())
-        val editor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
+        val editor =
+            com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
         val before = document().text
         var selected: Long? = null
-        val submenu = group({ selected = it }, meshes = { if (it == "tree") listOf("body", "glass") else null })
-            .filterIsInstance<com.intellij.openapi.actionSystem.ActionGroup>().single()
+        val submenu =
+            group(
+                    { selected = it },
+                    meshes = {
+                        if (it == "tree") {
+                            listOf("body", "glass")
+                        } else {
+                            null
+                        }
+                    },
+                )
+                .filterIsInstance<com.intellij.openapi.actionSystem.ActionGroup>()
+                .single()
         val glass = submenu.getChildren(null).first { it.templatePresentation.text == "glass" }
         glass.actionPerformed(TestActionEvent.createTestEvent(glass))
         assertEquals(9L, selected)

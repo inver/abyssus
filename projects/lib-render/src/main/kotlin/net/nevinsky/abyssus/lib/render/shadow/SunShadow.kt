@@ -12,13 +12,18 @@ import kotlin.math.max
 
 /** A stable seed up vector for a normalized direction; hosts retain their existing pole threshold. */
 fun cameraUp(direction: Vector3, poleThreshold: Float = 0.98f): Vector3 =
-    if (abs(direction.y) > poleThreshold) Vector3.Z else Vector3.Y
+    if (abs(direction.y) > poleThreshold) {
+        Vector3.Z
+    } else {
+        Vector3.Y
+    }
 
 /** How far a sun shadow camera sits back along the light, and how deep it sees: tall scenery upwind still casts. */
 const val SUN_SHADOW_DEPTH = 400f
 
 /**
- * A single sun's orthographic shadow camera: [extent] metres square around [center], looking along the light ([towardSun]
+  * A single sun's orthographic shadow camera: [extent] metres square around [center], looking along the light
+  * ([towardSun]
  * reversed). Its centre is snapped to whole texels of a [resolution] map, so a moving centre does not make edges
  * shimmer. No GL.
  */

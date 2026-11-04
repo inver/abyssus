@@ -22,7 +22,9 @@ enum class WaterSkip {
 
 /** The surfaces of one mean level, which share a planar reflection. */
 class WaterLevelGroup(val level: Double, val surfaces: List<WaterSettings>) {
-    /** The level in thousandths of a unit: what makes two levels "the same" and what a group is known by between frames. */
+    /**
+     * The level in thousandths of a unit: what makes two levels "the same" and what a group is known by between frames.
+     */
     val key: Long = levelKey(level)
 }
 
@@ -30,7 +32,8 @@ class WaterLevelGroup(val level: Double, val surfaces: List<WaterSettings>) {
 fun levelKey(level: Double): Long = Math.round(level * 1000.0)
 
 /**
- * What one frame does for the water in view: which levels get a planar reflection of the scene ([reflected], at most the
+  * What one frame does for the water in view: which levels get a planar reflection of the scene ([reflected], at most
+  * the
  * budget, ordered by level), which fall back to the sky or a tint ([fallback]), the surfaces to draw far to near
  * ([drawOrder]), why any were skipped, and the sizes of the offscreen targets. Pure data.
  */
@@ -88,7 +91,11 @@ class WaterPassPlanner(
                 eyeY <= s.level -> skipped[s.id] = WaterSkip.BELOW_VIEW
                 else -> {
                     val area = screenArea(s)
-                    if (area.isFinite() && area > 0.0) visible += s to area else skipped[s.id] = WaterSkip.NOT_VISIBLE
+                    if (area.isFinite() && area > 0.0) {
+                        visible += s to area
+                    } else {
+                        skipped[s.id] = WaterSkip.NOT_VISIBLE
+                    }
                 }
             }
         }
@@ -98,7 +105,11 @@ class WaterPassPlanner(
         }
         val remembered = previous.toSet()
         val ranked = groups.sortedWith(
-            compareByDescending<ScoredGroup> { if (it.key in remembered) it.area * hysteresis else it.area }.thenBy { it.key },
+            compareByDescending<ScoredGroup> { if (it.key in remembered) {
+                it.area * hysteresis
+            } else {
+                it.area
+            } }.thenBy { it.key },
         )
         val chosen = ranked.take(maxReflections).sortedBy { it.key }
         val rest = ranked.drop(maxReflections).sortedBy { it.key }
@@ -116,7 +127,9 @@ class WaterPassPlanner(
 
     private class ScoredGroup(val group: WaterLevelGroup, val area: Double, val key: Long)
 
-    /** [scale] of the viewport, capped to [cap] on its longer side with the aspect kept; at least one pixel each way. */
+    /**
+     * [scale] of the viewport, capped to [cap] on its longer side with the aspect kept; at least one pixel each way.
+     */
     private fun targetSize(width: Int, height: Int, scale: Double, cap: Int): Pair<Int, Int> {
         val w = max(width, 1) * scale
         val h = max(height, 1) * scale

@@ -13,10 +13,11 @@ import com.badlogic.gdx.graphics.g3d.utils.TextureProvider
 /** Resolves texture names relative to the folder of the model file. Copied from Mundus (see the package README).  */
 class ParentBasedTextureProvider(private val mainFile: FileHandle) : TextureProvider {
     override fun load(fileName: String): Texture {
-        val file = if (fileName.startsWith("/") || java.io.File(fileName).isAbsolute)
+        val file = if (fileName.startsWith("/") || java.io.File(fileName).isAbsolute) {
             Gdx.files.absolute(fileName)
-        else
+        } else {
             Gdx.files.internal(mainFile.parent().child(fileName).path())
+        }
         val result = Texture(file, false)
         result.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
         result.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat)

@@ -12,15 +12,15 @@ import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.Component
+import java.awt.Container
+import java.io.File
 import net.nevinsky.abyssus.plugin.projectView.AbyssusAssetNode
 import net.nevinsky.abyssus.plugin.projectView.AbyssusRootNode
 import net.nevinsky.abyssus.plugin.projectView.AbyssusSelection
 import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
 import net.nevinsky.abyssus.plugin.projectView.componentTargetOf
 import net.nevinsky.abyssus.plugin.testPanelServices
-import java.awt.Component
-import java.awt.Container
-import java.io.File
 
 /** The mesh field of a model's Render component in the Properties panel. */
 class MeshChooserTest : BasePlatformTestCase() {
@@ -46,28 +46,56 @@ class MeshChooserTest : BasePlatformTestCase() {
         val dir = "Untitled"
         myFixture.copyFileToProject("$dir/Untitled.abss", "$dir/Untitled.abss")
         myFixture.copyFileToProject("$dir/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
-        File("$testDataPath/$dir/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
-            d.listFiles { f -> f.isFile }!!.filter { it.extension == "json" }.forEach {
-                myFixture.copyFileToProject("$dir/assets/${d.name}/${it.name}", "$dir/assets/${d.name}/${it.name}")
+        File("$testDataPath/$dir/assets")
+            .listFiles { f -> f.isDirectory }!!
+            .forEach { d ->
+                d.listFiles { f -> f.isFile }!!
+                    .filter { it.extension == "json" }
+                    .forEach {
+                        myFixture.copyFileToProject(
+                            "$dir/assets/${d.name}/${it.name}",
+                            "$dir/assets/${d.name}/${it.name}",
+                        )
+                    }
             }
-        }
     }
 
     private fun children(node: AbstractTreeNode<*>) = node.children.map { it as AbstractTreeNode<*> }
-    private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
-    private fun descend(from: AbstractTreeNode<*>, vararg names: String) = names.fold(from) { node, name -> children(node).single { label(it) == name } }
 
-    private fun entity(id: String) = descend(
-        children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }, "scenes",
-    ).let { scenes -> descend(children(scenes).single(), "ecs", id) }
+    private fun label(node: AbstractTreeNode<*>): String =
+        (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
 
-    private fun panel(meshes: List<String>?) = AssetPropertiesPanel(
-        project, testRootDisposable,
-        testPanelServices(project, meshes = { _, name -> asked += name; meshes }), { it.run() }, { it.run() },
-    )
+    private fun descend(from: AbstractTreeNode<*>, vararg names: String) =
+        names.fold(from) { node, name -> children(node).single { label(it) == name } }
+
+    private fun entity(id: String) =
+        descend(
+                children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") },
+                "scenes",
+            )
+            .let { scenes -> descend(children(scenes).single(), "ecs", id) }
+
+    private fun panel(meshes: List<String>?) =
+        AssetPropertiesPanel(
+            project,
+            testRootDisposable,
+            testPanelServices(
+                project,
+                meshes = { _, name ->
+                    asked += name
+                    meshes
+                },
+            ),
+            { it.run() },
+            { it.run() },
+        )
 
     private fun named(c: Component, name: String): Component? =
-        if (c.name == name) c else (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
+        if (c.name == name) {
+            c
+        } else {
+            (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
+        }
 
     private fun combo(p: Component): ComboBox<*>? = named(p, "field-RenderComponent-meshId") as? ComboBox<*>
 
@@ -82,7 +110,12 @@ class MeshChooserTest : BasePlatformTestCase() {
         val file = componentTargetOf(entity("0"))!!.file
         val document = FileDocumentManager.getInstance().getDocument(file)!!
         WriteCommandAction.runWriteCommandAction(project) {
-            document.setText(document.text.replace("\"assetName\": \"$model\"", "\"assetName\": \"$model\",\n          \"meshId\": \"$id\""))
+            document.setText(
+                document.text.replace(
+                    "\"assetName\": \"$model\"",
+                    "\"assetName\": \"$model\",\n          \"meshId\": \"$id\"",
+                )
+            )
         }
     }
 
@@ -99,7 +132,8 @@ class MeshChooserTest : BasePlatformTestCase() {
     fun testChoosingAMeshWritesItAsOneUndoableEditAndTheWholeModelEntryRemovesIt() {
         copyProject()
         myFixture.openFileInEditor(componentTargetOf(entity("0"))!!.file)
-        val editor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
+        val editor =
+            com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
         // opening the scene in a text editor pretty-prints it; the baseline is the text as opened
         val before = sceneText()
         val p = panel(listOf("body", "glass"))

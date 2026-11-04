@@ -8,6 +8,11 @@ import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.PerspectiveCamera
+import java.io.ByteArrayOutputStream
+import java.io.PrintStream
+import java.nio.file.Files
+import java.nio.file.Path
+import java.time.Clock
 import net.nevinsky.abyssus.app.game.controlline.controller.FakeControllerSource
 import net.nevinsky.abyssus.app.game.controlline.render.Cable
 import net.nevinsky.abyssus.app.game.controlline.render.FieldScene
@@ -18,47 +23,61 @@ import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.ByteArrayOutputStream
-import java.io.PrintStream
-import java.nio.file.Files
-import java.nio.file.Path
-import java.time.Clock
 
 /** Headless: a failing frame leaves a crash record and ends the game (spec `control-line-runtime-stability`). */
 class ControlLineGameCrashTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
     private class ThrowingView : FieldView {
         var draws = 0
-        override val kind: String get() = "throwing"
+        override val kind: String
+            get() = "throwing"
+
         override fun draw(
-            field: FieldScene, camera: Camera, lines: List<LineSegment>, hidden: Entity?,
-            clips: Map<Entity, String>, seconds: Float, cables: List<Cable>, poses: Map<Entity, com.badlogic.gdx.math.Matrix4>,
+            field: FieldScene,
+            camera: Camera,
+            lines: List<LineSegment>,
+            hidden: Entity?,
+            clips: Map<Entity, String>,
+            seconds: Float,
+            cables: List<Cable>,
+            poses: Map<Entity, com.badlogic.gdx.math.Matrix4>,
         ) {
             draws++
             throw IllegalStateException("the injected view failed")
         }
 
         override fun resize(width: Float, height: Float) = Unit
+
         override fun dispose() = Unit
     }
 
     private fun reporter(folder: Path) =
-        CrashReporter(folder, GameEnvironment.current().copy(glRenderer = "Test GPU", glVersion = "3.3", fieldView = "throwing"),
-            Clock.systemUTC(), PrintStream(ByteArrayOutputStream()))
+        CrashReporter(
+            folder,
+            GameEnvironment.current().copy(glRenderer = "Test GPU", glVersion = "3.3", fieldView = "throwing"),
+            Clock.systemUTC(),
+            PrintStream(ByteArrayOutputStream()),
+        )
 
     private fun records(folder: Path): List<Path> =
-        if (!Files.isDirectory(folder)) emptyList() else Files.list(folder).use { it.toList() }
+        if (!Files.isDirectory(folder)) {
+            emptyList()
+        } else {
+            Files.list(folder).use { it.toList() }
+        }
 
-    @Test fun aThrowingViewWritesARecordAndEndsTheGameOnce() {
+    @Test
+    fun aThrowingViewWritesARecordAndEndsTheGameOnce() {
         val folder = temp.root.toPath().resolve("logs")
         val crashes = reporter(folder)
         var exits = 0
         val guard = FrameGuard(crashes, exit = { exits++ })
         val view = ThrowingView()
         val field = FieldScene(loadField())
-        val frame = { view.draw(field, PerspectiveCamera(), emptyList(), null, emptyMap(), 0f, emptyList(), emptyMap()) }
+        val frame = {
+            view.draw(field, PerspectiveCamera(), emptyList(), null, emptyMap(), 0f, emptyList(), emptyMap())
+        }
 
         guard.run(frame)
         guard.run(frame)
@@ -72,7 +91,8 @@ class ControlLineGameCrashTest {
         assertTrue(text, text.contains("field view: throwing"))
     }
 
-    @Test fun theGameGuardsItsOwnFrame() {
+    @Test
+    fun theGameGuardsItsOwnFrame() {
         // no window: the game's frame fails on its first line, and the guard in ControlLineGame.render records it
         val folder = temp.root.toPath().resolve("logs")
         val crashes = reporter(folder)
@@ -80,10 +100,16 @@ class ControlLineGameCrashTest {
         val graphics = Gdx.graphics
         Gdx.graphics = null
         try {
-            val game = ControlLineGame(
-                bundledProject(), temp.root.toPath().resolve("scores.json"), fieldView = ThrowingView(),
-                controllerSource = FakeControllerSource(), crashes = crashes, log = RecordingLogger(), exit = { exits++ },
-            )
+            val game =
+                ControlLineGame(
+                    bundledProject(),
+                    temp.root.toPath().resolve("scores.json"),
+                    fieldView = ThrowingView(),
+                    controllerSource = FakeControllerSource(),
+                    crashes = crashes,
+                    log = RecordingLogger(),
+                    exit = { exits++ },
+                )
             game.render()
             game.render()
             game.dispose()
@@ -96,7 +122,8 @@ class ControlLineGameCrashTest {
         assertEquals(1, records(folder).size)
     }
 
-    @Test fun aSuccessfulFrameReportsNothing() {
+    @Test
+    fun aSuccessfulFrameReportsNothing() {
         val folder = temp.root.toPath().resolve("logs")
         val crashes = reporter(folder)
         var exits = 0
@@ -109,7 +136,8 @@ class ControlLineGameCrashTest {
         assertTrue(records(folder).isEmpty())
     }
 
-    @Test fun aReleaseFailureAfterACrashIsOnlyLogged() {
+    @Test
+    fun aReleaseFailureAfterACrashIsOnlyLogged() {
         val folder = temp.root.toPath().resolve("logs")
         val crashes = reporter(folder)
         val guard = FrameGuard(crashes, exit = {})

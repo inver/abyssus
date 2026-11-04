@@ -4,14 +4,15 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.editor.ui.UiTreeEdit
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import java.util.concurrent.Executor
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.editor.document.*
 import net.nevinsky.abyssus.lib.core.editor.ui.*
+import net.nevinsky.abyssus.lib.core.editor.ui.UiTreeEdit
 import net.nevinsky.abyssus.lib.core.ui.layout.UiLayoutResult
 import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
 import net.nevinsky.abyssus.lib.core.ui.model.UiCollection
@@ -19,13 +20,13 @@ import net.nevinsky.abyssus.lib.core.ui.model.UiIssue
 import net.nevinsky.abyssus.lib.core.ui.model.UiWidget
 import net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import java.util.concurrent.Executor
 
 /** What the editor knows about the document it shows. */
 sealed interface UiEditorState {
     /** An admitted UI asset: editable. */
     data class Editable(val admission: UiAdmission.Admitted, val text: String) : UiEditorState {
-        val collection: UiCollection get() = admission.collection
+        val collection: UiCollection
+            get() = admission.collection
     }
 
     /** Valid JSON that is not editable UI (unsupported version, foreign markers, errors): nothing is rewritten. */
@@ -35,11 +36,15 @@ sealed interface UiEditorState {
     data class Unreadable(val message: String, val text: String) : UiEditorState
 }
 
-enum class UiEditorMode { EDIT, PREVIEW }
+enum class UiEditorMode {
+    EDIT,
+    PREVIEW,
+}
 
 /** The size of the screen a preview lays out for, independent of how large the editor panel shows it. */
 data class UiViewport(val width: Int, val height: Int) {
-    val valid: Boolean get() = width in 1..MAX_PREVIEW_SIDE && height in 1..MAX_PREVIEW_SIDE
+    val valid: Boolean
+        get() = width in 1..MAX_PREVIEW_SIDE && height in 1..MAX_PREVIEW_SIDE
 }
 
 /** The largest preview side; a bigger offscreen buffer costs memory the editor should not spend on a preview. */
@@ -48,22 +53,39 @@ const val MAX_PREVIEW_SIDE = 4096
 /** Editor-local settings (the preview size and backdrop): per viewer, never part of a scene or UI document. */
 interface UiPreferences {
     fun get(key: String): String?
+
     fun set(key: String, value: String?)
 }
 
-/** Preferences kept in the project's workspace file, so they are per viewer and never part of the repository's content. */
+/**
+ * Preferences kept in the project's workspace file, so they are per viewer and never part of the repository's content.
+ */
 class PropertiesUiPreferences(private val project: Project) : UiPreferences {
-    override fun get(key: String): String? = com.intellij.ide.util.PropertiesComponent.getInstance(project).getValue(key)
+    override fun get(key: String): String? =
+        com.intellij.ide.util.PropertiesComponent.getInstance(project).getValue(key)
+
     override fun set(key: String, value: String?) {
         val properties = com.intellij.ide.util.PropertiesComponent.getInstance(project)
-        if (value == null) properties.unsetValue(key) else properties.setValue(key, value)
+        if (value == null) {
+            properties.unsetValue(key)
+        } else {
+            properties.setValue(key, value)
+        }
     }
 }
 
 class MemoryUiPreferences : UiPreferences {
     private val values = HashMap<String, String>()
+
     override fun get(key: String) = values[key]
-    override fun set(key: String, value: String?) { if (value == null) values.remove(key) else values[key] = value }
+
+    override fun set(key: String, value: String?) {
+        if (value == null) {
+            values.remove(key)
+        } else {
+            values[key] = value
+        }
+    }
 }
 
 /** What the canvas needs from the editor model: what to draw, which mode, and the pointer gestures it forwards. */
@@ -91,11 +113,17 @@ interface UiCanvasModel {
 
     /** Told by the canvas how large the displayed screen is drawn, as a fraction of its own size (1 = 100%). */
     fun reportZoom(zoom: Float) {}
+
     fun select(widgetId: String?)
+
     fun beginGesture(widgetId: String, x: Float, y: Float)
+
     fun updateGesture(x: Float, y: Float): UiGesturePreview
+
     fun endGesture(x: Float, y: Float): Boolean
+
     fun deleteSelected(): Boolean
+
     fun duplicateSelected(): Boolean
 }
 
@@ -111,7 +139,10 @@ class UiEditorController(
     private val background: Executor,
     private val ui: (Runnable) -> Unit,
     private val decoder: UiCollectionDecoder = UiCollectionDecoder(),
-    private val textEditor: UiTextEditor = UiTextEditor(com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.json),
+    private val textEditor: UiTextEditor =
+        UiTextEditor(
+            com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.json
+        ),
     /** The layout the canvas shows for a screen, for drag gestures; null while nothing is drawn. */
     override var layoutProvider: (String) -> UiLayoutResult? = { null },
     private val preferences: UiPreferences = MemoryUiPreferences(),
@@ -122,8 +153,10 @@ class UiEditorController(
 
     override var state: UiEditorState = UiEditorState.Unreadable("", "")
         private set
+
     var selection: UiSelection = UiSelection()
         private set
+
     override var mode: UiEditorMode = UiEditorMode.EDIT
         private set
 
@@ -131,13 +164,16 @@ class UiEditorController(
     override var screenId: String? = null
         private set
 
-    private val prefKey: String get() = "abyssus.ui.${file.path}"
+    private val prefKey: String
+        get() = "abyssus.ui.${file.path}"
 
     private val viewSettings = UiViewSettings(preferences, prefKey)
 
-    override val previewViewport: UiViewport get() = viewSettings.viewport
+    override val previewViewport: UiViewport
+        get() = viewSettings.viewport
 
-    override val backdropScene: String? get() = viewSettings.backdropScene
+    override val backdropScene: String?
+        get() = viewSettings.backdropScene
 
     override var resourceRevision: Long = 0
         private set
@@ -152,7 +188,9 @@ class UiEditorController(
 
     private val listeners = mutableListOf<() -> Unit>()
 
-    override fun addListener(listener: () -> Unit) { listeners += listener }
+    override fun addListener(listener: () -> Unit) {
+        listeners += listener
+    }
 
     private fun changed() = listeners.toList().forEach { it() }
 
@@ -162,41 +200,65 @@ class UiEditorController(
 
     private val zoomListeners = mutableListOf<() -> Unit>()
 
-    fun addZoomListener(listener: () -> Unit) { zoomListeners += listener }
+    fun addZoomListener(listener: () -> Unit) {
+        zoomListeners += listener
+    }
 
     override fun reportZoom(zoom: Float) {
-        if (zoom <= 0f || kotlin.math.abs(zoom - this.zoom) < 0.005f) return
+        if (zoom <= 0f || kotlin.math.abs(zoom - this.zoom) < 0.005f) {
+            return
+        }
         this.zoom = zoom
         zoomListeners.toList().forEach { it() }
     }
 
-    val collection: UiCollection? get() = (state as? UiEditorState.Editable)?.collection
+    val collection: UiCollection?
+        get() = (state as? UiEditorState.Editable)?.collection
 
-    val text: String get() = when (val s = state) {
-        is UiEditorState.Editable -> s.text
-        is UiEditorState.Refused -> s.text
-        is UiEditorState.Unreadable -> s.text
-    }
+    val text: String
+        get() =
+            when (val s = state) {
+                is UiEditorState.Editable -> s.text
+                is UiEditorState.Refused -> s.text
+                is UiEditorState.Unreadable -> s.text
+            }
 
     // ---- reading ----
 
-    /** Reads the document now (unsaved text included) and publishes the parsed state when this is still the newest read. */
+    /**
+     * Reads the document now (unsaved text included) and publishes the parsed state when this is still the newest read.
+     */
     fun reload() {
-        if (disposed) return
+        if (disposed) {
+            return
+        }
         val document = FileDocumentManager.getInstance().getDocument(file)
         val snapshot = document?.text ?: String(file.contentsToByteArray(), file.charset)
         val mine = ++revision
         background.execute {
             val parsed = parse(snapshot)
-            ui(Runnable {
-                if (disposed || mine != revision) return@Runnable // a newer read superseded this result
-                apply(parsed)
-            })
+            ui(
+                Runnable {
+                    if (disposed || mine != revision) {
+                        return@Runnable // a newer read superseded this result
+                    }
+                    apply(parsed)
+                }
+            )
         }
     }
 
     private fun parse(text: String): UiEditorState {
-        val tree = runCatchingKeepingCancellation { com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.json.readObject(text) }.getOrElse { return UiEditorState.Unreadable(it.message.orEmpty(), text) }
+        val tree = runCatchingKeepingCancellation {
+            com.intellij.openapi.components
+                .service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>()
+                .documents
+                .json
+                .readObject(text)
+        }
+            .getOrElse {
+                return UiEditorState.Unreadable(it.message.orEmpty(), text)
+            }
         return when (val admission = decoder.decode(tree)) {
             is UiAdmission.Admitted -> UiEditorState.Editable(admission, text)
             is UiAdmission.Refused -> UiEditorState.Refused(admission.issues, text)
@@ -206,14 +268,27 @@ class UiEditorController(
     private fun apply(parsed: UiEditorState) {
         val definitionChanged = (state as? UiEditorState.Editable)?.text != (parsed as? UiEditorState.Editable)?.text
         state = parsed
-        if (definitionChanged) previewState = null
+        if (definitionChanged) {
+            previewState = null
+        }
         val collection = (parsed as? UiEditorState.Editable)?.collection
-        if (collection == null) { selection = UiSelection(); screenId = null }
-        else {
-            val keep = screenId?.takeIf { collection.screen(it) != null }
-                ?: collection.entryScreen?.takeIf { collection.screen(it) != null } ?: collection.screens.firstOrNull()?.id
+        if (collection == null) {
+            selection = UiSelection()
+            screenId = null
+        } else {
+            val keep =
+                screenId?.takeIf { collection.screen(it) != null }
+                    ?: collection.entryScreen?.takeIf { collection.screen(it) != null }
+                    ?: collection.screens.firstOrNull()?.id
             screenId = keep
-            selection = selection.reconcile(collection).let { if (it.screenId == keep || it.widgetId == null) it else UiSelection(keep, collection.screen(keep!!)?.root?.id) }
+            selection =
+                selection.reconcile(collection).let {
+                    if (it.screenId == keep || it.widgetId == null) {
+                        it
+                    } else {
+                        UiSelection(keep, collection.screen(keep!!)?.root?.id)
+                    }
+                }
         }
         syncPreview()
         changed()
@@ -223,8 +298,19 @@ class UiEditorController(
 
     override fun select(widgetId: String?) {
         val c = collection ?: return
-        selection = if (widgetId == null) UiSelection(screenId, null) else UiSelection(UiTree(c).screenOf(widgetId)?.id ?: screenId, widgetId).takeIf { UiTree(c).widget(widgetId) != null } ?: selection
-        selection.screenId?.let { if (c.screen(it) != null) screenId = it }
+        selection =
+            if (widgetId == null) {
+                UiSelection(screenId, null)
+            } else {
+                UiSelection(UiTree(c).screenOf(widgetId)?.id ?: screenId, widgetId).takeIf {
+                    UiTree(c).widget(widgetId) != null
+                } ?: selection
+            }
+        selection.screenId?.let {
+            if (c.screen(it) != null) {
+                screenId = it
+            }
+        }
         changed()
     }
 
@@ -237,7 +323,9 @@ class UiEditorController(
     }
 
     fun setMode(mode: UiEditorMode) {
-        if (this.mode == mode) return
+        if (this.mode == mode) {
+            return
+        }
         this.mode = mode
         syncPreview()
         changed()
@@ -246,46 +334,76 @@ class UiEditorController(
     /** Preview exists only in preview mode on an admitted document; its samples start fresh for each definition. */
     private fun syncPreview() {
         val c = collection
-        if (mode != UiEditorMode.PREVIEW || c == null) { if (c == null) previewState = null; return }
-        if (previewState == null) previewState = previews.of(c, screenId ?: c.entryScreen)
+        if (mode != UiEditorMode.PREVIEW || c == null) {
+            if (c == null) {
+                previewState = null
+            }
+            return
+        }
+        if (previewState == null) {
+            previewState = previews.of(c, screenId ?: c.entryScreen)
+        }
     }
 
     /** The preview's sample world changed shape (a row added or removed): tell the views. */
-    fun resetView() { changed() }
+    fun resetView() {
+        changed()
+    }
 
-    /** Returns the samples to the authored ones, empties the action log and sends the preview back to its start screen. */
-    fun resetPreview() { previewState?.reset(); changed() }
+    /**
+     * Returns the samples to the authored ones, empties the action log and sends the preview back to its start screen.
+     */
+    fun resetPreview() {
+        previewState?.reset()
+        changed()
+    }
 
-    /** Sets what the preview lays out for; false (nothing changes) for a size that is not positive or is above [MAX_PREVIEW_SIDE]. */
+    /**
+     * Sets what the preview lays out for; false (nothing changes) for a size that is not positive or is above
+     * [MAX_PREVIEW_SIDE].
+     */
     fun setPreviewViewport(width: Int, height: Int): Boolean {
-        if (!viewSettings.setViewport(width, height)) return false
+        if (!viewSettings.setViewport(width, height)) {
+            return false
+        }
         changed()
         return true
     }
 
-    /** Chooses the scene drawn behind the preview (a file name in `scenes`), or none; remembered for this viewer only. */
+    /**
+     * Chooses the scene drawn behind the preview (a file name in `scenes`), or none; remembered for this viewer only.
+     */
     fun setBackdropScene(name: String?) {
         viewSettings.setBackdrop(name)
         changed()
     }
 
     /** An image or font file of the asset changed on disk: the canvas reloads its resources. */
-    fun resourcesChanged() { resourceRevision++; changed() }
+    fun resourcesChanged() {
+        resourceRevision++
+        changed()
+    }
 
-    val selectedWidget: UiWidget? get() = collection?.let { c -> selection.widgetId?.let { UiTree(c).widget(it) } }
+    val selectedWidget: UiWidget?
+        get() = collection?.let { c -> selection.widgetId?.let { UiTree(c).widget(it) } }
 
     // ---- edits ----
 
     private fun perform(name: String, baseText: String? = null, op: UiTreeEdit): UiEditOutcome {
         val outcome = editUiMeta(project, file, name, baseText, textEditor, op)
-        lastError = when (outcome) {
-            is UiEditOutcome.Rejected -> outcome.error
-            UiEditOutcome.Stale -> UiEditError.STALE
-            UiEditOutcome.ReadOnly -> UiEditError.NOT_EDITABLE
-            UiEditOutcome.Unavailable -> UiEditError.NOT_EDITABLE
-            else -> null
+        lastError =
+            when (outcome) {
+                is UiEditOutcome.Rejected -> outcome.error
+                UiEditOutcome.Stale -> UiEditError.STALE
+                UiEditOutcome.ReadOnly -> UiEditError.NOT_EDITABLE
+                UiEditOutcome.Unavailable -> UiEditError.NOT_EDITABLE
+                else -> null
+            }
+        if (outcome is UiEditOutcome.Edited) {
+            reloadNow()
+        } else {
+            changed()
         }
-        if (outcome is UiEditOutcome.Edited) { reloadNow() } else changed()
         return outcome
     }
 
@@ -296,27 +414,39 @@ class UiEditorController(
         apply(parse(document.text))
     }
 
-    private fun added(outcome: UiEditOutcome): String? = ((outcome as? UiEditOutcome.Edited)?.result as? UiEditResult.Added)?.id
+    private fun added(outcome: UiEditOutcome): String? =
+        ((outcome as? UiEditOutcome.Edited)?.result as? UiEditResult.Added)?.id
 
-    /** The container [addWidget] adds into: the selected container, else the selected widget's parent, else the screen's root; null when there is none. */
+    /**
+     * The container [addWidget] adds into: the selected container, else the selected widget's parent, else the screen's
+     * root; null when there is none.
+     */
     fun addTarget(): UiWidget? {
         val c = collection ?: return null
         val tree = UiTree(c)
         val selected = selection.widgetId?.let(tree::widget) ?: c.screen(screenId ?: return null)?.root ?: return null
-        return if (tree.isContainer(selected)) selected else tree.parentOf(selected.id)
+        return if (tree.isContainer(selected)) {
+            selected
+        } else {
+            tree.parentOf(selected.id)
+        }
     }
 
     /** Adds a widget of [type] into the selected container (or the selected widget's parent), and selects it. */
     fun addWidget(type: String): Boolean {
         val parent = addTarget() ?: return false
-        val id = added(perform(AbyssusBundle.message("uiCommandAddWidget")) { e, m -> e.addWidget(m, parent.id, type) }) ?: return false
+        val id =
+            added(perform(AbyssusBundle.message("uiCommandAddWidget")) { e, m -> e.addWidget(m, parent.id, type) })
+                ?: return false
         select(id)
         return true
     }
 
     override fun duplicateSelected(): Boolean {
         val id = selection.widgetId ?: return false
-        val copy = added(perform(AbyssusBundle.message("uiCommandDuplicateWidget")) { e, m -> e.duplicateWidget(m, id) }) ?: return false
+        val copy =
+            added(perform(AbyssusBundle.message("uiCommandDuplicateWidget")) { e, m -> e.duplicateWidget(m, id) })
+                ?: return false
         select(copy)
         return true
     }
@@ -325,31 +455,44 @@ class UiEditorController(
         val c = collection ?: return false
         val id = selection.widgetId ?: return false
         val parent = UiTree(c).parentOf(id)?.id
-        val ok = perform(AbyssusBundle.message("uiCommandDeleteWidget")) { e, m -> e.deleteWidget(m, id) } is UiEditOutcome.Edited
-        if (ok) select(parent)
+        val ok =
+            perform(AbyssusBundle.message("uiCommandDeleteWidget")) { e, m -> e.deleteWidget(m, id) } is
+                UiEditOutcome.Edited
+        if (ok) {
+            select(parent)
+        }
         return ok
     }
 
     /** Tree drag and drop: moves the selected widget under [parentId] at [index]. */
     fun moveSelected(parentId: String, index: Int?): Boolean {
         val id = selection.widgetId ?: return false
-        return perform(AbyssusBundle.message("uiCommandMoveWidget")) { e, m -> e.reparentWidget(m, id, parentId, index) } is UiEditOutcome.Edited
+        return perform(AbyssusBundle.message("uiCommandMoveWidget")) { e, m ->
+            e.reparentWidget(m, id, parentId, index)
+        } is
+            UiEditOutcome.Edited
     }
 
     fun reorderSelected(newIndex: Int): Boolean {
         val id = selection.widgetId ?: return false
-        return perform(AbyssusBundle.message("uiCommandMoveWidget")) { e, m -> e.reorderWidget(m, id, newIndex) } is UiEditOutcome.Edited
+        return perform(AbyssusBundle.message("uiCommandMoveWidget")) { e, m -> e.reorderWidget(m, id, newIndex) } is
+            UiEditOutcome.Edited
     }
 
-    /** The selected list gets an empty state (or loses it). Selecting a widget inside the list's row or empty state also works. */
+    /**
+     * The selected list gets an empty state (or loses it). Selecting a widget inside the list's row or empty state also
+     * works.
+     */
     fun addListEmpty(): Boolean {
         val list = enclosingList() ?: return false
-        return perform(AbyssusBundle.message("uiCommandListEmpty")) { e, m -> e.addListEmpty(m, list) } is UiEditOutcome.Edited
+        return perform(AbyssusBundle.message("uiCommandListEmpty")) { e, m -> e.addListEmpty(m, list) } is
+            UiEditOutcome.Edited
     }
 
     fun removeListEmpty(): Boolean {
         val list = enclosingList() ?: return false
-        return perform(AbyssusBundle.message("uiCommandListEmpty")) { e, m -> e.removeListEmpty(m, list) } is UiEditOutcome.Edited
+        return perform(AbyssusBundle.message("uiCommandListEmpty")) { e, m -> e.removeListEmpty(m, list) } is
+            UiEditOutcome.Edited
     }
 
     /** The list the selection is, or is inside of (its row or empty state); null when there is none. */
@@ -358,7 +501,9 @@ class UiEditorController(
         val tree = UiTree(c)
         var at = selection.widgetId?.let(tree::widget)
         while (at != null) {
-            if (at.type == net.nevinsky.abyssus.lib.core.ui.model.UiWidgetType.LIST) return at.id
+            if (at.type == net.nevinsky.abyssus.lib.core.ui.model.UiWidgetType.LIST) {
+                return at.id
+            }
             at = tree.parentOf(at.id)
         }
         return null
@@ -366,31 +511,56 @@ class UiEditorController(
 
     /** Up and Down move focus on [screenId] (`true`), or only Tab does (`false`, the default). */
     fun setNavigation(screenId: String, arrows: Boolean) =
-        perform(AbyssusBundle.message("uiCommandNavigation")) { e, m -> e.setScreenNavigation(m, screenId, if (arrows) "arrows" else "tab") } is UiEditOutcome.Edited
+        perform(AbyssusBundle.message("uiCommandNavigation")) { e, m ->
+            e.setScreenNavigation(
+                m,
+                screenId,
+                if (arrows) {
+                    "arrows"
+                } else {
+                    "tab"
+                },
+            )
+        } is
+            UiEditOutcome.Edited
 
     fun addScreen(name: String, kind: String): Boolean {
-        val id = added(perform(AbyssusBundle.message("uiCommandAddScreen")) { e, m -> e.addScreen(m, name, kind) }) ?: return false
+        val id =
+            added(perform(AbyssusBundle.message("uiCommandAddScreen")) { e, m -> e.addScreen(m, name, kind) })
+                ?: return false
         selectScreen(id)
         return true
     }
 
-    fun renameScreen(id: String, name: String) = perform(AbyssusBundle.message("uiCommandRenameScreen")) { e, m -> e.renameScreen(m, id, name) } is UiEditOutcome.Edited
+    fun renameScreen(id: String, name: String) =
+        perform(AbyssusBundle.message("uiCommandRenameScreen")) { e, m -> e.renameScreen(m, id, name) } is
+            UiEditOutcome.Edited
 
-    fun deleteScreen(id: String) = perform(AbyssusBundle.message("uiCommandDeleteScreen")) { e, m -> e.deleteScreen(m, id) } is UiEditOutcome.Edited
+    fun deleteScreen(id: String) =
+        perform(AbyssusBundle.message("uiCommandDeleteScreen")) { e, m -> e.deleteScreen(m, id) } is
+            UiEditOutcome.Edited
 
     /** A generic property-panel edit; see `UiDocumentEdits`. */
     fun edit(name: String, op: UiTreeEdit): Boolean = perform(name, null, op) is UiEditOutcome.Edited
 
     // ---- canvas gestures ----
 
-    private val gestures = UiCanvasGestures(
-        { collection }, { text }, { layoutProvider(it) }, ::select,
-        { baseText, edit -> perform(AbyssusBundle.message("uiCommandDrag"), baseText, edit) is UiEditOutcome.Edited },
-    )
+    private val gestures =
+        UiCanvasGestures(
+            { collection },
+            { text },
+            { layoutProvider(it) },
+            ::select,
+            { baseText, edit ->
+                perform(AbyssusBundle.message("uiCommandDrag"), baseText, edit) is UiEditOutcome.Edited
+            },
+        )
 
-    override val gestureActive: Boolean get() = gestures.active
+    override val gestureActive: Boolean
+        get() = gestures.active
 
-    override val selectedWidgetId: String? get() = selection.widgetId
+    override val selectedWidgetId: String?
+        get() = selection.widgetId
 
     /** A press on [widgetId] in the edit canvas: selects it and starts a drag at viewport point ([x], [y]). */
     override fun beginGesture(widgetId: String, x: Float, y: Float) = gestures.begin(widgetId, x, y)

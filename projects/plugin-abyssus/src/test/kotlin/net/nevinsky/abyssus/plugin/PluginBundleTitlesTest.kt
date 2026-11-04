@@ -5,18 +5,25 @@
 
 package net.nevinsky.abyssus.plugin
 
-import org.junit.Assert.*
-import org.junit.Test
 import java.io.File
 import java.util.Properties
 import javax.xml.parsers.DocumentBuilderFactory
+import org.junit.Assert.*
+import org.junit.Test
 
 class PluginBundleTitlesTest {
-    @Test fun everyRegisteredActionAndNotificationHasItsBundleTitle() {
+    @Test
+    fun everyRegisteredActionAndNotificationHasItsBundleTitle() {
         for (module in listOf("")) {
-            val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(File(module + "src/main/resources/META-INF/plugin.xml"))
+            val document =
+                DocumentBuilderFactory.newInstance()
+                    .newDocumentBuilder()
+                    .parse(File(module + "src/main/resources/META-INF/plugin.xml"))
             val bundle = "AbyssusBundle"
-            val properties = Properties().apply { File(module + "src/main/resources/messages/$bundle.properties").reader().use(::load) }
+            val properties =
+                Properties().apply {
+                    File(module + "src/main/resources/messages/$bundle.properties").reader().use(::load)
+                }
             val actions = document.getElementsByTagName("action")
             for (index in 0 until actions.length) {
                 val action = actions.item(index) as org.w3c.dom.Element

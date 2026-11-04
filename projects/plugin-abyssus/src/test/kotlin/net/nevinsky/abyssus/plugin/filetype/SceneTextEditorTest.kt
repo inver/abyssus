@@ -63,7 +63,10 @@ class SceneTextEditorTest : BasePlatformTestCase() {
     }
 
     fun testTextEditorShowsFormattedJsonForProjectFiles() {
-        val file = myFixture.addFileToProject("f/Untitled.abss", """{"formatVersion":1,"name":"Main","mainCamera":{"far":100}}""").virtualFile
+        val file =
+            myFixture
+                .addFileToProject("f/Untitled.abss", """{"formatVersion":1,"name":"Main","mainCamera":{"far":100}}""")
+                .virtualFile
         myFixture.configureFromExistingVirtualFile(file)
         val text = FileDocumentManager.getInstance().getDocument(file)!!.text
         assertTrue(text, text.lines().size > 4)

@@ -4,18 +4,19 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.flight
 
+import java.util.Random
 import net.nevinsky.abyssus.app.game.controlline.input.HandleInput
 import net.nevinsky.abyssus.lib.physics.PHYSICS_STEP
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.Random
 
 class FlightControlSourceTest {
     /** Records every observation and answers with [tilt] of it. */
     private class Recorder(val tilt: (FlightObservation) -> Float = { 0f }) : FlightControlSource {
         val seen = ArrayList<FlightObservation>()
+
         override fun tilt(observation: FlightObservation): Float {
             seen += observation
             return tilt.invoke(observation)
@@ -94,10 +95,19 @@ class FlightControlSourceTest {
     @Test
     fun regularAndIrregularFramesGiveTheSameFlightAtEqualSimulatedTime() {
         fun fly(frames: List<Float>): List<FlightObservation> {
-            val recorder = Recorder { o -> if (o.time > 6f && o.time < 6.1f) 0.05f else 0f }
+            val recorder = Recorder { o ->
+                if (o.time > 6f && o.time < 6.1f) {
+                    0.05f
+                } else {
+                    0f
+                }
+            }
             fieldSession("Stunter", control = recorder).use { session ->
                 frames.forEach(session::advance)
-                assertNull("the flight goes on: ${session.flight.result} at ${session.flight.time} s", session.flight.result)
+                assertNull(
+                    "the flight goes on: ${session.flight.result} at ${session.flight.time} s",
+                    session.flight.result,
+                )
             }
             return recorder.seen
         }

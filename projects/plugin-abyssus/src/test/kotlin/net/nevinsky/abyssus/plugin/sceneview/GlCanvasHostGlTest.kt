@@ -17,7 +17,8 @@ import javax.swing.JFrame
 import javax.swing.SwingUtilities
 
 /**
- * The shared GL canvas lifecycle in a real GL 3.2 core canvas: the hooks run in order, GL calls inside them work because
+  * The shared GL canvas lifecycle in a real GL 3.2 core canvas: the hooks run in order, GL calls inside them work
+  * because
  * the context is current, a frame failure reaches the timer's handler, and release runs once with the context current.
  * Opens a window: runs only with `-Dabyssus.glTests=true`.
  */
@@ -40,7 +41,9 @@ class GlCanvasHostGlTest {
             GL11.glClearColor(0f, 1f, 0f, 1f)
             GL11.glClear(GL11.GL_COLOR_BUFFER_BIT)
             glErrorInPaint = GL11.glGetError()
-            if (painted++ == failAt) error("frame failed")
+            if (painted++ == failAt) {
+                error("frame failed")
+            }
         }
         override fun framePresented() { events += "framePresented"; frames.countDown() }
         override fun beforeRelease() { events += "beforeRelease" }

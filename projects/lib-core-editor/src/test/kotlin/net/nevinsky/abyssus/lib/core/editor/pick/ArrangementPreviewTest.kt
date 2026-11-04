@@ -19,13 +19,17 @@ import org.junit.Test
 
 class ArrangementPreviewTest {
     private fun scene(): SceneContent {
-        val path = arrangementAlong(listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f))).also {
-            it.asset = BaseMeta(name = "post")
-            it.spacing = 10f
-            it.slots = mutableListOf(11, 12, 13)
-        }
+        val path =
+            arrangementAlong(listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f))).also {
+                it.asset = BaseMeta(name = "post")
+                it.spacing = 10f
+                it.slots = mutableListOf(11, 12, 13)
+            }
         val models = listOf(11, 12, 13).map { AssetPlacement(it.toLong(), "post", PlacementTransform.IDENTITY) }
-        return SceneContent(models = models + AssetPlacement(99L, "rock", PlacementTransform.IDENTITY), arrangements = listOf(ArrangementPlacement(10L, path)))
+        return SceneContent(
+            models = models + AssetPlacement(99L, "rock", PlacementTransform.IDENTITY),
+            arrangements = listOf(ArrangementPlacement(10L, path)),
+        )
     }
 
     @Test
@@ -38,9 +42,13 @@ class ArrangementPreviewTest {
 
     @Test
     fun aLongerDraftAddsPreviewCopiesAndAShorterOneDropsThem() {
-        val longer = ArrangementPreview().apply(scene(), PathEdit(10L, listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f))), LineHeights())
+        val longer =
+            ArrangementPreview()
+                .apply(scene(), PathEdit(10L, listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f))), LineHeights())
         assertEquals(5, longer.models.count { it.assetName == "post" })
-        val shorter = ArrangementPreview().apply(scene(), PathEdit(10L, listOf(Vector3(0f, 0f, 0f), Vector3(10f, 0f, 0f))), LineHeights())
+        val shorter =
+            ArrangementPreview()
+                .apply(scene(), PathEdit(10L, listOf(Vector3(0f, 0f, 0f), Vector3(10f, 0f, 0f))), LineHeights())
         assertEquals(listOf(99L, 11L, 12L), shorter.models.map { it.entityId })
     }
 

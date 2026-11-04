@@ -16,14 +16,21 @@ import org.junit.Test
 class PhysicsComponentKindsTest {
     private val messages = ResourceEditorMessages()
     private val editor = ComponentEditor(messages, PhysicsComponentKinds(messages).kinds)
-    private val registry = ComponentRegistry().also { r -> r.registerAll(PHYSICS_COMPONENTS); PHYSICS_COMPONENTS.values.forEach { r.register(it.name, it) } }
+    private val registry =
+        ComponentRegistry().also { r ->
+            r.registerAll(PHYSICS_COMPONENTS)
+            PHYSICS_COMPONENTS.values.forEach { r.register(it.name, it) }
+        }
+
     private fun scene(component: String = ""): SceneDto =
         sceneWithEcs("""{"0":{"components":{$component}},"1":{"components":{}}}""", registry)
 
     private fun SceneDto.body() = entity(0)!!.component(RigidBodyComponent::class.java)!!
+
     private fun SceneDto.collider() = entity(0)!!.component(ColliderComponent::class.java)!!
 
-    @Test fun rigidBodyIsAddedWithDefaultsAndChangesTheField() {
+    @Test
+    fun rigidBodyIsAddedWithDefaultsAndChangesTheField() {
         val root = scene()
         assertEquals(EditResult.Changed, editor.add(root, 0L, "RigidBodyComponent"))
         assertEquals(1f, root.body().mass, 0f)
@@ -32,7 +39,8 @@ class PhysicsComponentKindsTest {
         assertEquals(2f, root.body().mass, 0f)
     }
 
-    @Test fun unitsComeFromTheKinds() {
+    @Test
+    fun unitsComeFromTheKinds() {
         val root = scene(""""RigidBodyComponent":{"mass":0.5},"ColliderComponent":{"shape":"SPHERE","radius":0.15}""")
         val body = editor.read(root, 0L, "RigidBodyComponent")!!.associateBy { it.field }
         assertEquals("kg", body.getValue("mass").unit)
@@ -41,7 +49,8 @@ class PhysicsComponentKindsTest {
         assertEquals("m", collider.getValue("radius").unit)
     }
 
-    @Test fun nestedFieldsAreEditedInPlace() {
+    @Test
+    fun nestedFieldsAreEditedInPlace() {
         val root = scene(""""ColliderComponent":{"offset":{"x":1},"halfExtents":{"x":1,"y":0.5}}""")
         assertEquals(EditResult.Changed, editor.update(root, 0L, "ColliderComponent", "offset.x", "0"))
         assertEquals(0f, root.collider().offset.x, 0f)
@@ -50,7 +59,8 @@ class PhysicsComponentKindsTest {
         assertEquals(0.5f, root.collider().halfExtents.y, 0f)
     }
 
-    @Test fun fullClassNameIsEditableAndDoesNotOfferDuplicate() {
+    @Test
+    fun fullClassNameIsEditableAndDoesNotOfferDuplicate() {
         val name = "net.nevinsky.abyssus.lib.physics.ColliderComponent"
         val root = scene("\"$name\":{}")
         assertFalse(editor.missingKinds(root, 0L).any { it.name == "ColliderComponent" })
@@ -59,11 +69,17 @@ class PhysicsComponentKindsTest {
         assertEquals(1f, root.collider().halfExtents.x, 0f)
     }
 
-    @Test fun invalidDimensionsMassDistanceAndReferencesAreRejected() {
-        for ((kind, field, value) in listOf(Triple("RigidBodyComponent", "mass", "0"),
-            Triple("ColliderComponent", "halfExtents.x", "0"), Triple("ColliderComponent", "radius", "NaN"),
-            Triple("ColliderComponent", "halfHeight", "-1"), Triple("ConstraintComponent", "minDistance", "-1"),
-            Triple("ConstraintComponent", "other", "999"))) {
+    @Test
+    fun invalidDimensionsMassDistanceAndReferencesAreRejected() {
+        for ((kind, field, value) in
+            listOf(
+                Triple("RigidBodyComponent", "mass", "0"),
+                Triple("ColliderComponent", "halfExtents.x", "0"),
+                Triple("ColliderComponent", "radius", "NaN"),
+                Triple("ColliderComponent", "halfHeight", "-1"),
+                Triple("ConstraintComponent", "minDistance", "-1"),
+                Triple("ConstraintComponent", "other", "999"),
+            )) {
             val root = scene("\"$kind\":{}")
             val before = net.nevinsky.abyssus.plugin.printSceneWith(registry, root)
             assertTrue("$kind $field", editor.update(root, 0L, kind, field, value) is EditResult.Rejected)

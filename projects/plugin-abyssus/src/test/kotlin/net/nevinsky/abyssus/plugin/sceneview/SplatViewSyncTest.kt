@@ -24,7 +24,9 @@ class SplatViewSyncTest {
         override val textureKey: Any? get() = texture
         val uploads = mutableListOf<GridRect>()
         override fun upload(draft: SplatDraft, rect: GridRect): Boolean {
-            if (texture == null) return false
+            if (texture == null) {
+                return false
+            }
             uploads += rect
             return true
         }

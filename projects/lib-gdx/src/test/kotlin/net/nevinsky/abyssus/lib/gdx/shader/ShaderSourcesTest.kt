@@ -12,7 +12,8 @@ import org.junit.Test
 class ShaderSourcesTest {
     @Test
     fun everyBundledShaderIsReadable() {
-        for (resource in listOf(ShaderSources.DEFAULT_VERTEX, ShaderSources.DEFAULT_FRAGMENT, ShaderSources.PBR_FRAGMENT)) {
+        for (resource in
+            listOf(ShaderSources.DEFAULT_VERTEX, ShaderSources.DEFAULT_FRAGMENT, ShaderSources.PBR_FRAGMENT)) {
             assertTrue("$resource is empty", ShaderSources.read(resource).isNotBlank())
         }
     }
@@ -23,7 +24,10 @@ class ShaderSourcesTest {
             val source = ShaderSources.readAssembled(resource)
             assertFalse("$resource kept an include line", source.contains("#pragma include"))
             assertTrue("$resource has no transform", source.contains("vec3 outputTransform(vec3 linear)"))
-            assertTrue("$resource ends in the transform", source.contains("gl_FragColor.rgb = outputTransform(gl_FragColor.rgb);"))
+            assertTrue(
+                "$resource ends in the transform",
+                source.contains("gl_FragColor.rgb = outputTransform(gl_FragColor.rgb);"),
+            )
         }
         val include = ShaderSources.assemble("#pragma include \"output_transform.glsl\"\n", "test")
         assertTrue(include.contains("// The display transform of a host that lights in linear space"))

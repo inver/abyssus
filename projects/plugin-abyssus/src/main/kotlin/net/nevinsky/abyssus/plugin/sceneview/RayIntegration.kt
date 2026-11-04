@@ -4,14 +4,13 @@
  */
 package net.nevinsky.abyssus.plugin.sceneview
 
+import java.util.concurrent.Executor
+import net.nevinsky.abyssus.lib.core.assets.displayMessage
 import net.nevinsky.abyssus.lib.core.editor.ray.RayBackendService
 import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssets
 import net.nevinsky.abyssus.lib.core.editor.ray.RayViewFeed
 import net.nevinsky.abyssus.plugin.EditorBundle
-import net.nevinsky.abyssus.lib.core.assets.displayMessage
-
 import net.nevinsky.abyssus.plugin.RayServices
-import java.util.concurrent.Executor
 
 /**
  * What a scene view needs to offer Ray Tracing: the application's backend service, per-view CPU asset interest, the
@@ -27,12 +26,25 @@ internal class RayIntegration(
 ) {
     /** A feed whose CPU asset interest goes through [viewAssets], the assets of the view it is for. */
     fun newFeed(viewId: String, viewAssets: ViewAssets): RayViewFeed =
-        RayViewFeed(service.newView(viewId), assets(viewAssets), executor, EditorBundle, exposure, reportFailure = reportFailure)
+        RayViewFeed(
+            service.newView(viewId),
+            assets(viewAssets),
+            executor,
+            EditorBundle,
+            exposure,
+            reportFailure = reportFailure,
+        )
 
     companion object {
-        fun of(ray: RayServices) = RayIntegration(
-            ray.service, { viewAssets -> raySceneAssetsOf(viewAssets) }, ray.converter, ray.exposure,
-            ray.log.let { log -> { failure: Throwable -> log.warn("Ray tracing stopped: ${failure.displayMessage()}", failure) } },
-        )
+        fun of(ray: RayServices) =
+            RayIntegration(
+                ray.service,
+                { viewAssets -> raySceneAssetsOf(viewAssets) },
+                ray.converter,
+                ray.exposure,
+                ray.log.let { log ->
+                    { failure: Throwable -> log.warn("Ray tracing stopped: ${failure.displayMessage()}", failure) }
+                },
+            )
     }
 }

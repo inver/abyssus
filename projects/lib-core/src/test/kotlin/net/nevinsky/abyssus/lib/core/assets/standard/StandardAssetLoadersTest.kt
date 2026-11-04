@@ -34,17 +34,18 @@ class StandardAssetLoadersTest {
     @Test
     fun everyDrawableKindHasItsLoader() {
         val byType = loaders().byType
-        val expected = mapOf(
-            MetaType.MODEL to ModelLoader::class,
-            MetaType.TERRAIN to TerrainLoader::class,
-            MetaType.FOLIAGE to RuntimeFoliageLoader::class,
-            MetaType.TEXTURE to TextureLoader::class,
-            MetaType.PIXMAP_TEXTURE to TextureLoader::class,
-            MetaType.SKYBOX to SkyboxLoader::class,
-            MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader::class,
-            MetaType.CLOUDS to CloudsLoader::class,
-            MetaType.SKYBOX_HDR to HdrSkyLoader::class,
-        )
+        val expected =
+            mapOf(
+                MetaType.MODEL to ModelLoader::class,
+                MetaType.TERRAIN to TerrainLoader::class,
+                MetaType.FOLIAGE to RuntimeFoliageLoader::class,
+                MetaType.TEXTURE to TextureLoader::class,
+                MetaType.PIXMAP_TEXTURE to TextureLoader::class,
+                MetaType.SKYBOX to SkyboxLoader::class,
+                MetaType.SKYBOX_PROCEDURAL to ProceduralSkyLoader::class,
+                MetaType.CLOUDS to CloudsLoader::class,
+                MetaType.SKYBOX_HDR to HdrSkyLoader::class,
+            )
         assertEquals(expected.keys, byType.keys)
         expected.forEach { (type, loader) -> assertEquals(type.name, loader, byType.getValue(type)::class) }
     }
@@ -69,15 +70,28 @@ class StandardAssetLoadersTest {
     fun aHostCanReplaceTheFoliageLoader() {
         var seen: TerrainLoader? = null
         val custom = RuntimeFoliageLoaderStub()
-        val loaders = StandardAssetLoaders(files, metas, ShaderStorage(), foliage = { seen = it; custom })
+        val loaders =
+            StandardAssetLoaders(
+                files,
+                metas,
+                ShaderStorage(),
+                foliage = {
+                    seen = it
+                    custom
+                },
+            )
         assertSame(custom, loaders.byType[MetaType.FOLIAGE])
         assertTrue(seen === loaders.terrain)
     }
 
     private class RuntimeFoliageLoaderStub : AssetLoader<Unit, PreparedFoliage, FoliageDrawable> {
         override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedFoliage>? = null
+
         override fun prepare(name: String): Prepared<Unit, PreparedFoliage>? = null
-        override fun build(staged: PreparedFoliage, assets: BuiltAssets): FoliageDrawable = error("not built in this test")
+
+        override fun build(staged: PreparedFoliage, assets: BuiltAssets): FoliageDrawable =
+            error("not built in this test")
+
         override fun discard(model: Unit) {}
     }
 }

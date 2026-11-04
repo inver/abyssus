@@ -17,7 +17,8 @@ import org.slf4j.Logger
 /**
  * Loads the scenes of one project folder into independent Ashley engines, without editor or GL services. Each load
  * owns its engine, entities, resolver and warnings, and logs under the scene's name. The game components of [registry]
- * are checked here, so a registration that fails (see [net.nevinsky.abyssus.lib.runtime.schema.ComponentRegistrationException])
+  * are checked here, so a registration that fails (see
+  * [net.nevinsky.abyssus.lib.runtime.schema.ComponentRegistrationException])
  * fails the construction and no scene loads.
  *
  * A scene that cannot be read is logged once, with its cause, and loads as null, so a caller can carry on with the
@@ -51,7 +52,9 @@ class RuntimeSceneLoader(
         return SceneContext(engine, scene)
     }
 
-    /** Logs each distinct warning once: a kept component by its reason alone, a bad reference as the loader words it. */
+    /**
+     * Logs each distinct warning once: a kept component by its reason alone, a bad reference as the loader words it.
+     */
     private fun logWarnings(loaded: EcsLoadingWarns) {
         val perEntity = loaded.carried.flatMap { (id, raws) ->
             raws.values.map { "entity $id: ${it.reason}" to it.reason }

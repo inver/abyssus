@@ -17,18 +17,31 @@ import javax.imageio.ImageIO
  * conversion would change what the shader reads. Pure CPU work, safe on any thread.
  */
 class ImageIoSplatCodec : SplatImageCodec {
-    /** Decodes [bytes] of the file [fileName]; throws [SplatImageException] with the reason when it cannot be painted. */
+    /**
+     * Decodes [bytes] of the file [fileName]; throws [SplatImageException] with the reason when it cannot be painted.
+     */
     override fun decode(fileName: String, bytes: ByteArray): SplatPixels {
-        if (!fileName.endsWith(".png", ignoreCase = true)) throw SplatImageException(SplatImageProblem.NOT_PNG, fileName)
+        if (!fileName.endsWith(".png", ignoreCase = true)) {
+            throw SplatImageException(SplatImageProblem.NOT_PNG, fileName)
+        }
         val image = runCatchingKeepingCancellation { ImageIO.read(ByteArrayInputStream(bytes)) }.getOrNull()
             ?: throw SplatImageException(SplatImageProblem.UNREADABLE)
         val side = image.width
-        // ImageIO gives 8-bit non-premultiplied RGBA PNGs as TYPE_4BYTE_ABGR; RGB, grey, palette and 16-bit are other types.
+        // ImageIO gives 8-bit non-premultiplied RGBA PNGs as TYPE_4BYTE_ABGR; RGB, grey, palette and 16-bit are other
+        // types.
         val eightBitRgba = image.type == BufferedImage.TYPE_4BYTE_ABGR
-        if (!eightBitRgba) throw SplatImageException(SplatImageProblem.NOT_RGBA8)
-        if (image.width != image.height) throw SplatImageException(SplatImageProblem.NOT_SQUARE, "${image.width}x${image.height}")
-        if (side < SPLAT_MIN_SIDE) throw SplatImageException(SplatImageProblem.TOO_SMALL, "$side")
-        if (side > SPLAT_MAX_SIDE) throw SplatImageException(SplatImageProblem.TOO_LARGE, "$side")
+        if (!eightBitRgba) {
+            throw SplatImageException(SplatImageProblem.NOT_RGBA8)
+        }
+        if (image.width != image.height) {
+            throw SplatImageException(SplatImageProblem.NOT_SQUARE, "${image.width}x${image.height}")
+        }
+        if (side < SPLAT_MIN_SIDE) {
+            throw SplatImageException(SplatImageProblem.TOO_SMALL, "$side")
+        }
+        if (side > SPLAT_MAX_SIDE) {
+            throw SplatImageException(SplatImageProblem.TOO_LARGE, "$side")
+        }
         val out = ByteArray(side * side * 4)
         val row = IntArray(side * 4)
         val raster = image.raster

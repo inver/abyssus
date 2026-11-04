@@ -35,9 +35,14 @@ class TerrainPreviewRunner(
     @Volatile
     private var disposed = false
 
-    /** Starts a preview of [draft]'s current inputs; false (nothing started) when they are invalid. [onOutcome] runs on the UI thread. */
+    /**
+     * Starts a preview of [draft]'s current inputs; false (nothing started) when they are invalid. [onOutcome] runs on
+     * the UI thread.
+     */
     fun start(draft: TerrainGenerationDraft, onOutcome: (PreviewOutcome) -> Unit): Boolean {
-        if (disposed) return false
+        if (disposed) {
+            return false
+        }
         val request = draft.begin() ?: return false
         active = request.token
         background {
@@ -45,19 +50,29 @@ class TerrainPreviewRunner(
             // outcome handled in `ui` (it is ours, not the platform's), so it must be captured too
             val result = try {
                 Result.success(generator.generate(request.resolution, request.size, request.settings) {
-                    if (disposed || active != request.token) throw CancellationException("superseded")
+                    if (disposed || active != request.token) {
+                        throw CancellationException("superseded")
+                    }
                 })
             } catch (e: Throwable) {
                 Result.failure(e)
             }
             ui {
-                if (disposed) return@ui
+                if (disposed) {
+                    return@ui
+                }
                 result.fold(
-                    onSuccess = { heights -> if (draft.complete(request, heights)) onOutcome(PreviewOutcome.Ready) },
+                    onSuccess = { heights -> if (draft.complete(request, heights)) {
+                        onOutcome(PreviewOutcome.Ready)
+                    } },
                     onFailure = { e ->
-                        if (e is CancellationException) return@ui
+                        if (e is CancellationException) {
+                            return@ui
+                        }
                         draft.fail(request)
-                        if (active == request.token) onOutcome(PreviewOutcome.Failed(e.documentDisplayMessage()))
+                        if (active == request.token) {
+                            onOutcome(PreviewOutcome.Failed(e.documentDisplayMessage()))
+                        }
                     },
                 )
             }

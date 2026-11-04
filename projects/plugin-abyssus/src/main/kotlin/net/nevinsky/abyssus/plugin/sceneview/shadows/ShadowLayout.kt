@@ -5,10 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.shadows
 
-import net.nevinsky.abyssus.lib.gdx.shader.ShadowLightKind
-
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
-
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowLightKind
 
 data class ShadowTile(val index: Int, val x: Int, val y: Int, val size: Int = 1024, val atlasSize: Int = 4096)
 
@@ -21,11 +19,18 @@ class ShadowLayout {
 
     fun allocate(lights: LightSet): List<ShadowAllocation> {
         val candidates = buildList {
-            lights.directional.sortedBy { it.entityId }.take(1).forEach { add(it.entityId to ShadowLightKind.DIRECTIONAL) }
+            lights.directional
+                .sortedBy { it.entityId }
+                .take(1)
+                .forEach { add(it.entityId to ShadowLightKind.DIRECTIONAL) }
             lights.point.sortedBy { it.entityId }.take(2).forEach { add(it.entityId to ShadowLightKind.POINT) }
             lights.spot.sortedBy { it.entityId }.take(3).forEach { add(it.entityId to ShadowLightKind.SPOT) }
         }
-        if (candidates.isEmpty()) { previous = emptyMap(); grid = 0; return emptyList() }
+        if (candidates.isEmpty()) {
+            previous = emptyMap()
+            grid = 0
+            return emptyList()
+        }
         val count = candidates.sumOf { tileCount(it.second) }
         grid = maxOf(grid, kotlin.math.ceil(kotlin.math.sqrt(count.toDouble())).toInt())
         val used = HashSet<Int>()
@@ -41,7 +46,10 @@ class ShadowLayout {
             if (id !in indices) {
                 val count = tileCount(kind)
                 val free = (0 until ATLAS_TILES).filterNot(used::contains).take(count)
-                if (free.size == count) { indices[id] = free; used.addAll(free) }
+                if (free.size == count) {
+                    indices[id] = free
+                    used.addAll(free)
+                }
             }
         }
         val result = candidates.mapNotNull { (id, kind) ->
@@ -52,10 +60,12 @@ class ShadowLayout {
         return result
     }
 
-    private fun tileCount(kind: ShadowLightKind) = when (kind) {
-        ShadowLightKind.DIRECTIONAL, ShadowLightKind.SPOT -> 1
-        ShadowLightKind.POINT -> 6
-    }
+    private fun tileCount(kind: ShadowLightKind) =
+        when (kind) {
+            ShadowLightKind.DIRECTIONAL,
+            ShadowLightKind.SPOT -> 1
+            ShadowLightKind.POINT -> 6
+        }
 
     private fun tile(index: Int): ShadowTile {
         val size = ATLAS_SIZE / grid

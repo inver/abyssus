@@ -5,23 +5,25 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.editor.parseScene
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import net.nevinsky.abyssus.lib.core.editor.parseScene
 
 /** The tree squashes the linked copies of a path arrangement into the arrangement's row. */
 class ArrangementTreeTest : BasePlatformTestCase() {
-    private val ecs = parseScene(
-        """
+    private val ecs =
+        parseScene(
+            """
         {"formatVersion":1,"ecs":{
           "1": {"components": {"NameComponent": {"name": "Ground"}}},
-          "2": {"type": "GROUP","components": {"NameComponent": {"name": "Railway"}, "PathArrangementComponent": {"slots": [3, 4]}}},
+          "2": {"type": "GROUP",
+"components": {"NameComponent": {"name": "Railway"}, "PathArrangementComponent": {"slots": [3, 4]}}},
           "3": {"components": {"NameComponent": {"name": "Path 2 #0"}, "ParentComponent": {"parentEntityId": 2}}},
           "4": {"components": {"NameComponent": {"name": "Path 2 #1"}, "ParentComponent": {"parentEntityId": 2}}},
           "5": {"components": {"NameComponent": {"name": "Detached"}}}
         }}
-        """,
-    )
+        """
+        )
 
     fun testCopiesAreNotListedUnderEcs() {
         assertEquals(listOf("1", "2", "5"), ecsRows(ecs).map { it.name })

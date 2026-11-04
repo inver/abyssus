@@ -5,6 +5,7 @@
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
 import com.badlogic.gdx.math.MathUtils
+import kotlin.math.atan2
 import net.nevinsky.abyssus.app.game.controlline.flight.Takeover
 import net.nevinsky.abyssus.app.game.controlline.track.wrapDegrees
 import org.junit.Assert.assertEquals
@@ -13,9 +14,10 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.atan2
 
-/** A recording of [seconds] with the plane moving 1 m/s along x at 30 Hz and one judgement per entry of [judgements]. */
+/**
+ * A recording of [seconds] with the plane moving 1 m/s along x at 30 Hz and one judgement per entry of [judgements].
+ */
 private fun handRecording(seconds: Float, judgements: List<RecordedJudgement>): FlightRecording {
     val count = (seconds * 30).toInt() + 1
     val samples = FloatArray(count * SAMPLE_STRIDE)
@@ -26,8 +28,15 @@ private fun handRecording(seconds: Float, judgements: List<RecordedJudgement>): 
     return FlightRecording("Stunter", 18f, AssistLevel.PRO, samples, judgements)
 }
 
-private fun judgement(figure: Figure, start: Float, end: Float, tenths: Int, reason: ZeroReason? = null, deductions: List<RecordedDeduction> = emptyList(), ideal: FloatArray = FloatArray(0)) =
-    RecordedJudgement(figure.ordinal, start, end, tenths, reason, deductions, ideal)
+private fun judgement(
+    figure: Figure,
+    start: Float,
+    end: Float,
+    tenths: Int,
+    reason: ZeroReason? = null,
+    deductions: List<RecordedDeduction> = emptyList(),
+    ideal: FloatArray = FloatArray(0),
+) = RecordedJudgement(figure.ordinal, start, end, tenths, reason, deductions, ideal)
 
 class DebriefModelTest {
     private fun azimuth(x: Float, z: Float) = atan2(-z, x) * MathUtils.radiansToDegrees
@@ -56,7 +65,11 @@ class DebriefModelTest {
         assertTrue(frame.centre.y > 2f)
     }
 
-    private fun loopsSpan(): Pair<Float, Float> = debriefOf(recordedFlight()).let { it.select(2); it.recording!!.judgement(2)!!.let { j -> j.start to j.end } }
+    private fun loopsSpan(): Pair<Float, Float> =
+        debriefOf(recordedFlight()).let {
+            it.select(2)
+            it.recording!!.judgement(2)!!.let { j -> j.start to j.end }
+        }
 
     @Test
     fun aTakeoverInTheLoopsDrawsItsPartInTheInstructorColourAndSaysSo() {
@@ -65,7 +78,17 @@ class DebriefModelTest {
         val model = debriefOf(recordedFlight(), listOf(Takeover(middle - 1f, middle + 1f)))
         model.select(2)
         val lines = model.segments()
-        assertEquals(listOf(TrackKind.IDEAL, TrackKind.FLOWN, TrackKind.INSTRUCTOR, TrackKind.FLOWN, TrackKind.GUIDE, TrackKind.GUIDE), lines.map { it.kind })
+        assertEquals(
+            listOf(
+                TrackKind.IDEAL,
+                TrackKind.FLOWN,
+                TrackKind.INSTRUCTOR,
+                TrackKind.FLOWN,
+                TrackKind.GUIDE,
+                TrackKind.GUIDE,
+            ),
+            lines.map { it.kind },
+        )
         val flown = lines.filter { it.kind == TrackKind.FLOWN || it.kind == TrackKind.INSTRUCTOR }
         // the runs meet: the flown line is unbroken
         flown.zipWithNext { a, b -> assertEquals(a.points.last(), b.points.first()) }
@@ -82,7 +105,10 @@ class DebriefModelTest {
         val model = debriefOf(recordedFlight(), listOf(Takeover(0f, 0.5f)))
         model.select(2)
         assertTrue(start > 1f)
-        assertEquals(listOf(TrackKind.IDEAL, TrackKind.FLOWN, TrackKind.GUIDE, TrackKind.GUIDE), model.segments().map { it.kind })
+        assertEquals(
+            listOf(TrackKind.IDEAL, TrackKind.FLOWN, TrackKind.GUIDE, TrackKind.GUIDE),
+            model.segments().map { it.kind },
+        )
         assertFalse(model.deductionLines().contains(INSTRUCTOR_NOTE))
         assertTrue(model.hasTakeovers)
     }
@@ -165,7 +191,8 @@ class DebriefModelTest {
     @Test
     fun lowBottomsListOneLine() {
         val low = RecordedDeduction(Criterion.BASE_HEIGHT, 0.6f, 0.3f, 6)
-        val model = debriefOf(handRecording(20f, listOf(judgement(Figure.INSIDE_LOOPS, 2f, 14f, 94, deductions = listOf(low)))))
+        val model =
+            debriefOf(handRecording(20f, listOf(judgement(Figure.INSIDE_LOOPS, 2f, 14f, 94, deductions = listOf(low)))))
         model.select(2)
         assertEquals(listOf("Base height 0.60 m off (±0.30): −0.6"), model.deductionLines())
     }
@@ -174,19 +201,29 @@ class DebriefModelTest {
     fun deductionsAreListedLargestFirstAndATenSaysNone() {
         val small = RecordedDeduction(Criterion.PARALLEL_45, 0.7f, 0.5f, 2)
         val big = RecordedDeduction(Criterion.LINE_ANGLE, 9f, 3f, 12)
-        val model = debriefOf(handRecording(20f, listOf(
-            judgement(Figure.INSIDE_LOOPS, 2f, 14f, 86, deductions = listOf(small, big)),
-            judgement(Figure.INVERTED_LAPS, 14f, 18f, 100),
-        )))
+        val model =
+            debriefOf(
+                handRecording(
+                    20f,
+                    listOf(
+                        judgement(Figure.INSIDE_LOOPS, 2f, 14f, 86, deductions = listOf(small, big)),
+                        judgement(Figure.INVERTED_LAPS, 14f, 18f, 100),
+                    ),
+                )
+            )
         model.select(2)
-        assertEquals(listOf("Line angle 9.00 ° off (±3.00): −1.2", "45° parallel 0.70 m off (±0.50): −0.2"), model.deductionLines())
+        assertEquals(
+            listOf("Line angle 9.00 ° off (±3.00): −1.2", "45° parallel 0.70 m off (±0.50): −0.2"),
+            model.deductionLines(),
+        )
         model.select(1)
         assertEquals(listOf("No deductions"), model.deductionLines())
     }
 
     @Test
     fun tooSoonShowsTheReasonAndNoDeductions() {
-        val model = debriefOf(handRecording(20f, listOf(judgement(Figure.OUTSIDE_LOOPS, 2f, 14f, 0, ZeroReason.TOO_SOON))))
+        val model =
+            debriefOf(handRecording(20f, listOf(judgement(Figure.OUTSIDE_LOOPS, 2f, 14f, 0, ZeroReason.TOO_SOON))))
         model.select(4)
         assertEquals(listOf("Scored 0: too soon"), model.deductionLines())
         // the flown path is still shown

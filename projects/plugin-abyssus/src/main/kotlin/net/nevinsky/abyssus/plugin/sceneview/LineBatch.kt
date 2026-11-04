@@ -42,12 +42,15 @@ class LineBatch(shaders: ShaderStorage) : LineSink, Disposable {
     }
 
     /**
-     * A line [widthPx] pixels wide: a strip of two triangles across the line, as wide on the screen at both ends however
+      * A line [widthPx] pixels wide: a strip of two triangles across the line, as wide on the screen at both ends
+      * however
      * far they are (the camera's viewport height gives the pixel size).
      */
     override fun thickLine(from: Vector3, to: Vector3, color: Color, widthPx: Float) {
         val cam = camera as? PerspectiveCamera ?: return line(from, to, color)
-        if (quadCount + 6 > MAX_VERTICES) flush()
+        if (quadCount + 6 > MAX_VERTICES) {
+            flush()
+        }
         val dx = to.x - from.x
         val dy = to.y - from.y
         val dz = to.z - from.z
@@ -57,7 +60,9 @@ class LineBatch(shaders: ShaderStorage) : LineSink, Disposable {
         var sy = dz * d.x - dx * d.z
         var sz = dx * d.y - dy * d.x
         val length = kotlin.math.sqrt(sx * sx + sy * sy + sz * sz)
-        if (length < 1e-6f) return line(from, to, color)
+        if (length < 1e-6f) {
+            return line(from, to, color)
+        }
         sx /= length; sy /= length; sz /= length
         val perPixel =
             2f * kotlin.math.tan(Math.toRadians(cam.fieldOfView.toDouble() / 2.0)).toFloat() / cam.viewportHeight
@@ -84,7 +89,9 @@ class LineBatch(shaders: ShaderStorage) : LineSink, Disposable {
     }
 
     override fun line(from: Vector3, to: Vector3, color: Color) {
-        if (count + 2 > MAX_VERTICES) flush()
+        if (count + 2 > MAX_VERTICES) {
+            flush()
+        }
         put(from, color)
         put(to, color)
     }
@@ -108,7 +115,11 @@ class LineBatch(shaders: ShaderStorage) : LineSink, Disposable {
             quadCount = 0
             return
         }
-        if (depthTest) Gdx.gl.glEnable(GL20.GL_DEPTH_TEST) else Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
+        if (depthTest) {
+            Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
+        } else {
+            Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
+        }
         Gdx.gl.glDisable(GL20.GL_CULL_FACE)
         Gdx.gl.glDisable(GL20.GL_BLEND)
         program.bind()

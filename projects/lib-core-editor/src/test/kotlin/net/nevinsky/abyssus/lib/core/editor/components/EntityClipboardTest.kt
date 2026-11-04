@@ -5,7 +5,6 @@
 package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
@@ -14,6 +13,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.RawComponentsWrapper
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.*
 import org.junit.Test
@@ -22,16 +22,19 @@ import org.slf4j.helpers.NOPLogger
 class EntityClipboardTest {
     private val clipboard = EntityClipboard(JsonProcessor(NOPLogger.NOP_LOGGER), ResourceEditorMessages())
 
-    private fun scene(): SceneDto = parseScene(
-        """{"format":"abyssus","formatVersion":1,"ecs":{
+    private fun scene(): SceneDto =
+        parseScene(
+            """{"format":"abyssus","formatVersion":1,"ecs":{
           "1":{"type":"OBJECT","components":{"NameComponent":{"name":"tree"},
             "PositionComponent":{"localPosition":{"x":1,"y":2,"z":3}},
             "RenderComponent":{"shaderKey":"defaultShader","type":"MODEL","assetName":"tree"},
             "VendorComponent":{"gain":2.5}}},
           "2":{"type":"LIGHT_POINT","components":{"NameComponent":{"name":"lamp"}}},
-          "3":{"type":"TERRAIN","components":{"RenderComponent":{"shaderKey":"terrain","type":"TERRAIN","assetName":"hills"}}},
-          "4":{"type":"OBJECT","components":{"RenderComponent":{"type":"MODEL","assetName":"tree"},"ParentComponent":{"parentEntityId":1}}}}}""",
-    )
+          "3":{"type":"TERRAIN","components":{"RenderComponent":{"shaderKey":"terrain","type":"TERRAIN",
+"assetName":"hills"}}},
+          "4":{"type":"OBJECT","components":{"RenderComponent":{"type":"MODEL","assetName":"tree"},
+"ParentComponent":{"parentEntityId":1}}}}}"""
+        )
 
     private fun position(scene: SceneDto, id: Long): Vector3 =
         scene.component(id, PositionComponent::class.java)!!.localPosition
@@ -98,7 +101,9 @@ class EntityClipboardTest {
         val before = target.ecs.size
         assertFalse(clipboard.holdsEntity("hello"))
         assertFalse(clipboard.holdsEntity(null))
-        assertTrue(clipboard.paste(target, "{\"abyssusEntity\":1,\"components\":{}}", Vector3()).result is EditResult.Rejected)
+        assertTrue(
+            clipboard.paste(target, "{\"abyssusEntity\":1,\"components\":{}}", Vector3()).result is EditResult.Rejected
+        )
         assertTrue(clipboard.paste(target, "hello", Vector3()).result is EditResult.Rejected)
         assertEquals(before, target.ecs.size)
     }

@@ -5,27 +5,27 @@
 
 package net.nevinsky.abyssus.plugin.terrain
 
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.plugin.assetfiles.strokeResultMessage
-import net.nevinsky.abyssus.plugin.assetfiles.assetFilesAffected
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
+import java.io.File
 import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
-import net.nevinsky.abyssus.plugin.brush.TerrainStrokeCommand
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptBrush
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptDraft
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptState
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptTool
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.decodeSculptGrid
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileCommand
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileStore
+import net.nevinsky.abyssus.plugin.assetfiles.assetFilesAffected
+import net.nevinsky.abyssus.plugin.assetfiles.strokeResultMessage
+import net.nevinsky.abyssus.plugin.brush.TerrainStrokeCommand
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
-import java.io.File
 
 /**
  * One Scene view's Sculpt Terrain brush: the press opens a [SculptDraft] in the project's [SculptDrafts] from the
@@ -55,10 +55,14 @@ class SculptStrokeCommand(
 
     override fun begin(terrain: TerrainTarget, at: Vector3, mode: BrushMode): Stroke? {
         val picked = tool() ?: return null
-        val source = when (val read = readCurrent()) {
-            is TerrainSource.Unusable -> { report(read.reason); return null }
-            is TerrainSource.Ready -> read
-        }
+        val source =
+            when (val read = readCurrent()) {
+                is TerrainSource.Unusable -> {
+                    report(read.reason)
+                    return null
+                }
+                is TerrainSource.Ready -> read
+            }
         val files = source.files ?: return null
         val state = source.sculpt
         if (state is SculptState.Unsafe) {
@@ -66,11 +70,19 @@ class SculptStrokeCommand(
             return null
         }
         val composed = decodeSculptGrid(files.terrainBytes, source.resolution) ?: return null
-        if (terrain.data.resolution != source.resolution) return null
-        val draft = drafts.open(folder.name) {
-            val sculpted = state as? SculptState.Sculpted
-            SculptDraft(source.resolution, sculpted?.base ?: composed.copyOf(), composed, sculpted?.delta?.copyOf() ?: FloatArray(composed.size))
+        if (terrain.data.resolution != source.resolution) {
+            return null
         }
+        val draft =
+            drafts.open(folder.name) {
+                val sculpted = state as? SculptState.Sculpted
+                SculptDraft(
+                    source.resolution,
+                    sculpted?.base ?: composed.copyOf(),
+                    composed,
+                    sculpted?.delta?.copyOf() ?: FloatArray(composed.size),
+                )
+            }
         return Stroke(source, draft, SculptBrush(draft, source.size, terrain.world), picked, Vector3(at))
     }
 
@@ -88,7 +100,9 @@ class SculptStrokeCommand(
         val stroke = active ?: return
         active = null
         try {
-            if (stroke.draft.changed.isEmpty) return
+            if (stroke.draft.changed.isEmpty) {
+                return
+            }
             commit(stroke)
         } finally {
             drafts.discard(folder.name)
@@ -96,7 +110,9 @@ class SculptStrokeCommand(
     }
 
     override fun cancelled() {
-        if (active == null) return
+        if (active == null) {
+            return
+        }
         active = null
         drafts.discard(folder.name)
     }
@@ -109,14 +125,21 @@ class SculptStrokeCommand(
         }
         stroke.draft.recompose()
         val set = sculpt.planner.commitStroke(checkNotNull(current.files), current.sculpt, stroke.draft)
-        val txn = SculptTransactions(store).plan(
-            AbyssusBundle.message("commandSculptStroke"), current.folderName, current.dataName, set,
-            expected = mapOf(current.metaPath to current.metaBytes),
-        ) ?: return
-        val result = AssetFileCommand(project, store).execute(
-            txn,
-            affected = { assetFilesAffected(folder, File(folder.path, current.dataName)) },
-        )
+        val txn =
+            SculptTransactions(store)
+                .plan(
+                    AbyssusBundle.message("commandSculptStroke"),
+                    current.folderName,
+                    current.dataName,
+                    set,
+                    expected = mapOf(current.metaPath to current.metaBytes),
+                ) ?: return
+        val result =
+            AssetFileCommand(project, store)
+                .execute(
+                    txn,
+                    affected = { assetFilesAffected(folder, File(folder.path, current.dataName)) },
+                )
         strokeResultMessage(result, "sculptStrokeConflict", "sculptStrokeFailed")?.let(report)
     }
 }
@@ -133,8 +156,20 @@ fun readTerrainFolder(
 ): TerrainSource {
     val metaFile = folder.findChild(META_FILE) ?: return TerrainSource.Unusable("meta.json")
     val text = com.intellij.openapi.application.runReadAction { net.nevinsky.abyssus.plugin.dto.textOf(metaFile) }
-    val meta = net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation {
-        net.nevinsky.abyssus.lib.core.assets.AssetMetaParser(json).read(folder.name, text)
-    }.getOrElse { return TerrainSource.Unusable("meta.json") }
-    return readTerrainSource(File(folder.path), text, meta, net.nevinsky.abyssus.lib.core.editor.meta.AssetReferenceChoices(json), recipes, sculpt.reader)
+    val meta =
+        net.nevinsky.abyssus.lib.core.assets
+            .runCatchingKeepingCancellation {
+                net.nevinsky.abyssus.lib.core.assets.AssetMetaParser(json).read(folder.name, text)
+            }
+            .getOrElse {
+                return TerrainSource.Unusable("meta.json")
+            }
+    return readTerrainSource(
+        File(folder.path),
+        text,
+        meta,
+        net.nevinsky.abyssus.lib.core.editor.meta.AssetReferenceChoices(json),
+        recipes,
+        sculpt.reader,
+    )
 }

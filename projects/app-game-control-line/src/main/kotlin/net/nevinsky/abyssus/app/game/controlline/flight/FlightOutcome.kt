@@ -29,9 +29,9 @@ const val AIRBORNE_HEIGHT = 0.5f
  * - upside down, or coming down faster than [CRASH_SPEED]: crashed;
  * - otherwise, after the engine has stopped: landed; while it runs the flight goes on.
  *
- * The speed of a touch is how fast the plane came down onto the ground just before it (its sink speed), so a
- * plane gliding in on its wheels can land.
- * Lines below [CONTROL_TENSION] for [SLACK_TIME] while in the air end it as [FlightEnd.LINES_SLACK].
+ * The speed of a touch is how fast the plane came down onto the ground just before it (its sink speed), so a plane
+ * gliding in on its wheels can land. Lines below [CONTROL_TENSION] for [SLACK_TIME] while in the air end it as
+ * [FlightEnd.LINES_SLACK].
  */
 class FlightOutcome(private val plane: Entity, private val field: Entity?) {
     private var flown = false
@@ -53,17 +53,38 @@ class FlightOutcome(private val plane: Entity, private val field: Entity?) {
      * flight ended, or null while it goes on.
      */
     fun check(
-        seconds: Float, contacts: List<Contact>, sinkSpeed: Float, upright: Boolean, airborne: Boolean,
-        engineRunning: Boolean, tension: Float,
+        seconds: Float,
+        contacts: List<Contact>,
+        sinkSpeed: Float,
+        upright: Boolean,
+        airborne: Boolean,
+        engineRunning: Boolean,
+        tension: Float,
     ): FlightEnd? {
-        if (airborne) flown = true
-        val touched = field != null && contacts.any { (it.a == plane && it.b == field) || (it.b == plane && it.a == field) }
+        if (airborne) {
+            flown = true
+        }
+        val touched =
+            field != null && contacts.any { (it.a == plane && it.b == field) || (it.b == plane && it.a == field) }
         if (touched && (flown || !upright)) {
-            if (!upright || sinkSpeed > CRASH_SPEED) return FlightEnd.CRASHED
-            if (!engineRunning) return FlightEnd.LANDED
+            if (!upright || sinkSpeed > CRASH_SPEED) {
+                return FlightEnd.CRASHED
+            }
+            if (!engineRunning) {
+                return FlightEnd.LANDED
+            }
         }
         slackInAir = airborne && tension < CONTROL_TENSION
-        slack = if (slackInAir) slack + seconds else 0f
-        return if (slack >= SLACK_TIME) FlightEnd.LINES_SLACK else null
+        slack =
+            if (slackInAir) {
+                slack + seconds
+            } else {
+                0f
+            }
+        return if (slack >= SLACK_TIME) {
+            FlightEnd.LINES_SLACK
+        } else {
+            null
+        }
     }
 }

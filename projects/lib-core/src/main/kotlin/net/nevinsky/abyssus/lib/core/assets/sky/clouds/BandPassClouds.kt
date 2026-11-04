@@ -24,7 +24,11 @@ open class BandPassClouds(
     private val program: ShaderProgram =
         shaders.program(
             "clouds.vert", *(
-                    (if (linear) listOf("clouds_linear.glsl") else emptyList()) +
+                    (if (linear) {
+                        listOf("clouds_linear.glsl")
+                    } else {
+                        emptyList()
+                    }) +
                             listOf("clouds_common.glsl", "clouds_light.glsl", fragment)
                     ).toTypedArray()
         )

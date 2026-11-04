@@ -15,21 +15,38 @@ class ProjectAssetUsageTest : BasePlatformTestCase() {
     private fun meta(type: String, name: String, additional: String = "{}") =
         """{"format":"abyssus","formatVersion":1,"type":"$type","uuid":"${uuid(name)}","additional":$additional}"""
 
-    private fun foliage() = meta("FOLIAGE", "foliage_meadow", """{"terrain":"terrain","layers":[{"id":1,"models":[{"asset":"tree"},{"asset":"missing"}]},{"id":2,"kind":"DETAIL","models":[{"asset":"grass"}]}]}""")
+    private fun foliage() =
+        meta(
+            "FOLIAGE",
+            "foliage_meadow",
+            """{"terrain":"terrain","layers":[{"id":1,"models":[{"asset":"tree"},{"asset":"missing"}]},{"id":2,
+"kind":"DETAIL","models":[{"asset":"grass"}]}]}""",
+        )
 
     private fun usage(withFoliage: Boolean, foliageMeta: String = foliage()): Map<String, Boolean> {
-        val abss = myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""").virtualFile
-        val component = if (withFoliage) """, "FoliageComponent":{"assetName":"foliage_meadow"}""" else ""
-        myFixture.addFileToProject("p/scenes/Main.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"1":{"components":{"TerrainComponent":{"assetName":"terrain"}$component}}}}""")
-        val metas = mapOf(
-            "foliage_meadow" to foliageMeta,
-            "terrain" to meta("TERRAIN", "terrain", """{"splatMap":"${uuid("splat")}"}"""),
-            "tree" to meta("MODEL", "tree", """{"materials":["${uuid("bark")}"]}"""),
-            "grass" to meta("MODEL", "grass"),
-            "bark" to meta("MATERIAL", "bark"),
-            "splat" to meta("TEXTURE", "splat"),
-            "lonely" to meta("MODEL", "lonely"),
+        val abss =
+            myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""").virtualFile
+        val component =
+            if (withFoliage) {
+                """, "FoliageComponent":{"assetName":"foliage_meadow"}"""
+            } else {
+                ""
+            }
+        myFixture.addFileToProject(
+            "p/scenes/Main.scene",
+            """{"format":"abyssus","formatVersion":1,
+"ecs":{"1":{"components":{"TerrainComponent":{"assetName":"terrain"}$component}}}}""",
         )
+        val metas =
+            mapOf(
+                "foliage_meadow" to foliageMeta,
+                "terrain" to meta("TERRAIN", "terrain", """{"splatMap":"${uuid("splat")}"}"""),
+                "tree" to meta("MODEL", "tree", """{"materials":["${uuid("bark")}"]}"""),
+                "grass" to meta("MODEL", "grass"),
+                "bark" to meta("MATERIAL", "bark"),
+                "splat" to meta("TEXTURE", "splat"),
+                "lonely" to meta("MODEL", "lonely"),
+            )
         metas.forEach { (folder, text) -> myFixture.addFileToProject("p/assets/$folder/meta.json", text) }
         return project.service<ProjectReader>().read(abss).obj!!.assets.associate { it.name to it.unused }
     }
@@ -58,7 +75,11 @@ class ProjectAssetUsageTest : BasePlatformTestCase() {
         usage(true)
         val scene = myFixture.findFileInTempDir("p/scenes/Main.scene")
         com.intellij.openapi.application.runWriteAction {
-            scene.setBinaryContent("""{"format":"abyssus","formatVersion":1,"ecs":{"1":{"components":{"FoliageComponent":{"assetName":"foliage_meadow"}}}}}""".toByteArray())
+            scene.setBinaryContent(
+                """{"format":"abyssus","formatVersion":1,
+"ecs":{"1":{"components":{"FoliageComponent":{"assetName":"foliage_meadow"}}}}}"""
+                    .toByteArray()
+            )
         }
         val assets = project.service<ProjectReader>().read(myFixture.findFileInTempDir("p/P.abss")).obj!!.assets
         assertFalse(assets.single { it.name == "terrain" }.unused)
@@ -72,19 +93,31 @@ class ProjectAssetUsageTest : BasePlatformTestCase() {
     }
 
     private fun ui(vararg targets: String, version: Int = 1): String {
-        val buttons = targets.mapIndexed { i, target ->
-            val (asset, screen) = target.split(":")
-            """{"id":"b$i","type":"button","actions":{"click":{"type":"openScreen","assetName":"$asset","screenId":"$screen"}}}"""
-        }.joinToString(",")
-        return """{"format":"abyssus","formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":$version,"screens":[{"id":"main","root":{"id":"root","type":"panel","children":[$buttons]}}]}}}"""
+        val buttons =
+            targets
+                .mapIndexed { i, target ->
+                    val (asset, screen) = target.split(":")
+                    """{"id":"b$i","type":"button","actions":{"click":{"type":"openScreen","assetName":"$asset",
+"screenId":"$screen"}}}"""
+                }
+                .joinToString(",")
+        return """{"format":"abyssus","formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":$version,
+            "screens":[{"id":"main","root":{"id":"root","type":"panel","children":[$buttons]}}]}}}"""
     }
 
     private data class UiResult(val unused: Map<String, Boolean>, val issues: Set<UiUsageIssue>)
 
     private fun uiUsage(registered: String?, metas: Map<String, String>): UiResult {
         val names = registered?.let { ""","uiAssetNames":$it""" } ?: ""
-        val abss = myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"$names}""").virtualFile
-        myFixture.addFileToProject("p/scenes/Main.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"1":{"components":{"RenderComponent":{"assetName":"tree"}}}}}""")
+        val abss =
+            myFixture
+                .addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"$names}""")
+                .virtualFile
+        myFixture.addFileToProject(
+            "p/scenes/Main.scene",
+            """{"format":"abyssus","formatVersion":1,
+"ecs":{"1":{"components":{"RenderComponent":{"assetName":"tree"}}}}}""",
+        )
         myFixture.addFileToProject("p/assets/tree/meta.json", meta("MODEL", "tree"))
         metas.forEach { (folder, text) -> myFixture.addFileToProject("p/assets/$folder/meta.json", text) }
         val dto = project.service<ProjectReader>().read(abss).obj!!
@@ -92,7 +125,8 @@ class ProjectAssetUsageTest : BasePlatformTestCase() {
     }
 
     fun testRegisteredMenuAssetsAreUsedAndNavigationReachesOthers() {
-        val result = uiUsage("""["menus"]""", mapOf("menus" to ui("settings:main"), "settings" to ui(), "other" to ui()))
+        val result =
+            uiUsage("""["menus"]""", mapOf("menus" to ui("settings:main"), "settings" to ui(), "other" to ui()))
         assertFalse(result.unused.getValue("menus"))
         assertFalse(result.unused.getValue("settings"))
         assertTrue(result.unused.getValue("other"))
@@ -113,8 +147,10 @@ class ProjectAssetUsageTest : BasePlatformTestCase() {
         assertFalse(result.unused.getValue("tree"))
         assertEquals(
             setOf(
-                UiUsageIssue("gone", UiUsageProblem.MISSING), UiUsageIssue("tree", UiUsageProblem.WRONG_TYPE),
-                UiUsageIssue("menus", UiUsageProblem.DUPLICATE), UiUsageIssue("menus", UiUsageProblem.MISSING, "absent"),
+                UiUsageIssue("gone", UiUsageProblem.MISSING),
+                UiUsageIssue("tree", UiUsageProblem.WRONG_TYPE),
+                UiUsageIssue("menus", UiUsageProblem.DUPLICATE),
+                UiUsageIssue("menus", UiUsageProblem.MISSING, "absent"),
                 UiUsageIssue("menus", UiUsageProblem.WRONG_TYPE, "tree"),
             ),
             result.issues,
@@ -131,18 +167,32 @@ class ProjectAssetUsageTest : BasePlatformTestCase() {
         val result = uiUsage("""["a"]""", mapOf("a" to ui("b:main"), "b" to ui("a:main", "b:main")))
         assertFalse(result.unused.getValue("a"))
         assertFalse(result.unused.getValue("b"))
-        assertEquals(setOf(UiUsageIssue("a", UiUsageProblem.CYCLE), UiUsageIssue("b", UiUsageProblem.CYCLE)), result.issues)
+        assertEquals(
+            setOf(UiUsageIssue("a", UiUsageProblem.CYCLE), UiUsageIssue("b", UiUsageProblem.CYCLE)),
+            result.issues,
+        )
     }
 
     fun testUnsupportedUiAssetIsNotARootAndItsLinksAreNotFollowed() {
-        val result = uiUsage("""["future","menus"]""", mapOf("future" to ui("hidden:main", version = 2), "menus" to ui("future2:main"),
-            "hidden" to ui(), "future2" to ui("hidden:main", version = 2)))
+        val result =
+            uiUsage(
+                """["future","menus"]""",
+                mapOf(
+                    "future" to ui("hidden:main", version = 2),
+                    "menus" to ui("future2:main"),
+                    "hidden" to ui(),
+                    "future2" to ui("hidden:main", version = 2),
+                ),
+            )
         assertTrue(result.unused.getValue("future"))
         assertTrue(result.unused.getValue("hidden"))
         assertFalse(result.unused.getValue("menus"))
         assertFalse(result.unused.getValue("future2"))
         assertEquals(
-            setOf(UiUsageIssue("future", UiUsageProblem.UNSUPPORTED), UiUsageIssue("menus", UiUsageProblem.UNSUPPORTED, "future2")),
+            setOf(
+                UiUsageIssue("future", UiUsageProblem.UNSUPPORTED),
+                UiUsageIssue("menus", UiUsageProblem.UNSUPPORTED, "future2"),
+            ),
             result.issues,
         )
     }

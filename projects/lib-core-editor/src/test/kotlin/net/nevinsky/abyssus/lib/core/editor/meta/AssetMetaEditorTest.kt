@@ -5,19 +5,19 @@
 
 package net.nevinsky.abyssus.lib.core.editor.meta
 
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaParser
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSkyMeta
-import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
 import net.nevinsky.abyssus.lib.core.assets.testProject
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class AssetMetaEditorTest {
     private val descriptions = AssetFieldDescriptions()
@@ -26,10 +26,15 @@ class AssetMetaEditorTest {
     private val parser = AssetMetaParser(json)
     private val untitled = testProject("Untitled")
 
-    private fun meta(folder: String): AssetMeta<Any> = parser.read(folder, File(untitled, "assets/$folder/meta.json").readText())
+    private fun meta(folder: String): AssetMeta<Any> =
+        parser.read(folder, File(untitled, "assets/$folder/meta.json").readText())
+
     private fun terrain() = meta("terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b")
+
     private fun field(type: MetaType, key: String) = descriptions.field(type, key)!!
-    private fun cur(meta: AssetMeta<Any>, type: MetaType, key: String) = editor.current(meta.additional, field(type, key))
+
+    private fun cur(meta: AssetMeta<Any>, type: MetaType, key: String) =
+        editor.current(meta.additional, field(type, key))
 
     private fun edit(meta: AssetMeta<Any>, type: MetaType, key: String, value: AssetFieldValue): TypedAssetEdit =
         editor.edit(meta, key, cur(meta, type, key), value)
@@ -43,7 +48,8 @@ class AssetMetaEditorTest {
 
     private fun rejected(edit: TypedAssetEdit): EditError = (edit.outcome as EditOutcome.Rejected).error
 
-    @Test fun legacyMetadataIsRefusedWithoutAnEdit() {
+    @Test
+    fun legacyMetadataIsRefusedWithoutAnEdit() {
         val text = """{"type":"TERRAIN","additional":{"size":100}}"""
         val outcome = editor.editText(text, "size", AssetFieldValue.Int(100), AssetFieldValue.Int(200))!!
         assertEquals(EditOutcome.Rejected(EditError.UNSUPPORTED_FORMAT), outcome.outcome)
@@ -89,17 +95,31 @@ class AssetMetaEditorTest {
         assertEquals("other.png", edited.left)
         assertEquals("skybox_default.png", edited.right)
         for (bad in listOf("../x.png", "/etc/passwd", "C:x.png", "a//b.png", "a/./b.png")) {
-            assertEquals(bad, EditError.BAD_FILE_NAME, rejected(edit(meta, MetaType.SKYBOX, "top", AssetFieldValue.Text(bad))))
+            assertEquals(
+                bad,
+                EditError.BAD_FILE_NAME,
+                rejected(edit(meta, MetaType.SKYBOX, "top", AssetFieldValue.Text(bad))),
+            )
         }
         assertEquals(EditError.EMPTY, rejected(edit(meta, MetaType.SKYBOX, "top", AssetFieldValue.Text(" "))))
     }
 
     @Test
     fun `an omitted atmosphere field shows its default and an edit sets only that one`() {
-        val meta = parser.read("", """{"formatVersion":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f","planetRadius":6360000.0}}""")
+        val meta =
+            parser.read(
+                "",
+                """{"formatVersion":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f",
+"planetRadius":6360000.0}}""",
+            )
         assertEquals(AssetFieldValue.Real(20f), cur(meta, MetaType.SKYBOX_PROCEDURAL, "sunIntensity"))
-        assertEquals(EditOutcome.NoChange, edit(meta, MetaType.SKYBOX_PROCEDURAL, "sunIntensity", AssetFieldValue.Real(20f)).outcome)
-        val edited = changed(meta, MetaType.SKYBOX_PROCEDURAL, "sunIntensity", AssetFieldValue.Real(25f)).additional as ProceduralSkyMeta
+        assertEquals(
+            EditOutcome.NoChange,
+            edit(meta, MetaType.SKYBOX_PROCEDURAL, "sunIntensity", AssetFieldValue.Real(20f)).outcome,
+        )
+        val edited =
+            changed(meta, MetaType.SKYBOX_PROCEDURAL, "sunIntensity", AssetFieldValue.Real(25f)).additional
+                as ProceduralSkyMeta
         assertEquals(25f, edited.sunIntensity)
         assertEquals("v", edited.vertex)
         assertEquals(6360000f, edited.planetRadius)
@@ -117,9 +137,16 @@ class AssetMetaEditorTest {
     fun `identity bookkeeping and file keys are not editable`() {
         val meta = terrain()
         for (key in listOf("uuid", "type", "version", "lastModified", "terrainFile", "additional", "missing")) {
-            assertEquals(key, EditOutcome.Rejected(EditError.UNSUPPORTED_FIELD), editor.edit(meta, key, AssetFieldValue.None, AssetFieldValue.Text("x")).outcome)
+            assertEquals(
+                key,
+                EditOutcome.Rejected(EditError.UNSUPPORTED_FIELD),
+                editor.edit(meta, key, AssetFieldValue.None, AssetFieldValue.Text("x")).outcome,
+            )
         }
-        assertEquals(EditOutcome.Rejected(EditError.UNSUPPORTED_FIELD), editor.edit(meta("tree"), "size", AssetFieldValue.None, AssetFieldValue.Int(1)).outcome)
+        assertEquals(
+            EditOutcome.Rejected(EditError.UNSUPPORTED_FIELD),
+            editor.edit(meta("tree"), "size", AssetFieldValue.None, AssetFieldValue.Int(1)).outcome,
+        )
     }
 
     @Test
@@ -134,9 +161,18 @@ class AssetMetaEditorTest {
         assertEquals(EditError.NOT_POSITIVE, rejected(edit(root, MetaType.TERRAIN, "size", AssetFieldValue.Int(0))))
         assertEquals(EditError.NOT_POSITIVE, rejected(edit(root, MetaType.TERRAIN, "size", AssetFieldValue.Int(-4))))
         assertEquals(EditError.NOT_POSITIVE, rejected(edit(root, MetaType.TERRAIN, "uv", AssetFieldValue.Real(0f))))
-        assertEquals(EditError.NOT_FINITE, rejected(edit(root, MetaType.TERRAIN, "uv", AssetFieldValue.Real(Float.NaN))))
-        assertEquals(EditError.NOT_FINITE, rejected(edit(root, MetaType.TERRAIN, "uv", AssetFieldValue.Real(Float.POSITIVE_INFINITY))))
-        assertEquals(EditError.NOT_A_UUID, rejected(edit(root, MetaType.TERRAIN, "splatMap", AssetFieldValue.Text("nope"))))
+        assertEquals(
+            EditError.NOT_FINITE,
+            rejected(edit(root, MetaType.TERRAIN, "uv", AssetFieldValue.Real(Float.NaN))),
+        )
+        assertEquals(
+            EditError.NOT_FINITE,
+            rejected(edit(root, MetaType.TERRAIN, "uv", AssetFieldValue.Real(Float.POSITIVE_INFINITY))),
+        )
+        assertEquals(
+            EditError.NOT_A_UUID,
+            rejected(edit(root, MetaType.TERRAIN, "splatMap", AssetFieldValue.Text("nope"))),
+        )
     }
 
     @Test
@@ -144,8 +180,14 @@ class AssetMetaEditorTest {
         val root = terrain()
         val uuid = "2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
         assertEquals(EditError.NOT_A_UUID, rejected(edit(root, MetaType.TERRAIN, "splatMap", AssetFieldValue.Text(""))))
-        assertEquals(EditError.NOT_A_UUID, rejected(edit(root, MetaType.TERRAIN, "splatMap", AssetFieldValue.Text("not-a-uuid"))))
-        assertEquals(false, edit(root, MetaType.TERRAIN, "splatMap", AssetFieldValue.Text(uuid)).outcome is EditOutcome.Rejected)
+        assertEquals(
+            EditError.NOT_A_UUID,
+            rejected(edit(root, MetaType.TERRAIN, "splatMap", AssetFieldValue.Text("not-a-uuid"))),
+        )
+        assertEquals(
+            false,
+            edit(root, MetaType.TERRAIN, "splatMap", AssetFieldValue.Text(uuid)).outcome is EditOutcome.Rejected,
+        )
     }
 
     @Test
@@ -155,7 +197,7 @@ class AssetMetaEditorTest {
         assertEquals(EditOutcome.Changed, result.outcome)
         val written = parser.read("", result.text!!)
         assertEquals(800, (written.additional as TerrainMeta).size)
-        assertTrue(result.text!!.contains("\n  \"formatVersion\": 1"))
+        assertTrue(result.text.contains("\n  \"formatVersion\": 1"))
         assertNull(editor.editText(text, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(1600))!!.text)
     }
 
@@ -180,18 +222,36 @@ class AssetMetaEditorTest {
     fun `atmosphere parameters are validated as a set`() {
         val root = meta("skybox_physical")
         val type = MetaType.SKYBOX_PROCEDURAL
-        assertEquals(EditError.ATMOSPHERE_ORDER, rejected(edit(root, type, "atmosphereRadius", AssetFieldValue.Real(6360000f))))
-        assertEquals(EditError.ATMOSPHERE_ORDER, rejected(edit(root, type, "planetRadius", AssetFieldValue.Real(6420000f))))
-        assertEquals(EditError.ATMOSPHERE_ORDER, rejected(edit(root, type, "planetRadius", AssetFieldValue.Real(7000000f))))
+        assertEquals(
+            EditError.ATMOSPHERE_ORDER,
+            rejected(edit(root, type, "atmosphereRadius", AssetFieldValue.Real(6360000f))),
+        )
+        assertEquals(
+            EditError.ATMOSPHERE_ORDER,
+            rejected(edit(root, type, "planetRadius", AssetFieldValue.Real(6420000f))),
+        )
+        assertEquals(
+            EditError.ATMOSPHERE_ORDER,
+            rejected(edit(root, type, "planetRadius", AssetFieldValue.Real(7000000f))),
+        )
         assertEquals(EditError.NOT_POSITIVE, rejected(edit(root, type, "heightMie", AssetFieldValue.Real(0f))))
         assertEquals(EditError.NEGATIVE, rejected(edit(root, type, "betaMie", AssetFieldValue.Real(-1f))))
         assertEquals(EditError.NEGATIVE, rejected(edit(root, type, "sunIntensity", AssetFieldValue.Real(-0.5f))))
         assertEquals(EditError.MIE_G_RANGE, rejected(edit(root, type, "mieG", AssetFieldValue.Real(1f))))
         assertEquals(EditError.MIE_G_RANGE, rejected(edit(root, type, "mieG", AssetFieldValue.Real(-1f))))
-        assertEquals(EditError.WRONG_COUNT, rejected(edit(root, type, "betaRayleigh", AssetFieldValue.Reals(listOf(1f, 2f)))))
-        assertEquals(EditError.NEGATIVE, rejected(edit(root, type, "betaRayleigh", AssetFieldValue.Reals(listOf(1f, -2f, 3f)))))
+        assertEquals(
+            EditError.WRONG_COUNT,
+            rejected(edit(root, type, "betaRayleigh", AssetFieldValue.Reals(listOf(1f, 2f)))),
+        )
+        assertEquals(
+            EditError.NEGATIVE,
+            rejected(edit(root, type, "betaRayleigh", AssetFieldValue.Reals(listOf(1f, -2f, 3f)))),
+        )
         assertEquals(EditOutcome.Changed, edit(root, type, "mieG", AssetFieldValue.Real(0.5f)).outcome)
-        assertEquals(EditOutcome.Changed, edit(root, type, "betaRayleigh", AssetFieldValue.Reals(listOf(1e-6f, 2e-6f, 3e-6f))).outcome)
+        assertEquals(
+            EditOutcome.Changed,
+            edit(root, type, "betaRayleigh", AssetFieldValue.Reals(listOf(1e-6f, 2e-6f, 3e-6f))).outcome,
+        )
         assertEquals(EditOutcome.Changed, edit(root, type, "atmosphereRadius", AssetFieldValue.Real(6500000f)).outcome)
     }
 
@@ -218,6 +278,9 @@ class AssetMetaEditorTest {
     fun `an unknown type has no editable fields`() {
         assertTrue(descriptions.fields(MetaType.MODEL).isEmpty())
         assertTrue(descriptions.fields(MetaType.SKYBOX_HDR).isEmpty())
-        assertEquals(MetaType.UNKNOWN, parser.read("", """{"formatVersion":1,"type":"NEW_THING","additional":{}}""").type)
+        assertEquals(
+            MetaType.UNKNOWN,
+            parser.read("", """{"formatVersion":1,"type":"NEW_THING","additional":{}}""").type,
+        )
     }
 }

@@ -16,10 +16,15 @@ internal class UiViewSettings(private val preferences: UiPreferences, private va
     var backdropScene: String? = preferences.get("$prefKey.backdrop")
         private set
 
-    /** Sets what the preview lays out for; false (nothing changes) for a size that is not positive or is above [MAX_PREVIEW_SIDE]. */
+    /**
+     * Sets what the preview lays out for; false (nothing changes) for a size that is not positive or is above
+     * [MAX_PREVIEW_SIDE].
+     */
     fun setViewport(width: Int, height: Int): Boolean {
         val next = UiViewport(width, height)
-        if (!next.valid) return false
+        if (!next.valid) {
+            return false
+        }
         viewport = next
         preferences.set("$prefKey.viewport", "${width}x$height")
         return true

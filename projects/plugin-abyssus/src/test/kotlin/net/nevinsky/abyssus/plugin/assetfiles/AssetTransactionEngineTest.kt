@@ -17,7 +17,9 @@ class AssetTransactionEngineTest {
         assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", sha256Hex("abc".toByteArray()))
     }
 
-    /** Files and folders in memory; [failAt] makes the n-th mutation (0 based) throw, before or after it took effect. */
+    /**
+     * Files and folders in memory; [failAt] makes the n-th mutation (0 based) throw, before or after it took effect.
+     */
     private class MemoryStore(
         val files: MutableMap<String, ByteArray> = linkedMapOf(),
         val dirs: MutableSet<String> = linkedSetOf(""),
@@ -30,15 +32,23 @@ class AssetTransactionEngineTest {
         private fun mutate(effect: () -> Unit) {
             val n = mutations++
             val fail = failAt == n
-            if (fail && !failAfter) throw java.io.IOException("injected before $n")
+            if (fail && !failAfter) {
+                throw java.io.IOException("injected before $n")
+            }
             effect()
-            if (fail && failAfter) throw java.io.IOException("injected after $n")
+            if (fail && failAfter) {
+                throw java.io.IOException("injected after $n")
+            }
         }
 
         override fun read(path: String) = files[path]?.let { FileSnapshot.Bytes(it) } ?: FileSnapshot.Absent
+
         override fun dirExists(path: String) = path in dirs
+
         override fun children(path: String) =
-            (files.keys + dirs).filter { it.isNotEmpty() && it.substringBeforeLast('/', "") == path }.map { it.substringAfterLast('/') }
+            (files.keys + dirs)
+                .filter { it.isNotEmpty() && it.substringBeforeLast('/', "") == path }
+                .map { it.substringAfterLast('/') }
 
         override fun write(path: String, bytes: ByteArray) = mutate {
             check(path.substringBeforeLast('/', "") in dirs) { "no folder for $path" }
@@ -46,7 +56,9 @@ class AssetTransactionEngineTest {
         }
 
         override fun delete(path: String) = mutate { files.remove(path) }
+
         override fun makeDir(path: String) = mutate { dirs += path }
+
         override fun removeDir(path: String) = mutate { dirs -= path }
 
         fun state() = files.mapValues { it.value.toList() } to dirs.toSet()
@@ -54,28 +66,33 @@ class AssetTransactionEngineTest {
 
     private fun bytes(vararg b: Int) = FileSnapshot.Bytes(ByteArray(b.size) { b[it].toByte() })
 
-    private fun regenerate() = AssetTransaction(
-        "Regenerate",
-        changes = listOf(
-            FileChange("assets/t/terrain.data", bytes(1, 2), bytes(3, 4)),
-            FileChange("assets/t/recipe.json", FileSnapshot.Absent, bytes(9)),
-        ),
-        expectedFiles = mapOf("assets/t/meta.json" to bytes(7)),
-    )
+    private fun regenerate() =
+        AssetTransaction(
+            "Regenerate",
+            changes =
+                listOf(
+                    FileChange("assets/t/terrain.data", bytes(1, 2), bytes(3, 4)),
+                    FileChange("assets/t/recipe.json", FileSnapshot.Absent, bytes(9)),
+                ),
+            expectedFiles = mapOf("assets/t/meta.json" to bytes(7)),
+        )
 
-    private fun regenerateStore() = MemoryStore(
-        files = linkedMapOf("assets/t/terrain.data" to byteArrayOf(1, 2), "assets/t/meta.json" to byteArrayOf(7)),
-        dirs = linkedSetOf("", "assets", "assets/t"),
-    )
+    private fun regenerateStore() =
+        MemoryStore(
+            files = linkedMapOf("assets/t/terrain.data" to byteArrayOf(1, 2), "assets/t/meta.json" to byteArrayOf(7)),
+            dirs = linkedSetOf("", "assets", "assets/t"),
+        )
 
-    private fun create() = AssetTransaction(
-        "Create",
-        changes = listOf(
-            FileChange("assets/hills/meta.json", FileSnapshot.Absent, bytes(1)),
-            FileChange("assets/hills/terrain.data", FileSnapshot.Absent, bytes(2, 2)),
-        ),
-        createdDirs = listOf("assets", "assets/hills"),
-    )
+    private fun create() =
+        AssetTransaction(
+            "Create",
+            changes =
+                listOf(
+                    FileChange("assets/hills/meta.json", FileSnapshot.Absent, bytes(1)),
+                    FileChange("assets/hills/terrain.data", FileSnapshot.Absent, bytes(2, 2)),
+                ),
+            createdDirs = listOf("assets", "assets/hills"),
+        )
 
     @Test
     fun `a transaction applies and reverses exactly`() {
@@ -96,7 +113,10 @@ class AssetTransactionEngineTest {
         val store = regenerateStore()
         store.files["assets/t/terrain.data"] = byteArrayOf(5)
         val start = store.state()
-        assertEquals(AssetCommandResult.Conflict("assets/t/terrain.data"), AssetTransactionEngine(store).apply(regenerate(), true))
+        assertEquals(
+            AssetCommandResult.Conflict("assets/t/terrain.data"),
+            AssetTransactionEngine(store).apply(regenerate(), true),
+        )
         assertEquals(start, store.state())
         assertEquals(0, store.mutations)
     }
@@ -105,16 +125,25 @@ class AssetTransactionEngineTest {
     fun `an expected file that changed is a conflict`() {
         val store = regenerateStore()
         store.files["assets/t/meta.json"] = byteArrayOf(8)
-        assertEquals(AssetCommandResult.Conflict("assets/t/meta.json"), AssetTransactionEngine(store).apply(regenerate(), true))
+        assertEquals(
+            AssetCommandResult.Conflict("assets/t/meta.json"),
+            AssetTransactionEngine(store).apply(regenerate(), true),
+        )
         store.files.remove("assets/t/meta.json")
-        assertEquals(AssetCommandResult.Conflict("assets/t/meta.json"), AssetTransactionEngine(store).apply(regenerate(), true))
+        assertEquals(
+            AssetCommandResult.Conflict("assets/t/meta.json"),
+            AssetTransactionEngine(store).apply(regenerate(), true),
+        )
     }
 
     @Test
     fun `every injected failure before or after each write restores the starting state`() {
-        val operations = MemoryStore(regenerateStore().files.toMutableMap(), regenerateStore().dirs.toMutableSet()).also {
-            AssetTransactionEngine(it).apply(regenerate(), true)
-        }.mutations
+        val operations =
+            MemoryStore(regenerateStore().files.toMutableMap(), regenerateStore().dirs.toMutableSet())
+                .also {
+                    AssetTransactionEngine(it).apply(regenerate(), true)
+                }
+                .mutations
         assertEquals(2, operations)
         for (after in listOf(false, true)) for (n in 0 until operations) {
             val store = regenerateStore()
@@ -122,9 +151,18 @@ class AssetTransactionEngineTest {
             store.failAt = n
             store.failAfter = after
             val result = AssetTransactionEngine(store).apply(regenerate(), true)
-            assertTrue("fail ${if (after) "after" else "before"} $n: $result", result is AssetCommandResult.Failed)
+            assertTrue(
+                "fail ${when { after -> "after"
+ else -> "before" }} $n: $result",
+                result is AssetCommandResult.Failed,
+            )
             assertTrue((result as AssetCommandResult.Failed).rolledBack)
-            assertEquals("fail ${if (after) "after" else "before"} write $n", start, store.state())
+            assertEquals(
+                "fail ${when { after -> "after"
+ else -> "before" }} write $n",
+                start,
+                store.state(),
+            )
         }
     }
 
@@ -139,7 +177,12 @@ class AssetTransactionEngineTest {
             store.failAfter = after
             val result = AssetTransactionEngine(store).apply(create(), true)
             assertTrue((result as AssetCommandResult.Failed).rolledBack)
-            assertEquals("fail ${if (after) "after" else "before"} step $n", start, store.state())
+            assertEquals(
+                "fail ${when { after -> "after"
+ else -> "before" }} step $n",
+                start,
+                store.state(),
+            )
         }
     }
 
@@ -147,12 +190,17 @@ class AssetTransactionEngineTest {
     fun `a failure while restoring reports what could not be put back`() {
         val store = regenerateStore()
         store.failAt = 1 // the recipe write fails; restoring the heights is mutation 2, which also fails
-        val engine = AssetTransactionEngine(object : AssetFileStore by store {
-            override fun write(path: String, bytes: ByteArray) {
-                if (store.mutations >= 2) throw java.io.IOException("disk gone")
-                store.write(path, bytes)
-            }
-        })
+        val engine =
+            AssetTransactionEngine(
+                object : AssetFileStore by store {
+                    override fun write(path: String, bytes: ByteArray) {
+                        if (store.mutations >= 2) {
+                            throw java.io.IOException("disk gone")
+                        }
+                        store.write(path, bytes)
+                    }
+                }
+            )
         val result = engine.apply(regenerate(), true) as AssetCommandResult.Failed
         assertFalse(result.rolledBack)
         assertEquals(listOf("assets/t/terrain.data"), result.leftover)
@@ -167,12 +215,13 @@ class AssetTransactionEngineTest {
         assertEquals(start, store.state())
 
         var cancelled = false
-        val late = object : AssetFileStore by store {
-            override fun write(path: String, bytes: ByteArray) {
-                store.write(path, bytes)
-                cancelled = true // cancellation requested during the commit
+        val late =
+            object : AssetFileStore by store {
+                override fun write(path: String, bytes: ByteArray) {
+                    store.write(path, bytes)
+                    cancelled = true // cancellation requested during the commit
+                }
             }
-        }
         assertEquals(AssetCommandResult.Done, AssetTransactionEngine(late).apply(regenerate(), true) { !cancelled })
         assertTrue(store.files.containsKey("assets/t/recipe.json"))
     }
@@ -182,7 +231,10 @@ class AssetTransactionEngineTest {
         val store = MemoryStore(dirs = linkedSetOf("", "assets", "assets/hills"))
         assertEquals(AssetCommandResult.Collision("assets"), AssetTransactionEngine(store).apply(create(), true))
         val withAssets = AssetTransaction("Create", create().changes, createdDirs = listOf("assets/hills"))
-        assertEquals(AssetCommandResult.Collision("assets/hills"), AssetTransactionEngine(store).apply(withAssets, true))
+        assertEquals(
+            AssetCommandResult.Collision("assets/hills"),
+            AssetTransactionEngine(store).apply(withAssets, true),
+        )
         assertEquals(0, store.mutations)
     }
 
@@ -243,10 +295,11 @@ class AssetTransactionEngineTest {
     private val rect = GridRect(2, 2, 4, 3)
 
     /** The mask with the stroke's rectangle painted over it. */
-    private val painted = mask.copyOf().also { base ->
-        var at = 0
-        for (z in rect.minZ..rect.maxZ) for (x in rect.minX..rect.maxX) base[z * 8 + x] = (100 + at++).toByte()
-    }
+    private val painted =
+        mask.copyOf().also { base ->
+            var at = 0
+            for (z in rect.minZ..rect.maxZ) for (x in rect.minX..rect.maxX) base[z * 8 + x] = (100 + at++).toByte()
+        }
 
     /** The bytes of [rect] of this mask, in the order a [MaskPatch] writes them. */
     private fun ByteArray.region(rect: GridRect): ByteArray {
@@ -262,10 +315,11 @@ class AssetTransactionEngineTest {
     private fun maskStore(files: Map<String, ByteArray> = linkedMapOf("assets/f/layer-0.mask" to mask)) =
         MemoryStore(files = files.toMutableMap(), dirs = linkedSetOf("", "assets", "assets/f"))
 
-    private fun stroke() = AssetTransaction(
-        "Stroke",
-        changes = listOf(FileChange("assets/f/layer-0.mask", patch(mask, mask), patch(painted, painted))),
-    )
+    private fun stroke() =
+        AssetTransaction(
+            "Stroke",
+            changes = listOf(FileChange("assets/f/layer-0.mask", patch(mask, mask), patch(painted, painted))),
+        )
 
     @Test
     fun `a mask patch writes only its rectangle and the stroke reverses exactly`() {
@@ -312,19 +366,27 @@ class AssetTransactionEngineTest {
 
     private val newBake = byteArrayOf(8, 13, 21, 34, 55)
 
-    private fun bakeStore(bake: ByteArray = oldBake) = MemoryStore(
-        files = linkedMapOf("assets/f/meta.json" to byteArrayOf(1), "assets/f/foliage.data" to bake),
-        dirs = linkedSetOf("", "assets", "assets/f"),
-    )
+    private fun bakeStore(bake: ByteArray = oldBake) =
+        MemoryStore(
+            files = linkedMapOf("assets/f/meta.json" to byteArrayOf(1), "assets/f/foliage.data" to bake),
+            dirs = linkedSetOf("", "assets", "assets/f"),
+        )
 
     private fun bakeTxn(
-        rebuild: (forward: Boolean) -> ByteArray = { forward -> if (forward) newBake else oldBake },
+        rebuild: (forward: Boolean) -> ByteArray = { forward ->
+            if (forward) {
+                newBake
+            } else {
+                oldBake
+            }
+        },
         beforeSha256: String? = sha256Hex(oldBake),
-    ) = AssetTransaction(
-        "Apply",
-        changes = listOf(FileChange("assets/f/meta.json", bytes(1), bytes(2))),
-        derived = listOf(DerivedFile("assets/f/foliage.data", beforeSha256, sha256Hex(newBake), rebuild)),
-    )
+    ) =
+        AssetTransaction(
+            "Apply",
+            changes = listOf(FileChange("assets/f/meta.json", bytes(1), bytes(2))),
+            derived = listOf(DerivedFile("assets/f/foliage.data", beforeSha256, sha256Hex(newBake), rebuild)),
+        )
 
     @Test
     fun `a derived file is rebuilt forward and back to the expected hashes`() {
@@ -355,7 +417,10 @@ class AssetTransactionEngineTest {
     fun `a derived file that changed is a conflict and nothing is written`() {
         val stale = bakeStore(byteArrayOf(9, 9, 9))
         val start = stale.state()
-        assertEquals(AssetCommandResult.Conflict("assets/f/foliage.data"), AssetTransactionEngine(stale).apply(bakeTxn(), true))
+        assertEquals(
+            AssetCommandResult.Conflict("assets/f/foliage.data"),
+            AssetTransactionEngine(stale).apply(bakeTxn(), true),
+        )
         assertEquals(start, stale.state())
 
         val store = bakeStore()
@@ -370,10 +435,23 @@ class AssetTransactionEngineTest {
     @Test
     fun `a failing rebuild rolls back the files already written`() {
         // the new bake cannot be built (or builds wrong); the old one still can, so the undo of the write can run
-        for (rebuild in listOf(
-            { forward: Boolean -> if (forward) throw java.io.IOException("generation failed") else oldBake },
-            { forward: Boolean -> if (forward) byteArrayOf(7) else oldBake },
-        )) {
+        for (rebuild in
+            listOf(
+                { forward: Boolean ->
+                    if (forward) {
+                        throw java.io.IOException("generation failed")
+                    } else {
+                        oldBake
+                    }
+                },
+                { forward: Boolean ->
+                    if (forward) {
+                        byteArrayOf(7)
+                    } else {
+                        oldBake
+                    }
+                },
+            )) {
             val store = bakeStore()
             val start = store.state()
             val result = AssetTransactionEngine(store).apply(bakeTxn(rebuild = rebuild), true)

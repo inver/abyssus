@@ -14,7 +14,8 @@ class ImportSettingsTest {
     private val rules = ImportSettingsRules()
     private val untitled = untitledAssetNames()
 
-    private fun settings(folder: String, fit: FitSize = FitSize.Original) = ImportSettings(folder, LengthUnit.CM, UpAxis.Y, fit)
+    private fun settings(folder: String, fit: FitSize = FitSize.Original) =
+        ImportSettings(folder, LengthUnit.CM, UpAxis.Y, fit)
 
     @Test
     fun aTakenFolderNameIsRefused() {
@@ -26,8 +27,14 @@ class ImportSettingsTest {
 
     @Test
     fun aSizeOfZeroIsRefused() {
-        assertEquals(listOf(SettingsProblem.SIZE_NOT_POSITIVE), rules.problems(settings("a", FitSize.Height(0.0)), untitled))
-        assertEquals(listOf(SettingsProblem.SIZE_NOT_POSITIVE), rules.problems(settings("a", FitSize.LargestExtent(-1.0)), untitled))
+        assertEquals(
+            listOf(SettingsProblem.SIZE_NOT_POSITIVE),
+            rules.problems(settings("a", FitSize.Height(0.0)), untitled),
+        )
+        assertEquals(
+            listOf(SettingsProblem.SIZE_NOT_POSITIVE),
+            rules.problems(settings("a", FitSize.LargestExtent(-1.0)), untitled),
+        )
         assertTrue(rules.problems(settings("a", FitSize.Height(1.8)), untitled).isEmpty())
     }
 
@@ -41,7 +48,10 @@ class ImportSettingsTest {
 
     @Test
     fun xUpIsNotOffered() {
-        assertEquals(listOf(SettingsProblem.UP_AXIS_UNSUPPORTED), rules.problems(ImportSettings("a", LengthUnit.M, UpAxis.X), untitled))
+        assertEquals(
+            listOf(SettingsProblem.UP_AXIS_UNSUPPORTED),
+            rules.problems(ImportSettings("a", LengthUnit.M, UpAxis.X), untitled),
+        )
     }
 
     @Test

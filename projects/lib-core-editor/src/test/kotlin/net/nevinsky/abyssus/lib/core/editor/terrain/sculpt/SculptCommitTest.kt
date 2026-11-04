@@ -38,14 +38,25 @@ class SculptCommitTest {
     private fun draftOver(base: FloatArray, delta: FloatArray = FloatArray(base.size)) =
         SculptDraft(resolution, base, composeSculpt(base, delta), delta.copyOf())
 
-    private fun asFiles(set: SculptFileSet) = SculptFiles(
-        size, resolution, set.terrain, set.recipe?.toString(Charsets.UTF_8), set.manifest?.toString(Charsets.UTF_8), set.delta, set.base,
-    )
+    private fun asFiles(set: SculptFileSet) =
+        SculptFiles(
+            size,
+            resolution,
+            set.terrain,
+            set.recipe?.toString(Charsets.UTF_8),
+            set.manifest?.toString(Charsets.UTF_8),
+            set.delta,
+            set.base,
+        )
 
     @Test
     fun `the first stroke over a matching recipe writes no base and keeps the recipe`() {
         val files = SculptFiles(size, resolution, generatedBytes, recipeText, null, null, null)
-        val draft = draftOver(generated).also { it.add(4, 4, 6f); it.recompose() }
+        val draft =
+            draftOver(generated).also {
+                it.add(4, 4, 6f)
+                it.recompose()
+            }
         val out = planner.commitStroke(files, reader.read(files), draft)
         assertNull(out.base)
         assertArrayEquals(recipeText.toByteArray(), out.recipe)
@@ -59,7 +70,11 @@ class SculptCommitTest {
     @Test
     fun `the first stroke over a terrain with no recipe stores the heights from before the stroke`() {
         val files = SculptFiles(size, resolution, generatedBytes, null, null, null, null)
-        val draft = draftOver(generated).also { it.add(1, 1, -3f); it.recompose() }
+        val draft =
+            draftOver(generated).also {
+                it.add(1, 1, -3f)
+                it.recompose()
+            }
         val out = planner.commitStroke(files, reader.read(files), draft)
         assertArrayEquals(generatedBytes, out.base)
         assertNull(out.recipe)
@@ -72,7 +87,11 @@ class SculptCommitTest {
     fun `a recipe that does not match the heights is left alone and the base is stored`() {
         val other = recipes.encode(TerrainRecipe(settings.copy(seed = 5), size, resolution, sha256Hex(generatedBytes)))
         val files = SculptFiles(size, resolution, generatedBytes, other, null, null, null)
-        val draft = draftOver(generated).also { it.add(2, 2, 1f); it.recompose() }
+        val draft =
+            draftOver(generated).also {
+                it.add(2, 2, 1f)
+                it.recompose()
+            }
         val out = planner.commitStroke(files, reader.read(files), draft)
         assertNotNull(out.base)
         assertArrayEquals(other.toByteArray(), out.recipe)
@@ -81,10 +100,22 @@ class SculptCommitTest {
     @Test
     fun `a later stroke keeps the base kind and the stored base bytes`() {
         val first = SculptFiles(size, resolution, generatedBytes, null, null, null, null)
-        val firstOut = planner.commitStroke(first, reader.read(first), draftOver(generated).also { it.add(1, 1, 2f); it.recompose() })
+        val firstOut =
+            planner.commitStroke(
+                first,
+                reader.read(first),
+                draftOver(generated).also {
+                    it.add(1, 1, 2f)
+                    it.recompose()
+                },
+            )
         val second = asFiles(firstOut)
         val state = reader.read(second) as SculptState.Sculpted
-        val draft = draftOver(state.base, state.delta).also { it.add(5, 5, 4f); it.recompose() }
+        val draft =
+            draftOver(state.base, state.delta).also {
+                it.add(5, 5, 4f)
+                it.recompose()
+            }
         val out = planner.commitStroke(second, state, draft)
         assertArrayEquals(generatedBytes, out.base)
         val after = reader.read(asFiles(out)) as SculptState.Sculpted

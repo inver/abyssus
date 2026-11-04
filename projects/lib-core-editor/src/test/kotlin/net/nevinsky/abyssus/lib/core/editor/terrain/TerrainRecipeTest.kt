@@ -13,12 +13,22 @@ import org.junit.Test
 class TerrainRecipeTest {
     private val codec = TerrainRecipeCodec(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER))
     private val bytes = byteArrayOf(1, 2, 3, 4)
-    private val recipe = TerrainRecipe(
-        settings = TerrainGenerationSettings(seed = -7, featureSize = 150.5f, minHeight = -10f, maxHeight = 90f, octaves = 4, persistence = 0.25f, lacunarity = 3f),
-        size = 1600,
-        resolution = 180,
-        heightsSha256 = sha256Hex(bytes),
-    )
+    private val recipe =
+        TerrainRecipe(
+            settings =
+                TerrainGenerationSettings(
+                    seed = -7,
+                    featureSize = 150.5f,
+                    minHeight = -10f,
+                    maxHeight = 90f,
+                    octaves = 4,
+                    persistence = 0.25f,
+                    lacunarity = 3f,
+                ),
+            size = 1600,
+            resolution = 180,
+            heightsSha256 = sha256Hex(bytes),
+        )
 
     private fun text() = codec.encode(recipe)
 
@@ -51,8 +61,14 @@ class TerrainRecipeTest {
 
     @Test
     fun `changed heights or size or resolution are mismatches and offer defaults`() {
-        assertEquals(setOf(MismatchReason.HEIGHTS), (codec.status(text(), 1600, 180, byteArrayOf(9)) as RecipeStatus.Mismatch).reasons)
-        assertEquals(setOf(MismatchReason.SIZE), (codec.status(text(), 800, 180, bytes) as RecipeStatus.Mismatch).reasons)
+        assertEquals(
+            setOf(MismatchReason.HEIGHTS),
+            (codec.status(text(), 1600, 180, byteArrayOf(9)) as RecipeStatus.Mismatch).reasons,
+        )
+        assertEquals(
+            setOf(MismatchReason.SIZE),
+            (codec.status(text(), 800, 180, bytes) as RecipeStatus.Mismatch).reasons,
+        )
         val both = codec.status(text(), 800, 90, byteArrayOf(9)) as RecipeStatus.Mismatch
         assertEquals(setOf(MismatchReason.SIZE, MismatchReason.RESOLUTION, MismatchReason.HEIGHTS), both.reasons)
         assertEquals(TerrainGenerationSettings(), codec.draftSettings(both))
@@ -60,9 +76,19 @@ class TerrainRecipeTest {
 
     @Test
     fun `malformed recipes are reported with a reason`() {
-        for (bad in listOf("", "not json", "[]", "{}", """{"schemaVersion":1}""", text().replace("\"seed\": -7", "\"seed\": \"x\""),
-            text().replace("\"octaves\": 4", "\"octaves\": 99"), text().replace("\"size\": 1600", "\"size\": 0"),
-            text().replace(sha256Hex(bytes), "abc"), text().replace("\"resolution\": 180", "\"resolution\": 300"))) {
+        for (bad in
+            listOf(
+                "",
+                "not json",
+                "[]",
+                "{}",
+                """{"schemaVersion":1}""",
+                text().replace("\"seed\": -7", "\"seed\": \"x\""),
+                text().replace("\"octaves\": 4", "\"octaves\": 99"),
+                text().replace("\"size\": 1600", "\"size\": 0"),
+                text().replace(sha256Hex(bytes), "abc"),
+                text().replace("\"resolution\": 180", "\"resolution\": 300"),
+            )) {
             val status = codec.status(bad, 1600, 180, bytes)
             assertTrue("$bad -> $status", status is RecipeStatus.Malformed && status.reason.isNotBlank())
         }

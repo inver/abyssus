@@ -7,29 +7,31 @@ package net.nevinsky.abyssus.lib.core.assets.foliage
 
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
+import kotlin.math.PI
+import kotlin.math.sqrt
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import kotlin.math.PI
-import kotlin.math.sqrt
 
 /** [FoliageMatrices] on a synthetic 10 x 10 plane rising 0.5 per unit along x, with no files and no GL. */
 class FoliageMatricesTest {
     private val resolution = 11
-    private val terrain = TerrainData(
-        resolution,
-        FloatArray(resolution * resolution) { (it % resolution) * 0.5f },
-        10,
-        1f,
-    )
+    private val terrain =
+        TerrainData(
+            resolution,
+            FloatArray(resolution * resolution) { (it % resolution) * 0.5f },
+            10,
+            1f,
+        )
     private val matrices = FoliageMatrices()
     private val out = Matrix4()
 
     private fun copy(x: Float = 4f, z: Float = 3f, yaw: Float = 0f, scale: Float = 1f) =
         FoliageCopy(0, x, z, yaw, scale)
 
-    private fun axis(column: Int) = Vector3(out.values[column * 4], out.values[column * 4 + 1], out.values[column * 4 + 2])
+    private fun axis(column: Int) =
+        Vector3(out.values[column * 4], out.values[column * 4 + 1], out.values[column * 4 + 2])
 
     @Test
     fun alignZeroStaysUprightAndSitsOnTheSurface() {
@@ -91,7 +93,11 @@ class FoliageMatricesTest {
         // local +x is two units long and points to world -z after the quarter turn
         assertEquals(origin.x, world.x, 1e-4f)
         assertEquals(origin.z - 2f, world.z, 1e-4f)
-        assertEquals(2f, sqrt((world.x - origin.x) * (world.x - origin.x) + (world.z - origin.z) * (world.z - origin.z)), 1e-4f)
+        assertEquals(
+            2f,
+            sqrt((world.x - origin.x) * (world.x - origin.x) + (world.z - origin.z) * (world.z - origin.z)),
+            1e-4f,
+        )
     }
 
     @Test

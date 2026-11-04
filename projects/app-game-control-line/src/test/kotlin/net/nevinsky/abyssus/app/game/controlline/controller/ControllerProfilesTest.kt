@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.controller
 
+import java.nio.file.Files
+import java.nio.file.Path
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -11,14 +13,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.nio.file.Files
-import java.nio.file.Path
 
 class ControllerProfilesTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
-    private val home get() = temp.root.toPath().resolve("home/.abyssus-control-line")
+    private val home
+        get() = temp.root.toPath().resolve("home/.abyssus-control-line")
 
     private fun file(): Path = home.resolve("controls.json")
 
@@ -47,7 +47,10 @@ class ControllerProfilesTest {
     @Test
     fun changesSurviveAReload() {
         val profiles = ControllerProfiles(file())
-        val changed = profiles.profile("stick", false).copy(axis = 1, rest = -0.5f, invert = true, deadZone = 0.2f, curve = 0.4f, pauseButton = 7)
+        val changed =
+            profiles
+                .profile("stick", false)
+                .copy(axis = 1, rest = -0.5f, invert = true, deadZone = 0.2f, curve = 0.4f, pauseButton = 7)
         profiles.put("stick", changed)
         assertEquals(changed, ControllerProfiles(file()).profile("stick", false))
         assertTrue(Files.readString(file()).contains("\"version\" : 1"))

@@ -5,46 +5,64 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.shadows
 
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.scene.DirectionalSource
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
+import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.lib.core.editor.scene.PointSource
 import net.nevinsky.abyssus.lib.core.editor.scene.SpotCone
 import net.nevinsky.abyssus.lib.core.editor.scene.SpotSource
-import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
-import com.badlogic.gdx.math.Vector3
-import com.badlogic.gdx.graphics.Color
-
 import net.nevinsky.abyssus.plugin.sceneview.*
 import org.junit.Assert.*
 import org.junit.Test
 
 class ShadowLayoutTest {
-    private val color = Color(1f,1f,1f,1f)
-    /** A stable numeric id for a readable light name: the kind letter picks the hundreds, a trailing digit the unit. */
-    private fun lid(name: String): Long = when {
-        name == "sun" -> 900L
-        name == "spot" -> 800L
-        else -> (when (name[0]) { 'd' -> 100L; 'p' -> 200L; else -> 300L }) + name.drop(1).toLong()
-    }
-    private fun lights(points: List<String>, spots: List<String> = emptyList(), dirs: List<String> = emptyList()) = LightSet(
-        dirs.map { DirectionalSource(Vector3(0f,-1f,0f),color,lid(it)) },
-        points.map { PointSource(Vector3(0f,0f,0f),color,10f,lid(it)) },
-        spots.map { SpotSource(lid(it),Vector3(0f,0f,0f),Vector3(0f,0f,-1f),color,10f,SpotCone(45f,0.2f)) })
+    private val color = Color(1f, 1f, 1f, 1f)
 
-    @Test fun budgetsAndUniqueTilesAreBounded() {
-        val allocated = ShadowLayout().allocate(lights(listOf("p3","p1","p2"),listOf("s4","s3","s2","s1"),listOf("d2","d1")))
-        assertEquals(setOf("d1","p1","p2","s1","s2","s3").map(::lid).toSet(), allocated.map { it.entityId }.toSet())
-        val tiles=allocated.flatMap { it.tiles }
-        assertEquals(16,tiles.size)
-        assertEquals(16,tiles.map { it.index }.toSet().size)
-        for(tile in tiles) {
-            assertEquals(1024,tile.size)
-            assertEquals(4096,tile.atlasSize)
+    /** A stable numeric id for a readable light name: the kind letter picks the hundreds, a trailing digit the unit. */
+    private fun lid(name: String): Long =
+        when {
+            name == "sun" -> 900L
+            name == "spot" -> 800L
+            else ->
+                (when (name[0]) {
+                    'd' -> 100L
+                    'p' -> 200L
+                    else -> 300L
+                }) + name.drop(1).toLong()
+        }
+
+    private fun lights(points: List<String>, spots: List<String> = emptyList(), dirs: List<String> = emptyList()) =
+        LightSet(
+            dirs.map { DirectionalSource(Vector3(0f, -1f, 0f), color, lid(it)) },
+            points.map { PointSource(Vector3(0f, 0f, 0f), color, 10f, lid(it)) },
+            spots.map {
+                SpotSource(lid(it), Vector3(0f, 0f, 0f), Vector3(0f, 0f, -1f), color, 10f, SpotCone(45f, 0.2f))
+            },
+        )
+
+    @Test
+    fun budgetsAndUniqueTilesAreBounded() {
+        val allocated =
+            ShadowLayout()
+                .allocate(lights(listOf("p3", "p1", "p2"), listOf("s4", "s3", "s2", "s1"), listOf("d2", "d1")))
+        assertEquals(
+            setOf("d1", "p1", "p2", "s1", "s2", "s3").map(::lid).toSet(),
+            allocated.map { it.entityId }.toSet(),
+        )
+        val tiles = allocated.flatMap { it.tiles }
+        assertEquals(16, tiles.size)
+        assertEquals(16, tiles.map { it.index }.toSet().size)
+        for (tile in tiles) {
+            assertEquals(1024, tile.size)
+            assertEquals(4096, tile.atlasSize)
             assertTrue(tile.x in 0..3072 && tile.y in 0..3072)
         }
     }
 
-    @Test fun smallLightSetsUseAvailableAtlasResolution() {
+    @Test
+    fun smallLightSetsUseAvailableAtlasResolution() {
         val layout = ShadowLayout()
         assertEquals(4096, layout.allocate(lights(emptyList(), dirs = listOf("sun"))).single().tiles.single().size)
         val pair = layout.allocate(lights(emptyList(), listOf("spot"), listOf("sun")))
@@ -52,14 +70,18 @@ class ShadowLayoutTest {
         assertEquals(pair, layout.allocate(lights(emptyList(), listOf("spot"), listOf("sun"))))
     }
 
-    @Test fun reorderRemovalAndReplacementPreserveSurvivingTiles() {
-        val layout=ShadowLayout()
-        val first=layout.allocate(lights(listOf("p1","p2"),listOf("s1","s2"),listOf("d1"))).associateBy { it.entityId }
-        val reorder=layout.allocate(lights(listOf("p2","p1"),listOf("s2","s1"),listOf("d1"))).associateBy { it.entityId }
-        assertEquals(first,reorder)
-        val removal=layout.allocate(lights(listOf("p2"),listOf("s2","s3"),listOf("d1"))).associateBy { it.entityId }
-        for(name in listOf("p2","s2","d1")) assertEquals(first[lid(name)],removal[lid(name)])
+    @Test
+    fun reorderRemovalAndReplacementPreserveSurvivingTiles() {
+        val layout = ShadowLayout()
+        val first =
+            layout.allocate(lights(listOf("p1", "p2"), listOf("s1", "s2"), listOf("d1"))).associateBy { it.entityId }
+        val reorder =
+            layout.allocate(lights(listOf("p2", "p1"), listOf("s2", "s1"), listOf("d1"))).associateBy { it.entityId }
+        assertEquals(first, reorder)
+        val removal =
+            layout.allocate(lights(listOf("p2"), listOf("s2", "s3"), listOf("d1"))).associateBy { it.entityId }
+        for (name in listOf("p2", "s2", "d1")) assertEquals(first[lid(name)], removal[lid(name)])
         assertFalse(removal.containsKey(lid("p1")))
-        assertEquals(emptyList<ShadowAllocation>(),layout.allocate(NO_LIGHTS))
+        assertEquals(emptyList<ShadowAllocation>(), layout.allocate(NO_LIGHTS))
     }
 }

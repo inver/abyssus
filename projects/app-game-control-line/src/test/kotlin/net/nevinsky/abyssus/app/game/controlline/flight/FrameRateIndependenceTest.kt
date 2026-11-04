@@ -19,13 +19,15 @@ import org.junit.Test
 class FrameRateIndependenceTest {
     private class Flown(val recording: FlightRecording, val score: Int, val time: Float, val end: FlightEnd?)
 
-    private fun fly(framesPerSecond: Int): Flown = AiFlight().use { ai ->
-        val frame = 1f / framesPerSecond
-        ai.fly(frames = generateSequence { frame }.iterator())
-        Flown(ai.judge.recording("Stunter", AssistLevel.MID), ai.judge.sheet.tenths, ai.time, ai.result)
-    }
+    private fun fly(framesPerSecond: Int): Flown =
+        AiFlight().use { ai ->
+            val frame = 1f / framesPerSecond
+            ai.fly(frames = generateSequence { frame }.iterator())
+            Flown(ai.judge.recording("Stunter", AssistLevel.MID), ai.judge.sheet.tenths, ai.time, ai.result)
+        }
 
-    @Test fun sixtyAndOneHundredFortyFourFramesASecondFlyTheSameRoutine() {
+    @Test
+    fun sixtyAndOneHundredFortyFourFramesASecondFlyTheSameRoutine() {
         val slow = fly(60)
         val fast = fly(144)
 
@@ -48,7 +50,8 @@ class FrameRateIndependenceTest {
         }
     }
 
-    @Test fun thePlaneComponentHoldsTheSimulatedPoseBetweenFrames() {
+    @Test
+    fun thePlaneComponentHoldsTheSimulatedPoseBetweenFrames() {
         AiFlight().use { ai ->
             val body = ai.session.plane.getComponent(PositionComponent::class.java)
             // 2885 frames of 1/144 s are 2404 1/120 s steps and a sixth of one: the plane is in the air, and its drawn
@@ -56,9 +59,15 @@ class FrameRateIndependenceTest {
             repeat(2885) { ai.session.advance(1f / 144f) }
             assertTrue("airborne", ai.last!!.height > AIRBORNE_HEIGHT)
             val simulated = Vector3(body.localPosition)
-            assertFalse("the drawn pose trails the simulation", ai.session.drawnPosition.epsilonEquals(simulated, 1e-6f))
+            assertFalse(
+                "the drawn pose trails the simulation",
+                ai.session.drawnPosition.epsilonEquals(simulated, 1e-6f),
+            )
             ai.session.advance(0f)
-            assertTrue("a frame with no step leaves the simulated pose alone", body.localPosition.epsilonEquals(simulated, 0f))
+            assertTrue(
+                "a frame with no step leaves the simulated pose alone",
+                body.localPosition.epsilonEquals(simulated, 0f),
+            )
             assertTrue(
                 "the drawn transform is at the drawn position",
                 ai.session.drawnTransform().getTranslation(Vector3()).epsilonEquals(ai.session.drawnPosition, 1e-4f),

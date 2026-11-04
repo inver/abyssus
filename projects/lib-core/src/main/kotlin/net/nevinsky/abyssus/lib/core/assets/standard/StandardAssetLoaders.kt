@@ -33,7 +33,8 @@ import org.slf4j.helpers.NOPLogger
  * [byType] and register it with an `AssetStorage`, so adding an asset kind is one line here. The loaders a host also
  * needs by themselves are exposed as typed properties, so it never makes a second one.
  *
- * Hosts differ in three things only: [modelPreparation] (a tap on the prepared model data), [log] (where loaders report), and
+  * Hosts differ in three things only: [modelPreparation] (a tap on the prepared model data), [log] (where loaders
+  * report), and
  * [foliage] (the editor reads foliage from its bake cache, a game from the baked data; the default is the game's).
  * Constructors only, no GL: the loaders touch GL in their `build` step on the GL thread, as before.
  */

@@ -38,7 +38,9 @@ abstract class AbyssusTreeAction<T : Any> : AnAction(), DumbAware {
     final override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val target = targetOf(selected(e)) ?: return
-        if (!isEnabled(e, target)) return
+        if (!isEnabled(e, target)) {
+            return
+        }
         perform(project, target, e)
     }
 }

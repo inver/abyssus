@@ -22,7 +22,9 @@ internal class PhysicsPoseWriter(
         val p = RVec3()
         val q = Quat()
         for (record in records) {
-            if (record.motion == MotionType.STATIC) continue
+            if (record.motion == MotionType.STATIC) {
+                continue
+            }
             bodies.getPositionAndRotation(record.id, p, q)
             val position = record.entity.getComponent(PositionComponent::class.java) ?: continue
             position.localPosition.set(p.x(), p.y(), p.z())

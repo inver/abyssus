@@ -51,7 +51,9 @@ data class FogParams(val color: Color, val density: Float, val gradient: Float) 
     val shaderCoefficient: Float get() = quadraticFogCoefficient(density)
 }
 
-/** [content] is what the scene places; [projectDir] is the folder of its `.abss`, whose `assets` folder holds the files. */
+/**
+ * [content] is what the scene places; [projectDir] is the folder of its `.abss`, whose `assets` folder holds the files.
+ */
 data class SceneRenderParams(
     val clear: Color,
     val ambient: Color?,
@@ -70,7 +72,8 @@ data class SceneRenderParams(
 }
 
 /**
- * The view parameters of [scene], seen through [camera]; [projectDir] holds its assets. The ray settings are the defaults:
+  * The view parameters of [scene], seen through [camera]; [projectDir] holds its assets. The ray settings are the
+  * defaults:
  * a scene does not save them.
  */
 fun renderParamsOf(scene: SceneDto, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
@@ -87,7 +90,9 @@ fun renderParamsOf(scene: SceneDto, camera: CameraParams, projectDir: File? = nu
 }
 
 private fun ambientOf(scene: SceneDto): Color? {
-    if (scene.ambientLightEnabled != true) return null
+    if (scene.ambientLightEnabled != true) {
+        return null
+    }
     val light = scene.ambientLight ?: return null
     val c = light.color ?: return null
     val k = (light.intensity ?: 1f).coerceAtLeast(0f)
@@ -95,7 +100,9 @@ private fun ambientOf(scene: SceneDto): Color? {
 }
 
 private fun fogOf(scene: SceneDto): FogParams? {
-    if (scene.fogEnabled != true) return null
+    if (scene.fogEnabled != true) {
+        return null
+    }
     val fog = scene.fog ?: return null
     val c = fog.color ?: return null
     val density = fog.density?.takeIf { it > 0f && it.isFinite() } ?: return null
@@ -105,7 +112,11 @@ private fun fogOf(scene: SceneDto): FogParams? {
 
 internal fun normalized(v: Vector3): Vector3? {
     val len = v.len()
-    return if (len > 1e-6f && len.isFinite()) Vector3(v).scl(1f / len) else null
+    return if (len > 1e-6f && len.isFinite()) {
+        Vector3(v).scl(1f / len)
+    } else {
+        null
+    }
 }
 
 /** The part of an `.abss` project file [MainCamera] reads. */
@@ -118,7 +129,9 @@ class MainCamera(
 ) {
     fun parse(abssText: String): CameraParams? = runCatchingKeepingCancellation {
         val root = json.readObject(abssText)
-        if (format.validate(root, DocumentKind.PROJECT) != null) return null
+        if (format.validate(root, DocumentKind.PROJECT) != null) {
+            return null
+        }
         val cam = json.bind(root, MainCameraDocument::class.java).mainCamera ?: return null
         val position = cam.position ?: return null
         val direction = normalized(cam.viewPointPosition ?: return null) ?: return null
@@ -129,8 +142,16 @@ class MainCamera(
         CameraParams(
             position,
             direction,
-            if (invertedClip) defaults.near else near ?: defaults.near,
-            if (invertedClip) defaults.far else far ?: defaults.far,
+            if (invertedClip) {
+                defaults.near
+            } else {
+                near ?: defaults.near
+            },
+            if (invertedClip) {
+                defaults.far
+            } else {
+                far ?: defaults.far
+            },
             cam.fieldOfView?.takeIf { it > 0f && it < 180f } ?: defaults.fieldOfView,
         )
     }.getOrNull()

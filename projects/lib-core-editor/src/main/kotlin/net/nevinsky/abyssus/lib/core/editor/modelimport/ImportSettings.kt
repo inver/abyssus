@@ -93,17 +93,23 @@ class ImportSettingsRules {
         return name
     }
 
-    /** Every problem of [settings]; empty when Create may run. [taken] holds the names of the project's asset folders. */
+    /**
+     * Every problem of [settings]; empty when Create may run. [taken] holds the names of the project's asset folders.
+     */
     fun problems(settings: ImportSettings, taken: Set<String>): List<SettingsProblem> {
         val problems = ArrayList<SettingsProblem>()
         folderProblem(settings.folderName, taken)?.let(problems::add)
-        if (settings.upAxis == UpAxis.X) problems += SettingsProblem.UP_AXIS_UNSUPPORTED
+        if (settings.upAxis == UpAxis.X) {
+            problems += SettingsProblem.UP_AXIS_UNSUPPORTED
+        }
         val size = when (val fit = settings.fit) {
             FitSize.Original -> null
             is FitSize.LargestExtent -> fit.metres
             is FitSize.Height -> fit.metres
         }
-        if (size != null && !(size > 0.0 && size.isFinite())) problems += SettingsProblem.SIZE_NOT_POSITIVE
+        if (size != null && !(size > 0.0 && size.isFinite())) {
+            problems += SettingsProblem.SIZE_NOT_POSITIVE
+        }
         return problems
     }
 
@@ -115,8 +121,12 @@ class ImportSettingsRules {
     }
 
     private fun validFolderName(name: String): Boolean {
-        if (name == "." || name == ".." || name != name.trim() || name.endsWith('.')) return false
-        if (name.any { it < ' ' || it in INVALID_FOLDER_CHARACTERS }) return false
+        if (name == "." || name == ".." || name != name.trim() || name.endsWith('.')) {
+            return false
+        }
+        if (name.any { it < ' ' || it in INVALID_FOLDER_CHARACTERS }) {
+            return false
+        }
         return name.substringBefore('.').uppercase(Locale.ROOT) !in RESERVED_FOLDER_NAMES
     }
 

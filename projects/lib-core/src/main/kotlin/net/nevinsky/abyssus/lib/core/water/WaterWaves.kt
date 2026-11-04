@@ -13,29 +13,52 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /** One travelling sine wave: it moves along ([dirX], [dirZ]); [k] is its wave number, [omega] its angular frequency. */
-class WaterWave(val dirX: Double, val dirZ: Double, val k: Double, val omega: Double, val amplitude: Double, val offset: Double)
+class WaterWave(
+    val dirX: Double,
+    val dirZ: Double,
+    val k: Double,
+    val omega: Double,
+    val amplitude: Double,
+    val offset: Double,
+)
 
 /**
  * The surface height of a water surface: a small, fixed sum of [WAVES] travelling sines (vertical displacement only, no
  * fluid simulation) with analytic slopes, so the normal needs no neighbouring samples. The phase depends on world
- * position and time alone, never on the camera, so the water keeps its shape while the view moves. The largest
- * height is [amplitude] (the shares of the waves sum to 1) and with an [amplitude] of 0 the surface is flat.
+ * position and time alone, never on the camera, so the water keeps its shape while the view moves. The largest height
+ * is [amplitude] (the shares of the waves sum to 1) and with an [amplitude] of 0 the surface is flat.
  *
  * The shader evaluates the same sum from [uniform] (with [phases] reduced to one turn on the CPU, where double
  * precision is available, so a long-running view does not lose the animation to float error).
  */
 class WaterWaves(amplitude: Double, wavelength: Double, speed: Double) {
-    val amplitude: Double = if (amplitude.isFinite()) amplitude.coerceIn(0.0, MAX_VALUE) else 0.0
-    private val base: Double = if (wavelength.isFinite() && wavelength > 0.0) wavelength.coerceIn(MIN_WAVELENGTH, MAX_VALUE) else 1.0
-    private val speed: Double = if (speed.isFinite()) speed.coerceIn(0.0, MAX_VALUE) else 0.0
+    val amplitude: Double =
+        if (amplitude.isFinite()) {
+            amplitude.coerceIn(0.0, MAX_VALUE)
+        } else {
+            0.0
+        }
+    private val base: Double =
+        if (wavelength.isFinite() && wavelength > 0.0) {
+            wavelength.coerceIn(MIN_WAVELENGTH, MAX_VALUE)
+        } else {
+            1.0
+        }
+    private val speed: Double =
+        if (speed.isFinite()) {
+            speed.coerceIn(0.0, MAX_VALUE)
+        } else {
+            0.0
+        }
 
-    val waves: List<WaterWave> = (0 until WAVES).map { i ->
-        val length = base * LENGTH_SCALE[i]
-        val k = 2.0 * PI / length
-        // shorter waves travel slower, like deep-water waves
-        val omega = k * this.speed * sqrt(LENGTH_SCALE[i])
-        WaterWave(cos(ANGLE[i]), sin(ANGLE[i]), k, omega, this.amplitude * SHARE[i], OFFSET[i])
-    }
+    val waves: List<WaterWave> =
+        (0 until WAVES).map { i ->
+            val length = base * LENGTH_SCALE[i]
+            val k = 2.0 * PI / length
+            // shorter waves travel slower, like deep-water waves
+            val omega = k * this.speed * sqrt(LENGTH_SCALE[i])
+            WaterWave(cos(ANGLE[i]), sin(ANGLE[i]), k, omega, this.amplitude * SHARE[i], OFFSET[i])
+        }
 
     /** The height above the mean level at world position ([x], [z]) and time [seconds]. */
     fun height(x: Double, z: Double, seconds: Double): Double {
@@ -63,24 +86,34 @@ class WaterWaves(amplitude: Double, wavelength: Double, speed: Double) {
         return Vector3((-sx / length).toFloat(), (1.0 / length).toFloat(), (-sz / length).toFloat())
     }
 
-    /** Each wave's phase offset at [seconds], reduced to [0, 2 pi): what the shader adds to `k * dot(direction, position)`. */
-    fun phases(seconds: Double): FloatArray = FloatArray(WAVES) {
-        val w = waves[it]
-        val turn = 2.0 * PI
-        val p = (w.offset - w.omega * seconds) % turn
-        (if (p < 0.0) p + turn else p).toFloat()
-    }
+    /**
+     * Each wave's phase offset at [seconds], reduced to [0, 2 pi): what the shader adds to `k * dot(direction,
+     * position)`.
+     */
+    fun phases(seconds: Double): FloatArray =
+        FloatArray(WAVES) {
+            val w = waves[it]
+            val turn = 2.0 * PI
+            val p = (w.offset - w.omega * seconds) % turn
+            (if (p < 0.0) {
+                    p + turn
+                } else {
+                    p
+                })
+                .toFloat()
+        }
 
     /** The wave table the shader reads: per wave `(directionX, directionZ, k, amplitude)`. */
-    fun uniform(): FloatArray = FloatArray(WAVES * 4) {
-        val w = waves[it / 4]
-        when (it % 4) {
-            0 -> w.dirX.toFloat()
-            1 -> w.dirZ.toFloat()
-            2 -> w.k.toFloat()
-            else -> w.amplitude.toFloat()
+    fun uniform(): FloatArray =
+        FloatArray(WAVES * 4) {
+            val w = waves[it / 4]
+            when (it % 4) {
+                0 -> w.dirX.toFloat()
+                1 -> w.dirZ.toFloat()
+                2 -> w.k.toFloat()
+                else -> w.amplitude.toFloat()
+            }
         }
-    }
 
     private fun phase(w: WaterWave, x: Double, z: Double, seconds: Double): Double =
         w.k * (w.dirX * x + w.dirZ * z) - w.omega * seconds + w.offset

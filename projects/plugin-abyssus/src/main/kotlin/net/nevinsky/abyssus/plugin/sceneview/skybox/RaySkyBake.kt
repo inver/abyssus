@@ -18,7 +18,8 @@ const val RAY_SKY_BAKE_REFRESH_SECONDS = 5.0
 
 /**
  * What a baked ray-tracing sky was made for. A new bake is needed when any part changes: the sky, project or sun, the
- * cloud asset ([clouds] is that asset by identity, so a reload is a change; null while clouds are hidden or absent), or,
+  * cloud asset ([clouds] is that asset by identity, so a reload is a change; null while clouds are hidden or absent),
+  * or,
  * for clouds that drift, the [timeBucket] of the view's sky clock. Stationary clouds, and skies without clouds, never
  * change it with time, so a bake is not repeated for nothing.
  */
@@ -38,7 +39,11 @@ data class RaySkyBakeKey(
 fun raySkyBakeKey(name: String, projectDir: File?, sun: Vector3, clouds: Any?, drifting: Boolean, timeSeconds: Double) =
     RaySkyBakeKey(
         name, projectDir, sun, clouds,
-        if (clouds != null && drifting) floor(timeSeconds / RAY_SKY_BAKE_REFRESH_SECONDS).toLong() else 0L,
+        if (clouds != null && drifting) {
+            floor(timeSeconds / RAY_SKY_BAKE_REFRESH_SECONDS).toLong()
+        } else {
+            0L
+        },
     )
 
 /**
@@ -46,7 +51,9 @@ fun raySkyBakeKey(name: String, projectDir: File?, sun: Vector3, clouds: Any?, d
  * [from] itself when [to] is null. The ray path uses it so its diffuse sky light fades with the raster path.
  */
 fun blendAxisColors(from: FloatArray, to: FloatArray?, weight: Float): FloatArray {
-    if (to == null) return from
+    if (to == null) {
+        return from
+    }
     val w = weight.coerceIn(0f, 1f)
     return FloatArray(from.size) { from[it] + (to[it] - from[it]) * w }
 }

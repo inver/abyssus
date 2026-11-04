@@ -33,7 +33,11 @@ class CloudsLoader(
 ) : MetaAssetLoader<Unit, PreparedClouds, Clouds>(metaLoader) {
     override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, PreparedClouds> {
         val additional = meta.typedAdditional<CloudMeta>()
-        return Prepared(PreparedClouds(meta.name, additional, if (additional.visible) noise.generate() else null))
+        return Prepared(PreparedClouds(meta.name, additional, if (additional.visible) {
+            noise.generate()
+        } else {
+            null
+        }))
     }
 
     override fun build(staged: PreparedClouds, assets: BuiltAssets) =
@@ -96,8 +100,12 @@ class Clouds(val name: String, val settings: CloudMeta, noise: CloudNoise?) : Di
 
     private fun deleteNoise() {
         val gl = Gdx.gl ?: return
-        if (baseNoise != 0) gl.glDeleteTexture(baseNoise)
-        if (detailNoise != 0) gl.glDeleteTexture(detailNoise)
+        if (baseNoise != 0) {
+            gl.glDeleteTexture(baseNoise)
+        }
+        if (detailNoise != 0) {
+            gl.glDeleteTexture(detailNoise)
+        }
         baseNoise = 0
         detailNoise = 0
     }

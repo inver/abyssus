@@ -40,13 +40,24 @@ fun TerrainSettingField.textOf(settings: TerrainGenerationSettings): String = wh
     TerrainSettingField.LACUNARITY -> settings.lacunarity.toString()
 }
 
-/** [current] with this field set from [text], or why the text is not a value of the field's type. Range rules are the settings' own. */
+/**
+ * [current] with this field set from [text], or why the text is not a value of the field's type. Range rules are the
+ * settings' own.
+ */
 fun TerrainSettingField.parse(current: TerrainGenerationSettings, text: String): SettingParse {
     val trimmed = text.trim()
     if (integer) {
         val n = trimmed.toIntOrNull()
-            ?: return SettingParse.Failed(AbyssusBundle.message(if (trimmed.toBigDecimalOrNull() == null) "terrainSettingNotANumber" else "terrainSettingNotAnInteger", label()))
-        return SettingParse.Parsed(if (this == TerrainSettingField.SEED) current.copy(seed = n) else current.copy(octaves = n))
+            ?: return SettingParse.Failed(AbyssusBundle.message(if (trimmed.toBigDecimalOrNull() == null) {
+                "terrainSettingNotANumber"
+            } else {
+                "terrainSettingNotAnInteger"
+            }, label()))
+        return SettingParse.Parsed(if (this == TerrainSettingField.SEED) {
+            current.copy(seed = n)
+        } else {
+            current.copy(octaves = n)
+        })
     }
     val f = trimmed.toBigDecimalOrNull()?.let(BigDecimal::toFloat)?.takeIf { it.isFinite() }
         ?: return SettingParse.Failed(AbyssusBundle.message("terrainSettingNotANumber", label()))

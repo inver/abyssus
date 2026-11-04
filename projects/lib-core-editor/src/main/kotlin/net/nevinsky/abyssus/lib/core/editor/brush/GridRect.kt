@@ -6,7 +6,8 @@
 package net.nevinsky.abyssus.lib.core.editor.brush
 
 /**
- * A rectangle of grid cells (mask texels, terrain vertices): [minX]..[maxX] along x and [minZ]..[maxZ] along z, both inclusive; empty when either
+  * A rectangle of grid cells (mask texels, terrain vertices): [minX]..[maxX] along x and [minZ]..[maxZ] along z, both
+  * inclusive; empty when either
  * span is inverted. A brush stroke reports the texels it changed, and a draft turns them into what a view must refresh.
  */
 data class GridRect(val minX: Int, val minZ: Int, val maxX: Int, val maxZ: Int) {
@@ -17,11 +18,19 @@ data class GridRect(val minX: Int, val minZ: Int, val maxX: Int, val maxZ: Int) 
 
     /** How many texels the rectangle spans along x; 0 when empty. */
     val width: Int
-        get() = if (isEmpty) 0 else maxX - minX + 1
+        get() = if (isEmpty) {
+            0
+        } else {
+            maxX - minX + 1
+        }
 
     /** How many texels the rectangle spans along z; 0 when empty. */
     val height: Int
-        get() = if (isEmpty) 0 else maxZ - minZ + 1
+        get() = if (isEmpty) {
+            0
+        } else {
+            maxZ - minZ + 1
+        }
 
     /** The smallest rectangle holding both rectangles; an empty one leaves the other as it is. */
     fun union(other: GridRect): GridRect = when {

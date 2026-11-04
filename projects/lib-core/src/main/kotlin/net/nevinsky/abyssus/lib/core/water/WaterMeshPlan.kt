@@ -12,16 +12,20 @@ import kotlin.math.sqrt
 
 /**
  * The grid of one water surface: [cellsX] by [cellsZ] quads over its extent, with a fixed ceiling on the vertex count
- * ([MAX_WATER_VERTICES], so 16-bit indices suffice and the cost of any surface is bounded). The density follows the wave
- * length (about [CELLS_PER_WAVELENGTH] cells per wave) within that ceiling; a very large sea gets coarser cells and the
- * shader's fragment normals carry the small ripples. Pure.
+ * ([MAX_WATER_VERTICES], so 16-bit indices suffice and the cost of any surface is bounded). The density follows the
+ * wave length (about [CELLS_PER_WAVELENGTH] cells per wave) within that ceiling; a very large sea gets coarser cells
+ * and the shader's fragment normals carry the small ripples. Pure.
  */
 class WaterMeshPlan internal constructor(val cellsX: Int, val cellsZ: Int, val width: Double, val length: Double) {
     /** The longest side of a cell in world units. */
-    val cellSize: Double get() = max(width / cellsX, length / cellsZ)
+    val cellSize: Double
+        get() = max(width / cellsX, length / cellsZ)
 
-    val vertexCount: Int get() = (cellsX + 1) * (cellsZ + 1)
-    val indexCount: Int get() = cellsX * cellsZ * 6
+    val vertexCount: Int
+        get() = (cellsX + 1) * (cellsZ + 1)
+
+    val indexCount: Int
+        get() = cellsX * cellsZ * 6
 
     /** The grid's vertices as `x, z` pairs relative to the surface centre, row after row along X. */
     fun vertices(): FloatArray {
@@ -44,20 +48,32 @@ class WaterMeshPlan internal constructor(val cellsX: Int, val cellsZ: Int, val w
             val b = a + 1
             val c = a + row
             val d = c + 1
-            out[i++] = a.toShort(); out[i++] = c.toShort(); out[i++] = b.toShort()
-            out[i++] = b.toShort(); out[i++] = c.toShort(); out[i++] = d.toShort()
+            out[i++] = a.toShort()
+            out[i++] = c.toShort()
+            out[i++] = b.toShort()
+            out[i++] = b.toShort()
+            out[i++] = c.toShort()
+            out[i++] = d.toShort()
         }
         return out
     }
-
 }
 
 /** Plans [WaterMeshPlan]s; stateless. */
 class WaterMeshPlanner {
     fun plan(width: Double, length: Double, wavelength: Double): WaterMeshPlan {
-        require(width > 0.0 && length > 0.0 && width.isFinite() && length.isFinite()) { "a surface has a positive finite extent" }
+        require(width > 0.0 && length > 0.0 && width.isFinite() && length.isFinite()) {
+            "a surface has a positive finite extent"
+        }
         val cell =
-            max((if (wavelength.isFinite() && wavelength > 0.0) wavelength else 1.0) / CELLS_PER_WAVELENGTH, MIN_CELL)
+            max(
+                (if (wavelength.isFinite() && wavelength > 0.0) {
+                    wavelength
+                } else {
+                    1.0
+                }) / CELLS_PER_WAVELENGTH,
+                MIN_CELL,
+            )
         var nx = ceil(width / cell).coerceIn(1.0, MAX_CELLS_PER_SIDE.toDouble())
         var nz = ceil(length / cell).coerceIn(1.0, MAX_CELLS_PER_SIDE.toDouble())
         val vertices = (nx + 1) * (nz + 1)
@@ -66,7 +82,11 @@ class WaterMeshPlanner {
             nx = floor(nx * shrink).coerceAtLeast(1.0)
             nz = floor(nz * shrink).coerceAtLeast(1.0)
             // flooring can leave one side needing a last trim to stay under the ceiling
-            while ((nx + 1) * (nz + 1) > MAX_WATER_VERTICES) if (nx >= nz) nx-- else nz--
+            while ((nx + 1) * (nz + 1) > MAX_WATER_VERTICES) if (nx >= nz) {
+                nx--
+            } else {
+                nz--
+            }
         }
         return WaterMeshPlan(nx.toInt(), nz.toInt(), width, length)
     }

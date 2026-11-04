@@ -32,14 +32,20 @@ class RayFeasibilityLoop(private val probe: () -> RayCapability) : AutoCloseable
         private set
 
     fun offer(request: RayRequest) {
-        if (closed.get()) return
+        if (closed.get()) {
+            return
+        }
         desired.set(request)
         pending.set(Offered(request, System.nanoTime()))
-        if (started.compareAndSet(false, true)) worker.scheduleWithFixedDelay(::tick, 0, 1, TimeUnit.MILLISECONDS)
+        if (started.compareAndSet(false, true)) {
+            worker.scheduleWithFixedDelay(::tick, 0, 1, TimeUnit.MILLISECONDS)
+        }
     }
 
     fun latest(): Completed? {
-        if (closed.get()) return null
+        if (closed.get()) {
+            return null
+        }
         val value = completed.get() ?: return null
         val wanted = desired.get() ?: return null
         return value.takeIf { compatible(it.frame, wanted) }
@@ -51,9 +57,11 @@ class RayFeasibilityLoop(private val probe: () -> RayCapability) : AutoCloseable
             frame.width == request.width && frame.height == request.height
 
     private fun tick() {
-        if (!closed.get()) runCatchingKeepingCancellation { pump() }.onFailure {
-            failure = it
-            closed.set(true)
+        if (!closed.get()) {
+            runCatchingKeepingCancellation { pump() }.onFailure {
+                failure = it
+                closed.set(true)
+            }
         }
         if (closed.get()) {
             pending.set(null)
@@ -83,7 +91,9 @@ class RayFeasibilityLoop(private val probe: () -> RayCapability) : AutoCloseable
                 completed.set(Completed(frame, offered.nanos))
             }
         }
-        if (closed.get()) return
+        if (closed.get()) {
+            return
+        }
         val next = pending.getAndSet(null) ?: return
         active.submit(next.request)
         inFlight = next
@@ -94,6 +104,8 @@ class RayFeasibilityLoop(private val probe: () -> RayCapability) : AutoCloseable
         closed.set(true)
         pending.set(null)
         completed.set(null)
-        if (!started.get()) worker.shutdown()
+        if (!started.get()) {
+            worker.shutdown()
+        }
     }
 }

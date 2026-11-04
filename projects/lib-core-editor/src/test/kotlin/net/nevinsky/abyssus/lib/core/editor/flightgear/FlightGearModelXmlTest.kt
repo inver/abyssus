@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.flightgear
 
+import java.io.File
 import net.nevinsky.abyssus.lib.core.editor.flightgear.fixtureArchive
 import net.nevinsky.abyssus.lib.core.editor.flightgear.writeZip
 import org.junit.Assert.assertEquals
@@ -12,11 +13,9 @@ import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
 
 class FlightGearModelXmlTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
     @Test
     fun theFixtureModelNamesItsGeometryNestedModelAndPanel() {
@@ -34,7 +33,9 @@ class FlightGearModelXmlTest {
     @Test
     fun aDoctypeWithAnExternalEntityIsRefused() {
         val secret = File(temp.root, "secret.txt").apply { writeText("secret") }
-        val xml = """<?xml version="1.0"?><!DOCTYPE p [<!ENTITY x SYSTEM "file://${secret.absolutePath}">]><PropertyList><path>&x;</path></PropertyList>"""
+        val xml =
+            """<?xml version="1.0"?><!DOCTYPE p [<!ENTITY x SYSTEM "file://${secret.absolutePath}">]>
+            <PropertyList><path>&x;</path></PropertyList>"""
         val zip = writeZip(File(temp.root, "xxe.zip"), mapOf("a/a-set.xml" to xml.toByteArray()))
         FlightGearArchive(zip).use { archive ->
             assertThrows(FlightGearArchiveException::class.java) { archive.aircraft() }

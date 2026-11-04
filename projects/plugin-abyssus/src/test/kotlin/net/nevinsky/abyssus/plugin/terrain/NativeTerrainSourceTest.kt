@@ -4,15 +4,15 @@
  */
 package net.nevinsky.abyssus.plugin.terrain
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
-import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
+import java.io.File
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetReferenceChoices
 import net.nevinsky.abyssus.lib.core.editor.terrain.RecipeStatus
 import net.nevinsky.abyssus.lib.core.editor.terrain.SourceSnapshot
-import net.nevinsky.abyssus.lib.core.editor.meta.AssetReferenceChoices
-import java.io.File
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
+import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
 
 class NativeTerrainSourceTest : BasePlatformTestCase() {
     fun testRejectedMetadataStopsSourceReadingAndQueuedPreview() {
@@ -20,13 +20,44 @@ class NativeTerrainSourceTest : BasePlatformTestCase() {
         val core = service<AbyssusPluginCtx>()
         val choices = AssetReferenceChoices(core.json)
         for (text in listOf("{}", """{"format":"abyssus","formatVersion":2}""")) {
-            val rejected = readTerrainSource(File(folder.path), text, net.nevinsky.abyssus.lib.core.assets.AssetMeta<Any>(type = net.nevinsky.abyssus.lib.core.assets.MetaType.TERRAIN, additional = Any()), choices, core.terrainRecipes, core.terrainSculpt.reader)
+            val rejected =
+                readTerrainSource(
+                    File(folder.path),
+                    text,
+                    net.nevinsky.abyssus.lib.core.assets.AssetMeta<Any>(
+                        type = net.nevinsky.abyssus.lib.core.assets.MetaType.TERRAIN,
+                        additional = Any(),
+                    ),
+                    choices,
+                    core.terrainRecipes,
+                    core.terrainSculpt.reader,
+                )
             assertTrue(rejected is TerrainSource.Unusable)
-            val initial = TerrainSource.Ready("terrain", 400, 17, FileSnapshot.Bytes(ByteArray(17 * 17 * 4)),
-                FileSnapshot.Absent, RecipeStatus.Missing, SourceSnapshot("native", "hash", null, true), FileSnapshot.Bytes(byteArrayOf()))
+            val initial =
+                TerrainSource.Ready(
+                    "terrain",
+                    400,
+                    17,
+                    FileSnapshot.Bytes(ByteArray(17 * 17 * 4)),
+                    FileSnapshot.Absent,
+                    RecipeStatus.Missing,
+                    SourceSnapshot("native", "hash", null, true),
+                    FileSnapshot.Bytes(byteArrayOf()),
+                )
             val queued = mutableListOf<Runnable>()
-            val controller = TerrainGenerationController(project, folder, initial, core.terrainGenerator,
-                core.heightEncoder, core.terrainRecipes, core.terrainSculpt, queued::add, { it.run() }, { rejected })
+            val controller =
+                TerrainGenerationController(
+                    project,
+                    folder,
+                    initial,
+                    core.terrainGenerator,
+                    core.heightEncoder,
+                    core.terrainRecipes,
+                    core.terrainSculpt,
+                    queued::add,
+                    { it.run() },
+                    { rejected },
+                )
             controller.preview()
             assertTrue(queued.isEmpty())
             assertFalse(controller.canApply)

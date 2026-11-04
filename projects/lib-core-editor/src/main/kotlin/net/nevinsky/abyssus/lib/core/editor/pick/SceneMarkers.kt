@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
@@ -15,7 +16,6 @@ import net.nevinsky.abyssus.lib.core.editor.arrange.pointsOf
 import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
-import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.editor.scene.*
 
 private const val CAMERA_BOUNDS_HALF = 0.5f
@@ -34,11 +34,20 @@ const val PATH_HANDLE_WIDTH_PX = 3f
 
 /** The 12 edges of the diamond (octahedron) of half-size [r] at [p]; every tip joins every tip that is not opposite. */
 fun diamondEdges(p: Vector3, r: Float): List<Pair<Vector3, Vector3>> {
-    val tips = listOf(
-        Vector3(p.x + r, p.y, p.z), Vector3(p.x - r, p.y, p.z), Vector3(p.x, p.y + r, p.z),
-        Vector3(p.x, p.y - r, p.z), Vector3(p.x, p.y, p.z + r), Vector3(p.x, p.y, p.z - r),
-    )
-    return buildList { for (i in tips.indices) for (j in i + 1 until tips.size) if (i / 2 != j / 2) add(tips[i] to tips[j]) }
+    val tips =
+        listOf(
+            Vector3(p.x + r, p.y, p.z),
+            Vector3(p.x - r, p.y, p.z),
+            Vector3(p.x, p.y + r, p.z),
+            Vector3(p.x, p.y - r, p.z),
+            Vector3(p.x, p.y, p.z + r),
+            Vector3(p.x, p.y, p.z - r),
+        )
+    return buildList {
+        for (i in tips.indices) for (j in i + 1 until tips.size) if (i / 2 != j / 2) {
+            add(tips[i] to tips[j])
+        }
+    }
 }
 
 private val PATH_COLOR = Color(1f, 0.8f, 0.2f, 1f)
@@ -56,7 +65,6 @@ private val FRUSTUM_COLOR = Color(0.55f, 0.7f, 0.95f, 1f)
  */
 class SceneMarkers {
     private val curve = PathCurve()
-
 
     fun cameraBounds(position: Vector3): BoundingBox = boundsAround(position, CAMERA_BOUNDS_HALF)
 
@@ -78,7 +86,9 @@ class SceneMarkers {
     /** Draws every marker of [content] into [out], for a viewport of [aspect], leaving out the camera [skipCamera]. */
     fun draw(out: LineSink, content: SceneContent, aspect: Float, skipCamera: Long? = null) {
         for (camera in content.cameras) {
-            if (camera.entityId == skipCamera) continue
+            if (camera.entityId == skipCamera) {
+                continue
+            }
             drawCamera(out, camera, content.entityPositions, aspect)
         }
         for (light in content.lights) drawLight(out, light)
@@ -101,11 +111,22 @@ class SceneMarkers {
         val w = 0.3f
         val h = 0.2f
         val l = 0.3f
-        val corners = listOf(
-            at(-w, -h, -l), at(w, -h, -l), at(w, h, -l), at(-w, h, -l),
-            at(-w, -h, l), at(w, -h, l), at(w, h, l), at(-w, h, l),
+        val corners =
+            listOf(
+                at(-w, -h, -l),
+                at(w, -h, -l),
+                at(w, h, -l),
+                at(-w, h, -l),
+                at(-w, -h, l),
+                at(w, -h, l),
+                at(w, h, l),
+                at(-w, h, l),
+            )
+        for (ring in 0..1) for (i in 0 until 4) out.line(
+            corners[ring * 4 + i],
+            corners[ring * 4 + (i + 1) % 4],
+            BODY_COLOR,
         )
-        for (ring in 0..1) for (i in 0 until 4) out.line(corners[ring * 4 + i], corners[ring * 4 + (i + 1) % 4], BODY_COLOR)
         for (i in 0 until 4) out.line(corners[i], corners[4 + i], BODY_COLOR)
         val tip = at(0f, 0f, l + 0.3f)
         for (i in 4 until 8) out.line(corners[i], tip, BODY_COLOR)
@@ -113,20 +134,27 @@ class SceneMarkers {
 
     fun drawLight(out: LineSink, light: LightPlacement) {
         val p = light.position
-        val color = Color(
-            (light.color.r * 0.7f + 0.3f).coerceAtMost(1f),
-            (light.color.g * 0.7f + 0.3f).coerceAtMost(1f),
-            (light.color.b * 0.7f + 0.3f).coerceAtMost(1f),
-            1f,
-        )
+        val color =
+            Color(
+                (light.color.r * 0.7f + 0.3f).coerceAtMost(1f),
+                (light.color.g * 0.7f + 0.3f).coerceAtMost(1f),
+                (light.color.b * 0.7f + 0.3f).coerceAtMost(1f),
+                1f,
+            )
         val r = LIGHT_RADIUS
-        val tips = listOf(
-            Vector3(p.x + r, p.y, p.z), Vector3(p.x - r, p.y, p.z),
-            Vector3(p.x, p.y + r, p.z), Vector3(p.x, p.y - r, p.z),
-            Vector3(p.x, p.y, p.z + r), Vector3(p.x, p.y, p.z - r),
-        )
+        val tips =
+            listOf(
+                Vector3(p.x + r, p.y, p.z),
+                Vector3(p.x - r, p.y, p.z),
+                Vector3(p.x, p.y + r, p.z),
+                Vector3(p.x, p.y - r, p.z),
+                Vector3(p.x, p.y, p.z + r),
+                Vector3(p.x, p.y, p.z - r),
+            )
         // an octahedron: every tip joins every tip that is not opposite
-        for (i in tips.indices) for (j in i + 1 until tips.size) if (i / 2 != j / 2) out.line(tips[i], tips[j], color)
+        for (i in tips.indices) for (j in i + 1 until tips.size) if (i / 2 != j / 2) {
+            out.line(tips[i], tips[j], color)
+        }
         if (light.kind != LightKind.POINT) {
             val end = Vector3(p.x, p.y, p.z).mulAdd(light.direction.cpy(), DIRECTION_LINE_LENGTH).cpy()
             out.line(p, end, color)
@@ -134,10 +162,10 @@ class SceneMarkers {
     }
 
     /**
-     * Draws a path arrangement's line through its points (and back to the first when it is closed), a cross with a short
-     * post for each copy at its height on [ground], and, when [handles] is set, a diamond on each point and a small
-     * cross in the middle of each segment. The copies are laid out by [PathLayout], so they are where regeneration would
-     * put them (the crosses are left out when [slots] is false). No model is drawn.
+     * Draws a path arrangement's line through its points (and back to the first when it is closed), a cross with a
+     * short post for each copy at its height on [ground], and, when [handles] is set, a diamond on each point and a
+     * small cross in the middle of each segment. The copies are laid out by [PathLayout], so they are where
+     * regeneration would put them (the crosses are left out when [slots] is false). No model is drawn.
      */
     fun drawPath(
         out: LineSink,
@@ -150,15 +178,29 @@ class SceneMarkers {
         val points = pointsOf(path)
         val line = curve.sample(points, path.closed)
         for (i in 0 until line.size - 1) out.thickLine(line[i], line[i + 1], PATH_COLOR, PATH_WIDTH_PX)
-        if (slots) for (slot in PathLayout().slots(path).orEmpty()) {
-            val y = ground.heightAt(slot.x, slot.z, slot.fallbackY)
-            val r = SLOT_MARKER_HALF
-            out.line(Vector3(slot.x - r, y, slot.z), Vector3(slot.x + r, y, slot.z), SLOT_COLOR)
-            out.line(Vector3(slot.x, y, slot.z - r), Vector3(slot.x, y, slot.z + r), SLOT_COLOR)
-            out.line(Vector3(slot.x, y, slot.z), Vector3(slot.x, y + SLOT_MARKER_HEIGHT, slot.z), SLOT_COLOR)
+        if (slots) {
+            for (slot in PathLayout().slots(path).orEmpty()) {
+                val y = ground.heightAt(slot.x, slot.z, slot.fallbackY)
+                val r = SLOT_MARKER_HALF
+                out.line(Vector3(slot.x - r, y, slot.z), Vector3(slot.x + r, y, slot.z), SLOT_COLOR)
+                out.line(Vector3(slot.x, y, slot.z - r), Vector3(slot.x, y, slot.z + r), SLOT_COLOR)
+                out.line(Vector3(slot.x, y, slot.z), Vector3(slot.x, y + SLOT_MARKER_HEIGHT, slot.z), SLOT_COLOR)
+            }
         }
-        if (!handles) return
-        for ((i, p) in points.withIndex()) drawDiamond(out, p, PATH_POINT_HALF, if (i == selectedPoint) SELECTED_HANDLE_COLOR else POINT_HANDLE_COLOR, PATH_HANDLE_WIDTH_PX)
+        if (!handles) {
+            return
+        }
+        for ((i, p) in points.withIndex()) drawDiamond(
+            out,
+            p,
+            PATH_POINT_HALF,
+            if (i == selectedPoint) {
+                SELECTED_HANDLE_COLOR
+            } else {
+                POINT_HANDLE_COLOR
+            },
+            PATH_HANDLE_WIDTH_PX,
+        )
     }
 
     private fun drawDiamond(out: LineSink, p: Vector3, r: Float, color: Color, widthPx: Float) {

@@ -1,15 +1,17 @@
 package net.nevinsky.abyssus.lib.core.assets
 
+import java.util.UUID
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.*
 import org.junit.Test
 import org.slf4j.helpers.NOPLogger
-import java.util.UUID
 
 class AssetMetaParserTest {
     private val parser = AssetMetaParser(JsonProcessor(NOPLogger.NOP_LOGGER))
-    private val text = """{"type":"TERRAIN","uuid":"00000000-0000-0000-0000-000000000001","additional":{"terrainFile":"t.bin","size":64}}"""
+    private val text =
+        """{"type":"TERRAIN","uuid":"00000000-0000-0000-0000-000000000001","additional":{"terrainFile":"t.bin",
+"size":64}}"""
 
     @Test
     fun readBindsTypeNameAndTypedAdditional() {

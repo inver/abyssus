@@ -5,19 +5,19 @@
 package net.nevinsky.abyssus.app.game.controlline.ai
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.app.game.controlline.pattern.place
 import kotlin.math.acos
 import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.tan
+import net.nevinsky.abyssus.app.game.controlline.pattern.place
 import net.nevinsky.abyssus.lib.core.util.azimuthOf
 
 /**
  * Where the course wants the plane, at the place nearest to it: the [point] (unit), the course's direction there
- * ([tangent], unit, in the tangent plane at [point]) and its geodesic [curvature] [lead] metres on (1/m, positive turning
- * left seen from outside, which is a pull).
+ * ([tangent], unit, in the tangent plane at [point]) and its geodesic [curvature] [lead] metres on (1/m, positive
+ * turning left seen from outside, which is a pull).
  */
 class Aim(val point: Vector3, val tangent: Vector3, val curvature: Float)
 
@@ -25,7 +25,10 @@ class Aim(val point: Vector3, val tangent: Vector3, val curvature: Float)
 sealed interface Course {
     val radius: Float
 
-    /** The aim for a plane at [u] (unit, from the hemisphere's centre) flying at [speed] m/s, curvature looked up [lead] metres on. */
+    /**
+     * The aim for a plane at [u] (unit, from the hemisphere's centre) flying at [speed] m/s, curvature looked up [lead]
+     * metres on.
+     */
     fun aim(u: Vector3, lead: Float): Aim
 }
 
@@ -39,10 +42,20 @@ class Parallel(override val radius: Float, val latitude: Float, val clockwise: B
         val point = place(latitude, azimuth)
         val a = Math.toRadians(azimuth.toDouble()).toFloat()
         val east = Vector3(-kotlin.math.sin(a), 0f, -kotlin.math.cos(a))
-        if (clockwise) east.scl(-1f)
+        if (clockwise) {
+            east.scl(-1f)
+        }
         // a parallel north of the base bends towards the pole: left going anticlockwise, right going clockwise
         val curvature = tan(Math.toRadians(latitude.toDouble())).toFloat() / radius
-        return Aim(point, east, if (clockwise) -curvature else curvature)
+        return Aim(
+            point,
+            east,
+            if (clockwise) {
+                -curvature
+            } else {
+                curvature
+            },
+        )
     }
 }
 
@@ -62,32 +75,42 @@ class PathCourse(override val radius: Float, points: List<Vector3>) : Course {
 
     init {
         require(this.points.size >= 3) { "a course needs at least 3 points" }
-        for (i in 1 until this.points.size) distance[i] = distance[i - 1] + angle(this.points[i - 1], this.points[i]) * radius
-        tangents = this.points.indices.map { i ->
-            val a = this.points[max(0, i - 1)]
-            val b = this.points[min(this.points.size - 1, i + 1)]
-            tangentAt(this.points[i], Vector3(b).sub(a))
-        }
+        for (i in 1 until this.points.size) distance[i] =
+            distance[i - 1] + angle(this.points[i - 1], this.points[i]) * radius
+        tangents =
+            this.points.indices.map { i ->
+                val a = this.points[max(0, i - 1)]
+                val b = this.points[min(this.points.size - 1, i + 1)]
+                tangentAt(this.points[i], Vector3(b).sub(a))
+            }
         // the turn about each point over a window of about a metre each way, so the corners' few points do not spike it
-        curvatures = FloatArray(this.points.size) { i ->
-            val back = indexAt(distance[i] - CURVATURE_WINDOW)
-            val ahead = indexAt(distance[i] + CURVATURE_WINDOW)
-            val span = distance[ahead] - distance[back]
-            if (span < 1e-4f) 0f else turn(tangents[back], tangents[ahead], this.points[i]) / span
-        }
+        curvatures =
+            FloatArray(this.points.size) { i ->
+                val back = indexAt(distance[i] - CURVATURE_WINDOW)
+                val ahead = indexAt(distance[i] + CURVATURE_WINDOW)
+                val span = distance[ahead] - distance[back]
+                if (span < 1e-4f) {
+                    0f
+                } else {
+                    turn(tangents[back], tangents[ahead], this.points[i]) / span
+                }
+            }
     }
 
     /** The index of the last point the plane has been matched to. */
     var progress = 0
         private set
 
-    val length: Float get() = distance.last()
+    val length: Float
+        get() = distance.last()
 
     /** Metres flown along the course so far. */
-    val travelled: Float get() = distance[progress]
+    val travelled: Float
+        get() = distance[progress]
 
     /** Metres of course left. */
-    val remaining: Float get() = length - travelled
+    val remaining: Float
+        get() = length - travelled
 
     override fun aim(u: Vector3, lead: Float): Aim {
         val limit = distance[progress] + SEARCH_AHEAD
@@ -109,13 +132,21 @@ class PathCourse(override val radius: Float, points: List<Vector3>) : Course {
 
     /** The index of the point at [metres] along the course, clamped to its ends. */
     fun indexAt(metres: Float): Int {
-        if (metres <= 0f) return 0
-        if (metres >= distance.last()) return points.size - 1
+        if (metres <= 0f) {
+            return 0
+        }
+        if (metres >= distance.last()) {
+            return points.size - 1
+        }
         var low = 0
         var high = points.size - 1
         while (high - low > 1) {
             val mid = (low + high) / 2
-            if (distance[mid] <= metres) low = mid else high = mid
+            if (distance[mid] <= metres) {
+                low = mid
+            } else {
+                high = mid
+            }
         }
         return low
     }
@@ -135,7 +166,8 @@ internal fun angle(a: Vector3, b: Vector3): Float = acos(a.dot(b).coerceIn(-1f, 
 internal fun tangentAt(u: Vector3, direction: Vector3): Vector3 = Vector3(direction).mulAdd(u, -direction.dot(u)).nor()
 
 /** The signed angle (rad) from [from] to [to] about [axis]: positive turning left seen from outside. */
-internal fun turn(from: Vector3, to: Vector3, axis: Vector3): Float = atan2(Vector3(from).crs(to).dot(axis), from.dot(to))
+internal fun turn(from: Vector3, to: Vector3, axis: Vector3): Float =
+    atan2(Vector3(from).crs(to).dot(axis), from.dot(to))
 
 /** The latitude (degrees) of unit vector [u]. */
 internal fun latitudeOf(u: Vector3): Float = Math.toDegrees(asin(u.y.coerceIn(-1f, 1f)).toDouble()).toFloat()

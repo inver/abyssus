@@ -17,14 +17,18 @@ import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 class PlacementWrites {
     /** Sets the local position of [placement] to [v]; false when it already is [v]. */
     fun setPosition(placement: PositionComponent, v: Vector3): Boolean {
-        if (placement.localPosition == v) return false
+        if (placement.localPosition == v) {
+            return false
+        }
         placement.localPosition.set(v)
         return true
     }
 
     /** Sets the local rotation of [placement] to [q]; false when it already is [q]. */
     fun setRotation(placement: PositionComponent, q: Quaternion): Boolean {
-        if (placement.localRotation == q) return false
+        if (placement.localRotation == q) {
+            return false
+        }
         placement.localRotation.set(q)
         return true
     }

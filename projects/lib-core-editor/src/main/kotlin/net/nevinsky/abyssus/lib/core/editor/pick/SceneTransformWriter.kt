@@ -24,7 +24,10 @@ data class TransformEdit(
     val target: TargetMove? = null,
 )
 
-/** A move of another entity's `PositionComponent.localPosition`: [entityId] is the target, [position] is its new position. */
+/**
+ * A move of another entity's `PositionComponent.localPosition`: [entityId] is the target, [position] is its new
+ * position.
+ */
 data class TargetMove(val entityId: Long, val position: Vector3)
 
 /** Writes a [TransformEdit] into a scene, touching only the values that change. */
@@ -34,7 +37,8 @@ class SceneTransformWriter(private val arrangements: ArrangementEdits = Arrangem
     /**
      * Sets the `PositionComponent` local position / rotation of the entity [entityId], adding the component when it is
      * missing. For an entity with a `CameraComponent` it also sets the camera's position and view direction. [edit]'s
-     * target is written as the target entity's local position. Moving or turning a copy of a path arrangement detaches it
+      * target is written as the target entity's local position. Moving or turning a copy of a path arrangement detaches
+      * it
      * in the same edit ([ArrangementEdits.detach]). Returns false, leaving [scene] as it was, when the entity or the
      * target is missing or no value differs.
      */
@@ -46,11 +50,17 @@ class SceneTransformWriter(private val arrangements: ArrangementEdits = Arrangem
             val placement = placements.placementOf(entity)
             edit.position?.let { changed = placements.setPosition(placement, it) or changed }
             edit.rotation?.let { changed = placements.setRotation(placement, it) or changed }
-            if (changed) arrangements.detach(scene, entityId)
+            if (changed) {
+                arrangements.detach(scene, entityId)
+            }
         }
         entity.component(CameraComponent::class.java)?.camera?.let { camera ->
-            edit.position?.let { if (camera.position != it) { camera.position.set(it); changed = true } }
-            edit.direction?.let { if (camera.direction != it) { camera.direction.set(it); changed = true } }
+            edit.position?.let { if (camera.position != it) {
+                camera.position.set(it); changed = true
+            } }
+            edit.direction?.let { if (camera.direction != it) {
+                camera.direction.set(it); changed = true
+            } }
         }
         if (edit.target != null && target != null) {
             changed = placements.setPosition(placements.placementOf(target), edit.target.position) or changed

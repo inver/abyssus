@@ -25,9 +25,13 @@ class SceneWaterShallowsGlTest {
 
     private val orbit = OrbitCamera(WaterGlScenes.BOWL_CENTRE, 520f, 0.0f, 0.5f)
 
-    private fun shoot(params: SceneRenderParams, orbit: OrbitCamera = this.orbit) = WaterGlRig.shoot(params, orbit, size = 800 to 500)
+    private fun shoot(params: SceneRenderParams, orbit: OrbitCamera = this.orbit) = WaterGlRig.shoot(params, orbit,
+        size = 800 to 500)
 
-    /** Points on the water level at distances [radii] from the bowl's centre, sideways across the view so all are about as far from the eye. */
+    /**
+     * Points on the water level at distances [radii] from the bowl's centre, sideways across the view so all are about
+     * as far from the eye.
+     */
     private fun lateral(radii: List<Float>): List<Vector3> {
         val eye = orbit.position()
         val centre = WaterGlScenes.BOWL_CENTRE
@@ -46,7 +50,8 @@ class SceneWaterShallowsGlTest {
         val y = (shot.image.height - screen.y).toInt()
         var r = 0.0; var g = 0.0; var b = 0.0; var n = 0
         for (dy in -2..2) for (dx in -2..2) {
-            val (pr, pg, pb) = WaterGlRig.rgb(shot.image, (x + dx).coerceIn(0, shot.image.width - 1), (y + dy).coerceIn(0, shot.image.height - 1))
+            val (pr, pg, pb) = WaterGlRig.rgb(shot.image, (x + dx).coerceIn(0, shot.image.width - 1), (y +
+                dy).coerceIn(0, shot.image.height - 1))
             r += pr; g += pg; b += pb; n++
         }
         return Triple(r / n, g / n, b / n)
@@ -71,7 +76,10 @@ class SceneWaterShallowsGlTest {
         assertTrue("clearer water shows more of the deep floor ($murkyRed vs $clearRed)", clearRed > murkyRed + 25)
         fun waterPixels(shot: WaterShot): Int {
             var count = 0
-            for (y in 0 until shot.image.height) for (x in 0 until shot.image.width) if (shot.image.getRGB(x, y) != land.image.getRGB(x, y)) count++
+            for (y in 0 until shot.image.height) for (x in 0 until shot.image.width) if (shot.image.getRGB(x, y) !=
+                land.image.getRGB(x, y)) {
+                count++
+            }
             return count
         }
         val a = waterPixels(murky)
@@ -82,7 +90,8 @@ class SceneWaterShallowsGlTest {
     @Test fun waterOverEmptyDepthIsDeepWaterWhateverTheClarity() {
         val far = Vector3(8000f, 0f, 8000f)
         fun over(clarity: Double): WaterShot {
-            val lake = WaterGlScenes.bowlLake { it.copy(x = far.x.toDouble(), z = far.z.toDouble(), clarity = clarity, waveAmplitude = 0.0, foamAmount = 0.0) }
+            val lake = WaterGlScenes.bowlLake { it.copy(x = far.x.toDouble(), z = far.z.toDouble(), clarity = clarity,
+                waveAmplitude = 0.0, foamAmount = 0.0) }
             return WaterGlRig.shoot(WaterGlScenes.bowlScene(lake), OrbitCamera(far, 120f, 0f, 0.8f), size = 400 to 300)
         }
         val short = over(2.0)
@@ -90,7 +99,8 @@ class SceneWaterShallowsGlTest {
         val a = WaterGlRig.rgb(short.image, 200, 150)
         val b = WaterGlRig.rgb(long.image, 200, 150)
         assertTrue("nothing is behind the water: its colour does not depend on clarity ($a vs $b)",
-            kotlin.math.abs(a.first - b.first) + kotlin.math.abs(a.second - b.second) + kotlin.math.abs(a.third - b.third) <= 6)
+            kotlin.math.abs(a.first - b.first) + kotlin.math.abs(a.second - b.second) + kotlin.math.abs(a.third -
+                b.third) <= 6)
         assertTrue("and it is the tint, not the floor", a.first < 80)
     }
 
@@ -111,12 +121,17 @@ class SceneWaterShallowsGlTest {
     @Test fun refractionNearDryLandDoesNotPullTheShoreIntoTheWater() {
         val land = shoot(WaterGlScenes.bowlScene())
         fun whiteWater(amplitude: Double): Int {
-            val shot = shoot(WaterGlScenes.bowlScene(WaterGlScenes.bowlLake { it.copy(waveAmplitude = amplitude, foamAmount = 0.0, tintR = 0.02, tintG = 0.15, tintB = 0.2) }))
+            val shot = shoot(WaterGlScenes.bowlScene(WaterGlScenes.bowlLake { it.copy(waveAmplitude = amplitude,
+                foamAmount = 0.0, tintR = 0.02, tintG = 0.15, tintB = 0.2) }))
             var count = 0
             for (y in 0 until shot.image.height) for (x in 0 until shot.image.width) {
-                if (shot.image.getRGB(x, y) == land.image.getRGB(x, y)) continue
+                if (shot.image.getRGB(x, y) == land.image.getRGB(x, y)) {
+                    continue
+                }
                 val (r, g, b) = WaterGlRig.rgb(shot.image, x, y)
-                if (r >= 245 && g >= 245 && b >= 245) count++
+                if (r >= 245 && g >= 245 && b >= 245) {
+                    count++
+                }
             }
             return count
         }

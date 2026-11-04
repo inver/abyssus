@@ -30,7 +30,8 @@ class PadNavigatorTest {
             step().forEach { keys += t to it }
             t += 1f / 60f
         }
-        // the first at once, the second near 0.4 s, then about every 0.12 s: 1 + 1 + floor((2 - 0.4) / 0.12) = 15 within 2 s
+        // the first at once, the second near 0.4 s, then about every 0.12 s: 1 + 1 + floor((2 - 0.4) / 0.12) = 15
+        // within 2 s
         assertEquals(Input.Keys.DOWN, keys.first().second)
         assertEquals(0f, keys[0].first, 0f)
         assertEquals(0.4f, keys[1].first, 0.02f)
@@ -48,7 +49,13 @@ class PadNavigatorTest {
 
     @Test
     fun theFourDirectionsMapToTheArrowKeys() {
-        for ((hat, key) in listOf(HAT_UP to Input.Keys.UP, HAT_RIGHT to Input.Keys.RIGHT, HAT_DOWN to Input.Keys.DOWN, HAT_LEFT to Input.Keys.LEFT)) {
+        for ((hat, key) in
+            listOf(
+                HAT_UP to Input.Keys.UP,
+                HAT_RIGHT to Input.Keys.RIGHT,
+                HAT_DOWN to Input.Keys.DOWN,
+                HAT_LEFT to Input.Keys.LEFT,
+            )) {
             source.hat("pad", hat)
             assertEquals(listOf(key), step())
             source.hat("pad", 0)

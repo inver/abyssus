@@ -5,18 +5,24 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 
-import org.junit.Assert.*
-import org.junit.Test
 import kotlin.math.cos
 import kotlin.math.sin
+import org.junit.Assert.*
+import org.junit.Test
 
 class LightingRefreshPolicyTest {
     private fun request(angle: Double = 0.0, time: Double = 0.0, drift: Boolean = false) =
         LightingRefreshRequest(
             LightingSunDirection(sin(Math.toRadians(angle)), cos(Math.toRadians(angle)), 0.0),
-            LightingRevision("sky", 1, "cloud", 1, true), time, drift)
+            LightingRevision("sky", 1, "cloud", 1, true),
+            time,
+            drift,
+        )
 
-    private fun first(policy: LightingRefreshPolicy, request: LightingRefreshRequest = request()): LightingBuildRequest {
+    private fun first(
+        policy: LightingRefreshPolicy,
+        request: LightingRefreshRequest = request(),
+    ): LightingBuildRequest {
         val build = policy.update(request, true, 0.0).build!!
         assertTrue(policy.completed(build))
         assertEquals(build, policy.state.current)
@@ -24,7 +30,8 @@ class LightingRefreshPolicyTest {
         return build
     }
 
-    @Test fun firstBuildPublishesImmediatelyAndOneDegreeStartsRefresh() {
+    @Test
+    fun firstBuildPublishesImmediatelyAndOneDegreeStartsRefresh() {
         val policy = LightingRefreshPolicy()
         first(policy)
         assertNull(policy.update(request(angle = 0.99), true, 0.0).build)
@@ -37,7 +44,8 @@ class LightingRefreshPolicyTest {
         assertNull(policy.state.next)
     }
 
-    @Test fun onlyVisibleDriftingCloudsRefreshEveryTwoCloudSeconds() {
+    @Test
+    fun onlyVisibleDriftingCloudsRefreshEveryTwoCloudSeconds() {
         val policy = LightingRefreshPolicy()
         first(policy, request(drift = true))
         assertNull(policy.update(request(time = 1.999, drift = true), true, 0.0).build)
@@ -51,20 +59,27 @@ class LightingRefreshPolicyTest {
         assertNull(hiddenClouds.update(invisible.copy(cloudTimeSeconds = 100.0), true, 0.0).build)
     }
 
-    @Test fun stationaryCloudReloadIdentityAndVisibilityInvalidate() {
-        for (revision in listOf(
-            request().revision.copy(cloudRevision = 2),
-            request().revision.copy(cloudIdentity = "other"),
-            request().revision.copy(cloudsVisible = false),
-            request().revision.copy(skyRevision = 2),
-            request().revision.copy(skyIdentity = "other"))) {
+    @Test
+    fun stationaryCloudReloadIdentityAndVisibilityInvalidate() {
+        for (revision in
+            listOf(
+                request().revision.copy(cloudRevision = 2),
+                request().revision.copy(cloudIdentity = "other"),
+                request().revision.copy(cloudsVisible = false),
+                request().revision.copy(skyRevision = 2),
+                request().revision.copy(skyIdentity = "other"),
+            )) {
             val policy = LightingRefreshPolicy()
             first(policy)
-            assertEquals(revision, policy.update(request().copy(revision = revision), true, 0.0).build!!.request.revision)
+            assertEquals(
+                revision,
+                policy.update(request().copy(revision = revision), true, 0.0).build!!.request.revision,
+            )
         }
     }
 
-    @Test fun hiddenViewPausesBuildAndFadeAndCoalescesWithoutWork() {
+    @Test
+    fun hiddenViewPausesBuildAndFadeAndCoalescesWithoutWork() {
         val policy = LightingRefreshPolicy()
         assertNull(policy.update(request(), false, 50.0).build)
         first(policy)
@@ -81,7 +96,8 @@ class LightingRefreshPolicyTest {
         assertEquals(request(angle = 8.0), resumed.build!!.request)
     }
 
-    @Test fun newerRequestsCoalesceDuringBuildAndFade() {
+    @Test
+    fun newerRequestsCoalesceDuringBuildAndFade() {
         val policy = LightingRefreshPolicy()
         first(policy)
         val build = policy.update(request(angle = 2.0), true, 0.0).build!!
@@ -94,7 +110,8 @@ class LightingRefreshPolicyTest {
         assertEquals(request(angle = 140.0), state.build!!.request)
     }
 
-    @Test fun obsoleteRevisionAndContextCompletionsCannotPublish() {
+    @Test
+    fun obsoleteRevisionAndContextCompletionsCannotPublish() {
         val policy = LightingRefreshPolicy()
         val old = first(policy)
         val build = policy.update(request(angle = 2.0), true, 0.0).build!!
@@ -115,7 +132,8 @@ class LightingRefreshPolicyTest {
         assertEquals(restored, policy.state.current)
     }
 
-    @Test fun revisionChangeDropsObsoleteFadeButRetainsCurrent() {
+    @Test
+    fun revisionChangeDropsObsoleteFadeButRetainsCurrent() {
         val policy = LightingRefreshPolicy()
         val current = first(policy)
         val next = policy.update(request(angle = 2.0), true, 0.0).build!!
@@ -127,7 +145,8 @@ class LightingRefreshPolicyTest {
         assertEquals(revised, state.build!!.request)
     }
 
-    @Test fun errorsKeepCurrentAndRetryWithBoundedVisibleTimeBackoff() {
+    @Test
+    fun errorsKeepCurrentAndRetryWithBoundedVisibleTimeBackoff() {
         val policy = LightingRefreshPolicy(maxRetries = 2, retryDelaySeconds = 2.0)
         val current = first(policy)
         val target = request(angle = 2.0)
@@ -148,7 +167,8 @@ class LightingRefreshPolicyTest {
         assertEquals(recovery, policy.state.next)
     }
 
-    @Test fun firstFailureKeepsAmbientUntilRetrySucceeds() {
+    @Test
+    fun firstFailureKeepsAmbientUntilRetrySucceeds() {
         val policy = LightingRefreshPolicy()
         val build = policy.update(request(), true, 0.0).build!!
         policy.failed(build)

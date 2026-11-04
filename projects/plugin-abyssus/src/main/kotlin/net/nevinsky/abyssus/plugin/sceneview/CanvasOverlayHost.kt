@@ -23,7 +23,9 @@ internal class CanvasOverlayHost(
     private var snapshot: BufferedImage? = null
     private val monitor = Timer(50) { syncOverlay() }
 
-    init { add(canvas, BorderLayout.CENTER) }
+    init {
+        add(canvas, BorderLayout.CENTER)
+    }
 
     override fun addNotify() {
         super.addNotify()
@@ -43,9 +45,14 @@ internal class CanvasOverlayHost(
 
     internal fun syncOverlay() {
         val overlapping = hasOverlay()
-        if (overlapping == !canvas.isVisible) return
-        if (overlapping) snapshot = capture()
-        else snapshot = null
+        if (overlapping == !canvas.isVisible) {
+            return
+        }
+        if (overlapping) {
+            snapshot = capture()
+        } else {
+            snapshot = null
+        }
         canvas.isVisible = !overlapping
         revalidate()
         repaint()
@@ -63,11 +70,20 @@ internal class CanvasOverlayHost(
             val bounds = SwingUtilities.convertRectangle(this, java.awt.Rectangle(0, 0, width, height), ancestor)
             val index = ancestor.getComponentZOrder(child)
             for (sibling in ancestor.components.take(index.coerceAtLeast(0))) {
-                if (!sibling.isVisible || !sibling.bounds.intersects(bounds)) continue
+                if (!sibling.isVisible || !sibling.bounds.intersects(bounds)) {
+                    continue
+                }
                 // IntelliJ's glass pane is often visible solely to intercept events. Its empty area is transparent.
                 if (ancestor is JRootPane && sibling === ancestor.glassPane) {
                     val glass = sibling as? Container ?: continue
-                    if (glass.components.none { it.isVisible && SwingUtilities.convertRectangle(it.parent, it.bounds, ancestor).intersects(bounds) }) continue
+                    if (
+                        glass.components.none {
+                            it.isVisible &&
+                                SwingUtilities.convertRectangle(it.parent, it.bounds, ancestor).intersects(bounds)
+                        }
+                    ) {
+                        continue
+                    }
                 }
                 return true
             }

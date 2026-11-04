@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.lib.core.editor.document
 
-import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaParser
 import net.nevinsky.abyssus.lib.core.assets.MetaType
@@ -13,12 +12,13 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.dto.ProjectDto
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.editor.util.JsonValues
 import net.nevinsky.abyssus.lib.core.editor.util.at
 import net.nevinsky.abyssus.lib.core.editor.util.objectAt
 import net.nevinsky.abyssus.lib.core.editor.util.textAt
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.scene.SceneParser
 import org.slf4j.Logger
 
@@ -30,7 +30,8 @@ class DocumentParsing(
     private val json: JsonProcessor,
     private val log: Logger,
     registry: ComponentRegistry = ComponentRegistry(),
-    private val format: net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat = net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat(),
+    private val format: net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat =
+        net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat(),
 ) {
     /** Binds a scene with its components resolved through [registry]; what it does not know is kept raw. */
     private val scenes = SceneParser(json, registry)
@@ -58,7 +59,8 @@ class DocumentParsing(
     fun foliageMeta(text: String): FoliageMeta =
         values(text).objectAt("additional")?.let { FoliageSettingsBinding(json).read(it) } ?: FoliageMeta()
 
-    private fun supported(text: String, kind: DocumentKind) = json.readObject(text).also { format.requireSupported(it, kind) }
+    private fun supported(text: String, kind: DocumentKind) =
+        json.readObject(text).also { format.requireSupported(it, kind) }
 
     @Suppress("UNCHECKED_CAST")
     private fun values(text: String): JsonValues {
@@ -92,8 +94,11 @@ class DocumentParsing(
     /** Includes failures obtaining the text (an editor's filesystem) in the same logging boundary. */
     fun parse(source: String, readText: () -> String): SceneDto = reportedOrThrow("scene $source") { parse(readText()) }
 
-    private fun <T> reportedOrThrow(source: String, read: () -> T): T = runCatchingKeepingCancellation(read)
-        .getOrElse { error -> log.warn("Could not read $source: ${error.message}", error); throw error }
+    private fun <T> reportedOrThrow(source: String, read: () -> T): T =
+        runCatchingKeepingCancellation(read).getOrElse { error ->
+            log.warn("Could not read $source: ${error.message}", error)
+            throw error
+        }
 }
 
 data class AssetDocumentFields(val type: MetaType, val uuidText: String?, val clouds: String?, val terrainFile: String)
@@ -101,6 +106,8 @@ data class AssetDocumentFields(val type: MetaType, val uuidText: String?, val cl
 private data class ProjectName(val name: String? = null)
 
 private data class ProjectRegistry(
-    @param:com.fasterxml.jackson.databind.annotation.JsonDeserialize(using = net.nevinsky.abyssus.lib.core.dto.UiAssetNamesDeserializer::class)
-    val uiAssetNames: List<String> = emptyList(),
+    @param:com.fasterxml.jackson.databind.annotation.JsonDeserialize(
+        using = net.nevinsky.abyssus.lib.core.dto.UiAssetNamesDeserializer::class
+    )
+    val uiAssetNames: List<String> = emptyList()
 )

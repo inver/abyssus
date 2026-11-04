@@ -5,11 +5,10 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
-import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.graphics.Color
-
+import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
+import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
 
 /** The highlight drawn around the selected entity: the twelve edges of its world bounds. */
 object SelectionBox {
@@ -19,11 +18,22 @@ object SelectionBox {
         val a = box.min
         val b = box.max
         val p = { x: Float, y: Float, z: Float -> Vector3(x, y, z) }
-        val corners = listOf(
-            p(a.x, a.y, a.z), p(b.x, a.y, a.z), p(b.x, a.y, b.z), p(a.x, a.y, b.z),
-            p(a.x, b.y, a.z), p(b.x, b.y, a.z), p(b.x, b.y, b.z), p(a.x, b.y, b.z),
+        val corners =
+            listOf(
+                p(a.x, a.y, a.z),
+                p(b.x, a.y, a.z),
+                p(b.x, a.y, b.z),
+                p(a.x, a.y, b.z),
+                p(a.x, b.y, a.z),
+                p(b.x, b.y, a.z),
+                p(b.x, b.y, b.z),
+                p(a.x, b.y, b.z),
+            )
+        for (ring in 0..1) for (i in 0 until 4) out.line(
+            corners[ring * 4 + i],
+            corners[ring * 4 + (i + 1) % 4],
+            HIGHLIGHT,
         )
-        for (ring in 0..1) for (i in 0 until 4) out.line(corners[ring * 4 + i], corners[ring * 4 + (i + 1) % 4], HIGHLIGHT)
         for (i in 0 until 4) out.line(corners[i], corners[4 + i], HIGHLIGHT)
     }
 }

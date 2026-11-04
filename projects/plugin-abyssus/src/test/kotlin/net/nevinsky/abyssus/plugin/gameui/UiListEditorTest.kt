@@ -4,37 +4,39 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
-import net.nevinsky.abyssus.plugin.uiDocJson
-
-import net.nevinsky.abyssus.plugin.canonicalUi
-import net.nevinsky.abyssus.plugin.admitUi
-
-import net.nevinsky.abyssus.lib.core.editor.ui.*
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
-import net.nevinsky.abyssus.lib.core.ui.model.UiCollection
-import net.nevinsky.abyssus.lib.core.ui.model.UiWidgetType
-import net.nevinsky.abyssus.lib.core.ui.state.UiValue
-import net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder
 import java.util.concurrent.Executor
 import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JTextField
 import javax.swing.tree.DefaultMutableTreeNode
+import net.nevinsky.abyssus.lib.core.editor.ui.*
+import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
+import net.nevinsky.abyssus.lib.core.ui.model.UiCollection
+import net.nevinsky.abyssus.lib.core.ui.model.UiWidgetType
+import net.nevinsky.abyssus.lib.core.ui.state.UiValue
+import net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder
+import net.nevinsky.abyssus.plugin.admitUi
+import net.nevinsky.abyssus.plugin.canonicalUi
+import net.nevinsky.abyssus.plugin.uiDocJson
 
 class UiListEditorTest : BasePlatformTestCase() {
-    private val source = canonicalUi("""{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main",
+    private val source =
+        canonicalUi(
+            """{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main",
         "bindings":[
-          {"name":"scores","type":"list","fields":[{"name":"rank","type":"number"},{"name":"name","type":"string"},{"name":"look","type":"string"}],
+          {"name":"scores","type":"list","fields":[{"name":"rank","type":"number"},{"name":"name","type":"string"},
+{"name":"look","type":"string"}],
            "sample":[{"rank":1,"name":"Ace","look":"gold"},{"rank":2,"name":"Bo","look":"plain"}]},
           {"name":"title","type":"string","sample":"T"}],
         "styles":[{"name":"gold","color":"#ffd700"}],
         "screens":[{"id":"main","name":"Main","root":{"id":"root","type":"column","children":[
           {"id":"head","type":"label","bindings":{"text":"title"}},
           {"id":"table","type":"list","bindings":{"items":"scores"},"template":{"id":"row","type":"row","children":[
-            {"id":"who","type":"label","bindings":{"text":"item.name","style":"item.look"}}]}}]}}]}}}""")!!
+            {"id":"who","type":"label","bindings":{"text":"item.name","style":"item.look"}}]}}]}}]}}}"""
+        )
 
     private lateinit var file: VirtualFile
 
@@ -44,13 +46,26 @@ class UiListEditorTest : BasePlatformTestCase() {
         file = myFixture.addFileToProject("p/assets/menus/meta.json", source).virtualFile
     }
 
-    private fun controller(): UiEditorController = UiEditorController(project, file, Executor { it.run() }, { it.run() }).also { it.reload() }
-    private val doc get() = FileDocumentManager.getInstance().getDocument(file)!!.text
-    private val collection: UiCollection get() = (admitUi(doc) as UiAdmission.Admitted).collection
+    private fun controller(): UiEditorController =
+        UiEditorController(project, file, Executor { it.run() }, { it.run() }).also { it.reload() }
+
+    private val doc
+        get() = FileDocumentManager.getInstance().getDocument(file)!!.text
+
+    private val collection: UiCollection
+        get() = (admitUi(doc) as UiAdmission.Admitted).collection
+
     private val model = UiPropertiesModel()
 
     private fun find(root: java.awt.Container, name: String): java.awt.Component {
-        fun walk(c: java.awt.Container): java.awt.Component? = c.components.firstNotNullOfOrNull { ch -> if (ch.name == name) ch else (ch as? java.awt.Container)?.let(::walk) }
+        fun walk(c: java.awt.Container): java.awt.Component? =
+            c.components.firstNotNullOfOrNull { ch ->
+                if (ch.name == name) {
+                    ch
+                } else {
+                    (ch as? java.awt.Container)?.let(::walk)
+                }
+            }
         return checkNotNull(walk(root)) { name }
     }
 
@@ -73,12 +88,19 @@ class UiListEditorTest : BasePlatformTestCase() {
         assertEquals("list-row", added.template!!.id)
         c.select("table")
         run(tree.moreGroup(), 0)
-        val labels = (tree.tree.model.root as DefaultMutableTreeNode).depthFirstEnumeration().toList().filterIsInstance<DefaultMutableTreeNode>().mapNotNull { (it.userObject as? UiTreeItem)?.label }
+        val labels =
+            (tree.tree.model.root as DefaultMutableTreeNode)
+                .depthFirstEnumeration()
+                .toList()
+                .filterIsInstance<DefaultMutableTreeNode>()
+                .mapNotNull { (it.userObject as? UiTreeItem)?.label }
         assertTrue(labels.toString(), labels.any { it.startsWith("Row: ") && it.endsWith("(row)") })
         assertTrue(labels.any { it.startsWith("Empty state: ") })
-        c.select("who"); run(tree.moreGroup(), 1)
+        c.select("who")
+        run(tree.moreGroup(), 1)
         assertNull("removing from inside the list's row works too", collection.screens[0].root.children[1].empty)
-        c.select("head"); assertFalse("outside a list there is nothing to remove", c.removeListEmpty())
+        c.select("head")
+        assertFalse("outside a list there is nothing to remove", c.removeListEmpty())
     }
 
     fun testWidgetsInsideTheRowCanBeAddedSelectedAndNotDeletedAsTheTemplate() {
@@ -93,7 +115,8 @@ class UiListEditorTest : BasePlatformTestCase() {
 
     // ---- properties ----
 
-    private fun binding(id: String, key: String) = model.fieldsFor(collection, id)!!.bindings.first { it.key == key } as UiField.Binding
+    private fun binding(id: String, key: String) =
+        model.fieldsFor(collection, id)!!.bindings.first { it.key == key } as UiField.Binding
 
     fun testAListHasRowsAndItsItemsBindingListsOnlyLists() {
         val groups = model.fieldsFor(collection, "table")!!
@@ -109,10 +132,21 @@ class UiListEditorTest : BasePlatformTestCase() {
         val text = binding("who", "binding.text")
         assertEquals(listOf("title", "item.rank", "item.name", "item.look"), text.options)
         assertNull(text.warning)
-        assertEquals("a string binding or field can name a style", listOf("title", "item.name", "item.look"), binding("who", "binding.style").options)
+        assertEquals(
+            "a string binding or field can name a style",
+            listOf("title", "item.name", "item.look"),
+            binding("who", "binding.style").options,
+        )
         assertEquals("outside a row there is no item", listOf("title"), binding("head", "binding.text").options)
-        assertEquals("the template container is itself a row, so it may bind a row-wide style", listOf("title", "item.name", "item.look"), binding("row", "binding.style").options)
-        assertTrue("the list that repeats it is not inside a row", binding("table", "binding.style").options.none { it.startsWith("item.") })
+        assertEquals(
+            "the template container is itself a row, so it may bind a row-wide style",
+            listOf("title", "item.name", "item.look"),
+            binding("row", "binding.style").options,
+        )
+        assertTrue(
+            "the list that repeats it is not inside a row",
+            binding("table", "binding.style").options.none { it.startsWith("item.") },
+        )
     }
 
     fun testItemBindingsAreWarnedWhenTheFieldOrTypeIsWrong() {
@@ -120,7 +154,11 @@ class UiListEditorTest : BasePlatformTestCase() {
         assertTrue(c.edit("t", model.edit("binding.text", "who", "item.nickname")!!))
         assertEquals(UiFieldWarning.UNKNOWN_BINDING, binding("who", "binding.text").warning)
         assertTrue(c.edit("t", model.edit("binding.style", "who", "item.rank")!!))
-        assertEquals("a number field cannot name a style", UiFieldWarning.INCOMPATIBLE_TARGET, binding("who", "binding.style").warning)
+        assertEquals(
+            "a number field cannot name a style",
+            UiFieldWarning.INCOMPATIBLE_TARGET,
+            binding("who", "binding.style").warning,
+        )
         assertTrue(c.edit("t", model.edit("binding.style", "who", "item.look")!!))
         assertNull(binding("who", "binding.style").warning)
     }
@@ -130,11 +168,18 @@ class UiListEditorTest : BasePlatformTestCase() {
         c.select("table")
         val panel = UiPropertiesPanel(c)
         val rows = panel.components.getValue("property.maxRows") as JTextField
-        rows.text = "10"; rows.postActionEvent()
+        rows.text = "10"
+        rows.postActionEvent()
         assertEquals(10, collection.screens[0].root.children[1].properties["maxRows"]!!.intValue())
-        rows.text = "ten"; rows.postActionEvent()
-        assertEquals("a bad number is not written", 10, collection.screens[0].root.children[1].properties["maxRows"]!!.intValue())
-        rows.text = ""; rows.postActionEvent()
+        rows.text = "ten"
+        rows.postActionEvent()
+        assertEquals(
+            "a bad number is not written",
+            10,
+            collection.screens[0].root.children[1].properties["maxRows"]!!.intValue(),
+        )
+        rows.text = ""
+        rows.postActionEvent()
         assertNull(collection.screens[0].root.children[1].properties["maxRows"])
         val items = panel.components.getValue("binding.items") as JComboBox<*>
         items.selectedItem = ""
@@ -159,16 +204,28 @@ class UiListEditorTest : BasePlatformTestCase() {
     // ---- declarations ----
 
     fun testListBindingFormsValidateTheRecordAndTheSampleRows() {
-        fun members(form: BindingForm) = (bindingMembers(form, uiDocJson) as? FormResult.Valid)?.value?.let { uiDocJson.toString(it) }
-        assertEquals("""{"sample":[{"rank":1,"name":"A"}],"fields":[{"name":"rank","type":"number"},{"name":"name","type":"string"}]}""",
-            members(BindingForm("l", "list", fields = "rank:number, name:string", sample = """[{"rank":1,"name":"A"}]""")))
-        assertEquals("""{"fields":[{"name":"a","type":"boolean"}]}""", members(BindingForm("l", "list", access = "write", fields = "a:boolean")))
+        fun members(form: BindingForm) =
+            (bindingMembers(form, uiDocJson) as? FormResult.Valid)?.value?.let { uiDocJson.toString(it) }
+        assertEquals(
+            """{"sample":[{"rank":1,"name":"A"}],"fields":[{"name":"rank","type":"number"},{"name":"name",""" +
+                """"type":"string"}]}""",
+            members(
+                BindingForm("l", "list", fields = "rank:number, name:string", sample = """[{"rank":1,"name":"A"}]""")
+            ),
+        )
+        assertEquals(
+            """{"fields":[{"name":"a","type":"boolean"}]}""",
+            members(BindingForm("l", "list", access = "write", fields = "a:boolean")),
+        )
         fun errors(form: BindingForm) = (bindingMembers(form, uiDocJson) as FormResult.Invalid).errors.map { it.field }
         assertEquals(listOf("fields"), errors(BindingForm("l", "list", fields = "")))
         assertEquals(listOf("fields"), errors(BindingForm("l", "list", fields = "a:number, a:string")))
         assertEquals(listOf("fields"), errors(BindingForm("l", "list", fields = "a:list")))
         assertEquals(listOf("fields"), errors(BindingForm("l", "list", fields = "a")))
-        assertEquals(listOf("sample"), errors(BindingForm("l", "list", fields = "a:number", sample = """[{"a":"x"}]""")))
+        assertEquals(
+            listOf("sample"),
+            errors(BindingForm("l", "list", fields = "a:number", sample = """[{"a":"x"}]""")),
+        )
         assertEquals(listOf("sample"), errors(BindingForm("l", "list", fields = "a:number", sample = """[{"b":1}]""")))
         assertEquals(listOf("sample"), errors(BindingForm("l", "list", fields = "a:number", sample = "{")))
         val roundTrip = bindingFormOf(collection.binding("scores")!!)
@@ -194,13 +251,22 @@ class UiListEditorTest : BasePlatformTestCase() {
         val c = controller()
         val panel = UiPreviewPanel(c) { emptyList() }
         c.setMode(UiEditorMode.PREVIEW)
-        assertEquals(setOf("scores/0/rank", "scores/0/name", "scores/0/look", "scores/1/rank", "scores/1/name", "scores/1/look"), panel.rowFields.keys)
+        assertEquals(
+            setOf("scores/0/rank", "scores/0/name", "scores/0/look", "scores/1/rank", "scores/1/name", "scores/1/look"),
+            panel.rowFields.keys,
+        )
         val rank = panel.rowFields.getValue("scores/0/rank")
-        rank.text = "7"; rank.postActionEvent()
+        rank.text = "7"
+        rank.postActionEvent()
         assertEquals(UiValue.Num(7.0), (c.previewState!!.samples["scores"] as UiValue.Rows).items[0]["rank"])
-        rank.text = "seven"; rank.postActionEvent()
+        rank.text = "seven"
+        rank.postActionEvent()
         assertTrue(panel.sampleStatus.getValue("scores").text.contains("Not a number"))
-        assertEquals("a rejected value left the sample", UiValue.Num(7.0), (c.previewState!!.samples["scores"] as UiValue.Rows).items[0]["rank"])
+        assertEquals(
+            "a rejected value left the sample",
+            UiValue.Num(7.0),
+            (c.previewState!!.samples["scores"] as UiValue.Rows).items[0]["rank"],
+        )
         (find(panel, "add-row-scores") as JButton).doClick()
         assertEquals(9, panel.rowFields.size)
         (find(panel, "remove-row-scores-0") as JButton).doClick()
@@ -209,7 +275,12 @@ class UiListEditorTest : BasePlatformTestCase() {
         val text = doc
         c.resetPreview()
         panel.refresh()
-        assertEquals("Ace", (c.previewState!!.samples["scores"] as UiValue.Rows).items[0].getValue("name").let { (it as UiValue.Text).value })
+        assertEquals(
+            "Ace",
+            (c.previewState!!.samples["scores"] as UiValue.Rows).items[0].getValue("name").let {
+                (it as UiValue.Text).value
+            },
+        )
         assertEquals("the document was never touched", text, doc)
     }
 }

@@ -31,7 +31,9 @@ internal fun foliageChoices(project: Project, file: VirtualFile, entityId: Long,
     val scene = SceneDocumentCache.of(project).read(file)?.scene ?: return emptyList()
     val terrain = renderedAsset(scene, entityId)?.takeIf { it.isTerrain() } ?: return emptyList()
     val abss = ProjectLayout.abssFor(file) ?: return emptyList()
-    if (AssetReadCache.of(project).read(abss)?.obj !is ProjectDto) return emptyList()
+    if (AssetReadCache.of(project).read(abss)?.obj !is ProjectDto) {
+        return emptyList()
+    }
     return ProjectLayout.assetFolders(abss).mapNotNull { folder ->
         runCatchingKeepingCancellation {
             val meta = metas.inEditor(folder) ?: return@runCatchingKeepingCancellation null
@@ -49,7 +51,9 @@ internal fun setFoliage(
     name: String,
     metas: MetaFiles
 ): Boolean {
-    if (name !in foliageChoices(project, file, entityId, metas)) return false
+    if (name !in foliageChoices(project, file, entityId, metas)) {
+        return false
+    }
     return editSceneDocument(project, file, AbyssusBundle.message("commandAddFoliage")) { scene ->
         FoliageComponentEdits().attach(scene, entityId, name)
     }
@@ -58,7 +62,9 @@ internal fun setFoliage(
 /** The same terrain-bound choices serve the tree and the Scene view toolbar; an empty group means none fit. */
 fun foliageGroup(project: Project, file: VirtualFile, entityId: Long): DefaultActionGroup? {
     val scene = SceneDocumentCache.of(project).read(file)?.scene ?: return null
-    if (renderedAsset(scene, entityId)?.isTerrain() != true) return null
+    if (renderedAsset(scene, entityId)?.isTerrain() != true) {
+        return null
+    }
     val metas = service<AbyssusPluginCtx>().assets.metaFiles
     val names = foliageChoices(project, file, entityId, metas)
     return DefaultActionGroup().apply {
@@ -87,7 +93,11 @@ open class AddFoliageAction : AbyssusTreeAction<ComponentTarget>() {
     override fun isEnabled(e: AnActionEvent, target: ComponentTarget): Boolean {
         val group = e.project?.let { foliageGroup(it, target.file, target.entityId) }
         val hasChoices = group != null && group.childrenCount > 0
-        e.presentation.description = if (group != null && !hasChoices) AbyssusBundle.message("addFoliageNone") else null
+        e.presentation.description = if (group != null && !hasChoices) {
+            AbyssusBundle.message("addFoliageNone")
+        } else {
+            null
+        }
         return hasChoices
     }
 

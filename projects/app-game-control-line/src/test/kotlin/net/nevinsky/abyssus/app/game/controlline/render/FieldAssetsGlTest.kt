@@ -47,7 +47,9 @@ class FieldAssetsGlTest {
                 repeat(600) {
                     names.forEach(assets::request)
                     assets.update()
-                    if (!assets.isLoading()) return@repeat
+                    if (!assets.isLoading()) {
+                        return@repeat
+                    }
                 }
                 assertNotNull("model", assets.getAs<Model>(model))
                 val mesh = assets.getAs<TerrainMesh>(terrain)

@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 package net.nevinsky.abyssus.plugin.dto
-import com.intellij.openapi.components.service
+
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.plugin.sceneview.SceneParamsSource
@@ -18,14 +19,20 @@ class NativeDocumentReadTest : BasePlatformTestCase() {
         assertTrue(reader.read(good).success)
         assertFalse(reader.read(bad).success)
         val document = FileDocumentManager.getInstance().getDocument(good)!!
-        WriteCommandAction.runWriteCommandAction(project) { document.setText(native.replace("\"formatVersion\":1", "\"formatVersion\":2")) }
+        WriteCommandAction.runWriteCommandAction(project) {
+            document.setText(native.replace("\"formatVersion\":1", "\"formatVersion\":2"))
+        }
         assertFalse(reader.read(good).success)
         org.junit.Assert.assertThrows(Exception::class.java) { SceneParamsSource.editorText(reader).read(good) }
         assertEquals(native, String(good.contentsToByteArray(), good.charset))
     }
+
     fun testUnsupportedProjectDoesNotEnumerateItsNativeScene() {
         val file = myFixture.addFileToProject("p/Legacy.abss", "{\"name\":\"Legacy\"}").virtualFile
-        myFixture.addFileToProject("p/scenes/Native.scene", """{"format":"abyssus","formatVersion":1,"name":"Native"}""")
+        myFixture.addFileToProject(
+            "p/scenes/Native.scene",
+            """{"format":"abyssus","formatVersion":1,"name":"Native"}""",
+        )
         val result = project.service<ProjectReader>().read(file)
         assertFalse(result.success)
         assertNull(result.obj)

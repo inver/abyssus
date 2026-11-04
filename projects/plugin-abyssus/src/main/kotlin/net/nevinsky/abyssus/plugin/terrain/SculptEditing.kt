@@ -10,6 +10,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import java.io.File
 import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
 import net.nevinsky.abyssus.lib.core.editor.pick.BrushStroke
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptState
@@ -18,7 +19,6 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
 import net.nevinsky.abyssus.plugin.brush.resolveTerrainEntity
-import java.io.File
 
 /**
  * What a Scene view knows about sculpting the selected entity: why it cannot be done ([reason], null when it can), the
@@ -60,7 +60,8 @@ class SculptEditing(private val project: Project) {
         val assets = found.assets
         val core = service<AbyssusPluginCtx>()
         val projectDir = File(abss.parent.path)
-        // a pooled thread, not a coroutine: the resume of a coroutine fails under the IDE's own debug probes in the sandbox
+        // a pooled thread, not a coroutine: the resume of a coroutine fails under the IDE's own debug probes in the
+        // sandbox
         ApplicationManager.getApplication().executeOnPooledThread {
             val source = readTerrainFolder(folder, core.json, core.terrainRecipes, core.terrainSculpt)
             ApplicationManager.getApplication().invokeLater {
@@ -68,19 +69,30 @@ class SculptEditing(private val project: Project) {
                     ready(null)
                     return@invokeLater
                 }
-                val reason = when {
-                    source is TerrainSource.Unusable -> AbyssusBundle.message("sculptUnavailableUnreadable", source.reason)
-                    (source as TerrainSource.Ready).sculpt is SculptState.Unsafe -> AbyssusBundle.message("sculptUnavailableUnsafe")
-                    else -> null
-                }
+                val reason =
+                    when {
+                        source is TerrainSource.Unusable ->
+                            AbyssusBundle.message("sculptUnavailableUnreadable", source.reason)
+                        (source as TerrainSource.Ready).sculpt is SculptState.Unsafe ->
+                            AbyssusBundle.message("sculptUnavailableUnsafe")
+                        else -> null
+                    }
                 if (reason != null) {
                     ready(SculptSession(reason, null, File(assets.path), StampImages(core.json), {}))
                     return@invokeLater
                 }
-                val command = SculptStrokeCommand(
-                    project, folder, project.service<SculptDrafts>(), core.terrainSculpt, LocalAssetFileStore(projectDir),
-                    { readTerrainFolder(folder, core.json, core.terrainRecipes, core.terrainSculpt) }, mode, tool, report,
-                )
+                val command =
+                    SculptStrokeCommand(
+                        project,
+                        folder,
+                        project.service<SculptDrafts>(),
+                        core.terrainSculpt,
+                        LocalAssetFileStore(projectDir),
+                        { readTerrainFolder(folder, core.json, core.terrainRecipes, core.terrainSculpt) },
+                        mode,
+                        tool,
+                        report,
+                    )
                 ready(SculptSession(null, command, File(assets.path), StampImages(core.json), command::dispose))
             }
         }

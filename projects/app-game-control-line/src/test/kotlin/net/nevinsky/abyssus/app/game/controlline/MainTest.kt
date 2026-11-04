@@ -4,23 +4,31 @@
  */
 package net.nevinsky.abyssus.app.game.controlline
 
+import java.nio.file.Path
 import org.junit.Assert.*
 import org.junit.Test
-import java.nio.file.Path
 
 class MainTest {
-    @Test fun withoutTheRayOptionRunsRasterWithNoReason() {
+    @Test
+    fun withoutTheRayOptionRunsRasterWithNoReason() {
         System.clearProperty("controlLine.fieldView")
         val result = resolveFieldView(Path.of("project/ControlLine"))
-        assertTrue("Expected Unavailable with no reason when ray is not requested", result is RayFieldResult.Unavailable)
+        assertTrue(
+            "Expected Unavailable with no reason when ray is not requested",
+            result is RayFieldResult.Unavailable,
+        )
         assertNull((result as RayFieldResult.Unavailable).reason)
     }
 
-    @Test fun rayRequestedButRaySourceSetAbsentReportsUnavailable() {
+    @Test
+    fun rayRequestedButRaySourceSetAbsentReportsUnavailable() {
         System.setProperty("controlLine.fieldView", "ray")
         try {
             val result = resolveFieldView(Path.of("project/ControlLine"))
-            assertTrue("Expected Unavailable when the ray source set is not on the classpath", result is RayFieldResult.Unavailable)
+            assertTrue(
+                "Expected Unavailable when the ray source set is not on the classpath",
+                result is RayFieldResult.Unavailable,
+            )
             assertNotNull((result as RayFieldResult.Unavailable).reason)
         } finally {
             System.clearProperty("controlLine.fieldView")

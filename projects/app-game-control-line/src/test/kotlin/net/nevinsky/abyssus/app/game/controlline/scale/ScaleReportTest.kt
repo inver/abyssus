@@ -20,7 +20,11 @@ class ScaleReportTest {
         val judge = ScaleJudge()
         var seconds = 0f
         // level for a minute, then the handle goes full down: the plane crashes and the flight ends
-        fieldSession("Trainer", judge, FlightControlSource { if (seconds < 60f) 0f else -1f }).use { session ->
+        fieldSession("Trainer", judge, FlightControlSource { if (seconds < 60f) {
+            0f
+        } else {
+            -1f
+        } }).use { session ->
             assertNull(reportOf(session, Mode.Scale, null, "Trainer", judge))
             repeat(60 * 180) {
                 if (session.flight.result == null) {

@@ -5,11 +5,6 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
-import net.nevinsky.abyssus.lib.core.util.GlStateScope
-import net.nevinsky.abyssus.lib.core.util.checkFramebufferComplete
-
-import net.nevinsky.abyssus.lib.core.util.GL_HALF_FLOAT
-
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
@@ -19,9 +14,12 @@ import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.BufferUtils
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import net.nevinsky.abyssus.lib.core.util.createFullscreenTriangle
 import kotlin.math.abs
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.core.util.GL_HALF_FLOAT
+import net.nevinsky.abyssus.lib.core.util.GlStateScope
+import net.nevinsky.abyssus.lib.core.util.checkFramebufferComplete
+import net.nevinsky.abyssus.lib.core.util.createFullscreenTriangle
 
 private const val GL_RGBA16F = 0x881A
 
@@ -89,22 +87,60 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
         check(scene.clouds.baseNoise != 0) { scene.clouds.noiseFailure ?: "the cloud asset has no noise textures" }
         val gl = Gdx.gl
         val state = GlStateScope(listOf(GL20.GL_BLEND))
-        val viewport = IntArray(4).also { v -> BufferUtils.newIntBuffer(16).let { gl.glGetIntegerv(GL20.GL_VIEWPORT, it); for (i in v.indices) v[i] = it.get(i) } }
-        // a baked face is drawn once, so it gets the full resolution (the cloud detail follows the pixel size) and a few samples
-        val divisor = if (scene.bake) 1 else 2
+        val viewport =
+            IntArray(4).also { v ->
+                BufferUtils.newIntBuffer(16).let {
+                    gl.glGetIntegerv(GL20.GL_VIEWPORT, it)
+                    for (i in v.indices) v[i] = it.get(i)
+                }
+            }
+        // a baked face is drawn once, so it gets the full resolution (the cloud detail follows the pixel size) and a
+        // few samples
+        val divisor =
+            if (scene.bake) {
+                1
+            } else {
+                2
+            }
         ensureTargets(maxOf(1, viewport[2] / divisor), maxOf(1, viewport[3] / divisor))
         rotationOnlyViewProj(scene.camera, viewProj)
-        if (scene.bake) hasHistory = false else if (hasHistory && jumped(scene.camera)) resetHistory()
+        if (scene.bake) {
+            hasHistory = false
+        } else if (hasHistory && jumped(scene.camera)) {
+            resetHistory()
+        }
 
         try {
             bakeCoverage(scene)
             gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, framebuffer)
             gl.glViewport(0, 0, width, height)
-            if (scene.bake) prevViewProj.set(viewProj) // same view for every sample: the history lines up exactly
-            for (sample in 0 until if (scene.bake) BAKE_SAMPLES else 1) {
-                marchBands(scene, if (scene.bake) sample else frame % 64)
+            if (scene.bake) {
+                prevViewProj.set(viewProj) // same view for every sample: the history lines up exactly
+            }
+            for (sample in
+                0 until
+                    if (scene.bake) {
+                        BAKE_SAMPLES
+                    } else {
+                        1
+                    }) {
+                marchBands(
+                    scene,
+                    if (scene.bake) {
+                        sample
+                    } else {
+                        frame % 64
+                    },
+                )
                 gl.glDisable(GL20.GL_BLEND)
-                resolveHistory(scene, if (scene.bake) 1f / (sample + 1) else HISTORY_BLEND)
+                resolveHistory(
+                    scene,
+                    if (scene.bake) {
+                        1f / (sample + 1)
+                    } else {
+                        HISTORY_BLEND
+                    },
+                )
             }
         } finally {
             state.restore()
@@ -169,7 +205,14 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
         resolve.bind()
         resolve.setUniformMatrix("u_invViewProj", scene.invViewProj)
         resolve.setUniformMatrix("u_prevViewProj", prevViewProj)
-        resolve.setUniformi("u_hasHistory", if (hasHistory) 1 else 0)
+        resolve.setUniformi(
+            "u_hasHistory",
+            if (hasHistory) {
+                1
+            } else {
+                0
+            },
+        )
         resolve.setUniformf("u_blend", blend)
         resolve.setUniformf("u_texel", 1f / width, 1f / height)
         bindTexture(0, GL20.GL_TEXTURE_2D, current)
@@ -184,14 +227,18 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
     /** True when the camera turned or zoomed too far since the last frame for the history to line up. */
     private fun jumped(camera: Camera): Boolean {
         val cos = MathUtils.cosDeg(HISTORY_RESET_DEGREES)
-        if (prevDirection.dot(camera.direction) < cos * prevDirection.len() * camera.direction.len()) return true
+        if (prevDirection.dot(camera.direction) < cos * prevDirection.len() * camera.direction.len()) {
+            return true
+        }
         val a = prevProjection.`val`
         val b = camera.projection.`val`
         return a.indices.any { abs(a[it] - b[it]) > 1e-3f }
     }
 
     private fun ensureTargets(w: Int, h: Int) {
-        if (w == width && h == height && current != 0) return
+        if (w == width && h == height && current != 0) {
+            return
+        }
         deleteTargets()
         width = w
         height = h
@@ -247,7 +294,9 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
 
     private fun deleteTargets() {
         val gl = Gdx.gl
-        for (texture in intArrayOf(current, history[0], history[1])) if (texture != 0) gl.glDeleteTexture(texture)
+        for (texture in intArrayOf(current, history[0], history[1])) if (texture != 0) {
+            gl.glDeleteTexture(texture)
+        }
         current = 0
         history.fill(0)
         width = 0
@@ -259,7 +308,9 @@ class VolumetricClouds(shaders: ShaderStorage, private val field: CloudField) : 
         coverageMaps?.dispose()
         coverageMaps = null
         val gl = Gdx.gl
-        if (framebuffer != 0) gl.glDeleteFramebuffer(framebuffer)
+        if (framebuffer != 0) {
+            gl.glDeleteFramebuffer(framebuffer)
+        }
         framebuffer = 0
         listOfNotNull(march, resolve, composite, mesh).forEach { it.dispose() }
         march = null

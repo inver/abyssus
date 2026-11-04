@@ -5,11 +5,11 @@
 
 package net.nevinsky.abyssus.lib.core.editor.terrain.sculpt
 
+import java.nio.ByteBuffer
 import net.nevinsky.abyssus.lib.core.assets.displayMessage
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.terrain.TerrainHeightEncoder
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import java.nio.ByteBuffer
 
 /** The Abyssus-only files beside `terrain.data` that keep a terrain's sculpting. */
 const val SCULPT_MANIFEST_FILE = "abyssus-terrain.sculpt.json"
@@ -20,7 +20,10 @@ const val SCULPT_BASE_FILE = "abyssus-terrain.base"
 const val SCULPT_SCHEMA_VERSION = 1
 
 /** Where the heights under the delta come from. */
-enum class SculptBaseKind { RECIPE, STORED }
+enum class SculptBaseKind {
+    RECIPE,
+    STORED,
+}
 
 /**
  * What the manifest next to a sculpted terrain says: the [resolution] of the delta (and stored base) grid, the
@@ -36,7 +39,9 @@ data class SculptManifest(
     val schemaVersion: Int = SCULPT_SCHEMA_VERSION,
 ) {
     init {
-        require((baseKind == SculptBaseKind.STORED) == (baseSha256 != null)) { "baseSha256 belongs to a stored base only" }
+        require((baseKind == SculptBaseKind.STORED) == (baseSha256 != null)) {
+            "baseSha256 belongs to a stored base only"
+        }
     }
 }
 
@@ -51,7 +56,8 @@ class SculptManifestCodec(private val json: JsonProcessor) {
             return Decoded.Unsupported("schemaVersion ${res.schemaVersion}")
         }
         return Decoded.Manifest(res)
-    }.getOrElse { Decoded.Malformed(it.displayMessage()) }
+    }
+        .getOrElse { Decoded.Malformed(it.displayMessage()) }
 
     sealed interface Decoded {
         data class Manifest(val manifest: SculptManifest) : Decoded
@@ -65,8 +71,8 @@ class SculptManifestCodec(private val json: JsonProcessor) {
 }
 
 /**
- * Reads a [resolution] by [resolution] grid of big-endian floats, the layout of `terrain.data`, the delta file and
- * the stored base; null when [bytes] hold another number of values.
+ * Reads a [resolution] by [resolution] grid of big-endian floats, the layout of `terrain.data`, the delta file and the
+ * stored base; null when [bytes] hold another number of values.
  */
 fun decodeSculptGrid(bytes: ByteArray, resolution: Int): FloatArray? {
     if (bytes.size != resolution * resolution * Float.SIZE_BYTES) {

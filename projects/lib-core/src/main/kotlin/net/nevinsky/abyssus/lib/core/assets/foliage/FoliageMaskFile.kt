@@ -42,7 +42,9 @@ class FoliageMaskFile(private val files: FileLoader) {
 
     private fun requireSize(file: File, size: Int, resolution: Int) {
         val expected = resolution * resolution
-        if (size != expected) throw FoliageMaskException("${file.path}: expected $expected bytes, found $size")
+        if (size != expected) {
+            throw FoliageMaskException("${file.path}: expected $expected bytes, found $size")
+        }
     }
 }
 

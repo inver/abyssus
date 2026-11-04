@@ -29,7 +29,11 @@ class StampBrushChannelsTest {
 
     /** Adds the changes to the four weights, clamps at zero and scales the result back to a sum of exactly 255. */
     private class RenormalizingTarget(res: Int, size: Int) : BrushTarget<Weights> {
-        override val grid = Weights(res, size, IntArray(res * res * 4) { if (it % 4 == 0) 255 else 0 })
+        override val grid = Weights(res, size, IntArray(res * res * 4) { if (it % 4 == 0) {
+            255
+        } else {
+            0
+        } })
         val offsets = ArrayList<Int>()
         var spare = 0
 
@@ -39,12 +43,16 @@ class StampBrushChannelsTest {
             val base = (gz * grid.resolution + gx) * 4
             val next = FloatArray(4) { maxOf(0f, grid.values[base + it] + changes[offset + it]) }
             val total = next.sum()
-            if (total <= 0f) return false
+            if (total <= 0f) {
+                return false
+            }
             val scaled = IntArray(4) { Math.round(next[it] * 255f / total) }
             scaled[scaled.indices.maxBy { scaled[it] }] += 255 - scaled.sum()
             var changed = false
             for (c in 0 until 4) {
-                if (grid.values[base + c] != scaled[c]) changed = true
+                if (grid.values[base + c] != scaled[c]) {
+                    changed = true
+                }
                 grid.values[base + c] = scaled[c]
             }
             return changed
@@ -58,7 +66,11 @@ class StampBrushChannelsTest {
             val f = stamp.footprint
             for (i in 0 until f.count) {
                 val amount = f.weight[i] * rate
-                for (c in 0 until 4) out[i * 4 + c] = if (c == channel) amount else -amount / 3f
+                for (c in 0 until 4) out[i * 4 + c] = if (c == channel) {
+                    amount
+                } else {
+                    -amount / 3f
+                }
             }
         }
     }

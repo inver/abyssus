@@ -5,17 +5,17 @@
 
 package net.nevinsky.abyssus.plugin.terrain
 
-import net.nevinsky.abyssus.lib.core.editor.terrain.FolderNameError
 import com.intellij.openapi.components.service
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
-import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import java.awt.Component
 import java.awt.Container
 import java.io.File
 import javax.swing.JButton
+import net.nevinsky.abyssus.lib.core.editor.terrain.FolderNameError
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 
 class NewTerrainFormTest : BasePlatformTestCase() {
     private lateinit var projectDir: File
@@ -28,16 +28,35 @@ class NewTerrainFormTest : BasePlatformTestCase() {
         File(projectDir, "assets/existing").mkdirs()
     }
 
-    private fun form() = NewTerrainForm(
-        projectDir, service<AbyssusPluginCtx>().terrainGenerator,
-        background = { if (deferred) queue += it else it.run() }, ui = { it.run() },
-    )
+    private fun form() =
+        NewTerrainForm(
+            projectDir,
+            service<AbyssusPluginCtx>().terrainGenerator,
+            background = {
+                if (deferred) {
+                    queue += it
+                } else {
+                    it.run()
+                }
+            },
+            ui = { it.run() },
+        )
 
     private fun find(c: Component, name: String): Component? =
-        if (c.name == name) c else (c as? Container)?.components?.firstNotNullOfOrNull { find(it, name) }
+        if (c.name == name) {
+            c
+        } else {
+            (c as? Container)?.components?.firstNotNullOfOrNull { find(it, name) }
+        }
 
     private fun text(f: NewTerrainForm, name: String) = find(f, name) as JBTextField
-    private fun type(f: NewTerrainForm, name: String, value: String) = text(f, name).let { it.text = value; it.postActionEvent() }
+
+    private fun type(f: NewTerrainForm, name: String, value: String) =
+        text(f, name).let {
+            it.text = value
+            it.postActionEvent()
+        }
+
     private fun click(f: NewTerrainForm, name: String) = (find(f, name) as JButton).doClick()
 
     fun testNoRequestUntilTheNameIsValidAndAMatchingPreviewExists() {
@@ -96,14 +115,20 @@ class NewTerrainFormTest : BasePlatformTestCase() {
         val f = form()
         type(f, "new-terrain-name", "hills")
         type(f, "new-terrain-resolution", "1")
-        assertEquals("The resolution must be a whole number from 2 to 255.", (find(f, "new-terrain-error") as JBLabel).text)
+        assertEquals(
+            "The resolution must be a whole number from 2 to 255.",
+            (find(f, "new-terrain-error") as JBLabel).text,
+        )
         assertFalse((find(f, "terrain-preview") as JButton).isEnabled)
         type(f, "new-terrain-resolution", "256")
         assertFalse((find(f, "terrain-preview") as JButton).isEnabled)
         type(f, "new-terrain-resolution", "255")
         assertTrue((find(f, "terrain-preview") as JButton).isEnabled)
         type(f, "new-terrain-size", "0")
-        assertEquals("The world size must be a whole number above zero.", (find(f, "new-terrain-error") as JBLabel).text)
+        assertEquals(
+            "The world size must be a whole number above zero.",
+            (find(f, "new-terrain-error") as JBLabel).text,
+        )
         type(f, "new-terrain-size", "800")
         type(f, "terrain-gen-featureSize", "-1")
         assertFalse((find(f, "terrain-preview") as JButton).isEnabled)

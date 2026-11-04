@@ -5,13 +5,13 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.core.editor.meta.RowKind
-import net.nevinsky.abyssus.lib.core.editor.meta.metaRowsOf
-import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.assets.MetaType
 import java.io.File
 import java.time.ZoneOffset
+import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
+import net.nevinsky.abyssus.lib.core.editor.meta.RowKind
+import net.nevinsky.abyssus.lib.core.editor.meta.metaRowsOf
 import net.nevinsky.abyssus.plugin.testMetaFiles
 
 private fun load(folder: com.intellij.openapi.vfs.VirtualFile) = loadAssetMeta(folder, testMetaFiles())
@@ -19,18 +19,39 @@ private fun load(folder: com.intellij.openapi.vfs.VirtualFile) = loadAssetMeta(f
 class MetaRowsTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
 
-    private val processor get() = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().json
+    private val processor
+        get() = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().json
+
     @Suppress("UNCHECKED_CAST")
     private fun valuesOfText(text: String) = processor.parse(text, Map::class.java) as Map<String, Any?>
-    private fun sample(folder: String) = valuesOfText(File("$testDataPath/Untitled/assets/$folder/meta.json").readText())
 
-    private fun terrainFolder() = File("$testDataPath/Untitled/assets").listFiles { f -> f.name.startsWith("terrain_") }!!.single().name
+    private fun sample(folder: String) =
+        valuesOfText(File("$testDataPath/Untitled/assets/$folder/meta.json").readText())
+
+    private fun terrainFolder() =
+        File("$testDataPath/Untitled/assets").listFiles { f -> f.name.startsWith("terrain_") }!!.single().name
 
     private fun rows(json: String) = metaRowsOf(valuesOfText(json), ResourceEditorMessages(), ZoneOffset.UTC)
 
     fun testSkyboxListsTopLevelFieldsThenAdditionalFacesInFileOrder() {
         val rows = metaRowsOf(sample("skybox_default"), ResourceEditorMessages(), ZoneOffset.UTC)
-        assertEquals(listOf("format", "formatVersion", "version", "lastModified", "type", "additional", "top", "bottom", "left", "right", "front", "back"), rows.map { it.name })
+        assertEquals(
+            listOf(
+                "format",
+                "formatVersion",
+                "version",
+                "lastModified",
+                "type",
+                "additional",
+                "top",
+                "bottom",
+                "left",
+                "right",
+                "front",
+                "back",
+            ),
+            rows.map { it.name },
+        )
         assertEquals("SKYBOX", rows.single { it.name == "type" }.value)
         assertEquals(RowKind.HEADING, rows.single { it.name == "additional" }.kind)
         val faces = rows.dropWhile { it.kind != RowKind.HEADING }.drop(1)
@@ -47,14 +68,18 @@ class MetaRowsTest : BasePlatformTestCase() {
     }
 
     fun testModelListSummarisesAnEmptyListAndShowsBooleans() {
-        val rows = metaRowsOf(sample("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"), ResourceEditorMessages(), ZoneOffset.UTC).associateBy { it.name }
+        val rows =
+            metaRowsOf(sample("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"), ResourceEditorMessages(), ZoneOffset.UTC)
+                .associateBy { it.name }
         assertEquals("0 items", rows.getValue("materials").value)
         assertEquals("true", rows.getValue("binary").value)
         assertEquals("29e9be61-6594-4f82-a6cf-44ccf09f71fb", rows.getValue("uuid").value)
     }
 
     fun testSingularListAndObjectSummaries() {
-        val rows = rows("""{"format":"abyssus","formatVersion":1,"additional":{"a":[1],"b":{"x":1,"y":2},"c":{"x":1}}}""").associateBy { it.name }
+        val rows =
+            rows("""{"format":"abyssus","formatVersion":1,"additional":{"a":[1],"b":{"x":1,"y":2},"c":{"x":1}}}""")
+                .associateBy { it.name }
         assertEquals("1 item", rows.getValue("a").value)
         assertEquals("2 properties", rows.getValue("b").value)
         assertEquals("1 property", rows.getValue("c").value)
@@ -67,7 +92,10 @@ class MetaRowsTest : BasePlatformTestCase() {
     }
 
     fun testLastModifiedIsADateTimeAndOtherNumbersAreUntouched() {
-        val rows = rows("""{"format":"abyssus","formatVersion":1,"lastModified":1663444124794,"version":1}""").associateBy { it.name }
+        val rows =
+            rows("""{"format":"abyssus","formatVersion":1,"lastModified":1663444124794,"version":1}""").associateBy {
+                it.name
+            }
         assertEquals("2022-09-17 19:48:44", rows.getValue("lastModified").value)
         assertEquals("1", rows.getValue("version").value)
     }
@@ -86,7 +114,9 @@ class MetaRowsTest : BasePlatformTestCase() {
     }
 
     fun testLoadsAValidMeta() {
-        val loaded = load(asset("""{"format":"abyssus","formatVersion":1,"type":"SKYBOX","additional":{"top":"t.png"}}""")) as AssetMeta.Loaded
+        val loaded =
+            load(asset("""{"format":"abyssus","formatVersion":1,"type":"SKYBOX","additional":{"top":"t.png"}}"""))
+                as AssetMeta.Loaded
         assertEquals(MetaType.SKYBOX, loaded.type)
         assertEquals(listOf("format", "formatVersion", "type", "additional", "top"), loaded.rows.map { it.name })
     }
@@ -110,7 +140,9 @@ class MetaRowsTest : BasePlatformTestCase() {
         val folder = asset("""{"format":"abyssus","formatVersion":1,"type":"MODEL"}""")
         val file = folder.findChild("meta.json")!!
         val doc = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(file)!!
-        com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) { doc.setText("""{"format":"abyssus","formatVersion":1,"type":"TERRAIN"}""") }
+        com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) {
+            doc.setText("""{"format":"abyssus","formatVersion":1,"type":"TERRAIN"}""")
+        }
         assertEquals(MetaType.TERRAIN, (load(folder) as AssetMeta.Loaded).type)
     }
 }

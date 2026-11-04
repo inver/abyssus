@@ -19,7 +19,13 @@ import org.junit.Test
 /** Which course the rescue picks, from observations made up for it. */
 class RescuePilotTest {
     private val radius = 18f
-    private val stunter = PlaneComponent().apply { lineLength = radius; wingArea = 0.325f; liftSlope = 8f; elevatorEffect = 3f }
+    private val stunter =
+        PlaneComponent().apply {
+            lineLength = radius
+            wingArea = 0.325f
+            liftSlope = 8f
+            elevatorEffect = 3f
+        }
     private val rescue = rescuePilot(radius, Handling(stunter, 1.1f))
 
     private fun east(azimuth: Float): Vector3 {
@@ -28,13 +34,37 @@ class RescuePilotTest {
     }
 
     /** A plane at the base at [azimuth], flying anticlockwise upright, or clockwise inverted. */
-    private fun observation(time: Float = 10f, clockwise: Boolean = false, engine: Boolean = true, azimuth: Float = 30f): FlightObservation {
+    private fun observation(
+        time: Float = 10f,
+        clockwise: Boolean = false,
+        engine: Boolean = true,
+        azimuth: Float = 30f,
+    ): FlightObservation {
         val u = place(0f, azimuth)
-        val heading = east(azimuth).also { if (clockwise) it.scl(-1f) }
+        val heading =
+            east(azimuth).also {
+                if (clockwise) {
+                    it.scl(-1f)
+                }
+            }
         val up = Vector3(u).crs(heading)
         return FlightObservation(
-            time, Vector3(u).scl(radius).add(0f, BASE_HEIGHT, 0f), Vector3(heading).scl(22f), Vector3(), heading, up, 1.5f, 25f,
-            if (engine) 100f else 0f, engine, radius, null,
+            time,
+            Vector3(u).scl(radius).add(0f, BASE_HEIGHT, 0f),
+            Vector3(heading).scl(22f),
+            Vector3(),
+            heading,
+            up,
+            1.5f,
+            25f,
+            if (engine) {
+                100f
+            } else {
+                0f
+            },
+            engine,
+            radius,
+            null,
         )
     }
 

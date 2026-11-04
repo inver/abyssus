@@ -25,7 +25,11 @@ class SkyClock {
 
     /** Moves the clock on by [deltaSeconds] (clamped to a quarter of a second) unless it is fixed. */
     fun advance(deltaSeconds: Float) {
-        lastStep = if (fixed || !deltaSeconds.isFinite()) 0f else deltaSeconds.coerceIn(0f, MAX_STEP_SECONDS)
+        lastStep = if (fixed || !deltaSeconds.isFinite()) {
+            0f
+        } else {
+            deltaSeconds.coerceIn(0f, MAX_STEP_SECONDS)
+        }
         seconds += lastStep
     }
 

@@ -38,29 +38,43 @@ class ShaderDefinesTest {
 
     @Test
     fun theInstancedVariantDefinesInstancedFlag() {
-        assertEquals("#define instancedFlag\n", extraDefines(Attributes(), position, hasEnvironment = false, instanced = true))
+        assertEquals(
+            "#define instancedFlag\n",
+            extraDefines(Attributes(), position, hasEnvironment = false, instanced = true),
+        )
     }
 
     @Test
     fun aClipPlaneDefinesTheFlagEvenWithoutLighting() {
         val attributes = Attributes().apply { set(ClipPlaneAttribute(0f, 1f, 0f, 0f)) }
-        assertEquals("#define clipPlaneFlag\n", extraDefines(attributes, position, hasEnvironment = false, instanced = false))
+        assertEquals(
+            "#define clipPlaneFlag\n",
+            extraDefines(attributes, position, hasEnvironment = false, instanced = false),
+        )
     }
 
     @Test
     fun theOutputTransformFlagOnlyComesWithTheAttribute() {
         assertEquals("", extraDefines(Attributes(), lit, hasEnvironment = true, instanced = false))
         val attributes = Attributes().apply { set(OutputTransformAttribute(1.5f)) }
-        assertEquals("#define outputTransformFlag\n", extraDefines(attributes, lit, hasEnvironment = true, instanced = false))
-        assertEquals("#define outputTransformFlag\n", extraDefines(attributes, position, hasEnvironment = false, instanced = true).replace("#define instancedFlag\n", ""))
+        assertEquals(
+            "#define outputTransformFlag\n",
+            extraDefines(attributes, lit, hasEnvironment = true, instanced = false),
+        )
+        assertEquals(
+            "#define outputTransformFlag\n",
+            extraDefines(attributes, position, hasEnvironment = false, instanced = true)
+                .replace("#define instancedFlag\n", ""),
+        )
     }
 
     @Test
     fun shadowAndVisibilityFlagsNeedAnEnvironmentAndNormals() {
-        val attributes = Attributes().apply {
-            set(ShadowAtlasAttribute(FakeTexture(), emptyList()))
-            set(directionalVisibility())
-        }
+        val attributes =
+            Attributes().apply {
+                set(ShadowAtlasAttribute(FakeTexture(), emptyList()))
+                set(directionalVisibility())
+            }
         val both = "#define shadowAtlasFlag\n#define directionalVisibilityFlag\n"
         assertEquals(both, extraDefines(attributes, lit, hasEnvironment = true, instanced = false))
         assertEquals("", extraDefines(attributes, lit, hasEnvironment = false, instanced = false))
@@ -71,14 +85,20 @@ class ShaderDefinesTest {
 
     @Test
     fun pbrDefinesFollowTheMaterialMask() {
-        val mask = Material(
-            PBRFloatAttribute.createMetallic(0.5f), PBRFloatAttribute.createRoughness(0.5f)
-        ).mask
+        val mask =
+            Material(
+                    PBRFloatAttribute.createMetallic(0.5f),
+                    PBRFloatAttribute.createRoughness(0.5f),
+                )
+                .mask
         assertEquals("#define metallicFactorFlag\n#define roughnessFactorFlag\n", PbrModelShader.pbrDefines(mask, null))
         assertEquals("", PbrModelShader.pbrDefines(0L, null))
         assertEquals(
             "#define metallicRoughnessTextureFlag\n#define occlusionTextureFlag\n",
-            PbrModelShader.pbrDefines(PBRTextureAttribute.MetallicRoughnessTexture or PBRTextureAttribute.OcclusionTexture, null)
+            PbrModelShader.pbrDefines(
+                PBRTextureAttribute.MetallicRoughnessTexture or PBRTextureAttribute.OcclusionTexture,
+                null,
+            ),
         )
     }
 
@@ -90,14 +110,22 @@ class ShaderDefinesTest {
         val lit = Environment().apply { set(sky) }
         val fade = Environment().apply { set(fading) }
         assertFalse(PbrModelShader.pbrDefines(PBRFloatAttribute.Metallic, plain).contains("environmentLightFlag"))
-        assertTrue(PbrModelShader.pbrDefines(PBRFloatAttribute.Metallic, lit).contains("#define environmentLightFlag\n"))
+        assertTrue(
+            PbrModelShader.pbrDefines(PBRFloatAttribute.Metallic, lit).contains("#define environmentLightFlag\n")
+        )
         assertFalse(PbrModelShader.pbrDefines(PBRFloatAttribute.Metallic, lit).contains("environmentFadeFlag"))
-        assertTrue(PbrModelShader.pbrDefines(PBRFloatAttribute.Metallic, fade).contains("#define environmentFadeFlag\n"))
+        assertTrue(
+            PbrModelShader.pbrDefines(PBRFloatAttribute.Metallic, fade).contains("#define environmentFadeFlag\n")
+        )
     }
 
     @Test
     fun theProviderRaisesTheBoneCountInStepsAndKeepsTheConfiguredOnesOtherwise() {
-        val config = DefaultShader.Config().apply { numBones = 12; numPointLights = 2 }
+        val config =
+            DefaultShader.Config().apply {
+                numBones = 12
+                numPointLights = 2
+            }
         assertEquals(12, ModelShaderProvider.fitBones(config, 0).numBones)
         assertEquals(12, ModelShaderProvider.fitBones(config, 12).numBones)
         assertEquals(16, ModelShaderProvider.fitBones(config, 13).numBones)
@@ -112,9 +140,13 @@ class ShaderDefinesTest {
     // the attributes only keep this reference; no GL call is made on it
     private class FakeTexture : GLTexture(GL20.GL_TEXTURE_2D, 3) {
         override fun getWidth() = 1
+
         override fun getHeight() = 1
+
         override fun getDepth() = 0
+
         override fun isManaged() = false
+
         override fun reload() = Unit
     }
 

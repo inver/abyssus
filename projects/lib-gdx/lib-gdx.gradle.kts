@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// libGDX 3D model runtime with 32-bit indices and an Assimp importer (an inherited fork; see README.md and docs/third-party/gdx-model-origin.md).
+// libGDX 3D model runtime with 32-bit indices and an Assimp importer (an inherited fork; see README.md and
+// docs/third-party/gdx-model-origin.md).
 // Plain JVM library: no IntelliJ dependency, so other libGDX projects can use it.
 plugins {
     `java-library`
@@ -80,5 +81,6 @@ tasks.test {
 // Games ship this library: `checkNoEditorCode` keeps editor imports and ray-tracing snapshot types out of it.
 extra["abyssusShippedLibrary"] = true
 
-// No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in lib-core-editor (see gradle/checks.gradle.kts).
+// No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in
+// lib-core-editor (see gradle/checks.gradle.kts).
 extra["abyssusJacksonTreeAllowed"] = emptyList<String>()

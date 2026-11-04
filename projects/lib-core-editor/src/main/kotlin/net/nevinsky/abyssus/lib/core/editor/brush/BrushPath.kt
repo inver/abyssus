@@ -20,7 +20,8 @@ fun smoothFalloff(falloff: Float): Float = smooth01(falloff)
  * The grid is [resolution] points over a terrain [size] world units wide, in terrain-local space: a stamp's centre goes
  * through the inverse of the entity's [world] matrix, and the distance is measured through the entity's scale along the
  * terrain's own axes. For the translation, yaw rotation and scaling terrain entities are built from, that is exactly
- * the world-space distance on the terrain plane, so a rotated or scaled entity is brushed under the circle the view draws.
+  * the world-space distance on the terrain plane, so a rotated or scaled entity is brushed under the circle the view
+  * draws.
  *
  * One stroke is one instance: [walk] is called once per drag segment and keeps the stamp spacing across the calls, so a
  * spot is stamped once however finely the drag is sampled. Pure math that touches no `Gdx.*`.
@@ -54,7 +55,9 @@ class BrushPath(private val size: Int, private val resolution: Int, world: Matri
      * world centre, which it must not keep. The first call of a stroke always stamps at [from].
      */
     fun walk(from: Vector3, to: Vector3, radius: Float, stamp: (Vector3) -> Unit) {
-        if (!canStamp(radius)) return
+        if (!canStamp(radius)) {
+            return
+        }
         if (!pressed) {
             pressed = true
             sinceLastStamp = 0f
@@ -69,7 +72,11 @@ class BrushPath(private val size: Int, private val resolution: Int, world: Matri
             stamp(point.set(from).lerp(to, along / distance))
             along += spacing
         }
-        sinceLastStamp = if (lastStamp.isNaN()) sinceLastStamp + distance else distance - lastStamp
+        sinceLastStamp = if (lastStamp.isNaN()) {
+            sinceLastStamp + distance
+        } else {
+            distance - lastStamp
+        }
     }
 
     /** The terrain-local position of the world point [at], in a vector that the next call reuses. */
@@ -90,7 +97,9 @@ class BrushPath(private val size: Int, private val resolution: Int, world: Matri
                 val dx = scaleX * (gx * cell - centre.x)
                 val dz = scaleZ * (gz * cell - centre.z)
                 val distance = sqrt(dx * dx + dz * dz)
-                if (distance >= radius) continue
+                if (distance >= radius) {
+                    continue
+                }
                 visit(gx, gz, 1f - distance / radius)
             }
         }

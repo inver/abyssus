@@ -49,7 +49,9 @@ class DocumentServices(
 ) {
     val parsing = DocumentParsing(json, log, registry)
 
-    /** Scene, project and format writes: the text transforms the editing library shares with callers that have no IDE. */
+    /**
+     * Scene, project and format writes: the text transforms the editing library shares with callers that have no IDE.
+     */
     val scenes = SceneTextEditor(SceneParser(json, registry), json)
     val projects = ProjectTextEditor(parsing, json)
     val formatter = DocumentFormatter(parsing, json)
@@ -96,7 +98,11 @@ internal class RayServices(log: Logger, val exposure: () -> Float) : AutoCloseab
     }
     val converter get() = converterHolder.value
     override fun close() {
-        if (serviceHolder.isInitialized()) serviceHolder.value.close()
-        if (converterHolder.isInitialized()) converterHolder.value.shutdown()
+        if (serviceHolder.isInitialized()) {
+            serviceHolder.value.close()
+        }
+        if (converterHolder.isInitialized()) {
+            converterHolder.value.shutdown()
+        }
     }
 }

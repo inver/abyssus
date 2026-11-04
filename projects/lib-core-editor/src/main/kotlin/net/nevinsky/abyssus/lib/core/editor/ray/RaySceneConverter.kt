@@ -18,11 +18,11 @@ import net.nevinsky.abyssus.lib.raytracing.*
  *
  * Converts `RayModelSnapshot`/`RayTerrainSnapshot` assets plus their per-instance world transforms into the
  * `RayMesh`/`RayMaterial`/`RayTexture` values a `RaySceneSnapshot` is built from, reusing mesh and texture caches so
- * unchanged assets keep their identity across conversions. Geometry, materials and textures belong to the asset, not the
- * instance: many instances share one of each. No editor scene types (`ScenePreview`, `AssetPlacement`, `LightSet`) appear
- * in this API: instances are placed by id and world matrix. A model is drawn in bind pose unless [model] is given a
- * [RayModelPose] and [reset] a deformation, which the editor passes for animated and skinned models. It lives in
- * `lib-core-editor`, so a shipped game cannot use it.
+ * unchanged assets keep their identity across conversions. Geometry, materials and textures belong to the asset, not
+ * the instance: many instances share one of each. No editor scene types (`ScenePreview`, `AssetPlacement`, `LightSet`)
+ * appear in this API: instances are placed by id and world matrix. A model is drawn in bind pose unless [model] is
+ * given a [RayModelPose] and [reset] a deformation, which the editor passes for animated and skinned models. It lives
+ * in `lib-core-editor`, so a shipped game cannot use it.
  */
 class RaySceneConverter(private val defaultLimits: RaySnapshotLimits = RaySnapshotLimits()) {
     /** Meshes built so far, keyed by mesh id; unchanged assets return the same `RayMesh` instance. */
@@ -53,6 +53,7 @@ class RaySceneConverter(private val defaultLimits: RaySnapshotLimits = RaySnapsh
     private val textureCache = HashMap<String, Pair<RayModelImage, RayTexture>>()
     private val assetIds = java.util.WeakHashMap<Any, Int>()
     private var nextAssetId = 0
+
     private fun assetKey(asset: Any) = "a${assetIds.getOrPut(asset) { nextAssetId++ }}"
 
     /**
@@ -66,9 +67,15 @@ class RaySceneConverter(private val defaultLimits: RaySnapshotLimits = RaySnapsh
         limits: RaySnapshotLimits = defaultLimits,
         deform: ((RayModelMesh, List<FloatArray>) -> FloatArray)? = null,
     ) {
-        meshes.clear(); materials.clear(); textures.clear(); instances.clear(); topology.clear(); transforms.clear()
+        meshes.clear()
+        materials.clear()
+        textures.clear()
+        instances.clear()
+        topology.clear()
+        transforms.clear()
         textures.addAll(environmentTextures)
-        geometry.clear(); materialIds.clear()
+        geometry.clear()
+        materialIds.clear()
         bytes = environmentTextures.sumOf { it.width.toLong() * it.height * 16 }
         triangles = 0L
         this.limits = limits
@@ -76,9 +83,9 @@ class RaySceneConverter(private val defaultLimits: RaySnapshotLimits = RaySnapsh
     }
 
     /**
-     * Converts one placed model (mesh parts → meshes/instances, materials → materials, images → textures) and returns the
-     * number of instances it added. [instanceId] prefixes the instance ids and [world] places the model. With a [pose],
-     * the pose's node transforms replace the bind pose and a skinned part is deformed for this instance alone.
+     * Converts one placed model (mesh parts → meshes/instances, materials → materials, images → textures) and returns
+     * the number of instances it added. [instanceId] prefixes the instance ids and [world] places the model. With a
+     * [pose], the pose's node transforms replace the bind pose and a skinned part is deformed for this instance alone.
      */
     fun model(instanceId: String, world: Matrix4, asset: RayModelSnapshot, pose: RayModelPose? = null): Int {
         val firstInstance = instances.size
@@ -102,26 +109,50 @@ class RaySceneConverter(private val defaultLimits: RaySnapshotLimits = RaySnapsh
                     "Skinned model requires the displayed animation pose and deformation"
                 }
                 val source = asset.requireMeshOfPart(part.meshPartId)
-                val meshPart = requireNotNull(source.parts.firstOrNull { it.id == part.meshPartId }) {
-                    "Missing mesh part ${part.meshPartId}"
-                }
-                require(meshPart.primitiveType == GL20.GL_TRIANGLES) { "Only triangle mesh parts are supported" }
-                val key = "$shared:${part.meshPartId}" + if (skin != null) ":$instanceId:$path/$ordinal" else ""
-                val meshIndex = geometry.getOrPut(key) {
-                    fun build(): CachedMesh {
-                        val values = if (skin != null) requireNotNull(deform)(source, skin) else source.vertices()
-                        return rayMeshOf(source, values, meshPart.indices(), key)
+                val meshPart =
+                    requireNotNull(source.parts.firstOrNull { it.id == part.meshPartId }) {
+                        "Missing mesh part ${part.meshPartId}"
                     }
-                    // skinned geometry depends on the instance's pose; static geometry is converted once per asset
-                    val built = if (skin != null) build() else cache.getOrPut("mesh:$key") { build() } as CachedMesh
-                    bytes += built.bytes
-                    triangles += built.mesh.indexCount / 3
-                    meshes.add(built.mesh)
-                    meshes.lastIndex
-                }
+                require(meshPart.primitiveType == GL20.GL_TRIANGLES) { "Only triangle mesh parts are supported" }
+                val key =
+                    "$shared:${part.meshPartId}" +
+                        if (skin != null) {
+                            ":$instanceId:$path/$ordinal"
+                        } else {
+                            ""
+                        }
+                val meshIndex =
+                    geometry.getOrPut(key) {
+                        fun build(): CachedMesh {
+                            val values =
+                                if (skin != null) {
+                                    requireNotNull(deform)(source, skin)
+                                } else {
+                                    source.vertices()
+                                }
+                            return rayMeshOf(source, values, meshPart.indices(), key)
+                        }
+                        // skinned geometry depends on the instance's pose; static geometry is converted once per asset
+                        val built =
+                            if (skin != null) {
+                                build()
+                            } else {
+                                cache.getOrPut("mesh:$key") { build() } as CachedMesh
+                            }
+                        bytes += built.bytes
+                        triangles += built.mesh.indexCount / 3
+                        meshes.add(built.mesh)
+                        meshes.lastIndex
+                    }
                 val id = "$instanceId/$path/$ordinal"
-                // a skinned instance is placed by the model's world alone: its deformed vertices already hold the node transforms
-                val placed = if (skin != null) Matrix4(world) else Matrix4(world).mul(global)
+                // a skinned instance is placed by the model's world alone: its deformed vertices already hold the node
+                // transforms
+                val placed =
+                    if (skin != null) {
+                        Matrix4(world)
+                    } else {
+                        Matrix4(world).mul(global)
+                    }
                 instance(id, meshIndex, material(part.materialId), placed)
                 topology += "$id:$key:${part.materialId}"
             }
@@ -135,50 +166,71 @@ class RaySceneConverter(private val defaultLimits: RaySnapshotLimits = RaySnapsh
     fun terrain(instanceId: String, world: Matrix4, asset: RayTerrainSnapshot) {
         val key = "terrain:${assetKey(asset)}"
         val cache = caches.getOrPut(asset) { HashMap() }
-        val meshIndex = geometry.getOrPut(key) {
-            val built = cache.getOrPut("mesh:$key") { rayTerrainMeshOf(asset, key) } as CachedMesh
-            bytes += built.bytes
-            triangles += built.mesh.indexCount / 3
-            meshes.add(built.mesh)
-            meshes.lastIndex
-        }
-        val materialIndex = materialIds.getOrPut(key) {
-            val splat = asset.splatMap?.let { RayTextureBinding(texture("$key:splat", it.image, it.sampler)) }
-            val layers = SPLAT_LAYERS.map { name ->
-                asset.layers[name]?.let {
-                    RayTextureBinding(texture("$key:$name", it.image, it.sampler))
-                }
+        val meshIndex =
+            geometry.getOrPut(key) {
+                val built = cache.getOrPut("mesh:$key") { rayTerrainMeshOf(asset, key) } as CachedMesh
+                bytes += built.bytes
+                triangles += built.mesh.indexCount / 3
+                meshes.add(built.mesh)
+                meshes.lastIndex
             }
-            materials.add(
-                RayMaterial(
-                    kind = RayMaterialKind.TERRAIN,
-                    terrain = RayTerrainMaterial(splat, layers, asset.size.toFloat())
+        val materialIndex =
+            materialIds.getOrPut(key) {
+                val splat = asset.splatMap?.let { RayTextureBinding(texture("$key:splat", it.image, it.sampler)) }
+                val layers = SPLAT_LAYERS.map { name ->
+                    asset.layers[name]?.let {
+                        RayTextureBinding(texture("$key:$name", it.image, it.sampler))
+                    }
+                }
+                materials.add(
+                    RayMaterial(
+                        kind = RayMaterialKind.TERRAIN,
+                        terrain = RayTerrainMaterial(splat, layers, asset.size.toFloat()),
+                    )
                 )
-            )
-            materials.lastIndex
-        }
+                materials.lastIndex
+            }
         instance(instanceId, meshIndex, materialIndex, world)
         topology += "$instanceId:$key"
     }
 
     /** Says which bound was exceeded and by how much. */
     fun checkBounds() {
-        if (instances.size > limits.maxInstances) throw RaySceneLimitException("The scene needs ${instances.size} model parts and terrain; the limit is ${limits.maxInstances}")
-        if (triangles > limits.maxTriangles) throw RaySceneLimitException("The scene has $triangles triangles; the limit is ${limits.maxTriangles}")
-        if (bytes > limits.maxBytes) throw RaySceneLimitException("The scene needs ${bytes / (1024 * 1024)} MB of geometry and textures; the limit is ${limits.maxBytes / (1024 * 1024)} MB")
+        if (instances.size > limits.maxInstances) {
+            throw RaySceneLimitException(
+                "The scene needs ${instances.size} model parts and terrain; the limit is ${limits.maxInstances}"
+            )
+        }
+        if (triangles > limits.maxTriangles) {
+            throw RaySceneLimitException("The scene has $triangles triangles; the limit is ${limits.maxTriangles}")
+        }
+        if (bytes > limits.maxBytes) {
+            throw RaySceneLimitException(
+                "The scene needs ${bytes / (1024 * 1024)} MB of geometry and textures; the limit is " +
+                    "${limits.maxBytes / (1024 * 1024)} MB"
+            )
+        }
     }
 
     private fun texture(id: String, image: RayModelImage, sampler: RayTextureSampler): Int {
         val existing = textures.indexOfFirst { it.id == id }
-        if (existing >= 0) return existing
+        if (existing >= 0) {
+            return existing
+        }
         bytes += image.byteSize
         checkBounds()
         val cached = textureCache[id]?.takeIf { it.first === image }?.second
         textures.add(
-            cached ?: RayTexture(
-                id, image.width, image.height, image.rgba(),
-                sampler.wrapU.toRayWrap(), sampler.wrapV.toRayWrap()
-            ).also { textureCache[id] = image to it }
+            cached
+                ?: RayTexture(
+                        id,
+                        image.width,
+                        image.height,
+                        image.rgba(),
+                        sampler.wrapU.toRayWrap(),
+                        sampler.wrapV.toRayWrap(),
+                    )
+                    .also { textureCache[id] = image to it }
         )
         return textures.lastIndex
     }
@@ -188,5 +240,4 @@ class RaySceneConverter(private val defaultLimits: RaySnapshotLimits = RaySnapsh
         transforms[id] = matrix.`val`.toList()
         checkBounds()
     }
-
 }

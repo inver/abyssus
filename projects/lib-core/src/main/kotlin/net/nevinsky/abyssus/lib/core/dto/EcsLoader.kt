@@ -13,10 +13,13 @@ import net.nevinsky.abyssus.lib.core.dto.EntityDto
 import net.nevinsky.abyssus.lib.core.ecs.component.*
 
 /**
- * Puts the typed entities of a scene's `ecs` block into a [SceneEngine]. The components were already bound when the scene
- * was read (see [EntityDtoModule]), header included, so the entities go into the engine as they are; a [RawComponent] is not added to the entity but carried (see [EcsLoadingWarns.carried])
+  * Puts the typed entities of a scene's `ecs` block into a [SceneEngine]. The components were already bound when the
+  * scene
+  * was read (see [EntityDtoModule]), header included, so the entities go into the engine as they are; a [RawComponent]
+  * is not added to the entity but carried (see [EcsLoadingWarns.carried])
  * with one warning, so a scene can be written back unchanged. The `flags` of an entity set whether it is enabled
- * ([ENTITY_DISABLED_FLAG]) in its [HeaderComponent], which also holds the entity id and type; its other bits are kept in [HeaderComponent.flags]. References to ids that are not in the
+  * ([ENTITY_DISABLED_FLAG]) in its [HeaderComponent], which also holds the entity id and type; its other bits are kept
+  * in [HeaderComponent.flags]. References to ids that are not in the
  * file become [NO_ENTITY].
  *
  * The Mundus-era `archetype` of an entity and the `archetypes` table are not part of the format.

@@ -1,14 +1,17 @@
 package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 
 import com.badlogic.gdx.math.Vector3
+import kotlin.math.sqrt
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.AtmosphereParams
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.SkyAmbientEstimate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.sqrt
 
-/** [net.nevinsky.abyssus.lib.core.assets.sky.procedural.SkyAmbientEstimate], the CPU twin of the fixture sky's scattering (formerly the test-side `AtmosphereModel`). */
+/**
+ * [net.nevinsky.abyssus.lib.core.assets.sky.procedural.SkyAmbientEstimate], the CPU twin of the fixture sky's
+ * scattering (formerly the test-side `AtmosphereModel`).
+ */
 class AtmosphereModelTest {
     private val earth = AtmosphereParams()
     private val model = SkyAmbientEstimate(earth)
@@ -34,7 +37,10 @@ class AtmosphereModelTest {
         val view = unit(0f, 0.05f, 1f)
         val low = model.radiance(view, sunsetSun)
         val high = model.radiance(view, noon)
-        assertTrue("red/blue at sunset ${low[0] / low[2]} vs noon ${high[0] / high[2]}", low[0] / low[2] > high[0] / high[2])
+        assertTrue(
+            "red/blue at sunset ${low[0] / low[2]} vs noon ${high[0] / high[2]}",
+            low[0] / low[2] > high[0] / high[2],
+        )
         assertTrue(low[0] > low[2] * 0.9)
     }
 
@@ -44,7 +50,12 @@ class AtmosphereModelTest {
             for (yaw in 0 until 12) for (pitch in -5..5) {
                 val a = yaw * Math.PI / 6
                 val e = pitch * 0.3
-                val v = unit((Math.cos(e) * Math.sin(a)).toFloat(), Math.sin(e).toFloat(), (Math.cos(e) * Math.cos(a)).toFloat())
+                val v =
+                    unit(
+                        (Math.cos(e) * Math.sin(a)).toFloat(),
+                        Math.sin(e).toFloat(),
+                        (Math.cos(e) * Math.cos(a)).toFloat(),
+                    )
                 val c = model.radiance(v, sun)
                 c.forEach { assertTrue("$c at $v", it.isFinite() && it >= 0.0) }
             }
@@ -56,7 +67,10 @@ class AtmosphereModelTest {
         val down = model.radiance(Vector3(0f, -1f, 0f), noon)
         val horizon = model.radiance(unit(0f, 0.05f, 1f), noon)
         assertTrue(luminance(down) > 0.0)
-        assertTrue("ground ${luminance(down)} must be dimmer than the horizon sky ${luminance(horizon)}", luminance(down) < luminance(horizon))
+        assertTrue(
+            "ground ${luminance(down)} must be dimmer than the horizon sky ${luminance(horizon)}",
+            luminance(down) < luminance(horizon),
+        )
         val night = model.radiance(Vector3(0f, -1f, 0f), unit(0f, -0.5f, 1f))
         assertEquals(0.0, luminance(night), 1e-9)
     }
@@ -64,8 +78,10 @@ class AtmosphereModelTest {
     @Test
     fun ambientZenithIsBluerThanTheHorizonAtNoon() {
         val ambient = model.ambient(noon)
-        assertTrue("zenith ${ambient.zenith.toList()} horizon ${ambient.horizon.toList()}",
-            ambient.zenith[2] / ambient.zenith[0] > ambient.horizon[2] / ambient.horizon[0])
+        assertTrue(
+            "zenith ${ambient.zenith.toList()} horizon ${ambient.horizon.toList()}",
+            ambient.zenith[2] / ambient.zenith[0] > ambient.horizon[2] / ambient.horizon[0],
+        )
     }
 
     @Test
@@ -76,7 +92,10 @@ class AtmosphereModelTest {
         val noonSun = noonAmbient.sunlight[0] / noonAmbient.sunlight[2]
         val evening = model.ambient(sunset)
         assertTrue(evening.horizon[0] / evening.horizon[2] > noonHorizon)
-        assertTrue("sunset light ${evening.sunlight.toList()} must be redder than noon's", evening.sunlight[0] / evening.sunlight[2] > noonSun)
+        assertTrue(
+            "sunset light ${evening.sunlight.toList()} must be redder than noon's",
+            evening.sunlight[0] / evening.sunlight[2] > noonSun,
+        )
         assertTrue("red dominates the low sun", evening.sunlight[0] > evening.sunlight[2] * 1.5f)
     }
 

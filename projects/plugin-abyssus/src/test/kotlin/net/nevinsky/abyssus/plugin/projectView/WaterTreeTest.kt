@@ -33,7 +33,8 @@ class WaterTreeTest : BasePlatformTestCase() {
     }
 
     private fun children(node: AbstractTreeNode<*>) = node.children.map { it as AbstractTreeNode<*> }
-    private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+    private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as
+        AbyssusAssetNode).virtualFile.name
 
     private fun sceneRow(): AbstractTreeNode<*> {
         val projectRow = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
@@ -94,7 +95,8 @@ class WaterTreeTest : BasePlatformTestCase() {
     fun testInvalidSurfaceIsARemovableRowWithoutAnEye() {
         val document = FileDocumentManager.getInstance().getDocument(scene)!!
         com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) {
-            val root = net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(document.text) as com.fasterxml.jackson.databind.node.ObjectNode
+            val root = net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parse(document.text) as
+                com.fasterxml.jackson.databind.node.ObjectNode
             root.putObject("abyssus").putObject("waterSurfaces").putObject("bad").put("preset", "LAKE").put("width", -1)
             document.setText(net.nevinsky.abyssus.lib.core.editor.document.SceneJson().pretty(root))
             FileDocumentManager.getInstance().saveDocument(document)

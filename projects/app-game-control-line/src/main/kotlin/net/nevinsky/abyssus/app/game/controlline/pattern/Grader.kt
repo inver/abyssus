@@ -4,8 +4,6 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
-import net.nevinsky.abyssus.lib.core.util.wrapDegrees
-
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector3
 import kotlin.math.abs
@@ -13,6 +11,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
+import net.nevinsky.abyssus.lib.core.util.wrapDegrees
 
 /** What a deduction is for. */
 enum class Criterion(val label: String, val unit: String) {
@@ -32,11 +31,12 @@ enum class Criterion(val label: String, val unit: String) {
 data class Deduction(val criterion: Criterion, val measured: Float, val amount: Float)
 
 /**
- * A graded manoeuvre: the mark in [tenths] (10 to 100, so 85 is 8.5), what was deducted, and the ideal and flown tracks as
- * directions on the hemisphere, kept for the debrief.
+ * A graded manoeuvre: the mark in [tenths] (10 to 100, so 85 is 8.5), what was deducted, and the ideal and flown tracks
+ * as directions on the hemisphere, kept for the debrief.
  */
 class Graded(val tenths: Int, val deductions: List<Deduction>, val ideal: List<Vector3>, val flown: List<Vector3>) {
-    val mark: Float get() = tenths / 10f
+    val mark: Float
+        get() = tenths / 10f
 }
 
 /** The shortest take-off roll (m). */
@@ -46,10 +46,10 @@ const val MIN_ROLL = 4.5f
 private const val BASE = BASE_HEIGHT
 
 /**
- * Marks a recognised manoeuvre from its flown path (design decision 5). The flown points are matched to the ideal track by
- * progress, each to the nearest ideal point within ±15% of its own, so that a repeat cannot snap onto another repeat.
- * Every criterion is `min(cap, perUnit × max(0, measured − tolerance))`, non-decreasing in the error; the mark is
- * `clamp(10 − Σ deductions, 1, 10)` in tenths.
+ * Marks a recognised manoeuvre from its flown path (design decision 5). The flown points are matched to the ideal track
+ * by progress, each to the nearest ideal point within ±15% of its own, so that a repeat cannot snap onto another
+ * repeat. Every criterion is `min(cap, perUnit × max(0, measured − tolerance))`, non-decreasing in the error; the mark
+ * is `clamp(10 − Σ deductions, 1, 10)` in tenths.
  */
 class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()) {
     private val tracks = IdealTracks(radius)
@@ -57,27 +57,28 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
     private val sampler = IdealSampler(radius)
 
     /** The ideal track of a recognised manoeuvre, placed at its anchor and without its lead-in and lead-out. */
-    fun idealFor(figure: Figure, anchor: Float): IdealTrack = when (figure) {
-        Figure.TAKEOFF -> tracks.takeoff(anchor)
-        Figure.REVERSE_WINGOVER -> tracks.reverseWingover(anchor)
-        Figure.INSIDE_LOOPS -> tracks.loops(anchor, 3)
-        Figure.INVERTED_LAPS -> tracks.invertedLaps(anchor, 2)
-        Figure.OUTSIDE_LOOPS -> tracks.loops(anchor, 3, inverted = true)
-        Figure.INSIDE_SQUARES -> tracks.squares(anchor, 2)
-        Figure.OUTSIDE_SQUARES -> tracks.squares(anchor, 2, inverted = true)
-        Figure.INSIDE_TRIANGLES -> tracks.triangles(anchor, 2)
-        Figure.HORIZONTAL_EIGHTS -> tracks.horizontalEights(anchor, 2)
-        Figure.SQUARE_EIGHTS -> tracks.squareEights(anchor, 2)
-        Figure.VERTICAL_EIGHTS -> tracks.verticalEights(anchor, 2)
-        Figure.HOURGLASS -> tracks.hourglass(anchor)
-        Figure.OVERHEAD_EIGHTS -> tracks.overheadEights(anchor, 2)
-        Figure.CLOVER -> tracks.clover(anchor)
-        Figure.LANDING -> tracks.landing(anchor)
-    }.judged()
+    fun idealFor(figure: Figure, anchor: Float): IdealTrack =
+        when (figure) {
+            Figure.TAKEOFF -> tracks.takeoff(anchor)
+            Figure.REVERSE_WINGOVER -> tracks.reverseWingover(anchor)
+            Figure.INSIDE_LOOPS -> tracks.loops(anchor, 3)
+            Figure.INVERTED_LAPS -> tracks.invertedLaps(anchor, 2)
+            Figure.OUTSIDE_LOOPS -> tracks.loops(anchor, 3, inverted = true)
+            Figure.INSIDE_SQUARES -> tracks.squares(anchor, 2)
+            Figure.OUTSIDE_SQUARES -> tracks.squares(anchor, 2, inverted = true)
+            Figure.INSIDE_TRIANGLES -> tracks.triangles(anchor, 2)
+            Figure.HORIZONTAL_EIGHTS -> tracks.horizontalEights(anchor, 2)
+            Figure.SQUARE_EIGHTS -> tracks.squareEights(anchor, 2)
+            Figure.VERTICAL_EIGHTS -> tracks.verticalEights(anchor, 2)
+            Figure.HOURGLASS -> tracks.hourglass(anchor)
+            Figure.OVERHEAD_EIGHTS -> tracks.overheadEights(anchor, 2)
+            Figure.CLOVER -> tracks.clover(anchor)
+            Figure.LANDING -> tracks.landing(anchor)
+        }.judged()
 
     /**
-     * Marks the manoeuvre [recognition] found in [points] (the whole flight's resampled points); [tokens] are the tokens
-     * of the burst it was found in.
+     * Marks the manoeuvre [recognition] found in [points] (the whole flight's resampled points); [tokens] are the
+     * tokens of the burst it was found in.
      */
     fun grade(recognition: Recognition, points: List<PathPoint>, tokens: List<Token>): Graded {
         val ideal = idealFor(recognition.figure, recognition.anchor)
@@ -87,10 +88,17 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
     }
 
     private fun gradeSegment(
-        figure: Figure, ideal: IdealTrack, segment: List<PathPoint>, tokens: List<Token>, all: List<PathPoint>, extra: List<Deduction> = emptyList(),
+        figure: Figure,
+        ideal: IdealTrack,
+        segment: List<PathPoint>,
+        tokens: List<Token>,
+        all: List<PathPoint>,
+        extra: List<Deduction> = emptyList(),
     ): Graded {
         val deductions = ArrayList<Deduction>(extra)
-        if (segment.size < 3) return finish(deductions + Deduction(Criterion.TRACK_DEVIATION, 99f, 99f), ideal, segment)
+        if (segment.size < 3) {
+            return finish(deductions + Deduction(Criterion.TRACK_DEVIATION, 99f, 99f), ideal, segment)
+        }
         val match = align(segment, ideal)
         deductions += deviation(segment, ideal, match)
         deductions += baseHeight(segment, ideal, match)
@@ -98,7 +106,9 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
         deductions += lines(figure, tokens)
         deductions += corners(tokens)
         deductions += lengths(figure, tokens, all)
-        if (ideal.repeats > 1 && ideal.superimposed) deductions += superimposition(segment, ideal, match)
+        if (ideal.repeats > 1 && ideal.superimposed) {
+            deductions += superimposition(segment, ideal, match)
+        }
         ideal.crossing?.let { deductions += crossing(segment, ideal, match, it) }
         return finish(deductions, ideal, segment)
     }
@@ -110,17 +120,27 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
     }
 
     /**
-     * For each flown point the index of the ideal point it is matched to: the nearest one ahead of the point before it, so
-     * a figure that crosses itself or repeats does not match a point of another pass. The first point is matched within the
-     * first [WINDOW] of the track.
+     * For each flown point the index of the ideal point it is matched to: the nearest one ahead of the point before it,
+     * so a figure that crosses itself or repeats does not match a point of another pass. The first point is matched
+     * within the first [WINDOW] of the track.
      */
     internal fun align(segment: List<PathPoint>, ideal: IdealTrack): IntArray {
         val pts = ideal.points
         val match = IntArray(segment.size)
         var previous = 0
         for (k in segment.indices) {
-            val from = if (k == 0) 0 else max(0, previous - BACK)
-            val to = if (k == 0) max(1, (pts.size * WINDOW).toInt()) else min(pts.size - 1, previous + AHEAD)
+            val from =
+                if (k == 0) {
+                    0
+                } else {
+                    max(0, previous - BACK)
+                }
+            val to =
+                if (k == 0) {
+                    max(1, (pts.size * WINDOW).toInt())
+                } else {
+                    min(pts.size - 1, previous + AHEAD)
+                }
             var best = from
             var bestDot = -2f
             for (i in from..to) {
@@ -152,12 +172,19 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
         var worst = 0f
         val lowest = FloatArray(ideal.repeats) { Float.MAX_VALUE }
         for (k in segment.indices) {
-            if (!segment[k].airborne) continue
+            if (!segment[k].airborne) {
+                continue
+            }
             val point = ideal.points[match[k]]
-            if (point.tag == Tag.BASE) worst = max(worst, abs(segment[k].height - BASE))
-            else if (geometry.latitude(point.u) <= BOTTOM_BAND) lowest[point.repeat] = min(lowest[point.repeat], segment[k].height)
+            if (point.tag == Tag.BASE) {
+                worst = max(worst, abs(segment[k].height - BASE))
+            } else if (geometry.latitude(point.u) <= BOTTOM_BAND) {
+                lowest[point.repeat] = min(lowest[point.repeat], segment[k].height)
+            }
         }
-        for (h in lowest) if (h != Float.MAX_VALUE) worst = max(worst, abs(h - BASE))
+        for (h in lowest) if (h != Float.MAX_VALUE) {
+            worst = max(worst, abs(h - BASE))
+        }
         return Deduction(Criterion.BASE_HEIGHT, worst, weights.baseHeight.deduct(worst))
     }
 
@@ -165,14 +192,18 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
         var worst = 0f
         for (r in 0 until ideal.repeats) {
             val top = ideal.repeat(r).maxOf { geometry.latitude(it.u) }
-            if (top < 40f || top > 47f) continue
+            if (top < 40f || top > 47f) {
+                continue
+            }
             var flownTop = -90f
             var seen = false
             for (k in segment.indices) if (ideal.points[match[k]].repeat == r) {
                 flownTop = max(flownTop, geometry.latitude(segment[k].u))
                 seen = true
             }
-            if (seen) worst = max(worst, abs(flownTop - top) * MathUtils.degreesToRadians * radius)
+            if (seen) {
+                worst = max(worst, abs(flownTop - top) * MathUtils.degreesToRadians * radius)
+            }
         }
         return Deduction(Criterion.PARALLEL_45, worst, weights.parallel45.deduct(worst))
     }
@@ -180,11 +211,12 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
     private fun lines(figure: Figure, tokens: List<Token>): Deduction {
         var worst = 0f
         for (t in tokens) if (t is Straight && t.length > 3f) {
-            val expected = when {
-                figure == Figure.INSIDE_TRIANGLES -> 30f
-                t.offVertical < VERTICAL_TOLERANCE -> 0f
-                else -> continue
-            }
+            val expected =
+                when {
+                    figure == Figure.INSIDE_TRIANGLES -> 30f
+                    t.offVertical < VERTICAL_TOLERANCE -> 0f
+                    else -> continue
+                }
             worst = max(worst, abs(t.offVertical - expected))
         }
         return Deduction(Criterion.LINE_ANGLE, worst, weights.lineAngle.deduct(worst))
@@ -192,7 +224,12 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
 
     private fun corners(tokens: List<Token>): Deduction {
         val radii = tokens.filterIsInstance<Corner>().map { it.radius }
-        val mean = if (radii.isEmpty()) 0f else radii.average().toFloat()
+        val mean =
+            if (radii.isEmpty()) {
+                0f
+            } else {
+                radii.average().toFloat()
+            }
         return Deduction(Criterion.CORNER_RADIUS, mean, weights.cornerRadius.deduct(mean))
     }
 
@@ -201,7 +238,8 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
         var worst = 0f
         val all = tokens.filterIsInstance<Straight>().filter { it.length > 3f }
         when (figure) {
-            Figure.INSIDE_SQUARES, Figure.OUTSIDE_SQUARES -> {
+            Figure.INSIDE_SQUARES,
+            Figure.OUTSIDE_SQUARES -> {
                 val verticals = all.filter { it.offVertical < VERTICAL_TOLERANCE }
                 for (pair in verticals.chunked(2)) if (pair.size == 2) {
                     val a = azimuthOf(pair[0], segment)
@@ -213,7 +251,9 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
                 for (pair in all.chunked(2)) if (pair.size == 2) {
                     val a = equatorAzimuth(pair[0], segment)
                     val b = equatorAzimuth(pair[1], segment)
-                    if (a != null && b != null) worst = max(worst, abs(abs(wrapDegrees(a - b)) - TRIANGLE_BASE) / 360f)
+                    if (a != null && b != null) {
+                        worst = max(worst, abs(abs(wrapDegrees(a - b)) - TRIANGLE_BASE) / 360f)
+                    }
                 }
             }
             else -> {}
@@ -227,21 +267,29 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
     }
 
     /** Where the great circle of [straight] crosses the base, as an azimuth (degrees), or null. */
-    fun equatorAzimuth(straight: Straight, points: List<PathPoint>): Float? = geometry.equatorCrossing(points[straight.from].u, points[straight.to].u)
+    fun equatorAzimuth(straight: Straight, points: List<PathPoint>): Float? =
+        geometry.equatorCrossing(points[straight.from].u, points[straight.to].u)
 
     private fun superimposition(segment: List<PathPoint>, ideal: IdealTrack, match: IntArray): Deduction {
         val first = ArrayList<Vector3>()
         val rest = ArrayList<Pair<Int, Vector3>>()
         for (k in segment.indices) {
             val r = ideal.points[match[k]].repeat
-            if (r == 0) first += segment[k].u else rest += r to segment[k].u
+            if (r == 0) {
+                first += segment[k].u
+            } else {
+                rest += r to segment[k].u
+            }
         }
-        // each later repeat's points against the first repeat's path: the nearest point, and a half step more for the gaps
+        // each later repeat's points against the first repeat's path: the nearest point, and a half step more for the
+        // gaps
         var worst = 0f
-        if (first.size >= 2) for ((_, u) in rest) {
-            var best = Float.MAX_VALUE
-            for (i in 0 until first.size - 1) best = min(best, distanceToSegment(u, first[i], first[i + 1]))
-            worst = max(worst, best * radius - STEP_LENGTH / 2f)
+        if (first.size >= 2) {
+            for ((_, u) in rest) {
+                var best = Float.MAX_VALUE
+                for (i in 0 until first.size - 1) best = min(best, distanceToSegment(u, first[i], first[i + 1]))
+                worst = max(worst, best * radius - STEP_LENGTH / 2f)
+            }
         }
         return Deduction(Criterion.SUPERIMPOSITION, worst, weights.superimposition.deduct(worst))
     }
@@ -250,7 +298,12 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
     private fun distanceToSegment(p: Vector3, a: Vector3, b: Vector3): Float {
         val ab = Vector3(b).sub(a)
         val len2 = ab.len2()
-        val t = if (len2 > 0f) (Vector3(p).sub(a).dot(ab) / len2).coerceIn(0f, 1f) else 0f
+        val t =
+            if (len2 > 0f) {
+                (Vector3(p).sub(a).dot(ab) / len2).coerceIn(0f, 1f)
+            } else {
+                0f
+            }
         return Vector3(a).mulAdd(ab, t).dst(p)
     }
 
@@ -261,15 +314,21 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
         for (k in segment.indices) {
             val near = geometry.angle(ideal.points[match[k]].u, x) < CROSSING_BAND
             if (near) {
-                val c = current ?: Vector3().also {
-                    current = it
-                    cut = k == 0
-                }
+                val c =
+                    current
+                        ?: Vector3().also {
+                            current = it
+                            cut = k == 0
+                        }
                 // the flown point of the pass nearest the ideal crossing
-                if (c.isZero || geometry.angle(segment[k].u, x) < geometry.angle(c, x)) c.set(segment[k].u)
+                if (c.isZero || geometry.angle(segment[k].u, x) < geometry.angle(c, x)) {
+                    c.set(segment[k].u)
+                }
             } else if (current != null) {
                 // a pass cut off by the start of the judged stretch is not whole
-                if (!cut) passes += requireNotNull(current)
+                if (!cut) {
+                    passes += requireNotNull(current)
+                }
                 current = null
             }
         }
@@ -295,15 +354,17 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
         deductions += Deduction(Criterion.TAKEOFF_ROLL, outside, weights.takeoffRoll.deduct(outside))
         deductions += deviation(segment, ideal, match)
         var worst = 0f
-        for (k in segment.indices) if (ideal.points[match[k]].tag == Tag.BASE) worst = max(worst, abs(segment[k].height - BASE))
+        for (k in segment.indices) if (ideal.points[match[k]].tag == Tag.BASE) {
+            worst = max(worst, abs(segment[k].height - BASE))
+        }
         deductions += Deduction(Criterion.BASE_HEIGHT, worst, weights.baseHeight.deduct(worst))
         return finish(deductions, ideal, segment)
     }
 
     /**
-     * Marks the landing in [points], from the place the plane left the base (index [from]) to touchdown ([to]): the glide,
-     * which should take 1 lap to bring the plane down from the base (measured from its height at [from]), and the vertical
-     * speed at touchdown (m/s), [sink].
+     * Marks the landing in [points], from the place the plane left the base (index [from]) to touchdown ([to]): the
+     * glide, which should take 1 lap to bring the plane down from the base (measured from its height at [from]), and
+     * the vertical speed at touchdown (m/s), [sink].
      */
     fun gradeLanding(points: List<PathPoint>, from: Int, to: Int, sink: Float): Graded {
         val segment = points.subList(from, to + 1)
@@ -311,7 +372,8 @@ class Grader(private val radius: Float, val weights: MarkWeights = MarkWeights()
         val deductions = ArrayList<Deduction>()
         val match = align(segment, ideal)
         deductions += deviation(segment, ideal, match)
-        val laps = abs(segment.last().azimuth - segment.first().azimuth) / 360f * (BASE / max(segment.first().height, 0.5f))
+        val laps =
+            abs(segment.last().azimuth - segment.first().azimuth) / 360f * (BASE / max(segment.first().height, 0.5f))
         deductions += Deduction(Criterion.SEGMENT_LENGTH, abs(laps - 1f), weights.segmentLength.deduct(abs(laps - 1f)))
         deductions += Deduction(Criterion.TOUCHDOWN, sink, weights.touchdown.deduct(sink))
         return finish(deductions, ideal, segment)

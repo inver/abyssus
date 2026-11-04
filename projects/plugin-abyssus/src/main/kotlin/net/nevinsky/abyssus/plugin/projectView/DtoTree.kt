@@ -29,7 +29,10 @@ data class DtoRow(
     val value: Any?,
     val enabled: Boolean? = null,
     val toggleName: String? = null,
-    /** JSON keys the view skips between the parent and this row (`entities` above an entity), so paths and writes still name the real location. */
+    /**
+     * JSON keys the view skips between the parent and this row (`entities` above an entity), so paths and writes still
+     * name the real location.
+     */
     val via: List<String> = emptyList(),
 )
 
@@ -69,10 +72,16 @@ fun childrenOf(value: Any?): List<DtoRow> = when {
     else -> beanProperties(value!!)
 }
 
-/** A scene's own properties, with the `ecs` row standing for its entities. The `abyssus` extension block is not listed. */
+/**
+ * A scene's own properties, with the `ecs` row standing for its entities. The `abyssus` extension block is not listed.
+ */
 private fun sceneRows(scene: SceneDto): List<DtoRow> =
     beanProperties(scene).filter { it.name != "water" && it.name != "abyssus" }
-        .map { if (it.name == "ecs") it.copy(value = EcsNode(scene)) else it }
+        .map { if (it.name == "ecs") {
+            it.copy(value = EcsNode(scene))
+        } else {
+            it
+        } }
 
 /**
  * The properties of a bean in declaration order: the constructor parameters of a Kotlin class (skipping `@JsonIgnore`d
@@ -85,7 +94,9 @@ private fun beanProperties(bean: Any): List<DtoRow> {
         val properties = kotlin.memberProperties.associateBy { it.name }
         return constructor.parameters.mapNotNull { parameter ->
             val property = properties[parameter.name] ?: return@mapNotNull null
-            if (property.hasAnnotation<JsonIgnore>() || property.getter.hasAnnotation<JsonIgnore>()) return@mapNotNull null
+            if (property.hasAnnotation<JsonIgnore>() || property.getter.hasAnnotation<JsonIgnore>()) {
+                return@mapNotNull null
+            }
             property.isAccessible = true
             DtoRow(property.name, property.getter.call(bean))
         }
@@ -103,7 +114,9 @@ fun List<DtoRow>.foldToggles(): List<DtoRow> {
     val consumed = mutableSetOf<String>()
     for (toggle in this) {
         val on = toggle.value as? Boolean ?: continue
-        if (!toggle.name.endsWith("Enabled")) continue
+        if (!toggle.name.endsWith("Enabled")) {
+            continue
+        }
         val base = toggle.name.removeSuffix("Enabled")
         val target = firstOrNull { it.name == base } ?: firstOrNull { it.name == base + "Name" } ?: continue
         folded[target.name] = on to toggle.name
@@ -122,10 +135,13 @@ fun List<DtoRow>.foldToggles(): List<DtoRow> {
 /** `Main Scene (6275127)`: the scene name followed by its id; the index stands in for a missing name. */
 fun sceneLabel(scene: SceneDto, index: Int): String {
     val name = scene.name?.takeIf { it.isNotBlank() } ?: AbyssusBundle.message("dtoListElementLabel", "scenes", index)
-    return scene.id?.let { "$name ($it)" } ?: name
+    return "$name (${scene.id})"
 }
 
-/** What a list element is called in the tree: a scene's label, an asset's folder, a failed scene's file, else `parent[i]`. */
+/**
+ * What a list element is called in the tree: a scene's label, an asset's folder, a failed scene's file, else
+ * `parent[i]`.
+ */
 fun elementLabel(parentName: String, element: Any?, index: Int): String = when (element) {
     is SceneEntry -> sceneLabel(element.scene, index)
     is SceneDto -> sceneLabel(element, index)
@@ -178,10 +194,14 @@ private fun entityText(node: EntityNode): RowText {
     val copies = arrangementCopyCount(entity)
     return RowText(
         entityName(node),
-        if (copies > 0) AbyssusBundle.message(
-            "treeComponentsCopies",
-            components,
-            copies
-        ) else AbyssusBundle.message("treeComponents", components),
+        if (copies > 0) {
+            AbyssusBundle.message(
+                "treeComponentsCopies",
+                components,
+                copies
+            )
+        } else {
+            AbyssusBundle.message("treeComponents", components)
+        },
     )
 }

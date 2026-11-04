@@ -37,14 +37,25 @@ data class ScaleMarks(val speed: Int, val level: Int, val landing: Int) {
 }
 
 /**
- * The marks of a flight that flew laps of [lapTimes] seconds at a mean absolute elevation of [meanElevation] degrees and
+  * The marks of a flight that flew laps of [lapTimes] seconds at a mean absolute elevation of [meanElevation] degrees
+  * and
  * [landed] or not. Fewer than [MIN_LAPS] laps score no speed or level mark.
  */
 fun scaleMarks(lapTimes: List<Float>, meanElevation: Float, landed: Boolean): ScaleMarks {
-    val landing = if (landed) LANDING_POINTS else 0
-    if (lapTimes.size < MIN_LAPS) return ScaleMarks(0, 0, landing)
+    val landing = if (landed) {
+        LANDING_POINTS
+    } else {
+        0
+    }
+    if (lapTimes.size < MIN_LAPS) {
+        return ScaleMarks(0, 0, landing)
+    }
     val mean = lapTimes.average().toFloat()
-    val spread = if (mean <= 0f) UNSTEADY_SPREAD else lapTimes.maxOf { abs(it - mean) } / mean
+    val spread = if (mean <= 0f) {
+        UNSTEADY_SPREAD
+    } else {
+        lapTimes.maxOf { abs(it - mean) } / mean
+    }
     return ScaleMarks(
         falling(spread, STEADY_SPREAD, UNSTEADY_SPREAD, SPEED_POINTS),
         falling(abs(meanElevation), LEVEL_ELEVATION, UNLEVEL_ELEVATION, LEVEL_POINTS),

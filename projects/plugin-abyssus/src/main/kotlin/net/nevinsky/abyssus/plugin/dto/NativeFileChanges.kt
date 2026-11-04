@@ -22,25 +22,47 @@ fun interface NativeChangeListener {
 @Service(Service.Level.PROJECT)
 class NativeFileChanges(private val project: Project) : Disposable {
     init {
-        project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
-            override fun after(events: List<VFileEvent>) {
-                val native = events.filter(::nativeCandidate)
-                if (native.isNotEmpty()) project.messageBus.syncPublisher(NATIVE).after(native)
-                project.messageBus.syncPublisher(RESOURCES).after(events)
-            }
-        })
+        project.messageBus
+            .connect(this)
+            .subscribe(
+                VirtualFileManager.VFS_CHANGES,
+                object : BulkFileListener {
+                    override fun after(events: List<VFileEvent>) {
+                        val native = events.filter(::nativeCandidate)
+                        if (native.isNotEmpty()) {
+                            project.messageBus.syncPublisher(NATIVE).after(native)
+                        }
+                        project.messageBus.syncPublisher(RESOURCES).after(events)
+                    }
+                },
+            )
     }
 
-    /** Resource consumers retain their own folder predicate; native consumers still apply their project/folder rules. */
+    /**
+     * Resource consumers retain their own folder predicate; native consumers still apply their project/folder rules.
+     */
     fun subscribe(parent: Disposable, nativeOnly: Boolean = true, after: (List<VFileEvent>) -> Unit) {
-        project.messageBus.connect(parent).subscribe(if (nativeOnly) NATIVE else RESOURCES, NativeChangeListener(after))
+        project.messageBus
+            .connect(parent)
+            .subscribe(
+                if (nativeOnly) {
+                    NATIVE
+                } else {
+                    RESOURCES
+                },
+                NativeChangeListener(after),
+            )
     }
 
     private fun nativeCandidate(event: VFileEvent): Boolean {
-        if (event.file == null || event.file?.isDirectory == true || isNativeDocumentPath(event.path)) return true
+        if (event.file == null || event.file?.isDirectory == true || isNativeDocumentPath(event.path)) {
+            return true
+        }
         if (event is VFilePropertyChangeEvent && event.propertyName == VirtualFile.PROP_NAME) {
             val parent = event.path.substringBeforeLast('/', "")
-            return listOf(event.oldValue, event.newValue).filterIsInstance<String>().any { isNativeDocumentPath("$parent/$it") }
+            return listOf(event.oldValue, event.newValue).filterIsInstance<String>().any {
+                isNativeDocumentPath("$parent/$it")
+            }
         }
         return false
     }

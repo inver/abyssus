@@ -4,35 +4,48 @@
  */
 package net.nevinsky.abyssus.plugin.physics
 
-import net.nevinsky.abyssus.lib.core.dto.entityWriter
 import com.badlogic.gdx.math.Vector3
+import java.io.File
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
+import net.nevinsky.abyssus.lib.core.dto.entityWriter
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class PhysicsOverlayGeometryTest {
     private val project = File(checkNotNull(System.getProperty("abyssus.testData")), "project/Physics")
     private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
-    private val registry = net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry().also { r -> r.registerAll(net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS); net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS.values.forEach { r.register(it.name, it) } }
-    private val scene = net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER, listOf(entityWriter(registry))), org.slf4j.helpers.NOPLogger.NOP_LOGGER, registry)
-        .parse(File(project, "scenes/Main Scene.scene").readText())
+    private val registry =
+        net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry().also { r ->
+            r.registerAll(net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS)
+            net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS.values.forEach { r.register(it.name, it) }
+        }
+    private val scene =
+        net.nevinsky.abyssus.lib.core.editor.document
+            .DocumentParsing(
+                JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER, listOf(entityWriter(registry))),
+                org.slf4j.helpers.NOPLogger.NOP_LOGGER,
+                registry,
+            )
+            .parse(File(project, "scenes/Main Scene.scene").readText())
     private val content = sceneContentOf(scene)
     private val metas = AssetMetaLoader(json, FileLoader(project))
     private val geometry = PhysicsOverlayGeometry { name -> metas.terrainSize(name) }
 
     private fun ecsOf(text: String) = net.nevinsky.abyssus.lib.core.testing.sceneWithEcs(text, registry).ecs
 
-    @Test fun physicsComponentsDrawAtShownPosesAndStayUnchanged() {
+    @Test
+    fun physicsComponentsDrawAtShownPosesAndStayUnchanged() {
         val before = scene.ecs.toString()
         for (selected in listOf(null, 0L, 1L, 2L, 99L)) {
             val segments = geometry.segments(content, scene.ecs, selected)
             assertTrue(segments.isNotEmpty())
-            if (selected == 0L) assertEquals(12, segments.count { it.color == PhysicsColors.brighter(PhysicsColors.DYNAMIC) })
+            if (selected == 0L) {
+                assertEquals(12, segments.count { it.color == PhysicsColors.brighter(PhysicsColors.DYNAMIC) })
+            }
             if (selected == null) {
                 val box = segments.filter { it.color == PhysicsColors.DYNAMIC }
                 assertEquals(12, box.size)
@@ -45,42 +58,58 @@ class PhysicsOverlayGeometryTest {
         }
     }
 
-    @Test fun allShapesAndScaledOffsetsFollowPreviewPositions() {
+    @Test
+    fun allShapesAndScaledOffsetsFollowPreviewPositions() {
         for ((shape, count) in listOf("BOX" to 12, "SPHERE" to 72, "CAPSULE" to 100, "CONVEX_HULL" to 12)) {
-            val ecs = ecsOf("""{"0":{"components":{
+            val ecs =
+                ecsOf(
+                    """{"0":{"components":{
                 "net.nevinsky.abyssus.lib.physics.ColliderComponent":{"shape":"$shape","offset":{"x":1}},
                 "net.nevinsky.abyssus.lib.physics.RigidBodyComponent":{"motionType":"KINEMATIC"},
-                "PositionComponent":{"localScale":{"x":2,"y":2,"z":2}}}}}""")
-            val shown = net.nevinsky.abyssus.lib.core.editor.scene.SceneContent(entityPositions = mapOf(0L to
-                com.badlogic.gdx.math.Vector3(10f,20f,30f)))
+                "PositionComponent":{"localScale":{"x":2,"y":2,"z":2}}}}}"""
+                )
+            val shown =
+                net.nevinsky.abyssus.lib.core.editor.scene.SceneContent(
+                    entityPositions = mapOf(0L to com.badlogic.gdx.math.Vector3(10f, 20f, 30f))
+                )
             val lines = geometry.segments(shown, ecs, 0L)
-            assertEquals(shape,count,lines.size)
+            assertEquals(shape, count, lines.size)
             assertTrue(lines.all { it.selected && it.color == PhysicsColors.brighter(PhysicsColors.KINEMATIC) })
             if (shape == "BOX") {
-                assertEquals(11f,lines.minOf { minOf(it.from.x,it.to.x) },0f)
-                assertEquals(13f,lines.maxOf { maxOf(it.from.x,it.to.x) },0f)
-                assertEquals(19f,lines.minOf { minOf(it.from.y,it.to.y) },0f)
+                assertEquals(11f, lines.minOf { minOf(it.from.x, it.to.x) }, 0f)
+                assertEquals(13f, lines.maxOf { maxOf(it.from.x, it.to.x) }, 0f)
+                assertEquals(19f, lines.minOf { minOf(it.from.y, it.to.y) }, 0f)
             }
         }
     }
 
-    @Test fun constraintAnchorsUseLocalAndWorldFrames() {
+    @Test
+    fun constraintAnchorsUseLocalAndWorldFrames() {
         val ecs = ecsOf("""{"0":{"components":{"ConstraintComponent":{"anchor":{"x":1},"otherAnchor":{"y":4}}}}}""")
-        val shown = net.nevinsky.abyssus.lib.core.editor.scene.SceneContent(entityPositions = mapOf(0L to
-            com.badlogic.gdx.math.Vector3(2f,0f,0f)))
-        val lines = geometry.segments(shown,ecs,null)
-        assertTrue(lines.any { it.from == com.badlogic.gdx.math.Vector3(3f,0f,0f) })
-        assertTrue(lines.any { it.from == com.badlogic.gdx.math.Vector3(-0.15f,4f,0f) &&
-            it.to == com.badlogic.gdx.math.Vector3(0.15f,4f,0f) })
+        val shown =
+            net.nevinsky.abyssus.lib.core.editor.scene.SceneContent(
+                entityPositions = mapOf(0L to com.badlogic.gdx.math.Vector3(2f, 0f, 0f))
+            )
+        val lines = geometry.segments(shown, ecs, null)
+        assertTrue(lines.any { it.from == com.badlogic.gdx.math.Vector3(3f, 0f, 0f) })
+        assertTrue(
+            lines.any {
+                it.from == com.badlogic.gdx.math.Vector3(-0.15f, 4f, 0f) &&
+                    it.to == com.badlogic.gdx.math.Vector3(0.15f, 4f, 0f)
+            }
+        )
     }
 
-    @Test fun absentAndEmptyEntityMapsProduceNoOverlay() {
+    @Test
+    fun absentAndEmptyEntityMapsProduceNoOverlay() {
         assertTrue(geometry.segments(content, emptyMap(), null).isEmpty())
         assertTrue(geometry.segments(content, ecsOf("{}"), null).isEmpty())
     }
 
-    @Test fun selectionColorsAreBrighterAndKeepTheirAlpha() {
-        for (base in listOf(PhysicsColors.DYNAMIC, PhysicsColors.KINEMATIC, PhysicsColors.STATIC, PhysicsColors.CONSTRAINT)) {
+    @Test
+    fun selectionColorsAreBrighterAndKeepTheirAlpha() {
+        for (base in
+            listOf(PhysicsColors.DYNAMIC, PhysicsColors.KINEMATIC, PhysicsColors.STATIC, PhysicsColors.CONSTRAINT)) {
             val selected = PhysicsColors.brighter(base)
             assertEquals(minOf(1f, base.r * 0.5f + 0.5f), selected.r, 0f)
             assertEquals(minOf(1f, base.g * 0.5f + 0.5f), selected.g, 0f)

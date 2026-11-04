@@ -34,9 +34,11 @@ class HeaderComponentTest {
 
     @Test
     fun aDisabledComponentLoadsAsDataWithoutBehavior() {
-        val (engine, warns) = load(
-            """{"disabledComponents":["NameComponent"],"components":{"NameComponent":{"name":"a"},"PositionComponent":{"position":{"x":1,"y":2,"z":3}}}}"""
-        )
+        val (engine, warns) =
+            load(
+                """{"disabledComponents":["NameComponent"],"components":{"NameComponent":{"name":"a"},
+"PositionComponent":{"position":{"x":1,"y":2,"z":3}}}}"""
+            )
         assertTrue(warns.warnings.toString(), warns.warnings.isEmpty())
         val entity = engine.entities.single()
         assertEquals("a", entity.getComponent(NameComponent::class.java).name)
@@ -78,7 +80,11 @@ class HeaderComponentTest {
 
     @Test
     fun theHeaderCarriesTheTypeAndTheDisabledComponents() {
-        val (engine, _) = load("""{"type":"LIGHT_SPOT","disabledComponents":["NameComponent","Mystery"],"components":{"NameComponent":{"name":"a"},"Mystery":{"w":2.50}}}""")
+        val (engine, _) =
+            load(
+                """{"type":"LIGHT_SPOT","disabledComponents":["NameComponent","Mystery"],
+"components":{"NameComponent":{"name":"a"},"Mystery":{"w":2.50}}}"""
+            )
         val header = engine.entities.single().getComponent(HeaderComponent::class.java)
         assertEquals(net.nevinsky.abyssus.lib.core.format.EntityType.LIGHT_SPOT, header.type)
         assertEquals(setOf(NameComponent::class.java), header.disabledComponents)

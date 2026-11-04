@@ -18,8 +18,14 @@ class EntityReferences(private val kinds: List<ComponentKind<*>> = emptyList()) 
     /** The first field of [component] that names [entityId], or null. */
     fun fieldNaming(component: Component, entityId: Long): String? {
         when (component) {
-            is ParentComponent -> if (component.parentEntityId.toLong() == entityId) return "parentEntityId"
-            is PositionComponent -> if (component.lookAtId.toLong() == entityId) return "lookAtId"
+            is ParentComponent ->
+                if (component.parentEntityId.toLong() == entityId) {
+                    return "parentEntityId"
+                }
+            is PositionComponent ->
+                if (component.lookAtId.toLong() == entityId) {
+                    return "lookAtId"
+                }
         }
         val kind = kinds.firstOrNull { it.type.isInstance(component) } ?: return null
         return namedBy(kind, component, entityId)
@@ -27,6 +33,8 @@ class EntityReferences(private val kinds: List<ComponentKind<*>> = emptyList()) 
 
     private fun <C : Component> namedBy(kind: ComponentKind<C>, component: Component, entityId: Long): String? {
         val typed = kind.type.cast(component)
-        return kind.fields.firstOrNull { it.kind == FieldKind.ENTITY_REF && it.get(typed).trim() == entityId.toString() }?.name
+        return kind.fields
+            .firstOrNull { it.kind == FieldKind.ENTITY_REF && it.get(typed).trim() == entityId.toString() }
+            ?.name
     }
 }

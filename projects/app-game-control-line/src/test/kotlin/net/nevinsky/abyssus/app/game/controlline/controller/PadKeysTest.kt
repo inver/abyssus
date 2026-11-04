@@ -14,7 +14,21 @@ class PadKeysTest {
     private val log = ArrayList<String>()
 
     private fun send(keycode: Int, takes: Set<Int> = emptySet(), tab: Boolean = false, space: Boolean = false) =
-        navigateKey(keycode, { log += "key $it"; it in takes }, { log += "tab shift=$it"; tab }, { log += "space"; space })
+        navigateKey(
+            keycode,
+            {
+                log += "key $it"
+                it in takes
+            },
+            {
+                log += "tab shift=$it"
+                tab
+            },
+            {
+                log += "space"
+                space
+            },
+        )
 
     @Test
     fun aKeyTheScreenTakesIsNotRepeatedAsAFallback() {
@@ -48,7 +62,9 @@ class PadKeysTest {
 
     @Test
     fun leftRightAndEscapeHaveNoFallback() {
-        for (key in listOf(Input.Keys.LEFT, Input.Keys.RIGHT, Input.Keys.ESCAPE)) assertFalse(send(key, tab = true, space = true))
+        for (key in listOf(Input.Keys.LEFT, Input.Keys.RIGHT, Input.Keys.ESCAPE)) assertFalse(
+            send(key, tab = true, space = true)
+        )
         assertEquals(3, log.size)
     }
 }

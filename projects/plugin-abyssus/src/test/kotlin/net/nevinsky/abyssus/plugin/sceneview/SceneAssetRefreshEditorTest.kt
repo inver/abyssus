@@ -5,11 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.util.Disposer
@@ -20,8 +15,15 @@ import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.io.File
 import javax.swing.JPanel
+import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
-/** The scene editor wires asset changes (files and unsaved metadata text) to its view, on a project on the real file system. */
+/**
+ * The scene editor wires asset changes (files and unsaved metadata text) to its view, on a project on the real file
+ * system.
+ */
 class SceneAssetRefreshEditorTest : BasePlatformTestCase() {
     private class FakeView : SceneView {
         val revisions = mutableListOf<AssetRevisionBatch>()
@@ -29,8 +31,13 @@ class SceneAssetRefreshEditorTest : BasePlatformTestCase() {
         override var onFailure: ((Throwable) -> Unit)? = null
         override var onPick: ((Long) -> Unit)? = null
         override var onTransform: ((Long, TransformEdit) -> Boolean)? = null
+
         override fun setParams(params: SceneRenderParams) {}
-        override fun refreshAssets(revision: AssetRevisionBatch) { revisions += revision }
+
+        override fun refreshAssets(revision: AssetRevisionBatch) {
+            revisions += revision
+        }
+
         override fun dispose() {}
     }
 
@@ -43,19 +50,24 @@ class SceneAssetRefreshEditorTest : BasePlatformTestCase() {
         root = FileUtil.createTempDirectory("abyssus-refresh", null)
         File(root, "Refresh.abss").writeText("""{"format":"abyssus","formatVersion":1}""")
         File(root, "scenes").mkdirs()
-        File(root, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"id":0,"name":"Main","ecs":{}}""")
+        File(root, "scenes/Main.scene")
+            .writeText("""{"format":"abyssus","formatVersion":1,"id":0,"name":"Main","ecs":{}}""")
         File(root, "assets/hills").mkdirs()
         File(root, "assets/hills/terrain.data").writeBytes(ByteArray(16))
-        File(root, "assets/hills/meta.json").writeText(
-            """{"format":"abyssus","formatVersion":1,"uuid":"t","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":100,"uv":1.0}}""",
-        )
+        File(root, "assets/hills/meta.json")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"uuid":"t","type":"TERRAIN",
+"additional":{"terrainFile":"terrain.data","size":100,"uv":1.0}}"""
+            )
         val lfs = LocalFileSystem.getInstance()
         scene = lfs.refreshAndFindFileByIoFile(File(root, "scenes/Main.scene"))!!
         meta = lfs.refreshAndFindFileByIoFile(File(root, "assets/hills/meta.json"))!!
     }
 
     private fun editor(view: FakeView): SceneFileEditor =
-        newSceneEditor(project, scene, SceneParamsSource { SceneRenderParams.DEFAULT }, viewFactory = { view }).also { Disposer.register(testRootDisposable, it) }
+        newSceneEditor(project, scene, SceneParamsSource { SceneRenderParams.DEFAULT }, viewFactory = { view }).also {
+            Disposer.register(testRootDisposable, it)
+        }
 
     /** Lets the background read and its UI continuation run. */
     private fun settle() {
@@ -72,11 +84,20 @@ class SceneAssetRefreshEditorTest : BasePlatformTestCase() {
         settle()
         assertTrue(view.revisions.isEmpty())
         val document = FileDocumentManager.getInstance().getDocument(meta)!!
-        WriteCommandAction.runWriteCommandAction(project) { document.setText(document.text.replace("\"size\":100", "\"size\":250")) }
+        WriteCommandAction.runWriteCommandAction(project) {
+            document.setText(document.text.replace("\"size\":100", "\"size\":250"))
+        }
         settle()
         assertEquals(setOf("hills"), view.revisions.single().names)
         val text = view.revisions.single().unsaved[File(meta.path).absoluteFile]!!
-        assertEquals(250, JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(text).get("additional").get("size").asInt())
+        assertEquals(
+            250,
+            JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
+                .readObject(text)
+                .get("additional")
+                .get("size")
+                .asInt(),
+        )
         FileDocumentManager.getInstance().saveDocument(document)
         settle()
         assertEquals("saving the shown text is not a new revision", 1, view.revisions.size)
@@ -98,7 +119,9 @@ class SceneAssetRefreshEditorTest : BasePlatformTestCase() {
         settle()
         Disposer.dispose(e)
         val document = FileDocumentManager.getInstance().getDocument(meta)!!
-        WriteCommandAction.runWriteCommandAction(project) { document.setText(document.text.replace("\"size\":100", "\"size\":999")) }
+        WriteCommandAction.runWriteCommandAction(project) {
+            document.setText(document.text.replace("\"size\":100", "\"size\":999"))
+        }
         settle()
         assertTrue(view.revisions.isEmpty())
     }

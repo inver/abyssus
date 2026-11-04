@@ -26,7 +26,9 @@ class FoliageFingerprint {
         DataOutputStream(bytes).use { out ->
             out.text(FOLIAGE_GENERATOR_ID)
             out.writeInt(terrain?.size ?: -1)
-            if (terrain != null) for (height in terrain.heights) out.writeFloat(height)
+            if (terrain != null) {
+                for (height in terrain.heights) out.writeFloat(height)
+            }
             out.writeInt(meta.maskResolution)
             for (layer in meta.layers) {
                 out.writeInt(layer.id)
@@ -59,7 +61,9 @@ class FoliageFingerprint {
     }
 
     private fun DataOutputStream.writeOptional(value: Float?) {
-        if (value == null) writeByte(0) else {
+        if (value == null) {
+            writeByte(0)
+        } else {
             writeByte(1)
             writeFloat(value)
         }

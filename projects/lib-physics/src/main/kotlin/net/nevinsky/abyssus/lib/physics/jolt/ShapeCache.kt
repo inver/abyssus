@@ -18,7 +18,13 @@ import net.nevinsky.abyssus.lib.physics.ColliderShape
  * [close]s it after the last world. One thread, like the worlds.
  */
 class ShapeCache : AutoCloseable {
-    internal data class Key(val shape: ColliderShape, val asset: String, val scaleX: Float, val scaleY: Float, val scaleZ: Float)
+    internal data class Key(
+        val shape: ColliderShape,
+        val asset: String,
+        val scaleX: Float,
+        val scaleY: Float,
+        val scaleZ: Float,
+    )
 
     private val shapes = HashMap<Key, ShapeRefC>()
     private val owned = ArrayList<AutoCloseable>()
@@ -27,22 +33,29 @@ class ShapeCache : AutoCloseable {
     /** How many shapes were built through this cache, of [hullsBuilt] convex hulls: a hit builds none. */
     var built = 0
         private set
+
     var hullsBuilt = 0
         private set
 
     /** The shape kept under [key], or the one [build] makes (kept from now on); null when [build] refused. */
     internal fun shape(key: Key, build: (own: (ConstJoltPhysicsObject) -> Unit) -> ShapeRefC?): ShapeRefC? {
         check(!closed) { "the shape cache is closed" }
-        shapes[key]?.let { return it }
+        shapes[key]?.let {
+            return it
+        }
         val made = build { owned += it as AutoCloseable } ?: return null
         built++
-        if (key.shape == ColliderShape.CONVEX_HULL) hullsBuilt++
+        if (key.shape == ColliderShape.CONVEX_HULL) {
+            hullsBuilt++
+        }
         shapes[key] = made
         return made
     }
 
     override fun close() {
-        if (closed) return
+        if (closed) {
+            return
+        }
         closed = true
         shapes.clear()
         for (o in owned.asReversed()) o.close()

@@ -13,7 +13,10 @@ class CloudStepDownTest {
     @Test
     fun theStepDownChainEndsAtLayered() {
         val chain = generateSequence(CloudTechnique.VOLUMETRIC, ::simplerThan).toList()
-        assertEquals(listOf(CloudTechnique.VOLUMETRIC, CloudTechnique.SHELLS, CloudTechnique.CUMULUS, CloudTechnique.LAYERED), chain)
+        assertEquals(
+            listOf(CloudTechnique.VOLUMETRIC, CloudTechnique.SHELLS, CloudTechnique.CUMULUS, CloudTechnique.LAYERED),
+            chain,
+        )
     }
 
     @Test
@@ -22,7 +25,10 @@ class CloudStepDownTest {
         var drawn: CloudTechnique? = CloudTechnique.VOLUMETRIC
         val seen = mutableListOf<CloudTechnique>()
         repeat(1000) {
-            step.frame(0.05f, drawn)?.let { next -> seen += next; drawn = next }
+            step.frame(0.05f, drawn)?.let { next ->
+                seen += next
+                drawn = next
+            }
         }
         assertEquals(listOf(CloudTechnique.SHELLS, CloudTechnique.CUMULUS, CloudTechnique.LAYERED), seen)
         assertEquals(CloudTechnique.LAYERED, drawn)
@@ -39,14 +45,28 @@ class CloudStepDownTest {
     @Test
     fun atTheGamesFrameBudgetFortyFramesASecondStepDownAndSixtyDoNot() {
         // the reference machine held 35 to 40 frames a second with volumetric clouds, above the old 30 (evidence M2)
-        val slow = CloudStepDown(net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudFrameBudget(CLOUD_STEP_DOWN_INTERVAL))
+        val slow =
+            CloudStepDown(net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudFrameBudget(CLOUD_STEP_DOWN_INTERVAL))
         var next: CloudTechnique? = null
         repeat(Math.round(2.1f * 40)) { slow.frame(1f / 40f, CloudTechnique.VOLUMETRIC)?.let { next = it } }
         assertEquals(CloudTechnique.SHELLS, next)
 
-        val fast = CloudStepDown(net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudFrameBudget(CLOUD_STEP_DOWN_INTERVAL))
+        val fast =
+            CloudStepDown(net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudFrameBudget(CLOUD_STEP_DOWN_INTERVAL))
         // a vsynced 60 frames a second, with a late frame now and then
-        repeat(600) { i -> assertEquals(null, fast.frame(if (i % 7 == 0) 0.0175f else 1f / 60f, CloudTechnique.VOLUMETRIC)) }
+        repeat(600) { i ->
+            assertEquals(
+                null,
+                fast.frame(
+                    if (i % 7 == 0) {
+                        0.0175f
+                    } else {
+                        1f / 60f
+                    },
+                    CloudTechnique.VOLUMETRIC,
+                ),
+            )
+        }
     }
 
     @Test

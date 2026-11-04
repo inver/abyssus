@@ -84,7 +84,11 @@ class SplatToolsTest {
         // a hard edge: left half R 255, right half G 255
         val e = draft()
         for (gz in 0 until resolution) for (gx in 0 until resolution) {
-            e.pixels[(gz * resolution + gx) * 4 + if (gx < 50) 0 else 1] = -1
+            e.pixels[(gz * resolution + gx) * 4 + if (gx < 50) {
+                0
+            } else {
+                1
+            }] = -1
         }
         click(e, SplatTool.Smooth, 50f, 50f, exclusive = false)
         assertTrue(at(e, 49, 50, 0) < 255)
@@ -108,7 +112,9 @@ class SplatToolsTest {
             if (at(d, gx, gz, 0) > 0) {
                 painted++
                 assertTrue("texel $gx,$gz at $dist", dist < 10f)
-            } else assertFalse(dist < 6f)
+            } else {
+                assertFalse(dist < 6f)
+            }
         }
         assertTrue(painted > 4)
         assertTrue(at(d, 50, 50, 0) > 0)

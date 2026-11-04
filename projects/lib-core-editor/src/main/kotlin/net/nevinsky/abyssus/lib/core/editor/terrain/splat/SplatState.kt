@@ -21,7 +21,10 @@ enum class SplatProblem { TERRAIN_META, TEXTURE_META, IMAGE_MISSING, IMAGE }
 
 /** What a terrain's splat map looks like on disk. */
 sealed interface SplatState {
-    /** No map to paint: `splatMap` is null, or [unresolved] names no readable texture asset. Create splat map is offered. */
+    /**
+     * No map to paint: `splatMap` is null, or [unresolved] names no readable texture asset. Create splat map is
+     * offered.
+     */
     class None(val unresolved: String? = null) : SplatState
 
     /**
@@ -106,7 +109,9 @@ class SplatStateReader(private val json: JsonProcessor, private val codec: Splat
 
     /** The native `meta.json` in [file], or null when it is missing, not JSON or not a supported native document. */
     private fun readMeta(file: File): MetaDocument? {
-        if (!file.isFile) return null
+        if (!file.isFile) {
+            return null
+        }
         return try {
             parseMeta(file.readText())
         } catch (e: java.io.IOException) {

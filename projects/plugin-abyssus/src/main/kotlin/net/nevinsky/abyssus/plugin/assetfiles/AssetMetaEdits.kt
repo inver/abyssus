@@ -7,14 +7,14 @@ package net.nevinsky.abyssus.plugin.assetfiles
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetMetaEditor
 import net.nevinsky.abyssus.lib.core.editor.meta.EditError
 import net.nevinsky.abyssus.lib.core.editor.meta.EditOutcome
-import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
-import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
-import net.nevinsky.abyssus.plugin.filetype.editTextDocument
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
-import net.nevinsky.abyssus.lib.core.editor.meta.AssetMetaEditor
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.filetype.editTextDocument
 
 /** What came of one asset property edit. Only [Changed] wrote anything. */
 sealed interface AssetEditResult {
@@ -38,17 +38,25 @@ sealed interface AssetEditResult {
  * `AssetMetaEditor`'s; the document text (saved or not) is what is compared with the value the editor was filled from.
  */
 object AssetMetaEdits {
-    fun update(project: Project, assetFolder: VirtualFile, key: String, expected: AssetFieldValue, value: AssetFieldValue, editor: AssetMetaEditor): AssetEditResult {
+    fun update(
+        project: Project,
+        assetFolder: VirtualFile,
+        key: String,
+        expected: AssetFieldValue,
+        value: AssetFieldValue,
+        editor: AssetMetaEditor,
+    ): AssetEditResult {
         val file = assetFolder.takeIf { it.isValid }?.findChild(META_FILE) ?: return AssetEditResult.Unreadable
         var result: AssetEditResult = AssetEditResult.Unreadable
         editTextDocument(project, file, AbyssusBundle.message("commandEditAssetMeta")) { text ->
             val edit = editor.editText(text, key, expected, value) ?: return@editTextDocument TextEditOutcome.Unchanged
-            result = when (val outcome = edit.outcome) {
-                EditOutcome.Changed -> AssetEditResult.Changed
-                EditOutcome.NoChange -> AssetEditResult.Unchanged
-                is EditOutcome.Rejected -> AssetEditResult.Rejected(outcome.error)
-                is EditOutcome.Conflict -> AssetEditResult.Conflict(outcome.actual)
-            }
+            result =
+                when (val outcome = edit.outcome) {
+                    EditOutcome.Changed -> AssetEditResult.Changed
+                    EditOutcome.NoChange -> AssetEditResult.Unchanged
+                    is EditOutcome.Rejected -> AssetEditResult.Rejected(outcome.error)
+                    is EditOutcome.Conflict -> AssetEditResult.Conflict(outcome.actual)
+                }
             edit.text?.let { TextEditOutcome.Edited(it) } ?: TextEditOutcome.Unchanged
         }
         return result

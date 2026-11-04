@@ -55,10 +55,16 @@ class SceneInteraction(
      */
     var onArrangementCreate: ((BaseMeta, List<Vector3>, Boolean) -> Boolean)? = null
 
-    /** Called when a point drag, an insert or a removal ends with new points for the arrangement; returns whether it was written. */
+    /**
+     * Called when a point drag, an insert or a removal ends with new points for the arrangement; returns whether it was
+     * written.
+     */
     var onArrangementEdit: ((Long, List<Vector3>) -> Boolean)? = null
 
-    /** Called when the edit of an arrangement's control points ended because the selection moved on or the arrangement went. */
+    /**
+     * Called when the edit of an arrangement's control points ended because the selection moved on or the arrangement
+     * went.
+     */
     var onPathEditEnded: (() -> Unit)? = null
 
     /** Called when the selection, the mode or the looked-through camera changed by the user or by new scene params. */
@@ -80,7 +86,11 @@ class SceneInteraction(
 
     /** Sets what strokes the terrain for the brush [kind]; null removes it. */
     fun setBrushStroke(kind: BrushKind, stroke: BrushStroke?) {
-        if (stroke == null) brushStrokes.remove(kind) else brushStrokes[kind] = stroke
+        if (stroke == null) {
+            brushStrokes.remove(kind)
+        } else {
+            brushStrokes[kind] = stroke
+        }
     }
 
     var selectedId: Long?
@@ -134,11 +144,15 @@ class SceneInteraction(
     private fun dropPosition(): Vector3? {
         val id = selectedId ?: return null
         val content = queries.content
-        if (isDragging || id == state.viewCamera || content.terrains.any { it.entityId == id }) return null
+        if (isDragging || id == state.viewCamera || content.terrains.any { it.entityId == id }) {
+            return null
+        }
         val selected = ScenePreview().selected(content, id) ?: return null
         val lowest = queries.lowestPoint(id) ?: return null
         val height = queries.groundBelow(id) ?: return null
-        if (!height.isFinite() || ScenePicker().isResting(lowest, height)) return null
+        if (!height.isFinite() || ScenePicker().isResting(lowest, height)) {
+            return null
+        }
         val p = selected.transform.position
         return Vector3(p.x, (p.y.toDouble() + height.toDouble() - lowest.toDouble()).toFloat(), p.z)
     }
@@ -153,7 +167,11 @@ class SceneInteraction(
         val written = onTransform?.invoke(id, TransformEdit(position = position)) ?: false
         // A synchronous document re-read can clear the preview during the callback. Keep the accepted result
         // until the renderer has another frame; a second key press must use the newly settled box immediately.
-        state.preview = if (written) mapOf(id to result) else emptyMap()
+        state.preview = if (written) {
+            mapOf(id to result)
+        } else {
+            emptyMap()
+        }
         stateChanged()
     }
 
@@ -161,7 +179,8 @@ class SceneInteraction(
     var groundHeights: (() -> GroundHeight?)? = null
 
     /**
-     * New points for an arrangement: while its control points are edited they are only kept as a draft that Apply writes
+      * New points for an arrangement: while its control points are edited they are only kept as a draft that Apply
+      * writes
      * and Close drops; otherwise they go to [onArrangementEdit].
      */
     private val stagedEdit: (Long, List<Vector3>) -> Boolean = { id, points ->
@@ -178,11 +197,16 @@ class SceneInteraction(
     /** Whether the edit of the control points holds changes not written yet. */
     val hasPathDraft: Boolean get() = state.pathDraft != null
 
-    /** Writes the draft points of the arrangement being edited through [onArrangementEdit]; false when there was nothing to write or it failed. */
+    /**
+     * Writes the draft points of the arrangement being edited through [onArrangementEdit]; false when there was nothing
+     * to write or it failed.
+     */
     fun applyPathDraft(): Boolean {
         val draft = state.pathDraft ?: return false
         val written = onArrangementEdit?.invoke(draft.entityId, draft.points) ?: false
-        if (written) state.pathDraft = null
+        if (written) {
+            state.pathDraft = null
+        }
         stateChanged()
         return written
     }
@@ -198,8 +222,14 @@ class SceneInteraction(
         val ground = groundHeights?.invoke() ?: return false
         val points = queries.pathPoints(id) ?: return false
         val dropped =
-            points.mapIndexed { i, p -> if (which(i)) Vector3(p.x, ground.heightAt(p.x, p.z, p.y), p.z) else p }
-        if (dropped == points) return false
+            points.mapIndexed { i, p -> if (which(i)) {
+                Vector3(p.x, ground.heightAt(p.x, p.z, p.y), p.z)
+            } else {
+                p
+            } }
+        if (dropped == points) {
+            return false
+        }
         return stagedEdit(id, dropped)
     }
 
@@ -219,10 +249,14 @@ class SceneInteraction(
         stateChanged()
     }
 
-    /** Ends the control point edit when the selection is no longer its arrangement. Call after the selection changed. */
+    /**
+     * Ends the control point edit when the selection is no longer its arrangement. Call after the selection changed.
+     */
     fun selectionChanged() {
         val editing = state.pathEditing ?: return
-        if (state.selectedId == editing) return
+        if (state.selectedId == editing) {
+            return
+        }
         state.pathEditing = null
         state.selectedPathPoint = null
         state.pathEdit = null
@@ -238,7 +272,9 @@ class SceneInteraction(
 
     /** Called outside GL after a frame; loading or params changes need one query, unchanged frames need none. */
     fun frameRendered(drawnVersion: Long = queries.drawnVersion) {
-        if (drawnVersion == lastDrawnVersion && !refreshDropAfterFrame) return
+        if (drawnVersion == lastDrawnVersion && !refreshDropAfterFrame) {
+            return
+        }
         refreshDropAfterFrame = false
         lastDrawnVersion = drawnVersion
         val available = canDrop
@@ -255,7 +291,9 @@ class SceneInteraction(
         click.pressed(x, y)
         val id = selectedId
         // Drawing mode: a press only starts a click that adds a point (or a camera drag).
-        if (!left || state.drawing != null || size.isEmpty) return
+        if (!left || state.drawing != null || size.isEmpty) {
+            return
+        }
         gestures.press(id, x, y)
     }
 
@@ -265,26 +303,42 @@ class SceneInteraction(
         val dy = (y - lastY).toFloat()
         lastX = x
         lastY = y
-        if (size.isEmpty || gestures.drag(x, y)) return
-        if (state.viewCamera != null) return
+        if (size.isEmpty || gestures.drag(x, y)) {
+            return
+        }
+        if (state.viewCamera != null) {
+            return
+        }
         // The left button paints in Paint Foliage mode; only the other buttons and the wheel navigate.
         if (left) {
-            if (!state.brushing) orbit.orbit(dx, dy)
-        } else orbit.pan(dx, dy)
+            if (!state.brushing) {
+                orbit.orbit(dx, dy)
+            }
+        } else {
+            orbit.pan(dx, dy)
+        }
     }
 
     fun released(x: Int, y: Int, left: Boolean, clickCount: Int = 1) {
         val wasClick = click.released(x, y)
-        if (gestures.release()) return
+        if (gestures.release()) {
+            return
+        }
         if (left && wasClick) {
-            if (state.drawing != null) drawingSession.click(x, y, clickCount) else pickAt(x, y)
+            if (state.drawing != null) {
+                drawingSession.click(x, y, clickCount)
+            } else {
+                pickAt(x, y)
+            }
         }
     }
 
     /** Starts drawing a path arrangement of the model [asset]: each click on the terrain adds a point. */
     fun startDrawing(asset: BaseMeta) = drawingSession.start(asset)
 
-    /** Enter: finishes the drawing as an open line; nothing happens, and drawing continues, with fewer than two points. */
+    /**
+     * Enter: finishes the drawing as an open line; nothing happens, and drawing continues, with fewer than two points.
+     */
     fun enter() = drawingSession.enter()
 
     /** Copy: hands the selected entity to [onCopy]. */
@@ -311,7 +365,11 @@ class SceneInteraction(
     /** Where [ray] meets the plane `y = 0`, or null when it runs parallel to it or away from it. */
     private fun planeHit(ray: Ray): Vector3? {
         val t = gizmoMath.rayPlane(ray, Vector3.Zero, Vector3.Y) ?: return null
-        return if (t > 0f) Vector3(ray.origin).mulAdd(ray.direction, t) else null
+        return if (t > 0f) {
+            Vector3(ray.origin).mulAdd(ray.direction, t)
+        } else {
+            null
+        }
     }
 
     /**
@@ -329,9 +387,13 @@ class SceneInteraction(
                 }
             }
             is ViewMode.Brush, ViewMode.Select -> {
-                if (isDragging) return
+                if (isDragging) {
+                    return
+                }
                 val id = selectedId
-                if (id != null && id != state.viewCamera) onDelete?.invoke(id)
+                if (id != null && id != state.viewCamera) {
+                    onDelete?.invoke(id)
+                }
             }
         }
     }
@@ -339,16 +401,23 @@ class SceneInteraction(
     /** Whether point [index] of the arrangement [entityId] can be removed: at least two points must remain. */
     fun canRemovePoint(entityId: Long): Boolean = drawingSession.canRemovePoint(entityId)
 
-    /** Removes point [index] of the arrangement [entityId] through [onArrangementEdit]; false when it cannot be removed or was not written. */
+    /**
+     * Removes point [index] of the arrangement [entityId] through [onArrangementEdit]; false when it cannot be removed
+     * or was not written.
+     */
     fun removePoint(entityId: Long, index: Int): Boolean = drawingSession.removePoint(entityId, index)
 
     private fun editOf(id: Long, result: DragResult): TransformEdit {
-        if (state.gizmoMode == GizmoMode.MOVE) return TransformEdit(position = result.transform.position)
+        if (state.gizmoMode == GizmoMode.MOVE) {
+            return TransformEdit(position = result.transform.position)
+        }
         val content = queries.sceneContent
         val handleId = content.lights.firstOrNull { it.entityId == id }?.let(content::aimHandleOf)
         // A rotate drag on a light aimed at a direction handle moves the handle instead of the light's own rotation.
         val handleAt = handleId?.let { ScenePreview().aimedTarget(content, id, result) }
-        if (handleId != null && handleAt != null) return TransformEdit(target = TargetMove(handleId, handleAt))
+        if (handleId != null && handleAt != null) {
+            return TransformEdit(target = TargetMove(handleId, handleAt))
+        }
         return TransformEdit(
             rotation = result.transform.rotation,
             direction = result.direction.takeIf { ScenePreview().isCamera(content, id) })
@@ -358,19 +427,27 @@ class SceneInteraction(
     fun moved(x: Int, y: Int) {
         lastX = x
         lastY = y
-        if (size.isEmpty || isDragging) return
+        if (size.isEmpty || isDragging) {
+            return
+        }
         val at = size.toFramebuffer(x, y)
         state.hoveredAxis = queries.gizmoHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
-        state.hoveredPlane = if (state.hoveredAxis == null) queries.gizmoPlaneHit(
-            at.x,
-            at.y,
-            size.framebufferWidth,
-            size.framebufferHeight
-        ) else null
+        state.hoveredPlane = if (state.hoveredAxis == null) {
+            queries.gizmoPlaneHit(
+                at.x,
+                at.y,
+                size.framebufferWidth,
+                size.framebufferHeight
+            )
+        } else {
+            null
+        }
     }
 
     fun wheel(clicks: Float) {
-        if (state.viewCamera == null) orbit.zoom(clicks)
+        if (state.viewCamera == null) {
+            orbit.zoom(clicks)
+        }
     }
 
     /** Esc: puts the dragged object back, or discards the paint stroke; neither writes anything. */
@@ -383,7 +460,9 @@ class SceneInteraction(
     }
 
     private fun pickAt(x: Int, y: Int) {
-        if (size.isEmpty) return
+        if (size.isEmpty) {
+            return
+        }
         if (state.pathEditing != null) {
             // editing control points: a click off the handles only lets go of the point; Apply ends the mode
             if (state.selectedPathPoint != null) {
@@ -406,15 +485,21 @@ class SceneInteraction(
                 changed = true
             }
         }
-        if (hit != null) onPick?.invoke(hit)
-        if (changed) stateChanged()
+        if (hit != null) {
+            onPick?.invoke(hit)
+        }
+        if (changed) {
+            stateChanged()
+        }
     }
 
     /** New scene params arrived: drops the preview and a selection or camera the scene no longer has. */
     fun paramsChanged(params: SceneRenderParams) {
         refreshDropAfterFrame = true
         state.preview = emptyMap()
-        if (!gestures.isDraggingPathPoint) state.pathEdit = null
+        if (!gestures.isDraggingPathPoint) {
+            state.pathEdit = null
+        }
         var changed = false
         selectedId?.let {
             if (!ScenePreview().contains(params.content, it)) {
@@ -442,6 +527,8 @@ class SceneInteraction(
                 }
             }
         }
-        if (changed || canDrop != lastCanDrop) stateChanged()
+        if (changed || canDrop != lastCanDrop) {
+            stateChanged()
+        }
     }
 }

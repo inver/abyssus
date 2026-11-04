@@ -19,6 +19,12 @@ class SplatBrush(draft: SplatDraft, exclusive: Boolean, world: Matrix4) {
     private val brush = StampBrush(SplatTarget(draft, exclusive), world)
 
     /** Stamps [tool] along the segment from [from] to [to]; returns the rectangle of texels that changed. */
-    fun stroke(from: Vector3, to: Vector3, radius: Float, strength: Float, tool: SplatTool, reversed: Boolean): GridRect =
-        brush.stroke(from, to, radius, strength, tool, reversed)
+    fun stroke(
+        from: Vector3,
+        to: Vector3,
+        radius: Float,
+        strength: Float,
+        tool: SplatTool,
+        reversed: Boolean,
+    ): GridRect = brush.stroke(from, to, radius, strength, tool, reversed)
 }

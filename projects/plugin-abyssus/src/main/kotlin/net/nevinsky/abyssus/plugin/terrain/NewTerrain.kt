@@ -36,7 +36,8 @@ fun GeometryError.message(): String = AbyssusBundle.message("newTerrainGeometryE
 class NewTerrain(val name: String, val uuid: String, val transaction: AssetTransaction)
 
 /**
- * Stages the files of a new terrain asset from a finished [net.nevinsky.abyssus.lib.core.editor.terrain.TerrainPreview]: `meta.json` in native layout with a fresh
+  * Stages the files of a new terrain asset from a finished
+  * [net.nevinsky.abyssus.lib.core.editor.terrain.TerrainPreview]: `meta.json` in native layout with a fresh
  * `uuid`, the big-endian heights, and the Abyssus recipe. Nothing is written here; no scene or project file is touched.
  */
 class NewTerrainFactory(
@@ -47,11 +48,16 @@ class NewTerrainFactory(
     private val clock: () -> Long = System::currentTimeMillis,
     private val randomUuid: () -> UUID = { UUID.randomUUID() },
 ) {
-    /** The staged terrain, or null when the folder name is refused (re-checked here: the folder may have appeared since). */
+    /**
+     * The staged terrain, or null when the folder name is refused (re-checked here: the folder may have appeared
+     * since).
+     */
     fun stage(projectDir: File, rawName: String, preview: TerrainPreview): NewTerrain? {
         val name = rawName.trim()
         val assetsDir = File(projectDir, ASSETS_DIR)
-        if (checkFolderName(assetsDir, name) != null) return null
+        if (checkFolderName(assetsDir, name) != null) {
+            return null
+        }
         val uuid = uniqueAssetUuid(json, assetsDir, randomUuid)
         val files = writer.create(uuid, clock(), preview.size, preview.heights)
         val recipe = TerrainRecipe(preview.settings, preview.size, preview.resolution, sha256Hex(files.heightBytes))
@@ -67,7 +73,11 @@ class NewTerrainFactory(
                     FileSnapshot.Bytes(recipes.encode(recipe).toByteArray())
                 ),
             ),
-            createdDirs = (if (assetsDir.isDirectory) emptyList() else listOf(ASSETS_DIR)) + base,
+            createdDirs = (if (assetsDir.isDirectory) {
+                emptyList()
+            } else {
+                listOf(ASSETS_DIR)
+            }) + base,
             guard = AssetReferenceGuard(projectDir).let { guard -> { guard.blocker(name, uuid.toString()) } },
         )
         return NewTerrain(name, uuid.toString(), transaction)

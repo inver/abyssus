@@ -15,11 +15,11 @@ import org.junit.rules.TemporaryFolder
 import org.w3c.dom.Element
 
 class RestStateTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
     private val rest = RestState()
 
-    private fun condition(xml: String): Element = FlightGearXml().parse("<condition>$xml</condition>".toByteArray(), "test")
+    private fun condition(xml: String): Element =
+        FlightGearXml().parse("<condition>$xml</condition>".toByteArray(), "test")
 
     @Test
     fun theStaticPropellerShowsAndTheDiscDoesNot() {

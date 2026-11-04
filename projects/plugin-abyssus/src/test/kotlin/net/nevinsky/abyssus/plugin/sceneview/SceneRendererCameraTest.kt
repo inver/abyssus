@@ -5,23 +5,22 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
-import net.nevinsky.abyssus.lib.core.editor.scene.cameraDirectionOf
-import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
-import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
-import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.Quaternion
+import com.badlogic.gdx.math.Vector3
+import java.io.File
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.editor.pick.DragResult
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoAxis
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode
+import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
+import net.nevinsky.abyssus.lib.core.editor.scene.cameraDirectionOf
+import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /** The renderer's camera, picking and gizmo hits, which work on CPU-side data once a frame's camera is set (no GL). */
 class SceneRendererCameraTest {
@@ -33,10 +32,11 @@ class SceneRendererCameraTest {
     }
 
     private fun renderer(): SceneRenderer {
-        val params = renderParamsOf(
-            parseScene(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()),
-            CameraParams.DEFAULT,
-        )
+        val params =
+            renderParamsOf(
+                parseScene(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()),
+                CameraParams.DEFAULT,
+            )
         return testRenderer().also { it.params = params }
     }
 
@@ -144,7 +144,10 @@ class SceneRendererCameraTest {
         val moved = original.transform.copy(position = Vector3(1f, 2f, 3f))
         r.state.preview = mapOf(0L to DragResult(moved, null))
         assertEquals(Vector3(1f, 2f, 3f), r.content.models.first { it.entityId == 0L }.transform.position)
-        assertEquals(original.transform.position, r.params.content.models.first { it.entityId == 0L }.transform.position)
+        assertEquals(
+            original.transform.position,
+            r.params.content.models.first { it.entityId == 0L }.transform.position,
+        )
         r.state.preview = emptyMap()
         assertEquals(original, r.content.models.first { it.entityId == 0L })
     }

@@ -31,7 +31,8 @@ class SceneSkybox(private val assets: AssetView<SkyRenderer>) : Disposable {
     private val sunDirection = Vector3()
 
     /**
-     * Draws the skybox named [name] if it is loaded; nothing for null. It never touches the storage: [update] asks for the
+      * Draws the skybox named [name] if it is loaded; nothing for null. It never touches the storage: [update] asks for
+      * the
      * sky once per frame, and building a replacement here would dispose a terrain or model the frame already holds. A
      * procedural sky is lit by the sun toward [sun], and its clouds drift to [timeSeconds] and are drawn with
      * [technique] (null: the asset's).
@@ -53,7 +54,10 @@ class SceneSkybox(private val assets: AssetView<SkyRenderer>) : Disposable {
     /** The built sky named [name], or null while it loads or when it failed. */
     fun sky(name: String?): SkyRenderer? = name?.let(assets::get)
 
-    /** Keeps the sky named [name] loading (and a replaced one released) without drawing it, e.g. while a ray frame is shown. */
+    /**
+     * Keeps the sky named [name] loading (and a replaced one released) without drawing it, e.g. while a ray frame is
+     * shown.
+     */
     fun update(name: String?, projectDir: File?) = assets.update(projectDir, setOfNotNull(name))
 
     /**

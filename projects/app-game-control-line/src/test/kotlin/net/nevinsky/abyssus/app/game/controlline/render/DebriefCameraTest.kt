@@ -6,6 +6,7 @@ package net.nevinsky.abyssus.app.game.controlline.render
 
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector3
+import kotlin.math.atan2
 import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefFrame
 import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefView
 import net.nevinsky.abyssus.app.game.controlline.pattern.Figure
@@ -14,7 +15,6 @@ import net.nevinsky.abyssus.app.game.controlline.pattern.HemisphereGeometry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.atan2
 
 class DebriefCameraTest {
     init {
@@ -39,7 +39,10 @@ class DebriefCameraTest {
         assertTrue("fov ${camera.fieldOfView}", camera.fieldOfView in DEBRIEF_MIN_FOV..DEBRIEF_MAX_FOV)
         for (p in frame.points) {
             val world = Vector3(pilot).add(p)
-            assertTrue("$figure $view at $azimuth: $p outside the frustum (fov ${camera.fieldOfView})", camera.frustum.pointInFrustum(world))
+            assertTrue(
+                "$figure $view at $azimuth: $p outside the frustum (fov ${camera.fieldOfView})",
+                camera.frustum.pointInFrustum(world),
+            )
         }
     }
 
@@ -53,7 +56,10 @@ class DebriefCameraTest {
         }
     }
 
-    /** The vertical eights reach from the horizon at 90° either side of their middle to the zenith: no view from the pilot's eyes holds them. */
+    /**
+     * The vertical eights reach from the horizon at 90° either side of their middle to the zenith: no view from the
+     * pilot's eyes holds them.
+     */
     @Test
     fun everyPointOfTheVerticalEightsIsInFrameFromOutside() {
         for (azimuth in listOf(-170f, -60f, 0f, 45f, 120f)) check(Figure.VERTICAL_EIGHTS, azimuth, DebriefView.OUTSIDE)

@@ -17,27 +17,36 @@ import net.nevinsky.abyssus.plugin.sceneview.openSceneView
 
 /**
  * Links the runtime Ray Tracing switch of the open Scene views to anything that wants to flip it, chiefly the Abyssus
- * Properties panel. Views register their [RayControl] by scene file; [request] applies a change to every open view of that
- * scene. With no view open, switching it on opens the scene's Scene View and applies the request as soon as that view
- * registers. Nothing is persisted, so the switch is per running view and never writes the scene. AWT thread only.
+ * Properties panel. Views register their [RayControl] by scene file; [request] applies a change to every open view of
+ * that scene. With no view open, switching it on opens the scene's Scene View and applies the request as soon as that
+ * view registers. Nothing is persisted, so the switch is per running view and never writes the scene. AWT thread only.
  */
 @Service(Service.Level.PROJECT)
-class SceneRayControls @JvmOverloads constructor(
+class SceneRayControls
+@JvmOverloads
+constructor(
     val project: Project,
     private val open: (Project, VirtualFile) -> Unit = { p, f -> openSceneView(p, f) },
 ) : SceneFacts<SceneContent> {
     private val sceneFacts =
-        LinkedHashMap<VirtualFile, LinkedHashMap<Disposable, Pair<net.nevinsky.abyssus.lib.core.editor.scene.SceneContent, String?>>>()
+        LinkedHashMap<
+            VirtualFile,
+            LinkedHashMap<Disposable, Pair<net.nevinsky.abyssus.lib.core.editor.scene.SceneContent, String?>>,
+        >()
 
     internal fun recordFacts(
         file: VirtualFile,
         parent: Disposable,
-        content: net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
+        content: net.nevinsky.abyssus.lib.core.editor.scene.SceneContent,
     ) {
         val owners = sceneFacts.getOrPut(file) { LinkedHashMap() }
-        if (parent !in owners) Disposer.register(parent) {
-            owners.remove(parent)
-            if (owners.isEmpty()) sceneFacts.remove(file)
+        if (parent !in owners) {
+            Disposer.register(parent) {
+                owners.remove(parent)
+                if (owners.isEmpty()) {
+                    sceneFacts.remove(file)
+                }
+            }
         }
         owners[parent] = content to owners[parent]?.second
     }
@@ -51,7 +60,9 @@ class SceneRayControls @JvmOverloads constructor(
     internal fun forgetFacts(file: VirtualFile, parent: Disposable) {
         val owners = sceneFacts[file] ?: return
         owners.remove(parent)
-        if (owners.isEmpty()) sceneFacts.remove(file)
+        if (owners.isEmpty()) {
+            sceneFacts.remove(file)
+        }
     }
 
     override fun content(scenePath: String) =
@@ -64,8 +75,8 @@ class SceneRayControls @JvmOverloads constructor(
         controls.entries.lastOrNull { it.key.path == scenePath }?.value?.lastOrNull()?.mode
 
     /**
-     * The note of the most recently opened view of [file], which says its ray-traced image has no foliage, or null
-     * when no view with ray tracing is open or the scene it shows has none.
+     * The note of the most recently opened view of [file], which says its ray-traced image has no foliage, or null when
+     * no view with ray tracing is open or the scene it shows has none.
      */
     fun foliageNote(file: VirtualFile): String? = controls[file]?.lastOrNull()?.foliageNote
 
@@ -73,18 +84,25 @@ class SceneRayControls @JvmOverloads constructor(
     private val pending = LinkedHashSet<VirtualFile>()
     private val listeners = mutableListOf<Pair<VirtualFile, () -> Unit>>()
 
-    /** Registers [control] as a view of [file] until [parent] (the view) is disposed. A request made earlier is applied now. */
+    /**
+     * Registers [control] as a view of [file] until [parent] (the view) is disposed. A request made earlier is applied
+     * now.
+     */
     internal fun register(file: VirtualFile, control: RayControl, parent: Disposable) {
         controls.getOrPut(file) { mutableListOf() } += control
         control.addListener(parent) { changed(file) }
         Disposer.register(parent) {
             controls[file]?.let { list ->
                 list -= control
-                if (list.isEmpty()) controls.remove(file)
+                if (list.isEmpty()) {
+                    controls.remove(file)
+                }
             }
             changed(file)
         }
-        if (pending.remove(file)) control.setRequested(true)
+        if (pending.remove(file)) {
+            control.setRequested(true)
+        }
         changed(file)
     }
 
@@ -112,7 +130,10 @@ class SceneRayControls @JvmOverloads constructor(
     /** Checks the GPU again in every open view of [file] that failed. */
     fun retry(file: VirtualFile) = controls[file].orEmpty().toList().forEach { it.retry() }
 
-    /** Calls [listener] after the state for [file] changes (a view opens or closes, or its mode changes), until [parent] is disposed. */
+    /**
+     * Calls [listener] after the state for [file] changes (a view opens or closes, or its mode changes), until [parent]
+     * is disposed.
+     */
     fun addListener(file: VirtualFile, parent: Disposable, listener: () -> Unit) {
         val entry = file to listener
         listeners += entry

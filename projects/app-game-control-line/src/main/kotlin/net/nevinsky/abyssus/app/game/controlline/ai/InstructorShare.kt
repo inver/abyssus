@@ -7,7 +7,9 @@ package net.nevinsky.abyssus.app.game.controlline.ai
 import net.nevinsky.abyssus.app.game.controlline.flight.Takeover
 import net.nevinsky.abyssus.lib.physics.PHYSICS_STEP
 
-/** Seconds the danger must stay 0 before the instructor starts to hand the handle back, and how long the handback takes. */
+/**
+ * Seconds the danger must stay 0 before the instructor starts to hand the handle back, and how long the handback takes.
+ */
 const val HANDBACK_HOLD = 1f
 const val HANDBACK_TIME = 0.5f
 
@@ -38,16 +40,25 @@ class InstructorShare {
 
     /** Takes the [danger] of the step at flight time [time] (s); the state is the one after the step. */
     fun step(danger: Float, time: Float) {
-        if (danger > share) share = danger
+        if (danger > share) {
+            share = danger
+        }
         if (danger > 0f) {
             calm = 0f
         } else {
             calm += PHYSICS_STEP
-            if (calm >= HANDBACK_HOLD - EPSILON) share = (share - PHYSICS_STEP / HANDBACK_TIME).let { if (it < EPSILON) 0f else it }
+            if (calm >= HANDBACK_HOLD - EPSILON) {
+                share = (share - PHYSICS_STEP / HANDBACK_TIME).let { if (it < EPSILON) {
+                    0f
+                } else {
+                    it
+                } }
+            }
         }
         val start = open
-        if (start == null && share >= TAKEOVER_SHARE) open = time
-        else if (start != null && share < TAKEOVER_SHARE) {
+        if (start == null && share >= TAKEOVER_SHARE) {
+            open = time
+        } else if (start != null && share < TAKEOVER_SHARE) {
             spans += Takeover(start, time)
             open = null
         }

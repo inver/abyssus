@@ -53,7 +53,9 @@ class PhysicsAssets private constructor(
     private val heights = HashMap<String, TerrainData?>()
     private val foliage = HashMap<Pair<String, String?>, FoliageRuntimeRead>()
 
-    /** Every vertex position of the model in [assetName], in model space (node transforms applied); null without one. */
+    /**
+     * Every vertex position of the model in [assetName], in model space (node transforms applied); null without one.
+     */
     fun modelPoints(assetName: String): List<Vector3>? = points.getOrPut(assetName) {
         runCatchingKeepingCancellation {
             val meta = metas.loadBaseMeta(assetName)?.takeIf { it.type == MetaType.MODEL }
@@ -102,16 +104,22 @@ class PhysicsAssets private constructor(
                 var offset = 0
                 var position = -1
                 for (a in mesh.attributes) {
-                    if (a.usage == VertexAttributes.Usage.Position) position = offset
+                    if (a.usage == VertexAttributes.Usage.Position) {
+                        position = offset
+                    }
                     offset += a.numComponents
                 }
-                if (position < 0 || stride == 0) continue
+                if (position < 0 || stride == 0) {
+                    continue
+                }
                 val used = mesh.parts.firstOrNull { it.id == part.meshPartId }?.indices
                 val vertices = mesh.vertices
                 val indices = used?.distinct() ?: (0 until vertices.size / stride).toList()
                 for (i in indices) {
                     val at = i * stride + position
-                    if (at + 2 >= vertices.size) continue
+                    if (at + 2 >= vertices.size) {
+                        continue
+                    }
                     out += Vector3(vertices[at], vertices[at + 1], vertices[at + 2]).mul(world)
                 }
             }

@@ -5,32 +5,35 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import java.io.File
+import java.nio.file.Files
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import net.nevinsky.abyssus.lib.core.editor.modelimport.LengthUnit
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelImportException
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelSource
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelSourceOpener
+import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
 
 /** The Import Model dialog's state, without Swing, over the model import fixtures of `lib-core`. */
 class ModelImportFormTest {
-    private val fixtures = Files.createTempDirectory("abyssus_form").toFile().also {
-        File("../lib-core-editor/src/test/resources/modelimport").copyRecursively(it)
-    }
+    private val fixtures =
+        Files.createTempDirectory("abyssus_form").toFile().also {
+            File("../lib-core-editor/src/test/resources/modelimport").copyRecursively(it)
+        }
     private val untitled = File("src/test/testData/project/Untitled/assets").list()!!.toSet()
     private val opened = ArrayList<ModelSource>()
 
-    @After
-    fun closeSources() = opened.forEach(ModelSource::close)
+    @After fun closeSources() = opened.forEach(ModelSource::close)
 
-    private fun form(name: String, placement: PlacementOption = PlacementOption.Disabled(PlacementBlock.NO_SCENE_VIEW)) =
+    private fun form(
+        name: String,
+        placement: PlacementOption = PlacementOption.Disabled(PlacementBlock.NO_SCENE_VIEW),
+    ) =
         ModelImportForm(File(fixtures, name), untitled, placement).also { form ->
             form.accept(runCatchingKeepingCancellation { ModelSourceOpener().open(form.sourceFile).also(opened::add) })
         }
@@ -88,7 +91,12 @@ class ModelImportFormTest {
 
     @Test
     fun anUnreadableSourceDisablesCreateAndShowsItsReason() {
-        val form = ModelImportForm(File(fixtures, "broken.fbx"), untitled, PlacementOption.Disabled(PlacementBlock.NO_SCENE_VIEW))
+        val form =
+            ModelImportForm(
+                File(fixtures, "broken.fbx"),
+                untitled,
+                PlacementOption.Disabled(PlacementBlock.NO_SCENE_VIEW),
+            )
         assertEquals(listOf(FormProblem.SOURCE_LOADING), form.problems())
         form.accept(Result.failure(ModelImportException("Error loading model: truncated file")))
         assertEquals(listOf(FormProblem.SOURCE_UNREADABLE), form.problems())
@@ -119,8 +127,18 @@ class ModelImportFormTest {
     @Test
     fun settingsChangeReusesSource() {
         var opens = 0
-        val form = ModelImportForm(File(fixtures, "crate.obj"), untitled, PlacementOption.Disabled(PlacementBlock.NO_SCENE_VIEW))
-        form.accept(runCatchingKeepingCancellation { opens++; ModelSourceOpener().open(form.sourceFile).also(opened::add) })
+        val form =
+            ModelImportForm(
+                File(fixtures, "crate.obj"),
+                untitled,
+                PlacementOption.Disabled(PlacementBlock.NO_SCENE_VIEW),
+            )
+        form.accept(
+            runCatchingKeepingCancellation {
+                opens++
+                ModelSourceOpener().open(form.sourceFile).also(opened::add)
+            }
+        )
         val heights = ArrayList<Float>()
         for (unit in listOf(LengthUnit.CM, LengthUnit.MM, LengthUnit.M)) {
             form.unit = unit

@@ -16,14 +16,20 @@ import org.junit.Test
 
 class ModelCullingTest {
     /** A model whose rest-pose box is a 2 m cube about its origin; it has no GL resources. */
-    private fun model(): Model = object : Model() {
-        override fun calculateBoundingBox(out: BoundingBox): BoundingBox = out.set(Vector3(-1f, -1f, -1f), Vector3(1f, 1f, 1f))
-    }
+    private fun model(): Model =
+        object : Model() {
+            override fun calculateBoundingBox(out: BoundingBox): BoundingBox =
+                out.set(Vector3(-1f, -1f, -1f), Vector3(1f, 1f, 1f))
+        }
 
     private val camera: PerspectiveCamera by lazy {
         com.badlogic.gdx.utils.GdxNativesLoader.load() // the camera's frustum update is native
         PerspectiveCamera(60f, 100f, 100f).apply {
-            position.set(0f, 0f, 0f); lookAt(0f, 0f, -1f); near = 0.1f; far = 100f; update()
+            position.set(0f, 0f, 0f)
+            lookAt(0f, 0f, -1f)
+            near = 0.1f
+            far = 100f
+            update()
         }
     }
 
@@ -54,9 +60,13 @@ class ModelCullingTest {
         assertTrue(culling.visible(big, camera.frustum))
     }
 
-    /** A model whose rest-pose box is a cube of [half] metres either side of its origin; [half] may change, as a rebuild does. */
+    /**
+     * A model whose rest-pose box is a cube of [half] metres either side of its origin; [half] may change, as a rebuild
+     * does.
+     */
     private class Cube(var half: Float) : Model() {
-        override fun calculateBoundingBox(out: BoundingBox): BoundingBox = out.set(Vector3(-half, -half, -half), Vector3(half, half, half))
+        override fun calculateBoundingBox(out: BoundingBox): BoundingBox =
+            out.set(Vector3(-half, -half, -half), Vector3(half, half, half))
     }
 
     @Test

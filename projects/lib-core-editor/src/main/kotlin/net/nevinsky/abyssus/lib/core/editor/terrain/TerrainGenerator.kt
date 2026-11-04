@@ -39,27 +39,39 @@ data class TerrainGenerationSettings(
 ) {
     /** Every setting that is not acceptable, in field order; empty when generation may run. */
     fun errors(): List<SettingsError> = buildList {
-        if (!featureSize.isFinite() || featureSize <= 0f) add(SettingsError.FEATURE_SIZE)
-        if (!minHeight.isFinite() || !maxHeight.isFinite()) add(SettingsError.HEIGHT_NOT_FINITE)
-        else if (minHeight >= maxHeight) add(SettingsError.HEIGHT_RANGE)
-        if (octaves !in 1..MAX_OCTAVES) add(SettingsError.OCTAVES)
-        if (!persistence.isFinite() || persistence < 0f || persistence > 1f) add(SettingsError.PERSISTENCE)
-        if (!lacunarity.isFinite() || lacunarity < 1f || lacunarity > MAX_LACUNARITY) add(SettingsError.LACUNARITY)
+        if (!featureSize.isFinite() || featureSize <= 0f) {
+            add(SettingsError.FEATURE_SIZE)
+        }
+        if (!minHeight.isFinite() || !maxHeight.isFinite()) {
+            add(SettingsError.HEIGHT_NOT_FINITE)
+        } else if (minHeight >= maxHeight) {
+            add(SettingsError.HEIGHT_RANGE)
+        }
+        if (octaves !in 1..MAX_OCTAVES) {
+            add(SettingsError.OCTAVES)
+        }
+        if (!persistence.isFinite() || persistence < 0f || persistence > 1f) {
+            add(SettingsError.PERSISTENCE)
+        }
+        if (!lacunarity.isFinite() || lacunarity < 1f || lacunarity > MAX_LACUNARITY) {
+            add(SettingsError.LACUNARITY)
+        }
     }
 
-    val valid: Boolean get() = errors().isEmpty()
+    val valid: Boolean
+        get() = errors().isEmpty()
 }
 
 /**
  * Makes terrain heights from [TerrainGenerationSettings]: fractal noise sampled at world positions, so the same
  * settings, size and noise generator give the same heights at any resolution, then mapped onto the height range.
- * Heights are laid out row after row (z-major) as [net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData] expects. Pure
- * CPU work, safe on any thread.
+ * Heights are laid out row after row (z-major) as [net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData] expects.
+ * Pure CPU work, safe on any thread.
  */
 class TerrainGenerator(private val noise: NoiseSamplerFactory) {
     /**
-     * The `resolution` x `resolution` heights of a terrain [size] world units wide. [checkCancelled] is called once
-     * per row and may throw to stop; nothing is returned in that case.
+     * The `resolution` x `resolution` heights of a terrain [size] world units wide. [checkCancelled] is called once per
+     * row and may throw to stop; nothing is returned in that case.
      */
     fun generate(
         resolution: Int,
@@ -67,11 +79,20 @@ class TerrainGenerator(private val noise: NoiseSamplerFactory) {
         settings: TerrainGenerationSettings,
         checkCancelled: () -> Unit = {},
     ): FloatArray {
-        require(resolution in MIN_TERRAIN_RESOLUTION..MAX_TERRAIN_RESOLUTION) { "resolution $resolution is outside 2..$MAX_TERRAIN_RESOLUTION" }
+        require(resolution in MIN_TERRAIN_RESOLUTION..MAX_TERRAIN_RESOLUTION) {
+            "resolution $resolution is outside 2..$MAX_TERRAIN_RESOLUTION"
+        }
         require(size > 0) { "size must be positive" }
         require(settings.valid) { "invalid generation settings: ${settings.errors()}" }
 
-        val sampler = noise.create(settings.seed, 1f / settings.featureSize, settings.octaves, settings.persistence, settings.lacunarity)
+        val sampler =
+            noise.create(
+                settings.seed,
+                1f / settings.featureSize,
+                settings.octaves,
+                settings.persistence,
+                settings.lacunarity,
+            )
         val min = settings.minHeight.toDouble()
         val span = settings.maxHeight.toDouble() - min
         val step = size.toDouble() / (resolution - 1)

@@ -29,9 +29,13 @@ data class RayQualityLimits(
 }
 
 data class RayRenderQuality(val width: Int, val height: Int, val samples: Int, val frameBytes: Long)
+
 class RayQualityLimitException(message: String) : IllegalStateException(message)
 
-/** Owned by the serial rendering worker. Adaptation stays at or above the minimum resolution unless only the saved ray budget forbids it; then it shrinks the frame down to the budget floor. */
+/**
+ * Owned by the serial rendering worker. Adaptation stays at or above the minimum resolution unless only the saved ray
+ * budget forbids it; then it shrinks the frame down to the budget floor.
+ */
 class RayQualityPolicy(val limits: RayQualityLimits = RayQualityLimits()) {
     private var meanNanos: Double? = null
     private var scale = limits.minimumScale
@@ -47,7 +51,7 @@ class RayQualityPolicy(val limits: RayQualityLimits = RayQualityLimits()) {
         outputHeight: Int,
         stableFrames: Int,
         raysPerSample: Int = 1,
-        maxRaysPerFrame: Long = limits.maxRaysPerFrame
+        maxRaysPerFrame: Long = limits.maxRaysPerFrame,
     ): RayRenderQuality {
         require(outputWidth > 0 && outputHeight > 0 && stableFrames >= 0 && raysPerSample > 0 && maxRaysPerFrame > 0)
         // All bounds are hard, including every intersection query in the submitted frame.
@@ -65,7 +69,12 @@ class RayQualityPolicy(val limits: RayQualityLimits = RayQualityLimits()) {
             throw RayQualityLimitException("Minimum ray frame exceeds dimension, pixel or memory bounds")
         }
         // a small saved budget lowers the floor instead of stopping ray tracing, down to the budget floor
-        val lowest = if (fits(limits.minimumScale)) limits.minimumScale else limits.budgetFloorScale
+        val lowest =
+            if (fits(limits.minimumScale)) {
+                limits.minimumScale
+            } else {
+                limits.budgetFloorScale
+            }
         if (!fits(lowest)) {
             val width = dimension(outputWidth, lowest)
             val height = dimension(outputHeight, lowest)
@@ -73,23 +82,34 @@ class RayQualityPolicy(val limits: RayQualityLimits = RayQualityLimits()) {
             throw RayQualityLimitException(
                 "Saved ray budget of $maxRaysPerFrame rays per frame is too small for the minimum ray frame: " +
                     "${width}x$height pixels (${outputWidth}x$outputHeight view at ${(lowest * 100).toInt()}%) " +
-                    "at $raysPerSample rays per sample needs at least $needed. Raise Rays per frame in the scene's ray settings."
+                    "at $raysPerSample rays per sample needs at least $needed. Raise Rays per frame in the scene's " +
+                    "ray settings."
             )
         }
         meanNanos?.let {
-            scale = when {
-                it > limits.targetFrameNanos * 1.1 -> scale * sqrt(limits.targetFrameNanos / it)
-                it < limits.targetFrameNanos * 0.65 -> scale * 1.125
-                else -> scale
-            }.coerceIn(lowest, 1.0)
+            scale =
+                when {
+                    it > limits.targetFrameNanos * 1.1 -> scale * sqrt(limits.targetFrameNanos / it)
+                    it < limits.targetFrameNanos * 0.65 -> scale * 1.125
+                    else -> scale
+                }.coerceIn(lowest, 1.0)
         }
-        var selected = if (stableFrames < 2) lowest else scale
+        var selected =
+            if (stableFrames < 2) {
+                lowest
+            } else {
+                scale
+            }
         if (!fits(selected)) {
             var low = lowest
             var high = selected
             repeat(32) {
                 val middle = (low + high) * 0.5
-                if (fits(middle)) low = middle else high = middle
+                if (fits(middle)) {
+                    low = middle
+                } else {
+                    high = middle
+                }
             }
             selected = low
         }
@@ -98,10 +118,13 @@ class RayQualityPolicy(val limits: RayQualityLimits = RayQualityLimits()) {
         val pixels = width.toLong() * height
         val timingSamples =
             meanNanos?.let { (limits.targetFrameNanos / it).toInt().coerceIn(1, limits.maxSamples) } ?: 1
-        val samples = minOf(
-            limits.maxSamples, timingSamples, 1 shl minOf(stableFrames / 2, 6),
-            (maxRaysPerFrame / pixels / raysPerSample).coerceIn(1, 64).toInt()
-        )
+        val samples =
+            minOf(
+                limits.maxSamples,
+                timingSamples,
+                1 shl minOf(stableFrames / 2, 6),
+                (maxRaysPerFrame / pixels / raysPerSample).coerceIn(1, 64).toInt(),
+            )
         return RayRenderQuality(width, height, samples, pixels * limits.bytesPerPixel)
     }
 }

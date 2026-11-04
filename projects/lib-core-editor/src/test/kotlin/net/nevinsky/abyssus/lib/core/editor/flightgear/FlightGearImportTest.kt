@@ -7,9 +7,15 @@ package net.nevinsky.abyssus.lib.core.editor.flightgear
 
 import com.badlogic.gdx.files.FileHandle
 import com.fasterxml.jackson.databind.JsonNode
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import java.io.ByteArrayInputStream
+import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.util.UUID
+import javax.imageio.ImageIO
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -19,21 +25,18 @@ import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.ByteArrayInputStream
-import java.io.File
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.util.UUID
-import javax.imageio.ImageIO
 
 class FlightGearImportTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
     private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
     private val importer = FlightGearImport(json)
     private val uuid = UUID.fromString("6f1c2b5e-7d0a-4c39-9e61-1d3a2f5b8c90")
 
-    private fun stage(license: Boolean = false, size: ImportSize = ImportSize.Span(1.0), excluded: Set<String> = setOf("PropDisc")): Pair<File, StagedImport> {
+    private fun stage(
+        license: Boolean = false,
+        size: ImportSize = ImportSize.Span(1.0),
+        excluded: Set<String> = setOf("PropDisc"),
+    ): Pair<File, StagedImport> {
         val zip = fixtureArchive(temp.newFolder(), license)
         FlightGearArchive(zip).use { archive ->
             val request = FlightGearImportRequest(archive.aircraft().single(), "model_fixture", size, excluded)
@@ -45,20 +48,23 @@ class FlightGearImportTest {
     private fun positions(glb: ByteArray): Map<String, List<FloatArray>> {
         val doc = glbJson(glb)
         val jsonLength = ByteBuffer.wrap(glb).order(ByteOrder.LITTLE_ENDIAN).getInt(12)
-        val bin = ByteBuffer.wrap(glb, 28 + jsonLength, glb.size - 28 - jsonLength).slice().order(ByteOrder.LITTLE_ENDIAN)
+        val bin =
+            ByteBuffer.wrap(glb, 28 + jsonLength, glb.size - 28 - jsonLength).slice().order(ByteOrder.LITTLE_ENDIAN)
         return doc["nodes"].associate { node ->
             val mesh = doc["meshes"][node["mesh"].asInt()]
-            node["name"].asText() to mesh["primitives"].flatMap { p ->
-                val accessor = doc["accessors"][p["attributes"]["POSITION"].asInt()]
-                val view = doc["bufferViews"][accessor["bufferView"].asInt()]
-                (0 until accessor["count"].asInt()).map { i ->
-                    FloatArray(3) { c -> bin.getFloat(view["byteOffset"].asInt() + (i * 3 + c) * 4) }
+            node["name"].asText() to
+                mesh["primitives"].flatMap { p ->
+                    val accessor = doc["accessors"][p["attributes"]["POSITION"].asInt()]
+                    val view = doc["bufferViews"][accessor["bufferView"].asInt()]
+                    (0 until accessor["count"].asInt()).map { i ->
+                        FloatArray(3) { c -> bin.getFloat(view["byteOffset"].asInt() + (i * 3 + c) * 4) }
+                    }
                 }
-            }
         }
     }
 
     private fun List<FloatArray>.min(c: Int) = minOf { it[c] }
+
     private fun List<FloatArray>.max(c: Int) = maxOf { it[c] }
 
     @Test
@@ -95,11 +101,18 @@ class FlightGearImportTest {
     @Test
     fun aSourcePointBecomesTheOrigin() {
         val zip = fixtureArchive(temp.newFolder())
-        val staged = FlightGearArchive(zip).use { archive ->
-            // the FlightGear body point of AC vertex (1, 0.6, 0): the body's top rear edge (x aft, z up)
-            val request = FlightGearImportRequest(archive.aircraft().single(), "m", ImportSize.Original, origin = ImportOrigin.SourcePoint(1.0, 0.0, 0.6))
-            importer.stage(archive, request, uuid, 1L)
-        }
+        val staged =
+            FlightGearArchive(zip).use { archive ->
+                // the FlightGear body point of AC vertex (1, 0.6, 0): the body's top rear edge (x aft, z up)
+                val request =
+                    FlightGearImportRequest(
+                        archive.aircraft().single(),
+                        "m",
+                        ImportSize.Original,
+                        origin = ImportOrigin.SourcePoint(1.0, 0.0, 0.6),
+                    )
+                importer.stage(archive, request, uuid, 1L)
+            }
         val body = positions(staged.files.getValue(IMPORTED_MODEL_FILE)).getValue("Body")
         assertEquals(0f, body.min(2), 1e-5f) // the tail end is at Z = 0
         assertEquals(0f, body.max(1), 1e-5f) // the body's top is at Y = 0
@@ -154,13 +167,22 @@ class FlightGearImportTest {
     @Test
     fun theSameImportStagesTheSameBytes() {
         val zip = fixtureArchive(temp.newFolder())
-        val runs = (1..2).map {
-            FlightGearArchive(zip).use { archive ->
-                importer.stage(archive, FlightGearImportRequest(archive.aircraft().single(), "m", ImportSize.Span(1.0)), uuid, 1L)
+        val runs =
+            (1..2).map {
+                FlightGearArchive(zip).use { archive ->
+                    importer.stage(
+                        archive,
+                        FlightGearImportRequest(archive.aircraft().single(), "m", ImportSize.Span(1.0)),
+                        uuid,
+                        1L,
+                    )
+                }
             }
-        }
         assertEquals(runs[0].files.keys, runs[1].files.keys)
-        for (key in runs[0].files.keys) assertTrue(key, runs[0].files.getValue(key).contentEquals(runs[1].files.getValue(key)))
+        for (key in runs[0].files.keys) assertTrue(
+            key,
+            runs[0].files.getValue(key).contentEquals(runs[1].files.getValue(key)),
+        )
     }
 
     @Test
@@ -184,13 +206,21 @@ class FlightGearImportTest {
             val inspection = importer.inspect(archive, aircraft)
             assertEquals(listOf("Propeller.2"), inspection.parts.filter { !it.shownAtRest }.map { it.name })
             assertNull(inspection.license)
-            val staged = importer.stage(archive, FlightGearImportRequest(aircraft, "model_c172r", ImportSize.Span(1.0), setOf("Propeller.2")), uuid, 1L)
+            val staged =
+                importer.stage(
+                    archive,
+                    FlightGearImportRequest(aircraft, "model_c172r", ImportSize.Span(1.0), setOf("Propeller.2")),
+                    uuid,
+                    1L,
+                )
             val parts = positions(staged.files.getValue(IMPORTED_MODEL_FILE))
             val all = parts.values.flatten()
             assertEquals(1f, all.max(0) - all.min(0), 1e-4f)
             assertEquals(0f, all.min(1), 1e-6f)
             assertEquals(all.max(2), parts.getValue("Hub").max(2), 1e-4f) // the spinner is the nose
-            assertTrue(parts.getValue("Wings").min(1) > parts.getValue("NoseWheel").max(1)) // a high wing above the gear
+            assertTrue(
+                parts.getValue("Wings").min(1) > parts.getValue("NoseWheel").max(1)
+            ) // a high wing above the gear
             assertEquals(0f, minOf(parts.getValue("LeftWheel").min(1), parts.getValue("NoseWheel").min(1)), 1e-4f)
             assertTrue(parts.getValue("LeftAileron").min(0) > 0f) // left is +X
             assertTrue(setOf("textures/c172-01.png", "textures/c172-02.png").all { it in staged.files })

@@ -9,10 +9,10 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.ToggleAction
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.components.service
-import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
 import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
@@ -20,23 +20,24 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
+import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
 import net.nevinsky.abyssus.plugin.sceneview.OverlayView
 import net.nevinsky.abyssus.plugin.sceneview.SceneOverlay
 import net.nevinsky.abyssus.plugin.sceneview.SceneOverlayProvider
 import org.slf4j.LoggerFactory
-import java.io.File
 
 val LOGGER = LoggerFactory.getLogger(PhysicsOverlay::class.java)
 
 /** Gives every Scene view a [PhysicsOverlay]. */
 class PhysicsOverlayProvider : SceneOverlayProvider {
     override fun isAvailable(project: Project, file: VirtualFile): Boolean =
-        ProjectLayout.abssFor(file)?.let { project.service<AbyssusProjectSettings>().getSettings(it).physicsEnabled } == true
+        ProjectLayout.abssFor(file)?.let { project.service<AbyssusProjectSettings>().getSettings(it).physicsEnabled } ==
+            true
+
     override fun create(project: Project, file: VirtualFile): SceneOverlay {
         return PhysicsOverlay(ProjectLayout.projectDirFor(file))
     }
 }
-
 
 /**
  * Draws the scene's colliders and constraints in one Scene view while "Show Physics" is on (off when the view opens).
@@ -44,14 +45,15 @@ class PhysicsOverlayProvider : SceneOverlayProvider {
  * stays visible. Segments are recomputed only when the shown content, the scene JSON or the selection changes.
  */
 class PhysicsOverlay(initialProjectDir: File?) : SceneOverlay {
-    @Volatile
-    var shown = false
+    @Volatile var shown = false
 
     private var projectDir: File? = null
     private var metas: AssetMetaLoader? = null
     private val geometry = PhysicsOverlayGeometry { name -> metas?.terrainSize(name) }
 
-    init { initialProjectDir?.let(::useProject) }
+    init {
+        initialProjectDir?.let(::useProject)
+    }
 
     private var lastContent: SceneContent? = null
     private var lastEcs: Map<Long, net.nevinsky.abyssus.lib.core.dto.EntityDto>? = null
@@ -79,18 +81,23 @@ class PhysicsOverlay(initialProjectDir: File?) : SceneOverlay {
         }
     }
 
-    private val toolbarActions: List<AnAction> = listOf(object : ToggleAction(
-        AbyssusPhysicsBundle.message("showPhysics"),
-        AbyssusPhysicsBundle.message("showPhysicsTooltip"),
-        AllIcons.Actions.Show,
-    ) {
-        override fun isSelected(e: AnActionEvent) = shown
-        override fun setSelected(e: AnActionEvent, state: Boolean) {
-            shown = state
-        }
+    private val toolbarActions: List<AnAction> =
+        listOf(
+            object :
+                ToggleAction(
+                    AbyssusPhysicsBundle.message("showPhysics"),
+                    AbyssusPhysicsBundle.message("showPhysicsTooltip"),
+                    AllIcons.Actions.Show,
+                ) {
+                override fun isSelected(e: AnActionEvent) = shown
 
-        override fun getActionUpdateThread() = ActionUpdateThread.EDT
-    })
+                override fun setSelected(e: AnActionEvent, state: Boolean) {
+                    shown = state
+                }
+
+                override fun getActionUpdateThread() = ActionUpdateThread.EDT
+            }
+        )
 
     override fun actions(): List<AnAction> = toolbarActions
 

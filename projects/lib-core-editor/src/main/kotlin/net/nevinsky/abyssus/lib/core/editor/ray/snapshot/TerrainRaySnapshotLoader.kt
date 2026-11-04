@@ -15,7 +15,8 @@ import net.nevinsky.abyssus.lib.core.assets.texture.TextureLoader
  * The CPU-only companion of a terrain: its heights and splat images are read afresh (no GL, nothing uploaded, no GPU
  * asset touched), because the raster side keeps no pixels once its splat textures are on the GPU. This is a
  * companion read, not an asset load, so it takes [terrainLoader] (for the parsed terrain) and [textureLoader] (for the
- * decoded images) directly, without the caching [net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage] gives GPU assets.
+  * decoded images) directly, without the caching [net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage] gives GPU
+  * assets.
  */
 class TerrainRaySnapshotLoader(
     private val terrainLoader: TerrainLoader,

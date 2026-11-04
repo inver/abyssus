@@ -24,7 +24,10 @@ import java.awt.event.MouseEvent
 import javax.swing.*
 import javax.swing.border.AbstractBorder
 
-/** The sizes of the panel's design (at scale 1): a 150 px label column, fields at the look and feel's height, a 26 px Browse, a 34 px section header. */
+/**
+ * The sizes of the panel's design (at scale 1): a 150 px label column, fields at the look and feel's height, a 26 px
+ * Browse, a 34 px section header.
+ */
 object PanelMetrics {
     const val LABEL_COLUMN = 150
     const val BROWSE = 26
@@ -46,11 +49,21 @@ private const val HAIRLINE_PX = 1
  * negative. Every field of the panel then has one height, a field that was never sized included.
  */
 internal fun JComponent.pinFieldHeight(width: Int = -1) {
-    val keep = if (isPreferredSizeSet) preferredSize.width else -1
+    val keep = if (isPreferredSizeSet) {
+        preferredSize.width
+    } else {
+        -1
+    }
     preferredSize = null
     minimumSize = null
     val height = maxOf(preferredSize.height, minimumSize.height)
-    preferredSize = Dimension(if (width >= 0) width else if (keep >= 0) keep else preferredSize.width, height)
+    preferredSize = Dimension(if (width >= 0) {
+        width
+    } else if (keep >= 0) {
+        keep
+    } else {
+        preferredSize.width
+    }, height)
     minimumSize = Dimension(minimumSize.width, height)
     maximumSize = Dimension(maximumSize.width, height)
 }
@@ -83,7 +96,11 @@ class BadgeLabel(text: String, foreground: Color, private val outline: Color) : 
         fun of(badge: Badge): BadgeLabel = when (badge.kind) {
             BadgeKind.READ_ONLY -> BadgeLabel(badge.text, DesignColors.SECONDARY, DesignColors.BORDER)
             BadgeKind.UNUSED -> BadgeLabel(badge.text, DesignColors.AMBER, DesignColors.AMBER)
-        }.also { it.name = if (badge.kind == BadgeKind.READ_ONLY) "badge-read-only" else "badge-unused" }
+        }.also { it.name = if (badge.kind == BadgeKind.READ_ONLY) {
+            "badge-read-only"
+        } else {
+            "badge-unused"
+        } }
 
         fun game(): BadgeLabel =
             BadgeLabel(AbyssusBundle.message("panelBadgeGame"), DesignColors.GAME, DesignColors.GAME)
@@ -111,12 +128,14 @@ class HeaderPanel(header: Header, icon: Icon, titleName: String = "header-title"
             isOpaque = false
         }
         val crumbs = header.breadcrumb.filter { it.isNotBlank() }
-        if (crumbs.isNotEmpty()) column.add(
-            JBLabel(crumbs.joinToString("  ›  ")).apply {
-                name = "header-breadcrumb"; font = JBFont.small(); foreground = DesignColors.SECONDARY
-                alignmentX = LEFT_ALIGNMENT; border = JBUI.Borders.emptyBottom(6)
-            },
-        )
+        if (crumbs.isNotEmpty()) {
+            column.add(
+                JBLabel(crumbs.joinToString("  ›  ")).apply {
+                    name = "header-breadcrumb"; font = JBFont.small(); foreground = DesignColors.SECONDARY
+                    alignmentX = LEFT_ALIGNMENT; border = JBUI.Borders.emptyBottom(6)
+                },
+            )
+        }
         // The icon spans the title and subtitle rows; the text sits to its right.
         val text = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
@@ -126,7 +145,9 @@ class HeaderPanel(header: Header, icon: Icon, titleName: String = "header-title"
             isOpaque = false; alignmentX = LEFT_ALIGNMENT
             add(JBLabel(header.title).apply {
                 name = titleName; font = JBFont.label().asBold().biggerOn(2f)
-                if (dim) foreground = DesignColors.SECONDARY
+                if (dim) {
+                    foreground = DesignColors.SECONDARY
+                }
             })
             header.badges.forEach {
                 add(Box.createHorizontalStrut(JBUI.scale(8)))
@@ -140,12 +161,14 @@ class HeaderPanel(header: Header, icon: Icon, titleName: String = "header-title"
                 border = JBUI.Borders.emptyTop(2)
             },
         )
-        if (header.note.isNotEmpty()) text.add(
-            JBLabel(header.note).apply {
-                name = "shared-asset-note"; font = JBFont.small(); foreground = DesignColors.SECONDARY
-                alignmentX = LEFT_ALIGNMENT; border = JBUI.Borders.emptyTop(2)
-            },
-        )
+        if (header.note.isNotEmpty()) {
+            text.add(
+                JBLabel(header.note).apply {
+                    name = "shared-asset-note"; font = JBFont.small(); foreground = DesignColors.SECONDARY
+                    alignmentX = LEFT_ALIGNMENT; border = JBUI.Borders.emptyTop(2)
+                },
+            )
+        }
         val row = JPanel(BorderLayout()).apply {
             isOpaque = false; alignmentX = LEFT_ALIGNMENT
             add(
@@ -171,12 +194,18 @@ class HeaderPanel(header: Header, icon: Icon, titleName: String = "header-title"
 /** A panel that draws its children at [alpha]; a disabled section's body, which stays editable. */
 class DimPanel(layout: java.awt.LayoutManager, private var alpha: Float = 1f) : JPanel(layout) {
     fun setDim(dim: Boolean) {
-        alpha = if (dim) PanelMetrics.DISABLED_ALPHA else 1f
+        alpha = if (dim) {
+            PanelMetrics.DISABLED_ALPHA
+        } else {
+            1f
+        }
         repaint()
     }
 
     override fun paint(g: Graphics) {
-        if (alpha >= 1f) return super.paint(g)
+        if (alpha >= 1f) {
+            return super.paint(g)
+        }
         val g2 = g.create() as Graphics2D
         try {
             g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha)
@@ -243,14 +272,20 @@ class PropertySection(
         name = "section-chevron-${section.key}"
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         accessibleContext.accessibleName =
-            AbyssusBundle.message(if (collapsed) "panelExpand" else "panelCollapse", section.title)
+            AbyssusBundle.message(if (collapsed) {
+                "panelExpand"
+            } else {
+                "panelCollapse"
+            }, section.title)
     }
     val enabledBox: JBCheckBox? = section.enable?.let { toggle ->
         JBCheckBox(AbyssusBundle.message("panelEnabled"), toggle.checked).apply {
             name = "section-enabled-${section.key}"
             isOpaque = false
             accessibleContext.accessibleName = AbyssusBundle.message("panelEnabledFor", section.title)
-            if (onEnabled != null) addActionListener { onEnabled(isSelected) }
+            if (onEnabled != null) {
+                addActionListener { onEnabled(isSelected) }
+            }
         }
     }
 
@@ -270,12 +305,16 @@ class PropertySection(
                     JBLabel(
                         if (dim) {
                             dimmed(it)
-                        } else it
+                        } else {
+                            it
+                        }
                     ).apply { name = "section-icon-${section.key}" })
             }
             add(JBLabel(section.title).apply {
                 name = "section-title-${section.key}"; font = JBFont.label().asBold()
-                if (dim) foreground = DesignColors.SECONDARY
+                if (dim) {
+                    foreground = DesignColors.SECONDARY
+                }
             })
             if (section.game) {
                 add(BadgeLabel.game())
@@ -338,10 +377,14 @@ class PropertySection(
 
     private fun chevronIcon(collapsed: Boolean): Icon = if (collapsed) {
         AllIcons.General.ArrowRight
-    } else AllIcons.General.ArrowDown
+    } else {
+        AllIcons.General.ArrowDown
+    }
 }
 
-/** Hosts [view] in a scroll pane that follows the viewport's width, so a section never needs a horizontal scroll bar. */
+/**
+ * Hosts [view] in a scroll pane that follows the viewport's width, so a section never needs a horizontal scroll bar.
+ */
 class WidthTrackingPanel(view: JComponent) : JPanel(BorderLayout()), javax.swing.Scrollable {
     init {
         add(view, BorderLayout.CENTER)

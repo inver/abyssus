@@ -11,23 +11,36 @@ import org.junit.Test
 
 /** Measures native-to-canvas motion. Does not substitute for the sandbox IDE/manual gate. */
 class RayFeasibilityPresentationTimingGlTest {
-    @Test fun movingInstanceAndCameraReachTheCanvasForThirtySeconds() {
-        assumeTrue(GlHarness.enabled && java.lang.Boolean.getBoolean("abyssus.rayTimingTests") &&
-            System.getProperty("os.name").startsWith("Mac"))
+    @Test
+    fun movingInstanceAndCameraReachTheCanvasForThirtySeconds() {
+        assumeTrue(
+            GlHarness.enabled &&
+                java.lang.Boolean.getBoolean("abyssus.rayTimingTests") &&
+                System.getProperty("os.name").startsWith("Mac")
+        )
         val reports = mutableListOf<String>()
-        val preview = RayFeasibilityPreview { reports.add(it); println(it) }
-        val rendered = GlHarness.render(SceneRenderParams.DEFAULT, 2100, framebufferSize = 1280 to 720) { renderer, index ->
-            try {
-                assertEquals(1280, renderer.lastWidth)
-                assertEquals(720, renderer.lastHeight)
-                preview.orbit.yaw += 0.0005f
-                preview.draw(renderer.lastWidth, renderer.lastHeight)
-                assertNull(preview.failure)
-            } finally {
-                if (index == 2099) preview.dispose()
-            }
+        val preview = RayFeasibilityPreview {
+            reports.add(it)
+            println(it)
         }
-        rendered.error?.let { preview.stop(); throw it }
+        val rendered =
+            GlHarness.render(SceneRenderParams.DEFAULT, 2100, framebufferSize = 1280 to 720) { renderer, index ->
+                try {
+                    assertEquals(1280, renderer.lastWidth)
+                    assertEquals(720, renderer.lastHeight)
+                    preview.orbit.yaw += 0.0005f
+                    preview.draw(renderer.lastWidth, renderer.lastHeight)
+                    assertNull(preview.failure)
+                } finally {
+                    if (index == 2099) {
+                        preview.dispose()
+                    }
+                }
+            }
+        rendered.error?.let {
+            preview.stop()
+            throw it
+        }
         assertTrue("Expected a 30-second measurement: $reports", reports.isNotEmpty())
         assertTrue(GlHarness.coverage(rendered.image, SceneRenderParams.DEFAULT) > 0.2)
         for (report in reports) {

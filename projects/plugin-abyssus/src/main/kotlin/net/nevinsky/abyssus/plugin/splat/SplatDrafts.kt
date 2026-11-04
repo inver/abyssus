@@ -11,8 +11,10 @@ import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatDraft
 
 /**
  * The splat painting strokes in progress in one project, keyed by the **splat texture's asset folder** (not the
- * terrain's), so two terrains that share a map both follow one stroke. A stroke's [SplatDraft] lives here from the press
- * until its write has finished (or the stroke is discarded): every Scene view showing a terrain with that map copies the
+  * terrain's), so two terrains that share a map both follow one stroke. A stroke's [SplatDraft] lives here from the
+  * press
+  * until its write has finished (or the stroke is discarded): every Scene view showing a terrain with that map copies
+  * the
  * draft's changed texels into its own splat texture on each new revision, and once the draft is gone the views load the
  * texture again from the file.
  *

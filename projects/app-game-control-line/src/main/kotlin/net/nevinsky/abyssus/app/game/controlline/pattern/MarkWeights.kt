@@ -7,14 +7,18 @@ package net.nevinsky.abyssus.app.game.controlline.pattern
 import kotlin.math.max
 import kotlin.math.min
 
-/** One criterion of a mark: nothing is deducted up to [tolerance], then [perUnit] marks for each unit more, at most [cap]. */
+/**
+ * One criterion of a mark: nothing is deducted up to [tolerance], then [perUnit] marks for each unit more, at most
+ * [cap].
+ */
 data class Weight(val tolerance: Float, val perUnit: Float, val cap: Float) {
     /** The deduction (marks) for a [measured] error. Never decreases as the error grows. */
     fun deduct(measured: Float): Float = min(cap, perUnit * max(0f, measured - tolerance))
 }
 
 /**
- * The deductions of a mark (design decision 5). Annex 4B, the Judges' Guide, is not part of the 2027 volume, so these are
+  * The deductions of a mark (design decision 5). Annex 4B, the Judges' Guide, is not part of the 2027 volume, so these
+  * are
  * this game's own weights, one table to tune by play. Units: metres, degrees, laps, metres per second.
  */
 data class MarkWeights(
@@ -26,7 +30,10 @@ data class MarkWeights(
     val parallel45: Weight = Weight(0.5f, 1f, 2f),
     /** Verticals and 30° legs away from their direction (degrees). */
     val lineAngle: Weight = Weight(3f, 0.1f, 2f),
-    /** The mean radius of the corners (m); the Stunter cannot turn tighter than about 2.7 m at full tilt (see the README). */
+    /**
+     * The mean radius of the corners (m); the Stunter cannot turn tighter than about 2.7 m at full tilt (see the
+     * README).
+     */
     val cornerRadius: Weight = Weight(3f, 1f, 3f),
     /** A segment that should be ⅛ lap, ½ lap or 1 lap away from it (laps). */
     val segmentLength: Weight = Weight(0.02f, 10f, 2f),

@@ -10,8 +10,10 @@ import com.badlogic.ashley.core.Entity
 import net.nevinsky.abyssus.lib.core.format.EntityType
 
 /**
- * What every loaded entity is before its other components: its [id] as the scene file keys it, its [type] (the `type` of its entry, null when it has none), whether it is enabled ([entityEnabled]), the bits of its `flags` this program
- * does not own ([flags], kept so a write puts them back) and the classes of its disabled components. A disabled thing is
+  * What every loaded entity is before its other components: its [id] as the scene file keys it, its [type] (the `type`
+  * of its entry, null when it has none), whether it is enabled ([entityEnabled]), the bits of its `flags` this program
+  * does not own ([flags], kept so a write puts them back) and the classes of its disabled components. A disabled thing
+  * is
  * present as data and absent as behavior.
  */
 class HeaderComponent(
@@ -37,4 +39,6 @@ fun Entity.isActive(type: Class<out Component>): Boolean {
 /** The [type] component of this entity when it and the entity are enabled, else null. */
 fun <T : Component> Entity.activeComponent(type: Class<T>): T? = if (isActive(type)) {
     getComponent(type)
-} else null
+} else {
+    null
+}

@@ -35,13 +35,17 @@ class CloudFrameBudget(val budgetSeconds: Float = CLOUD_FRAME_BUDGET) {
             reset()
             return false
         }
-        if (!interval.isFinite() || interval <= 0f || interval > CLOUD_FRAME_GAP) return false
+        if (!interval.isFinite() || interval <= 0f || interval > CLOUD_FRAME_GAP) {
+            return false
+        }
         if (interval <= budgetSeconds) {
             slowSeconds = 0f
             return false
         }
         slowSeconds += interval
-        if (slowSeconds < CLOUD_SLOW_SECONDS - 1e-4f) return false // forty 50 ms frames add up to just under 2 in floats
+        if (slowSeconds < CLOUD_SLOW_SECONDS - 1e-4f) {
+            return false // forty 50 ms frames add up to just under 2 in floats
+        }
         reset()
         return true
     }

@@ -17,22 +17,32 @@ class DocumentParsingTest {
 
     @Test
     fun headerAdmissionMatchesTheNativeValidatorBeforeDtoCoercion() {
-        val headers = listOf(
-            "\"format\":\"abyssus\",\"formatVersion\":1",
-            "\"formatVersion\":1",
-            "\"format\":\"other\",\"formatVersion\":1",
-            "\"format\":7,\"formatVersion\":1",
-            *listOf("1.0", "\"1\"", "2", "1e0", "null").map { "\"format\":\"abyssus\",\"formatVersion\":$it" }.toTypedArray(),
-            "\"format\":\"abyssus\"",
-        )
+        val headers =
+            listOf(
+                "\"format\":\"abyssus\",\"formatVersion\":1",
+                "\"formatVersion\":1",
+                "\"format\":\"other\",\"formatVersion\":1",
+                "\"format\":7,\"formatVersion\":1",
+                *listOf("1.0", "\"1\"", "2", "1e0", "null")
+                    .map { "\"format\":\"abyssus\",\"formatVersion\":$it" }
+                    .toTypedArray(),
+                "\"format\":\"abyssus\"",
+            )
         for (kind in DocumentKind.entries) for (header in headers) {
             val text = "{$header}"
             val expected = runCatchingKeepingCancellation {
-                AbyssusDocumentFormat().requireSupported(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(text), kind)
-            }.isSuccess
-            assertEquals("$kind $text", expected, runCatchingKeepingCancellation { parsing.requireSupported(text, kind) }.isSuccess)
+                AbyssusDocumentFormat()
+                    .requireSupported(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(text), kind)
+            }
+                .isSuccess
+            assertEquals(
+                "$kind $text",
+                expected,
+                runCatchingKeepingCancellation { parsing.requireSupported(text, kind) }.isSuccess,
+            )
         }
-        for (text in listOf("{", "[]", """{"format":"abyssus","formatVersion":1,"ecs":{"componentIdentifiers":{}}}""")) {
+        for (text in
+            listOf("{", "[]", """{"format":"abyssus","formatVersion":1,"ecs":{"componentIdentifiers":{}}}""")) {
             assertNull(runCatchingKeepingCancellation { parsing.parse(text) }.getOrNull())
         }
     }
@@ -51,7 +61,8 @@ class DocumentParsingTest {
 
     @Test
     fun foliageKeepsWrongTypeDefaultsAndSkipsMalformedLayerAndModelEntries() {
-        val text = """{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","additional":{
+        val text =
+            """{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","additional":{
             "terrain":12,"maskResolution":"16","layers":[null,{"id":"2"},{"id":1.0},
             {"id":3,"density":"0.9","seed":4.0,"kind":false,"models":[null,{"asset":7},{"asset":"tree","weight":"2"}],
              "scale":{"min":"9","max":2},"collider":{"future":1.00}}]}}"""
@@ -73,7 +84,9 @@ class DocumentParsingTest {
 
     @Test
     fun narrowAssetReadsPreserveStrictReferencesAndScalarIdentityText() {
-        val text = """{"format":"abyssus","formatVersion":1,"type":"SKYBOX_PROCEDURAL","uuid":123,"additional":{"clouds":42,"terrainFile":false}}"""
+        val text =
+            """{"format":"abyssus","formatVersion":1,"type":"SKYBOX_PROCEDURAL","uuid":123,"additional":{"clouds":42,
+"terrainFile":false}}"""
         val fields = parsing.assetFields(text)
         assertNull(fields.clouds)
         assertEquals("123", fields.uuidText)

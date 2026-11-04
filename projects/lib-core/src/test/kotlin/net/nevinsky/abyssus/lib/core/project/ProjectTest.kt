@@ -4,16 +4,16 @@
  */
 package net.nevinsky.abyssus.lib.gdx.project
 
-import net.nevinsky.abyssus.lib.core.project.ProjectLoader
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import java.nio.file.Files
 import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.core.dto.ProjectDto
+import net.nevinsky.abyssus.lib.core.io.FileLoader
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.project.ProjectLoader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.nio.file.Files
 
 class ProjectTest {
     @Test
@@ -37,7 +37,11 @@ class ProjectTest {
 
     @Test
     fun aMissingFolderHasNoScenes() {
-        assertTrue(ProjectDto(dir = Files.createTempDirectory("core-project").also { it.toFile().deleteRecursively() }).sceneFiles().isEmpty())
+        assertTrue(
+            ProjectDto(dir = Files.createTempDirectory("core-project").also { it.toFile().deleteRecursively() })
+                .sceneFiles()
+                .isEmpty()
+        )
     }
 
     @Test
@@ -45,9 +49,15 @@ class ProjectTest {
         val temp = Files.createTempDirectory("core-project")
         try {
             Files.createDirectory(temp.resolve("scenes"))
-            for (name in listOf("Z.scene", "A.scene", "Wrong.SCENE", "bad.scene.bak")) Files.writeString(temp.resolve("scenes/$name"), "{}")
+            for (name in listOf("Z.scene", "A.scene", "Wrong.SCENE", "bad.scene.bak")) Files.writeString(
+                temp.resolve("scenes/$name"),
+                "{}",
+            )
             Files.createDirectory(temp.resolve("scenes/directory.scene"))
-            assertEquals(listOf("A.scene", "Z.scene"), ProjectDto(dir = temp).sceneFiles().map { it.fileName.toString() })
+            assertEquals(
+                listOf("A.scene", "Z.scene"),
+                ProjectDto(dir = temp).sceneFiles().map { it.fileName.toString() },
+            )
         } finally {
             temp.toFile().deleteRecursively()
         }
@@ -67,10 +77,14 @@ class ProjectTest {
     @Test
     fun aLoadedProjectKnowsItsFolderAndTheFolderIsNotPartOfTheFile() {
         val dir = testProject("Untitled")
-        val loaded = ProjectLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir)).load("Untitled.abss")
+        val loaded =
+            ProjectLoader(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER), FileLoader(dir)).load("Untitled.abss")
         assertEquals("Untitled", loaded.name)
         assertEquals(dir.toPath(), loaded.dir)
         assertEquals(listOf("Main Scene.scene"), loaded.sceneFiles().map { it.fileName.toString() })
-        assertTrue("the folder is never written to the file", !JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).toString(loaded).contains("\"dir\""))
+        assertTrue(
+            "the folder is never written to the file",
+            !JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).toString(loaded).contains("\"dir\""),
+        )
     }
 }

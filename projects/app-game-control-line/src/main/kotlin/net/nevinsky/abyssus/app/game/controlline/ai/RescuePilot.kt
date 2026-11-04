@@ -10,7 +10,10 @@ import net.nevinsky.abyssus.app.game.controlline.flight.FlightObservation
 import net.nevinsky.abyssus.app.game.controlline.pattern.BASE_HEIGHT
 import net.nevinsky.abyssus.lib.core.util.azimuthOf
 
-/** A course that has not moved on for this long (s) has lost the plane: the rescue builds it again from where the plane is. */
+/**
+ * A course that has not moved on for this long (s) has lost the plane: the rescue builds it again from where the plane
+ * is.
+ */
 private const val NO_PROGRESS = 3f
 
 /** A path course with less than this much (m) left is flown. */
@@ -23,14 +26,22 @@ interface RescueSource : FlightControlSource {
 }
 
 /** What the rescue flies: level at the base, over onto the upright base, or the landing glide. */
-enum class RescuePhase { LEVEL, TURN_OVER, GLIDE }
+enum class RescuePhase {
+    LEVEL,
+    TURN_OVER,
+    GLIDE,
+}
 
 /**
- * Flies the plane back to safe flight (design decision 3 of `add-control-line-trainer`), through [pilot], on a course of
- * its own that the planner and the judge never see. While the engine runs: level on the base in the direction the plane
- * flies. With the engine stopped: over onto the upright base if it flies clockwise, then the landing glide.
+ * Flies the plane back to safe flight (design decision 3 of `add-control-line-trainer`), through [pilot], on a course
+ * of its own that the planner and the judge never see. While the engine runs: level on the base in the direction the
+ * plane flies. With the engine stopped: over onto the upright base if it flies clockwise, then the landing glide.
  */
-class RescuePilot(private val radius: Float, private val pilot: F2bPilot, private val figures: F2bFigures = F2bFigures(radius)) : RescueSource {
+class RescuePilot(
+    private val radius: Float,
+    private val pilot: F2bPilot,
+    private val figures: F2bFigures = F2bFigures(radius),
+) : RescueSource {
     /** The course being flown, or null before the rescue starts and after [release]. */
     var course: Course? = null
         private set
@@ -54,8 +65,11 @@ class RescuePilot(private val radius: Float, private val pilot: F2bPilot, privat
                 progressAt = current.travelled
                 progressTime = o.time
             }
-            if (current.remaining < FLOWN && phase == RescuePhase.TURN_OVER) start(o, u, upright = true)
-            else if (o.time - progressTime > NO_PROGRESS) start(o, u, upright = phase != RescuePhase.TURN_OVER)
+            if (current.remaining < FLOWN && phase == RescuePhase.TURN_OVER) {
+                start(o, u, upright = true)
+            } else if (o.time - progressTime > NO_PROGRESS) {
+                start(o, u, upright = phase != RescuePhase.TURN_OVER)
+            }
         }
         return pilot.tilt(o, checkNotNull(course))
     }

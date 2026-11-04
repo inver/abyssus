@@ -28,7 +28,9 @@ fun arrangementAlong(
             it.alignToPath = base.alignToPath
             it.yawOffset = base.yawOffset
         }
-        if (closed != null) it.closed = closed
+        if (closed != null) {
+            it.closed = closed
+        }
         it.points = points.toMutableList()
     }
 

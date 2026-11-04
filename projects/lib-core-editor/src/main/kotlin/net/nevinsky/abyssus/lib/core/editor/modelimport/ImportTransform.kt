@@ -14,15 +14,15 @@ import com.badlogic.gdx.math.collision.BoundingBox
 import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import net.nevinsky.abyssus.lib.gdx.model.ModelMesh
-import net.nevinsky.abyssus.lib.gdx.model.VertexLayout
 import net.nevinsky.abyssus.lib.gdx.model.ModelMeshPart
+import net.nevinsky.abyssus.lib.gdx.model.VertexLayout
 
 /** The id of the node an import wraps the source roots in. */
 const val IMPORT_ROOT = "import_root"
 
 /**
- * A transformed model: [data] holds the source's roots under one `import_root` node whose transform is [root];
- * [size] is its rest-pose extent in metres.
+ * A transformed model: [data] holds the source's roots under one `import_root` node whose transform is [root]; [size]
+ * is its rest-pose extent in metres.
  */
 class TransformedModel(val data: ModelData, val root: Matrix4, val size: Vector3)
 
@@ -33,30 +33,33 @@ class TransformedModel(val data: ModelData, val root: Matrix4, val size: Vector3
  * 3. the fit scale: the largest extent, or the height, to the chosen metres;
  * 4. a translation so that the lowest point is at y = 0 and the X/Z centre at 0.
  *
- * The result is a new `import_root` node around the source roots: vertices, inverse bind matrices and keyframes stay
- * as they are, so skins and animations remain valid, and the source [ModelData] is not changed.
+ * The result is a new `import_root` node around the source roots: vertices, inverse bind matrices and keyframes stay as
+ * they are, so skins and animations remain valid, and the source [ModelData] is not changed.
  */
 class ImportTransform {
     fun apply(source: ModelData, settings: ImportSettings): TransformedModel {
-        val rotation = when (settings.upAxis) {
-            UpAxis.Z -> Quaternion(Vector3.X, -90f)
-            UpAxis.Y -> Quaternion()
-            UpAxis.X -> throw IllegalArgumentException("X up is not offered")
-        }
+        val rotation =
+            when (settings.upAxis) {
+                UpAxis.Z -> Quaternion(Vector3.X, -90f)
+                UpAxis.Y -> Quaternion()
+                UpAxis.X -> throw IllegalArgumentException("X up is not offered")
+            }
         val oriented = Matrix4().set(Vector3(), rotation, Vector3(1f, 1f, 1f).scl(settings.unit.metres))
         val bounds = restBounds(source).mul(oriented)
         val extent = bounds.getDimensions(Vector3())
-        val fit = when (val fit = settings.fit) {
-            FitSize.Original -> 1f
-            is FitSize.LargestExtent -> fitScale(fit.metres, maxOf(extent.x, extent.y, extent.z))
-            is FitSize.Height -> fitScale(fit.metres, extent.y)
-        }
+        val fit =
+            when (val fit = settings.fit) {
+                FitSize.Original -> 1f
+                is FitSize.LargestExtent -> fitScale(fit.metres, maxOf(extent.x, extent.y, extent.z))
+                is FitSize.Height -> fitScale(fit.metres, extent.y)
+            }
         val scale = settings.unit.metres * fit
-        val translation = Vector3(
-            -(bounds.min.x + bounds.max.x) / 2f * fit,
-            -bounds.min.y * fit,
-            -(bounds.min.z + bounds.max.z) / 2f * fit,
-        )
+        val translation =
+            Vector3(
+                -(bounds.min.x + bounds.max.x) / 2f * fit,
+                -bounds.min.y * fit,
+                -(bounds.min.z + bounds.max.z) / 2f * fit,
+            )
 
         val root = ModelNode()
         root.id = uniqueRootId(source)
@@ -75,7 +78,9 @@ class ImportTransform {
         return TransformedModel(data, matrix, extent.scl(fit))
     }
 
-    /** The bounds of every vertex a node part draws, in the rest pose: node transforms, skinned parts at their joints. */
+    /**
+     * The bounds of every vertex a node part draws, in the rest pose: node transforms, skinned parts at their joints.
+     */
     fun restBounds(data: ModelData): BoundingBox {
         val box = BoundingBox().inf()
         val world = HashMap<String, Matrix4>()
@@ -99,17 +104,25 @@ class ImportTransform {
                 val position = VertexLayout(mesh).offsetOf(VertexAttributes.Usage.Position) ?: continue
                 val weights = VertexLayout(mesh).offsetsOf(VertexAttributes.Usage.BoneWeight)
                 val bones = nodePart.bones?.takeIf { weights.isNotEmpty() && it.size > 0 }
-                val boneWorld = bones?.let { b -> (0 until b.size).map { i -> Matrix4(world[b.getKeyAt(i)] ?: Matrix4()).mul(b.getValueAt(i)) } }
+                val boneWorld = bones?.let { b ->
+                    (0 until b.size).map { i -> Matrix4(world[b.getKeyAt(i)] ?: Matrix4()).mul(b.getValueAt(i)) }
+                }
                 for (index in part.indices) {
                     val base = index * stride
-                    p.set(mesh.vertices[base + position], mesh.vertices[base + position + 1], mesh.vertices[base + position + 2])
+                    p.set(
+                        mesh.vertices[base + position],
+                        mesh.vertices[base + position + 1],
+                        mesh.vertices[base + position + 2],
+                    )
                     if (boneWorld == null) {
                         p.mul(m)
                     } else {
                         for (k in skinned.`val`.indices) skinned.`val`[k] = 0f
                         for (w in weights) {
                             val weight = mesh.vertices[base + w + 1]
-                            if (weight <= 0f) continue
+                            if (weight <= 0f) {
+                                continue
+                            }
                             bone.set(boneWorld.getOrNull(mesh.vertices[base + w].toInt()) ?: continue)
                             for (k in skinned.`val`.indices) skinned.`val`[k] += bone.`val`[k] * weight
                         }
@@ -121,12 +134,18 @@ class ImportTransform {
             node.children?.forEach { visit(it, m) }
         }
         data.nodes.forEach { visit(it, Matrix4()) }
-        if (!box.isValid) box.set(Vector3(), Vector3())
+        if (!box.isValid) {
+            box.set(Vector3(), Vector3())
+        }
         return box
     }
 
     private fun fitScale(target: Double, extent: Float): Float =
-        if (extent > 1e-9f) (target / extent).toFloat() else 1f
+        if (extent > 1e-9f) {
+            (target / extent).toFloat()
+        } else {
+            1f
+        }
 
     private fun uniqueRootId(data: ModelData): String {
         val ids = HashSet<String>()

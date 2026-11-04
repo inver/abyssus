@@ -29,7 +29,9 @@ abstract class AddChildGroup<T>(title: String) : DefaultActionGroup(title, true)
 
             override fun actionPerformed(e: AnActionEvent) = addTarget(target)
         }
-        if (literalName) child.templatePresentation.setText(label, false)
+        if (literalName) {
+            child.templatePresentation.setText(label, false)
+        }
         return child
     }
 }

@@ -5,6 +5,8 @@
 package net.nevinsky.abyssus.app.game.controlline.ai
 
 import com.badlogic.gdx.math.Vector3
+import kotlin.math.cos
+import kotlin.math.sin
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightObservation
 import net.nevinsky.abyssus.app.game.controlline.pattern.BASE_HEIGHT
@@ -15,8 +17,6 @@ import net.nevinsky.abyssus.lib.physics.PHYSICS_STEP
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.cos
-import kotlin.math.sin
 
 /**
  * The routine planner without physics: a stand-in plane flies exactly the course it is given, and the judge's progress
@@ -35,15 +35,33 @@ class F2bRoutinePlannerTest {
         /** When false, it stays where it is (a plane that does not follow its course). */
         var moving = true
 
-        fun observe(): FlightObservation = FlightObservation(
-            time, Vector3(u).scl(radius).add(0f, BASE_HEIGHT, 0f), Vector3(heading).scl(speed), Vector3(), Vector3(heading),
-            Vector3(u).crs(heading), 1.5f, 20f, if (engineRunning) 100f else 0f, engineRunning, radius, null,
-        )
+        fun observe(): FlightObservation =
+            FlightObservation(
+                time,
+                Vector3(u).scl(radius).add(0f, BASE_HEIGHT, 0f),
+                Vector3(heading).scl(speed),
+                Vector3(),
+                Vector3(heading),
+                Vector3(u).crs(heading),
+                1.5f,
+                20f,
+                if (engineRunning) {
+                    100f
+                } else {
+                    0f
+                },
+                engineRunning,
+                radius,
+                null,
+            )
 
         private var flying: Course? = null
         private var along = 0f
 
-        /** Moves on [course]: along a path by the distance flown, along a parallel from the nearest place on it; then aims as the pilot does. */
+        /**
+         * Moves on [course]: along a path by the distance flown, along a parallel from the nearest place on it; then
+         * aims as the pilot does.
+         */
         fun follow(course: Course) {
             move(course)
             course.aim(u, 0f)
@@ -51,18 +69,29 @@ class F2bRoutinePlannerTest {
 
         private fun move(course: Course) {
             time += PHYSICS_STEP
-            if (!moving) return
+            if (!moving) {
+                return
+            }
             val step = speed * PHYSICS_STEP
             if (course is PathCourse) {
-                if (course !== flying) along = course.travelled
+                if (course !== flying) {
+                    along = course.travelled
+                }
                 flying = course
                 along += step
                 val i = course.indexAt(along)
                 val j = minOf(i + 1, course.points.size - 1)
                 val span = course.distance[j] - course.distance[i]
-                val t = if (span > 0f) ((along - course.distance[i]) / span).coerceIn(0f, 1f) else 0f
+                val t =
+                    if (span > 0f) {
+                        ((along - course.distance[i]) / span).coerceIn(0f, 1f)
+                    } else {
+                        0f
+                    }
                 u = Vector3(course.points[i]).lerp(course.points[j], t).nor()
-                if (j > i) heading = tangentAt(u, Vector3(course.points[j]).sub(course.points[i]))
+                if (j > i) {
+                    heading = tangentAt(u, Vector3(course.points[j]).sub(course.points[i]))
+                }
                 return
             }
             flying = course
@@ -76,6 +105,7 @@ class F2bRoutinePlannerTest {
 
     private class Judge {
         var pauseLaps: Float? = null
+
         fun input() = GuideInput(Figure.REVERSE_WINGOVER, pauseLaps, false, null, true)
     }
 
@@ -108,8 +138,11 @@ class F2bRoutinePlannerTest {
         run.fly(120f)
         assertEquals(
             listOf(
-                BotPhase.TAKEOFF to Figure.TAKEOFF, BotPhase.BASE to Figure.REVERSE_WINGOVER, BotPhase.FIGURE to Figure.REVERSE_WINGOVER,
-                BotPhase.BASE to Figure.INSIDE_LOOPS, BotPhase.FIGURE to Figure.INSIDE_LOOPS,
+                BotPhase.TAKEOFF to Figure.TAKEOFF,
+                BotPhase.BASE to Figure.REVERSE_WINGOVER,
+                BotPhase.FIGURE to Figure.REVERSE_WINGOVER,
+                BotPhase.BASE to Figure.INSIDE_LOOPS,
+                BotPhase.FIGURE to Figure.INSIDE_LOOPS,
                 // the schedule given is done: level on the base from then on
                 BotPhase.BASE to Figure.INSIDE_LOOPS,
             ),
@@ -149,10 +182,18 @@ class F2bRoutinePlannerTest {
         run.judge.pauseLaps = 2.6f
         run.fly(30f) { run.planner.phase != BotPhase.BASE }
         assertEquals(BotPhase.TURN_OVER, run.planner.phase)
-        // over onto the base clockwise, the pause, the loops pushed from it, the pause, back over, and on along the base
+        // over onto the base clockwise, the pause, the loops pushed from it, the pause, back over, and on along the
+        // base
         run.fly(120f)
         assertEquals(
-            listOf(BotPhase.TURN_OVER, BotPhase.BASE, BotPhase.FIGURE, BotPhase.BASE, BotPhase.TURN_OVER, BotPhase.BASE),
+            listOf(
+                BotPhase.TURN_OVER,
+                BotPhase.BASE,
+                BotPhase.FIGURE,
+                BotPhase.BASE,
+                BotPhase.TURN_OVER,
+                BotPhase.BASE,
+            ),
             run.phases.dropWhile { it.first != BotPhase.TURN_OVER }.map { it.first },
         )
     }
@@ -178,7 +219,10 @@ class F2bRoutinePlannerTest {
         run.fly(5f)
         assertEquals(BotPhase.RECOVERY, run.planner.phase)
         assertEquals(1, run.planner.diagnostics.size)
-        assertTrue(run.planner.diagnostics.single(), run.planner.diagnostics.single().contains(Figure.INSIDE_LOOPS.label))
+        assertTrue(
+            run.planner.diagnostics.single(),
+            run.planner.diagnostics.single().contains(Figure.INSIDE_LOOPS.label),
+        )
         run.ghost.moving = true
         run.fly(60f) { run.planner.figure == Figure.INSIDE_SQUARES && run.planner.phase == BotPhase.FIGURE }
         assertEquals(Figure.INSIDE_SQUARES, run.planner.figure)
@@ -197,7 +241,13 @@ class F2bRoutinePlannerTest {
 
     @Test
     fun neitherHalfOfTheBotChangesWhatItIsGiven() {
-        val stunter = PlaneComponent().apply { lineLength = radius; wingArea = 0.325f; liftSlope = 8f; elevatorEffect = 3f }
+        val stunter =
+            PlaneComponent().apply {
+                lineLength = radius
+                wingArea = 0.325f
+                liftSlope = 8f
+                elevatorEffect = 3f
+            }
         val judge = Judge().also { it.pauseLaps = 2f }
         val bot = f2bBot(stunter, 1.1f, judge::input)
         val ghost = Ghost(radius)

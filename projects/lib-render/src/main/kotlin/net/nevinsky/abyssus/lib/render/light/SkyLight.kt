@@ -15,10 +15,17 @@ fun skyLightAttribute(current: HdrEnvironment, next: HdrEnvironment?, weight: Fl
     EnvironmentLightAttribute(
         current.specular, current.irradiance, current.levels, current.ambient,
         next?.let { EnvironmentLightAttribute(it.specular, it.irradiance, it.levels, it.ambient) },
-        if (next != null) weight else 0f,
+        if (next != null) {
+            weight
+        } else {
+            0f
+        },
     )
 
-/** Lights this environment with the sky of [current] (fading toward [next] by [weight]) in place of the flat ambient colour. */
+/**
+ * Lights this environment with the sky of [current] (fading toward [next] by [weight]) in place of the flat ambient
+ * colour.
+ */
 fun Environment.setSkyLight(current: HdrEnvironment, next: HdrEnvironment?, weight: Float) {
     remove(ColorAttribute.AmbientLight)
     set(skyLightAttribute(current, next, weight))

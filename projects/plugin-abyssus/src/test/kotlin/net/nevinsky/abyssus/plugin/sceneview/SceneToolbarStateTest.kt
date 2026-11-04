@@ -5,10 +5,10 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -16,38 +16,93 @@ import org.junit.Test
 
 /** The Scene view toolbar's rules without Swing: camera choices and which controls are enabled. */
 class SceneToolbarStateTest {
-    @Test fun freeCameraComesFirstThenTheSceneCamerasByName() {
-        val content = SceneContent(cameras = listOf(
-            CameraPlacement(4L, "Main", Vector3(0f, 0f, 0f), Vector3(0f, 0f, -1f), null),
-            CameraPlacement(9L, "9", Vector3(0f, 0f, 0f), Vector3(0f, 0f, -1f), null),
-        ))
+    @Test
+    fun freeCameraComesFirstThenTheSceneCamerasByName() {
+        val content =
+            SceneContent(
+                cameras =
+                    listOf(
+                        CameraPlacement(4L, "Main", Vector3(0f, 0f, 0f), Vector3(0f, 0f, -1f), null),
+                        CameraPlacement(9L, "9", Vector3(0f, 0f, 0f), Vector3(0f, 0f, -1f), null),
+                    )
+            )
         assertEquals(
             listOf(CameraChoice(null, "Free"), CameraChoice(4L, "Main"), CameraChoice(9L, "9")),
             cameraChoices(content, "Free"),
         )
     }
 
-    @Test fun editingNeedsNeitherPlayNorTheExperiment() {
-        val editing = toolbarState(GizmoMode.ROTATE, experimenting = false, playing = false, canDrop = true, canAddLight = true, canAddAsset = false)
+    @Test
+    fun editingNeedsNeitherPlayNorTheExperiment() {
+        val editing =
+            toolbarState(
+                GizmoMode.ROTATE,
+                experimenting = false,
+                playing = false,
+                canDrop = true,
+                canAddLight = true,
+                canAddAsset = false,
+            )
         assertEquals(ToolbarState(false, true, true, true, true, true, false), editing)
-        val playing = toolbarState(GizmoMode.MOVE, experimenting = false, playing = true, canDrop = true, canAddLight = true, canAddAsset = true)
+        val playing =
+            toolbarState(
+                GizmoMode.MOVE,
+                experimenting = false,
+                playing = true,
+                canDrop = true,
+                canAddLight = true,
+                canAddAsset = true,
+            )
         assertFalse(playing.gizmoEnabled || playing.dropEnabled || playing.addLightEnabled || playing.addAssetEnabled)
         assertTrue(playing.cameraEnabled)
-        val experimenting = toolbarState(GizmoMode.MOVE, experimenting = true, playing = false, canDrop = true, canAddLight = true, canAddAsset = true)
+        val experimenting =
+            toolbarState(
+                GizmoMode.MOVE,
+                experimenting = true,
+                playing = false,
+                canDrop = true,
+                canAddLight = true,
+                canAddAsset = true,
+            )
         assertFalse(experimenting.cameraEnabled || experimenting.gizmoEnabled)
     }
 
-    @Test fun withoutAnAddLightOrAddAssetMenuTheirButtonsStayDisabled() {
-        val state = toolbarState(GizmoMode.MOVE, experimenting = false, playing = false, canDrop = false, canAddLight = false, canAddAsset = false)
+    @Test
+    fun withoutAnAddLightOrAddAssetMenuTheirButtonsStayDisabled() {
+        val state =
+            toolbarState(
+                GizmoMode.MOVE,
+                experimenting = false,
+                playing = false,
+                canDrop = false,
+                canAddLight = false,
+                canAddAsset = false,
+            )
         assertFalse(state.addLightEnabled || state.addAssetEnabled || state.dropEnabled)
         assertTrue("the gizmo and camera still work", state.gizmoEnabled && state.cameraEnabled)
     }
 
-    @Test fun playControlsFollowThePhase() {
-        assertEquals(PlayControls(play = true, pause = false, step = false, stop = false), playControls(PlayState.Phase.IDLE, active = false))
-        assertEquals(PlayControls(play = false, pause = true, step = false, stop = true), playControls(PlayState.Phase.PLAYING, active = true))
-        assertEquals(PlayControls(play = true, pause = false, step = true, stop = true), playControls(PlayState.Phase.PAUSED, active = true))
-        assertEquals(PlayControls(play = false, pause = false, step = false, stop = true), playControls(PlayState.Phase.STARTING, active = true))
-        assertEquals(PlayControls(play = true, pause = false, step = false, stop = false), playControls(PlayState.Phase.FAILED, active = false))
+    @Test
+    fun playControlsFollowThePhase() {
+        assertEquals(
+            PlayControls(play = true, pause = false, step = false, stop = false),
+            playControls(PlayState.Phase.IDLE, active = false),
+        )
+        assertEquals(
+            PlayControls(play = false, pause = true, step = false, stop = true),
+            playControls(PlayState.Phase.PLAYING, active = true),
+        )
+        assertEquals(
+            PlayControls(play = true, pause = false, step = true, stop = true),
+            playControls(PlayState.Phase.PAUSED, active = true),
+        )
+        assertEquals(
+            PlayControls(play = false, pause = false, step = false, stop = true),
+            playControls(PlayState.Phase.STARTING, active = true),
+        )
+        assertEquals(
+            PlayControls(play = true, pause = false, step = false, stop = false),
+            playControls(PlayState.Phase.FAILED, active = false),
+        )
     }
 }

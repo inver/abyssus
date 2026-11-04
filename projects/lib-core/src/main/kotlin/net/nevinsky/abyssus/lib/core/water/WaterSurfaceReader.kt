@@ -25,7 +25,9 @@ class WaterSurfaceReader(
     private val validation: WaterValidation = WaterValidation(),
 ) {
     fun read(id: String, node: JsonNode): WaterSurfaceRead {
-        if (!node.isObject) return WaterSurfaceRead(id, id, null, listOf("surface is not an object"))
+        if (!node.isObject) {
+            return WaterSurfaceRead(id, id, null, listOf("surface is not an object"))
+        }
         val name = node.get("name")?.takeIf { it.isTextual }?.textValue()?.takeIf { it.isNotBlank() } ?: id
         val preset = presets.parse(node.get("preset")?.takeIf { it.isTextual }?.textValue())
             ?: return WaterSurfaceRead(id, name, null, listOf("unknown preset"))
@@ -41,10 +43,18 @@ class WaterSurfaceReader(
         }
         val enabled = node.get("enabled")
         if (enabled != null) {
-            if (enabled.isBoolean) settings = settings.copy(enabled = enabled.booleanValue()) else problems += "enabled is not a boolean"
+            if (enabled.isBoolean) {
+                settings = settings.copy(enabled = enabled.booleanValue())
+            } else {
+                problems += "enabled is not a boolean"
+            }
         }
         for ((field, issue) in validation.check(settings)) problems += "${field.path.joinToString(".")}: $issue"
-        return if (problems.isEmpty()) WaterSurfaceRead(id, name, settings, emptyList()) else WaterSurfaceRead(id, name, null, problems)
+        return if (problems.isEmpty()) {
+            WaterSurfaceRead(id, name, settings, emptyList())
+        } else {
+            WaterSurfaceRead(id, name, null, problems)
+        }
     }
 
     private fun lookup(node: JsonNode, path: List<String>): JsonNode? {

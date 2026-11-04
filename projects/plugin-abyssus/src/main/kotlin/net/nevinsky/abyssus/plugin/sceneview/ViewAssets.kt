@@ -13,7 +13,8 @@ import net.nevinsky.abyssus.plugin.ProjectAssets
 import java.io.File
 
 /**
- * The assets of one scene view: the [ProjectAssets] of the project it shows, which a new project replaces, shared by the
+  * The assets of one scene view: the [ProjectAssets] of the project it shows, which a new project replaces, shared by
+  * the
  * kinds of asset the view draws ([AssetView]) and by its ray mode. One storage owns every built asset, so assets can
  * depend on each other (a terrain on its textures); each [AssetView] says which names it still wants and the storage
  * keeps the union. GL thread only.
@@ -73,7 +74,9 @@ class ViewAssets(private val loading: AssetLoading) : Disposable {
 
     internal fun release(view: AssetView<*>) {
         views.remove(view)
-        if (views.isEmpty()) dispose()
+        if (views.isEmpty()) {
+            dispose()
+        }
     }
 
     /** Forgets every asset without GL calls: the context they were built in is gone. */
@@ -97,7 +100,10 @@ class AssetView<T : Disposable>(private val owner: ViewAssets, private val type:
 
     val isLoading: Boolean get() = owner.isLoading
 
-    /** Loads [names] from the project in [projectDir] (none without one), drops the rest, and does one slice of GPU work. */
+    /**
+     * Loads [names] from the project in [projectDir] (none without one), drops the rest, and does one slice of GPU
+     * work.
+     */
     fun update(projectDir: File?, names: Set<String>) = owner.update(this, projectDir, names)
 
     /** The built asset [name]; null while it loads, when it failed or when it is of another kind. */

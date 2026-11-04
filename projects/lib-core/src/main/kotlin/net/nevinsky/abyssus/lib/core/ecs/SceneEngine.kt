@@ -34,8 +34,10 @@ class SceneEngine : Engine() {
 }
 
 /**
- * What the loader keeps of the `ecs` block besides the entities: the components it could not bind (by entity id, then the
- * key the file gave them, in file order, as [RawComponent]s holding their JSON text), and the problems met while loading. [carried] is what lets a scene be written back without losing a component this
+  * What the loader keeps of the `ecs` block besides the entities: the components it could not bind (by entity id, then
+  * the
+  * key the file gave them, in file order, as [RawComponent]s holding their JSON text), and the problems met while
+  * loading. [carried] is what lets a scene be written back without losing a component this
  * program does not model; the writer adds it to the entity of the same id.
  */
 //todo use this object instead of EcsReadWarnings

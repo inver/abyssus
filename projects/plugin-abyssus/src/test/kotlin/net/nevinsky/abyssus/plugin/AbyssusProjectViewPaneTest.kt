@@ -19,6 +19,10 @@ import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.TestDataPath
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.tree.TreeUtil
+import javax.swing.JTree
+import javax.swing.UIManager
+import javax.swing.tree.TreeModel
+import javax.swing.tree.TreePath
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
 import net.nevinsky.abyssus.plugin.projectView.AbyssusProjectViewPane
@@ -26,16 +30,14 @@ import net.nevinsky.abyssus.plugin.projectView.AbyssusTreeRefresh
 import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
 import net.nevinsky.abyssus.plugin.projectView.isEntityEntry
 import net.nevinsky.abyssus.plugin.projectView.renameScene
-import javax.swing.JTree
-import javax.swing.UIManager
-import javax.swing.tree.TreeModel
-import javax.swing.tree.TreePath
 
 @TestDataPath("\$CONTENT_ROOT/src/test/testData")
 class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
 
-    /** ProjectViewImpl.addProjectPane logs a SEVERE error unless the pane's select-in target reports the pane's own id. */
+    /**
+     * ProjectViewImpl.addProjectPane logs a SEVERE error unless the pane's select-in target reports the pane's own id.
+     */
     fun testSelectInTargetMatchesPaneId() {
         val pane = AbyssusProjectViewPane(project)
         try {
@@ -63,7 +65,8 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
     private val panes = mutableListOf<AbyssusProjectViewPane>()
 
     private fun open(): AbyssusProjectViewPane {
-        // Headless runs keep Swing's Metal look and feel, whose expand/collapse icons throw when painted without a parent.
+        // Headless runs keep Swing's Metal look and feel, whose expand/collapse icons throw when painted without a
+        // parent.
         UIManager.put("Tree.expandedIcon", AllIcons.General.ArrowDown)
         UIManager.put("Tree.collapsedIcon", AllIcons.General.ArrowRight)
         val pane = AbyssusProjectViewPane(project)
@@ -76,7 +79,11 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
-            panes.forEach { if (!Disposer.isDisposed(it)) Disposer.dispose(it) }
+            panes.forEach {
+                if (!Disposer.isDisposed(it)) {
+                    Disposer.dispose(it)
+                }
+            }
         } finally {
             super.tearDown()
         }
@@ -87,19 +94,33 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
     }
 
-    /** Waits until the pane has rebuilt [times] times in all and nothing is scheduled, then lets the tree finish loading. */
+    /**
+     * Waits until the pane has rebuilt [times] times in all and nothing is scheduled, then lets the tree finish
+     * loading.
+     */
     private fun settle(pane: AbyssusProjectViewPane, times: Int) {
-        PlatformTestUtil.waitWithEventsDispatching("tree refresh $times", { pane.refresh.rebuilds >= times && pane.refresh.idle }, 30)
+        PlatformTestUtil.waitWithEventsDispatching(
+            "tree refresh $times",
+            { pane.refresh.rebuilds >= times && pane.refresh.idle },
+            30,
+        )
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
         PlatformTestUtil.waitWhileBusy(pane.tree)
     }
 
-    /** The platform loads children in the background after a rebuild: wait for [condition] while the tree catches up. */
+    /**
+     * The platform loads children in the background after a rebuild: wait for [condition] while the tree catches up.
+     */
     private fun await(message: String, condition: () -> Boolean) {
         PlatformTestUtil.waitWithEventsDispatching(message, condition, 30)
     }
 
-    private fun walk(model: TreeModel, node: Any = model.root, path: TreePath = TreePath(model.root), out: MutableList<TreePath> = ArrayList()): List<TreePath> {
+    private fun walk(
+        model: TreeModel,
+        node: Any = model.root,
+        path: TreePath = TreePath(model.root),
+        out: MutableList<TreePath> = ArrayList(),
+    ): List<TreePath> {
         out += path
         for (i in 0 until model.getChildCount(node)) {
             val child = model.getChild(node, i)
@@ -116,19 +137,26 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
     }
 
     private fun texts(pane: AbyssusProjectViewPane): List<String> =
-        paths(pane.tree).mapNotNull { TreeUtil.getUserObject(it.lastPathComponent) as? AbstractTreeNode<*> }.map(::textOf)
+        paths(pane.tree)
+            .mapNotNull { TreeUtil.getUserObject(it.lastPathComponent) as? AbstractTreeNode<*> }
+            .map(::textOf)
 
     private fun entries(pane: AbyssusProjectViewPane) =
         paths(pane.tree).mapNotNull { (TreeUtil.getUserObject(it.lastPathComponent) as? DtoEntryNode)?.value }
 
     private fun entityPath(pane: AbyssusProjectViewPane, id: String): TreePath? =
-        paths(pane.tree).firstOrNull { (TreeUtil.getUserObject(it.lastPathComponent) as? DtoEntryNode)?.value?.let { e -> isEntityEntry(e) && e.name == id } == true }
+        paths(pane.tree).firstOrNull {
+            (TreeUtil.getUserObject(it.lastPathComponent) as? DtoEntryNode)?.value?.let { e ->
+                isEntityEntry(e) && e.name == id
+            } == true
+        }
 
     private fun sceneFile(dir: VirtualFile) = dir.findFileByRelativePath("scenes/Main Scene.scene")!!
 
     private fun scenePart(text: String) = text.substringBefore(" (")
 
-    private fun hasSceneLabeled(pane: AbyssusProjectViewPane, name: String) = texts(pane).any { scenePart(it) == name && it.endsWith(")") }
+    private fun hasSceneLabeled(pane: AbyssusProjectViewPane, name: String) =
+        texts(pane).any { scenePart(it) == name && it.endsWith(")") }
 
     private fun unsaved(file: VirtualFile): Boolean = FileDocumentManager.getInstance().isFileModified(file)
 
@@ -153,7 +181,11 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         UndoManager.getInstance(project).undo(editor)
         settle(pane, 2)
         await("original label") { hasSceneLabeled(pane, originalName) }
-        assertEquals("one Undo undid the rename: the refresh added no undo entry of its own", originalText, document.text)
+        assertEquals(
+            "one Undo undid the rename: the refresh added no undo entry of its own",
+            originalText,
+            document.text,
+        )
         UndoManager.getInstance(project).redo(editor)
         settle(pane, 3)
         await("Forest label again") { hasSceneLabeled(pane, "Forest") }
@@ -198,18 +230,30 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         val pane = open()
         fun assetNames() = entries(pane).mapNotNull { (it.value as? Asset<*>)?.name }
         assertFalse("rock" in assetNames())
-        val meta = """{"format":"abyssus","formatVersion":1,"type":"MODEL","uuid":"5e6c2c36-0a32-4a7f-9b5d-0d2f6a0b7a01","additional":{}}"""
-        val rock = WriteAction.computeAndWait<VirtualFile, Exception> {
-            dir.findChild("assets")?.createChildDirectory(this, "rock") ?: dir.createChildDirectory(this, "assets").createChildDirectory(this, "rock")
+        val meta =
+            """{"format":"abyssus","formatVersion":1,"type":"MODEL","uuid":"5e6c2c36-0a32-4a7f-9b5d-0d2f6a0b7a01",
+"additional":{}}"""
+        val rock =
+            WriteAction.computeAndWait<VirtualFile, Exception> {
+                dir.findChild("assets")?.createChildDirectory(this, "rock")
+                    ?: dir.createChildDirectory(this, "assets").createChildDirectory(this, "rock")
+            }
+        WriteAction.runAndWait<Exception> {
+            rock.createChildData(this, "meta.json").setBinaryContent(meta.toByteArray())
         }
-        WriteAction.runAndWait<Exception> { rock.createChildData(this, "meta.json").setBinaryContent(meta.toByteArray()) }
         settle(pane, 2.coerceAtMost(pane.refresh.rebuilds.coerceAtLeast(1)))
         expand(pane)
         await("rock listed") { "rock" in assetNames() }
         await("rock unused") { entries(pane).any { (it.value as? Asset<*>)?.name == "rock" } }
-        assertEquals("not referenced by any scene", true, entries(pane).firstNotNullOf { (it.value as? Asset<*>)?.takeIf { a -> a.name == "rock" } }.unused)
+        assertEquals(
+            "not referenced by any scene",
+            true,
+            entries(pane).firstNotNullOf { (it.value as? Asset<*>)?.takeIf { a -> a.name == "rock" } }.unused,
+        )
         val afterAdd = pane.refresh.rebuilds
-        WriteAction.runAndWait<Exception> { rock.findChild("meta.json")!!.setBinaryContent(meta.replace("MODEL", "TEXTURE").toByteArray()) }
+        WriteAction.runAndWait<Exception> {
+            rock.findChild("meta.json")!!.setBinaryContent(meta.replace("MODEL", "TEXTURE").toByteArray())
+        }
         settle(pane, afterAdd + 1)
         val afterMeta = pane.refresh.rebuilds
         WriteAction.runAndWait<Exception> { rock.rename(this, "stone") }
@@ -229,7 +273,10 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         for ((index, bad) in listOf("{ not json", """{"format":"abyssus","formatVersion":2}""").withIndex()) {
             WriteAction.runAndWait<Exception> { file.setBinaryContent(bad.toByteArray()) }
             settle(pane, index + 1)
-            await("unreadable presentation") { "Main Scene.scene" in texts(pane).map { it.substringBefore(" (") } && !hasSceneLabeled(pane, originalName) }
+            await("unreadable presentation") {
+                "Main Scene.scene" in texts(pane).map { it.substringBefore(" (") } &&
+                    !hasSceneLabeled(pane, originalName)
+            }
             assertEquals("the replacement is not repaired", bad, String(file.contentsToByteArray()))
         }
         assertTrue("the tree is still usable", texts(pane).any { it.startsWith("Assets") || it.startsWith("Scenes") })
@@ -262,12 +309,21 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         pane.tree.selectionPath = entity
         pane.tree.expandPath(entity)
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
-        assertTrue(editSceneDocument(project, file, "Rename entity 1") { scene ->
-            scene.entity(1)!!.component(net.nevinsky.abyssus.lib.core.ecs.component.NameComponent::class.java)!!.name = "Renamed Terrain"
-            true
-        })
+        assertTrue(
+            editSceneDocument(project, file, "Rename entity 1") { scene ->
+                scene
+                    .entity(1)!!
+                    .component(net.nevinsky.abyssus.lib.core.ecs.component.NameComponent::class.java)!!
+                    .name = "Renamed Terrain"
+                true
+            }
+        )
         settle(pane, 1)
-        PlatformTestUtil.waitWithEventsDispatching("selection restored", { pane.tree.selectionPath?.let { keyOfEntity(it) } == "0" }, 30)
+        PlatformTestUtil.waitWithEventsDispatching(
+            "selection restored",
+            { pane.tree.selectionPath?.let { keyOfEntity(it) } == "0" },
+            30,
+        )
         await("entity 1 shows its new name") { texts(pane).any { it.startsWith("Renamed Terrain") } }
         val restored = entityPath(pane, "0")!!
         assertEquals(restored.lastPathComponent.toString(), pane.tree.selectionPath!!.lastPathComponent.toString())
@@ -287,18 +343,39 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         val pane = open()
         pane.tree.selectionPath = entityPath(pane, "0")!!
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
-        assertTrue(editSceneDocument(project, file, "Add entity 99") { scene ->
-            scene.ecs[99L] = net.nevinsky.abyssus.lib.core.editor.entityOf(99, net.nevinsky.abyssus.lib.core.format.EntityType.OBJECT, net.nevinsky.abyssus.lib.core.ecs.component.NameComponent("Copy 99"))
-            true
-        })
-        val visitor = com.intellij.ui.tree.TreeVisitor { path -> net.nevinsky.abyssus.plugin.projectView.entityVisitAction(file, 99L, path.path.map(TreeUtil::getUserObject)) }
+        assertTrue(
+            editSceneDocument(project, file, "Add entity 99") { scene ->
+                scene.ecs[99L] =
+                    net.nevinsky.abyssus.lib.core.editor.entityOf(
+                        99,
+                        net.nevinsky.abyssus.lib.core.format.EntityType.OBJECT,
+                        net.nevinsky.abyssus.lib.core.ecs.component.NameComponent("Copy 99"),
+                    )
+                true
+            }
+        )
+        val visitor =
+            com.intellij.ui.tree.TreeVisitor { path ->
+                net.nevinsky.abyssus.plugin.projectView.entityVisitAction(
+                    file,
+                    99L,
+                    path.path.map(TreeUtil::getUserObject),
+                )
+            }
         assertTrue("a rebuild is pending after the edit", pane.refresh.selectAfterRebuild(visitor))
         settle(pane, 1)
-        PlatformTestUtil.waitWithEventsDispatching("the new entity is selected", { pane.tree.selectionPath?.let { keyOfEntity(it) } == "99" }, 30)
+        PlatformTestUtil.waitWithEventsDispatching(
+            "the new entity is selected",
+            { pane.tree.selectionPath?.let { keyOfEntity(it) } == "99" },
+            30,
+        )
         assertNotNull("entity 99 has a row", entityPath(pane, "99"))
     }
 
-    /** Asset creation requests the selection while the tree is idle: the VFS events that start the rebuild come after it. */
+    /**
+     * Asset creation requests the selection while the tree is idle: the VFS events that start the rebuild come after
+     * it.
+     */
     fun testAnIdleRequestSelectsTheRowTheNextRebuildCreates() {
         val dir = fixture()
         val file = sceneFile(dir)
@@ -306,14 +383,35 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         pane.tree.selectionPath = entityPath(pane, "0")!!
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
         assertTrue("no rebuild is pending", pane.refresh.idle)
-        val visitor = com.intellij.ui.tree.TreeVisitor { path -> net.nevinsky.abyssus.plugin.projectView.entityVisitAction(file, 99L, path.path.map(TreeUtil::getUserObject)) }
-        assertTrue("the request is kept although the tree is idle", pane.refresh.selectAfterRebuild(visitor, evenIfIdle = true))
-        assertTrue(editSceneDocument(project, file, "Add entity 99") { scene ->
-            scene.ecs[99L] = net.nevinsky.abyssus.lib.core.editor.entityOf(99, net.nevinsky.abyssus.lib.core.format.EntityType.OBJECT, net.nevinsky.abyssus.lib.core.ecs.component.NameComponent("Copy 99"))
-            true
-        })
+        val visitor =
+            com.intellij.ui.tree.TreeVisitor { path ->
+                net.nevinsky.abyssus.plugin.projectView.entityVisitAction(
+                    file,
+                    99L,
+                    path.path.map(TreeUtil::getUserObject),
+                )
+            }
+        assertTrue(
+            "the request is kept although the tree is idle",
+            pane.refresh.selectAfterRebuild(visitor, evenIfIdle = true),
+        )
+        assertTrue(
+            editSceneDocument(project, file, "Add entity 99") { scene ->
+                scene.ecs[99L] =
+                    net.nevinsky.abyssus.lib.core.editor.entityOf(
+                        99,
+                        net.nevinsky.abyssus.lib.core.format.EntityType.OBJECT,
+                        net.nevinsky.abyssus.lib.core.ecs.component.NameComponent("Copy 99"),
+                    )
+                true
+            }
+        )
         settle(pane, 1)
-        PlatformTestUtil.waitWithEventsDispatching("the new entity is selected", { pane.tree.selectionPath?.let { keyOfEntity(it) } == "99" }, 30)
+        PlatformTestUtil.waitWithEventsDispatching(
+            "the new entity is selected",
+            { pane.tree.selectionPath?.let { keyOfEntity(it) } == "99" },
+            30,
+        )
     }
 
     fun testSelectAfterRebuildDoesNothingWhenNoRebuildIsPending() {
@@ -321,7 +419,11 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         val pane = open()
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
         assertTrue("no rebuild is pending after opening", pane.refresh.idle)
-        assertFalse(pane.refresh.selectAfterRebuild(com.intellij.ui.tree.TreeVisitor { com.intellij.ui.tree.TreeVisitor.Action.INTERRUPT }))
+        assertFalse(
+            pane.refresh.selectAfterRebuild(
+                com.intellij.ui.tree.TreeVisitor { com.intellij.ui.tree.TreeVisitor.Action.INTERRUPT }
+            )
+        )
     }
 
     fun testRemovedSelectedEntityDisappearsAndLeavesNoStaleSelection() {
@@ -330,14 +432,24 @@ class AbyssusProjectViewPaneTest : BasePlatformTestCase() {
         val pane = open()
         pane.tree.selectionPath = entityPath(pane, "0")!!
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
-        assertTrue(editSceneDocument(project, file, "Remove entity 0") { scene ->
-            scene.ecs.remove(0L)
-            true
-        })
+        assertTrue(
+            editSceneDocument(project, file, "Remove entity 0") { scene ->
+                scene.ecs.remove(0L)
+                true
+            }
+        )
         settle(pane, 1)
-        PlatformTestUtil.waitWithEventsDispatching("selection cleared", { pane.tree.selectionPath?.let { keyOfEntity(it) } != "0" }, 30)
+        PlatformTestUtil.waitWithEventsDispatching(
+            "selection cleared",
+            { pane.tree.selectionPath?.let { keyOfEntity(it) } != "0" },
+            30,
+        )
         assertNull("entity 0 is gone", entityPath(pane, "0"))
-        assertEquals("no duplicate nodes", entries(pane).map { it.path }.size, entries(pane).map { it.path }.toSet().size)
+        assertEquals(
+            "no duplicate nodes",
+            entries(pane).map { it.path }.size,
+            entries(pane).map { it.path }.toSet().size,
+        )
         assertNull("the removed entity is no longer the selection", pane.tree.selectionPath?.let { keyOfEntity(it) })
     }
 

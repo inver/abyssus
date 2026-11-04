@@ -5,25 +5,40 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.plugin.assetfiles.AssetEditResult
-import net.nevinsky.abyssus.plugin.assetfiles.AssetMetaEdits
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.meta.EditError
-import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
 import java.io.File
+import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
+import net.nevinsky.abyssus.lib.core.editor.meta.EditError
+import net.nevinsky.abyssus.plugin.assetfiles.AssetEditResult
+import net.nevinsky.abyssus.plugin.assetfiles.AssetMetaEdits
 import net.nevinsky.abyssus.plugin.testCore
 
-private fun update(project: com.intellij.openapi.project.Project, dir: com.intellij.openapi.vfs.VirtualFile, key: String, expected: AssetFieldValue, value: AssetFieldValue) =
-    AssetMetaEdits.update(project, dir, key, expected, value, testCore.assetEditor)
+private fun update(
+    project: com.intellij.openapi.project.Project,
+    dir: com.intellij.openapi.vfs.VirtualFile,
+    key: String,
+    expected: AssetFieldValue,
+    value: AssetFieldValue,
+) = AssetMetaEdits.update(project, dir, key, expected, value, testCore.assetEditor)
 
 class AssetMetaEditsTest : BasePlatformTestCase() {
-    private val terrainMeta get() = net.nevinsky.abyssus.plugin.canonicalMeta(File("src/test/testData/project/Untitled/assets/terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b/meta.json").readText())
-    private val physicalMeta get() = net.nevinsky.abyssus.plugin.canonicalMeta(File("src/test/testData/project/Untitled/assets/skybox_physical/meta.json").readText())
+    private val terrainMeta
+        get() =
+            net.nevinsky.abyssus.plugin.canonicalMeta(
+                File("src/test/testData/project/Untitled/assets/terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b/meta.json")
+                    .readText()
+            )
+
+    private val physicalMeta
+        get() =
+            net.nevinsky.abyssus.plugin.canonicalMeta(
+                File("src/test/testData/project/Untitled/assets/skybox_physical/meta.json").readText()
+            )
 
     private fun textOf(f: VirtualFile) = FileDocumentManager.getInstance().getDocument(f)!!.text
 
@@ -35,14 +50,20 @@ class AssetMetaEditsTest : BasePlatformTestCase() {
 
     fun testOneFieldEditChangesOnlyThatValue() {
         val (dir, meta, _) = open("terrain", terrainMeta)
-        assertEquals(AssetEditResult.Changed, update(project, dir, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(800)))
+        assertEquals(
+            AssetEditResult.Changed,
+            update(project, dir, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(800)),
+        )
         assertEquals(terrainMeta.replace("\"size\": 1600", "\"size\": 800"), textOf(meta))
     }
 
     fun testUndoAndRedoRestoreTheExactText() {
         val (dir, meta, editor) = open("terrain", terrainMeta)
         val undo = UndoManager.getInstance(project)
-        assertEquals(AssetEditResult.Changed, update(project, dir, "uv", AssetFieldValue.Real(60f), AssetFieldValue.Real(30f)))
+        assertEquals(
+            AssetEditResult.Changed,
+            update(project, dir, "uv", AssetFieldValue.Real(60f), AssetFieldValue.Real(30f)),
+        )
         val edited = textOf(meta)
         assertTrue(edited, edited.contains("\"uv\": 30.0"))
         undo.undo(editor)
@@ -54,7 +75,10 @@ class AssetMetaEditsTest : BasePlatformTestCase() {
 
     fun testUntouchedNumbersKeepTheirText() {
         val (dir, meta, _) = open("sky", physicalMeta)
-        assertEquals(AssetEditResult.Changed, update(project, dir, "sunIntensity", AssetFieldValue.Real(20f), AssetFieldValue.Real(25f)))
+        assertEquals(
+            AssetEditResult.Changed,
+            update(project, dir, "sunIntensity", AssetFieldValue.Real(20f), AssetFieldValue.Real(25f)),
+        )
         val after = textOf(meta)
         assertTrue(after, after.contains("5.8E-6"))
         assertTrue(after.contains("\"planetRadius\": 6360000.0"))
@@ -72,31 +96,56 @@ class AssetMetaEditsTest : BasePlatformTestCase() {
     }
 
     fun testAnOmittedDefaultIsNotMaterializedByAnEqualEdit() {
-        val text = net.nevinsky.abyssus.plugin.canonicalMeta("""{"formatVersion":1,"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL","additional":{"vertex":"v","fragment":"f"}}""")
+        val text =
+            net.nevinsky.abyssus.plugin.canonicalMeta(
+                """{"formatVersion":1,"version":1,"lastModified":1,"type":"SKYBOX_PROCEDURAL",
+"additional":{"vertex":"v","fragment":"f"}}"""
+            )
         val (dir, meta, _) = open("sky2", text)
-        assertEquals(AssetEditResult.Unchanged, update(project, dir, "sunIntensity", AssetFieldValue.Real(20f), AssetFieldValue.Real(20f)))
+        assertEquals(
+            AssetEditResult.Unchanged,
+            update(project, dir, "sunIntensity", AssetFieldValue.Real(20f), AssetFieldValue.Real(20f)),
+        )
         assertEquals(text, textOf(meta))
-        assertEquals(AssetEditResult.Changed, update(project, dir, "sunIntensity", AssetFieldValue.Real(20f), AssetFieldValue.Real(25f)))
+        assertEquals(
+            AssetEditResult.Changed,
+            update(project, dir, "sunIntensity", AssetFieldValue.Real(20f), AssetFieldValue.Real(25f)),
+        )
         assertTrue(textOf(meta), textOf(meta).contains("\"sunIntensity\": 25.0"))
     }
 
     fun testRejectedAndEqualEditsWriteNothing() {
         val (dir, meta, _) = open("terrain", terrainMeta)
-        assertEquals(AssetEditResult.Rejected(EditError.NOT_POSITIVE), update(project, dir, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(0)))
-        assertEquals(AssetEditResult.Unchanged, update(project, dir, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(1600)))
-        assertEquals(AssetEditResult.Rejected(EditError.UNSUPPORTED_FIELD), update(project, dir, "uuid", AssetFieldValue.None, AssetFieldValue.Text("x")))
+        assertEquals(
+            AssetEditResult.Rejected(EditError.NOT_POSITIVE),
+            update(project, dir, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(0)),
+        )
+        assertEquals(
+            AssetEditResult.Unchanged,
+            update(project, dir, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(1600)),
+        )
+        assertEquals(
+            AssetEditResult.Rejected(EditError.UNSUPPORTED_FIELD),
+            update(project, dir, "uuid", AssetFieldValue.None, AssetFieldValue.Text("x")),
+        )
         assertEquals(terrainMeta, textOf(meta))
     }
 
     fun testMalformedMetaIsNotWritten() {
         val (dir, meta, _) = open("bad", "{ not json")
-        assertEquals(AssetEditResult.Unreadable, update(project, dir, "size", AssetFieldValue.Int(1), AssetFieldValue.Int(2)))
+        assertEquals(
+            AssetEditResult.Unreadable,
+            update(project, dir, "size", AssetFieldValue.Int(1), AssetFieldValue.Int(2)),
+        )
         assertEquals("{ not json", textOf(meta))
     }
 
     fun testAStaleEditorValueIsAConflictAndKeepsTheNewerValue() {
         val (dir, meta, _) = open("terrain", terrainMeta)
-        assertEquals(AssetEditResult.Changed, update(project, dir, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(900)))
+        assertEquals(
+            AssetEditResult.Changed,
+            update(project, dir, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(900)),
+        )
         val newer = textOf(meta)
         val result = update(project, dir, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(500))
         assertEquals(AssetEditResult.Conflict(AssetFieldValue.Int(900)), result)
@@ -106,14 +155,25 @@ class AssetMetaEditsTest : BasePlatformTestCase() {
     fun testUnsavedTextIsWhatIsEdited() {
         val (dir, meta, _) = open("terrain", terrainMeta)
         com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) {
-            FileDocumentManager.getInstance().getDocument(meta)!!.setText(terrainMeta.replace("\"size\": 1600", "\"size\": 1000"))
+            FileDocumentManager.getInstance()
+                .getDocument(meta)!!
+                .setText(terrainMeta.replace("\"size\": 1600", "\"size\": 1000"))
         }
-        assertEquals(AssetEditResult.Conflict(AssetFieldValue.Int(1000)), update(project, dir, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(5)))
-        assertEquals(AssetEditResult.Changed, update(project, dir, "size", AssetFieldValue.Int(1000), AssetFieldValue.Int(5)))
+        assertEquals(
+            AssetEditResult.Conflict(AssetFieldValue.Int(1000)),
+            update(project, dir, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(5)),
+        )
+        assertEquals(
+            AssetEditResult.Changed,
+            update(project, dir, "size", AssetFieldValue.Int(1000), AssetFieldValue.Int(5)),
+        )
     }
 
     fun testAMissingMetaFileIsUnreadable() {
         val dir = myFixture.addFileToProject("p/assets/empty/other.txt", "x").virtualFile.parent
-        assertEquals(AssetEditResult.Unreadable, update(project, dir, "size", AssetFieldValue.Int(1), AssetFieldValue.Int(2)))
+        assertEquals(
+            AssetEditResult.Unreadable,
+            update(project, dir, "size", AssetFieldValue.Int(1), AssetFieldValue.Int(2)),
+        )
     }
 }

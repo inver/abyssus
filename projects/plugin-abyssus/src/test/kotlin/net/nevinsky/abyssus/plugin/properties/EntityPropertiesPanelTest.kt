@@ -15,6 +15,12 @@ import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
+import java.awt.Component
+import java.awt.Container
+import java.io.File
+import javax.swing.JButton
+import javax.swing.JComboBox
+import javax.swing.JTextArea
 import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.plugin.editSceneText
 import net.nevinsky.abyssus.plugin.projectView.AbyssusAssetNode
@@ -24,12 +30,6 @@ import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
 import net.nevinsky.abyssus.plugin.projectView.addComponentGroup
 import net.nevinsky.abyssus.plugin.projectView.componentTargetOf
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
-import java.awt.Component
-import java.awt.Container
-import java.io.File
-import javax.swing.JButton
-import javax.swing.JComboBox
-import javax.swing.JTextArea
 import net.nevinsky.abyssus.plugin.testMetaFiles
 import net.nevinsky.abyssus.plugin.testPanelServices
 
@@ -53,47 +53,71 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         val dir = "Untitled"
         myFixture.copyFileToProject("$dir/Untitled.abss", "$dir/Untitled.abss")
         myFixture.copyFileToProject("$dir/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
-        File("$testDataPath/$dir/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
-            d.listFiles { f -> f.isFile }!!.filter { it.extension == "json" }.forEach {
-                myFixture.copyFileToProject("$dir/assets/${d.name}/${it.name}", "$dir/assets/${d.name}/${it.name}")
+        File("$testDataPath/$dir/assets")
+            .listFiles { f -> f.isDirectory }!!
+            .forEach { d ->
+                d.listFiles { f -> f.isFile }!!
+                    .filter { it.extension == "json" }
+                    .forEach {
+                        myFixture.copyFileToProject(
+                            "$dir/assets/${d.name}/${it.name}",
+                            "$dir/assets/${d.name}/${it.name}",
+                        )
+                    }
             }
-        }
     }
 
     /** The `Custom` project: a scene with a plane, the `tree` model and the exported component schema. */
     private fun copyCustom() {
-        for (path in listOf("Custom.abss", "scenes/Field.scene", "assets/tree/meta.json", "abyssus/components.schema.json")) {
+        for (path in
+            listOf("Custom.abss", "scenes/Field.scene", "assets/tree/meta.json", "abyssus/components.schema.json")) {
             myFixture.copyFileToProject("Custom/$path", "Custom/$path")
         }
     }
 
     private fun children(node: AbstractTreeNode<*>) = node.children.map { it as AbstractTreeNode<*> }
-    private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+
+    private fun label(node: AbstractTreeNode<*>): String =
+        (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+
     private fun descend(from: AbstractTreeNode<*>, vararg names: String) =
         names.fold(from) { node, name -> children(node).single { label(it) == name } }
 
-    private fun entity(id: String) = descend(
-        children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") },
-        "scenes",
-    ).let { scenes -> descend(children(scenes).single(), "ecs", id) }
+    private fun entity(id: String) =
+        descend(
+                children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") },
+                "scenes",
+            )
+            .let { scenes -> descend(children(scenes).single(), "ecs", id) }
 
     private fun component(id: String, kind: String) = descend(entity(id), kind)
 
-    private fun panel() = AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
+    private fun panel() =
+        AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
 
     private fun <T : Component> all(c: Component, type: Class<T>): List<T> = buildList {
-        if (type.isInstance(c)) add(type.cast(c))
-        if (c is Container) c.components.forEach { addAll(all(it, type)) }
+        if (type.isInstance(c)) {
+            add(type.cast(c))
+        }
+        if (c is Container) {
+            c.components.forEach { addAll(all(it, type)) }
+        }
     }
 
     private fun named(c: Component, name: String): Component? =
-        if (c.name == name) c else (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
+        if (c.name == name) {
+            c
+        } else {
+            (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
+        }
 
     private fun sceneFile(): VirtualFile = componentTargetOf(entity("0"))!!.file
 
     private fun text(f: VirtualFile) = FileDocumentManager.getInstance().getDocument(f)!!.text
 
-    private fun rawEntries(e: net.nevinsky.abyssus.lib.core.dto.EntityDto) = e.components.filterIsInstance<RawComponentsWrapper>().flatMap { it.entries }
+    private fun rawEntries(e: net.nevinsky.abyssus.lib.core.dto.EntityDto) =
+        e.components.filterIsInstance<RawComponentsWrapper>().flatMap { it.entries }
+
     private fun entityDto(f: VirtualFile, id: Long) = net.nevinsky.abyssus.plugin.parsedScene(text(f)).entity(id)!!
 
     fun testEntityShowsItsComponents() {
@@ -102,7 +126,10 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         p.show(entity("0"))
         val state = p.state as PanelState.EntityDetails
         assertEquals("Model 0", state.name)
-        assertEquals(listOf("NameComponent", "PositionComponent", "RenderComponent", "PickableComponent"), state.sections.map { it.kind })
+        assertEquals(
+            listOf("NameComponent", "PositionComponent", "RenderComponent", "PickableComponent"),
+            state.sections.map { it.kind },
+        )
         assertEquals("Model 0", all(p, JBLabel::class.java).first { it.name == "entity-name" }.text)
         assertEquals("-3.035308", (named(p, "field-PositionComponent-localPosition.x") as JBTextField).text)
         assertTrue("LightComponent" in state.addable)
@@ -137,13 +164,19 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         val p = panel()
         p.show(children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") })
         assertFalse((p.state as PanelState.Project).settings.physicsEnabled)
-        p.show(descend(children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }, "scenes"))
+        p.show(
+            descend(
+                children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") },
+                "scenes",
+            )
+        )
         val folder = p.state as PanelState.StructuralDetails
         assertEquals("Folder · 1 item", folder.model.header.subtitle)
         assertTrue(all(p, JBTextField::class.java).isEmpty())
     }
 
-    private fun leave(c: Component) = c.focusListeners.forEach { it.focusLost(java.awt.event.FocusEvent(c, java.awt.event.FocusEvent.FOCUS_LOST)) }
+    private fun leave(c: Component) =
+        c.focusListeners.forEach { it.focusLost(java.awt.event.FocusEvent(c, java.awt.event.FocusEvent.FOCUS_LOST)) }
 
     fun testLeavingAFieldConfirmsItsValue() {
         copyProject()
@@ -266,7 +299,9 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
 
     private fun setEntityType(type: String) {
         val doc = FileDocumentManager.getInstance().getDocument(sceneFile())!!
-        editSceneText(project, doc) { it.entity(0)!!.header().type = net.nevinsky.abyssus.lib.core.format.EntityType.valueOf(type) }
+        editSceneText(project, doc) {
+            it.entity(0)!!.header().type = net.nevinsky.abyssus.lib.core.format.EntityType.valueOf(type)
+        }
     }
 
     fun testBeamEditorsAreSpotlightOnlyAndUsePercent() {
@@ -298,7 +333,9 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
                 assertEquals(before, text(f))
                 assertTrue((named(p, "error-LightComponent-coneAngle") as JBLabel).text.contains("180"))
                 val doc = FileDocumentManager.getInstance().getDocument(f)!!
-                editSceneText(project, doc) { it.entity(0)!!.component(LightComponent::class.java)!!.light.coneAngle = 60f }
+                editSceneText(project, doc) {
+                    it.entity(0)!!.component(LightComponent::class.java)!!.light.coneAngle = 60f
+                }
                 assertEquals("60", (named(p, "field-LightComponent-coneAngle") as JBTextField).text)
             }
         }
@@ -320,7 +357,9 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         p.show(component("4", "CameraComponent"))
         val f = sceneFile()
         val doc = FileDocumentManager.getInstance().getDocument(f)!!
-        WriteCommandAction.runWriteCommandAction(project) { doc.setText(doc.text.replace("\"fieldOfView\": 67", "\"fieldOfView\": 42")) }
+        WriteCommandAction.runWriteCommandAction(project) {
+            doc.setText(doc.text.replace("\"fieldOfView\": 67", "\"fieldOfView\": 42"))
+        }
         assertEquals("42", (named(p, "field-CameraComponent-camera.fieldOfView") as JBTextField).text)
     }
 

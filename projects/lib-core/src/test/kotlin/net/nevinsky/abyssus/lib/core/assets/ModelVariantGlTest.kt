@@ -26,7 +26,9 @@ import java.io.File
 import java.nio.file.Files
 import java.util.concurrent.Executor
 
-/** One mesh of a model asset ("model variants") through a real storage and GL context. Opt-in: `-Dabyssus.glTests=true`. */
+/**
+ * One mesh of a model asset ("model variants") through a real storage and GL context. Opt-in: `-Dabyssus.glTests=true`.
+ */
 class ModelVariantGlTest {
     @Before
     fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
@@ -52,7 +54,9 @@ class ModelVariantGlTest {
         repeat(400) {
             names.forEach(assets::request)
             assets.update()
-            if (!assets.isLoading()) return
+            if (!assets.isLoading()) {
+                return
+            }
         }
         error("still loading")
     }

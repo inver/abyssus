@@ -5,16 +5,16 @@
 
 package net.nevinsky.abyssus.plugin.projectView.action.asset
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.tree.TreeVisitor
 import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.editor.document.*
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
@@ -22,7 +22,6 @@ import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.projectView.*
 
 private val LOG = Logger.getInstance("net.nevinsky.abyssus.projectView.AssetSelection")
-
 
 class AssetDropdownAction : DropdownAction {
     override val actionIds = listOf("Abyssus.Menu.ImportModel", "Abyssus.Menu.New")
@@ -37,10 +36,16 @@ fun assetsNodeProjectFile(node: Any?): VirtualFile? {
         return null
     }
     return entry.source?.takeIf {
-        it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION &&
-                runCatchingKeepingCancellation {
-                    com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing.project(textOf(it)) != null
-                }.getOrDefault(false)
+        it.isValid &&
+            it.extension == ProjectLayout.PROJECT_EXTENSION &&
+            runCatchingKeepingCancellation {
+                    com.intellij.openapi.components
+                        .service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>()
+                        .documents
+                        .parsing
+                        .project(textOf(it)) != null
+                }
+                .getOrDefault(false)
     }
 }
 
@@ -53,7 +58,8 @@ fun assetVisitAction(abss: VirtualFile, assetName: String, chain: List<Any?>): T
     val projectIndex = nodes.indexOfFirst { it is AbyssusAssetNode && it.virtualFile == abss }
     if (projectIndex < 0) {
         return when (nodes.lastOrNull()) {
-            null, is AbyssusRootNode -> TreeVisitor.Action.CONTINUE
+            null,
+            is AbyssusRootNode -> TreeVisitor.Action.CONTINUE
             is AbyssusAssetNode -> TreeVisitor.Action.SKIP_CHILDREN
             is DtoEntryNode -> TreeVisitor.Action.SKIP_CHILDREN
             else -> TreeVisitor.Action.CONTINUE // the platform's root of the tree
@@ -80,16 +86,25 @@ fun selectAssetInAbyssusView(project: Project, abss: VirtualFile, assetName: Str
         selectInAbyssusView(
             project,
             { path -> assetVisitAction(abss, assetName, path.path.map(TreeUtil::getUserObject)) },
-            refresh = true
+            refresh = true,
         )
     } catch (e: Throwable) {
         LOG.warn("Could not select asset $assetName in the Abyssus view", e)
     }
 }
 
-/** A callback that selects the created asset in the Abyssus view once the current command is done (on the EDT, unless the project closed). */
+/**
+ * A callback that selects the created asset in the Abyssus view once the current command is done (on the EDT, unless
+ * the project closed).
+ */
 fun selectAssetLater(project: Project, abss: VirtualFile): (String) -> Unit = { created ->
-    ApplicationManager.getApplication().invokeLater(
-        { if (!project.isDisposed) selectAssetInAbyssusView(project, abss, created) }, ModalityState.nonModal(),
-    )
+    ApplicationManager.getApplication()
+        .invokeLater(
+            {
+                if (!project.isDisposed) {
+                    selectAssetInAbyssusView(project, abss, created)
+                }
+            },
+            ModalityState.nonModal(),
+        )
 }

@@ -42,7 +42,8 @@ sealed interface PlayLaunch {
 
     companion object {
         /**
-         * The game's own play host when [projectDir] holds `abyssus/play.json` (every classpath entry must exist and the
+          * The game's own play host when [projectDir] holds `abyssus/play.json` (every classpath entry must exist and
+          * the
          * protocol must be [PLAY_PROTOCOL]), else the jars of the bundled [playHost] folder with physics alone.
          */
         fun choose(projectDir: File, playHost: File?): PlayLaunch {
@@ -53,19 +54,23 @@ sealed interface PlayLaunch {
                 } catch (e: Exception) {
                     return Refused(AbyssusPhysicsBundle.message("playBadFile", e.message.orEmpty()))
                 }
-                if (config.protocol != PLAY_PROTOCOL) return Refused(
-                    AbyssusPhysicsBundle.message(
-                        "playStaleProtocol",
-                        config.protocol,
-                        PLAY_PROTOCOL
+                if (config.protocol != PLAY_PROTOCOL) {
+                    return Refused(
+                        AbyssusPhysicsBundle.message(
+                            "playStaleProtocol",
+                            config.protocol,
+                            PLAY_PROTOCOL
+                        )
                     )
-                )
+                }
                 config.classpath.firstOrNull { !File(it).exists() }
                     ?.let { return Refused(AbyssusPhysicsBundle.message("playStaleJar", it)) }
                 return Plan(config.classpath, config.module, config.jvmArgs)
             }
             val jars = playHost?.listFiles { f -> f.isFile && f.name.endsWith(".jar") }?.sortedBy { it.name }.orEmpty()
-            if (jars.isEmpty()) return Refused(AbyssusPhysicsBundle.message("playNoHost"))
+            if (jars.isEmpty()) {
+                return Refused(AbyssusPhysicsBundle.message("playNoHost"))
+            }
             return Plan(jars.map { it.absolutePath }, PHYSICS_ONLY_MODULE, emptyList())
         }
     }

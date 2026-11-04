@@ -13,19 +13,21 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.lib.core.editor.arrange.ArrangementResult
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
-import net.nevinsky.abyssus.lib.core.ecs.component.*
 import net.nevinsky.abyssus.lib.core.editor.terrainData
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.testMetaFiles
-import java.io.File
 
-/** Arrangements written to a copy of the Untitled project on disk: one undo step each, terrain heights without a view. */
+/**
+ * Arrangements written to a copy of the Untitled project on disk: one undo step each, terrain heights without a view.
+ */
 class ArrangementEditingTest : BasePlatformTestCase() {
     private lateinit var projectDir: File
     private lateinit var scene: VirtualFile
@@ -40,12 +42,22 @@ class ArrangementEditingTest : BasePlatformTestCase() {
     }
 
     private fun text() = FileDocumentManager.getInstance().getDocument(scene)!!.text
+
     private fun scene1() = net.nevinsky.abyssus.plugin.parsedScene(text())
+
     private fun slots() = scene1().entity(11)!!.component(PathArrangementComponent::class.java)!!.slots.toList()
+
     private fun y(id: Int) = scene1().entity(id.toLong())!!.component(PositionComponent::class.java)!!.localPosition.y
 
     private fun draw(heights: GroundHeight = LineHeights()): ArrangementResult =
-        ArrangementEditing.create(project, scene, tree, listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)), false, heights)
+        ArrangementEditing.create(
+            project,
+            scene,
+            tree,
+            listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)),
+            false,
+            heights,
+        )
 
     fun testADrawingIsOneUndoStep() {
         myFixture.openFileInEditor(scene)
@@ -66,7 +78,16 @@ class ArrangementEditingTest : BasePlatformTestCase() {
 
     fun testASpacingEditFromThePropertiesPanelStandsOnTheFixtureTerrain() {
         assertEquals(ArrangementResult.Changed(11L), draw(ArrangementHeights.of(project).forScene(scene)!!))
-        val result = SceneComponentEdits.update(project, scene, 11L, "PathArrangementComponent", "spacing", "20", testMetaFiles())
+        val result =
+            SceneComponentEdits.update(
+                project,
+                scene,
+                11L,
+                "PathArrangementComponent",
+                "spacing",
+                "20",
+                testMetaFiles(),
+            )
         assertEquals(EditResult.Changed, result)
         assertEquals(listOf(12, 13, 14), slots())
         val heights = terrainData(projectDir, terrain)
@@ -78,7 +99,16 @@ class ArrangementEditingTest : BasePlatformTestCase() {
     fun testASettingEditThatMakesTooManyCopiesIsRefused() {
         draw()
         val before = text()
-        val result = SceneComponentEdits.update(project, scene, 11L, "PathArrangementComponent", "spacing", "0.001", testMetaFiles())
+        val result =
+            SceneComponentEdits.update(
+                project,
+                scene,
+                11L,
+                "PathArrangementComponent",
+                "spacing",
+                "0.001",
+                testMetaFiles(),
+            )
         assertTrue(result is EditResult.Rejected)
         assertEquals(before, text())
     }
@@ -86,22 +116,30 @@ class ArrangementEditingTest : BasePlatformTestCase() {
     fun testRegenerateWithNothingChangedWritesNothing() {
         draw(ArrangementHeights.of(project).forScene(scene)!!)
         val before = text()
-        assertEquals(ArrangementResult.Unchanged, ArrangementEditing.regenerate(project, scene, 11L, ArrangementHeights.of(project).forScene(scene)!!))
+        assertEquals(
+            ArrangementResult.Unchanged,
+            ArrangementEditing.regenerate(project, scene, 11L, ArrangementHeights.of(project).forScene(scene)!!),
+        )
         assertEquals(before, text())
     }
 
     fun testRegenerateAfterTheGroundChangedRewritesOnlyY() {
         draw()
         val before = scene1()
-        assertEquals(ArrangementResult.Changed(), ArrangementEditing.regenerate(project, scene, 11L, GroundHeight { _, _, _ -> 7f }))
+        assertEquals(
+            ArrangementResult.Changed(),
+            ArrangementEditing.regenerate(project, scene, 11L, GroundHeight { _, _, _ -> 7f }),
+        )
         val after = scene1()
         for (id in 12..16) {
             assertEquals(7f, y(id), 0f)
             fun withoutY(scene: net.nevinsky.abyssus.lib.core.dto.SceneDto): String {
                 val entity = scene.entity(id.toLong())!!
                 val position = entity.component(PositionComponent::class.java)!!
-                val x = position.localPosition.x; val z = position.localPosition.z
-                return listOf(x, z, entity.header().type, entity.component(NameComponent::class.java)?.name).joinToString("|")
+                val x = position.localPosition.x
+                val z = position.localPosition.z
+                return listOf(x, z, entity.header().type, entity.component(NameComponent::class.java)?.name)
+                    .joinToString("|")
             }
             assertEquals(withoutY(before), withoutY(after))
         }
@@ -111,7 +149,14 @@ class ArrangementEditingTest : BasePlatformTestCase() {
         myFixture.openFileInEditor(scene)
         draw()
         val before = text()
-        val result = ArrangementEditing.setPoints(project, scene, 11L, listOf(Vector3(0f, 0f, 0f), Vector3(60f, 0f, 0f)), LineHeights())
+        val result =
+            ArrangementEditing.setPoints(
+                project,
+                scene,
+                11L,
+                listOf(Vector3(0f, 0f, 0f), Vector3(60f, 0f, 0f)),
+                LineHeights(),
+            )
         assertEquals(ArrangementResult.Changed(), result)
         assertEquals(7, slots().size)
         UndoManager.getInstance(project).undo(TextEditorProvider.getInstance().getTextEditor(myFixture.editor))

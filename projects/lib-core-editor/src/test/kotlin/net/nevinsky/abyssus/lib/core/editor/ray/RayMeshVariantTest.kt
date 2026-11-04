@@ -6,6 +6,9 @@ package net.nevinsky.abyssus.lib.core.editor.ray
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.utils.GdxNativesLoader
+import java.io.File
+import java.nio.file.Files
+import java.util.concurrent.Executor
 import net.nevinsky.abyssus.lib.core.assets.ModelKey
 import net.nevinsky.abyssus.lib.core.assets.testFileLoader
 import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
@@ -28,9 +31,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
-import java.util.concurrent.Executor
 
 /** A model drawn by one mesh is its own ray asset: geometry and materials of that mesh only. */
 class RayMeshVariantTest {
@@ -40,16 +40,21 @@ class RayMeshVariantTest {
 
     private val dirs = mutableListOf<File>()
 
-    @After
-    fun cleanUp() = dirs.forEach(File::deleteRecursively)
+    @After fun cleanUp() = dirs.forEach(File::deleteRecursively)
 
-    private fun project(): File = Files.createTempDirectory("ray-variant").toFile().also(dirs::add).also {
-        writeModelAsset(it, "duo", twoQuadData())
-    }
+    private fun project(): File =
+        Files.createTempDirectory("ray-variant").toFile().also(dirs::add).also {
+            writeModelAsset(it, "duo", twoQuadData())
+        }
 
     private fun store(root: File): RaySnapshotStore<RayModelSnapshot, RayModelSource> {
         val files = testFileLoader(root)
-        return RaySnapshotStore(Executor(Runnable::run), testMetaLoader(root, fileLoader = files), ModelRaySnapshotLoader(files, AssimpModelLoader()), "model")
+        return RaySnapshotStore(
+            Executor(Runnable::run),
+            testMetaLoader(root, fileLoader = files),
+            ModelRaySnapshotLoader(files, AssimpModelLoader()),
+            "model",
+        )
     }
 
     private val first = ModelKey("duo", "mesh_0").encode()
@@ -71,7 +76,10 @@ class RayMeshVariantTest {
         fun ys(model: RayModelSnapshot): Set<Float> {
             val mesh = model.meshes.single()
             val stride = mesh.vertexSizeBytes / 4
-            val position = mesh.attributes.first { it.usage == com.badlogic.gdx.graphics.VertexAttributes.Usage.Position }.offsetBytes / 4
+            val position =
+                mesh.attributes
+                    .first { it.usage == com.badlogic.gdx.graphics.VertexAttributes.Usage.Position }
+                    .offsetBytes / 4
             val v = mesh.vertices()
             return (0 until v.size / stride).map { v[it * stride + position + 1] }.toSet()
         }
@@ -93,18 +101,24 @@ class RayMeshVariantTest {
         val opened = mutableListOf<String>()
         val closed = mutableListOf<String>()
         val model = rayTestModel()
-        val assets = RaySceneAssets(
-            { _, name -> opened += name; RayAssetLease({ model }, { null }) { closed += name } },
-            { _, _ -> error("no terrain") },
-        )
-        val content = SceneContent(
-            models = listOf(
-                AssetPlacement(1L, "duo", PlacementTransform.IDENTITY),
-                AssetPlacement(2L, "duo", PlacementTransform.IDENTITY, "mesh_0"),
-                AssetPlacement(3L, "duo", PlacementTransform.IDENTITY, "mesh_1"),
-                AssetPlacement(4L, "duo", PlacementTransform.IDENTITY, "mesh_1"),
-            ),
-        )
+        val assets =
+            RaySceneAssets(
+                { _, name ->
+                    opened += name
+                    RayAssetLease({ model }, { null }) { closed += name }
+                },
+                { _, _ -> error("no terrain") },
+            )
+        val content =
+            SceneContent(
+                models =
+                    listOf(
+                        AssetPlacement(1L, "duo", PlacementTransform.IDENTITY),
+                        AssetPlacement(2L, "duo", PlacementTransform.IDENTITY, "mesh_0"),
+                        AssetPlacement(3L, "duo", PlacementTransform.IDENTITY, "mesh_1"),
+                        AssetPlacement(4L, "duo", PlacementTransform.IDENTITY, "mesh_1"),
+                    )
+            )
         assets.update(File("p"), content)
         assertEquals(listOf("duo", first, second), opened)
         val ready = assets.poll() as RaySceneAssetState.Ready
@@ -115,13 +129,25 @@ class RayMeshVariantTest {
 
     @Test
     fun aMeshPlacementUsesItsOwnAssetAndWaitsForIt() {
-        val camera = PerspectiveCamera(61f, 800f, 600f).apply {
-            position.set(4f, 5f, 6f); direction.set(-1f, -1f, -1f).nor(); near = .2f; far = 500f; update()
-        }
+        val camera =
+            PerspectiveCamera(61f, 800f, 600f).apply {
+                position.set(4f, 5f, 6f)
+                direction.set(-1f, -1f, -1f).nor()
+                near = .2f
+                far = 500f
+                update()
+            }
         fun capture(meshId: String?, key: String): RaySceneConversion {
-            val content = SceneContent(models = listOf(AssetPlacement(0L, "model", PlacementTransform.IDENTITY, meshId)))
+            val content =
+                SceneContent(models = listOf(AssetPlacement(0L, "model", PlacementTransform.IDENTITY, meshId)))
             val params = SceneRenderParams.DEFAULT.copy(content = content, projectDir = File("p"))
-            return RaySceneSnapshots().capture(params, camera, NO_LIGHTS, RaySceneAssetState.Ready(mapOf(key to rayTestModel(pbr = true)), emptyMap()))
+            return RaySceneSnapshots()
+                .capture(
+                    params,
+                    camera,
+                    NO_LIGHTS,
+                    RaySceneAssetState.Ready(mapOf(key to rayTestModel(pbr = true)), emptyMap()),
+                )
         }
         assertTrue(capture(null, "model") is RaySceneConversion.Ready)
         val key = ModelKey("model", "mesh").encode()

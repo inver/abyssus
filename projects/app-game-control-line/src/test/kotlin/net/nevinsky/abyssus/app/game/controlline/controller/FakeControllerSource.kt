@@ -6,12 +6,35 @@ package net.nevinsky.abyssus.app.game.controlline.controller
 
 /** A [ControllerSource] the test drives: plug, unplug, move an axis, press a button, set the hat. */
 class FakeControllerSource : ControllerSource {
-    private class Device(val guid: String, val name: String, val gamepad: Boolean, val axes: FloatArray, val buttons: BooleanArray, var hat: Int = 0)
+    private class Device(
+        val guid: String,
+        val name: String,
+        val gamepad: Boolean,
+        val axes: FloatArray,
+        val buttons: BooleanArray,
+        var hat: Int = 0,
+    )
 
     private val devices = LinkedHashMap<String, Device>()
 
     /** Plugs in a device; a gamepad has the standard 6 axes and 15 buttons. */
-    fun plug(guid: String, name: String = guid, gamepad: Boolean = false, axes: Int = if (gamepad) 6 else 4, buttons: Int = if (gamepad) 15 else 12): FakeControllerSource {
+    fun plug(
+        guid: String,
+        name: String = guid,
+        gamepad: Boolean = false,
+        axes: Int =
+            if (gamepad) {
+                6
+            } else {
+                4
+            },
+        buttons: Int =
+            if (gamepad) {
+                15
+            } else {
+                12
+            },
+    ): FakeControllerSource {
         devices[guid] = Device(guid, name, gamepad, FloatArray(axes), BooleanArray(buttons))
         return this
     }

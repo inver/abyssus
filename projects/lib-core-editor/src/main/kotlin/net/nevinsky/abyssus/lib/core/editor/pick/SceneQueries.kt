@@ -7,18 +7,18 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Matrix4
+import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.math.collision.Ray
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import com.badlogic.gdx.math.Quaternion
 import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 
 /**
- * The questions the view asks about the scene as the last frame drew it (what is under the cursor, where an object would
- * rest, which gizmo handle is hit). Answered from CPU data only, so they need no GL context and can be tested with
- * a hand-built [FrameSnapshot].
+ * The questions the view asks about the scene as the last frame drew it (what is under the cursor, where an object
+ * would rest, which gizmo handle is hit). Answered from CPU data only, so they need no GL context and can be tested
+ * with a hand-built [FrameSnapshot].
  */
 interface SceneQueries {
     /** The scene's content with the previewed transforms applied: what the user sees now. */
@@ -33,9 +33,7 @@ interface SceneQueries {
     /** The entity under the pixel ([screenX], [screenY]) of a [width] x [height] view, or null. */
     fun pick(screenX: Int, screenY: Int, width: Int, height: Int): Long?
 
-    /**
-     * What is under the pixel: the entity [pick] finds, or null.
-     */
+    /** What is under the pixel: the entity [pick] finds, or null. */
     fun pickTarget(screenX: Int, screenY: Int, width: Int, height: Int): SceneTarget? =
         pick(screenX, screenY, width, height)?.let(SceneTarget::Entity)
 
@@ -46,30 +44,42 @@ interface SceneQueries {
     fun terrainOf(entityId: Long): TerrainTarget?
 
     /**
-     * The nearest terrain hit along [ray], when it belongs to [entityId]; null when another terrain covers it.
-     * Model boxes do not block the brush, and the camera's far plane limits the ray.
+     * The nearest terrain hit along [ray], when it belongs to [entityId]; null when another terrain covers it. Model
+     * boxes do not block the brush, and the camera's far plane limits the ray.
      */
     fun terrainHit(entityId: Long, ray: Ray): Vector3?
 
     /** The nearest point where [ray] meets any drawn terrain, or null when it meets none (a click in the sky). */
     fun groundHit(ray: Ray): Vector3?
 
-    /** The points of the arrangement [entityId] as shown now: the ones being dragged, else the file's; null when it is none. */
+    /**
+     * The points of the arrangement [entityId] as shown now: the ones being dragged, else the file's; null when it is
+     * none.
+     */
     fun pathPoints(entityId: Long): List<Vector3>?
 
     /** The handle of the selected arrangement's line under the pixel, or null. */
     fun pathHandleAt(screenX: Int, screenY: Int, width: Int, height: Int): PathHit?
 
-    /** How many pixels the pixel ([screenX], [screenY]) is from where the world point [at] is drawn; null when it is off screen. */
+    /**
+     * How many pixels the pixel ([screenX], [screenY]) is from where the world point [at] is drawn; null when it is off
+     * screen.
+     */
     fun screenDistance(at: Vector3, screenX: Int, screenY: Int, width: Int, height: Int): Float?
 
-    /** The height of the highest surface under [entityId], or null when it cannot drop (terrain, the camera looked through, nothing below). */
+    /**
+     * The height of the highest surface under [entityId], or null when it cannot drop (terrain, the camera looked
+     * through, nothing below).
+     */
     fun groundBelow(entityId: Long): Float?
 
     /** The lowest world point of [entityId]'s box, or null when it is not drawn. */
     fun lowestPoint(entityId: Long): Float?
 
-    /** The gizmo of the selected entity for a view [height] pixels tall, or null when nothing is selected or it has no handles. */
+    /**
+     * The gizmo of the selected entity for a view [height] pixels tall, or null when nothing is selected or it has no
+     * handles.
+     */
     fun gizmoHandles(height: Int): GizmoHandles?
 
     /** The handle of the selected entity's gizmo under the pixel, or null. */
@@ -96,7 +106,8 @@ class SnapshotSceneQueries(
     private val layers: ScenePreviewLayers = ScenePreviewLayers(state),
     private val sceneContentOf: () -> SceneContent,
 ) : SceneQueries {
-    override val sceneContent: SceneContent get() = sceneContentOf()
+    override val sceneContent: SceneContent
+        get() = sceneContentOf()
 
     private class DrawnBox(val id: Long, val local: BoundingBox, val world: Matrix4) {
         fun oriented() = OrientedBox(local, world)
@@ -109,7 +120,7 @@ class SnapshotSceneQueries(
         val content: SceneContent,
         val viewCamera: Long?,
         val preview: Map<Long, DragResult>,
-        val targets: Targets
+        val targets: Targets,
     )
 
     private var built: Built? = null
@@ -118,58 +129,81 @@ class SnapshotSceneQueries(
     internal var targetBuilds = 0
         private set
 
-    override val content: SceneContent get() = layers.apply(sceneContent)
+    override val content: SceneContent
+        get() = layers.apply(sceneContent)
 
-    override val drawnVersion: Long get() = snapshot()?.drawnVersion ?: 0L
+    override val drawnVersion: Long
+        get() = snapshot()?.drawnVersion ?: 0L
 
     private fun targets(): Targets? {
         val frame = snapshot() ?: return null
         val c = content
-        built?.takeIf { it.snapshot === frame && it.content === c && it.viewCamera == state.viewCamera && it.preview === state.preview }
-            ?.let { return it.targets }
+        built
+            ?.takeIf {
+                it.snapshot === frame &&
+                    it.content === c &&
+                    it.viewCamera == state.viewCamera &&
+                    it.preview === state.preview
+            }
+            ?.let {
+                return it.targets
+            }
         targetBuilds++
-        val boxes = frame.boxes.map { b ->
-            DrawnBox(b.id, b.local, state.preview[b.id]?.transform?.toMatrix() ?: b.world)
-        } + SceneMarkers().targets(c, state.viewCamera).map { DrawnBox(it.entityId, it.bounds, Matrix4()) }
+        val boxes =
+            frame.boxes.map { b ->
+                DrawnBox(b.id, b.local, state.preview[b.id]?.transform?.toMatrix() ?: b.world)
+            } + SceneMarkers().targets(c, state.viewCamera).map { DrawnBox(it.entityId, it.bounds, Matrix4()) }
         return Targets(boxes, frame.terrains).also { built = Built(frame, c, state.viewCamera, state.preview, it) }
     }
 
     override fun pick(screenX: Int, screenY: Int, width: Int, height: Int): Long? {
-        if (width <= 0 || height <= 0) return null
+        if (width <= 0 || height <= 0) {
+            return null
+        }
         val frame = snapshot() ?: return null
         val targets = targets() ?: return null
         val ray = ScenePicker().pickRay(frame.camera, screenX, screenY, width, height)
-        return ScenePicker().pick(
-            ray,
-            targets.boxes.map { BoxTarget(it.id, BoundingBox(it.local).mul(it.world)) },
-            targets.terrains,
-            frame.camera.far
-        )
+        return ScenePicker()
+            .pick(
+                ray,
+                targets.boxes.map { BoxTarget(it.id, BoundingBox(it.local).mul(it.world)) },
+                targets.terrains,
+                frame.camera.far,
+            )
     }
 
     override fun pickTarget(screenX: Int, screenY: Int, width: Int, height: Int): SceneTarget? {
-        if (width <= 0 || height <= 0) return null
+        if (width <= 0 || height <= 0) {
+            return null
+        }
         val frame = snapshot() ?: return null
         val targets = targets() ?: return null
         val ray = ScenePicker().pickRay(frame.camera, screenX, screenY, width, height)
-        val entity = ScenePicker().nearest(
-            ray,
-            targets.boxes.map { BoxTarget(it.id, BoundingBox(it.local).mul(it.world)) },
-            targets.terrains,
-            frame.camera.far
-        )
+        val entity =
+            ScenePicker()
+                .nearest(
+                    ray,
+                    targets.boxes.map { BoxTarget(it.id, BoundingBox(it.local).mul(it.world)) },
+                    targets.terrains,
+                    frame.camera.far,
+                )
         return entity?.let { SceneTarget.Entity(it.first) }
     }
 
     override fun rayAt(screenX: Int, screenY: Int, width: Int, height: Int): Ray? {
         val frame = snapshot() ?: return null
-        return if (width <= 0 || height <= 0) null else ScenePicker().pickRay(
-            frame.camera,
-            screenX,
-            screenY,
-            width,
-            height
-        )
+        return if (width <= 0 || height <= 0) {
+            null
+        } else {
+            ScenePicker()
+                .pickRay(
+                    frame.camera,
+                    screenX,
+                    screenY,
+                    width,
+                    height,
+                )
+        }
     }
 
     override fun terrainOf(entityId: Long): TerrainTarget? =
@@ -177,7 +211,11 @@ class SnapshotSceneQueries(
 
     override fun terrainHit(entityId: Long, ray: Ray): Vector3? {
         val (nearest, distance) = nearestTerrain(ray) ?: return null
-        return if (nearest.entityId == entityId) Vector3(ray.origin).mulAdd(ray.direction, distance) else null
+        return if (nearest.entityId == entityId) {
+            Vector3(ray.origin).mulAdd(ray.direction, distance)
+        } else {
+            null
+        }
     }
 
     override fun groundHit(ray: Ray): Vector3? {
@@ -189,7 +227,8 @@ class SnapshotSceneQueries(
     private fun nearestTerrain(ray: Ray): Pair<TerrainTarget, Float>? {
         val frame = snapshot() ?: return null
         val picker = ScenePicker()
-        return frame.terrains.mapNotNull { terrain -> picker.terrainDistance(ray, terrain, frame.camera.far)?.let { terrain to it } }
+        return frame.terrains
+            .mapNotNull { terrain -> picker.terrainDistance(ray, terrain, frame.camera.far)?.let { terrain to it } }
             .minByOrNull { it.second }
     }
 
@@ -202,27 +241,34 @@ class SnapshotSceneQueries(
         val id = state.selectedId ?: return null
         val arrangement = content.arrangements.firstOrNull { it.entityId == id } ?: return null
         val points = pathPoints(id) ?: return null
-        if (width <= 0 || height <= 0) return null
+        if (width <= 0 || height <= 0) {
+            return null
+        }
         return PathHandles(points, arrangement.arrangement.closed)
             .hit(ScreenProjection(frame.camera, width, height), screenX.toFloat(), screenY.toFloat())
     }
 
     override fun screenDistance(at: Vector3, screenX: Int, screenY: Int, width: Int, height: Int): Float? {
         val frame = snapshot() ?: return null
-        if (width <= 0 || height <= 0) return null
+        if (width <= 0 || height <= 0) {
+            return null
+        }
         val s = ScreenProjection(frame.camera, width, height).at(at) ?: return null
         return kotlin.math.hypot(s.x - screenX, s.y - screenY)
     }
 
     override fun groundBelow(entityId: Long): Float? {
-        if (entityId == state.viewCamera || content.terrains.any { it.entityId == entityId }) return null
+        if (entityId == state.viewCamera || content.terrains.any { it.entityId == entityId }) {
+            return null
+        }
         val targets = targets() ?: return null
         val footprint = targets.boxes.firstOrNull { it.id == entityId }?.oriented() ?: return null
-        return ScenePicker().restHeight(
-            footprint,
-            targets.boxes.filter { it.id != entityId }.map { it.oriented() },
-            targets.terrains
-        )
+        return ScenePicker()
+            .restHeight(
+                footprint,
+                targets.boxes.filter { it.id != entityId }.map { it.oriented() },
+                targets.terrains,
+            )
     }
 
     override fun lowestPoint(entityId: Long): Float? =
@@ -248,14 +294,23 @@ class SnapshotSceneQueries(
     override fun beginPlaneDrag(plane: GizmoPlane, screenX: Int, screenY: Int, width: Int, height: Int): GizmoDrag? {
         val handles = gizmoHandles(height) ?: return null
         val ray = rayAt(screenX, screenY, width, height) ?: return null
-        val start = when {
-            pathPointGizmoAt(content, state) != null -> PlacementTransform(pathPointGizmoAt(content, state)!!, Quaternion(), Vector3(1f, 1f, 1f))
-            else -> ScenePreview().selected(content, state.selectedId ?: return null)?.transform ?: return null
-        }
+        val start =
+            when {
+                pathPointGizmoAt(content, state) != null ->
+                    PlacementTransform(pathPointGizmoAt(content, state)!!, Quaternion(), Vector3(1f, 1f, 1f))
+                else -> ScenePreview().selected(content, state.selectedId ?: return null)?.transform ?: return null
+            }
         return GizmoDrag(
-            GizmoMode.MOVE, plane.first, start, ray, null, handles.axisVector(plane.first), state.snap,
-            handles.axisVector(plane.first) to handles.axisVector(plane.second),
-        ).takeIf { it.isUsable }
+                GizmoMode.MOVE,
+                plane.first,
+                start,
+                ray,
+                null,
+                handles.axisVector(plane.first),
+                state.snap,
+                handles.axisVector(plane.first) to handles.axisVector(plane.second),
+            )
+            .takeIf { it.isUsable }
     }
 
     override fun beginDrag(axis: GizmoAxis, screenX: Int, screenY: Int, width: Int, height: Int): GizmoDrag? {
@@ -269,24 +324,34 @@ class SnapshotSceneQueries(
         val ray = rayAt(screenX, screenY, width, height) ?: return null
         val axes = gizmoAxes(state.gizmoSpace, selected.transform.rotation)
         return GizmoDrag(
-            state.gizmoMode,
-            axis,
-            selected.transform,
-            ray,
-            selected.direction,
-            axes.getValue(axis),
-            state.snap
-        ).takeIf { it.isUsable }
+                state.gizmoMode,
+                axis,
+                selected.transform,
+                ray,
+                selected.direction,
+                axes.getValue(axis),
+                state.snap,
+            )
+            .takeIf { it.isUsable }
     }
 }
 
-/** The gizmo of the selected entity of [c], seen by [eyeCamera] in a view [height] pixels tall; shared with the renderer's drawing. */
+/**
+ * The gizmo of the selected entity of [c], seen by [eyeCamera] in a view [height] pixels tall; shared with the
+ * renderer's drawing.
+ */
 fun gizmoHandlesFor(c: SceneContent, eyeCamera: PerspectiveCamera, state: SceneViewState, height: Int): GizmoHandles? {
-    if (!state.gizmosEnabled) return null
+    if (!state.gizmosEnabled) {
+        return null
+    }
     // Paint Foliage and Sculpt Terrain modes hide the move and rotate gizmos of the brushed terrain.
-    if (state.brushing) return null
+    if (state.brushing) {
+        return null
+    }
     // Select mode highlights the selection without handles.
-    if (state.gizmoMode == GizmoMode.SELECT) return null
+    if (state.gizmoMode == GizmoMode.SELECT) {
+        return null
+    }
     // a control point of the arrangement being edited moves along the world axes
     if (state.pathEditing != null && state.selectedPathPoint != null) {
         val point = pathPointGizmoAt(c, state) ?: return null
@@ -297,13 +362,14 @@ fun gizmoHandlesFor(c: SceneContent, eyeCamera: PerspectiveCamera, state: SceneV
         return GizmoHandles(point, GizmoMode.MOVE, eye, eyeCamera.fieldOfView, height, WORLD_AXES)
     }
     val id = state.selectedId ?: return null
-    if (state.gizmoMode == GizmoMode.ROTATE && !canRotate(c, id)) return null
+    if (state.gizmoMode == GizmoMode.ROTATE && !canRotate(c, id)) {
+        return null
+    }
     val selected = ScenePreview().selected(c, id) ?: return null
     val eye = Vector3(eyeCamera.position.x, eyeCamera.position.y, eyeCamera.position.z)
     val axes = gizmoAxes(state.gizmoSpace, selected.transform.rotation)
     return GizmoHandles(selected.transform.position, state.gizmoMode, eye, eyeCamera.fieldOfView, height, axes)
 }
-
 
 /** Where the selected control point of the arrangement being edited is, or null when none is selected there. */
 fun pathPointGizmoAt(c: SceneContent, state: SceneViewState): Vector3? {

@@ -40,7 +40,8 @@ interface AssetFileStore {
 }
 
 /**
- * An [AssetFileStore] over a project folder on the local disk. Files are changed with `java.io` and the VFS is refreshed
+  * An [AssetFileStore] over a project folder on the local disk. Files are changed with `java.io` and the VFS is
+  * refreshed
  * afterwards by [flush], outside the write command. This is deliberate: a change made through the VFS API, or a file
  * created by a refresh inside a command, is recorded by the platform's own file undo (through local history) and that
  * record would fight [AssetFileUndoAction] over the same files, or make the command not undoable at all. Unsaved text
@@ -49,7 +50,11 @@ interface AssetFileStore {
 class LocalAssetFileStore(private val root: File) : AssetFileStore {
     private val dirty = LinkedHashSet<File>()
 
-    private fun io(path: String) = if (path.isEmpty()) root else File(root, path)
+    private fun io(path: String) = if (path.isEmpty()) {
+        root
+    } else {
+        File(root, path)
+    }
 
     private fun touched(file: File) {
         dirty += file
@@ -62,8 +67,14 @@ class LocalAssetFileStore(private val root: File) : AssetFileStore {
             val manager = FileDocumentManager.getInstance()
             manager.getCachedDocument(vf)?.takeIf { manager.isDocumentUnsaved(it) }?.text?.toByteArray(vf.charset)
         }
-        if (unsaved != null) return FileSnapshot.Bytes(unsaved)
-        return if (file.isFile) FileSnapshot.Bytes(file.readBytes()) else FileSnapshot.Absent
+        if (unsaved != null) {
+            return FileSnapshot.Bytes(unsaved)
+        }
+        return if (file.isFile) {
+            FileSnapshot.Bytes(file.readBytes())
+        } else {
+            FileSnapshot.Absent
+        }
     }
 
     override fun dirExists(path: String) = io(path).isDirectory
@@ -95,7 +106,9 @@ class LocalAssetFileStore(private val root: File) : AssetFileStore {
     }
 
     override fun flush(async: Boolean) {
-        if (dirty.isEmpty()) return
+        if (dirty.isEmpty()) {
+            return
+        }
         val files = dirty.toList()
         dirty.clear()
         LocalFileSystem.getInstance().refreshIoFiles(files, async, false, null)

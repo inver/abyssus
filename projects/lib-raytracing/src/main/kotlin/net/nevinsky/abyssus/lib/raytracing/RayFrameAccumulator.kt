@@ -25,8 +25,13 @@ internal class RayFrameAccumulator {
         )
         val previous = colors
         val blend = request.sampleOffset > 0 && history == next && samples == request.sampleOffset && previous != null
-        // the incoming frame is discarded, so its arrays are adopted; only a blend needs a fresh array because history is read from `previous`
-        val values = if (blend) frame.colorValues() else frame.colorView()
+        // the incoming frame is discarded, so its arrays are adopted; only a blend needs a fresh array because history
+        // is read from `previous`
+        val values = if (blend) {
+            frame.colorValues()
+        } else {
+            frame.colorView()
+        }
         if (blend) {
             val total = samples + request.samples
             for (i in values.indices) values[i] = (previous[i] * samples + values[i] * request.samples) / total

@@ -5,8 +5,10 @@
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
 /**
- * The 15 scored manoeuvres of the F2B schedule, in order, with their difficulty factor [k] (FAI Sporting Code Volume F2,
- * 2027 edition, rule 4.2.12). [repeats] is how many repeat figures the manoeuvre has (loops, squares, eights); 1 for the
+  * The 15 scored manoeuvres of the F2B schedule, in order, with their difficulty factor [k] (FAI Sporting Code Volume
+  * F2,
+  * 2027 edition, rule 4.2.12). [repeats] is how many repeat figures the manoeuvre has (loops, squares, eights); 1 for
+  * the
  * single figures.
  */
 enum class Figure(val label: String, val k: Int, val repeats: Int = 1) {

@@ -13,10 +13,12 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 
 /** Tells the user why a water edit was refused; anything else needs no word. */
 internal fun reportWaterRejection(project: Project, edit: WaterEdit) {
-    if (edit is WaterEdit.Rejected) Messages.showErrorDialog(
-        project,
-        waterErrorText(edit.error),
-        AbyssusBundle.message("waterRejectedTitle")
-    )
+    if (edit is WaterEdit.Rejected) {
+        Messages.showErrorDialog(
+            project,
+            waterErrorText(edit.error),
+            AbyssusBundle.message("waterRejectedTitle")
+        )
+    }
 }
 */

@@ -11,8 +11,12 @@ class UiDocumentEditsTest {
     private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
     private val editor = UiTextEditor(json)
 
-    /** Pretty printed, with an unknown member, a widget kind this build does not know, and number text that must survive. */
-    private val raw = """
+    /**
+     * Pretty printed, with an unknown member, a widget kind this build does not know, and number text that must
+     * survive.
+     */
+    private val raw =
+        """
 {
   "formatVersion": 1,
   "type": "UI",
@@ -101,15 +105,22 @@ class UiDocumentEditsTest {
     /** The fixture in the printer's own layout, so "unchanged text" can be compared exactly. */
     private val original: String = json.pretty(json.parse(raw, UiMetaDoc::class.java))
 
-    private fun edit(text: String = original, expected: String? = null, op: UiTreeEdit) = editor.apply(text, expected, op)
+    private fun edit(text: String = original, expected: String? = null, op: UiTreeEdit) =
+        editor.apply(text, expected, op)
 
     private fun doc(text: String) = json.parse(text, UiMetaDoc::class.java)
 
     /** The edited text; the printer writes `"key": value`. */
-    private val UiTextResult.Edited.out get() = after
+    private val UiTextResult.Edited.out
+        get() = after
 
     private fun widget(text: String, id: String): UiWidgetDoc? {
-        fun find(w: UiWidgetDoc): UiWidgetDoc? = if (w.id == id) w else w.inside().firstNotNullOfOrNull(::find)
+        fun find(w: UiWidgetDoc): UiWidgetDoc? =
+            if (w.id == id) {
+                w
+            } else {
+                w.inside().firstNotNullOfOrNull(::find)
+            }
         return doc(text).additional?.ui?.screens.orEmpty().firstNotNullOfOrNull { it.root?.let(::find) }
     }
 
@@ -123,20 +134,30 @@ class UiDocumentEditsTest {
 
     private fun widgetIds(text: String): List<String> {
         val ids = mutableListOf<String>()
-        fun walk(w: UiWidgetDoc) { w.id?.let { ids += it }; w.children?.forEach(::walk) }
+        fun walk(w: UiWidgetDoc) {
+            w.id?.let { ids += it }
+            w.children?.forEach(::walk)
+        }
         doc(text).additional?.ui?.screens.orEmpty().forEach { it.root?.let(::walk) }
         return ids
     }
 
-    @Test fun aPropertyEditChangesOnlyThatLineAndKeepsEverythingElseExactly() {
+    @Test
+    fun aPropertyEditChangesOnlyThatLineAndKeepsEverythingElseExactly() {
         val result = edited(edit { e, m -> e.setProperty(m, "title", "text", "Bye") })
         assertEquals(original.replace("\"text\": \"Hello\"", "\"text\": \"Bye\""), result.after)
         // unknown members stay; their number spelling does not (1.000 reads back as 1.0)
-        assertTrue(result.out.contains("\"extension\": {") && result.out.contains("\"keep\": 1.0") && result.out.contains("\"depth\": 3.0") && result.out.contains("\"futureField\""))
+        assertTrue(
+            result.out.contains("\"extension\": {") &&
+                result.out.contains("\"keep\": 1.0") &&
+                result.out.contains("\"depth\": 3.0") &&
+                result.out.contains("\"futureField\"")
+        )
         assertEquals(original, result.before)
     }
 
-    @Test fun undoRestoresTheExactPreviousTextAndReversingAnEditRoundTrips() {
+    @Test
+    fun undoRestoresTheExactPreviousTextAndReversingAnEditRoundTrips() {
         val moved = edited(edit { e, m -> e.reorderWidget(m, "start", 0) })
         assertNotEquals(original, moved.after)
         assertEquals(listOf("root", "menu", "start", "title", "ghost", "hud"), widgetIds(moved.after))
@@ -145,7 +166,8 @@ class UiDocumentEditsTest {
         assertEquals(moved.after, back.before)
     }
 
-    @Test fun addingWidgetsAssignsUniqueIdsAndTypeDefaults() {
+    @Test
+    fun addingWidgetsAssignsUniqueIdsAndTypeDefaults() {
         var text = original
         val ids = mutableListOf<String>()
         repeat(3) {
@@ -154,31 +176,44 @@ class UiDocumentEditsTest {
             text = r.after
         }
         assertEquals(listOf("button", "button-2", "button-3"), ids)
-        assertEquals(listOf("root", "menu", "title", "start", "ghost", "button", "button-2", "button-3", "hud"), widgetIds(text))
+        assertEquals(
+            listOf("root", "menu", "title", "start", "ghost", "button", "button-2", "button-3", "hud"),
+            widgetIds(text),
+        )
         assertEquals("Button", widget(text, "button")?.properties?.get("text"))
         // at an index, into the root panel
         val at = edited(edit { e, m -> e.addWidget(m, "root", "slider", index = 0) })
         assertEquals(listOf("root", "slider", "menu", "title", "start", "ghost", "hud"), widgetIds(at.after))
     }
 
-    @Test fun addingToANonContainerOrWithAnUnknownTypeIsRejectedWithoutChange() {
+    @Test
+    fun addingToANonContainerOrWithAnUnknownTypeIsRejectedWithoutChange() {
         rejected(edit { e, m -> e.addWidget(m, "title", "label") }, UiEditError.NOT_A_CONTAINER)
         rejected(edit { e, m -> e.addWidget(m, "menu", "hologram") }, UiEditError.UNKNOWN_TYPE)
         rejected(edit { e, m -> e.addWidget(m, "nowhere", "label") }, UiEditError.UNKNOWN_WIDGET)
     }
 
-    @Test fun duplicatingRepairsIdsForTheWholeSubtreeAndKeepsUnknownMembers() {
+    @Test
+    fun duplicatingRepairsIdsForTheWholeSubtreeAndKeepsUnknownMembers() {
         val r = edited(edit { e, m -> e.duplicateWidget(m, "menu") })
         assertEquals(UiEditResult.Added("menu-2"), r.result)
-        assertEquals(listOf("root", "menu", "title", "start", "ghost", "menu-2", "title-2", "start-2", "ghost-2", "hud"), widgetIds(r.after))
-        assertEquals("the copy keeps the unknown widget's own fields", 2, Regex("\"depth\": 3.0").findAll(r.out).count())
+        assertEquals(
+            listOf("root", "menu", "title", "start", "ghost", "menu-2", "title-2", "start-2", "ghost-2", "hud"),
+            widgetIds(r.after),
+        )
+        assertEquals(
+            "the copy keeps the unknown widget's own fields",
+            2,
+            Regex("\"depth\": 3.0").findAll(r.out).count(),
+        )
         assertEquals("and its binding", 2, Regex("\"enabled\": \"volume\"").findAll(r.out).count())
         val again = edited(edit(r.after) { e, m -> e.duplicateWidget(m, "menu") })
         assertEquals(UiEditResult.Added("menu-3"), again.result)
         rejected(edit { e, m -> e.duplicateWidget(m, "root") }, UiEditError.ROOT_WIDGET)
     }
 
-    @Test fun reparentingConvertsTheLayoutPolicyAndKeepsTheIdAndOrder() {
+    @Test
+    fun reparentingConvertsTheLayoutPolicyAndKeepsTheIdAndOrder() {
         // free placement is dropped under a column; a panel drops grow
         val intoColumn = edited(edit { e, m -> e.reparentWidget(m, "hud", "menu", index = 1) })
         assertEquals(listOf("root", "menu", "title", "hud", "start", "ghost"), widgetIds(intoColumn.after))
@@ -192,7 +227,8 @@ class UiDocumentEditsTest {
         assertEquals(original, intoPanel.before)
     }
 
-    @Test fun invalidHierarchyIsRejectedWithNoChange() {
+    @Test
+    fun invalidHierarchyIsRejectedWithNoChange() {
         rejected(edit { e, m -> e.reparentWidget(m, "hud", "title") }, UiEditError.NOT_A_CONTAINER)
         rejected(edit { e, m -> e.reparentWidget(m, "menu", "title") }, UiEditError.HIERARCHY_CYCLE)
         rejected(edit { e, m -> e.reparentWidget(m, "menu", "menu") }, UiEditError.HIERARCHY_CYCLE)
@@ -204,7 +240,8 @@ class UiDocumentEditsTest {
         rejected(edit { e, m -> e.reorderWidget(m, "root", 0) }, UiEditError.ROOT_WIDGET)
     }
 
-    @Test fun deletingRemovesTheSubtreeAndAnEmptyChildrenList() {
+    @Test
+    fun deletingRemovesTheSubtreeAndAnEmptyChildrenList() {
         val r = edited(edit { e, m -> e.deleteWidget(m, "menu") })
         assertEquals(listOf("root", "hud"), widgetIds(r.after))
         val all = edited(edit(r.after) { e, m -> e.deleteWidget(m, "hud") })
@@ -212,39 +249,74 @@ class UiDocumentEditsTest {
         assertEquals(UiTextResult.Unchanged, edit { e, m -> e.reorderWidget(m, "title", 0) })
     }
 
-    @Test fun layoutValuesAreValidatedAndNumbersKeepTheirShape() {
+    @Test
+    fun layoutValuesAreValidatedAndNumbersKeepTheirShape() {
         val ok = edited(edit { e, m -> e.setLayout(m, "hud", "width", 240.0) })
         assertTrue(ok.out.contains("\"width\": 240"))
         assertTrue(edited(edit { e, m -> e.setLayout(m, "hud", "y", 12.5) }).out.contains("\"y\": 12.5"))
-        for ((field, value) in listOf("width" to -1.0, "height" to Double.NaN, "grow" to -0.1, "x" to Double.POSITIVE_INFINITY, "anchor" to "middle", "align" to "sideways", "weight" to 1.0))
-            rejected(edit { e, m -> e.setLayout(m, "hud", field, value) }, UiEditError.BAD_VALUE)
-        assertTrue(edited(edit { e, m -> e.setLayout(m, "hud", "anchor", "bottom") }).out.contains("\"anchor\": \"bottom\""))
+        for ((field, value) in
+            listOf(
+                "width" to -1.0,
+                "height" to Double.NaN,
+                "grow" to -0.1,
+                "x" to Double.POSITIVE_INFINITY,
+                "anchor" to "middle",
+                "align" to "sideways",
+                "weight" to 1.0,
+            )) rejected(edit { e, m -> e.setLayout(m, "hud", field, value) }, UiEditError.BAD_VALUE)
+        assertTrue(
+            edited(edit { e, m -> e.setLayout(m, "hud", "anchor", "bottom") }).out.contains("\"anchor\": \"bottom\"")
+        )
         val removed = edited(edit { e, m -> e.setLayout(m, "start", "grow", null) })
         assertFalse(removed.out.contains("\"grow\""))
-        assertFalse("an emptied layout object is removed", removed.out.substringAfter("\"id\": \"start\"").substringBefore("\"id\": \"ghost\"").contains("\"layout\""))
+        assertFalse(
+            "an emptied layout object is removed",
+            removed.out.substringAfter("\"id\": \"start\"").substringBefore("\"id\": \"ghost\"").contains("\"layout\""),
+        )
         assertEquals(UiTextResult.Unchanged, edit { e, m -> e.setLayout(m, "hud", "width", 200.0) })
     }
 
-    @Test fun bindingsStylesAndActionsAreEditedAndCleanedUp() {
-        val withAction = edited(edit { e, m -> e.setAction(m, "start", "click", UiActionDoc().apply { type = "emitAction"; name = "go" }) })
+    @Test
+    fun bindingsStylesAndActionsAreEditedAndCleanedUp() {
+        val withAction =
+            edited(
+                edit { e, m ->
+                    e.setAction(
+                        m,
+                        "start",
+                        "click",
+                        UiActionDoc().apply {
+                            type = "emitAction"
+                            name = "go"
+                        },
+                    )
+                }
+            )
         assertTrue(withAction.out.contains("\"emitAction\""))
-        rejected(edit { e, m -> e.setAction(m, "start", "click", UiActionDoc().apply { name = "go" }) }, UiEditError.BAD_VALUE)
+        rejected(
+            edit { e, m -> e.setAction(m, "start", "click", UiActionDoc().apply { name = "go" }) },
+            UiEditError.BAD_VALUE,
+        )
         val bound = edited(edit { e, m -> e.setBinding(m, "title", "text", "volume") })
         assertTrue(bound.out.contains("\"text\": \"volume\""))
         // deleting a binding clears the widgets that used it, in the same edit
         val gone = edited(edit { e, m -> e.deleteBinding(m, "volume") })
-        assertFalse(gone.out.contains("\"enabled\"")); assertFalse(gone.out.contains("\"bindings\""))
+        assertFalse(gone.out.contains("\"enabled\""))
+        assertFalse(gone.out.contains("\"bindings\""))
         rejected(edit { e, m -> e.deleteBinding(m, "nope") }, UiEditError.UNKNOWN_NAME)
         val styled = edited(edit { e, m -> e.upsertStyle(m, "fancy", mapOf("fontSize" to 20, "color" to "#ff0000")) })
         assertTrue(styled.out.contains("\"fancy\""))
         val noStyle = edited(edit { e, m -> e.deleteStyle(m, "big") })
-        assertFalse(noStyle.out.contains("\"style\": \"big\"")); assertFalse(noStyle.out.contains("\"styles\""))
-        val newBinding = edited(edit { e, m -> e.upsertBinding(m, "score", "number", UiBindingDoc().apply { sample = 3 }) })
+        assertFalse(noStyle.out.contains("\"style\": \"big\""))
+        assertFalse(noStyle.out.contains("\"styles\""))
+        val newBinding =
+            edited(edit { e, m -> e.upsertBinding(m, "score", "number", UiBindingDoc().apply { sample = 3 }) })
         assertTrue(newBinding.out.contains("\"score\""))
         rejected(edit { e, m -> e.upsertBinding(m, "bad", "vector") }, UiEditError.BAD_VALUE)
     }
 
-    @Test fun screensAreAddedRenamedAndDeletedWithTheEntryKeptValid() {
+    @Test
+    fun screensAreAddedRenamedAndDeletedWithTheEntryKeptValid() {
         val added = edited(edit { e, m -> e.addScreen(m, "Pause Menu", "overlay") })
         assertEquals(UiEditResult.Added("pause-menu"), added.result)
         assertTrue(added.out.contains("\"kind\": \"overlay\""))
@@ -259,39 +331,64 @@ class UiDocumentEditsTest {
         assertFalse(none.out.contains("entryScreen"))
     }
 
-    @Test fun staleGesturesAreRefusedAndMatchingOnesApply() {
-        rejected(edit(original + " ", expected = original) { e, m -> e.reorderWidget(m, "start", 0) }, UiEditError.STALE)
-        assertTrue(edit(original, expected = original) { e, m -> e.reorderWidget(m, "start", 0) } is UiTextResult.Edited)
+    @Test
+    fun staleGesturesAreRefusedAndMatchingOnesApply() {
+        rejected(
+            edit(original + " ", expected = original) { e, m -> e.reorderWidget(m, "start", 0) },
+            UiEditError.STALE,
+        )
+        assertTrue(
+            edit(original, expected = original) { e, m -> e.reorderWidget(m, "start", 0) } is UiTextResult.Edited
+        )
     }
 
-    @Test fun unsupportedOrInvalidDocumentsAreNeverEditedAndInvalidResultsAreRefused() {
+    @Test
+    fun unsupportedOrInvalidDocumentsAreNeverEditedAndInvalidResultsAreRefused() {
         val future = original.replace("\"schemaVersion\": 1", "\"schemaVersion\": 2")
-        val refused = rejected(edit(future) { e, m -> e.setProperty(m, "title", "text", null) }, UiEditError.NOT_EDITABLE)
+        val refused =
+            rejected(edit(future) { e, m -> e.setProperty(m, "title", "text", null) }, UiEditError.NOT_EDITABLE)
         assertTrue(refused.issues.isNotEmpty())
         val notNative = original.replace("\"formatVersion\": 1", "\"formatVersion\": 2")
-        assertTrue(rejected(edit(notNative) { e, m -> e.setProperty(m, "title", "text", null) }, UiEditError.NOT_EDITABLE).issues.isNotEmpty())
+        assertTrue(
+            rejected(edit(notNative) { e, m -> e.setProperty(m, "title", "text", null) }, UiEditError.NOT_EDITABLE)
+                .issues
+                .isNotEmpty()
+        )
         assertTrue(edit("{not json") { e, m -> e.setProperty(m, "title", "text", null) } is UiTextResult.Refused)
         // an edit that would leave an invalid collection is not written
-        val bad = rejected(edit { e, m -> e.upsertBinding(m, "volume", "number", UiBindingDoc().apply { sample = "loud" }) }, UiEditError.INVALID_RESULT)
+        val bad =
+            rejected(
+                edit { e, m -> e.upsertBinding(m, "volume", "number", UiBindingDoc().apply { sample = "loud" }) },
+                UiEditError.INVALID_RESULT,
+            )
         assertTrue(bad.issues.isNotEmpty())
     }
 
-    @Test fun everyEditedResultIsStillAdmittedUi() {
+    @Test
+    fun everyEditedResultIsStillAdmittedUi() {
         var text = original
-        val steps: List<UiTreeEdit> = listOf(
-            { e, m -> e.addWidget(m, "menu", "slider") }, { e, m -> e.duplicateWidget(m, "menu") },
-            { e, m -> e.reparentWidget(m, "hud", "menu-2") }, { e, m -> e.setBinding(m, "slider", "value", "volume") },
-            { e, m -> e.deleteWidget(m, "title-2") }, { e, m -> e.addScreen(m, "Other") },
-        )
+        val steps: List<UiTreeEdit> =
+            listOf(
+                { e, m -> e.addWidget(m, "menu", "slider") },
+                { e, m -> e.duplicateWidget(m, "menu") },
+                { e, m -> e.reparentWidget(m, "hud", "menu-2") },
+                { e, m -> e.setBinding(m, "slider", "value", "volume") },
+                { e, m -> e.deleteWidget(m, "title-2") },
+                { e, m -> e.addScreen(m, "Other") },
+            )
         for (step in steps) text = edited(edit(text, op = step)).after
         assertTrue(UiCollectionDecoder().decode(text, json) is UiAdmission.Admitted)
     }
 
-    @Test fun resourcesAreDeclaredOnceAndRemovedCleanly() {
+    @Test
+    fun resourcesAreDeclaredOnceAndRemovedCleanly() {
         val added = edited(edit { e, m -> e.addResource(m, "logo", "image", "images/logo.png") })
         assertEquals(UiEditResult.Added("logo"), added.result)
         assertTrue(added.out.contains("\"path\": \"images/logo.png\""))
-        rejected(edit(added.after) { e, m -> e.addResource(m, "logo", "image", "images/other.png") }, UiEditError.DUPLICATE_ID)
+        rejected(
+            edit(added.after) { e, m -> e.addResource(m, "logo", "image", "images/other.png") },
+            UiEditError.DUPLICATE_ID,
+        )
         rejected(edit { e, m -> e.addResource(m, "x", "video", "x.mp4") }, UiEditError.BAD_VALUE)
         rejected(edit { e, m -> e.addResource(m, " ", "image", "x.png") }, UiEditError.BAD_VALUE)
         val removed = edited(edit(added.after) { e, m -> e.deleteResource(m, "logo") })

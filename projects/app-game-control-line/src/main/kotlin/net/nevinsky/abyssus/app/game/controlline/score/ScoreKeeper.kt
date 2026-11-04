@@ -25,12 +25,14 @@ const val MAX_MULTIPLIER = 5
 class ScoreKeeper {
     var score = 0
         private set
+
     var laps = 0
         private set
 
     /** The multiplier the next maneuver gets if it completes in time; 1 after a pause. */
     var multiplier = 1
         private set
+
     var bestCombo = 1
         private set
 
@@ -48,7 +50,12 @@ class ScoreKeeper {
     /** Scores [event] at the multiplier its time earns; returns its points. */
     fun maneuver(event: ManeuverEvent): Int {
         val previous = lastTime
-        multiplier = if (previous != null && event.time - previous <= COMBO_WINDOW) minOf(multiplier + 1, MAX_MULTIPLIER) else 1
+        multiplier =
+            if (previous != null && event.time - previous <= COMBO_WINDOW) {
+                minOf(multiplier + 1, MAX_MULTIPLIER)
+            } else {
+                1
+            }
         bestCombo = maxOf(bestCombo, multiplier)
         lastTime = event.time
         lastManeuver = event
@@ -59,7 +66,11 @@ class ScoreKeeper {
 
     /** At [time]: the combo is lost once [COMBO_WINDOW] passes without a maneuver. */
     fun tick(time: Float) {
-        lastTime?.let { if (time - it > COMBO_WINDOW) loseCombo() }
+        lastTime?.let {
+            if (time - it > COMBO_WINDOW) {
+                loseCombo()
+            }
+        }
     }
 
     /** Slack lines lose the combo. */
@@ -76,7 +87,11 @@ class ScoreKeeper {
 }
 
 /** Scores a flight from its track: laps and maneuvers into a [ScoreKeeper]. */
-class FlightScoring(val keeper: ScoreKeeper = ScoreKeeper(), private val maneuvers: Maneuvers = Maneuvers(), private val laps: Laps = Laps()) {
+class FlightScoring(
+    val keeper: ScoreKeeper = ScoreKeeper(),
+    private val maneuvers: Maneuvers = Maneuvers(),
+    private val laps: Laps = Laps(),
+) {
     fun sample(sample: TrackSample) {
         repeat(laps.sample(sample)) { keeper.lap() }
         for (event in maneuvers.sample(sample)) keeper.maneuver(event)
@@ -86,6 +101,8 @@ class FlightScoring(val keeper: ScoreKeeper = ScoreKeeper(), private val maneuve
     /** The flight ended; [landed] adds the landing bonus. A held maneuver scores first. */
     fun finish(landed: Boolean) {
         for (event in maneuvers.finish()) keeper.maneuver(event)
-        if (landed) keeper.landed()
+        if (landed) {
+            keeper.landed()
+        }
     }
 }

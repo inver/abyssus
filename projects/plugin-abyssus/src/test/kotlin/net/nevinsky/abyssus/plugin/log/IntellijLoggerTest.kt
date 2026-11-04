@@ -13,24 +13,51 @@ class IntellijLoggerTest {
     private class FakeIde(var debug: Boolean = true) : Logger() {
         val calls = mutableListOf<String>()
         val errors = mutableListOf<Throwable?>()
+
         override fun isDebugEnabled() = debug
-        override fun debug(message: String?, t: Throwable?) { calls += "debug $message"; errors += t }
-        override fun info(message: String?, t: Throwable?) { calls += "info $message"; errors += t }
-        override fun warn(message: String?, t: Throwable?) { calls += "warn $message"; errors += t }
-        override fun error(message: String?, t: Throwable?, vararg details: String) { calls += "error $message"; errors += t }
+
+        override fun debug(message: String?, t: Throwable?) {
+            calls += "debug $message"
+            errors += t
+        }
+
+        override fun info(message: String?, t: Throwable?) {
+            calls += "info $message"
+            errors += t
+        }
+
+        override fun warn(message: String?, t: Throwable?) {
+            calls += "warn $message"
+            errors += t
+        }
+
+        override fun error(message: String?, t: Throwable?, vararg details: String) {
+            calls += "error $message"
+            errors += t
+        }
     }
 
-    @Test fun everyLevelReachesTheIdeLoggerAndErrorIsDowngradedToWarn() {
+    @Test
+    fun everyLevelReachesTheIdeLoggerAndErrorIsDowngradedToWarn() {
         val ide = FakeIde()
         val log = IntellijLogger("Abyssus.test", ide)
         log.info("hello {}", "world")
         log.warn("careful")
         log.error("a problem with one asset, not an IDE error")
         log.debug("detail {} {}", 1, 2)
-        assertEquals(listOf("info hello world", "warn careful", "warn a problem with one asset, not an IDE error", "debug detail 1 2"), ide.calls)
+        assertEquals(
+            listOf(
+                "info hello world",
+                "warn careful",
+                "warn a problem with one asset, not an IDE error",
+                "debug detail 1 2",
+            ),
+            ide.calls,
+        )
     }
 
-    @Test fun aThrowableTravelsWithTheMessage() {
+    @Test
+    fun aThrowableTravelsWithTheMessage() {
         val ide = FakeIde()
         val boom = IllegalStateException("boom")
         IntellijLogger("Abyssus.test", ide).warn("failed to load", boom)
@@ -38,7 +65,8 @@ class IntellijLoggerTest {
         assertSame(boom, ide.errors.single())
     }
 
-    @Test fun lazyDebugIsOnlyBuiltWhenTheIdeCategoryHasDebugEnabled() {
+    @Test
+    fun lazyDebugIsOnlyBuiltWhenTheIdeCategoryHasDebugEnabled() {
         val ide = FakeIde(debug = false)
         val log = IntellijLogger("Abyssus.test", ide)
         assertFalse(log.isDebugEnabled)
@@ -49,7 +77,8 @@ class IntellijLoggerTest {
         assertEquals(listOf("debug now wanted"), ide.calls)
     }
 
-    @Test fun theFactoryNamesLoggersUnderItsPrefixAndReusesThem() {
+    @Test
+    fun theFactoryNamesLoggersUnderItsPrefixAndReusesThem() {
         val factory = IntellijLoggerFactory("Abyssus")
         assertEquals("Abyssus.ray", factory.getLogger("ray").name)
         assertSame(factory.getLogger("ray"), factory.getLogger("ray"))

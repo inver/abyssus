@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.lib.core.editor.terrain
 
+import java.nio.ByteBuffer
+import java.security.MessageDigest
+import kotlin.coroutines.cancellation.CancellationException
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -12,9 +15,6 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.security.MessageDigest
-import java.nio.ByteBuffer
-import kotlin.coroutines.cancellation.CancellationException
 
 class TerrainGeneratorTest {
     private val generator = TerrainGenerator(FastNoiseSamplerFactory())
@@ -84,7 +84,12 @@ class TerrainGeneratorTest {
     @Test
     fun `z major layout puts a changing noise along z in rows`() {
         val calls = mutableListOf<Pair<Float, Float>>()
-        val g = TerrainGenerator { _, _, _, _, _ -> NoiseSampler { x, z -> calls += x to z; 0f } }
+        val g = TerrainGenerator { _, _, _, _, _ ->
+            NoiseSampler { x, z ->
+                calls += x to z
+                0f
+            }
+        }
         g.generate(3, 20, settings)
         assertEquals(listOf(0f to 0f, 10f to 0f, 20f to 0f, 0f to 10f), calls.take(4))
     }
@@ -94,7 +99,10 @@ class TerrainGeneratorTest {
         assertTrue(settings.valid)
         assertEquals(listOf(SettingsError.FEATURE_SIZE), settings.copy(featureSize = 0f).errors())
         assertEquals(listOf(SettingsError.FEATURE_SIZE), settings.copy(featureSize = Float.NaN).errors())
-        assertEquals(listOf(SettingsError.HEIGHT_NOT_FINITE), settings.copy(minHeight = Float.NEGATIVE_INFINITY).errors())
+        assertEquals(
+            listOf(SettingsError.HEIGHT_NOT_FINITE),
+            settings.copy(minHeight = Float.NEGATIVE_INFINITY).errors(),
+        )
         assertEquals(listOf(SettingsError.HEIGHT_NOT_FINITE), settings.copy(maxHeight = Float.NaN).errors())
         assertEquals(listOf(SettingsError.HEIGHT_RANGE), settings.copy(minHeight = 5f, maxHeight = 5f).errors())
         assertEquals(listOf(SettingsError.HEIGHT_RANGE), settings.copy(minHeight = 9f, maxHeight = 1f).errors())
@@ -107,14 +115,20 @@ class TerrainGeneratorTest {
         assertTrue(settings.copy(octaves = 8, persistence = 1f, lacunarity = 4f).valid)
         assertTrue(settings.copy(octaves = 1, persistence = 0f, lacunarity = 1f).valid)
         assertFalse(settings.copy(octaves = 0, featureSize = -1f).valid)
-        assertThrows(IllegalArgumentException::class.java) { generator.generate(10, 100, settings.copy(featureSize = 0f)) }
+        assertThrows(IllegalArgumentException::class.java) {
+            generator.generate(10, 100, settings.copy(featureSize = 0f))
+        }
     }
 
     @Test
     fun `cancellation stops generation`() {
         var rows = 0
         assertThrows(CancellationException::class.java) {
-            generator.generate(50, 100, settings) { if (++rows == 3) throw CancellationException("stop") }
+            generator.generate(50, 100, settings) {
+                if (++rows == 3) {
+                    throw CancellationException("stop")
+                }
+            }
         }
         assertEquals(3, rows)
     }

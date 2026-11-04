@@ -1,11 +1,11 @@
 package net.nevinsky.abyssus.lib.core.dto
 
-import net.nevinsky.abyssus.lib.core.format.EntityType
-import net.nevinsky.abyssus.lib.core.dto.entityWriter
 import com.badlogic.ashley.core.Component
+import net.nevinsky.abyssus.lib.core.dto.entityWriter
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import org.junit.Assert.*
 import org.junit.Test
-import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 
 class SceneDtoTest {
     private fun scene(vararg entries: Pair<Long, List<Component>>) =
@@ -14,30 +14,27 @@ class SceneDtoTest {
     @Test
     fun aPrintedSceneCarriesItsFormatVersionAndReadsBack() {
         val registry = net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry()
-        val json = net.nevinsky.abyssus.lib.core.io.JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER, listOf(entityWriter(registry)))
+        val json =
+            net.nevinsky.abyssus.lib.core.io.JsonProcessor(
+                org.slf4j.helpers.NOPLogger.NOP_LOGGER,
+                listOf(entityWriter(registry)),
+            )
         val text = json.pretty(SceneDto(name = "A"))
         assertTrue(text, text.contains("\"formatVersion\": 1"))
         assertEquals("A", net.nevinsky.abyssus.lib.core.scene.SceneParser(json, registry).parse(text).name)
     }
 
-    @Test
-    fun nextIdOnEmptySceneIsOne() = assertEquals(1L, SceneDto().nextId())
+    @Test fun nextIdOnEmptySceneIsOne() = assertEquals(1L, SceneDto().nextId())
 
-    @Test
-    fun nextIdIsLargestIdPlusOne() = assertEquals(8L, scene(3L to emptyList(), 7L to emptyList()).nextId())
+    @Test fun nextIdIsLargestIdPlusOne() = assertEquals(8L, scene(3L to emptyList(), 7L to emptyList()).nextId())
 
-    @Test
-    fun nameOfMissingEntityIsNull() = assertNull(SceneDto().nameOf(5))
+    @Test fun nameOfMissingEntityIsNull() = assertNull(SceneDto().nameOf(5))
 
-    @Test
-    fun nameOfFallsBackToIdWithoutNameComponent() = assertEquals("4", scene(4L to emptyList()).nameOf(4))
+    @Test fun nameOfFallsBackToIdWithoutNameComponent() = assertEquals("4", scene(4L to emptyList()).nameOf(4))
 
-    @Test
-    fun nameOfFallsBackToIdWhenNameBlank() =
-        assertEquals("4", scene(4L to listOf(NameComponent("  "))).nameOf(4))
+    @Test fun nameOfFallsBackToIdWhenNameBlank() = assertEquals("4", scene(4L to listOf(NameComponent("  "))).nameOf(4))
 
-    @Test
-    fun nameOfUsesNameComponent() = assertEquals("Sun", scene(4L to listOf(NameComponent("Sun"))).nameOf(4))
+    @Test fun nameOfUsesNameComponent() = assertEquals("Sun", scene(4L to listOf(NameComponent("Sun"))).nameOf(4))
 
     @Test
     fun componentFoundByClassAndMissingEntityIsNull() {
@@ -58,8 +55,7 @@ class SceneDtoTest {
         assertEquals("x", s.nameOf(id))
     }
 
-    @Test
-    fun addOnAnEmptySceneStartsAtOne() = assertEquals(1L, SceneDto().add(EntityType.GROUP))
+    @Test fun addOnAnEmptySceneStartsAtOne() = assertEquals(1L, SceneDto().add(EntityType.GROUP))
 
     @Test
     fun addTellsTheBuilderTheNewId() {

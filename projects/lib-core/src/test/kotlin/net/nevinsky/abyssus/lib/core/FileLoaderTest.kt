@@ -1,14 +1,13 @@
 package net.nevinsky.abyssus.lib.gdx
 
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-
+import java.io.File
+import java.nio.file.Files
 import net.nevinsky.abyssus.lib.core.assets.testProject
+import net.nevinsky.abyssus.lib.core.io.FileLoader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
 
 class FileLoaderTest {
     private val untitled = FileLoader(testProject("Untitled"))
@@ -17,23 +16,31 @@ class FileLoaderTest {
     fun resolvesAnAssetFolderAndItsFile() {
         val folder = untitled.folder("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb")!!
         assertEquals("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", folder.name)
-        assertEquals("model.gltf", untitled.loadAssetFile("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", "model.gltf").name)
+        assertEquals(
+            "model.gltf",
+            untitled.loadAssetFile("model_29e9be61-6594-4f82-a6cf-44ccf09f71fb", "model.gltf").name,
+        )
     }
 
     @Test
     fun namesThatLeaveTheAssetsFolderOrDoNotExistHaveNoFolder() {
-        for (name in listOf("", ".", "..", "../Untitled", "a/b", "a\\b", "model_nope")) assertNull(name, untitled.folder(name))
+        for (name in listOf("", ".", "..", "../Untitled", "a/b", "a\\b", "model_nope")) assertNull(
+            name,
+            untitled.folder(name),
+        )
     }
 
     @Test
     fun aMissingAssetOrFileIsReportedWithItsName() {
         val asset = "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"
-        assertThrows(IllegalStateException::class.java) { untitled.loadAssetFile("model_nope", "model.gltf") }.also {
-            assertEquals(true, it.message!!.contains("model_nope"))
-        }
-        assertThrows(IllegalStateException::class.java) { untitled.loadAssetFile(asset, "nope.gltf") }.also {
-            assertEquals(true, it.message!!.contains("nope.gltf"))
-        }
+        assertThrows(IllegalStateException::class.java) { untitled.loadAssetFile("model_nope", "model.gltf") }
+            .also {
+                assertEquals(true, it.message!!.contains("model_nope"))
+            }
+        assertThrows(IllegalStateException::class.java) { untitled.loadAssetFile(asset, "nope.gltf") }
+            .also {
+                assertEquals(true, it.message!!.contains("nope.gltf"))
+            }
         assertThrows(IllegalArgumentException::class.java) { untitled.loadAssetFile(asset, null) }
         assertThrows(IllegalArgumentException::class.java) { untitled.loadAssetFile(asset, " ") }
     }

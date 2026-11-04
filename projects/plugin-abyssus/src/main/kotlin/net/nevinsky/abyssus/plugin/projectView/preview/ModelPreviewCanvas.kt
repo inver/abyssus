@@ -13,34 +13,20 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.VertexAttributes.Usage
 import com.badlogic.gdx.graphics.g3d.Environment
 import com.badlogic.gdx.graphics.g3d.Material
+import com.badlogic.gdx.graphics.g3d.Model as GdxModel
+import com.badlogic.gdx.graphics.g3d.Model
 import com.badlogic.gdx.graphics.g3d.ModelBatch
+import com.badlogic.gdx.graphics.g3d.ModelInstance as GdxModelInstance
+import com.badlogic.gdx.graphics.g3d.ModelInstance
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
+import com.badlogic.gdx.graphics.g3d.utils.AnimationController
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.BufferUtils
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
-import com.badlogic.gdx.graphics.g3d.utils.AnimationController
-import com.badlogic.gdx.graphics.g3d.ModelInstance
-import net.nevinsky.abyssus.lib.core.assets.model.PreparedModel
-import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
-import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
-import com.badlogic.gdx.graphics.g3d.Model
-import net.nevinsky.abyssus.lib.gdx.model.ModelData
-import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
-import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.sceneview.GdxContext
-import net.nevinsky.abyssus.plugin.sceneview.GlCanvasHooks
-import net.nevinsky.abyssus.plugin.sceneview.GlCanvasHost
-import net.nevinsky.abyssus.plugin.sceneview.GlFrameTimer
-import net.nevinsky.abyssus.plugin.sceneview.GdxFrame
-import net.nevinsky.abyssus.plugin.sceneview.GdxRuntime
-import net.nevinsky.abyssus.plugin.sceneview.GridModel
-import net.nevinsky.abyssus.plugin.sceneview.GuardedGLCanvas
-import org.lwjgl.opengl.GL
-import org.lwjgl.opengl.awt.GLData
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.event.MouseAdapter
@@ -48,33 +34,59 @@ import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
 import javax.swing.JPanel
 import javax.swing.SwingConstants
-import com.badlogic.gdx.graphics.g3d.Model as GdxModel
-import com.badlogic.gdx.graphics.g3d.ModelInstance as GdxModelInstance
+import net.nevinsky.abyssus.lib.core.assets.model.PreparedModel
+import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
+import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
+import net.nevinsky.abyssus.lib.gdx.model.ModelData
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.sceneview.GdxContext
+import net.nevinsky.abyssus.plugin.sceneview.GdxFrame
+import net.nevinsky.abyssus.plugin.sceneview.GdxRuntime
+import net.nevinsky.abyssus.plugin.sceneview.GlCanvasHooks
+import net.nevinsky.abyssus.plugin.sceneview.GlCanvasHost
+import net.nevinsky.abyssus.plugin.sceneview.GlFrameTimer
+import net.nevinsky.abyssus.plugin.sceneview.GridModel
+import net.nevinsky.abyssus.plugin.sceneview.GuardedGLCanvas
+import org.lwjgl.opengl.GL
+import org.lwjgl.opengl.awt.GLData
 
 /**
  * A model as the preview draws it: the transformed [data], its [pixmaps] decoded off the AWT thread (the canvas takes
  * them over), the [file] its texture names resolve against, and its [size] in metres for framing.
  */
-class PreviewModel(val data: ModelData, val pixmaps: MutableMap<String, Pixmap>, val file: FileHandle, val size: Vector3)
+class PreviewModel(
+    val data: ModelData,
+    val pixmaps: MutableMap<String, Pixmap>,
+    val file: FileHandle,
+    val size: Vector3,
+)
 
 /**
- * The live 3D preview of Import Model: a [GuardedGLCanvas] with its own `GdxRuntime` context, drawing the model as Create
- * would write it over a ground grid with a 1 m post, from an orbit camera (drag to orbit, wheel to zoom). The chosen
- * animation plays in a loop; textures are uploaded one per frame. A Swing timer drives frames, and GL is used only
- * inside `GdxRuntime.withContext` while the canvas is safe ([GuardedGLCanvas.glSafe]). The dialog calls [release]
+ * The live 3D preview of Import Model: a [GuardedGLCanvas] with its own `GdxRuntime` context, drawing the model as
+ * Create would write it over a ground grid with a 1 m post, from an orbit camera (drag to orbit, wheel to zoom). The
+ * chosen animation plays in a loop; textures are uploaded one per frame. A Swing timer drives frames, and GL is used
+ * only inside `GdxRuntime.withContext` while the canvas is safe ([GuardedGLCanvas.glSafe]). The dialog calls [release]
  * while it is still showing, so the context is current when its resources are freed. Without GL the reason is shown.
  */
 class ModelPreviewCanvas : JPanel(CardLayout()) {
-    private val glHost = GlCanvasHost(object : GlCanvasHooks {
-        override fun create() = this@ModelPreviewCanvas.create()
+    private val glHost =
+        GlCanvasHost(
+            object : GlCanvasHooks {
+                override fun create() = this@ModelPreviewCanvas.create()
 
-        override fun paint(canvas: GuardedGLCanvas, ctx: GdxContext, frame: GdxFrame) = GdxRuntime.withContext(ctx) { draw() }
+                override fun paint(canvas: GuardedGLCanvas, ctx: GdxContext, frame: GdxFrame) =
+                    GdxRuntime.withContext(ctx) { draw() }
 
-        override fun release() = disposeResources()
+                override fun release() = disposeResources()
 
-        override fun abandoned() = forgetResources()
-    }, "Failed to release the model preview's GL resources")
-    private val frame get() = glHost.frame
+                override fun abandoned() = forgetResources()
+            },
+            "Failed to release the model preview's GL resources",
+        )
+    private val frame
+        get() = glHost.frame
+
     private val framing = PreviewFraming()
     private val orbit = OrbitCamera(Vector3(0f, 0.5f, 0f), 3f, 30f, 20f)
     private val message = JBLabel("", SwingConstants.CENTER)
@@ -107,33 +119,44 @@ class ModelPreviewCanvas : JPanel(CardLayout()) {
     private var instance: ModelInstance? = null
     private var animation: AnimationController? = null
     private val camera = PerspectiveCamera()
-    private val environment = Environment().apply {
-        set(ColorAttribute.createAmbientLight(0.45f, 0.45f, 0.45f, 1f))
-        add(DirectionalLight().set(0.8f, 0.8f, 0.8f, -0.4f, -1f, -0.3f))
-    }
+    private val environment =
+        Environment().apply {
+            set(ColorAttribute.createAmbientLight(0.45f, 0.45f, 0.45f, 1f))
+            add(DirectionalLight().set(0.8f, 0.8f, 0.8f, -0.4f, -1f, -0.3f))
+        }
 
     private val canvas = glHost.newCanvas(glData())
 
-    private val timer: GlFrameTimer = GlFrameTimer({ canvas }) { e ->
-        thisLogger().warn("Model preview failed", e)
-        stopWith(e.message ?: e.javaClass.simpleName)
-    }
+    private val timer: GlFrameTimer =
+        GlFrameTimer({ canvas }) { e ->
+            thisLogger().warn("Model preview failed", e)
+            stopWith(e.message ?: e.javaClass.simpleName)
+        }
 
     init {
         add(canvas, CARD_CANVAS)
         add(JPanel(BorderLayout()).apply { add(message, BorderLayout.CENTER) }, CARD_MESSAGE)
         preferredSize = JBUI.size(420, 320)
-        val mouse = object : MouseAdapter() {
-            private var last: java.awt.Point? = null
-            override fun mousePressed(e: MouseEvent) { last = e.point }
-            override fun mouseReleased(e: MouseEvent) { last = null }
-            override fun mouseDragged(e: MouseEvent) {
-                val from = last ?: e.point
-                orbit.orbit((e.x - from.x).toFloat(), (e.y - from.y).toFloat())
-                last = e.point
+        val mouse =
+            object : MouseAdapter() {
+                private var last: java.awt.Point? = null
+
+                override fun mousePressed(e: MouseEvent) {
+                    last = e.point
+                }
+
+                override fun mouseReleased(e: MouseEvent) {
+                    last = null
+                }
+
+                override fun mouseDragged(e: MouseEvent) {
+                    val from = last ?: e.point
+                    orbit.orbit((e.x - from.x).toFloat(), (e.y - from.y).toFloat())
+                    last = e.point
+                }
+
+                override fun mouseWheelMoved(e: MouseWheelEvent) = orbit.zoom(e.preciseWheelRotation.toFloat())
             }
-            override fun mouseWheelMoved(e: MouseWheelEvent) = orbit.zoom(e.preciseWheelRotation.toFloat())
-        }
         canvas.addMouseListener(mouse)
         canvas.addMouseMotionListener(mouse)
         canvas.addMouseWheelListener(mouse)
@@ -170,7 +193,9 @@ class ModelPreviewCanvas : JPanel(CardLayout()) {
      * still showing (a hidden canvas cannot make its context current, and then only abandons it). Idempotent.
      */
     fun release() {
-        if (released) return
+        if (released) {
+            return
+        }
         released = true
         timer.stop()
         pending?.pixmaps?.values?.forEach(Pixmap::dispose)
@@ -197,10 +222,18 @@ class ModelPreviewCanvas : JPanel(CardLayout()) {
         val centre: Int,
     )
 
-    internal fun state() = State(
-        framesDrawn, model != null, prepared != null || pending != null, animation?.current?.animation?.id,
-        animation?.current?.time ?: 0f, Vector3(size), shownMessage, released, centrePixel,
-    )
+    internal fun state() =
+        State(
+            framesDrawn,
+            model != null,
+            prepared != null || pending != null,
+            animation?.current?.animation?.id,
+            animation?.current?.time ?: 0f,
+            Vector3(size),
+            shownMessage,
+            released,
+            centrePixel,
+        )
 
     // --- GL, inside the context -------------------------------------------------------------------------------------
 
@@ -209,8 +242,16 @@ class ModelPreviewCanvas : JPanel(CardLayout()) {
         contentBatch = ModelBatch(ModelShaderProvider().also { contentShaders = it })
         grid = GridModel.build().also { gridInstance = GdxModelInstance(it) }
         val material = Material(ColorAttribute.createDiffuse(Color(0.95f, 0.55f, 0.1f, 1f)))
-        post = ModelBuilder().createBox(PreviewFraming.POST_WIDTH * 2, PreviewFraming.POST_HEIGHT, PreviewFraming.POST_WIDTH * 2,
-            material, (Usage.Position or Usage.Normal).toLong()).also { postInstance = GdxModelInstance(it) }
+        post =
+            ModelBuilder()
+                .createBox(
+                    PreviewFraming.POST_WIDTH * 2,
+                    PreviewFraming.POST_HEIGHT,
+                    PreviewFraming.POST_WIDTH * 2,
+                    material,
+                    (Usage.Position or Usage.Normal).toLong(),
+                )
+                .also { postInstance = GdxModelInstance(it) }
     }
 
     private fun draw() {
@@ -223,7 +264,12 @@ class ModelPreviewCanvas : JPanel(CardLayout()) {
         }
         animation?.update(frame.deltaSeconds)
 
-        val aspect = if (frame.height > 0) frame.width.toFloat() / frame.height else 1f
+        val aspect =
+            if (frame.height > 0) {
+                frame.width.toFloat() / frame.height
+            } else {
+                1f
+            }
         if (reframe) {
             reframe = false
             val f = framing.frame(size, aspect)
@@ -263,7 +309,10 @@ class ModelPreviewCanvas : JPanel(CardLayout()) {
         if (sampleCentre) {
             val pixel = BufferUtils.newByteBuffer(4)
             gl.glReadPixels(frame.width / 2, frame.height / 2, 1, 1, GL20.GL_RGBA, GL20.GL_UNSIGNED_BYTE, pixel)
-            centrePixel = ((pixel.get(0).toInt() and 0xFF) shl 16) or ((pixel.get(1).toInt() and 0xFF) shl 8) or (pixel.get(2).toInt() and 0xFF)
+            centrePixel =
+                ((pixel.get(0).toInt() and 0xFF) shl 16) or
+                    ((pixel.get(1).toInt() and 0xFF) shl 8) or
+                    (pixel.get(2).toInt() and 0xFF)
         }
     }
 
@@ -279,7 +328,9 @@ class ModelPreviewCanvas : JPanel(CardLayout()) {
     /** One texture per frame, then the model: as the scene view builds its models. */
     private fun uploadAndBuild() {
         val building = prepared ?: return
-        if (!building.uploadNext()) return
+        if (!building.uploadNext()) {
+            return
+        }
         prepared = null
         val built = AssimpModelLoader().buildIntModel(building.data, building.file, building.textures)
         building.dispose()
@@ -288,14 +339,18 @@ class ModelPreviewCanvas : JPanel(CardLayout()) {
         model = built
         instance = ModelInstance(built).also { startAnimation(it) }
         val newSize = preparedSize ?: size
-        if (!newSize.epsilonEquals(size, 1e-4f)) reframe = true
+        if (!newSize.epsilonEquals(size, 1e-4f)) {
+            reframe = true
+        }
         size = newSize
     }
 
     private fun startAnimation(target: ModelInstance) {
         val name = animationName?.takeIf { wanted -> target.animations.any { it.id == wanted } }
         animation = name?.let { AnimationController(target).also { c -> c.setAnimation(it, -1) } }
-        if (name == null) target.calculateTransforms()
+        if (name == null) {
+            target.calculateTransforms()
+        }
     }
 
     private fun disposeResources() {
@@ -327,13 +382,14 @@ class ModelPreviewCanvas : JPanel(CardLayout()) {
         const val CARD_CANVAS = "canvas"
         const val CARD_MESSAGE = "message"
 
-        fun glData() = GLData().apply {
-            majorVersion = 3
-            minorVersion = 2
-            profile = GLData.Profile.CORE
-            forwardCompatible = true
-            depthSize = 24
-            swapInterval = 0
-        }
+        fun glData() =
+            GLData().apply {
+                majorVersion = 3
+                minorVersion = 2
+                profile = GLData.Profile.CORE
+                forwardCompatible = true
+                depthSize = 24
+                swapInterval = 0
+            }
     }
 }

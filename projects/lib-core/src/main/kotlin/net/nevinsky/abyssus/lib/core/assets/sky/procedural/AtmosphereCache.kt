@@ -22,10 +22,16 @@ import net.nevinsky.abyssus.lib.core.util.checkFramebufferComplete
 /** The size of each face of a cached atmosphere, in texels: about 5.7 texels a degree. */
 const val ATMOSPHERE_CACHE_SIZE = 512
 
-/** The define a procedural sky's fragment shader declares (`#define SKY_CACHEABLE` on a line) to have its atmosphere cached. */
+/**
+ * The define a procedural sky's fragment shader declares (`#define SKY_CACHEABLE` on a line) to have its atmosphere
+ * cached.
+ */
 const val SKY_CACHEABLE = "SKY_CACHEABLE"
 
-/** Defined when a cacheable sky's shader renders the cube: everything but what [SKY_DETAIL_ONLY] draws exactly (the sun's disc). */
+/**
+ * Defined when a cacheable sky's shader renders the cube: everything but what [SKY_DETAIL_ONLY] draws exactly (the
+ * sun's disc).
+ */
 const val SKY_BAKE = "SKY_BAKE"
 
 /**
@@ -49,8 +55,9 @@ fun declaresCacheable(fragment: String): Boolean = CACHEABLE.containsMatchIn(fra
  * sky's own shader with [SKY_DETAIL_ONLY] over it, which keeps only the pixels a cube would blur, so those are exact.
  *
  * The sky's shader is project content, so this is used only for one that declares [SKY_CACHEABLE]; its vertex shader
- * must give the world direction as `v_dir` from `u_invViewProj`, as a procedural sky's does. The cube holds the shader's
- * output (already tone mapped and encoded), 8 bits a channel. GL thread only; owns its programs, cube and framebuffer.
+ * must give the world direction as `v_dir` from `u_invViewProj`, as a procedural sky's does. The cube holds the
+ * shader's output (already tone mapped and encoded), 8 bits a channel. GL thread only; owns its programs, cube and
+ * framebuffer.
  */
 internal class AtmosphereCache(
     vertex: String,
@@ -83,7 +90,9 @@ internal class AtmosphereCache(
 
     /** Draws the atmosphere seen through [invViewProj] (camera translation removed) with the sun toward [sun]. */
     fun draw(mesh: Mesh, invViewProj: Matrix4, sun: Vector3) {
-        if (!baked || bakedFor != sun) render(mesh, sun)
+        if (!baked || bakedFor != sun) {
+            render(mesh, sun)
+        }
         val gl = Gdx.gl
         val seamless = gl.glIsEnabled(GL_TEXTURE_CUBE_MAP_SEAMLESS)
         gl.glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS)
@@ -94,7 +103,9 @@ internal class AtmosphereCache(
             lookup.setUniformi("u_cubemap", 0)
             mesh.render(lookup, GL20.GL_TRIANGLES)
         } finally {
-            if (!seamless) gl.glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS)
+            if (!seamless) {
+                gl.glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS)
+            }
             gl.glBindTexture(GL20.GL_TEXTURE_CUBE_MAP, 0)
         }
         detail.bind()
@@ -104,7 +115,9 @@ internal class AtmosphereCache(
     }
 
     private fun render(mesh: Mesh, sun: Vector3) {
-        if (fbo == 0) allocate()
+        if (fbo == 0) {
+            allocate()
+        }
         val gl = Gdx.gl
         val state = GlStateScope(OFFSCREEN_CAPS)
         try {
@@ -115,8 +128,11 @@ internal class AtmosphereCache(
             params.bindTo(bake, sun)
             for (face in 0..5) {
                 gl.glFramebufferTexture2D(
-                    GL20.GL_FRAMEBUFFER, GL20.GL_COLOR_ATTACHMENT0, GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
-                    texture.textureObjectHandle, 0,
+                    GL20.GL_FRAMEBUFFER,
+                    GL20.GL_COLOR_ATTACHMENT0,
+                    GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
+                    texture.textureObjectHandle,
+                    0,
                 )
                 checkFramebufferComplete("Procedural sky atmosphere cache")
                 orientCubeFace(camera, face)
@@ -139,8 +155,15 @@ internal class AtmosphereCache(
         texture.bind(0)
         for (face in 0..5) {
             gl.glTexImage2D(
-                GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, GL20.GL_RGBA, ATMOSPHERE_CACHE_SIZE, ATMOSPHERE_CACHE_SIZE, 0,
-                GL20.GL_RGBA, GL20.GL_UNSIGNED_BYTE, null,
+                GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
+                0,
+                GL20.GL_RGBA,
+                ATMOSPHERE_CACHE_SIZE,
+                ATMOSPHERE_CACHE_SIZE,
+                0,
+                GL20.GL_RGBA,
+                GL20.GL_UNSIGNED_BYTE,
+                null,
             )
         }
         gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL30.GL_TEXTURE_MAX_LEVEL, CACHE_LEVELS - 1)
@@ -158,7 +181,9 @@ internal class AtmosphereCache(
         detail.dispose()
         lookup.dispose()
         texture.dispose()
-        if (fbo != 0) Gdx.gl.glDeleteFramebuffer(fbo)
+        if (fbo != 0) {
+            Gdx.gl.glDeleteFramebuffer(fbo)
+        }
         fbo = 0
     }
 }

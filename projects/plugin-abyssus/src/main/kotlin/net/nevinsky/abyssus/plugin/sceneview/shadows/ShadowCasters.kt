@@ -5,12 +5,12 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.shadows
 
-import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
+import com.badlogic.gdx.graphics.g3d.Renderable
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.Pool
-import com.badlogic.gdx.graphics.g3d.Renderable
+import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
 import net.nevinsky.abyssus.plugin.sceneview.TerrainEntity
 
 /**
@@ -31,8 +31,8 @@ internal data class ShadowCaster(val renderable: Renderable, val bounds: Boundin
 /**
  * What reaches the shadow depth pass: every part of every drawn model, the depth renderable of every terrain, and the
  * instanced parts of the foliage's OBJECT layers. What is collected also lands in [renderables], so the caller's pool
- * frees it again after the frame; [casterBounds] caches the world boxes of the model parts, which it computes once
- * per mesh. Foliage renderables are skipped there on purpose: their copies carry their transforms in the instance
+ * frees it again after the frame; [casterBounds] caches the world boxes of the model parts, which it computes once per
+ * mesh. Foliage renderables are skipped there on purpose: their copies carry their transforms in the instance
  * attributes, so their box comes from [FoliageCastSource] instead.
  */
 internal fun shadowCasters(
@@ -47,24 +47,33 @@ internal fun shadowCasters(
     models.forEach { entity ->
         val first = renderables.size
         entity.instance.getRenderables(renderables, pool)
-        for (i in first until renderables.size) casters += ShadowCaster(renderables[i], casterBounds.world(renderables[i]))
+        for (i in first until renderables.size) casters +=
+            ShadowCaster(renderables[i], casterBounds.world(renderables[i]))
     }
     casterBounds.retain(renderables.mapNotNull { it.meshPart.mesh }.toSet())
     terrains.forEach { entity ->
-        val out = pool.obtain().also {
-            // a pooled renderable keeps what its last user set; this one is drawn by a depth shader that reads these
-            it.environment = null
-            it.material = null
-            it.meshPart.set("", null, 0, 0, 0)
-            it.shader = null
-            it.userData = null
-        }
-        entity.terrain.depthRenderable(entity.world, out); renderables.add(out)
+        val out =
+            pool.obtain().also {
+                // a pooled renderable keeps what its last user set; this one is drawn by a depth shader that reads
+                // these
+                it.environment = null
+                it.material = null
+                it.meshPart.set("", null, 0, 0, 0)
+                it.shader = null
+                it.userData = null
+            }
+        entity.terrain.depthRenderable(entity.world, out)
+        renderables.add(out)
         val data = entity.terrain.data
-        casters += ShadowCaster(out, BoundingBox(
-            Vector3(0f, data.heights.min(), 0f),
-            Vector3(data.size.toFloat(), data.heights.max(), data.size.toFloat()),
-        ).mul(entity.world))
+        casters +=
+            ShadowCaster(
+                out,
+                BoundingBox(
+                        Vector3(0f, data.heights.min(), 0f),
+                        Vector3(data.size.toFloat(), data.heights.max(), data.size.toFloat()),
+                    )
+                    .mul(entity.world),
+            )
     }
     if (foliage != null) {
         val bounds = foliage.castBounds()

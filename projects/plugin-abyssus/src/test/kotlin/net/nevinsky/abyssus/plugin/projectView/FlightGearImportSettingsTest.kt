@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
+import java.io.File
 import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearAircraft
 import net.nevinsky.abyssus.lib.core.editor.flightgear.FlightGearInspection
 import net.nevinsky.abyssus.lib.core.editor.flightgear.ImportPart
@@ -17,18 +18,29 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
 
 class FlightGearImportSettingsTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
     private fun settings(license: String? = null): FlightGearImportSettings {
         val assets = File(temp.newFolder(), "assets").apply { mkdirs() }
         File(assets, "model_taken").mkdirs()
-        val aircraft = FlightGearAircraft("c172r", "c172r/", "c172r/c172r-set.xml", "Cessna 172R", "David Megginson", license, "c172r/Models/c172-dpm.xml")
-        val parts = listOf(ImportPart("Fuselage", true), ImportPart("Propeller", true), ImportPart("Propeller.2", false))
-        return FlightGearImportSettings(assets, FlightGearInspection(aircraft, parts, emptyList(), license, emptyList()))
+        val aircraft =
+            FlightGearAircraft(
+                "c172r",
+                "c172r/",
+                "c172r/c172r-set.xml",
+                "Cessna 172R",
+                "David Megginson",
+                license,
+                "c172r/Models/c172-dpm.xml",
+            )
+        val parts =
+            listOf(ImportPart("Fuselage", true), ImportPart("Propeller", true), ImportPart("Propeller.2", false))
+        return FlightGearImportSettings(
+            assets,
+            FlightGearInspection(aircraft, parts, emptyList(), license, emptyList()),
+        )
     }
 
     @Test

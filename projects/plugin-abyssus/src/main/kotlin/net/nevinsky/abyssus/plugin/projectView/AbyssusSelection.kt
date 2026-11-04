@@ -9,8 +9,8 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.messages.Topic
-import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 
 fun interface AbyssusSelectionListener {
@@ -19,7 +19,8 @@ fun interface AbyssusSelectionListener {
 
     companion object {
         @JvmField
-        val TOPIC: Topic<AbyssusSelectionListener> = Topic.create("Abyssus view selection", AbyssusSelectionListener::class.java)
+        val TOPIC: Topic<AbyssusSelectionListener> =
+            Topic.create("Abyssus view selection", AbyssusSelectionListener::class.java)
     }
 }
 
@@ -32,7 +33,9 @@ class AbyssusSelection(private val project: Project) {
 
     fun select(node: Any?) {
         current = node
-        if (!project.isDisposed) project.messageBus.syncPublisher(AbyssusSelectionListener.TOPIC).selectionChanged(node)
+        if (!project.isDisposed) {
+            project.messageBus.syncPublisher(AbyssusSelectionListener.TOPIC).selectionChanged(node)
+        }
     }
 
     companion object {
@@ -51,11 +54,33 @@ fun assetFolderOf(node: Any?): VirtualFile? {
 /** True when the selected asset row is an asset that no scene of its project uses. */
 fun assetUnusedOf(node: Any?): Boolean = ((node as? DtoEntryNode)?.value?.value as? Asset<*>)?.unused == true
 
-/** The name and kind (`a scene`, `the project file`, `an entity or setting`) of a selected node that is not an asset; null for no node. */
-fun describeNonAsset(node: Any?): Pair<String, String>? = when (node) {
-    is AbyssusAssetNode -> if (!node.virtualFile.isValid) null else
-        node.virtualFile.name to AbyssusBundle.message(if (node.virtualFile.extension == ProjectLayout.PROJECT_EXTENSION) "propertiesKindProject" else "propertiesKindScene")
-    is DtoEntryNode ->
-        (node.label ?: node.value.name) to AbyssusBundle.message(if (sceneFileOf(node.value) != null) "propertiesKindScene" else "propertiesKindOther")
-    else -> null
-}
+/**
+ * The name and kind (`a scene`, `the project file`, `an entity or setting`) of a selected node that is not an asset;
+ * null for no node.
+ */
+fun describeNonAsset(node: Any?): Pair<String, String>? =
+    when (node) {
+        is AbyssusAssetNode ->
+            if (!node.virtualFile.isValid) {
+                null
+            } else {
+                node.virtualFile.name to
+                    AbyssusBundle.message(
+                        if (node.virtualFile.extension == ProjectLayout.PROJECT_EXTENSION) {
+                            "propertiesKindProject"
+                        } else {
+                            "propertiesKindScene"
+                        }
+                    )
+            }
+        is DtoEntryNode ->
+            (node.label ?: node.value.name) to
+                AbyssusBundle.message(
+                    if (sceneFileOf(node.value) != null) {
+                        "propertiesKindScene"
+                    } else {
+                        "propertiesKindOther"
+                    }
+                )
+        else -> null
+    }

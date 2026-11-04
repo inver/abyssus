@@ -14,7 +14,11 @@ import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
 
-fun aspectOf(width: Int, height: Int): Float? = if (width > 0 && height > 0) width.toFloat() / height else null
+fun aspectOf(width: Int, height: Int): Float? = if (width > 0 && height > 0) {
+    width.toFloat() / height
+} else {
+    null
+}
 
 private const val ORBIT_SPEED = 0.005f
 private const val PAN_SPEED = 0.0015f
@@ -77,17 +81,22 @@ class OrbitCamera(var target: Vector3, var distance: Float, var yaw: Float, var 
 
     /**
      * Turns the camera to look along [direction] (from the eye toward the target), keeping the target and distance.
-     * A direction that is straight up or down settles at the highest pitch the camera allows (89 degrees), keeping the yaw.
+      * A direction that is straight up or down settles at the highest pitch the camera allows (89 degrees), keeping the
+      * yaw.
      */
     fun lookAlong(direction: Vector3) {
         val length = direction.len()
-        if (length < 1e-6f) return
+        if (length < 1e-6f) {
+            return
+        }
         // the eye sits opposite to where the camera looks
         val ux = -direction.x / length
         val uy = -direction.y / length
         val uz = -direction.z / length
         pitch = asin(uy.coerceIn(-1f, 1f)).coerceIn(-MAX_PITCH, MAX_PITCH)
-        if (ux * ux + uz * uz > 1e-8f) yaw = atan2(ux, uz)
+        if (ux * ux + uz * uz > 1e-8f) {
+            yaw = atan2(ux, uz)
+        }
     }
 
     /** Moves the camera to look at [framing]'s target from its distance, keeping the view direction. */

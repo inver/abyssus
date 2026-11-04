@@ -1,12 +1,12 @@
 package net.nevinsky.abyssus.plugin.sceneview.skybox
 
-import net.nevinsky.abyssus.lib.core.editor.content.LightKind
-import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
+import kotlin.math.sqrt
+import net.nevinsky.abyssus.lib.core.editor.content.LightKind
+import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import kotlin.math.sqrt
 
 class SunDirectionTest {
     private val white = Color(1f, 1f, 1f, 1f)
@@ -16,12 +16,13 @@ class SunDirectionTest {
 
     @Test
     fun followsTheBrightestLight() {
-        val sun = SunDirection.of(
-            listOf(
-                light(LightKind.DIRECTIONAL, 1f, Vector3(1f, 0f, 0f)),
-                light(LightKind.DIRECTIONAL, 5f, Vector3(0f, -1f, 0f)),
+        val sun =
+            SunDirection.of(
+                listOf(
+                    light(LightKind.DIRECTIONAL, 1f, Vector3(1f, 0f, 0f)),
+                    light(LightKind.DIRECTIONAL, 5f, Vector3(0f, -1f, 0f)),
+                )
             )
-        )
         assertEquals(Vector3(0f, 1f, 0f), sun)
     }
 
@@ -43,17 +44,21 @@ class SunDirectionTest {
 
     @Test
     fun unusableLightFallsBackToDefault() {
-        assertEquals(SunDirection.DEFAULT, SunDirection.of(listOf(light(LightKind.DIRECTIONAL, 1f, Vector3(0f, 0f, 0f)))))
+        assertEquals(
+            SunDirection.DEFAULT,
+            SunDirection.of(listOf(light(LightKind.DIRECTIONAL, 1f, Vector3(0f, 0f, 0f)))),
+        )
     }
 
     @Test
     fun sunLightIsTheLightTheSkySunFollows() {
-        val lights = listOf(
-            LightPlacement(7L, LightKind.DIRECTIONAL, white, 5f, Vector3(0f, 0f, 0f), Vector3(0f, -1f, 0f)),
-            LightPlacement(3L, LightKind.DIRECTIONAL, white, 1f, Vector3(0f, 0f, 0f), Vector3(1f, 0f, 0f)),
-            LightPlacement(9L, LightKind.DIRECTIONAL, white, 50f, Vector3(0f, 0f, 0f), Vector3(0f, 0f, 0f)),
-            LightPlacement(8L, LightKind.SPOT, white, 90f, Vector3(0f, 0f, 0f), Vector3(0f, -1f, 0f)),
-        )
+        val lights =
+            listOf(
+                LightPlacement(7L, LightKind.DIRECTIONAL, white, 5f, Vector3(0f, 0f, 0f), Vector3(0f, -1f, 0f)),
+                LightPlacement(3L, LightKind.DIRECTIONAL, white, 1f, Vector3(0f, 0f, 0f), Vector3(1f, 0f, 0f)),
+                LightPlacement(9L, LightKind.DIRECTIONAL, white, 50f, Vector3(0f, 0f, 0f), Vector3(0f, 0f, 0f)),
+                LightPlacement(8L, LightKind.SPOT, white, 90f, Vector3(0f, 0f, 0f), Vector3(0f, -1f, 0f)),
+            )
         val sun = SunDirection.sunLight(lights)!!
         assertEquals(7L, sun.entityId)
         val d = sun.direction

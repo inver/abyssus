@@ -21,7 +21,9 @@ abstract class TerrainStrokeCommand<S : Any>(protected val mode: () -> BrushMode
     /** The stroke in progress, or null. */
     protected var active: S? = null
 
-    /** Starts a stroke at the world [at] on [terrain] under [mode], or null to refuse the press. Does not set [active]. */
+    /**
+     * Starts a stroke at the world [at] on [terrain] under [mode], or null to refuse the press. Does not set [active].
+     */
     protected abstract fun begin(terrain: TerrainTarget, at: Vector3, mode: BrushMode): S?
 
     /** The stamp of the press itself, after [active] is set. */
@@ -32,7 +34,9 @@ abstract class TerrainStrokeCommand<S : Any>(protected val mode: () -> BrushMode
 
     final override fun pressed(terrain: TerrainTarget, at: Vector3): Boolean {
         val current = mode() ?: return false
-        if (active != null || current.entityId != terrain.entityId) return false
+        if (active != null || current.entityId != terrain.entityId) {
+            return false
+        }
         val stroke = begin(terrain, at, current) ?: return false
         active = stroke
         press(stroke, at, current)

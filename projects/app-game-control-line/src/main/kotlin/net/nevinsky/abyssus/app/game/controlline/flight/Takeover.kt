@@ -4,5 +4,8 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.flight
 
-/** A span of an instructed flight in which the instructor held at least half the handle: from [start] to [end] flight seconds. */
+/**
+ * A span of an instructed flight in which the instructor held at least half the handle: from [start] to [end] flight
+ * seconds.
+ */
 data class Takeover(val start: Float, val end: Float)

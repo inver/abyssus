@@ -15,7 +15,8 @@ enum class ZeroReason(val label: String) {
 }
 
 /**
- * One line of the score sheet: [figure] marked [tenths] tenths of a mark (10 to 100; 0 when it scored nothing, then with a
+  * One line of the score sheet: [figure] marked [tenths] tenths of a mark (10 to 100; 0 when it scored nothing, then
+  * with a
  * [reason]) at [time] seconds, from [start]. A marked one keeps how it was [graded].
  */
 class SheetEntry(

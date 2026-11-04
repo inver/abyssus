@@ -5,18 +5,18 @@
 
 package net.nevinsky.abyssus.lib.core.editor.flightgear
 
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import java.util.UUID
 import net.nevinsky.abyssus.lib.core.editor.document.FlightGearImportRecord
-import net.nevinsky.abyssus.lib.core.editor.document.OriginalImportSize
-import net.nevinsky.abyssus.lib.core.editor.document.ImportSpan
 import net.nevinsky.abyssus.lib.core.editor.document.ImportItemRecord
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriter
+import net.nevinsky.abyssus.lib.core.editor.document.ImportSpan
+import net.nevinsky.abyssus.lib.core.editor.document.OriginalImportSize
 import net.nevinsky.abyssus.lib.core.editor.modelimport.MODEL_FILE
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelAssetFiles
 import net.nevinsky.abyssus.lib.core.editor.modelimport.SOURCE_FILE
 import net.nevinsky.abyssus.lib.core.editor.modelimport.uniqueTexturePath
-import java.util.UUID
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.gdx.gltf.GltfWriter
 
 /** Stages all asset bytes in memory; failed or cancelled imports expose no partial result. */
 internal class FlightGearStaging(
@@ -44,26 +44,32 @@ internal class FlightGearStaging(
         val images = ArrayList<String>()
         val imageOf = HashMap<String, Int?>()
         fun image(placement: Placement, texture: String?): Int? {
-            if (texture == null) return null
+            if (texture == null) {
+                return null
+            }
             val source = collection.textureSource(archive, aircraft, placement, texture) ?: return null
             return imageOf.getOrPut(source) {
                 cancel()
                 val stem = source.substringAfterLast('/').substringBeforeLast('.')
                 val extension = source.substringAfterLast('.', "").lowercase()
                 val bytes = archive.read(source)!!
-                val (name, data) = when (extension) {
-                    in SGI_EXTENSIONS -> try {
-                        "$stem.png" to sgi.toPng(bytes)
-                    } catch (e: SgiImageException) {
-                        skipped += SkippedItem(source, "texture not decoded: ${e.message}")
-                        return@getOrPut null
+                val (name, data) =
+                    when (extension) {
+                        in SGI_EXTENSIONS ->
+                            try {
+                                "$stem.png" to sgi.toPng(bytes)
+                            } catch (e: SgiImageException) {
+                                skipped += SkippedItem(source, "texture not decoded: ${e.message}")
+                                return@getOrPut null
+                            }
+                        "png",
+                        "jpg",
+                        "jpeg" -> source.substringAfterLast('/') to bytes
+                        else -> {
+                            skipped += SkippedItem(source, "texture format .$extension is not supported")
+                            return@getOrPut null
+                        }
                     }
-                    "png", "jpg", "jpeg" -> source.substringAfterLast('/') to bytes
-                    else -> {
-                        skipped += SkippedItem(source, "texture format .$extension is not supported")
-                        return@getOrPut null
-                    }
-                }
                 val unique = uniqueTexturePath(files.keys, name)
                 files[unique] = data
                 images += unique
@@ -73,34 +79,43 @@ internal class FlightGearStaging(
         skipped += collection.textureProblems(archive, collected)
 
         val model = geometry.build(collected, request, images, skipped, cancel, ::image)
-        files[MODEL_FILE] = writer.write(model, images.associateWith { it },
-            "Abyssus FlightGear import")
+        files[MODEL_FILE] =
+            writer.write(
+                model,
+                images.associateWith { it },
+                "Abyssus FlightGear import",
+            )
 
         val licenseFiles = archive.licenseFiles(aircraft.folder)
         for (path in licenseFiles) files[path.substringAfterLast('/')] = archive.read(path)!!
 
         files[META_FILE] = assets.metaBytes(uuid, lastModified)
 
-        val source = FlightGearImportRecord(
-            archive = archive.file.name,
-            archiveSha256 = archive.sha256(),
-            aircraft = aircraft.id,
-            description = aircraft.description,
-            authors = aircraft.authors,
-            model = aircraft.modelPath?.removePrefix(aircraft.folder),
-            license = (collection.license(archive, aircraft) ?: "unknown"),
-            licenseFiles = licenseFiles.map { it.substringAfterLast('/') },
-            size = when (val size = request.size) {
-                ImportSize.Original -> OriginalImportSize.ORIGINAL
-                is ImportSize.Span -> ImportSpan(size.metres)
-            },
-            excludedParts = request.excludedParts.sorted(),
-            skipped = skipped.distinct().map { ImportItemRecord(it.item, it.reason) },
-            frame = when (val o = request.origin) {
-                ImportOrigin.Ground -> "nose +Z, up +Y, left wing +X; centred on span and length; lowest point at y = 0"
-                is ImportOrigin.SourcePoint -> "nose +Z, up +Y, left wing +X; origin at FlightGear body point (${o.x}, ${o.y}, ${o.z}) m"
-            },
-        )
+        val source =
+            FlightGearImportRecord(
+                archive = archive.file.name,
+                archiveSha256 = archive.sha256(),
+                aircraft = aircraft.id,
+                description = aircraft.description,
+                authors = aircraft.authors,
+                model = aircraft.modelPath?.removePrefix(aircraft.folder),
+                license = (collection.license(archive, aircraft) ?: "unknown"),
+                licenseFiles = licenseFiles.map { it.substringAfterLast('/') },
+                size =
+                    when (val size = request.size) {
+                        ImportSize.Original -> OriginalImportSize.ORIGINAL
+                        is ImportSize.Span -> ImportSpan(size.metres)
+                    },
+                excludedParts = request.excludedParts.sorted(),
+                skipped = skipped.distinct().map { ImportItemRecord(it.item, it.reason) },
+                frame =
+                    when (val o = request.origin) {
+                        ImportOrigin.Ground ->
+                            "nose +Z, up +Y, left wing +X; centred on span and length; lowest point at y = 0"
+                        is ImportOrigin.SourcePoint ->
+                            "nose +Z, up +Y, left wing +X; origin at FlightGear body point (${o.x}, ${o.y}, ${o.z}) m"
+                    },
+            )
         files[SOURCE_FILE] = assets.sourceBytes(source)
         return StagedImport(request.folder, uuid, files, skipped.distinct())
     }

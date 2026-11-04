@@ -4,11 +4,11 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.tools
 
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import org.slf4j.helpers.NOPLogger
 import java.io.File
 import java.nio.file.Files
 import java.security.MessageDigest
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import org.slf4j.helpers.NOPLogger
 
 /** The committed project of the game, supplied by Gradle; never edited by these tests. */
 fun committedProject(): File = File(checkNotNull(System.getProperty("controlLine.project")) { "run through Gradle" })
@@ -28,24 +28,32 @@ fun <T> withCopy(source: File = committedProject(), use: (File) -> T): T {
 }
 
 /** SHA-256 of every file under [project] by relative path: what two runs must agree on. */
-fun checksums(project: File): Map<String, String> = project.walkTopDown().filter { it.isFile }.sortedBy { it.path }.associate {
-    it.relativeTo(project).path to MessageDigest.getInstance("SHA-256").digest(it.readBytes()).joinToString("") { b -> "%02x".format(b) }
-}
+fun checksums(project: File): Map<String, String> =
+    project
+        .walkTopDown()
+        .filter { it.isFile }
+        .sortedBy { it.path }
+        .associate {
+            it.relativeTo(project).path to
+                MessageDigest.getInstance("SHA-256").digest(it.readBytes()).joinToString("") { b -> "%02x".format(b) }
+        }
 
 /** Historic source recorded by the immutable manifest; later scene edits are replayed separately. */
 fun originalScene(): File = File(committedProject().parentFile.parentFile, "toolsTest/fixtures/Field.original.scene")
 
 /**
- * What the migration owns of a scene, which the editor keeps changing everything else in: the `FoliageComponent` of each
- * terrain entity, and how many of the recorded trees and bushes are still entities.
+ * What the migration owns of a scene, which the editor keeps changing everything else in: the `FoliageComponent` of
+ * each terrain entity, and how many of the recorded trees and bushes are still entities.
  */
 fun migrationFootprint(project: File, manifest: FieldManifest): Map<String, String> {
     val entities = JsonProcessor(NOPLogger.NOP_LOGGER).readObject(File(project, "scenes/Field.scene").readText())["ecs"]
     val out = sortedMapOf<String, String>()
     for (t in manifest.terrains) {
-        out["FoliageComponent of ${t.entity}"] = entities[t.entity.toString()]?.get("components")?.get("FoliageComponent")?.toString() ?: "none"
+        out["FoliageComponent of ${t.entity}"] =
+            entities[t.entity.toString()]?.get("components")?.get("FoliageComponent")?.toString() ?: "none"
     }
-    out["recorded vegetation still in the scene"] = manifest.instances.count { entities.has(it.id.toString()) }.toString()
+    out["recorded vegetation still in the scene"] =
+        manifest.instances.count { entities.has(it.id.toString()) }.toString()
     return out
 }
 

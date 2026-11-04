@@ -54,7 +54,8 @@ internal object WaterGlRig {
     }
 
     /**
-     * Renders [params] for [frames] frames from [orbit] (sleeping while assets load) and returns the last frame with the
+      * Renders [params] for [frames] frames from [orbit] (sleeping while assets load) and returns the last frame with
+      * the
      * water targets as they were then. [each] runs after every frame inside the GL context.
      */
     fun shoot(
@@ -65,7 +66,8 @@ internal object WaterGlRig {
         configure: (SceneRenderer) -> Unit = {},
         log: org.slf4j.Logger = printingLog,
         sceneShaders: net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage =
-            net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage().withResources("/shader/scene", SceneRenderer::class.java),
+            net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage().withResources("/shader/scene",
+                SceneRenderer::class.java),
         each: (SceneRenderer, Int) -> Unit = { _, _ -> },
     ): WaterShot {
         var reflection = emptyMap<Int, TargetImage>()
@@ -74,10 +76,15 @@ internal object WaterGlRig {
         var captured: SceneRenderer? = null
         var centres = emptyMap<String, com.badlogic.gdx.math.Vector3>()
         var configured = false
-        val result = GlHarness.render(params, frames, orbit, framebufferSize = size, log = log, sceneShaders = sceneShaders, afterFrame = { renderer, index ->
-            if (!configured) { renderer.waterTime = 2.5; configure(renderer); configured = true }
+        val result = GlHarness.render(params, frames, orbit, framebufferSize = size, log = log, sceneShaders =
+            sceneShaders, afterFrame = { renderer, index ->
+            if (!configured) {
+                renderer.waterTime = 2.5; configure(renderer); configured = true
+            }
             each(renderer, index)
-            if (index < frames - 1) Thread.sleep(15)
+            if (index < frames - 1) {
+                Thread.sleep(15)
+            }
             if (index == frames - 1) {
                 captured = renderer
                 centres = renderer.drawnModels.associate { entity ->

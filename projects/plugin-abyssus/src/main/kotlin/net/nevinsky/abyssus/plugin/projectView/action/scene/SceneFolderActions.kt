@@ -4,7 +4,6 @@
  */
 package net.nevinsky.abyssus.plugin.projectView.scene
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -12,7 +11,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.InputValidator
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
+import java.util.*
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.editor.document.*
 import net.nevinsky.abyssus.lib.core.format.AbyssusDocumentFormat
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.plugin.AbyssusBundle
@@ -22,19 +23,25 @@ import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.projectView.AbyssusTreeAction
 import net.nevinsky.abyssus.plugin.projectView.DropdownAction
 import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
-import java.util.*
 
 class SceneDropdownAction : DropdownAction {
     override val actionIds = listOf("Abyssus.RenameScene", "Abyssus.Menu.Add")
 
     override fun appliesTo(node: Any?): Boolean {
         val entry = (node as? DtoEntryNode)?.value ?: return false
-        return entry.value is SceneEntry && entry.source?.takeIf {
-            it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION &&
+        return entry.value is SceneEntry &&
+            entry.source?.takeIf {
+                it.isValid &&
+                    it.extension == ProjectLayout.PROJECT_EXTENSION &&
                     runCatchingKeepingCancellation {
-                        com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing.project(textOf(it)) != null
-                    }.getOrDefault(false)
-        } != null
+                            com.intellij.openapi.components
+                                .service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>()
+                                .documents
+                                .parsing
+                                .project(textOf(it)) != null
+                        }
+                        .getOrDefault(false)
+            } != null
     }
 }
 
@@ -53,17 +60,23 @@ internal fun scenesFolderProjectFile(node: Any?): VirtualFile? {
     return entry.source?.takeIf { it.isValid && it.extension == ProjectLayout.PROJECT_EXTENSION }
 }
 
-/** A problem with the scene file name [name] in [scenes] (the `scenes` folder, or null when it does not exist yet), or null. */
-internal fun sceneNameProblem(scenes: VirtualFile?, name: String): String? = when {
-    name.isBlank() -> AbyssusBundle.message("newSceneNameEmpty")
-    name.any { it == '/' || it == '\\' } || name == "." || name == ".." -> AbyssusBundle.message("newSceneNameInvalid")
-    scenes?.findChild("$name.${ProjectLayout.SCENE_EXTENSION}") != null -> AbyssusBundle.message(
-        "newSceneNameTaken",
-        name
-    )
+/**
+ * A problem with the scene file name [name] in [scenes] (the `scenes` folder, or null when it does not exist yet), or
+ * null.
+ */
+internal fun sceneNameProblem(scenes: VirtualFile?, name: String): String? =
+    when {
+        name.isBlank() -> AbyssusBundle.message("newSceneNameEmpty")
+        name.any { it == '/' || it == '\\' } || name == "." || name == ".." ->
+            AbyssusBundle.message("newSceneNameInvalid")
+        scenes?.findChild("$name.${ProjectLayout.SCENE_EXTENSION}") != null ->
+            AbyssusBundle.message(
+                "newSceneNameTaken",
+                name,
+            )
 
-    else -> null
-}
+        else -> null
+    }
 
 /** The text of a new, empty native scene. */
 internal fun emptySceneText(name: String, id: String = UUID.randomUUID().toString()): String =
@@ -75,7 +88,8 @@ internal fun emptySceneText(name: String, id: String = UUID.randomUUID().toStrin
       "name": ${quoted(name)},
       "ecs": {}
     }
-    """.trimIndent() + "\n"
+    """
+        .trimIndent() + "\n"
 
 private fun quoted(s: String) = "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
@@ -91,13 +105,21 @@ open class NewSceneAction : AbyssusTreeAction<VirtualFile>() {
 
     override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
         val dir = target.parent?.findChild(ProjectLayout.SCENES_DIR)
-        val name = Messages.showInputDialog(
-            project, AbyssusBundle.message("newScenePrompt"), AbyssusBundle.message("newSceneAction"), null, "",
-            object : InputValidator {
-                override fun checkInput(input: String?) = input != null && sceneNameProblem(dir, input.trim()) == null
-                override fun canClose(input: String?) = checkInput(input)
-            },
-        )?.trim() ?: return
+        val name =
+            Messages.showInputDialog(
+                    project,
+                    AbyssusBundle.message("newScenePrompt"),
+                    AbyssusBundle.message("newSceneAction"),
+                    null,
+                    "",
+                    object : InputValidator {
+                        override fun checkInput(input: String?) =
+                            input != null && sceneNameProblem(dir, input.trim()) == null
+
+                        override fun canClose(input: String?) = checkInput(input)
+                    },
+                )
+                ?.trim() ?: return
         val created = createScene(project, target, name) ?: return
         FileEditorManager.getInstance(project).openFile(created, true)
     }
@@ -107,19 +129,24 @@ open class NewSceneAction : AbyssusTreeAction<VirtualFile>() {
 fun createScene(project: Project, abss: VirtualFile, name: String): VirtualFile? {
     val root = abss.parent ?: return null
     return runCatchingKeepingCancellation {
-        WriteCommandAction.writeCommandAction(project).withName(AbyssusBundle.message("newSceneAction"))
-            .compute<VirtualFile, Exception> {
-                val dir = root.findChild(ProjectLayout.SCENES_DIR) ?: root.createChildDirectory(
-                    abss,
-                    ProjectLayout.SCENES_DIR
-                )
-                sceneNameProblem(dir, name)?.let { throw IllegalStateException(it) }
-                dir.createChildData(abss, "$name.${ProjectLayout.SCENE_EXTENSION}").also {
-                    it.setBinaryContent(emptySceneText(name).toByteArray(Charsets.UTF_8))
-                }
+        WriteCommandAction.writeCommandAction(project).withName(AbyssusBundle.message("newSceneAction")).compute<
+            VirtualFile,
+            Exception,
+        > {
+            val dir =
+                root.findChild(ProjectLayout.SCENES_DIR)
+                    ?: root.createChildDirectory(
+                        abss,
+                        ProjectLayout.SCENES_DIR,
+                    )
+            sceneNameProblem(dir, name)?.let { throw IllegalStateException(it) }
+            dir.createChildData(abss, "$name.${ProjectLayout.SCENE_EXTENSION}").also {
+                it.setBinaryContent(emptySceneText(name).toByteArray(Charsets.UTF_8))
             }
-    }.getOrElse {
-        Messages.showErrorDialog(project, it.message.orEmpty(), AbyssusBundle.message("newSceneAction"))
-        null
+        }
     }
+        .getOrElse {
+            Messages.showErrorDialog(project, it.message.orEmpty(), AbyssusBundle.message("newSceneAction"))
+            null
+        }
 }

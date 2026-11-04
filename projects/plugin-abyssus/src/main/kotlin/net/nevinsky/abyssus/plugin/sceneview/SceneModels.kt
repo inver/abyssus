@@ -5,28 +5,28 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
-import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
-import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
-
-import com.badlogic.gdx.graphics.g3d.utils.AnimationController
-import com.badlogic.gdx.graphics.g3d.ModelInstance
 import com.badlogic.gdx.graphics.g3d.Model
+import com.badlogic.gdx.graphics.g3d.ModelInstance
+import com.badlogic.gdx.graphics.g3d.utils.AnimationController
 import java.io.File
+import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
+import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
 
 /**
  * The model entities of the scene. Each entity gets its own instance of the shared model, so entities using one asset
  * animate and move independently. GL thread only.
  */
-class SceneModels(assets: AssetView<Model>) : PlacedAssets<Model, ModelEntity>(
-    assets,
-    { p, model, previous ->
-        // a moved entity keeps its instance and animation
-        val instance = previous?.instance ?: ModelInstance(model)
-        p.transform.toMatrix(instance.transform!!)
-        ModelEntity(p, model, instance, previous?.animation ?: firstAnimationOf(instance))
-    },
-) {
+class SceneModels(assets: AssetView<Model>) :
+    PlacedAssets<Model, ModelEntity>(
+        assets,
+        { p, model, previous ->
+            // a moved entity keeps its instance and animation
+            val instance = previous?.instance ?: ModelInstance(model)
+            p.transform.toMatrix(instance.transform!!)
+            ModelEntity(p, model, instance, previous?.animation ?: firstAnimationOf(instance))
+        },
+    ) {
     /** Brings the entities in line with [placements]; advances animations by [deltaSeconds]. */
     fun update(placements: List<AssetPlacement>, projectDir: File?, deltaSeconds: Float) {
         update(placements, projectDir)
@@ -36,4 +36,6 @@ class SceneModels(assets: AssetView<Model>) : PlacedAssets<Model, ModelEntity>(
 
 /** The first animation loops for as long as the entity is shown. */
 private fun firstAnimationOf(instance: ModelInstance): AnimationController? =
-    instance.animations.firstOrNull()?.let { first -> AnimationController(instance).also { it.setAnimation(first.id, -1) } }
+    instance.animations.firstOrNull()?.let { first ->
+        AnimationController(instance).also { it.setAnimation(first.id, -1) }
+    }

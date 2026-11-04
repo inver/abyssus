@@ -17,10 +17,11 @@ import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
 /**
- * One native `meta.json`: its [type], its keys as plain [values] (in file order, whatever the type, for display) and the
- * typed binding on request.
+ * One native `meta.json`: its [type], its keys as plain [values] (in file order, whatever the type, for display) and
+ * the typed binding on request.
  */
-class MetaDocument internal constructor(
+class MetaDocument
+internal constructor(
     val type: MetaType,
     val values: JsonValues,
     private val text: String,
@@ -29,7 +30,9 @@ class MetaDocument internal constructor(
     /** The text at [path] in the document; null when it is missing or not text. */
     fun text(vararg path: String): String? = values.textAt(*path)
 
-    /** The document bound to its typed [AssetMeta] (`additional` as the class of its `type`); the name is left empty. */
+    /**
+     * The document bound to its typed [AssetMeta] (`additional` as the class of its `type`); the name is left empty.
+     */
     fun bound(): AssetMeta<Any> = AssetMetaParser(processor).read("", text)
 
     /** The document admitted as UI (or why not); the decoder reads the text afresh, so the document stays read-only. */
@@ -37,8 +40,9 @@ class MetaDocument internal constructor(
         net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder().decode(processor.readObject(text))
 
     /**
-     * The `uuid`s the document holds in the fields Abyssus resolves to other assets: the splat textures, the `materials`
-     * list and a procedural sky's `clouds`. Files named in `meta.json` live in the asset's own folder and are not references.
+     * The `uuid`s the document holds in the fields Abyssus resolves to other assets: the splat textures, the
+     * `materials` list and a procedural sky's `clouds`. Files named in `meta.json` live in the asset's own folder and
+     * are not references.
      */
     fun referenceUuids(): List<String> {
         val materials = values.arrayAt("additional", "materials").orEmpty().filterIsInstance<String>()
@@ -62,9 +66,10 @@ class AssetMetaReader(
      */
     fun read(text: String): MetaDocument {
         format.requireSupported(json.readObject(text), DocumentKind.ASSET)
-        @Suppress("UNCHECKED_CAST")
-        val values = json.parse(text, Map::class.java) as JsonValues
-        val type = (values["type"] as? String)?.let { name -> MetaType.entries.firstOrNull { it.name == name } } ?: MetaType.UNKNOWN
+        @Suppress("UNCHECKED_CAST") val values = json.parse(text, Map::class.java) as JsonValues
+        val type =
+            (values["type"] as? String)?.let { name -> MetaType.entries.firstOrNull { it.name == name } }
+                ?: MetaType.UNKNOWN
         return MetaDocument(type, values, text, json)
     }
 

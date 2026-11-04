@@ -15,7 +15,14 @@ import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 
 /** Why a foliage value is refused; the panel shows the localized reason beside the field. */
 enum class FoliageError {
-    DENSITY, SCALE_RANGE, ALIGNMENT, SLOPE, HEIGHT_RANGE, WEIGHT, DUPLICATE_ID, NOT_A_MODEL,
+    DENSITY,
+    SCALE_RANGE,
+    ALIGNMENT,
+    SLOPE,
+    HEIGHT_RANGE,
+    WEIGHT,
+    DUPLICATE_ID,
+    NOT_A_MODEL,
 
     /** A layer's collider is not an object, has a member of the wrong type or an unknown shape. */
     COLLIDER_MALFORMED,
@@ -39,20 +46,23 @@ class FoliageProblem(
 )
 
 /**
- * What a foliage `meta.json` holds, read for editing: the [settings] (`additional` as the typed `FoliageMeta`) and
- * the [problems] that refuse them. The panel previews and writes only when [valid].
+ * What a foliage `meta.json` holds, read for editing: the [settings] (`additional` as the typed `FoliageMeta`) and the
+ * [problems] that refuse them. The panel previews and writes only when [valid].
  */
 class FoliageRead(val settings: FoliageMeta, val problems: List<FoliageProblem>) {
-    val valid: Boolean get() = problems.isEmpty()
+    val valid: Boolean
+        get() = problems.isEmpty()
 
     /** The problems of one layer's field, for the reason shown beside it. */
-    fun problemOf(layerId: Int, field: String): FoliageProblem? = problems.firstOrNull { it.layerId == layerId && it.field == field }
+    fun problemOf(layerId: Int, field: String): FoliageProblem? = problems.firstOrNull {
+        it.layerId == layerId && it.field == field
+    }
 }
 
 /**
- * Validates editable [FoliageMeta] settings read from a foliage `meta.json`.
- * Members that are not of the shape the format documents take their defaults; the validation then reports what must
- * be refused with a reason. [modelAssets] are the project's MODEL asset folders, the only ones a layer may name.
+ * Validates editable [FoliageMeta] settings read from a foliage `meta.json`. Members that are not of the shape the
+ * format documents take their defaults; the validation then reports what must be refused with a reason. [modelAssets]
+ * are the project's MODEL asset folders, the only ones a layer may name.
  */
 class FoliageSettingsReader(
     private val messages: EditorMessages,
@@ -71,30 +81,52 @@ class FoliageSettingsReader(
         fun problem(layerId: Int, field: String, error: FoliageError) =
             add(FoliageProblem(layerId, field, error, reason(error)))
         for (layer in settings.layers) {
-            if (!seen.add(layer.id)) problem(layer.id, FOLIAGE_ID, FoliageError.DUPLICATE_ID)
-            if (!(layer.density >= 0f)) problem(layer.id, FOLIAGE_DENSITY, FoliageError.DENSITY)
-            if (layer.scale.min > layer.scale.max) problem(layer.id, FOLIAGE_SCALE, FoliageError.SCALE_RANGE)
-            if (!(layer.alignToNormal in 0f..1f)) problem(layer.id, FOLIAGE_ALIGN_TO_NORMAL, FoliageError.ALIGNMENT)
-            layer.maxSlope?.let { if (!(it in 0f..90f)) problem(layer.id, FOLIAGE_MAX_SLOPE, FoliageError.SLOPE) }
+            if (!seen.add(layer.id)) {
+                problem(layer.id, FOLIAGE_ID, FoliageError.DUPLICATE_ID)
+            }
+            if (!(layer.density >= 0f)) {
+                problem(layer.id, FOLIAGE_DENSITY, FoliageError.DENSITY)
+            }
+            if (layer.scale.min > layer.scale.max) {
+                problem(layer.id, FOLIAGE_SCALE, FoliageError.SCALE_RANGE)
+            }
+            if (!(layer.alignToNormal in 0f..1f)) {
+                problem(layer.id, FOLIAGE_ALIGN_TO_NORMAL, FoliageError.ALIGNMENT)
+            }
+            layer.maxSlope?.let {
+                if (!(it in 0f..90f)) {
+                    problem(layer.id, FOLIAGE_MAX_SLOPE, FoliageError.SLOPE)
+                }
+            }
             val min = layer.minHeight
             val max = layer.maxHeight
-            if (min != null && max != null && min > max) problem(layer.id, FOLIAGE_HEIGHT, FoliageError.HEIGHT_RANGE)
+            if (min != null && max != null && min > max) {
+                problem(layer.id, FOLIAGE_HEIGHT, FoliageError.HEIGHT_RANGE)
+            }
             if (layer.layerKind() == FoliageLayerKind.OBJECT) {
                 val read = colliders.read(layer.collider)
-                if (read is FoliageColliderRead.Invalid) problem(layer.id, FOLIAGE_COLLIDER, colliderError(read.problem))
+                if (read is FoliageColliderRead.Invalid) {
+                    problem(layer.id, FOLIAGE_COLLIDER, colliderError(read.problem))
+                }
             }
             for (model in layer.models) {
-                if (!(model.weight > 0f)) problem(layer.id, "$FOLIAGE_MODELS[${model.asset}].$FOLIAGE_WEIGHT", FoliageError.WEIGHT)
-                if (model.asset !in modelAssets) problem(layer.id, FOLIAGE_MODELS, FoliageError.NOT_A_MODEL)
+                if (!(model.weight > 0f)) {
+                    problem(layer.id, "$FOLIAGE_MODELS[${model.asset}].$FOLIAGE_WEIGHT", FoliageError.WEIGHT)
+                }
+                if (model.asset !in modelAssets) {
+                    problem(layer.id, FOLIAGE_MODELS, FoliageError.NOT_A_MODEL)
+                }
             }
         }
     }
 
-    private fun colliderError(problem: FoliageColliderProblem): FoliageError = when (problem) {
-        FoliageColliderProblem.MALFORMED, FoliageColliderProblem.UNKNOWN_SHAPE -> FoliageError.COLLIDER_MALFORMED
-        FoliageColliderProblem.SIZE -> FoliageError.COLLIDER_SIZE
-        FoliageColliderProblem.OFFSET -> FoliageError.COLLIDER_OFFSET
-    }
+    private fun colliderError(problem: FoliageColliderProblem): FoliageError =
+        when (problem) {
+            FoliageColliderProblem.MALFORMED,
+            FoliageColliderProblem.UNKNOWN_SHAPE -> FoliageError.COLLIDER_MALFORMED
+            FoliageColliderProblem.SIZE -> FoliageError.COLLIDER_SIZE
+            FoliageColliderProblem.OFFSET -> FoliageError.COLLIDER_OFFSET
+        }
 
     /**
      * The problems an edit from [before] to [after] adds on top of [read]'s: a layer that was OBJECT and is now DETAIL
@@ -103,13 +135,15 @@ class FoliageSettingsReader(
     fun transitions(before: FoliageMeta, after: FoliageMeta): List<FoliageProblem> {
         val kinds = before.layers.associate { it.id to it.layerKind() }
         return after.layers
-            .filter { it.collider != null && it.layerKind() == FoliageLayerKind.DETAIL && kinds[it.id] == FoliageLayerKind.OBJECT }
-            .map { FoliageProblem(it.id, FOLIAGE_COLLIDER, FoliageError.COLLIDER_KIND, reason(FoliageError.COLLIDER_KIND)) }
+            .filter {
+                it.collider != null &&
+                    it.layerKind() == FoliageLayerKind.DETAIL &&
+                    kinds[it.id] == FoliageLayerKind.OBJECT
+            }
+            .map {
+                FoliageProblem(it.id, FOLIAGE_COLLIDER, FoliageError.COLLIDER_KIND, reason(FoliageError.COLLIDER_KIND))
+            }
     }
-
-
-
-
 }
 
 /** The documented keys and defaults of a foliage `additional` block. */
@@ -136,7 +170,10 @@ const val FOLIAGE_SEED = "seed"
 const val FOLIAGE_COLLIDER = "collider"
 
 const val FOLIAGE_MASK_RESOLUTION_DEFAULT = 256
-/** The mask resolution New Foliage... starts with; the accepted range is [FOLIAGE_MASK_RESOLUTION_MIN] through [FOLIAGE_MASK_RESOLUTION_MAX]. */
+/**
+ * The mask resolution New Foliage... starts with; the accepted range is [FOLIAGE_MASK_RESOLUTION_MIN] through
+ * [FOLIAGE_MASK_RESOLUTION_MAX].
+ */
 const val FOLIAGE_MASK_RESOLUTION_DIALOG_DEFAULT = 512
 const val FOLIAGE_MASK_RESOLUTION_MIN = 16
 const val FOLIAGE_MASK_RESOLUTION_MAX = 2048

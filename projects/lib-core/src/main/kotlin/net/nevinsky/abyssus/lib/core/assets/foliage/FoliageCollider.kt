@@ -8,7 +8,11 @@ package net.nevinsky.abyssus.lib.core.assets.foliage
 import com.fasterxml.jackson.databind.JsonNode
 
 /** The shapes an OBJECT foliage layer's collider can take. */
-enum class FoliageColliderShape { BOX, SPHERE, CAPSULE }
+enum class FoliageColliderShape {
+    BOX,
+    SPHERE,
+    CAPSULE,
+}
 
 /**
  * A layer's collider as its `collider` member declares it, in model units and relative to each copy's origin. The
@@ -57,40 +61,77 @@ enum class FoliageColliderProblem {
 
 /**
  * Decodes a layer's raw `collider` member. Absent is told apart from invalid, so a bad collider disables only that
- * layer's collision and never its rendered copies, and the raw node stays with the layer so a nested member this
- * reader does not know survives an edit. Members of an inactive shape are kept but not checked. Stateless.
+ * layer's collision and never its rendered copies, and the raw node stays with the layer so a nested member this reader
+ * does not know survives an edit. Members of an inactive shape are kept but not checked. Stateless.
  */
 class FoliageColliderReader {
 
     fun read(node: JsonNode?): FoliageColliderRead {
-        if (node == null || node.isNull || node.isMissingNode) return FoliageColliderRead.Absent
-        if (!node.isObject) return invalid(FoliageColliderProblem.MALFORMED, "the collider is not an object")
-        val shape = when (val raw = node.get("shape")) {
-            null, is com.fasterxml.jackson.databind.node.NullNode -> FoliageColliderShape.BOX
-            else -> raw.takeIf { it.isTextual }?.asText()?.let { name -> FoliageColliderShape.entries.firstOrNull { it.name == name } }
-                ?: return invalid(FoliageColliderProblem.UNKNOWN_SHAPE, "the collider shape $raw is not BOX, SPHERE or CAPSULE")
+        if (node == null || node.isNull || node.isMissingNode) {
+            return FoliageColliderRead.Absent
         }
-        val half = vector(node.get("halfExtents"), "halfExtents", 0.5f) ?: return invalid(FoliageColliderProblem.MALFORMED, "halfExtents must hold numbers x, y and z")
-        val offset = vector(node.get("offset"), "offset", 0f) ?: return invalid(FoliageColliderProblem.MALFORMED, "offset must hold numbers x, y and z")
-        val radius = number(node, "radius", 0.5f) ?: return invalid(FoliageColliderProblem.MALFORMED, "radius must be a number")
-        val halfHeight = number(node, "halfHeight", 0.5f) ?: return invalid(FoliageColliderProblem.MALFORMED, "halfHeight must be a number")
-        val collider = FoliageCollider(shape, half[0], half[1], half[2], radius, halfHeight, offset[0], offset[1], offset[2])
+        if (!node.isObject) {
+            return invalid(FoliageColliderProblem.MALFORMED, "the collider is not an object")
+        }
+        val shape =
+            when (val raw = node.get("shape")) {
+                null,
+                is com.fasterxml.jackson.databind.node.NullNode -> FoliageColliderShape.BOX
+                else ->
+                    raw.takeIf { it.isTextual }
+                        ?.asText()
+                        ?.let { name -> FoliageColliderShape.entries.firstOrNull { it.name == name } }
+                        ?: return invalid(
+                            FoliageColliderProblem.UNKNOWN_SHAPE,
+                            "the collider shape $raw is not BOX, SPHERE or CAPSULE",
+                        )
+            }
+        val half =
+            vector(node.get("halfExtents"), "halfExtents", 0.5f)
+                ?: return invalid(FoliageColliderProblem.MALFORMED, "halfExtents must hold numbers x, y and z")
+        val offset =
+            vector(node.get("offset"), "offset", 0f)
+                ?: return invalid(FoliageColliderProblem.MALFORMED, "offset must hold numbers x, y and z")
+        val radius =
+            number(node, "radius", 0.5f) ?: return invalid(FoliageColliderProblem.MALFORMED, "radius must be a number")
+        val halfHeight =
+            number(node, "halfHeight", 0.5f)
+                ?: return invalid(FoliageColliderProblem.MALFORMED, "halfHeight must be a number")
+        val collider =
+            FoliageCollider(shape, half[0], half[1], half[2], radius, halfHeight, offset[0], offset[1], offset[2])
         return validate(collider)?.let { invalid(it.first, it.second) } ?: FoliageColliderRead.Valid(collider)
     }
 
-    /** What keeps [collider] from being built (an active size that is not finite and positive, a non-finite offset), or null. */
+    /**
+     * What keeps [collider] from being built (an active size that is not finite and positive, a non-finite offset), or
+     * null.
+     */
     fun validate(collider: FoliageCollider): Pair<FoliageColliderProblem, String>? {
         fun bad(v: Float) = !(v.isFinite() && v > 0f)
         if (!collider.offsetX.isFinite() || !collider.offsetY.isFinite() || !collider.offsetZ.isFinite()) {
             return FoliageColliderProblem.OFFSET to "the collider offset must be finite"
         }
-        val size = when (collider.shape) {
-            FoliageColliderShape.BOX ->
-                if (bad(collider.halfX) || bad(collider.halfY) || bad(collider.halfZ)) "the box half extents must be finite and positive" else null
-            FoliageColliderShape.SPHERE -> if (bad(collider.radius)) "the sphere radius must be finite and positive" else null
-            FoliageColliderShape.CAPSULE ->
-                if (bad(collider.radius) || bad(collider.halfHeight)) "the capsule radius and half height must be finite and positive" else null
-        }
+        val size =
+            when (collider.shape) {
+                FoliageColliderShape.BOX ->
+                    if (bad(collider.halfX) || bad(collider.halfY) || bad(collider.halfZ)) {
+                        "the box half extents must be finite and positive"
+                    } else {
+                        null
+                    }
+                FoliageColliderShape.SPHERE ->
+                    if (bad(collider.radius)) {
+                        "the sphere radius must be finite and positive"
+                    } else {
+                        null
+                    }
+                FoliageColliderShape.CAPSULE ->
+                    if (bad(collider.radius) || bad(collider.halfHeight)) {
+                        "the capsule radius and half height must be finite and positive"
+                    } else {
+                        null
+                    }
+            }
         return size?.let { FoliageColliderProblem.SIZE to it }
     }
 
@@ -98,14 +139,26 @@ class FoliageColliderReader {
 
     private fun number(parent: JsonNode, key: String, default: Float): Float? {
         val value = parent.get(key)
-        if (value == null || value.isNull) return default
-        return if (value.isNumber) value.floatValue() else null
+        if (value == null || value.isNull) {
+            return default
+        }
+        return if (value.isNumber) {
+            value.floatValue()
+        } else {
+            null
+        }
     }
 
-    /** The x, y and z of [node], each defaulting to [default]; null when [node] or a member is not what it should be. */
+    /**
+     * The x, y and z of [node], each defaulting to [default]; null when [node] or a member is not what it should be.
+     */
     private fun vector(node: JsonNode?, @Suppress("UNUSED_PARAMETER") name: String, default: Float): FloatArray? {
-        if (node == null || node.isNull) return floatArrayOf(default, default, default)
-        if (!node.isObject) return null
+        if (node == null || node.isNull) {
+            return floatArrayOf(default, default, default)
+        }
+        if (!node.isObject) {
+            return null
+        }
         val out = FloatArray(3)
         for ((i, key) in listOf("x", "y", "z").withIndex()) out[i] = number(node, key, default) ?: return null
         return out

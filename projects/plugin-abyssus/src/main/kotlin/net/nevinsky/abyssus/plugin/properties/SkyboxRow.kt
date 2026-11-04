@@ -23,7 +23,8 @@ import javax.swing.JPanel
 
 /**
  * The scene's `skybox` field: its saved name in a read-only box (`scene-skybox`) and, for a scene of a project, a 26 px
- * Browse button (`scene-skybox-browse`) that opens the chooser through [browse], which returns true when it assigned a skybox.
+  * Browse button (`scene-skybox-browse`) that opens the chooser through [browse], which returns true when it assigned a
+  * skybox.
  */
 internal class SkyboxRow(
     private val file: VirtualFile,
@@ -50,7 +51,9 @@ internal class SkyboxRow(
                 preferredSize = Dimension(side, side)
             }
             button.addActionListener {
-                if (browse(file)) field.text = text(service<AbyssusPluginCtx>().documents.parsing.parse(textOf(file)).skyboxName)
+                if (browse(file)) {
+                    field.text = text(service<AbyssusPluginCtx>().documents.parsing.parse(textOf(file)).skyboxName)
+                }
             }
             line.add(button, BorderLayout.EAST)
         }

@@ -17,7 +17,8 @@ class ScenePanelModelTest {
 
     @Test
     fun projectSceneOffersBrowseAndShowsTheSavedSkybox() {
-        val row = model("""{"format":"abyssus","formatVersion":1,"skyboxName":"skybox_default"}""", inProject = true).skybox
+        val row =
+            model("""{"format":"abyssus","formatVersion":1,"skyboxName":"skybox_default"}""", inProject = true).skybox
         assertEquals("skybox_default", row.value)
         assertTrue(row.browsable)
     }
@@ -32,7 +33,9 @@ class ScenePanelModelTest {
     @Test
     fun nullAbsentAndNonTextSkyboxesAreNone() {
         for (body in listOf("\"skyboxName\":null", "")) {
-            val json = """{"format":"abyssus","formatVersion":1${if (body.isEmpty()) "" else ",$body"}}"""
+            val json =
+                """{"format":"abyssus","formatVersion":1${when { body.isEmpty() -> ""
+ else -> ",$body" }}}"""
             assertNull(json, model(json, true).skybox.value)
         }
     }

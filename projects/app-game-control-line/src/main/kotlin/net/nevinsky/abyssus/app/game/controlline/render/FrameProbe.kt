@@ -23,7 +23,8 @@ enum class FrameSpan(val key: String, val pass: Boolean) {
 
 /**
  * Where the game marks the start and end of each [FrameSpan]. The shipped game uses [NONE], which does nothing, so the
- * game carries no timing work; the performance workload passes one that records CPU time, GPU timer queries or counters.
+  * game carries no timing work; the performance workload passes one that records CPU time, GPU timer queries or
+  * counters.
  * Main thread only.
  */
 interface FrameProbe {

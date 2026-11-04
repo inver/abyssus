@@ -22,7 +22,9 @@ class Handling(plane: PlaneComponent, mass: Float) {
     /** Lift acceleration per V² per radian of angle of attack (1/m). */
     private val lift = 0.5f * AIR_DENSITY * plane.wingArea * plane.liftSlope / mass
 
-    /** The pitch damping's angle of attack per unit of curvature (m·rad): `pitchDamping * chord / 2 / -PITCH_STABILITY`. */
+    /**
+     * The pitch damping's angle of attack per unit of curvature (m·rad): `pitchDamping * chord / 2 / -PITCH_STABILITY`.
+     */
     private val damping = plane.pitchDamping * sqrt(plane.wingArea / ASPECT_RATIO) / 2f / -PITCH_STABILITY
     private val perElevator = plane.elevatorEffect / -PITCH_STABILITY
     private val denominator = 1f + lift * damping
@@ -30,7 +32,10 @@ class Handling(plane: PlaneComponent, mass: Float) {
     /** The tightest curvature the pilot asks for (1/m): what lift alone gives just short of the stall. */
     val maxCurvature: Float = lift * STALL_ANGLE * 0.85f
 
-    /** The tilt that holds a steady turn of [curvature] (1/m, towards the plane's up) with [gravityUp] m/s² of gravity along the plane's up, at [speed] m/s. */
+    /**
+     * The tilt that holds a steady turn of [curvature] (1/m, towards the plane's up) with [gravityUp] m/s² of gravity
+     * along the plane's up, at [speed] m/s.
+     */
     fun tilt(curvature: Float, gravityUp: Float, speed: Float): Float {
         val v2 = (speed * speed).coerceAtLeast(1f)
         // κ (1 + lift·damping) = lift (TRIM + perElevator·elevator) + gravityUp / V²

@@ -9,16 +9,25 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class UiPreviewListTest {
-    private val text = canonicalUi("""{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,
-        "bindings":[{"name":"scores","type":"list","fields":[{"name":"rank","type":"number"},{"name":"name","type":"string"},{"name":"ok","type":"boolean"}],
+    private val text =
+        canonicalUi(
+            """{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,
+        "bindings":[{"name":"scores","type":"list","fields":[{"name":"rank","type":"number"},{"name":"name",
+"type":"string"},{"name":"ok","type":"boolean"}],
           "sample":[{"rank":1,"name":"Ace","ok":true},{"rank":2,"name":"Bo","ok":false}]}],
-        "screens":[{"id":"main","root":{"id":"root","type":"list","bindings":{"items":"scores"},"template":{"id":"row","type":"label","bindings":{"text":"item.name"}}}}]}}}""")!!
+        "screens":[{"id":"main","root":{"id":"root","type":"list","bindings":{"items":"scores"},"template":{"id":"row",
+"type":"label","bindings":{"text":"item.name"}}}}]}}}"""
+        )
 
-    private val collection: UiCollection get() = (admitUi(text) as UiAdmission.Admitted).collection
+    private val collection: UiCollection
+        get() = (admitUi(text) as UiAdmission.Admitted).collection
+
     private fun state() = UiPreviewState.Factory().of(collection)
+
     private fun rows(s: UiPreviewState) = (s.samples["scores"] as UiValue.Rows).items
 
-    @Test fun theAuthoredSampleRowsAreTheStartingWorld() {
+    @Test
+    fun theAuthoredSampleRowsAreTheStartingWorld() {
         val s = state()
         assertEquals(2, rows(s).size)
         assertEquals(UiValue.Text("Ace"), rows(s)[0]["name"])
@@ -28,7 +37,8 @@ class UiPreviewListTest {
         assertTrue(view.diagnostics.toString(), view.diagnostics.isEmpty())
     }
 
-    @Test fun rowsAreAddedRemovedAndEditedWithTheRecordsTypes() {
+    @Test
+    fun rowsAreAddedRemovedAndEditedWithTheRecordsTypes() {
         val s = state()
         assertTrue(s.addRow("scores") is SampleResult.Applied)
         assertEquals(UiValue.Num(0.0), rows(s)[2]["rank"])
@@ -46,26 +56,32 @@ class UiPreviewListTest {
         assertEquals(SampleResult.Rejected(SampleProblem.NO_SUCH_ROW), s.removeRow("scores", 7))
     }
 
-    @Test fun aListIsNotEditedAsOneValueAndOtherBindingsAreRejectedForRowEdits() {
+    @Test
+    fun aListIsNotEditedAsOneValueAndOtherBindingsAreRejectedForRowEdits() {
         val s = state()
         assertEquals(SampleResult.Rejected(SampleProblem.NOT_A_LIST), s.setSample("scores", "[]"))
         assertEquals(SampleResult.Rejected(SampleProblem.UNKNOWN_BINDING), s.addRow("ghost"))
         assertEquals(SampleResult.Rejected(SampleProblem.NOT_A_LIST), s.removeRow("ghost", 0))
     }
 
-    @Test fun resetBringsBackTheAuthoredRowsAndTheWriterRefusesALiveListWrite() {
+    @Test
+    fun resetBringsBackTheAuthoredRowsAndTheWriterRefusesALiveListWrite() {
         val s = state()
-        s.addRow("scores"); s.removeRow("scores", 0); s.setRowField("scores", 0, "name", "Zed")
+        s.addRow("scores")
+        s.removeRow("scores", 0)
+        s.setRowField("scores", 0, "name", "Zed")
         assertTrue(s.log.size >= 3)
         s.reset()
         assertEquals(listOf("Ace", "Bo"), rows(s).map { (it["name"] as UiValue.Text).value })
         assertTrue(s.log.isEmpty())
-        val refused = s.writer().write(net.nevinsky.abyssus.lib.core.ui.state.UiWrite("scores", UiValue.Rows(emptyList()), "w"))
+        val refused =
+            s.writer().write(net.nevinsky.abyssus.lib.core.ui.state.UiWrite("scores", UiValue.Rows(emptyList()), "w"))
         assertTrue(refused is net.nevinsky.abyssus.lib.core.ui.state.UiWriteResult.Rejected)
         assertEquals("the document text is unchanged by all of it", canonicalUi(text), text)
     }
 
-    @Test fun aDefinitionChangeStartsFromTheNewAuthoredRows() {
+    @Test
+    fun aDefinitionChangeStartsFromTheNewAuthoredRows() {
         val old = state()
         old.addRow("scores")
         val changed = text.replace("\"name\": \"Ace\"", "\"name\": \"Zoe\"")

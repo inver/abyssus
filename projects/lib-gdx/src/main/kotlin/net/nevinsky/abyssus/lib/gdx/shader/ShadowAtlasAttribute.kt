@@ -12,7 +12,11 @@ import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.Vector4
 
-enum class ShadowLightKind { DIRECTIONAL, POINT, SPOT }
+enum class ShadowLightKind {
+    DIRECTIONAL,
+    POINT,
+    SPOT,
+}
 
 data class ShadowAtlasView(val matrix: Matrix4, val uvTransform: Vector4) {
     fun copyOwned() = ShadowAtlasView(matrix.cpy(), Vector4(uvTransform))
@@ -33,12 +37,24 @@ data class ShadowLightRecord(
 /** One atlas binding with per-light records associated by light object identity, never array order. */
 class ShadowAtlasAttribute(val atlas: GLTexture, records: List<ShadowLightRecord>) : Attribute(Type) {
     val records: List<ShadowLightRecord> = records.map(ShadowLightRecord::copyOwned)
+
     fun recordFor(light: BaseLight<*>): ShadowLightRecord? = records.firstOrNull { it.light === light }
+
     override fun copy(): Attribute = ShadowAtlasAttribute(atlas, records)
-    override fun hashCode(): Int = 31 * System.identityHashCode(atlas) + records.fold(1) { h, r -> 31 * h + r.lightId.hashCode() }
-    override fun equals(other: Any?): Boolean = other is ShadowAtlasAttribute && atlas === other.atlas && records == other.records
-    override fun compareTo(other: Attribute): Int = if (type != other.type) type.compareTo(other.type) else
-        System.identityHashCode(atlas).compareTo(System.identityHashCode((other as ShadowAtlasAttribute).atlas))
+
+    override fun hashCode(): Int =
+        31 * System.identityHashCode(atlas) + records.fold(1) { h, r -> 31 * h + r.lightId.hashCode() }
+
+    override fun equals(other: Any?): Boolean =
+        other is ShadowAtlasAttribute && atlas === other.atlas && records == other.records
+
+    override fun compareTo(other: Attribute): Int =
+        if (type != other.type) {
+            type.compareTo(other.type)
+        } else {
+            System.identityHashCode(atlas).compareTo(System.identityHashCode((other as ShadowAtlasAttribute).atlas))
+        }
+
     companion object {
         const val Alias = "shadowAtlas"
         @JvmField val Type: Long = register(Alias)

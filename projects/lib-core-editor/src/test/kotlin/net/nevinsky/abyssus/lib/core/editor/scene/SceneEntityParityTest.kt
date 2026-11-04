@@ -6,10 +6,10 @@
 package net.nevinsky.abyssus.lib.core.editor.scene
 
 import com.badlogic.gdx.graphics.Color
-import net.nevinsky.abyssus.lib.core.format.EntityType
-import net.nevinsky.abyssus.lib.core.ecs.component.LightDto
+import java.io.File
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.LightDto
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
@@ -17,23 +17,30 @@ import net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.entityOf
 import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.io.File
 
 /** The scene view and the Properties panel read an entity through the same codecs, so they show the same values. */
 class SceneEntityParityTest {
     private val fixture = File("src/test/testData/project/Tree/scenes/Main Scene.scene")
 
-    /** A copy of `Main Scene` in memory: entity 7 gets a LightComponent and a spotlight 8 omits range, cone and softness. */
+    /**
+     * A copy of `Main Scene` in memory: entity 7 gets a LightComponent and a spotlight 8 omits range, cone and
+     * softness.
+     */
     private fun scene(): SceneDto {
         val scene = parseScene(fixture.readText())
         val white = LightDto(intensity = 1.2f).also { it.color.set(1f, 0.96f, 0.84f, 1f) }
         scene.entity(7)!!.add(LightComponent(white))
-        scene.ecs[8] = entityOf(
-            8, EntityType.LIGHT_SPOT,
-            NameComponent("Spot Light 8"), PositionComponent(1f, 5f, 2f), LightComponent(LightDto()),
-        )
+        scene.ecs[8] =
+            entityOf(
+                8,
+                EntityType.LIGHT_SPOT,
+                NameComponent("Spot Light 8"),
+                PositionComponent(1f, 5f, 2f),
+                LightComponent(LightDto()),
+            )
         return scene
     }
 
@@ -53,7 +60,12 @@ class SceneEntityParityTest {
             if (light.kind == LightKind.SPOT) {
                 assertEquals(id.toString(), v("range"), light.range, 0f)
                 assertEquals(id.toString(), v("coneAngle"), light.coneAngle, 0f)
-                assertEquals(id.toString(), v("edgeSoftness") / 100f, light.edgeSoftness, 1e-6f) // the panel shows percent
+                assertEquals(
+                    id.toString(),
+                    v("edgeSoftness") / 100f,
+                    light.edgeSoftness,
+                    1e-6f,
+                ) // the panel shows percent
             }
         }
         val spot = content.lights.single { it.entityId == 8L }
@@ -75,9 +87,15 @@ class SceneEntityParityTest {
         for (model in content.models) {
             fun pos(field: String) = value(scene, model.entityId, "PositionComponent", field)
             val p = model.transform.position
-            assertEquals(Triple(pos("localPosition.x"), pos("localPosition.y"), pos("localPosition.z")), Triple(p.x, p.y, p.z))
+            assertEquals(
+                Triple(pos("localPosition.x"), pos("localPosition.y"), pos("localPosition.z")),
+                Triple(p.x, p.y, p.z),
+            )
             val q = model.transform.rotation
-            assertEquals(listOf(pos("localRotation.x"), pos("localRotation.y"), pos("localRotation.z"), pos("localRotation.w")), listOf(q.x, q.y, q.z, q.w))
+            assertEquals(
+                listOf(pos("localRotation.x"), pos("localRotation.y"), pos("localRotation.z"), pos("localRotation.w")),
+                listOf(q.x, q.y, q.z, q.w),
+            )
             val s = model.transform.scale
             assertEquals(Triple(pos("localScale.x"), pos("localScale.y"), pos("localScale.z")), Triple(s.x, s.y, s.z))
         }

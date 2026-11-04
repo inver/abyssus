@@ -18,7 +18,8 @@ const val DEFAULT_SHADER_ROOT = "/shader/sky"
  * 1. **the asset** a program belongs to: a file in that asset's folder of the project ([files], see [withAssets]),
  *    for shaders an author ships with an asset (a procedural sky's `sky.frag`);
  * 2. **resources**: classpath folders the host adds ([withResources]), for the shaders of the application;
- * 3. **defaults**: the shaders bundled with this module ([DEFAULT_SHADER_ROOT]), used when nothing more specific has the
+  * 3. **defaults**: the shaders bundled with this module ([DEFAULT_SHADER_ROOT]), used when nothing more specific has
+  *   the
  *    file.
  *
  * A file found in an earlier place hides the same name in a later one, so a project or a host can override a default.
@@ -69,7 +70,10 @@ class ShaderStorage private constructor(
         return null
     }
 
-    /** The files [fragment] joined in order (shared functions first), as one fragment shader, with each file's `#pragma include` lines expanded from the shared GLSL of `lib-gdx`. */
+    /**
+     * The files [fragment] joined in order (shared functions first), as one fragment shader, with each file's `#pragma
+     * include` lines expanded from the shared GLSL of `lib-gdx`.
+     */
     fun fragment(vararg fragment: String, asset: String? = null): String =
         fragment.joinToString("\n") { ShaderSources.assemble(read(it, asset), it) }
 
@@ -88,7 +92,10 @@ class ShaderStorage private constructor(
         listOfNotNull(asset?.takeIf { files != null }?.let { "asset '$it'" }) + (resources + defaults).map { it.path }
 }
 
-/** Compiles [vertex] and [fragment] on the current GL context. Throws with the compiler log, naming [label], when they do not compile. */
+/**
+ * Compiles [vertex] and [fragment] on the current GL context. Throws with the compiler log, naming [label], when they
+ * do not compile.
+ */
 fun compileProgram(vertex: String, fragment: String, label: String): ShaderProgram {
     val program = ShaderProgram(vertex, fragment)
     if (!program.isCompiled) {

@@ -76,7 +76,11 @@ class SceneInteractionPaintTest {
 
         override fun dragged(to: Vector3, reversed: Boolean) {
             moved += Vector3(to)
-            val mode = if (reversed) FoliageBrushMode.Erase else FoliageBrushMode.Paint
+            val mode = if (reversed) {
+                FoliageBrushMode.Erase
+            } else {
+                FoliageBrushMode.Paint
+            }
             brush!!.stroke(mask, last!!, Vector3(to), RADIUS, 1f, mode)
             last = Vector3(to)
         }
@@ -133,7 +137,9 @@ class SceneInteractionPaintTest {
         state.brush = BrushMode(FOLIAGE_BRUSH, 1L, RADIUS, 1f, erase)
     }
 
-    /** Press at ([x0], [y0]) and drag to ([x1], [y1]) in [steps] drag events, like a real drag; the button stays down. */
+    /**
+     * Press at ([x0], [y0]) and drag to ([x1], [y1]) in [steps] drag events, like a real drag; the button stays down.
+     */
     private fun drag(f: Fixture, x0: Int, y0: Int, x1: Int, y1: Int, steps: Int = 4) {
         f.interaction.pressed(x0, y0, true)
         for (step in 1..steps) {
@@ -154,7 +160,11 @@ class SceneInteractionPaintTest {
         val dx = bx - ax
         val dz = bz - az
         val length = dx * dx + dz * dz
-        val along = if (length <= 0f) 0f else ((px - ax) * dx + (pz - az) * dz) / length
+        val along = if (length <= 0f) {
+            0f
+        } else {
+            ((px - ax) * dx + (pz - az) * dz) / length
+        }
         val t = along.coerceIn(0f, 1f)
         val qx = ax + dx * t - px
         val qz = az + dz * t - pz
@@ -316,7 +326,9 @@ class SceneInteractionPaintTest {
         val path = f.paint.begun + f.paint.moved
         var raised = 0
         for (gz in 0 until resolution) for (gx in 0 until resolution) {
-            if (f.paint.value(gx, gz) == 0) continue
+            if (f.paint.value(gx, gz) == 0) {
+                continue
+            }
             raised++
             val worldTexel = Vector3(gx * cell, 0f, gz * cell).mul(world)
             val distance = path.zipWithNext().minOfOrNull { (a, b) ->

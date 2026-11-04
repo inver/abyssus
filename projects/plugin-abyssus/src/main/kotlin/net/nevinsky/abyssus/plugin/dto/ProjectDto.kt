@@ -10,7 +10,10 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 
-/** A `.abss` project as the view shows it. [scenes] holds [SceneEntry]s, and a [SceneError] for each that failed to read. */
+/**
+ * A `.abss` project as the view shows it. [scenes] holds [SceneEntry]s, and a [SceneError] for each that failed to
+ * read.
+ */
 data class ProjectDto(
     val name: String?,
     val scenes: List<Any>,
@@ -23,7 +26,7 @@ data class ProjectDto(
 data class SceneError(@get:JsonIgnore val file: VirtualFile, val error: String?)
 
 /** Editor source paired with a platform-independent scene. */
-data class SceneEntry @JvmOverloads constructor(
+data class SceneEntry constructor(
     @get:JsonIgnore val file: VirtualFile,
     val scene: SceneDto,
 )

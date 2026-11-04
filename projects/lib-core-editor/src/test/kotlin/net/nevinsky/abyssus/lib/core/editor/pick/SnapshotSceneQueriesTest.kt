@@ -5,19 +5,18 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.scene.FoliagePlacement
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
-import com.badlogic.gdx.math.Vector3
-import com.badlogic.gdx.math.Quaternion
-import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
-
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Matrix4
+import com.badlogic.gdx.math.Quaternion
+import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.math.collision.Ray
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.core.editor.scene.FoliagePlacement
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -37,26 +36,31 @@ class SnapshotSceneQueriesTest {
 
     private fun at(x: Float, y: Float, z: Float) = Matrix4().setToTranslation(x, y, z)
 
-    /** Looks along -Z at the height 1 from z 10, so a click on the centre of the view goes through the middle of boxes at x 0. */
-    private fun camera() = PerspectiveCamera(67f, width.toFloat(), height.toFloat()).also {
-        it.position.set(0f, 1f, 10f)
-        it.lookAt(0f, 1f, 0f)
-        it.near = 0.1f
-        it.far = 100f
-        it.update()
-    }
+    /**
+     * Looks along -Z at the height 1 from z 10, so a click on the centre of the view goes through the middle of boxes
+     * at x 0.
+     */
+    private fun camera() =
+        PerspectiveCamera(67f, width.toFloat(), height.toFloat()).also {
+            it.position.set(0f, 1f, 10f)
+            it.lookAt(0f, 1f, 0f)
+            it.near = 0.1f
+            it.far = 100f
+            it.update()
+        }
 
     private fun placement(id: Long, x: Float, y: Float, z: Float) =
         AssetPlacement(id, "model", PlacementTransform(Vector3(x, y, z), Quaternion(), Vector3(1f, 1f, 1f)))
 
     /** Looks down from above the origin terrain (local x 0..100, z 0..100, height 0), so the centre ray lands on it. */
-    private fun descending() = PerspectiveCamera(67f, width.toFloat(), height.toFloat()).also {
-        it.position.set(50f, 10f, 50f)
-        it.lookAt(50f, 0f, 60f)
-        it.near = 0.1f
-        it.far = 100f
-        it.update()
-    }
+    private fun descending() =
+        PerspectiveCamera(67f, width.toFloat(), height.toFloat()).also {
+            it.position.set(50f, 10f, 50f)
+            it.lookAt(50f, 0f, 60f)
+            it.near = 0.1f
+            it.far = 100f
+            it.update()
+        }
 
     private class Fixture(val state: SceneViewState, val queries: SnapshotSceneQueries)
 
@@ -80,16 +84,20 @@ class SnapshotSceneQueriesTest {
 
     @Test
     fun theQueriesSeeThePathDraftCopies() {
-        val path = net.nevinsky.abyssus.lib.core.editor.arrange.arrangementAlong(listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f))).also {
-            it.asset = BaseMeta(name = "post")
-            it.spacing = 10f
-            it.slots = mutableListOf(11, 12, 13)
-        }
+        val path =
+            net.nevinsky.abyssus.lib.core.editor.arrange
+                .arrangementAlong(listOf(Vector3(0f, 0f, 0f), Vector3(20f, 0f, 0f)))
+                .also {
+                    it.asset = BaseMeta(name = "post")
+                    it.spacing = 10f
+                    it.slots = mutableListOf(11, 12, 13)
+                }
         val posts = listOf(11, 12, 13).map { placement(it.toLong(), 0f, 0f, 0f) }
-        val content = SceneContent(
-            models = posts,
-            arrangements = listOf(net.nevinsky.abyssus.lib.core.editor.content.ArrangementPlacement(10L, path)),
-        )
+        val content =
+            SceneContent(
+                models = posts,
+                arrangements = listOf(net.nevinsky.abyssus.lib.core.editor.content.ArrangementPlacement(10L, path)),
+            )
         val f = fixture(emptyList(), content)
         assertEquals(3, f.queries.content.models.size)
         f.state.pathDraft = PathEdit(10L, listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)))
@@ -120,29 +128,43 @@ class SnapshotSceneQueriesTest {
     @Test
     fun theViewCameraAndTerrainsCannotDrop() {
         val content = SceneContent(models = listOf(placement(1006L, 0f, 5f, 0f)))
-        val f = fixture(listOf(snapshotBoxOf(1004L, unit, at(0f, 0f, 0f)), snapshotBoxOf(1006L, unit, at(0f, 5f, 0f))), content)
+        val f =
+            fixture(
+                listOf(snapshotBoxOf(1004L, unit, at(0f, 0f, 0f)), snapshotBoxOf(1006L, unit, at(0f, 5f, 0f))),
+                content,
+            )
         f.state.viewCamera = 1006L
         assertNull(f.queries.groundBelow(1006L))
     }
 
     @Test
     fun aPreviewMovesTheBoxForLaterQueries() {
-        val f = fixture(listOf(snapshotBoxOf(1004L, unit, at(0f, 0f, 0f)), snapshotBoxOf(1006L, unit, at(0f, 5f, 0f))), SceneContent(models = listOf(placement(1006L, 0f, 5f, 0f))))
+        val f =
+            fixture(
+                listOf(snapshotBoxOf(1004L, unit, at(0f, 0f, 0f)), snapshotBoxOf(1006L, unit, at(0f, 5f, 0f))),
+                SceneContent(models = listOf(placement(1006L, 0f, 5f, 0f))),
+            )
         assertEquals(5f, f.queries.lowestPoint(1006L)!!, 1e-5f)
-        f.state.preview = mapOf(1006L to DragResult(PlacementTransform(Vector3(0f, 9f, 0f), Quaternion(), Vector3(1f, 1f, 1f)), null))
+        f.state.preview =
+            mapOf(1006L to DragResult(PlacementTransform(Vector3(0f, 9f, 0f), Quaternion(), Vector3(1f, 1f, 1f)), null))
         assertEquals(9f, f.queries.lowestPoint(1006L)!!, 1e-5f)
     }
 
     @Test
     fun theBoxesArePutTogetherOncePerSnapshotAndPreview() {
-        val f = fixture(listOf(snapshotBoxOf(1004L, unit, at(0f, 0f, 0f)), snapshotBoxOf(1006L, unit, at(0f, 5f, 0f))), SceneContent(models = listOf(placement(1006L, 0f, 5f, 0f))))
+        val f =
+            fixture(
+                listOf(snapshotBoxOf(1004L, unit, at(0f, 0f, 0f)), snapshotBoxOf(1006L, unit, at(0f, 5f, 0f))),
+                SceneContent(models = listOf(placement(1006L, 0f, 5f, 0f))),
+            )
         repeat(5) {
             f.queries.lowestPoint(1006L)
             f.queries.groundBelow(1006L)
             f.queries.pick(width / 2, height / 2, width, height)
         }
         assertEquals(1, f.queries.targetBuilds)
-        f.state.preview = mapOf(1006L to DragResult(PlacementTransform(Vector3(0f, 6f, 0f), Quaternion(), Vector3(1f, 1f, 1f)), null))
+        f.state.preview =
+            mapOf(1006L to DragResult(PlacementTransform(Vector3(0f, 6f, 0f), Quaternion(), Vector3(1f, 1f, 1f)), null))
         f.queries.lowestPoint(1006L)
         f.queries.groundBelow(1006L)
         assertEquals(2, f.queries.targetBuilds)
@@ -156,7 +178,8 @@ class SnapshotSceneQueriesTest {
         val handles = f.queries.gizmoHandles(height)
         assertNotNull(handles)
         val tip = handles!!.tip(GizmoAxis.X)
-        val screen = Vector3(tip.x, tip.y, tip.z).also { camera().project(it, 0f, 0f, width.toFloat(), height.toFloat()) }
+        val screen =
+            Vector3(tip.x, tip.y, tip.z).also { camera().project(it, 0f, 0f, width.toFloat(), height.toFloat()) }
         val x = screen.x.toInt()
         val y = height - screen.y.toInt()
         assertEquals(GizmoAxis.X, f.queries.gizmoHit(x, y, width, height))
@@ -170,11 +193,12 @@ class SnapshotSceneQueriesTest {
     @Test
     fun paintingRequiresTheSelectedTerrainToBeTheNearestTerrainAlongTheRay() {
         val data = TerrainData(3, FloatArray(9), 100, 1f)
-        val f = fixture(
-            boxes = listOf(snapshotBoxOf(1007L, unit, at(50f, 7f, 50f))),
-            terrains = listOf(TerrainTarget(1009L, data, Matrix4()), TerrainTarget(1008L, data, at(0f, 5f, 0f))),
-            at = descending(),
-        )
+        val f =
+            fixture(
+                boxes = listOf(snapshotBoxOf(1007L, unit, at(50f, 7f, 50f))),
+                terrains = listOf(TerrainTarget(1009L, data, Matrix4()), TerrainTarget(1008L, data, at(0f, 5f, 0f))),
+                at = descending(),
+            )
         val ray = Ray(Vector3(50f, 20f, 50f), Vector3(0f, -1f, 0f))
         assertNull("another terrain covers the selected lower terrain", f.queries.terrainHit(1009L, ray))
         val hit = f.queries.terrainHit(1008L, ray)
@@ -185,15 +209,22 @@ class SnapshotSceneQueriesTest {
     @Test
     fun aRayThroughAFoliageCopyPicksTheTerrainItGrowsOn() {
         // The copies stand in the foliage bake of their terrain: they are drawn, but they are never pick targets.
-        val content = SceneContent(
-            terrains = listOf(AssetPlacement(1L, "terrain", PlacementTransform.IDENTITY)),
-            foliages = listOf(FoliagePlacement(1L, "foliage_meadow", "terrain", PlacementTransform.IDENTITY)),
-        )
+        val content =
+            SceneContent(
+                terrains = listOf(AssetPlacement(1L, "terrain", PlacementTransform.IDENTITY)),
+                foliages = listOf(FoliagePlacement(1L, "foliage_meadow", "terrain", PlacementTransform.IDENTITY)),
+            )
         val terrain = listOf(TerrainTarget(1L, TerrainData(3, FloatArray(9), 100, 1f), Matrix4()))
         val f = fixture(emptyList(), content, terrain, descending())
-        assertEquals("the click passes the copies and picks the terrain they grow on", 1L,
-            f.queries.pick(width / 2, height / 2, width, height))
-        assertEquals("foliage adds no BoxTarget", emptyList<Long>(),
-            SceneMarkers().targets(content).map { it.entityId })
+        assertEquals(
+            "the click passes the copies and picks the terrain they grow on",
+            1L,
+            f.queries.pick(width / 2, height / 2, width, height),
+        )
+        assertEquals(
+            "foliage adds no BoxTarget",
+            emptyList<Long>(),
+            SceneMarkers().targets(content).map { it.entityId },
+        )
     }
 }

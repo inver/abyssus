@@ -30,7 +30,11 @@ class PlacedEntities<A : Any, E : PlacedEntity<A>>(private val place: (AssetPlac
         for (p in placements) {
             val asset = assetOf(p.storageName) ?: continue
             val current = entities[p.entityId]?.takeIf { it.asset === asset }
-            next[p.entityId] = if (current?.placement == p) current else place(p, asset, current)
+            next[p.entityId] = if (current?.placement == p) {
+                current
+            } else {
+                place(p, asset, current)
+            }
         }
         entities = next
     }

@@ -24,7 +24,9 @@ class ShadowResourcesGlTest {
         var checked = false
         var beforeScissor = false
         val result = GlHarness.render(SceneRenderParams.DEFAULT, 2) { _, frame ->
-            if (frame != 0) return@render
+            if (frame != 0) {
+                return@render
+            }
             val unsupported = ShadowResources(100_000)
             assertFalse(unsupported.available)
             unsupported.dispose()
@@ -66,7 +68,9 @@ class ShadowResourcesGlTest {
                 checked = true
             } finally {
                 resources.dispose()
-                if (!beforeScissor) Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST)
+                if (!beforeScissor) {
+                    Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST)
+                }
             }
         }
         assertNull(result.error)
@@ -76,7 +80,9 @@ class ShadowResourcesGlTest {
     @Test fun failedPassRestoresCallerFramebufferAndResourcesCanBeRebuilt() {
         var checked = false
         val result = GlHarness.render(SceneRenderParams.DEFAULT, 2) { _, frame ->
-            if (frame != 0) return@render
+            if (frame != 0) {
+                return@render
+            }
             val caller = FrameBuffer(Pixmap.Format.RGBA8888, 64, 64, true)
             val resources = ShadowResources(256)
             try {

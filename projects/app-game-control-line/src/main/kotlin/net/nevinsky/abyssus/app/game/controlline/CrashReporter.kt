@@ -19,11 +19,13 @@ import java.time.format.DateTimeFormatter
 const val KEPT_CRASH_RECORDS = 10
 
 /** Where the game writes its crash records: `~/.abyssus-control-line/logs`. */
-fun defaultLogsFolder(home: String = System.getProperty("user.home")): Path = Path.of(home, ".abyssus-control-line", "logs")
+fun defaultLogsFolder(home: String = System.getProperty("user.home")): Path =
+    Path.of(home, ".abyssus-control-line", "logs")
 
 /**
- * What the game runs on, as plain values: what a crash record names and what the game logs once at start. The GL strings
- * are null until the window's context exists; [GameEnvironment.withGl] adds them, so the reporter never touches GL.
+ * What the game runs on, as plain values: what a crash record names and what the game logs once at start. The GL
+ * strings are null until the window's context exists; [GameEnvironment.withGl] adds them, so the reporter never touches
+ * GL.
  */
 data class GameEnvironment(
     val version: String,
@@ -38,24 +40,28 @@ data class GameEnvironment(
         copy(glRenderer = renderer, glVersion = version, fieldView = fieldView)
 
     /** The one environment line of the start log. */
-    fun line(): String = "Control Line $version; $os; $jvm; max heap $maxHeapMb MB; " +
-        "GL ${glRenderer ?: "none"}, ${glVersion ?: "none"}; field view ${fieldView ?: "unknown"}"
+    fun line(): String =
+        "Control Line $version; $os; $jvm; max heap $maxHeapMb MB; " +
+            "GL ${glRenderer ?: "none"}, ${glVersion ?: "none"}; field view ${fieldView ?: "unknown"}"
 
     companion object {
         /** The running JVM's environment; the version is the jar's `Implementation-Version`, `dev` outside a build. */
-        fun current(): GameEnvironment = GameEnvironment(
-            version = ControlLineGame::class.java.`package`?.implementationVersion ?: "dev",
-            os = "${System.getProperty("os.name")} ${System.getProperty("os.version")} ${System.getProperty("os.arch")}",
-            jvm = "${System.getProperty("java.vendor")} ${System.getProperty("java.version")}",
-            maxHeapMb = Runtime.getRuntime().maxMemory() / (1024 * 1024),
-        )
+        fun current(): GameEnvironment =
+            GameEnvironment(
+                version = ControlLineGame::class.java.`package`?.implementationVersion ?: "dev",
+                os =
+                    "${System.getProperty("os.name")} ${System.getProperty("os.version")} " +
+                        "${System.getProperty("os.arch")}",
+                jvm = "${System.getProperty("java.vendor")} ${System.getProperty("java.version")}",
+                maxHeapMb = Runtime.getRuntime().maxMemory() / (1024 * 1024),
+            )
     }
 }
 
 /**
  * Writes a plain-text crash record (design decision D1, spec `control-line-runtime-stability`) to
- * `<folder>/crash-<timestamp>.txt`: the time, the thread, [environment] and the stack trace. The record is written to
- * a temporary file first and moved into place, so a record is whole or absent. Only the newest [KEPT_CRASH_RECORDS] are
+ * `<folder>/crash-<timestamp>.txt`: the time, the thread, [environment] and the stack trace. The record is written to a
+ * temporary file first and moved into place, so a record is whole or absent. Only the newest [KEPT_CRASH_RECORDS] are
  * kept. When the folder cannot be made or written, the record goes to [stderr] instead. Nothing is sent anywhere.
  *
  * As the default uncaught-exception handler it reports the failure of any thread and then calls [onCrash], which asks
@@ -68,8 +74,7 @@ class CrashReporter(
     private val stderr: PrintStream = System.err,
 ) : Thread.UncaughtExceptionHandler {
     /** Called after an uncaught exception was reported: the game asks its application to exit. */
-    @Volatile
-    var onCrash: () -> Unit = {}
+    @Volatile var onCrash: () -> Unit = {}
 
     /** Whether a failure was reported: the process then exits with a non-zero status. */
     @Volatile
@@ -133,9 +138,13 @@ class CrashReporter(
 
     /** Deletes the oldest records beyond [KEPT_CRASH_RECORDS]; the names sort by time. */
     private fun prune() {
-        val records = Files.list(folder).use { files ->
-            files.filter { it.fileName.toString().let { n -> n.startsWith("crash-") && n.endsWith(".txt") } }.sorted().toList()
-        }
+        val records =
+            Files.list(folder).use { files ->
+                files
+                    .filter { it.fileName.toString().let { n -> n.startsWith("crash-") && n.endsWith(".txt") } }
+                    .sorted()
+                    .toList()
+            }
         records.dropLast(KEPT_CRASH_RECORDS).forEach { Files.deleteIfExists(it) }
     }
 

@@ -52,14 +52,17 @@ const val PATH_HANDLE_PX = PATH_HANDLE_WIDTH_PX / 2f + 3f
 const val PATH_LINE_PX = 8f
 
 /**
- * Hit tests for the line of an arrangement: the handle on each point and the segments themselves. Distances are in screen pixels, so a handle is as easy to grab far away as near.
+  * Hit tests for the line of an arrangement: the handle on each point and the segments themselves. Distances are in
+  * screen pixels, so a handle is as easy to grab far away as near.
  */
 class PathHandles(private val points: List<Vector3>, private val closed: Boolean) {
     private val curve = PathCurve()
 
     /**
-     * The handle under the pixel ([x], [y]); else the curve if it is within [PATH_LINE_PX] pixels; else null. A handle is
-     * hit when an edge of its diamond is within [radius] pixels (an edge of the drawn control object is what a click has to meet).
+      * The handle under the pixel ([x], [y]); else the curve if it is within [PATH_LINE_PX] pixels; else null. A handle
+      * is
+      * hit when an edge of its diamond is within [radius] pixels (an edge of the drawn control object is what a click
+      * has to meet).
      */
     fun hit(projection: ScreenProjection, x: Float, y: Float, radius: Float = PATH_HANDLE_PX): PathHit? {
         var best: PathHit? = null
@@ -98,14 +101,19 @@ class PathHandles(private val points: List<Vector3>, private val closed: Boolean
         return best
     }
 
-    /** The distance in pixels from ([x], [y]) to the nearest edge of the diamond at [at] that is on screen, or null when none is. */
+    /**
+     * The distance in pixels from ([x], [y]) to the nearest edge of the diamond at [at] that is on screen, or null when
+     * none is.
+     */
     private fun edgeDistance(projection: ScreenProjection, at: Vector3, half: Float, x: Float, y: Float): Float? {
         var best: Float? = null
         for ((a, b) in diamondEdges(at, half)) {
             val sa = projection.at(a) ?: continue
             val sb = projection.at(b) ?: continue
             val d = distanceToSegment(x, y, sa, sb)
-            if (best == null || d < best) best = d
+            if (best == null || d < best) {
+                best = d
+            }
         }
         return best
     }
@@ -121,6 +129,10 @@ class PathHandles(private val points: List<Vector3>, private val closed: Boolean
         val dx = b.x - a.x
         val dy = b.y - a.y
         val length2 = dx * dx + dy * dy
-        return if (length2 <= 0f) 0f else (((x - a.x) * dx + (y - a.y) * dy) / length2).coerceIn(0f, 1f)
+        return if (length2 <= 0f) {
+            0f
+        } else {
+            (((x - a.x) * dx + (y - a.y) * dy) / length2).coerceIn(0f, 1f)
+        }
     }
 }

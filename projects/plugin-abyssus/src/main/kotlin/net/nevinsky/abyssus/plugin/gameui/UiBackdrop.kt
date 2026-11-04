@@ -21,7 +21,8 @@ interface UiBackdrop {
 }
 
 /**
- * A native scene as a preview backdrop: the scene view's own renderer, fed the scene's current editor text (unsaved text
+  * A native scene as a preview backdrop: the scene view's own renderer, fed the scene's current editor text (unsaved
+  * text
  * included, native admission applied), looking through its main camera. It draws models, terrain, sky and lights as the
  * Scene view does and runs no simulation, no Play and no game module. Created and disposed on the GL thread.
  */

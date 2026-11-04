@@ -17,13 +17,18 @@ class EnvironmentLightAttributeTest {
     /** A texture handle without GL: the attribute only carries it. */
     private class FakeCube(handle: Int) : GLTexture(GL20.GL_TEXTURE_CUBE_MAP, handle) {
         override fun getWidth() = 1
+
         override fun getHeight() = 1
+
         override fun getDepth() = 0
+
         override fun isManaged() = false
+
         override fun reload() = Unit
     }
 
     private val axisColors = FloatArray(18) { (it + 1) / 20f }
+
     private fun sky() = EnvironmentLightAttribute(FakeCube(7), FakeCube(8), 6, axisColors)
 
     @Test
@@ -31,14 +36,19 @@ class EnvironmentLightAttributeTest {
         val mask = PBRFloatAttribute.Metallic or PBRFloatAttribute.Roughness
         val plain = Environment().apply { set(ColorAttribute(ColorAttribute.AmbientLight, 0.3f, 0.3f, 0.3f, 1f)) }
         // exactly the defines the shader added before the attribute existed
-        assertEquals("#define metallicFactorFlag\n#define roughnessFactorFlag\n", PbrModelShader.pbrDefines(mask, plain))
+        assertEquals(
+            "#define metallicFactorFlag\n#define roughnessFactorFlag\n",
+            PbrModelShader.pbrDefines(mask, plain),
+        )
         assertEquals("#define metallicFactorFlag\n#define roughnessFactorFlag\n", PbrModelShader.pbrDefines(mask, null))
     }
 
     @Test
     fun theAttributeAddsTheFlag() {
         val lit = Environment().apply { set(sky()) }
-        assertTrue(PbrModelShader.pbrDefines(PBRFloatAttribute.Metallic, lit).contains("#define environmentLightFlag\n"))
+        assertTrue(
+            PbrModelShader.pbrDefines(PBRFloatAttribute.Metallic, lit).contains("#define environmentLightFlag\n")
+        )
         assertTrue(EnvironmentLightAttribute.has(lit))
         assertFalse(EnvironmentLightAttribute.has(Environment()))
     }
@@ -55,10 +65,11 @@ class EnvironmentLightAttributeTest {
     @Test
     fun defaultShaderAmbientUsesTheSixColors() {
         val cubemap = AmbientCubemap()
-        val both = Environment().apply {
-            set(ColorAttribute(ColorAttribute.AmbientLight, 0.3f, 0.3f, 0.3f, 1f))
-            set(sky())
-        }
+        val both =
+            Environment().apply {
+                set(ColorAttribute(ColorAttribute.AmbientLight, 0.3f, 0.3f, 0.3f, 1f))
+                set(sky())
+            }
         ModelShader.AmbientCubemapSetter.setAmbientBase(cubemap, both)
         assertArrayEquals(axisColors, cubemap.data, 0f)
     }
@@ -66,7 +77,10 @@ class EnvironmentLightAttributeTest {
     @Test
     fun defaultShaderAmbientWithoutTheSkyIsTheAmbientColor() {
         val cubemap = AmbientCubemap()
-        ModelShader.AmbientCubemapSetter.setAmbientBase(cubemap, Environment().apply { set(ColorAttribute(ColorAttribute.AmbientLight, 0.3f, 0.3f, 0.3f, 1f)) })
+        ModelShader.AmbientCubemapSetter.setAmbientBase(
+            cubemap,
+            Environment().apply { set(ColorAttribute(ColorAttribute.AmbientLight, 0.3f, 0.3f, 0.3f, 1f)) },
+        )
         assertArrayEquals(FloatArray(18) { 0.3f }, cubemap.data, 1e-6f)
     }
 
@@ -78,7 +92,14 @@ class EnvironmentLightAttributeTest {
     }
 
     private fun fading(weight: Float) =
-        EnvironmentLightAttribute(FakeCube(7), FakeCube(8), 6, axisColors, EnvironmentLightAttribute(FakeCube(9), FakeCube(10), 5, FloatArray(18) { 1f }), weight)
+        EnvironmentLightAttribute(
+            FakeCube(7),
+            FakeCube(8),
+            6,
+            axisColors,
+            EnvironmentLightAttribute(FakeCube(9), FakeCube(10), 5, FloatArray(18) { 1f }),
+            weight,
+        )
 
     @Test
     fun aFadingAttributeCopiesAndComparesWithItsSecondEnvironment() {
@@ -101,7 +122,9 @@ class EnvironmentLightAttributeTest {
 
     @Test
     fun onlyOneEnvironmentCanBeFadedTo() {
-        val chained = runCatching { EnvironmentLightAttribute(FakeCube(1), FakeCube(2), 1, axisColors, fading(0.5f), 0.5f) }
+        val chained = runCatching {
+            EnvironmentLightAttribute(FakeCube(1), FakeCube(2), 1, axisColors, fading(0.5f), 0.5f)
+        }
         assertTrue(chained.exceptionOrNull() is IllegalArgumentException)
     }
 
@@ -109,10 +132,19 @@ class EnvironmentLightAttributeTest {
     fun theDefaultShaderBlendsTheAxisColorsOnTheCpu() {
         for ((weight, expected) in listOf(0f to 0.1f, 0.5f to 0.55f, 1f to 1f)) {
             val cubemap = AmbientCubemap()
-            val env = Environment().apply {
-                set(EnvironmentLightAttribute(FakeCube(7), FakeCube(8), 6, FloatArray(18) { 0.1f },
-                    EnvironmentLightAttribute(FakeCube(9), FakeCube(10), 6, FloatArray(18) { 1f }), weight))
-            }
+            val env =
+                Environment().apply {
+                    set(
+                        EnvironmentLightAttribute(
+                            FakeCube(7),
+                            FakeCube(8),
+                            6,
+                            FloatArray(18) { 0.1f },
+                            EnvironmentLightAttribute(FakeCube(9), FakeCube(10), 6, FloatArray(18) { 1f }),
+                            weight,
+                        )
+                    )
+                }
             ModelShader.AmbientCubemapSetter.setAmbientBase(cubemap, env)
             assertArrayEquals("weight $weight", FloatArray(18) { expected }, cubemap.data, 1e-6f)
         }
@@ -123,7 +155,9 @@ class EnvironmentLightAttributeTest {
         val plain = Environment().apply { set(sky()) }
         val fade = Environment().apply { set(fading(0.5f)) }
         assertFalse(PbrModelShader.pbrDefines(PBRFloatAttribute.Metallic, plain).contains("environmentFadeFlag"))
-        assertTrue(PbrModelShader.pbrDefines(PBRFloatAttribute.Metallic, fade).contains("#define environmentFadeFlag\n"))
+        assertTrue(
+            PbrModelShader.pbrDefines(PBRFloatAttribute.Metallic, fade).contains("#define environmentFadeFlag\n")
+        )
         assertTrue(EnvironmentLightAttribute.isFading(fade))
         assertFalse(EnvironmentLightAttribute.isFading(plain))
         // same attribute type, so the shader cache needs PbrModelShader.canRender to tell the two programs apart

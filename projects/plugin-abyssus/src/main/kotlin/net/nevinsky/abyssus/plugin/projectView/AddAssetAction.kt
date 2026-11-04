@@ -47,11 +47,23 @@ class AddAssetGroup(
         val items = ArrayList<AnAction>()
         for ((type, title) in listOf(MetaType.MODEL to "addAssetModels", MetaType.TERRAIN to "addAssetTerrains")) {
             val ofType = assets.filter { it.type == type }
-            if (ofType.isEmpty()) continue
+            if (ofType.isEmpty()) {
+                continue
+            }
             items += Separator.create(AbyssusBundle.message(title))
             for (asset in ofType) {
-                val ids = if (type == MetaType.MODEL) meshes(asset.name).orEmpty() else emptyList()
-                items += if (ids.size > 1) meshMenu(asset, ids) else childAction(AssetPick(asset), asset.name, literalName = true)
+                val ids =
+                    if (type == MetaType.MODEL) {
+                        meshes(asset.name).orEmpty()
+                    } else {
+                        emptyList()
+                    }
+                items +=
+                    if (ids.size > 1) {
+                        meshMenu(asset, ids)
+                    } else {
+                        childAction(AssetPick(asset), asset.name, literalName = true)
+                    }
             }
         }
         return items.toTypedArray()
@@ -59,31 +71,35 @@ class AddAssetGroup(
 
     override fun getActionUpdateThread() = ActionUpdateThread.BGT
 
-    private fun meshMenu(asset: BaseMeta, ids: List<String>): AnAction = DefaultActionGroup(asset.name, true).also { menu ->
-        menu.templatePresentation.setText(asset.name, false)
-        menu.add(childAction(AssetPick(asset), AbyssusBundle.message("addAssetWholeModel"), literalName = true))
-        menu.add(Separator.create())
-        for (id in ids) menu.add(childAction(AssetPick(asset, id), id, literalName = true))
-    }
+    private fun meshMenu(asset: BaseMeta, ids: List<String>): AnAction =
+        DefaultActionGroup(asset.name, true).also { menu ->
+            menu.templatePresentation.setText(asset.name, false)
+            menu.add(childAction(AssetPick(asset), AbyssusBundle.message("addAssetWholeModel"), literalName = true))
+            menu.add(Separator.create())
+            for (id in ids) menu.add(childAction(AssetPick(asset, id), id, literalName = true))
+        }
 
     override fun canAdd(target: AssetPick) = canAddAsset(file, SceneDocumentCache.of(project))
 
     override fun addTarget(target: AssetPick) {
-        val added = SceneComponentEdits.addAsset(
-            project,
-            file,
-            target.asset,
-            position(),
-            SceneDocumentCache.of(project),
-            metaFiles,
-            target.meshId,
-        )
+        val added =
+            SceneComponentEdits.addAsset(
+                project,
+                file,
+                target.asset,
+                position(),
+                SceneDocumentCache.of(project),
+                metaFiles,
+                target.meshId,
+            )
         reportRejection(project, added.result)
         added.entityId?.let(select)
     }
 }
 
-/** The mesh ids of the models of the project of [file], by asset name; parses the model, so call it off the UI thread. */
+/**
+ * The mesh ids of the models of the project of [file], by asset name; parses the model, so call it off the UI thread.
+ */
 internal fun projectModelMeshes(file: VirtualFile): (String) -> List<String>? = { name ->
     ProjectLayout.projectDirFor(file)?.let { dir ->
         service<AbyssusPluginCtx>().assets.loading.modelMeshes(dir, name)?.map { it.id }
@@ -110,20 +126,24 @@ open class AddAssetAction : AbyssusTreeAction<VirtualFile>() {
 
     override fun isEnabled(e: AnActionEvent, target: VirtualFile) =
         e.project?.let {
-            canAddAsset(target, SceneDocumentCache.of(it)) && hasRenderAssets(
-                target,
-                service<AbyssusPluginCtx>().assets.metaFiles
-            )
+            canAddAsset(target, SceneDocumentCache.of(it)) &&
+                hasRenderAssets(
+                    target,
+                    service<AbyssusPluginCtx>().assets.metaFiles,
+                )
         } ?: false
 
     override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
         showActionGroup(
             e,
             AddAssetGroup(
-                project, target, service<AbyssusPluginCtx>().assets.metaFiles, { Vector3(0f, 0f, 0f) },
+                project,
+                target,
+                service<AbyssusPluginCtx>().assets.metaFiles,
+                { Vector3(0f, 0f, 0f) },
                 meshes = projectModelMeshes(target),
             ),
-            AbyssusBundle.message("addAssetTitle")
+            AbyssusBundle.message("addAssetTitle"),
         )
     }
 }

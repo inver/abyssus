@@ -5,44 +5,44 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.core.editor.panel.FolderKind as PanelFolderKind
-import net.nevinsky.abyssus.lib.core.editor.panel.PanelBuilders
-import net.nevinsky.abyssus.lib.core.editor.panel.PanelModel
-import net.nevinsky.abyssus.plugin.projectView.isGameComponent
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.components.service
-import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import com.intellij.openapi.vfs.VirtualFile
+import java.awt.image.BufferedImage
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.assets.sky.cube.SkyboxMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyMeta
 import net.nevinsky.abyssus.lib.core.dto.ProjectDto
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.lib.core.editor.meta.SKYBOX_FACES
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.editor.meta.*
 import net.nevinsky.abyssus.lib.core.editor.meta.ComponentSection
 import net.nevinsky.abyssus.lib.core.editor.meta.EntityAssetChoices
 import net.nevinsky.abyssus.lib.core.editor.meta.EntitySections
+import net.nevinsky.abyssus.lib.core.editor.meta.SKYBOX_FACES
 import net.nevinsky.abyssus.lib.core.editor.meta.readEntitySections
-import net.nevinsky.abyssus.lib.core.editor.meta.*
+import net.nevinsky.abyssus.lib.core.editor.panel.FolderKind as PanelFolderKind
+import net.nevinsky.abyssus.lib.core.editor.panel.PanelBuilders
+import net.nevinsky.abyssus.lib.core.editor.panel.PanelModel
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.EditorBundle
-import net.nevinsky.abyssus.plugin.dto.ProjectSettings
-import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
+import net.nevinsky.abyssus.plugin.dto.ProjectSettings
 import net.nevinsky.abyssus.plugin.dto.textOf
+import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings
 import net.nevinsky.abyssus.plugin.foliage.FoliageSource
 import net.nevinsky.abyssus.plugin.foliage.readFoliageSource
 import net.nevinsky.abyssus.plugin.projectView.*
+import net.nevinsky.abyssus.plugin.projectView.isGameComponent
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.terrain.TerrainSource
 import net.nevinsky.abyssus.plugin.terrain.readTerrainSource
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import net.nevinsky.abyssus.plugin.ui.thumbnail
-import java.awt.image.BufferedImage
-import java.io.File
-import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 
 /** What the panel shows. */
 sealed interface PanelState {
@@ -75,7 +75,9 @@ sealed interface PanelState {
         val scene: SceneDto? = null,
     ) : PanelState
 
-    /** An asset's Meta; [fields] are its editable properties (empty for a type without editors, which stays read only). */
+    /**
+     * An asset's Meta; [fields] are its editable properties (empty for a type without editors, which stays read only).
+     */
     data class Details(
         val name: String,
         val meta: AssetMeta.Loaded,
@@ -89,8 +91,8 @@ sealed interface PanelState {
     ) : PanelState
 
     /**
-     * An entity of [target]'s scene, or only its component when `target.kind` is set. [addable] names the modeled kinds the
-     * entity lacks (offered when the whole entity is shown).
+     * An entity of [target]'s scene, or only its component when `target.kind` is set. [addable] names the modeled kinds
+     * the entity lacks (offered when the whole entity is shown).
      */
     data class EntityDetails(
         val target: ComponentTarget,
@@ -102,10 +104,16 @@ sealed interface PanelState {
     ) : PanelState
 }
 
-/** One face of a skybox: [file] is what `meta.json` names (or `null`), [image] its thumbnail, null when it cannot be shown. */
+/**
+ * One face of a skybox: [file] is what `meta.json` names (or `null`), [image] its thumbnail, null when it cannot be
+ * shown.
+ */
 data class FaceCell(val face: String, val file: String, val image: BufferedImage?)
 
-/** An HDR sky's preview: the tone-mapped [image] and its [label] (file and size), or a null image and the [label] saying why. */
+/**
+ * An HDR sky's preview: the tone-mapped [image] and its [label] (file and size), or a null image and the [label] saying
+ * why.
+ */
 data class HdrCell(val label: String, val image: BufferedImage?)
 
 private const val THUMBNAIL_WIDTH = 320
@@ -113,27 +121,56 @@ private const val THUMBNAIL_HEIGHT = 144
 
 fun emptyState(node: Any?): PanelState.Empty {
     val hint = AbyssusBundle.message("propertiesHint")
-    val (name, kind) = describeNonAsset(node)
-        ?: return PanelState.Empty(AbyssusBundle.message("propertiesNothingSelected"), hint)
+    val (name, kind) =
+        describeNonAsset(node) ?: return PanelState.Empty(AbyssusBundle.message("propertiesNothingSelected"), hint)
     return PanelState.Empty(AbyssusBundle.message("propertiesNothingToShow", name, kind), hint)
 }
 
-/** Reads the asset in [folder] for display: its Meta and, for a skybox, the face thumbnails or the HDR preview. Safe off the EDT. */
+/**
+ * Reads the asset in [folder] for display: its Meta and, for a skybox, the face thumbnails or the HDR preview. Safe off
+ * the EDT.
+ */
 fun readAssetState(folder: VirtualFile, services: PanelServices): PanelState {
     val meta = runReadAction { loadAssetMeta(folder, services.metaFiles) }
     return when (meta) {
         is AssetMeta.Failed -> PanelState.Empty(meta.message, null)
-        is AssetMeta.Loaded -> runCatchingKeepingCancellation { readFieldStates(folder, meta.type, meta.document, services) }.fold(
-            onFailure = { PanelState.Empty(AbyssusBundle.message("propertiesMetaParseError", it.documentDisplayMessage()), null) },
-            onSuccess = { fields -> PanelState.Details(
-            folder.name, meta,
-            if (meta.type == MetaType.SKYBOX) faces(folder, meta) else null,
-            if (meta.type == MetaType.SKYBOX_HDR) hdrCell(folder, meta, services.hdr) else null,
-            fields,
-            if (meta.type == MetaType.TERRAIN) readTerrainNow(folder, meta, services) else null,
-            if (meta.type == MetaType.FOLIAGE) readFoliageNow(folder, meta, services) else null,
-        ) },
-        )
+        is AssetMeta.Loaded ->
+            runCatchingKeepingCancellation { readFieldStates(folder, meta.type, meta.document, services) }
+                .fold(
+                    onFailure = {
+                        PanelState.Empty(
+                            AbyssusBundle.message("propertiesMetaParseError", it.documentDisplayMessage()),
+                            null,
+                        )
+                    },
+                    onSuccess = { fields ->
+                        PanelState.Details(
+                            folder.name,
+                            meta,
+                            if (meta.type == MetaType.SKYBOX) {
+                                faces(folder, meta)
+                            } else {
+                                null
+                            },
+                            if (meta.type == MetaType.SKYBOX_HDR) {
+                                hdrCell(folder, meta, services.hdr)
+                            } else {
+                                null
+                            },
+                            fields,
+                            if (meta.type == MetaType.TERRAIN) {
+                                readTerrainNow(folder, meta, services)
+                            } else {
+                                null
+                            },
+                            if (meta.type == MetaType.FOLIAGE) {
+                                readFoliageNow(folder, meta, services)
+                            } else {
+                                null
+                            },
+                        )
+                    },
+                )
     }
 }
 
@@ -148,7 +185,7 @@ private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded, hdr: HdrPreview
         {
             HdrCell(
                 AbyssusBundle.message("propertiesHdrLabel", file, info.width.toString(), info.height.toString()),
-                it
+                it,
             )
         },
         { HdrCell(AbyssusBundle.message("propertiesHdrUnreadable", file, it.documentDisplayMessage()), null) },
@@ -160,29 +197,47 @@ private fun hdrCell(folder: VirtualFile, meta: AssetMeta.Loaded, hdr: HdrPreview
  * `Empty` with a message when the scene cannot be read or the entity or component is gone.
  */
 fun readEntityState(target: ComponentTarget, services: PanelServices): PanelState {
-    val root = runCatchingKeepingCancellation { readScene(target.file) }.getOrElse {
-        return PanelState.Empty(
-            AbyssusBundle.message(
-                "propertiesSceneUnreadable",
-                it.documentDisplayMessage()
-            ), null
-        )
+    val root = runCatchingKeepingCancellation {
+        readScene(target.file)
     }
-    val assets = EntityAssetChoices(
-        SceneComponentEdits.renderAssets(target.file, services.metaFiles).map { it.name },
-        SceneComponentEdits.assetsByType(target.file, services.metaFiles).orEmpty(),
-    ) { assetName -> ProjectLayout.projectDirFor(target.file)?.let { services.meshes(it, assetName) } }
-    return when (val read = readEntitySections(
-        root, target.entityId, target.kind, services.schemas.editorFor(target.file), assets,
-        EditorBundle, services.json
-    )) {
+        .getOrElse {
+            return PanelState.Empty(
+                AbyssusBundle.message(
+                    "propertiesSceneUnreadable",
+                    it.documentDisplayMessage(),
+                ),
+                null,
+            )
+        }
+    val assets =
+        EntityAssetChoices(
+            SceneComponentEdits.renderAssets(target.file, services.metaFiles).map { it.name },
+            SceneComponentEdits.assetsByType(target.file, services.metaFiles).orEmpty(),
+        ) { assetName ->
+            ProjectLayout.projectDirFor(target.file)?.let { services.meshes(it, assetName) }
+        }
+    return when (
+        val read =
+            readEntitySections(
+                root,
+                target.entityId,
+                target.kind,
+                services.schemas.editorFor(target.file),
+                assets,
+                EditorBundle,
+                services.json,
+            )
+    ) {
         is EntitySections.Gone -> PanelState.Empty(read.message, null)
         is EntitySections.Read -> {
             val builders = PanelBuilders(EditorBundle, ::isGameComponent)
             val projectName = ProjectLayout.abssFor(target.file)?.name.orEmpty()
-            val model = if (target.kind == null) {
-                builders.entity(root, target.entityId, read, projectName)
-            } else builders.component(root, target.entityId, read, projectName)
+            val model =
+                if (target.kind == null) {
+                    builders.entity(root, target.entityId, read, projectName)
+                } else {
+                    builders.component(root, target.entityId, read, projectName)
+                }
             PanelState.EntityDetails(target, read.name, read.sections, read.addable, model)
         }
     }
@@ -191,14 +246,15 @@ fun readEntityState(target: ComponentTarget, services: PanelServices): PanelStat
 private fun faces(folder: VirtualFile, meta: AssetMeta.Loaded): List<FaceCell> {
     return SKYBOX_FACES.map { face ->
         val skybox = meta.meta.additional as? SkyboxMeta
-        val file = when (face) {
-            "top" -> skybox?.top
-            "bottom" -> skybox?.bottom
-            "left" -> skybox?.left
-            "right" -> skybox?.right
-            "front" -> skybox?.front
-            else -> skybox?.back
-        }
+        val file =
+            when (face) {
+                "top" -> skybox?.top
+                "bottom" -> skybox?.bottom
+                "left" -> skybox?.left
+                "right" -> skybox?.right
+                "front" -> skybox?.front
+                else -> skybox?.back
+            }
         FaceCell(face, file ?: EditorBundle.message("dtoNullValue"), file?.let { thumbnail(folder, it) })
     }
 }
@@ -206,7 +262,7 @@ private fun faces(folder: VirtualFile, meta: AssetMeta.Loaded): List<FaceCell> {
 private fun readTerrainNow(
     folder: VirtualFile,
     meta: AssetMeta.Loaded,
-    services: PanelServices
+    services: PanelServices,
 ): TerrainSource {
     val text = folder.findChild(META_FILE)?.let { runReadAction { textOf(it) } } ?: ""
     return readTerrainSource(
@@ -221,14 +277,14 @@ private fun readTerrainNow(
 
 /** The terrain of [folder] as it is now, for the checks Apply makes just before it writes. UI thread. */
 fun readTerrainSourceNow(folder: VirtualFile, services: PanelServices): TerrainSource {
-    val meta = loadAssetMeta(folder, services.metaFiles) as? AssetMeta.Loaded
-        ?: return TerrainSource.Unusable("meta.json")
+    val meta =
+        loadAssetMeta(folder, services.metaFiles) as? AssetMeta.Loaded ?: return TerrainSource.Unusable("meta.json")
     return readTerrainNow(folder, meta, services)
 }
 
 /**
- * Reads the foliage asset in [folder] for display: its settings and problems, the terrain it stands on, the layer
- * masks and the state of the bake. Safe off the EDT, like the rest of the state it is read for.
+ * Reads the foliage asset in [folder] for display: its settings and problems, the terrain it stands on, the layer masks
+ * and the state of the bake. Safe off the EDT, like the rest of the state it is read for.
  */
 private fun readFoliageNow(folder: VirtualFile, meta: AssetMeta.Loaded, services: PanelServices): FoliageSource {
     val text = folder.findChild(META_FILE)?.let { runReadAction { textOf(it) } } ?: ""
@@ -255,12 +311,16 @@ fun readFoliageSourceNow(folder: VirtualFile, services: PanelServices): FoliageS
 /** Current native scene preferences, read off the EDT independently of renderer availability. */
 fun readSceneState(file: VirtualFile, name: String): PanelState = runCatchingKeepingCancellation {
     PanelState.UISceneState(file, name, readScene(file))
-}.getOrElse { PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.documentDisplayMessage()), null) }
+}
+    .getOrElse {
+        PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.documentDisplayMessage()), null)
+    }
 
 /** Project settings use the same admitted, stamp-aware document cache as scene availability. */
 fun readProjectState(file: VirtualFile, name: String, settings: AbyssusProjectSettings): PanelState.Project {
-    val project = runCatchingKeepingCancellation { documents().parsing.project(runReadAction { textOf(file) }) }
-        .getOrElse { ProjectDto() }
+    val project = runCatchingKeepingCancellation {
+        documents().parsing.project(runReadAction { textOf(file) })
+    }.getOrElse { ProjectDto() }
     return PanelState.Project(file, name, settings.getSettings(file), project)
 }
 
@@ -271,28 +331,35 @@ private fun readScene(file: VirtualFile): SceneDto = documents().parsing.parse(r
 
 // G7: readWaterState (a water surface of a scene) is disabled; scene water is no longer modeled by lib-core-editor.
 
-/** Reads what the layout of [selection] shows. Safe off the EDT. `Empty` with a message when the scene cannot be read. */
+/**
+ * Reads what the layout of [selection] shows. Safe off the EDT. `Empty` with a message when the scene cannot be read.
+ */
 internal fun readStructuralState(selection: Structural): PanelState {
     val builders = PanelBuilders(EditorBundle, ::isGameComponent)
     fun project(abss: VirtualFile?) = abss?.name.orEmpty()
     fun scene(file: VirtualFile): SceneDto? = runCatchingKeepingCancellation { readScene(file) }.getOrNull()
     return when (selection) {
         is Structural.Folder -> {
-            val trail = listOf(project(selection.abss)) + if (selection.kind == PanelFolderKind.GROUP) listOf(
-                AbyssusBundle.message("panelAssetsFolder")
-            ) else emptyList()
+            val trail =
+                listOf(project(selection.abss)) +
+                    if (selection.kind == PanelFolderKind.GROUP) {
+                        listOf(AbyssusBundle.message("panelAssetsFolder"))
+                    } else {
+                        emptyList()
+                    }
             PanelState.StructuralDetails(
                 selection,
-                builders.folder(selection.kind, selection.name, selection.items, trail.filter { it.isNotEmpty() })
+                builders.folder(selection.kind, selection.name, selection.items, trail.filter { it.isNotEmpty() }),
             )
         }
 
         is Structural.Setting -> {
-            val root = scene(selection.file)
-                ?: return PanelState.Empty(
-                    AbyssusBundle.message("propertiesSceneUnreadable", selection.file.name),
-                    null
-                )
+            val root =
+                scene(selection.file)
+                    ?: return PanelState.Empty(
+                        AbyssusBundle.message("propertiesSceneUnreadable", selection.file.name),
+                        null,
+                    )
             PanelState.StructuralDetails(
                 selection,
                 builders.setting(root, selection.setting, project(ProjectLayout.abssFor(selection.file))),
@@ -301,20 +368,23 @@ internal fun readStructuralState(selection: Structural): PanelState {
         }
 
         is Structural.Ecs -> {
-            val root = scene(selection.file)
-                ?: return PanelState.Empty(
-                    AbyssusBundle.message("propertiesSceneUnreadable", selection.file.name),
-                    null
-                )
+            val root =
+                scene(selection.file)
+                    ?: return PanelState.Empty(
+                        AbyssusBundle.message("propertiesSceneUnreadable", selection.file.name),
+                        null,
+                    )
             PanelState.StructuralDetails(
                 selection,
                 builders.ecs(root, project(ProjectLayout.abssFor(selection.file))),
-                root
+                root,
             )
         }
 
-        is Structural.Screen -> PanelState.StructuralDetails(
-            selection, builders.uiScreen(selection.name, selection.asset, project(selection.abss)),
-        )
+        is Structural.Screen ->
+            PanelState.StructuralDetails(
+                selection,
+                builders.uiScreen(selection.name, selection.asset, project(selection.abss)),
+            )
     }
 }

@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.weather
 
+import java.util.*
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaBinder
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudLevel
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
@@ -15,7 +16,6 @@ import org.junit.Assert.*
 import org.junit.Ignore
 import org.junit.Test
 import org.slf4j.helpers.NOPLogger
-import java.util.*
 
 class WeatherPresetDraftTest {
     private val processor = JsonProcessor(NOPLogger.NOP_LOGGER)
@@ -37,7 +37,7 @@ class WeatherPresetDraftTest {
         val root = processor.readObject(text)
         assertEquals(
             listOf("format", "formatVersion", "version", "lastModified", "uuid", "type", "additional"),
-            root.fieldNames().asSequence().toList()
+            root.fieldNames().asSequence().toList(),
         )
         assertEquals("abyssus", root["format"].asText())
         assertTrue(root["formatVersion"].isIntegralNumber)
@@ -47,8 +47,11 @@ class WeatherPresetDraftTest {
         assertEquals(fresh.toString(), root["uuid"].asText())
         assertEquals("CLOUDS", root["type"].asText())
         assertEquals(
-            processor.readObject("""{"technique":"shells","low":{"type":"cumulus","base":800,"top":2000,"coverage":0.4,"density":0.8,"wind":[4,1]}}"""),
-            root["additional"]
+            processor.readObject(
+                """{"technique":"shells","low":{"type":"cumulus","base":800,"top":2000,"coverage":0.4,"density":0.8,
+"wind":[4,1]}}"""
+            ),
+            root["additional"],
         )
         val settings = AssetMetaBinder(processor).bind("new", root).typedAdditional<CloudMeta>()
         assertEquals(CloudMeta(low = CloudMeta.CloudBand(CloudType.CUMULUS, CloudLevel.LOW)), settings)
@@ -58,7 +61,10 @@ class WeatherPresetDraftTest {
     @Ignore
     fun keepsStoredTechniqueBandsExtensionsAndNumberTextWithoutMutatingSource() {
         val source =
-            source("""{"technique":"volumetric","low":{"type":"stratocumulus","coverage":0.9000,"custom":1.00},"mid":{"type":"altostratus"},"high":{"type":"cirrus","wind":[25.00,5]},"extra":1.2300}""")
+            source(
+                    """{"technique":"volumetric","low":{"type":"stratocumulus","coverage":0.9000,"custom":1.00},
+"mid":{"type":"altostratus"},"high":{"type":"cirrus","wind":[25.00,5]},"extra":1.2300}"""
+                )
                 .dropLast(1) + """, "vendor":{"n":2.00},"tail":null}"""
         val before = source
         val text = snapshot(source)
@@ -80,7 +86,14 @@ class WeatherPresetDraftTest {
     @Test
     fun invalidBandIsOmittedAndAcceptedRuntimeFieldsBecomeCanonical() {
         val root =
-            processor.readObject(snapshot(source("""{"low":{"type":"cirrus"},"high":{"level":"HIGH","type":"CIRRUS","windX":-2.00,"windZ":3.00}}""")))
+            processor.readObject(
+                snapshot(
+                    source(
+                        """{"low":{"type":"cirrus"},"high":{"level":"HIGH","type":"CIRRUS","windX":-2.00,
+"windZ":3.00}}"""
+                    )
+                )
+            )
         val additional = root["additional"]
         assertFalse(additional.has("low"))
         val high = additional["high"]
@@ -93,11 +106,15 @@ class WeatherPresetDraftTest {
     @Test
     fun refusesUnsupportedWrongTypeEmptyAndMismatchedSources() {
         val valid = source("""{"low":{"type":"cumulus"}}""")
-        for (bad in listOf(
-            "broken", valid.replace("\"formatVersion\":1", "\"formatVersion\":2"),
-            valid.replace("CLOUDS", "MODEL"), source("{}"), source("""{"low":{"type":"cirrus"}}"""),
-            valid.replace(sourceId, fresh.toString())
-        )) {
+        for (bad in
+            listOf(
+                "broken",
+                valid.replace("\"formatVersion\":1", "\"formatVersion\":2"),
+                valid.replace("CLOUDS", "MODEL"),
+                source("{}"),
+                source("""{"low":{"type":"cirrus"}}"""),
+                valid.replace(sourceId, fresh.toString()),
+            )) {
             assertThrows(Exception::class.java) { snapshot(bad) }
         }
         assertThrows(Exception::class.java) {
@@ -105,7 +122,7 @@ class WeatherPresetDraftTest {
                 sky.replace("SKYBOX_PROCEDURAL", "SKYBOX"),
                 valid,
                 fresh,
-                123
+                123,
             )
         }
         assertThrows(Exception::class.java) {
@@ -113,7 +130,7 @@ class WeatherPresetDraftTest {
                 sky.replace("\"formatVersion\":1", "\"formatVersion\":1.0"),
                 valid,
                 fresh,
-                123
+                123,
             )
         }
     }

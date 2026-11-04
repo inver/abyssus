@@ -13,7 +13,8 @@ data class CloudMeta(
     fun bandsFarToNear(): List<CloudBand> = listOfNotNull(high, mid, low)
 
     /**
-     * One band of clouds: [type] between [base] and [top] metres, covering [coverage] (0 to 1) of the sky with [density]
+      * One band of clouds: [type] between [base] and [top] metres, covering [coverage] (0 to 1) of the sky with
+      * [density]
      * (0 or more), drifting at [windX] / [windZ] metres per second.
      */
     data class CloudBand(

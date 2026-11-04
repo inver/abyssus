@@ -40,7 +40,8 @@ class GdxControllers : ControllerSource {
         val mapping = controller.mapping
         val axes = FloatArray(GAMEPAD_AXES)
         axes[0] = axis(controller, mapping.axisLeftX)
-        // gdx-controllers reports a stick pushed up as -1: turn the Y axes so that up is positive, like the profile reads them
+        // gdx-controllers reports a stick pushed up as -1: turn the Y axes so that up is positive, like the profile
+        // reads them
         axes[1] = -axis(controller, mapping.axisLeftY)
         axes[2] = axis(controller, mapping.axisRightX)
         axes[3] = -axis(controller, mapping.axisRightY)
@@ -48,7 +49,9 @@ class GdxControllers : ControllerSource {
         axes[TRIGGER_RIGHT] = trigger(controller, mapping.buttonR2)
         val buttons = BooleanArray(GAMEPAD_BUTTONS)
         fun map(code: Int, standard: Int) {
-            if (code != ControllerMapping.UNDEFINED) buttons[standard] = controller.getButton(code)
+            if (code != ControllerMapping.UNDEFINED) {
+                buttons[standard] = controller.getButton(code)
+            }
         }
         map(mapping.buttonA, GAMEPAD_BUTTON_A)
         map(mapping.buttonB, GAMEPAD_BUTTON_B)
@@ -57,15 +60,39 @@ class GdxControllers : ControllerSource {
         map(mapping.buttonDpadRight, GAMEPAD_BUTTON_DPAD_RIGHT)
         map(mapping.buttonDpadDown, GAMEPAD_BUTTON_DPAD_DOWN)
         map(mapping.buttonDpadLeft, GAMEPAD_BUTTON_DPAD_LEFT)
-        val hat = (if (buttons[GAMEPAD_BUTTON_DPAD_UP]) HAT_UP else 0) or (if (buttons[GAMEPAD_BUTTON_DPAD_RIGHT]) HAT_RIGHT else 0) or
-            (if (buttons[GAMEPAD_BUTTON_DPAD_DOWN]) HAT_DOWN else 0) or (if (buttons[GAMEPAD_BUTTON_DPAD_LEFT]) HAT_LEFT else 0)
+        val hat = (if (buttons[GAMEPAD_BUTTON_DPAD_UP]) {
+            HAT_UP
+        } else {
+            0
+        }) or (if (buttons[GAMEPAD_BUTTON_DPAD_RIGHT]) {
+            HAT_RIGHT
+        } else {
+            0
+        }) or
+            (if (buttons[GAMEPAD_BUTTON_DPAD_DOWN]) {
+                HAT_DOWN
+            } else {
+                0
+            }) or (if (buttons[GAMEPAD_BUTTON_DPAD_LEFT]) {
+                HAT_LEFT
+            } else {
+                0
+            })
         return DeviceState(controller.uniqueId ?: controller.name, controller.name, true, axes, buttons, hat)
     }
 
     private fun axis(controller: Controller, code: Int): Float =
-        if (code == ControllerMapping.UNDEFINED) 0f else controller.getAxis(code)
+        if (code == ControllerMapping.UNDEFINED) {
+            0f
+        } else {
+            controller.getAxis(code)
+        }
 
     /** A trigger is a button in the mapping, so it reads as fully pressed or not. */
     private fun trigger(controller: Controller, code: Int): Float =
-        if (code != ControllerMapping.UNDEFINED && controller.getButton(code)) 1f else 0f
+        if (code != ControllerMapping.UNDEFINED && controller.getButton(code)) {
+            1f
+        } else {
+            0f
+        }
 }

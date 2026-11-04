@@ -11,13 +11,22 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The judge on whole synthetic flights: the order, repeat, pause, time and crash rules of `control-line-f2b-pattern`. */
+/**
+ * The judge on whole synthetic flights: the order, repeat, pause, time and crash rules of `control-line-f2b-pattern`.
+ */
 class PatternJudgeTest {
-    private fun SyntheticSchedule.describe() = judge.sheet.entries.joinToString("\n") {
-        if (it == null) "undecided" else "${it.figure.label}: ${if (it.reason == null) it.mark.toString() else "0 ${it.reason.label}"}"
-    }
+    private fun SyntheticSchedule.describe() =
+        judge.sheet.entries.joinToString("\n") {
+            if (it == null) {
+                "undecided"
+            } else {
+                "${it.figure.label}: ${when { it.reason == null -> it.mark.toString()
+ else -> "0 ${it.reason.label}" }}"
+            }
+        }
 
-    private fun SyntheticSchedule.entry(figure: Figure): SheetEntry = checkNotNull(judge.sheet[figure]) { "not decided: $figure\n${describe()}" }
+    private fun SyntheticSchedule.entry(figure: Figure): SheetEntry =
+        checkNotNull(judge.sheet[figure]) { "not decided: $figure\n${describe()}" }
 
     @Test
     fun aPerfectFlightScoresThirteenHundred() {
@@ -54,7 +63,10 @@ class PatternJudgeTest {
         assertEquals(100, flight.entry(Figure.INSIDE_LOOPS).tenths)
     }
 
-    /** On its lines a plane's up stays across them, so it flies level inverted clockwise; its laps count as inverted laps. */
+    /**
+     * On its lines a plane's up stays across them, so it flies level inverted clockwise; its laps count as inverted
+     * laps.
+     */
     @Test
     fun invertedLapsFlownClockwiseAreMarked() {
         val flight = SyntheticSchedule()
@@ -94,7 +106,20 @@ class PatternJudgeTest {
     @Test
     fun aThirdSquareScoresWrongNumberOfRepeats() {
         val flight = SyntheticSchedule()
-        flight.everythingBeforeTheLanding(skip = setOf(Figure.INSIDE_SQUARES, Figure.OUTSIDE_SQUARES, Figure.INSIDE_TRIANGLES, Figure.HORIZONTAL_EIGHTS, Figure.SQUARE_EIGHTS, Figure.VERTICAL_EIGHTS, Figure.HOURGLASS, Figure.OVERHEAD_EIGHTS, Figure.CLOVER))
+        flight.everythingBeforeTheLanding(
+            skip =
+                setOf(
+                    Figure.INSIDE_SQUARES,
+                    Figure.OUTSIDE_SQUARES,
+                    Figure.INSIDE_TRIANGLES,
+                    Figure.HORIZONTAL_EIGHTS,
+                    Figure.SQUARE_EIGHTS,
+                    Figure.VERTICAL_EIGHTS,
+                    Figure.HOURGLASS,
+                    Figure.OVERHEAD_EIGHTS,
+                    Figure.CLOVER,
+                )
+        )
         flight.figure { flight.tracks.squares(it, 3) }
         flight.pause(2f)
         assertEquals(ZeroReason.WRONG_REPEATS, flight.entry(Figure.INSIDE_SQUARES).reason)
@@ -104,14 +129,31 @@ class PatternJudgeTest {
     @Test
     fun aSquareGivenUpScoresNotCompleted() {
         val flight = SyntheticSchedule()
-        flight.everythingBeforeTheLanding(skip = setOf(Figure.INSIDE_SQUARES, Figure.OUTSIDE_SQUARES, Figure.INSIDE_TRIANGLES, Figure.HORIZONTAL_EIGHTS, Figure.SQUARE_EIGHTS, Figure.VERTICAL_EIGHTS, Figure.HOURGLASS, Figure.OVERHEAD_EIGHTS, Figure.CLOVER))
+        flight.everythingBeforeTheLanding(
+            skip =
+                setOf(
+                    Figure.INSIDE_SQUARES,
+                    Figure.OUTSIDE_SQUARES,
+                    Figure.INSIDE_TRIANGLES,
+                    Figure.HORIZONTAL_EIGHTS,
+                    Figure.SQUARE_EIGHTS,
+                    Figure.VERTICAL_EIGHTS,
+                    Figure.HOURGLASS,
+                    Figure.OVERHEAD_EIGHTS,
+                    Figure.CLOVER,
+                )
+        )
         // up the first side, then level along the 45 degree parallel for a lap and a half, and back down
         flight.figure {
             val corner = (1f / 18f) / (Math.PI / 180.0).toFloat()
-            val edges = listOf(
-                parallel(0f, it - 20f, it, Tag.BASE), meridian(it, 0f, 45f), parallel(45f, it, it - 540f),
-                meridian(it - 540f, 45f, 0f), parallel(0f, it - 540f, it - 500f, Tag.BASE),
-            )
+            val edges =
+                listOf(
+                    parallel(0f, it - 20f, it, Tag.BASE),
+                    meridian(it, 0f, 45f),
+                    parallel(45f, it, it - 540f),
+                    meridian(it - 540f, 45f, 0f),
+                    parallel(0f, it - 540f, it - 500f, Tag.BASE),
+                )
             val b = TrackBuilder()
             b.add(rounded(edges, corner).points)
             b.build()
@@ -147,12 +189,27 @@ class PatternJudgeTest {
     @Test
     fun aCrashInTheTrianglesScoresCrashedFromThereOn() {
         val flight = SyntheticSchedule()
-        flight.everythingBeforeTheLanding(skip = setOf(Figure.INSIDE_TRIANGLES, Figure.HORIZONTAL_EIGHTS, Figure.SQUARE_EIGHTS, Figure.VERTICAL_EIGHTS, Figure.HOURGLASS, Figure.OVERHEAD_EIGHTS, Figure.CLOVER))
+        flight.everythingBeforeTheLanding(
+            skip =
+                setOf(
+                    Figure.INSIDE_TRIANGLES,
+                    Figure.HORIZONTAL_EIGHTS,
+                    Figure.SQUARE_EIGHTS,
+                    Figure.VERTICAL_EIGHTS,
+                    Figure.HOURGLASS,
+                    Figure.OVERHEAD_EIGHTS,
+                    Figure.CLOVER,
+                )
+        )
         // the first triangle only, then the crash
         flight.figure { flight.tracks.triangles(it, 1) }
         flight.end(FlightEnd.CRASHED)
         assertEquals(100, flight.entry(Figure.OUTSIDE_SQUARES).tenths)
-        for (f in SCHEDULE.drop(Figure.INSIDE_TRIANGLES.ordinal)) assertEquals("${f.label}\n${flight.describe()}", ZeroReason.CRASHED, flight.entry(f).reason)
+        for (f in SCHEDULE.drop(Figure.INSIDE_TRIANGLES.ordinal)) assertEquals(
+            "${f.label}\n${flight.describe()}",
+            ZeroReason.CRASHED,
+            flight.entry(f).reason,
+        )
     }
 
     @Test

@@ -10,14 +10,22 @@ import org.junit.Test
 
 class ProjectSettingsReaderTest {
 
-    private val reader = ProjectSettingsReader(com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing, com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().json)
+    private val reader =
+        ProjectSettingsReader(
+            com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing,
+            com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().json,
+        )
 
     @Test
     fun committedProjectsDeclareTheirPhysicsChoice() {
         val fixtures = java.io.File("src/test/testData/project")
         assertFalse(reader.read(java.io.File(fixtures, "Untitled/Untitled.abss").readText()).physicsEnabled)
         assertTrue(reader.read(java.io.File(fixtures, "Physics/Physics.abss").readText()).physicsEnabled)
-        assertTrue(reader.read(java.io.File("../app-game-control-line/project/ControlLine/ControlLine.abss").readText()).physicsEnabled)
+        assertTrue(
+            reader
+                .read(java.io.File("../app-game-control-line/project/ControlLine/ControlLine.abss").readText())
+                .physicsEnabled
+        )
     }
 
     @Test

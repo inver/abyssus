@@ -14,6 +14,7 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
 import net.nevinsky.abyssus.lib.core.editor.pick.SPLAT_BRUSH
@@ -24,7 +25,6 @@ import net.nevinsky.abyssus.lib.core.editor.terrain.splat.SplatStateReader
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileStore
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
 import net.nevinsky.abyssus.plugin.testCore
-import java.io.File
 
 class SplatStrokeCommandTest : BasePlatformTestCase() {
     private val side = 64
@@ -43,13 +43,17 @@ class SplatStrokeCommandTest : BasePlatformTestCase() {
         super.setUp()
         disk = FileUtil.createTempDirectory("abyssus-splat", null)
         val terrain = File(disk, "assets/terrain_a").apply { mkdirs() }
-        File(terrain, "meta.json").writeText(
-            """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"t","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":$size,"uv":8.0,"splatMap":"$uuid"}}""",
-        )
+        File(terrain, "meta.json")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"t","type":"TERRAIN",
+"additional":{"terrainFile":"terrain.data","size":$size,"uv":8.0,"splatMap":"$uuid"}}"""
+            )
         val texture = File(disk, "assets/texture_splat").apply { mkdirs() }
-        File(texture, "meta.json").writeText(
-            """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"$uuid","type":"TEXTURE","additional":{"file":"splat.png"}}""",
-        )
+        File(texture, "meta.json")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"$uuid","type":"TEXTURE",
+"additional":{"file":"splat.png"}}"""
+            )
         png = File(texture, "splat.png")
         original = codec.encode(SplatPixels(side, ByteArray(side * side * 4)))
         png.writeBytes(original)
@@ -57,24 +61,44 @@ class SplatStrokeCommandTest : BasePlatformTestCase() {
         terrainDir.refresh(false, true)
     }
 
-    private val target get() = TerrainTarget(1L, TerrainData(3, FloatArray(9), size, 1f), Matrix4())
+    private val target
+        get() = TerrainTarget(1L, TerrainData(3, FloatArray(9), size, 1f), Matrix4())
 
-    private fun mode(options: SplatBrushOptions = SplatBrushOptions(2, SplatMode.PAINT, true), reversed: Boolean = false) =
-        BrushMode(SPLAT_BRUSH, 1L, 8f, 1f, reversed, options)
+    private fun mode(
+        options: SplatBrushOptions = SplatBrushOptions(2, SplatMode.PAINT, true),
+        reversed: Boolean = false,
+    ) = BrushMode(SPLAT_BRUSH, 1L, 8f, 1f, reversed, options)
 
     /** [inline] runs the encode and the apply at once; otherwise they wait in [queue]. */
     private fun command(
         store: AssetFileStore = LocalAssetFileStore(disk),
         inline: Boolean = true,
         current: () -> BrushMode? = { mode() },
-    ) = SplatStrokeCommand(
-        project, terrainDir, drafts, SplatTransactions(store), store,
-        { SplatStateReader(testCore.json, ImageIoSplatCodec()).read(File(disk, "assets"), File(terrainDir.path)) },
-        current,
-        background = { if (inline) it.run() else queue += it },
-        ui = { if (inline) it.run() else queue += it },
-        report = { reports += it },
-    )
+    ) =
+        SplatStrokeCommand(
+            project,
+            terrainDir,
+            drafts,
+            SplatTransactions(store),
+            store,
+            { SplatStateReader(testCore.json, ImageIoSplatCodec()).read(File(disk, "assets"), File(terrainDir.path)) },
+            current,
+            background = {
+                if (inline) {
+                    it.run()
+                } else {
+                    queue += it
+                }
+            },
+            ui = {
+                if (inline) {
+                    it.run()
+                } else {
+                    queue += it
+                }
+            },
+            report = { reports += it },
+        )
 
     private fun stroke(c: SplatStrokeCommand, shift: Boolean = false) {
         assertTrue(c.pressed(target, Vector3(30f, 0f, 30f)))
@@ -131,9 +155,10 @@ class SplatStrokeCommandTest : BasePlatformTestCase() {
 
     fun testAFailedWriteRestoresTheFilesAndReportsTheReason() {
         val real = LocalAssetFileStore(disk)
-        val failing = object : AssetFileStore by real {
-            override fun write(path: String, bytes: ByteArray) = throw java.io.IOException("disk full")
-        }
+        val failing =
+            object : AssetFileStore by real {
+                override fun write(path: String, bytes: ByteArray) = throw java.io.IOException("disk full")
+            }
         stroke(command(failing))
         assertEquals(original.toList(), png.readBytes().toList())
         assertTrue(reports.single().contains("disk full"))

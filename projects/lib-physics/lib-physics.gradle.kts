@@ -4,7 +4,8 @@
  */
 
 // Physics for native scenes through Jolt (jolt-jni): physics components and the physics world. A plain JVM library (no
-// IntelliJ imports) wired by constructors. Jolt natives load only in a game or the play host (`lib-game-link`), never in
+// IntelliJ imports) wired by constructors. Jolt natives load only in a game or the play host (`lib-game-link`), never
+// in
 // the IDE.
 plugins {
     `java-library`
@@ -40,5 +41,6 @@ extra["abyssusSingletonExcludes"] = listOf<String>()
 // Games ship this library: `checkNoEditorCode` keeps editor imports and ray-tracing snapshot types out of it.
 extra["abyssusShippedLibrary"] = true
 
-// No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in lib-core-editor (see gradle/checks.gradle.kts).
+// No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in
+// lib-core-editor (see gradle/checks.gradle.kts).
 extra["abyssusJacksonTreeAllowed"] = emptyList<String>()

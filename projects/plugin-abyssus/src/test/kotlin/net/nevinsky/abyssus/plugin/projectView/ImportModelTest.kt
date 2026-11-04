@@ -14,6 +14,7 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.ecs.component.*
@@ -28,7 +29,6 @@ import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.plugin.dto.ProjectReader
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
-import java.io.File
 
 /** Import Model into a copy of the Untitled fixture, with and without placement in `Main Scene.scene`. */
 class ImportModelTest : BasePlatformTestCase() {
@@ -61,13 +61,15 @@ class ImportModelTest : BasePlatformTestCase() {
 
     private val crate = ImportSettings("model_crate", LengthUnit.CM, UpAxis.Y)
 
-    private fun tree(dir: File): Map<String, List<Byte>> = dir.walkTopDown().filter { it.isFile }
-        .associate { it.relativeTo(dir).path to it.readBytes().toList() }
+    private fun tree(dir: File): Map<String, List<Byte>> =
+        dir.walkTopDown().filter { it.isFile }.associate { it.relativeTo(dir).path to it.readBytes().toList() }
 
     private fun placement(point: Vector3 = Vector3(10f, 0f, -4f), playing: Boolean = false) =
         ScenePlacement(scene, { point }, { playing })
 
-    private fun sceneRoot() = net.nevinsky.abyssus.plugin.parsedScene(FileDocumentManager.getInstance().getDocument(scene)!!.text)
+    private fun sceneRoot() =
+        net.nevinsky.abyssus.plugin.parsedScene(FileDocumentManager.getInstance().getDocument(scene)!!.text)
+
     private fun sceneText() = FileDocumentManager.getInstance().getDocument(scene)!!.text
 
     private fun nextEntityId(): Long = sceneRoot().nextId()
@@ -78,7 +80,9 @@ class ImportModelTest : BasePlatformTestCase() {
             UndoManager.getInstance(project).undo(null)
             fail("expected a refused undo")
         } catch (e: Throwable) {
-            if (e is junit.framework.AssertionFailedError && e.message == "expected a refused undo") throw e
+            if (e is junit.framework.AssertionFailedError && e.message == "expected a refused undo") {
+                throw e
+            }
             val messages = generateSequence(e) { it.cause }.mapNotNull { it.message }.toList()
             assertTrue(messages.toString(), messages.any { it.contains(mentions) })
         }
@@ -95,12 +99,13 @@ class ImportModelTest : BasePlatformTestCase() {
         val folder = File(projectDir, "assets/model_crate")
         assertEquals(
             setOf("meta.json", "model.glb", "source.json", "textures/wood.png"),
-            tree(folder).keys.map { it.replace('\\', '/') }.toSet()
+            tree(folder).keys.map { it.replace('\\', '/') }.toSet(),
         )
         assertEquals(
             "only the new folder appears",
             before,
-            tree(projectDir).filterKeys { !it.startsWith("assets/model_crate") })
+            tree(projectDir).filterKeys { !it.startsWith("assets/model_crate") },
+        )
         abss.parent.refresh(false, true)
         val asset = project.service<ProjectReader>().read(abss).obj!!.assets.single { it.name == "model_crate" }
         assertEquals(MetaType.MODEL, asset.type)
@@ -112,24 +117,31 @@ class ImportModelTest : BasePlatformTestCase() {
         importModel(project, abss, source("crate.obj"), crate, null) { fail(it) }
         val folder = File(projectDir, "assets/model_crate")
         val made = tree(folder)
-        val uuid = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(
-            File(
-                folder,
-                "meta.json"
-            ).readText()
-        )["uuid"].asText()
+        val uuid =
+            JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
+                .readObject(
+                    File(
+                            folder,
+                            "meta.json",
+                        )
+                        .readText()
+                )["uuid"]
+                .asText()
         UndoManager.getInstance(project).undo(null)
         assertFalse(folder.exists())
         UndoManager.getInstance(project).redo(null)
         assertEquals(made, tree(folder))
         assertEquals(
             uuid,
-            JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(
-                File(
-                    folder,
-                    "meta.json"
-                ).readText()
-            )["uuid"].asText()
+            JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
+                .readObject(
+                    File(
+                            folder,
+                            "meta.json",
+                        )
+                        .readText()
+                )["uuid"]
+                .asText(),
         )
     }
 
@@ -198,7 +210,9 @@ class ImportModelTest : BasePlatformTestCase() {
 
     fun testASceneMadeUnreadableBeforeCreateWritesNothing() {
         val document = FileDocumentManager.getInstance().getDocument(scene)!!
-        com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) { document.setText("""{"name":"legacy"}""") }
+        com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) {
+            document.setText("""{"name":"legacy"}""")
+        }
         PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
         val undoBefore = UndoManager.getInstance(project).isUndoAvailable(null)
         val errors = mutableListOf<String>()
@@ -213,10 +227,15 @@ class ImportModelTest : BasePlatformTestCase() {
     /** In the same scene the platform refuses first: the scene changed since the import's own edit of it. */
     fun testUndoStaysRefusedWhenTheModelWasAlsoPlacedByAddAsset() {
         importModel(project, abss, source("crate.obj"), crate, placement()) { fail(it) }
-        val other = SceneComponentEdits.addAsset(
-            project, scene, BaseMeta(MetaType.MODEL, "model_crate"), Vector3(1f, 0f, 1f),
-            SceneDocumentCache.of(project), service<AbyssusPluginCtx>().assets.metaFiles
-        )
+        val other =
+            SceneComponentEdits.addAsset(
+                project,
+                scene,
+                BaseMeta(MetaType.MODEL, "model_crate"),
+                Vector3(1f, 0f, 1f),
+                SceneDocumentCache.of(project),
+                service<AbyssusPluginCtx>().assets.metaFiles,
+            )
         assertNotNull(other.entityId)
         assertUndoRefused("Main Scene.scene")
         assertTrue(File(projectDir, "assets/model_crate/meta.json").isFile)
@@ -229,8 +248,12 @@ class ImportModelTest : BasePlatformTestCase() {
         val secondFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(second)!!
         importModel(project, abss, source("crate.obj"), crate, placement()) { fail(it) }
         SceneComponentEdits.addAsset(
-            project, secondFile, BaseMeta(MetaType.MODEL, "model_crate"), Vector3(1f, 0f, 1f),
-            SceneDocumentCache.of(project), service<AbyssusPluginCtx>().assets.metaFiles
+            project,
+            secondFile,
+            BaseMeta(MetaType.MODEL, "model_crate"),
+            Vector3(1f, 0f, 1f),
+            SceneDocumentCache.of(project),
+            service<AbyssusPluginCtx>().assets.metaFiles,
         )
         FileDocumentManager.getInstance().saveAllDocuments()
         assertUndoRefused("Second.scene uses model_crate")
@@ -241,7 +264,7 @@ class ImportModelTest : BasePlatformTestCase() {
         assertEquals(PlacementOption.Disabled(PlacementBlock.NO_SCENE_VIEW), placementOption(project, null))
         assertEquals(
             PlacementOption.Disabled(PlacementBlock.PLAYING),
-            placementOption(project, placement(playing = true))
+            placementOption(project, placement(playing = true)),
         )
         assertEquals(PlacementOption.Available("Main Scene.scene"), placementOption(project, placement()))
         val errors = mutableListOf<String>()
@@ -250,4 +273,3 @@ class ImportModelTest : BasePlatformTestCase() {
         assertFalse(File(projectDir, "assets/model_crate").exists())
     }
 }
-

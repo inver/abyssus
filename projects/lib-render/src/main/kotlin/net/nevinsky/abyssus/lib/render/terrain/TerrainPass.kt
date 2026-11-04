@@ -28,7 +28,8 @@ import net.nevinsky.abyssus.lib.render.light.packLights
 const val RENDER_SHADER_ROOT = "/shader/render"
 
 /**
- * Which terrain program a host draws with. The two differ in what they light with and how they fog and shadow, so each is
+  * Which terrain program a host draws with. The two differ in what they light with and how they fog and shadow, so each
+  * is
  * a program of its own with its own uniform binding; what they share is [TerrainPass].
  */
 enum class TerrainVariant(internal val program: String, val profile: LightProfile) {
@@ -40,17 +41,25 @@ enum class TerrainVariant(internal val program: String, val profile: LightProfil
 }
 
 /**
- * Draws terrains with one of the [TerrainVariant] programs: the program, the camera, the frame's ambient light and fog, the
- * variant's lighting, then each terrain's world transform and its splat layers ([net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh.draw]).
+  * Draws terrains with one of the [TerrainVariant] programs: the program, the camera, the frame's ambient light and
+  * fog, the
+  * variant's lighting, then each terrain's world transform and its splat layers
+  * ([net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh.draw]).
  *
- * It creates and disposes its program and, unless the host lends one as [blank], the 1x1 white texture that stands in for
- * a layer a terrain does not have; a lent texture and every texture and map in the inputs stay the host's. Needs a current
+  * It creates and disposes its program and, unless the host lends one as [blank], the 1x1 white texture that stands in
+  * for
+  * a layer a terrain does not have; a lent texture and every texture and map in the inputs stay the host's. Needs a
+  * current
  * GL context; call it on the thread that owns that context.
  */
 class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Texture? = null) : Disposable {
     private val program: ShaderProgram =
         shaders.withResources(RENDER_SHADER_ROOT, TerrainPass::class.java).program(variant.program)
-    private val ownedBlank: Texture? = if (blank == null) newSolidTexture() else null
+    private val ownedBlank: Texture? = if (blank == null) {
+        newSolidTexture()
+    } else {
+        null
+    }
     private val blank: Texture = blank ?: ownedBlank!!
     private val binding: Binding = when (variant) {
         TerrainVariant.EDITOR_MULTI_LIGHT -> EditorBinding()
@@ -62,7 +71,9 @@ class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Te
 
     /** Draws [terrains] seen as [frame] says, lit by [lighting], which must be the variant's own kind. */
     fun draw(frame: FrameInputs, lighting: TerrainLighting, terrains: Collection<TerrainDraw>) {
-        if (terrains.isEmpty()) return
+        if (terrains.isEmpty()) {
+            return
+        }
         require(frame.profile == variant.profile) { "$variant lights with ${variant.profile}, not ${frame.profile}" }
         program.bind()
         program.setUniformMatrix("u_projViewTrans", frame.viewProjection)
@@ -96,14 +107,23 @@ class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Te
                 ?: throw IllegalArgumentException("the editor terrain needs TerrainLighting.Editor")
             program.setUniformf("u_cameraPos", frame.cameraPosition)
             program.setUniformf("u_ambient", frame.ambient[0], frame.ambient[1], frame.ambient[2])
-            // always on its own unit: a samplerCube left on unit 0 would share it with a 2D splat texture, which GL forbids
+            // always on its own unit: a samplerCube left on unit 0 would share it with a 2D splat texture, which GL
+            // forbids
             program.setUniformi("u_irradiance", IRRADIANCE_UNIT)
-            program.setUniformi("u_hasSky", if (editor.irradiance != null) 1 else 0)
+            program.setUniformi("u_hasSky", if (editor.irradiance != null) {
+                1
+            } else {
+                0
+            })
             editor.irradiance?.bind(IRRADIANCE_UNIT)
 
             val fading = editor.irradiance != null && editor.fadeIrradiance != null && editor.fade > 0f
             program.setUniformi("u_irradianceTo", IRRADIANCE_TO_UNIT)
-            program.setUniformf("u_skyFade", if (fading) editor.fade.coerceAtMost(1f) else 0f)
+            program.setUniformf("u_skyFade", if (fading) {
+                editor.fade.coerceAtMost(1f)
+            } else {
+                0f
+            })
             if (fading) {
                 editor.fadeIrradiance.bind(IRRADIANCE_TO_UNIT)
             }
@@ -111,8 +131,14 @@ class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Te
             program.setUniformf("u_fogColor", fog?.r ?: 0f, fog?.g ?: 0f, fog?.b ?: 0f)
             program.setUniformf("u_fogK", fog?.quadraticCoefficient ?: 0f)
             val clip = editor.clipPlane
-            program.setUniformi("u_clipEnabled", if (clip != null) 1 else 0)
-            if (clip != null) program.setUniformf("u_clipPlane", clip[0], clip[1], clip[2], clip[3])
+            program.setUniformi("u_clipEnabled", if (clip != null) {
+                1
+            } else {
+                0
+            })
+            if (clip != null) {
+                program.setUniformf("u_clipPlane", clip[0], clip[1], clip[2], clip[3])
+            }
             bindLights(program, frame)
             bindSunVisibility(program, editor)
             (editor.atlas?.atlas ?: blank).bind(SHADOW_UNIT)
@@ -176,20 +202,33 @@ class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Te
             program.setUniformf("u_shadowTexel", shadow?.texelSize ?: 1f)
             program.setUniformf("u_shadowBias", shadow?.bias ?: 0f)
             program.setUniformi("u_shadowTexture", SHADOW_UNIT)
-            // 0 leaves the program writing what it always wrote; above 0 it lights in linear space and ends in the display transform
+            // 0 leaves the program writing what it always wrote; above 0 it lights in linear space and ends in the
+            // display transform
             program.setUniformf("u_exposure", frame.output?.exposure ?: 0f)
-            // always on its own unit: a samplerCube left on unit 0 would share it with a 2D splat texture, which GL forbids
+            // always on its own unit: a samplerCube left on unit 0 would share it with a 2D splat texture, which GL
+            // forbids
             program.setUniformi("u_irradiance", IRRADIANCE_UNIT)
-            program.setUniformi("u_hasSky", if (sun.irradiance != null) 1 else 0)
+            program.setUniformi("u_hasSky", if (sun.irradiance != null) {
+                1
+            } else {
+                0
+            })
             sun.irradiance?.bind(IRRADIANCE_UNIT)
             val fading = sun.irradiance != null && sun.fadeIrradiance != null && sun.fade > 0f
             program.setUniformi("u_irradianceTo", IRRADIANCE_TO_UNIT)
-            program.setUniformf("u_skyFade", if (fading) sun.fade.coerceAtMost(1f) else 0f)
-            if (fading) sun.fadeIrradiance!!.bind(IRRADIANCE_TO_UNIT)
+            program.setUniformf("u_skyFade", if (fading) {
+                sun.fade.coerceAtMost(1f)
+            } else {
+                0f
+            })
+            if (fading) {
+                sun.fadeIrradiance.bind(IRRADIANCE_TO_UNIT)
+            }
         }
 
         override fun bindTerrain(program: ShaderProgram, lighting: TerrainLighting, terrain: TerrainDraw) {
-            // the splat layers take the units before the map; bind it again for each terrain, as the layers' binds move the active unit
+            // the splat layers take the units before the map; bind it again for each terrain, as the layers' binds move
+            // the active unit
             ((lighting as TerrainLighting.Sun).shadow?.texture ?: blank).bind(SHADOW_UNIT)
         }
     }

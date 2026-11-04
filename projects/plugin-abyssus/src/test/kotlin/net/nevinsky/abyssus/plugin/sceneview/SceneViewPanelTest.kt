@@ -11,6 +11,9 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.Component
+import java.awt.Container
+import javax.swing.JButton
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
@@ -21,36 +24,46 @@ import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.projectView.*
 import net.nevinsky.abyssus.plugin.testMetaFiles
-import java.awt.Component
-import java.awt.Container
-import javax.swing.JButton
 
 class SceneViewPanelTest : BasePlatformTestCase() {
     private fun named(c: Component, name: String): Component? =
-        if (c.name == name) c else (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
+        if (c.name == name) {
+            c
+        } else {
+            (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
+        }
 
     fun testToolbarPlacesLightAtOrbitTargetAndDisablesForUnreadableScene() {
-        val file = myFixture.addFileToProject(
-            "Lights.scene",
-            """{"format":"abyssus","formatVersion":1,"ecs":{}}"""
-        ).virtualFile
-        val params = SceneRenderParams.DEFAULT.copy(
-            camera = CameraParams.DEFAULT.copy(
-                position = Vector3(10f, 0f, 6f),
-                direction = Vector3(0f, 0f, -1f)
-            )
-        )
-        var selected: Long? = null
-        val panel = SceneViewPanel(
-            params, testRenderer(),
-            lightMenu = PlacementMenu({
-                canAddLight(
-                    file,
-                    net.nevinsky.abyssus.plugin.dto.SceneDocumentCache.of(project)
+        val file =
+            myFixture
+                .addFileToProject(
+                    "Lights.scene",
+                    """{"format":"abyssus","formatVersion":1,"ecs":{}}""",
                 )
-            }) { position ->
-                AddLightGroup(project, file, position, { selected = it })
-            })
+                .virtualFile
+        val params =
+            SceneRenderParams.DEFAULT.copy(
+                camera =
+                    CameraParams.DEFAULT.copy(
+                        position = Vector3(10f, 0f, 6f),
+                        direction = Vector3(0f, 0f, -1f),
+                    )
+            )
+        var selected: Long? = null
+        val panel =
+            SceneViewPanel(
+                params,
+                testRenderer(),
+                lightMenu =
+                    PlacementMenu({
+                        canAddLight(
+                            file,
+                            net.nevinsky.abyssus.plugin.dto.SceneDocumentCache.of(project),
+                        )
+                    }) { position ->
+                        AddLightGroup(project, file, position, { selected = it })
+                    },
+            )
         try {
             val button = named(panel, "add-light") as JButton
             assertTrue(button.isEnabled)
@@ -74,38 +87,51 @@ class SceneViewPanelTest : BasePlatformTestCase() {
         myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""")
         myFixture.addFileToProject(
             "p/assets/tree/meta.json",
-            """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"6a1b8d52-9f3e-4c71-8b0d-2e5f7a9c1d34","type":"MODEL","additional":{"file":"model.glb"}}"""
+            """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"6a1b8d52-9f3e-4c71-8b0d-2e5f7a9c1d34",
+"type":"MODEL","additional":{"file":"model.glb"}}""",
         )
         myFixture.addFileToProject(
             "p/assets/hills/meta.json",
-            """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"0c9e7f21-3b4a-4d85-a6f1-7e2d9b8c5a10","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":100}}"""
+            """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"0c9e7f21-3b4a-4d85-a6f1-7e2d9b8c5a10",
+"type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":100}}""",
         )
         myFixture.addFileToProject(
             "p/assets/sky/meta.json",
-            """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"9d2c4b6e-1f8a-4e37-b5c0-3a7f6e1d2b98","type":"SKYBOX","additional":{}}"""
+            """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"9d2c4b6e-1f8a-4e37-b5c0-3a7f6e1d2b98",
+"type":"SKYBOX","additional":{}}""",
         )
-        val file = myFixture.addFileToProject(
-            "p/scenes/S.scene",
-            """{"format":"abyssus","formatVersion":1,"ecs":{}}"""
-        ).virtualFile
-        val params = SceneRenderParams.DEFAULT.copy(
-            camera = CameraParams.DEFAULT.copy(
-                position = Vector3(10f, 0f, 6f),
-                direction = Vector3(0f, 0f, -1f)
+        val file =
+            myFixture
+                .addFileToProject(
+                    "p/scenes/S.scene",
+                    """{"format":"abyssus","formatVersion":1,"ecs":{}}""",
+                )
+                .virtualFile
+        val params =
+            SceneRenderParams.DEFAULT.copy(
+                camera =
+                    CameraParams.DEFAULT.copy(
+                        position = Vector3(10f, 0f, 6f),
+                        direction = Vector3(0f, 0f, -1f),
+                    )
             )
-        )
         var selected: Long? = null
         val documents = net.nevinsky.abyssus.plugin.dto.SceneDocumentCache.of(project)
-        val panel = SceneViewPanel(
-            params, testRenderer(),
-            assetMenu = PlacementMenu({
-                canAddAsset(file, documents) && hasRenderAssets(
-                    file,
-                    testMetaFiles()
-                )
-            }) { position ->
-                AddAssetGroup(project, file, testMetaFiles(), position, { selected = it })
-            })
+        val panel =
+            SceneViewPanel(
+                params,
+                testRenderer(),
+                assetMenu =
+                    PlacementMenu({
+                        canAddAsset(file, documents) &&
+                            hasRenderAssets(
+                                file,
+                                testMetaFiles(),
+                            )
+                    }) { position ->
+                        AddAssetGroup(project, file, testMetaFiles(), position, { selected = it })
+                    },
+            )
         try {
             val button = named(panel, "add-asset") as JButton
             assertTrue(button.isEnabled)
@@ -116,7 +142,10 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             choices[1].actionPerformed(TestActionEvent.createTestEvent(choices[1]))
             val document = FileDocumentManager.getInstance().getDocument(file)!!
             val scene = net.nevinsky.abyssus.plugin.parsedScene(document.text)
-            fun at(id: Long) = scene.entity(id)!!.component(PositionComponent::class.java)!!.localPosition.let { Vector3(it.x, it.y, it.z) }
+            fun at(id: Long) =
+                scene.entity(id)!!.component(PositionComponent::class.java)!!.localPosition.let {
+                    Vector3(it.x, it.y, it.z)
+                }
             assertEquals(Vector3(10f, 0f, -4f), at(1L))
             assertEquals(Vector3(-40f, 0f, -54f), at(2L)) // the 100-unit terrain is centred on the orbit target
             WriteCommandAction.runWriteCommandAction(project) { document.setText("not json") }
@@ -138,16 +167,20 @@ class SceneViewPanelTest : BasePlatformTestCase() {
 
     fun testToolbarOffersTheProjectsModelsAndStartsDrawing() {
         val file = untitled()
-        val panel = SceneViewPanel(
-            SceneRenderParams.DEFAULT, testRenderer(),
-            pathMenu = PlacementMenu({
-                net.nevinsky.abyssus.plugin.projectView.canAddPathArrangement(
-                    file,
-                    net.nevinsky.abyssus.plugin.dto.SceneDocumentCache.of(project)
-                )
-            }) { start ->
-                net.nevinsky.abyssus.plugin.projectView.AddPathArrangementGroup(project, file, start)
-            })
+        val panel =
+            SceneViewPanel(
+                SceneRenderParams.DEFAULT,
+                testRenderer(),
+                pathMenu =
+                    PlacementMenu({
+                        net.nevinsky.abyssus.plugin.projectView.canAddPathArrangement(
+                            file,
+                            net.nevinsky.abyssus.plugin.dto.SceneDocumentCache.of(project),
+                        )
+                    }) { start ->
+                        net.nevinsky.abyssus.plugin.projectView.AddPathArrangementGroup(project, file, start)
+                    },
+            )
         try {
             val button = named(panel, "add-path-arrangement") as JButton
             assertTrue(button.isEnabled)
@@ -180,9 +213,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
         try {
             val before = document.text
             val points = listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f))
-            assertTrue(
-                panel.onArrangementCreate!!(BaseMeta(MetaType.MODEL, "tree"), points, false)
-            )
+            assertTrue(panel.onArrangementCreate!!(BaseMeta(MetaType.MODEL, "tree"), points, false))
             val path = net.nevinsky.abyssus.plugin.parsedScene(document.text).entity(11)!!
             assertEquals("Path 11", path.component(NameComponent::class.java)!!.name)
             assertEquals(5, path.component(PathArrangementComponent::class.java)!!.slots.size)
@@ -207,12 +238,15 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             panel.onArrangementCreate!!(
                 BaseMeta(MetaType.MODEL, "tree"),
                 listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f)),
-                false
+                false,
             )
             assertTrue(panel.onArrangementEdit!!(11L, listOf(Vector3(0f, 0f, 0f), Vector3(60f, 0f, 0f))))
-            val slots = net.nevinsky.abyssus.plugin.parsedScene(
-                FileDocumentManager.getInstance().getDocument(file)!!.text
-            ).entity(11)!!.component(PathArrangementComponent::class.java)!!.slots
+            val slots =
+                net.nevinsky.abyssus.plugin
+                    .parsedScene(FileDocumentManager.getInstance().getDocument(file)!!.text)
+                    .entity(11)!!
+                    .component(PathArrangementComponent::class.java)!!
+                    .slots
             assertEquals(7, slots.size)
         } finally {
             editor.dispose()
@@ -228,24 +262,32 @@ class SceneViewPanelTest : BasePlatformTestCase() {
         }
     }
 
-    /** A copy of the fixture's skies on disk, with `skybox_cloudy`: `skybox_physical` naming the cloud asset `clouds_fair`. */
+    /**
+     * A copy of the fixture's skies on disk, with `skybox_cloudy`: `skybox_physical` naming the cloud asset
+     * `clouds_fair`.
+     */
     private fun skies(): java.io.File {
         val dir = java.nio.file.Files.createTempDirectory("clouds").toFile()
         val assets = java.io.File("src/test/testData/project/Untitled/assets")
-        for (name in listOf("skybox_default", "skybox_physical")) assets.resolve(name)
+        for (name in listOf("skybox_default", "skybox_physical")) assets
+            .resolve(name)
             .copyRecursively(dir.resolve("assets/$name"))
         assets.resolve("skybox_physical").copyRecursively(dir.resolve("assets/skybox_cloudy"))
         val meta = dir.resolve("assets/skybox_cloudy/meta.json")
         meta.writeText(
-            meta.readText().replace(
-                "\"sunIntensity\": 20.0",
-                "\"sunIntensity\": 20.0,\n    \"clouds\": \"3f2a9c1e-7b4d-4e8a-9c6f-1d2e3b4a5c6d\""
-            )
+            meta
+                .readText()
+                .replace(
+                    "\"sunIntensity\": 20.0",
+                    "\"sunIntensity\": 20.0,\n    \"clouds\": \"3f2a9c1e-7b4d-4e8a-9c6f-1d2e3b4a5c6d\"",
+                )
         )
         dir.resolve("assets/clouds_fair").mkdirs()
-        dir.resolve("assets/clouds_fair/meta.json").writeText(
-            """{"format":"abyssus","formatVersion":1,"uuid":"3f2a9c1e-7b4d-4e8a-9c6f-1d2e3b4a5c6d","type":"CLOUDS","additional":{"low":{"type":"cumulus"}}}"""
-        )
+        dir.resolve("assets/clouds_fair/meta.json")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"uuid":"3f2a9c1e-7b4d-4e8a-9c6f-1d2e3b4a5c6d","type":"CLOUDS",
+"additional":{"low":{"type":"cumulus"}}}"""
+            )
         return dir
     }
 
@@ -276,7 +318,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
                 assertTrue(clouds(panel).isEnabled)
                 assertEquals(
                     net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice.ASSET,
-                    (clouds(panel).selectedItem as CloudChoiceItem).choice
+                    (clouds(panel).selectedItem as CloudChoiceItem).choice,
                 )
                 assertNull(renderers.getValue(panel).state.cloudTechnique)
             }
@@ -293,7 +335,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             assertEquals(
                 "a reopened view starts at Asset",
                 net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice.ASSET,
-                reopened.cloudState.choice
+                reopened.cloudState.choice,
             )
         } finally {
             reopened.dispose()
@@ -338,7 +380,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             assertEquals(AbyssusBundle.message("sceneViewCloudsFallback"), note.text)
             assertEquals(
                 net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice.SHELLS,
-                (clouds(panel).selectedItem as CloudChoiceItem).choice
+                (clouds(panel).selectedItem as CloudChoiceItem).choice,
             )
             assertEquals(CloudTechnique.SHELLS, renderer.state.cloudTechnique)
 
@@ -350,7 +392,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             assertEquals(
                 "volumetric is refused after the second fallback",
                 net.nevinsky.abyssus.plugin.sceneview.skybox.CloudChoice.SHELLS,
-                (clouds(panel).selectedItem as CloudChoiceItem).choice
+                (clouds(panel).selectedItem as CloudChoiceItem).choice,
             )
             assertEquals(AbyssusBundle.message("sceneViewCloudsStickyTooltip"), clouds(panel).toolTipText)
         } finally {
@@ -368,13 +410,14 @@ class SceneViewPanelTest : BasePlatformTestCase() {
     fun testToolbarGroupsAppearInTheMockupsOrderWithDividers() {
         val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer())
         try {
-            val names = toolbarOf(panel).components.map {
-                when {
-                    it.name != null -> it.name
-                    it is javax.swing.JComboBox<*> -> "camera"
-                    else -> it.javaClass.simpleName
+            val names =
+                toolbarOf(panel).components.map {
+                    when {
+                        it.name != null -> it.name
+                        it is javax.swing.JComboBox<*> -> "camera"
+                        else -> it.javaClass.simpleName
+                    }
                 }
-            }
             val firstRow = names.take(9)
             assertEquals(
                 listOf(
@@ -386,7 +429,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
                     SceneToolsToolbar.DIVIDER_NAME,
                     "camera",
                     "AbyssusSceneFrame",
-                    SceneToolsToolbar.DIVIDER_NAME
+                    SceneToolsToolbar.DIVIDER_NAME,
                 ),
                 firstRow,
             )
@@ -428,14 +471,20 @@ class SceneViewPanelTest : BasePlatformTestCase() {
     }
 
     fun testToolbarWrapsInsteadOfOverlappingAtNineHundredPixels() {
-        val panel = SceneViewPanel(
-            SceneRenderParams.DEFAULT, testRenderer(),
-            lightMenu = PlacementMenu({ true }) { _ -> DefaultActionGroup() },
-            assetMenu = PlacementMenu({ true }) { _ -> DefaultActionGroup() })
+        val panel =
+            SceneViewPanel(
+                SceneRenderParams.DEFAULT,
+                testRenderer(),
+                lightMenu = PlacementMenu({ true }) { _ -> DefaultActionGroup() },
+                assetMenu = PlacementMenu({ true }) { _ -> DefaultActionGroup() },
+            )
         try {
             panel.setSize(900, 600)
             fun layoutAll(c: Component) {
-                (c as? Container)?.let { it.doLayout(); it.components.forEach(::layoutAll) }
+                (c as? Container)?.let {
+                    it.doLayout()
+                    it.components.forEach(::layoutAll)
+                }
             }
             layoutAll(panel)
             val toolbar = toolbarOf(panel)
@@ -479,7 +528,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
             assertEquals(net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace.LOCAL, renderer.state.gizmoSpace)
             assertEquals(
                 net.nevinsky.abyssus.lib.core.editor.pick.GizmoSnap(0.25f, SNAP_ANGLE_DEGREES),
-                renderer.state.snap
+                renderer.state.snap,
             )
             panel.tools.snapOn = false
             assertNull(renderer.state.snap)
@@ -493,12 +542,13 @@ class SceneViewPanelTest : BasePlatformTestCase() {
         }
     }
 
-    private val mainParams = net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf(
-        net.nevinsky.abyssus.lib.core.editor.parseScene(
-            java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()
-        ),
-        CameraParams.DEFAULT,
-    )
+    private val mainParams =
+        net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf(
+            net.nevinsky.abyssus.lib.core.editor.parseScene(
+                java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()
+            ),
+            CameraParams.DEFAULT,
+        )
 
     fun testFrameSelectionLooksAtTheSelectedMarker() {
         val renderer = testRenderer()
@@ -543,7 +593,10 @@ class SceneViewPanelTest : BasePlatformTestCase() {
     private fun laidOut(panel: SceneViewPanel) {
         panel.setSize(800, 600)
         fun layoutAll(c: Component) {
-            (c as? Container)?.let { it.doLayout(); it.components.forEach(::layoutAll) }
+            (c as? Container)?.let {
+                it.doLayout()
+                it.components.forEach(::layoutAll)
+            }
         }
         layoutAll(panel)
     }
@@ -574,9 +627,12 @@ class SceneViewPanelTest : BasePlatformTestCase() {
     }
 
     fun testAnUnavailableViewKeepsItsToolbarDisabledAboveTheMessage() {
-        val panel = SceneViewPanel(
-            SceneRenderParams.DEFAULT, testRenderer(),
-            lightMenu = PlacementMenu({ true }) { _ -> DefaultActionGroup() })
+        val panel =
+            SceneViewPanel(
+                SceneRenderParams.DEFAULT,
+                testRenderer(),
+                lightMenu = PlacementMenu({ true }) { _ -> DefaultActionGroup() },
+            )
         try {
             assertTrue(panel.showUnavailable("OpenGL scene is unavailable: no GL"))
             val message = named(panel, "scene-unavailable") as javax.swing.JLabel

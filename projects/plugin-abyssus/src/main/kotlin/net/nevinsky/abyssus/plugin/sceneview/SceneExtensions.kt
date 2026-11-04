@@ -76,7 +76,9 @@ class SimulationRequest(
     val selection: String?,
 )
 
-/** A key or mouse event passed to a running simulation: a key by name (`W`), or a mouse [button] at view pixel [x], [y]. */
+/**
+ * A key or mouse event passed to a running simulation: a key by name (`W`), or a mouse [button] at view pixel [x], [y].
+ */
 data class SimulationInput(val kind: Kind, val key: String = "", val button: Int = 0, val x: Int = 0, val y: Int = 0) {
     enum class Kind { KEY_DOWN, KEY_UP, BUTTON_DOWN, BUTTON_UP, MOUSE_MOVE }
 }
@@ -107,7 +109,8 @@ interface SceneSimulation {
 }
 
 /**
- * The `net.nevinsky.abyssus.sceneSimulation` extension: Play in the Scene view. With one installed, the view shows Play,
+  * The `net.nevinsky.abyssus.sceneSimulation` extension: Play in the Scene view. With one installed, the view shows
+  * Play,
  * Pause, Step and Stop. [start] must return at once; the simulation reports through the listener when it runs.
  */
 interface SceneSimulationProvider : SceneProviderAvailability {

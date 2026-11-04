@@ -28,14 +28,18 @@ class ReloadPolicy {
 
     /** An unsaved edit in a text tab. */
     fun typing(): Reload {
-        if (disposed) return Reload.NEVER
+        if (disposed) {
+            return Reload.NEVER
+        }
         pending = true
         return Reload.LATER
     }
 
     /** A change that must show at once: a file change on disk, a plugin edit, Undo or Redo. */
     fun immediate(): Reload {
-        if (disposed) return Reload.NEVER
+        if (disposed) {
+            return Reload.NEVER
+        }
         pending = false
         return Reload.NOW
     }

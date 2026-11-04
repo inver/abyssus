@@ -5,7 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.meta
 
-
+import java.io.File
+import java.nio.file.Files
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -16,25 +17,32 @@ import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
-import java.nio.file.Files
 
 class AssetReferenceChoicesTest {
-    @get:Rule
-    val tmp = TemporaryFolder()
+    @get:Rule val tmp = TemporaryFolder()
 
     private val choices = AssetReferenceChoices(JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER))
 
-    private fun asset(name: String, type: String, uuid: String?, file: String? = "tex.png", write: Boolean = true): File {
+    private fun asset(
+        name: String,
+        type: String,
+        uuid: String?,
+        file: String? = "tex.png",
+        write: Boolean = true,
+    ): File {
         val dir = File(tmp.root, "assets/$name").apply { mkdirs() }
         val id = uuid?.let { """"uuid":"$it",""" } ?: ""
         val f = file?.let { """"file":"$it"""" } ?: """"x":1"""
-        File(dir, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,$id"type":"$type","additional":{$f}}""")
-        if (write && file != null) File(dir, file).apply { parentFile.mkdirs() }.writeBytes(byteArrayOf(1, 2, 3))
+        File(dir, "meta.json")
+            .writeText("""{"format":"abyssus","formatVersion":1,"version":1,$id"type":"$type","additional":{$f}}""")
+        if (write && file != null) {
+            File(dir, file).apply { parentFile.mkdirs() }.writeBytes(byteArrayOf(1, 2, 3))
+        }
         return dir
     }
 
-    private val assetsDir get() = File(tmp.root, "assets")
+    private val assetsDir
+        get() = File(tmp.root, "assets")
 
     @Test
     fun `no current value offers none and the readable textures by folder name`() {

@@ -5,29 +5,29 @@
 
 package net.nevinsky.abyssus.lib.core.editor
 
+import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.EditorBundle
-import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import java.io.File
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.editor.util.at
 import net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEdit
 import net.nevinsky.abyssus.lib.core.editor.headless.HeadlessEditing
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
-import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
-import net.nevinsky.abyssus.plugin.projectView.ComponentTarget
+import net.nevinsky.abyssus.lib.core.editor.util.at
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.assetfiles.AssetEditResult
 import net.nevinsky.abyssus.plugin.assetfiles.AssetMetaEdits
+import net.nevinsky.abyssus.plugin.filetype.editSceneDocument
+import net.nevinsky.abyssus.plugin.projectView.ComponentTarget
 import net.nevinsky.abyssus.plugin.properties.PanelState
 import net.nevinsky.abyssus.plugin.properties.readEntityState
 import net.nevinsky.abyssus.plugin.testCore
 import net.nevinsky.abyssus.plugin.testPanelServices
-import java.io.File
 
 /**
  * Spec `headless-scene-editing`: for the same input text, the editing library without the IDE gives exactly what the
@@ -36,17 +36,29 @@ import java.io.File
 class HeadlessSceneEditingTest : BasePlatformTestCase() {
     private val sceneText = File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()
     private val terrainMeta =
-        File("src/test/testData/project/Untitled/assets/terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b/meta.json").readText()
-    private val headless get() = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().let { HeadlessEditing(it.json, EditorBundle, it.registry) }
+        File("src/test/testData/project/Untitled/assets/terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b/meta.json")
+            .readText()
+    private val headless
+        get() =
+            com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().let {
+                HeadlessEditing(it.json, EditorBundle, it.registry)
+            }
 
     private fun textOf(file: VirtualFile) = FileDocumentManager.getInstance().getDocument(file)!!.text
 
     fun testMovingAnEntityWritesWhatTheGizmoDragWrites() {
         val file = myFixture.addFileToProject("p/scenes/Main Scene.scene", sceneText).virtualFile
-        val position = net.nevinsky.abyssus.plugin.parsedScene(sceneText).entity(0)!!.component(PositionComponent::class.java)!!.localPosition
+        val position =
+            net.nevinsky.abyssus.plugin
+                .parsedScene(sceneText)
+                .entity(0)!!
+                .component(PositionComponent::class.java)!!
+                .localPosition
         val edit = TransformEdit(position = Vector3(1f, position.y, position.z))
         // what SceneFileEditor.applyTransform runs for a drag of Model 0
-        assertTrue(editSceneDocument(project, file, "Move Entity") { root -> SceneTransformWriter().apply(root, 0L, edit) })
+        assertTrue(
+            editSceneDocument(project, file, "Move Entity") { root -> SceneTransformWriter().apply(root, 0L, edit) }
+        )
         assertEquals(HeadlessEdit.Edited(textOf(file)), headless.transform(sceneText, 0L, edit))
     }
 
@@ -56,25 +68,49 @@ class HeadlessSceneEditingTest : BasePlatformTestCase() {
         val refusal = headless.validate(legacy, DocumentKind.SCENE)!!
         val shown = readEntityState(ComponentTarget(file, 0L, null), testPanelServices(project)) as PanelState.Empty
         assertEquals(AbyssusBundle.message("propertiesSceneUnreadable", refusal.message), shown.message)
-        assertFalse(editSceneDocument(project, file, "Move Entity") { root ->
-            SceneTransformWriter().apply(root, 0L, TransformEdit(position = Vector3(1f, 0f, 0f)))
-        })
+        assertFalse(
+            editSceneDocument(project, file, "Move Entity") { root ->
+                SceneTransformWriter().apply(root, 0L, TransformEdit(position = Vector3(1f, 0f, 0f)))
+            }
+        )
         assertEquals(legacy, textOf(file))
-        assertEquals(HeadlessEdit.Refused(refusal), headless.transform(legacy, 0L, TransformEdit(position = Vector3(1f, 0f, 0f))))
+        assertEquals(
+            HeadlessEdit.Refused(refusal),
+            headless.transform(legacy, 0L, TransformEdit(position = Vector3(1f, 0f, 0f))),
+        )
     }
 
     fun testAnAssetPropertyEditWritesWhatThePanelWrites() {
         val meta = myFixture.addFileToProject("p/assets/terrain/meta.json", terrainMeta).virtualFile
         assertEquals(
             AssetEditResult.Changed,
-            AssetMetaEdits.update(project, meta.parent, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(2048), testCore.assetEditor),
+            AssetMetaEdits.update(
+                project,
+                meta.parent,
+                "size",
+                AssetFieldValue.Int(1600),
+                AssetFieldValue.Int(2048),
+                testCore.assetEditor,
+            ),
         )
         assertEquals(
             HeadlessEdit.Edited(textOf(meta)),
             headless.setAssetProperty(terrainMeta, "size", AssetFieldValue.Int(1600), AssetFieldValue.Int(2048)),
         )
-        val written = net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader(com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().json).read(textOf(meta)).values
-        val original = net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader(com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().json).read(terrainMeta).values
+        val written =
+            net.nevinsky.abyssus.lib.core.editor.document
+                .AssetMetaReader(
+                    com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().json
+                )
+                .read(textOf(meta))
+                .values
+        val original =
+            net.nevinsky.abyssus.lib.core.editor.document
+                .AssetMetaReader(
+                    com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().json
+                )
+                .read(terrainMeta)
+                .values
         for (key in listOf("version", "uuid", "type", "lastModified")) assertEquals(key, original[key], written[key])
         assertEquals(2048, written.at("additional", "size"))
     }

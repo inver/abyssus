@@ -14,6 +14,12 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.Component
+import java.awt.Container
+import java.io.File
+import javax.swing.JCheckBox
+import javax.swing.JComboBox
+import javax.swing.JLabel
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
 import net.nevinsky.abyssus.lib.core.editor.pick.OrbitCamera
@@ -33,12 +39,6 @@ import net.nevinsky.abyssus.plugin.splat.SplatStateCache
 import net.nevinsky.abyssus.plugin.splat.SplatStrokeCommand
 import net.nevinsky.abyssus.plugin.splat.SplatTransactions
 import net.nevinsky.abyssus.plugin.testCore
-import java.awt.Component
-import java.awt.Container
-import java.io.File
-import javax.swing.JCheckBox
-import javax.swing.JComboBox
-import javax.swing.JLabel
 
 class PaintTextureControlsTest : BasePlatformTestCase() {
     init {
@@ -58,16 +58,23 @@ class PaintTextureControlsTest : BasePlatformTestCase() {
         disk = FileUtil.createTempDirectory("abyssus-paint", null)
     }
 
-    private fun project(splatMap: String?, image: ByteArray? = codec.encode(SplatPixels(side, ByteArray(side * side * 4)))) {
+    private fun project(
+        splatMap: String?,
+        image: ByteArray? = codec.encode(SplatPixels(side, ByteArray(side * side * 4))),
+    ) {
         val terrain = File(disk, "assets/terrain_a").apply { mkdirs() }
         val ref = splatMap?.let { ""","splatMap":"$it"""" }.orEmpty()
-        File(terrain, "meta.json").writeText(
-            """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"aaaaaaaa-0000-0000-0000-0000000000aa","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":63,"uv":8.0$ref}}""",
-        )
+        File(terrain, "meta.json")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"aaaaaaaa-0000-0000-0000-0000000000aa",
+"type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":63,"uv":8.0$ref}}"""
+            )
         val texture = File(disk, "assets/texture_splat").apply { mkdirs() }
-        File(texture, "meta.json").writeText(
-            """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"$uuid","type":"TEXTURE","additional":{"file":"splat.png"}}""",
-        )
+        File(texture, "meta.json")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"$uuid","type":"TEXTURE",
+"additional":{"file":"splat.png"}}"""
+            )
         png = File(texture, "splat.png")
         image?.let(png::writeBytes)
         terrainDir = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(terrain)!!
@@ -76,34 +83,69 @@ class PaintTextureControlsTest : BasePlatformTestCase() {
 
     private fun session(): SplatSession {
         val store = LocalAssetFileStore(disk)
-        val cache = SplatStateCache(SplatStateReader(testCore.json, ImageIoSplatCodec()), File(disk, "assets"), terrainDir)
-        val command = SplatStrokeCommand(
-            this.project, terrainDir, SplatDrafts(), SplatTransactions(store), store, cache::current, { splatMode },
-            background = { it.run() }, ui = { it.run() }, report = { reports += it },
+        val cache =
+            SplatStateCache(SplatStateReader(testCore.json, ImageIoSplatCodec()), File(disk, "assets"), terrainDir)
+        val command =
+            SplatStrokeCommand(
+                this.project,
+                terrainDir,
+                SplatDrafts(),
+                SplatTransactions(store),
+                store,
+                cache::current,
+                { splatMode },
+                background = { it.run() },
+                ui = { it.run() },
+                report = { reports += it },
+            )
+        return SplatSession(
+            this.project,
+            terrainDir,
+            disk,
+            testCore.json,
+            store,
+            testCore.assetEditor,
+            command,
+            command::dispose,
+            cache,
         )
-        return SplatSession(this.project, terrainDir, disk, testCore.json, store, testCore.assetEditor, command, command::dispose, cache)
     }
 
     private var splatMode: BrushMode? = null
 
-    private fun named(c: Component, name: String): Component? = if (c.name == name) c else
-        (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
+    private fun named(c: Component, name: String): Component? =
+        if (c.name == name) {
+            c
+        } else {
+            (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
+        }
 
     private fun controls(renderer: SceneRenderer, onEnded: () -> Unit = {}): PaintTextureControls {
         val interaction = SceneInteraction(renderer.state, renderer.queries, OrbitCamera(Vector3(), 10f, 0f, 0.5f))
         val session = session()
         return PaintTextureControls(
-            renderer, interaction, PlayState(null), BrushKinds(), { _, mode, ready -> splatMode = mode(); ready(session) },
-            {}, onEnded, { reports += it },
-        ).also {
-            renderer.state.selectedId = 1L
-            it.refreshSession(force = true)
-            it.begin(1L)
-            it.show(session.snapshot())
-        }
+                renderer,
+                interaction,
+                PlayState(null),
+                BrushKinds(),
+                { _, mode, ready ->
+                    splatMode = mode()
+                    ready(session)
+                },
+                {},
+                onEnded,
+                { reports += it },
+            )
+            .also {
+                renderer.state.selectedId = 1L
+                it.refreshSession(force = true)
+                it.begin(1L)
+                it.show(session.snapshot())
+            }
     }
 
-    private val target get() = TerrainTarget(1L, TerrainData(3, FloatArray(9), 63, 1f), Matrix4())
+    private val target
+        get() = TerrainTarget(1L, TerrainData(3, FloatArray(9), 63, 1f), Matrix4())
 
     fun testTheStripAppearsWithTheFirstLayerChosenAndExclusiveOn() {
         project(uuid)
@@ -174,7 +216,11 @@ class PaintTextureControlsTest : BasePlatformTestCase() {
         val otherBefore = File(other, "meta.json").readText()
         c.makeUniqueCopy()
         assertEquals(otherBefore, File(other, "meta.json").readText())
-        assertFalse(File(terrainDir.path, "meta.json").readText().contains(uuid.substring(0, 8) + "-0000-0000-0000-000000000001\""))
+        assertFalse(
+            File(terrainDir.path, "meta.json")
+                .readText()
+                .contains(uuid.substring(0, 8) + "-0000-0000-0000-000000000001\"")
+        )
         val copy = File(disk, "assets").listFiles()!!.single { it.name.startsWith("texture_terrain_a_splat") }
         assertEquals(png.readBytes().toList(), File(copy, "splat.png").readBytes().toList())
     }
@@ -188,7 +234,13 @@ class PaintTextureControlsTest : BasePlatformTestCase() {
         val slotG = session.snapshot().layers[2]
         assertNull(slotG.uuid)
         session.assign(slotG, uuid)
-        assertTrue(metaFile.readText().contains("\"splatG\":\"$uuid\"") || com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getCachedDocument(terrainDir.findChild("meta.json")!!)!!.text.contains("splatG"))
+        assertTrue(
+            metaFile.readText().contains("\"splatG\":\"$uuid\"") ||
+                com.intellij.openapi.fileEditor.FileDocumentManager.getInstance()
+                    .getCachedDocument(terrainDir.findChild("meta.json")!!)!!
+                    .text
+                    .contains("splatG")
+        )
         val assigned = session.snapshot().layers[2]
         assertEquals("texture_splat", assigned.name)
         session.assign(assigned, null)
@@ -206,7 +258,12 @@ class PaintTextureControlsTest : BasePlatformTestCase() {
 
     fun testAnUnresolvedLayerStaysSelectableAndPaintable() {
         project(uuid)
-        File(terrainDir.path, "meta.json").writeText(File(terrainDir.path, "meta.json").readText().replace("\"splatMap\"", "\"splatR\":\"gone\",\"splatMap\""))
+        File(terrainDir.path, "meta.json")
+            .writeText(
+                File(terrainDir.path, "meta.json")
+                    .readText()
+                    .replace("\"splatMap\"", "\"splatR\":\"gone\",\"splatMap\"")
+            )
         terrainDir.refresh(false, true)
         val renderer = testRenderer()
         val c = controls(renderer)
@@ -223,9 +280,16 @@ class PaintTextureControlsTest : BasePlatformTestCase() {
         project(uuid)
         val renderer = testRenderer()
         var ended = 0
-        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, renderer,
-            sculptSession = { _, _, _, ready -> ready(null) },
-            splatSession = { _, mode, ready -> splatMode = mode(); ready(session()) })
+        val panel =
+            SceneViewPanel(
+                SceneRenderParams.DEFAULT,
+                renderer,
+                sculptSession = { _, _, _, ready -> ready(null) },
+                splatSession = { _, mode, ready ->
+                    splatMode = mode()
+                    ready(session())
+                },
+            )
         panel.onPaintTextureEnded = { ended++ }
         try {
             panel.selectEntity(1L)
@@ -239,6 +303,8 @@ class PaintTextureControlsTest : BasePlatformTestCase() {
             panel.setPaintingTexture(null)
             assertNull(renderer.state.brush)
             assertEquals("a host-requested end is not reported back", 1, ended)
-        } finally { panel.dispose() }
+        } finally {
+            panel.dispose()
+        }
     }
 }

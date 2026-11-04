@@ -18,8 +18,10 @@ import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
  */
 sealed interface TerrainLighting {
     /**
-     * The editor's: several lights, an optional built sky's irradiance cube (and the cube a cross-fade goes to, with how far
-     * it has got), the shadow [atlas], the cloud shadow map [sunVisibility] and, in a planar reflection pass, a [clipPlane]
+      * The editor's: several lights, an optional built sky's irradiance cube (and the cube a cross-fade goes to, with
+      * how far
+      * it has got), the shadow [atlas], the cloud shadow map [sunVisibility] and, in a planar reflection pass, a
+      * [clipPlane]
      * `(a, b, c, d)` that discards fragments with `a x + b y + c z + d < 0`.
      */
     class Editor(
@@ -32,8 +34,10 @@ sealed interface TerrainLighting {
     ) : TerrainLighting
 
     /**
-     * A game's: one sun ([towardSun] unit vector, linear RGB [sunR]/[sunG]/[sunB]) that shadows through [shadow], when set.
-     * A built sky's [irradiance] cube, when set, replaces the frame's flat ambient; while a newer one fades in, [fadeIrradiance]
+      * A game's: one sun ([towardSun] unit vector, linear RGB [sunR]/[sunG]/[sunB]) that shadows through [shadow], when
+      * set.
+      * A built sky's [irradiance] cube, when set, replaces the frame's flat ambient; while a newer one fades in,
+      * [fadeIrradiance]
      * is it and [fade] (0 to 1) how far it has replaced [irradiance]. The host keeps and disposes the cubes.
      */
     class Sun(

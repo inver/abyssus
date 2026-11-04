@@ -16,12 +16,13 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
 class ControllerServiceTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
     private val source = FakeControllerSource()
     private val input = HandleInput()
-    private val file get() = temp.root.toPath().resolve("controls.json")
+    private val file
+        get() = temp.root.toPath().resolve("controls.json")
+
     private val profiles by lazy { ControllerProfiles(file) }
     private val service by lazy { ControllerService(source, profiles, input) }
 
@@ -49,7 +50,10 @@ class ControllerServiceTest {
     fun aRestingStickLeavesTheKeysInControl() {
         source.plug("pad", gamepad = true)
         input.key("W", true)
-        repeat(30) { frame(flight); input.update(1f / 120f) }
+        repeat(30) {
+            frame(flight)
+            input.update(1f / 120f)
+        }
         assertEquals(1f, tiltNow(), 0f)
     }
 
@@ -204,7 +208,10 @@ class ControllerServiceTest {
         service.setInvert(true)
         service.setDeadZone(0.3f)
         service.setCurve(0.5f)
-        assertEquals(gamepadDefault().copy(invert = true, deadZone = 0.3f, curve = 0.5f), ControllerProfiles(file).profile("pad", true))
+        assertEquals(
+            gamepadDefault().copy(invert = true, deadZone = 0.3f, curve = 0.5f),
+            ControllerProfiles(file).profile("pad", true),
+        )
         service.setDeadZone(5f)
         assertEquals(MAX_DEAD_ZONE, service.device!!.profile.deadZone, 0f)
         service.reset()

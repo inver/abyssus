@@ -20,8 +20,12 @@ class RayPlacedTerrain(val id: String, val asset: RayTerrainSnapshot, val world:
 
 /** The field camera as plain numbers: nothing mutable crosses to the ray worker. */
 class RayFieldCamera(
-    val position: List<Float>, val direction: List<Float>, val up: List<Float>,
-    val fieldOfView: Float, val near: Float, val far: Float,
+    val position: List<Float>,
+    val direction: List<Float>,
+    val up: List<Float>,
+    val fieldOfView: Float,
+    val near: Float,
+    val far: Float,
 )
 
 /** What the game knows about one frame of the field, with no GL and no Ashley type. */
@@ -68,7 +72,8 @@ class RayFieldSceneBuilder(limits: RaySnapshotLimits = RaySnapshotLimits()) {
     private var environment: Triple<RayEnvironment, RayFog?, Any?>? = null
 
     /** Geometry builds so far: the number of times the structure changed. */
-    val structureChanges: Long get() = sceneGeneration
+    val structureChanges: Long
+        get() = sceneGeneration
 
     fun build(inputs: RayFieldInputs): RayFieldFrame {
         val texture = inputs.sky?.let(::textureOf)
@@ -78,28 +83,47 @@ class RayFieldSceneBuilder(limits: RaySnapshotLimits = RaySnapshotLimits()) {
         converter.checkBounds()
 
         val environmentNow = RayEnvironment(inputs.ambient, inputs.background, texture = texture?.let { 0 })
-        val scene = RaySceneSnapshot(
-            converter.meshes, converter.instances, converter.materials,
-            fitTextureTexels(converter.textures, halve = ::halvedTexture)
-                ?: throw IllegalArgumentException("The scene textures cannot be reduced to $RAY_MAX_TEXTURE_TEXELS texels"),
-            inputs.lights, environmentNow, inputs.fog,
-        )
+        val scene =
+            RaySceneSnapshot(
+                converter.meshes,
+                converter.instances,
+                converter.materials,
+                fitTextureTexels(converter.textures, halve = ::halvedTexture)
+                    ?: throw IllegalArgumentException(
+                        "The scene textures cannot be reduced to $RAY_MAX_TEXTURE_TEXELS texels"
+                    ),
+                inputs.lights,
+                environmentNow,
+                inputs.fog,
+            )
         val c = inputs.camera
         val rayCamera = RaySliceCamera(c.position, c.direction, c.up, c.fieldOfView, c.near, c.far)
 
         val assetsNow = inputs.models.map<RayPlacedModel, Any> { it.asset } + inputs.terrains.map { it.asset }
-        val structure = topology != converter.topology.toList() ||
-            assets.size != assetsNow.size || assets.indices.any { assets[it] !== assetsNow[it] }
+        val structure =
+            topology != converter.topology.toList() ||
+                assets.size != assetsNow.size ||
+                assets.indices.any { assets[it] !== assetsNow[it] }
         val moved = transforms != converter.transforms
         val cameraNow = listOf(c.position, c.direction, c.up, c.fieldOfView, c.near, c.far)
         val lit = lights != inputs.lights
         val skyNow = Triple(environmentNow, inputs.fog, inputs.sky)
-        val env = environment?.let { it.first != skyNow.first || it.second != skyNow.second || it.third !== skyNow.third } ?: true
+        val env =
+            environment?.let { it.first != skyNow.first || it.second != skyNow.second || it.third !== skyNow.third }
+                ?: true
 
-        if (structure) sceneGeneration++
-        if (camera != cameraNow) cameraRevision++
+        if (structure) {
+            sceneGeneration++
+        }
+        if (camera != cameraNow) {
+            cameraRevision++
+        }
         // a sky-only change keeps the older frame shown; any other change restarts sampling
-        if (structure || moved || lit) contentRevision++ else if (env) environmentRevision++
+        if (structure || moved || lit) {
+            contentRevision++
+        } else if (env) {
+            environmentRevision++
+        }
 
         assets = assetsNow
         topology = converter.topology.toList()
@@ -108,20 +132,41 @@ class RayFieldSceneBuilder(limits: RaySnapshotLimits = RaySnapshotLimits()) {
         lights = inputs.lights
         environment = skyNow
         return RayFieldFrame(
-            scene, rayCamera, RayFrameKey(sceneGeneration, 1, cameraRevision, 0), contentRevision, environmentRevision,
+            scene,
+            rayCamera,
+            RayFrameKey(sceneGeneration, 1, cameraRevision, 0),
+            contentRevision,
+            environmentRevision,
         )
     }
 
-    // halved copies of oversized textures, per source, so a scene over the texel budget reduces them once, not every frame
+    // halved copies of oversized textures, per source, so a scene over the texel budget reduces them once, not every
+    // frame
     private val halved = java.util.WeakHashMap<RayTexture, RayTexture>()
+
     private fun halvedTexture(texture: RayTexture): RayTexture? =
         halved[texture] ?: texture.halved()?.also { halved[texture] = it }
 
     private fun textureOf(sky: RaySkySnapshot): RayTexture {
-        skyTexture?.takeIf { it.first === sky }?.let { return it.second }
+        skyTexture
+            ?.takeIf { it.first === sky }
+            ?.let {
+                return it.second
+            }
         val bytes = sky.rgba8()
-        return (if (bytes != null) RayTexture("sky", sky.width, sky.height, bytes, RayWrap.REPEAT, RayWrap.CLAMP_TO_EDGE, RayFilter.LINEAR)
-        else RayTexture("sky", sky.width, sky.height, sky.rgba(), RayWrap.REPEAT, RayWrap.CLAMP_TO_EDGE, RayFilter.LINEAR))
+        return (if (bytes != null) {
+                RayTexture("sky", sky.width, sky.height, bytes, RayWrap.REPEAT, RayWrap.CLAMP_TO_EDGE, RayFilter.LINEAR)
+            } else {
+                RayTexture(
+                    "sky",
+                    sky.width,
+                    sky.height,
+                    sky.rgba(),
+                    RayWrap.REPEAT,
+                    RayWrap.CLAMP_TO_EDGE,
+                    RayFilter.LINEAR,
+                )
+            })
             .also { skyTexture = sky to it }
     }
 }

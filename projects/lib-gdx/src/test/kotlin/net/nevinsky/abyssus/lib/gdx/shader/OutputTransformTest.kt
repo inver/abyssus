@@ -58,7 +58,8 @@ class OutputTransformTest {
 
     @Test
     fun exposureScalesTheLightBeforeTheToneMap() {
-        // below the shoulder the map is a fixed offset, so doubling the exposure doubles the light to within that offset
+        // below the shoulder the map is a fixed offset, so doubling the exposure doubles the light to within that
+        // offset
         val a = OutputTransform(1f).apply(floatArrayOf(0.2f, 0.2f, 0.2f))[0]
         val b = OutputTransform(2f).apply(floatArrayOf(0.1f, 0.1f, 0.1f))[0]
         assertEquals(a, b, 1e-6f)

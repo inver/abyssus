@@ -14,27 +14,34 @@ import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.graphics.VertexAttributes.Usage
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import java.awt.image.BufferedImage
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 
-/** What to show in a [corner]: [image] (changing [version] means new content) at [margin] device pixels from the edge. */
+/**
+ * What to show in a [corner]: [image] (changing [version] means new content) at [margin] device pixels from the edge.
+ */
 internal class CornerSprite(val corner: Corner, val image: BufferedImage, val version: Long, val margin: Int)
 
 /**
- * Draws Swing-painted images as blended quads in the corners of the view, in GL, after everything else. Call only with the
- * GL context current. A texture is uploaded again only when its sprite's version changes.
+ * Draws Swing-painted images as blended quads in the corners of the view, in GL, after everything else. Call only with
+ * the GL context current. A texture is uploaded again only when its sprite's version changes.
  */
 internal class CornerOverlay(shaders: ShaderStorage) : Disposable {
     private val program = shaders.program("cornerquad")
-    private val mesh = Mesh(
-        false, 4, 0,
-        VertexAttribute(Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE),
-        VertexAttribute(Usage.TextureCoordinates, 2, ShaderProgram.TEXCOORD_ATTRIBUTE + "0"),
-    )
+    private val mesh =
+        Mesh(
+            false,
+            4,
+            0,
+            VertexAttribute(Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE),
+            VertexAttribute(Usage.TextureCoordinates, 2, ShaderProgram.TEXCOORD_ATTRIBUTE + "0"),
+        )
     private val textures = HashMap<Corner, Pair<Long, Texture>>()
 
     fun draw(width: Int, height: Int, sprites: List<CornerSprite>) {
-        if (sprites.isEmpty() || width <= 0 || height <= 0) return
+        if (sprites.isEmpty() || width <= 0 || height <= 0) {
+            return
+        }
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
         Gdx.gl.glDisable(GL20.GL_CULL_FACE)
         Gdx.gl.glEnable(GL20.GL_BLEND)
@@ -47,12 +54,26 @@ internal class CornerOverlay(shaders: ShaderStorage) : Disposable {
             val right = 2f * (rect.x + rect.width) / width - 1f
             val top = 1f - 2f * rect.y / height
             val bottom = 1f - 2f * (rect.y + rect.height) / height
-            mesh.setVertices(floatArrayOf(
-                left, top, 0f, 0f,
-                left, bottom, 0f, 1f,
-                right, top, 1f, 0f,
-                right, bottom, 1f, 1f,
-            ))
+            mesh.setVertices(
+                floatArrayOf(
+                    left,
+                    top,
+                    0f,
+                    0f,
+                    left,
+                    bottom,
+                    0f,
+                    1f,
+                    right,
+                    top,
+                    1f,
+                    0f,
+                    right,
+                    bottom,
+                    1f,
+                    1f,
+                )
+            )
             texture.bind(0)
             program.setUniformi("u_texture", 0)
             mesh.render(program, GL20.GL_TRIANGLE_STRIP)
@@ -62,7 +83,11 @@ internal class CornerOverlay(shaders: ShaderStorage) : Disposable {
     }
 
     private fun textureOf(sprite: CornerSprite): Texture {
-        textures[sprite.corner]?.takeIf { it.first == sprite.version }?.let { return it.second }
+        textures[sprite.corner]
+            ?.takeIf { it.first == sprite.version }
+            ?.let {
+                return it.second
+            }
         textures.remove(sprite.corner)?.second?.dispose()
         val texture = upload(sprite.image)
         textures[sprite.corner] = sprite.version to texture
@@ -76,7 +101,11 @@ internal class CornerOverlay(shaders: ShaderStorage) : Disposable {
             val buffer = pixmap.pixels
             buffer.clear()
             for (argb in pixels) {
-                buffer.put((argb shr 16).toByte()).put((argb shr 8).toByte()).put(argb.toByte()).put((argb ushr 24).toByte())
+                buffer
+                    .put((argb shr 16).toByte())
+                    .put((argb shr 8).toByte())
+                    .put(argb.toByte())
+                    .put((argb ushr 24).toByte())
             }
             buffer.flip()
             return Texture(pixmap).also {

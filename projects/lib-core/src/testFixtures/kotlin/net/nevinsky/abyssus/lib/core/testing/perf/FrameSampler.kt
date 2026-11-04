@@ -29,7 +29,9 @@ class FrameSampler(expectedFrames: Int = 4096) {
     }
 
     fun record(nanos: Long) {
-        if (count == growing.size) growing = growing.copyOf(count * 2)
+        if (count == growing.size) {
+            growing = growing.copyOf(count * 2)
+        }
         growing[count++] = nanos
     }
 
@@ -41,7 +43,11 @@ class FrameSampler(expectedFrames: Int = 4096) {
         return PerfStats(
             frames = count,
             p50Ms = percentile(sorted, 0.50), p95Ms = percentile(sorted, 0.95), p99Ms = percentile(sorted, 0.99),
-            allocatedBytesPerFrame = if (thread == null) 0.0 else allocated.toDouble() / count,
+            allocatedBytesPerFrame = if (thread == null) {
+                0.0
+            } else {
+                allocated.toDouble() / count
+            },
             gcCount = gcs.sumOf { it.collectionCount.coerceAtLeast(0) } - gcCountAtStart,
             gcMillis = gcs.sumOf { it.collectionTime.coerceAtLeast(0) } - gcMillisAtStart,
         )

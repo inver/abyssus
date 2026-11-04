@@ -20,13 +20,23 @@ class NativesTest {
         natives.load()
         assertTrue(natives.loaded())
 
-        val pairs = ObjectLayerPairFilterTable(2).apply { enableCollision(0, 1); enableCollision(1, 1) }
-        val broad = BroadPhaseLayerInterfaceTable(2, 2).apply { mapObjectToBroadPhaseLayer(0, 0); mapObjectToBroadPhaseLayer(1, 1) }
+        val pairs =
+            ObjectLayerPairFilterTable(2).apply {
+                enableCollision(0, 1)
+                enableCollision(1, 1)
+            }
+        val broad =
+            BroadPhaseLayerInterfaceTable(2, 2).apply {
+                mapObjectToBroadPhaseLayer(0, 0)
+                mapObjectToBroadPhaseLayer(1, 1)
+            }
         val filter = ObjectVsBroadPhaseLayerFilterTable(broad, 2, pairs, 2)
         val system = PhysicsSystem()
         system.init(16, 0, 16, 16, broad, filter, pairs)
         assertTrue(system.getNumBodies() == 0)
         system.close()
-        filter.close(); broad.close(); pairs.close()
+        filter.close()
+        broad.close()
+        pairs.close()
     }
 }

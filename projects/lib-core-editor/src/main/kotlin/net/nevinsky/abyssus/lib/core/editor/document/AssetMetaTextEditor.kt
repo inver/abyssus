@@ -18,10 +18,14 @@ class AssetMetaTextEditor(private val parser: AssetMetaParser) {
     fun <T : Any> edit(text: String, type: MetaType, change: (T) -> T): TextEditOutcome {
         val meta = runCatchingKeepingCancellation { parser.read("", text) }
             .getOrElse { return TextEditOutcome.Refused(it) }
-        if (meta.type != type) return TextEditOutcome.Refused(IllegalArgumentException("not a ${type.name} asset"))
+        if (meta.type != type) {
+            return TextEditOutcome.Refused(IllegalArgumentException("not a ${type.name} asset"))
+        }
         val before = meta.typedAdditional<T>()
         val after = change(before)
-        if (after == before) return TextEditOutcome.Unchanged
+        if (after == before) {
+            return TextEditOutcome.Unchanged
+        }
         return TextEditOutcome.Edited(parser.write(parser.withAdditional(meta, after), pretty = true))
     }
 }

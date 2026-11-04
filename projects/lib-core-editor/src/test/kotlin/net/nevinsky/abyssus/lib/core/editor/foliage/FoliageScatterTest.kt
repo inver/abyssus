@@ -5,6 +5,14 @@
 
 package net.nevinsky.abyssus.lib.core.editor.foliage
 
+import kotlin.math.PI
+import kotlin.math.ceil
+import kotlin.math.cos
+import kotlin.math.floor
+import kotlin.math.max
+import kotlin.math.sin
+import kotlin.math.sqrt
+import kotlin.random.Random
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageBake
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDataFile
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageFingerprint
@@ -14,22 +22,14 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageModelMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.foliageChunkSize
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
-import net.nevinsky.abyssus.lib.core.editor.terrainData
 import net.nevinsky.abyssus.lib.core.assets.testProject
+import net.nevinsky.abyssus.lib.core.editor.terrainData
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.PI
-import kotlin.math.ceil
-import kotlin.math.cos
-import kotlin.math.floor
-import kotlin.math.max
-import kotlin.math.sin
-import kotlin.math.sqrt
-import kotlin.random.Random
 
 class FoliageScatterTest {
     private val scatter = FoliageScatter(FoliageFingerprint())
@@ -46,15 +46,16 @@ class FoliageScatterTest {
         minHeight: Float? = null,
         maxHeight: Float? = null,
         maxSlope: Float? = null,
-    ): FoliageLayerMeta = FoliageLayerMeta(
-        id = id,
-        models = models,
-        density = density,
-        minHeight = minHeight,
-        maxHeight = maxHeight,
-        maxSlope = maxSlope,
-        seed = seed,
-    )
+    ): FoliageLayerMeta =
+        FoliageLayerMeta(
+            id = id,
+            models = models,
+            density = density,
+            minHeight = minHeight,
+            maxHeight = maxHeight,
+            maxSlope = maxSlope,
+            seed = seed,
+        )
 
     private fun meta(vararg layers: FoliageLayerMeta): FoliageMeta =
         FoliageMeta(terrain = terrainName, maskResolution = resolution, layers = layers.toList())
@@ -75,10 +76,16 @@ class FoliageScatterTest {
 
     @Test
     fun equalInputsGiveByteEqualBakes() {
-        val settings = meta(
-            layer(1, 0.01f),
-            layer(2, 0.01f, seed = -7717, models = listOf(FoliageModelMeta("tree", 3f), FoliageModelMeta("rock", 1f))),
-        )
+        val settings =
+            meta(
+                layer(1, 0.01f),
+                layer(
+                    2,
+                    0.01f,
+                    seed = -7717,
+                    models = listOf(FoliageModelMeta("tree", 3f), FoliageModelMeta("rock", 1f)),
+                ),
+            )
         val masks = mapOf(1 to ByteArray(resolution * resolution) { ((it * 37) % 256).toByte() })
         val first = scatter.scatter(untitled, settings, masks)
         val second = scatter.scatter(untitled, settings, masks)
@@ -105,8 +112,8 @@ class FoliageScatterTest {
     fun noTwoCopiesAreCloserThanOneFifthOfTheSpacing() {
         val flat = TerrainData(2, FloatArray(4), 64, 1f)
         for (density in listOf(1f, 0.25f, 0.0625f)) {
-            val copies = scatter.scatter(flat, meta(layer(1, density)), emptyMap())
-                .bake.layers.single().chunks.flatten()
+            val copies =
+                scatter.scatter(flat, meta(layer(1, density)), emptyMap()).bake.layers.single().chunks.flatten()
             val cells = (64f * sqrt(density)).toInt()
             assertEquals(cells * cells, copies.size)
             val spacing = 0.2f / sqrt(density)
@@ -115,7 +122,9 @@ class FoliageScatterTest {
                 val dx = copies[a].x - copies[b].x
                 val dz = copies[a].z - copies[b].z
                 val distanceSquared = dx * dx + dz * dz
-                if (distanceSquared < closest) closest = distanceSquared
+                if (distanceSquared < closest) {
+                    closest = distanceSquared
+                }
             }
             assertTrue(
                 "density $density: closest ${sqrt(closest)} is below $spacing",
@@ -128,9 +137,12 @@ class FoliageScatterTest {
     fun theFlatFixtureTerrainKeepsNothingBetweenFiveAndForty() {
         // The Untitled heights are all 0, so a 5 to 40 height range refuses every candidate, and the slope limit of
         // 20 degrees keeps them all: the terrain is flat.
-        val excluded = scatter.scatter(
-            untitled, meta(layer(1, 0.01f, minHeight = 5f, maxHeight = 40f, maxSlope = 20f)), emptyMap(),
-        )
+        val excluded =
+            scatter.scatter(
+                untitled,
+                meta(layer(1, 0.01f, minHeight = 5f, maxHeight = 40f, maxSlope = 20f)),
+                emptyMap(),
+            )
         assertEquals(0, excluded.total)
         val kept = scatter.scatter(untitled, meta(layer(1, 0.01f, maxSlope = 20f)), emptyMap())
         assertEquals(25_600, kept.total)
@@ -141,9 +153,12 @@ class FoliageScatterTest {
         // The fixture terrain is flat at 0, so its heights are ramped over the same grid: the field rises past 40 and
         // steepens past 30 degrees, which is what the rules have to exclude.
         val varied = variedTerrain()
-        val limited = scatter.scatter(
-            varied, meta(layer(1, 0.01f, minHeight = 5f, maxHeight = 40f, maxSlope = 20f)), emptyMap(),
-        )
+        val limited =
+            scatter.scatter(
+                varied,
+                meta(layer(1, 0.01f, minHeight = 5f, maxHeight = 40f, maxSlope = 20f)),
+                emptyMap(),
+            )
         assertNull(limited.refusal.toString(), limited.refusal)
         assertTrue("copies ${limited.total}", limited.total > 0)
         for (copy in limited.bake.layers.single().chunks.flatten()) {
@@ -181,9 +196,8 @@ class FoliageScatterTest {
 
     @Test
     fun weightsOfThreeToOneGiveAboutThreeQuarters() {
-        val settings = meta(
-            layer(1, 0.01f, models = listOf(FoliageModelMeta("tree", 3f), FoliageModelMeta("rock", 1f))),
-        )
+        val settings =
+            meta(layer(1, 0.01f, models = listOf(FoliageModelMeta("tree", 3f), FoliageModelMeta("rock", 1f))))
         val copies = scatter.scatter(untitled, settings, emptyMap()).bake.layers.single().chunks.flatten()
         val share = copies.count { it.model == 0 }.toDouble() / copies.size
         assertTrue("share $share", share in 0.72..0.78)
@@ -191,13 +205,23 @@ class FoliageScatterTest {
 
     @Test
     fun everyCopyHasAPositionYawScaleAndModelIndexInRange() {
-        val copies = scatter.scatter(
-            untitled,
-            meta(layer(1, 0.01f, models = listOf(FoliageModelMeta("tree", 1f)))),
-            emptyMap(),
-        ).bake.layers.single().chunks.flatten()
+        val copies =
+            scatter
+                .scatter(
+                    untitled,
+                    meta(layer(1, 0.01f, models = listOf(FoliageModelMeta("tree", 1f)))),
+                    emptyMap(),
+                )
+                .bake
+                .layers
+                .single()
+                .chunks
+                .flatten()
         for (copy in copies) {
-            assertTrue("${copy.x},${copy.z}", copy.x in 0f..untitled.size.toFloat() && copy.z in 0f..untitled.size.toFloat())
+            assertTrue(
+                "${copy.x},${copy.z}",
+                copy.x in 0f..untitled.size.toFloat() && copy.z in 0f..untitled.size.toFloat(),
+            )
             assertTrue("yaw ${copy.yaw}", copy.yaw in 0f..2f * PI.toFloat())
             assertTrue("scale ${copy.scale}", copy.scale in 0.8f..1.2f)
             assertEquals(0, copy.model)
@@ -230,15 +254,23 @@ class FoliageScatterTest {
             val partial = scatter.scatter(untitled, settings, masks, chunks = requested)
             assertNull(partial.refusal.toString(), partial.refusal)
             assertTrue("partial copies ${partial.total}", partial.total > 0)
-            val merged = full.bake.layers.mapIndexed { index, layerBake ->
-                val regenerated = partial.bake.layers[index]
-                FoliageLayerBake(
-                    layerBake.id, layerBake.modelCount, layerBake.chunksX, layerBake.chunksZ,
-                    layerBake.chunks.mapIndexed { position, list ->
-                        if (position in wanted) regenerated.chunks[position] else list
-                    },
-                )
-            }
+            val merged =
+                full.bake.layers.mapIndexed { index, layerBake ->
+                    val regenerated = partial.bake.layers[index]
+                    FoliageLayerBake(
+                        layerBake.id,
+                        layerBake.modelCount,
+                        layerBake.chunksX,
+                        layerBake.chunksZ,
+                        layerBake.chunks.mapIndexed { position, list ->
+                            if (position in wanted) {
+                                regenerated.chunks[position]
+                            } else {
+                                list
+                            }
+                        },
+                    )
+                }
             val mergedBytes = dataFile.write(FoliageBake(full.bake.fingerprint, full.bake.chunkSize, merged))
             assertArrayEquals("rectangle $x0,$z0 to $x1,$z1", dataFile.write(full.bake), mergedBytes)
         }

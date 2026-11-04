@@ -2,12 +2,12 @@ package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.lwjgl3.TestGl
-import net.nevinsky.abyssus.lib.core.assets.skyShaders
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.GL30
-import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
-import java.lang.reflect.Proxy
 import com.badlogic.gdx.utils.BufferUtils
+import java.lang.reflect.Proxy
+import kotlin.math.abs
+import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.GpuTexture
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HDR_BUILD_STEPS
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironment
@@ -15,17 +15,16 @@ import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironmentBuild
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrImage
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.IRRADIANCE_SIZE
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.SPECULAR_SIZE
+import net.nevinsky.abyssus.lib.core.assets.skyShaders
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
-import kotlin.math.abs
 
 /** The GPU build of an HDR sky's environment, read back texel by texel. Opt-in: `-Dabyssus.glTests=true`. */
 class HdrEnvironmentGlTest {
-    @Before
-    fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
+    @Before fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
 
     private val shaders = skyShaders()
 
@@ -56,7 +55,13 @@ class HdrEnvironmentGlTest {
         val previous = ints.get(0)
         val fbo = gl.glGenFramebuffer()
         gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, fbo)
-        gl.glFramebufferTexture2D(GL20.GL_FRAMEBUFFER, GL20.GL_COLOR_ATTACHMENT0, GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, texture.textureObjectHandle, level)
+        gl.glFramebufferTexture2D(
+            GL20.GL_FRAMEBUFFER,
+            GL20.GL_COLOR_ATTACHMENT0,
+            GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
+            texture.textureObjectHandle,
+            level,
+        )
         val pixels = BufferUtils.newFloatBuffer(size * size * 4)
         gl.glReadPixels(0, 0, size, size, GL20.GL_RGBA, GL20.GL_FLOAT, pixels)
         gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, previous)
@@ -89,7 +94,10 @@ class HdrEnvironmentGlTest {
             assertTrue(Gdx.gl.glIsTexture(sourceHandle))
             assertTrue(!Gdx.gl.glIsTexture(specularHandle))
             assertTrue(!Gdx.gl.glIsTexture(irradianceHandle))
-        } finally { build.dispose(); source.dispose() }
+        } finally {
+            build.dispose()
+            source.dispose()
+        }
     }
 
     @Test
@@ -98,25 +106,41 @@ class HdrEnvironmentGlTest {
         val original = Gdx.gl
         val created = mutableListOf<Int>()
         val deleted = mutableListOf<Int>()
-        Gdx.gl = Proxy.newProxyInstance(GL20::class.java.classLoader, arrayOf(GL20::class.java)) { _, method, args ->
-            if (method.name == "glDeleteTexture") deleted += args!![0] as Int
-            method.invoke(original, *(args ?: emptyArray())).also {
-                if (method.name == "glGenTexture") created += it as Int
-            }
-        } as GL20
+        Gdx.gl =
+            Proxy.newProxyInstance(GL20::class.java.classLoader, arrayOf(GL20::class.java)) { _, method, args ->
+                if (method.name == "glDeleteTexture") {
+                    deleted += args!![0] as Int
+                }
+                method.invoke(original, *(args ?: emptyArray())).also {
+                    if (method.name == "glGenTexture") {
+                        created += it as Int
+                    }
+                }
+            } as GL20
         val broken = ShaderStorage().withResources("/shader/broken-environment", javaClass)
         val build = HdrEnvironmentBuild(CubeSource(source, 7), broken)
         try {
             build.step()
             var failure: Exception? = null
-            try { build.step() } catch (e: Exception) { failure = e }
-            assertTrue("expected prefilter shader failure: $failure", failure?.message?.contains("hdr_prefilter") == true)
+            try {
+                build.step()
+            } catch (e: Exception) {
+                failure = e
+            }
+            assertTrue(
+                "expected prefilter shader failure: $failure",
+                failure?.message?.contains("hdr_prefilter") == true,
+            )
             assertTrue("owned texture allocations", created.size >= 2)
             assertTrue("failure cleans up immediately", created.all { !original.glIsTexture(it) })
             build.dispose()
             assertEquals("each owned texture disposed once", created.sorted(), deleted.sorted())
             assertTrue(original.glIsTexture(source.textureObjectHandle))
-        } finally { build.dispose(); Gdx.gl = original; source.dispose() }
+        } finally {
+            build.dispose()
+            Gdx.gl = original
+            source.dispose()
+        }
     }
 
     @Test
@@ -134,7 +158,9 @@ class HdrEnvironmentGlTest {
             result.dispose()
             result.dispose()
             assertTrue(!Gdx.gl.glIsTexture(backgroundHandle))
-        } finally { build.dispose() }
+        } finally {
+            build.dispose()
+        }
     }
 
     private fun uniformCube(size: Int, radiance: Float): GpuTexture {
@@ -144,8 +170,17 @@ class HdrEnvironmentGlTest {
         repeat(pixels.capacity()) { pixels.put(radiance) }
         pixels.flip()
         for (face in 0..5) {
-            Gdx.gl.glTexImage2D(GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, 0x881B,
-                size, size, 0, GL20.GL_RGB, GL20.GL_FLOAT, pixels)
+            Gdx.gl.glTexImage2D(
+                GL20.GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
+                0,
+                0x881B,
+                size,
+                size,
+                0,
+                GL20.GL_RGB,
+                GL20.GL_FLOAT,
+                pixels,
+            )
         }
         Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL30.GL_TEXTURE_MAX_LEVEL, 6)
         Gdx.gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL20.GL_TEXTURE_MIN_FILTER, GL20.GL_LINEAR_MIPMAP_LINEAR)
@@ -165,7 +200,9 @@ class HdrEnvironmentGlTest {
                         val size = SPECULAR_SIZE shr level
                         readFace(env.specular, face, level, size).forEach { worst = maxOf(worst, abs(it - 2f) / 2f) }
                     }
-                    readFace(env.irradiance, face, 0, IRRADIANCE_SIZE).forEach { worst = maxOf(worst, abs(it - 2f) / 2f) }
+                    readFace(env.irradiance, face, 0, IRRADIANCE_SIZE).forEach {
+                        worst = maxOf(worst, abs(it - 2f) / 2f)
+                    }
                 }
                 env.ambient.forEach { worst = maxOf(worst, abs(it - 2f) / 2f) }
             } finally {
@@ -181,7 +218,16 @@ class HdrEnvironmentGlTest {
         var plusZ = floatArrayOf()
         inGl {
             // red in the middle half of the image (around u = 0.5), blue in the outer quarters (around the edges)
-            val (env, _) = build(image(64, 32) { x, _ -> if (x in 16 until 48) floatArrayOf(1f, 0f, 0f) else floatArrayOf(0f, 0f, 1f) })
+            val (env, _) =
+                build(
+                    image(64, 32) { x, _ ->
+                        if (x in 16 until 48) {
+                            floatArrayOf(1f, 0f, 0f)
+                        } else {
+                            floatArrayOf(0f, 0f, 1f)
+                        }
+                    }
+                )
             try {
                 val size = SPECULAR_SIZE
                 minusZ = centre(readFace(env.specular, 5, 0, size), size)

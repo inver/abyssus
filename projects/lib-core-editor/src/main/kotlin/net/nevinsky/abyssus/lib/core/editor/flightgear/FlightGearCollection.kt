@@ -32,12 +32,17 @@ internal class FlightGearCollection(private val ac3d: Ac3dReader, private val re
         collected.placements.flatMap { placement ->
             placement.objects().mapNotNull { obj ->
                 val texture = obj.texture ?: return@mapNotNull null
-                if (textureSource(archive, collected.aircraft, placement, texture) != null) null
-                else SkippedItem(texture.substringAfterLast('/'), "texture missing from the archive")
+                if (textureSource(archive, collected.aircraft, placement, texture) != null) {
+                    null
+                } else {
+                    SkippedItem(texture.substringAfterLast('/'), "texture missing from the archive")
+                }
             }
         }.distinct()
 
-    /** The archive path of an AC texture: by file name, in the AC file's folder first, then anywhere in the aircraft. */
+    /**
+     * The archive path of an AC texture: by file name, in the AC file's folder first, then anywhere in the aircraft.
+     */
     fun textureSource(
         archive: FlightGearArchive,
         aircraft: FlightGearAircraft,
@@ -45,8 +50,14 @@ internal class FlightGearCollection(private val ac3d: Ac3dReader, private val re
         texture: String
     ): String? {
         val name = texture.replace('\\', '/').substringAfterLast('/')
-        if (name.isEmpty()) return null
-        val folder = placement.acPath.substringBeforeLast('/', "").let { if (it.isEmpty()) "" else "$it/" }
+        if (name.isEmpty()) {
+            return null
+        }
+        val folder = placement.acPath.substringBeforeLast('/', "").let { if (it.isEmpty()) {
+            ""
+        } else {
+            "$it/"
+        } }
         return archive.findByName(folder, name).firstOrNull() ?: archive.findByName(aircraft.folder, name).firstOrNull()
     }
 
@@ -78,13 +89,15 @@ internal class FlightGearCollection(private val ac3d: Ac3dReader, private val re
                     }
                     val xml = reader.read(path)
                     val here = offsets + xml.offsets
-                    if (xml.panels > 0) skipped += SkippedItem(
-                        "${xml.panels} instrument panel(s) in ${
-                            path.substringAfterLast(
-                                '/'
-                            )
-                        }", "panels are not imported"
-                    )
+                    if (xml.panels > 0) {
+                        skipped += SkippedItem(
+                            "${xml.panels} instrument panel(s) in ${
+                                path.substringAfterLast(
+                                    '/'
+                                )
+                            }", "panels are not imported"
+                        )
+                    }
                     selects += xml.selects
                     when {
                         xml.acPath == null && xml.acWritten != null -> skipped += SkippedItem(
@@ -95,8 +108,11 @@ internal class FlightGearCollection(private val ac3d: Ac3dReader, private val re
                         xml.acPath != null -> visit(xml.acPath, here, depth + 1)
                     }
                     for (nested in xml.nested) {
-                        if (nested.path == null) skipped += SkippedItem(nested.written, "path leaves the archive")
-                        else visit(nested.path, here + nested.offsets, depth + 1)
+                        if (nested.path == null) {
+                            skipped += SkippedItem(nested.written, "path leaves the archive")
+                        } else {
+                            visit(nested.path, here + nested.offsets, depth + 1)
+                        }
                     }
                 }
 
@@ -127,7 +143,9 @@ internal class Placement(val acPath: String, val model: Ac3dModel, val offsets: 
         val out = ArrayList<Pair<Ac3dObject, Matrix>>()
         fun walk(obj: Ac3dObject, parent: Matrix) {
             val world = parent * acMatrix(obj.rotation, obj.location)
-            if (obj.type == "poly") out += obj to world
+            if (obj.type == "poly") {
+                out += obj to world
+            }
             obj.kids.forEach { walk(it, world) }
         }
         walk(model.world, acToAbyssus)

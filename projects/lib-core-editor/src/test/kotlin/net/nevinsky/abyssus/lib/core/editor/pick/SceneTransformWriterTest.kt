@@ -7,9 +7,9 @@ package net.nevinsky.abyssus.lib.core.editor.pick
 
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
@@ -24,11 +24,11 @@ import net.nevinsky.abyssus.lib.core.editor.arrange.LineHeights
 import net.nevinsky.abyssus.lib.core.editor.entityOf
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.editor.sceneOf
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.*
 import org.junit.Test
 import org.slf4j.helpers.NOPLogger
-import java.io.File
 
 /**
  * Transform write-back on the scene DTO. Cases that pinned the spelling of numbers and the order of keys in the saved
@@ -44,15 +44,22 @@ class SceneTransformWriterTest {
     private fun local(scene: SceneDto, id: Long) = scene.component(id, PositionComponent::class.java)!!.localPosition
 
     /** Everything the scene holds, as text, to compare "nothing changed". */
-    private fun snapshot(scene: SceneDto): Map<Long, List<String>> = scene.ecs.mapValues { (_, e) ->
-        e.components.map {
-            when (it) {
-                is HeaderComponent -> "H ${it.id} ${it.type} ${it.entityEnabled} ${it.flags}"
-                is CameraComponent -> "Camera ${it.camera.position} ${it.camera.direction}"
-                else -> it.javaClass.simpleName + try { json.componentValues(it) } catch (e: Exception) { it.toString() }
+    private fun snapshot(scene: SceneDto): Map<Long, List<String>> =
+        scene.ecs.mapValues { (_, e) ->
+            e.components.map {
+                when (it) {
+                    is HeaderComponent -> "H ${it.id} ${it.type} ${it.entityEnabled} ${it.flags}"
+                    is CameraComponent -> "Camera ${it.camera.position} ${it.camera.direction}"
+                    else ->
+                        it.javaClass.simpleName +
+                            try {
+                                json.componentValues(it)
+                            } catch (e: Exception) {
+                                it.toString()
+                            }
+                }
             }
         }
-    }
 
     @Test
     fun droppingAModelChangesOnlyY() {
@@ -109,7 +116,9 @@ class SceneTransformWriterTest {
     fun rotatingACameraWritesItsViewPoint() {
         val scene = main()
         val dir = Vector3(1f, 0f, 0f)
-        assertTrue(writer.apply(scene, 4L, TransformEdit(rotation = Quaternion(0f, 0.7071f, 0f, 0.7071f), direction = dir)))
+        assertTrue(
+            writer.apply(scene, 4L, TransformEdit(rotation = Quaternion(0f, 0.7071f, 0f, 0.7071f), direction = dir))
+        )
         assertEquals(1f, scene.component(4, CameraComponent::class.java)!!.camera.direction.x, 0f)
         assertEquals(0.7071f, scene.component(4, PositionComponent::class.java)!!.localRotation.y, 0f)
     }
@@ -148,7 +157,8 @@ class SceneTransformWriterTest {
         assertEquals(before, snapshot(scene))
     }
 
-    private val lights get() = parseScene(File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText())
+    private val lights
+        get() = parseScene(File("src/test/testData/project/Lights/scenes/Abyssus Lights.scene").readText())
 
     @Test
     fun aHandleMoveWritesTheHandlePosition() {
@@ -178,7 +188,8 @@ class SceneTransformWriterTest {
     fun aHandleMoveToAMissingEntityLeavesTheSceneAsItWas() {
         val scene = lights
         val before = snapshot(scene)
-        val edit = TransformEdit(rotation = Quaternion(0f, 1f, 0f, 0f), target = TargetMove(99L, Vector3(0f, 10f, -10f)))
+        val edit =
+            TransformEdit(rotation = Quaternion(0f, 1f, 0f, 0f), target = TargetMove(99L, Vector3(0f, 10f, -10f)))
         assertFalse(writer.apply(scene, 1L, edit))
         assertEquals(before, snapshot(scene))
     }
@@ -187,7 +198,8 @@ class SceneTransformWriterTest {
     private fun arranged(): SceneDto {
         val scene = main()
         val points = listOf(Vector3(0f, 0f, 0f), Vector3(40f, 0f, 0f))
-        ArrangementEdits(ResourceEditorMessages()).create(scene, BaseMeta(MetaType.MODEL, "tree"), points, false, LineHeights())
+        ArrangementEdits(ResourceEditorMessages())
+            .create(scene, BaseMeta(MetaType.MODEL, "tree"), points, false, LineHeights())
         return scene
     }
 

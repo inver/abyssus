@@ -4,9 +4,8 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
-import net.nevinsky.abyssus.lib.core.util.wrapDegrees
-
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.util.wrapDegrees
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -23,10 +22,15 @@ class GuidePlannerTest {
     private fun at(azimuth: Float) = place(0f, azimuth)
 
     private fun GuidePlanner.input(
-        expected: Figure?, pause: Float? = PAUSE_LAPS, azimuth: Float = 0f, started: Boolean = false, engine: Boolean = true,
+        expected: Figure?,
+        pause: Float? = PAUSE_LAPS,
+        azimuth: Float = 0f,
+        started: Boolean = false,
+        engine: Boolean = true,
     ) = update(GuideInput(expected, pause, started, at(azimuth), engine))
 
-    private fun GuidePlanner.track() = segments().filter { it.tag == GuideTag.GUIDE_AHEAD || it.tag == GuideTag.GUIDE_DONE }
+    private fun GuidePlanner.track() =
+        segments().filter { it.tag == GuideTag.GUIDE_AHEAD || it.tag == GuideTag.GUIDE_DONE }
 
     private fun GuidePlanner.count(tag: GuideTag) = segments().count { it.tag == tag }
 
@@ -46,7 +50,11 @@ class GuidePlannerTest {
         assertNull(planner.gateAzimuth)
         // the ring at the base is at the base's height, and the other is at the 45° parallel
         assertEquals(BASE_HEIGHT, planner.segments().first { it.tag == GuideTag.RING_BASE }.from.y, 1e-3f)
-        assertEquals(BASE_HEIGHT + radius * kotlin.math.sin(Math.toRadians(45.0)).toFloat(), planner.segments().first { it.tag == GuideTag.RING_45 }.from.y, 1e-2f)
+        assertEquals(
+            BASE_HEIGHT + radius * kotlin.math.sin(Math.toRadians(45.0)).toFloat(),
+            planner.segments().first { it.tag == GuideTag.RING_45 }.from.y,
+            1e-2f,
+        )
     }
 
     @Test
@@ -193,26 +201,34 @@ class GuidePlannerTest {
     fun loopsAppearAQuarterLapAheadAfterTheWingoverAndThePauseOfOneAndAHalfLaps() {
         val schedule = SyntheticSchedule(radius)
         val planner = planner()
-        val seen = ArrayList<Pair<Figure, Float>>() // the figure drawn when it first appears, and the plane's azimuth then
+        val seen =
+            ArrayList<Pair<Figure, Float>>() // the figure drawn when it first appears, and the plane's azimuth then
         var appeared: Float? = null
         schedule.afterSample = {
             planner.update(schedule.judge)
             val figure = planner.figure
             if (figure != null && seen.none { it.first == figure }) {
                 seen += figure to sphere.azimuth(checkNotNull(schedule.judge.guideInput().direction))
-                if (figure == Figure.INSIDE_LOOPS) assertTrue(schedule.judge.pauseLaps!! in PAUSE_LAPS..PAUSE_LAPS + 0.01f)
+                if (figure == Figure.INSIDE_LOOPS) {
+                    assertTrue(schedule.judge.pauseLaps!! in PAUSE_LAPS..PAUSE_LAPS + 0.01f)
+                }
                 assertEquals(false, schedule.judge.started)
             }
-            if (figure == Figure.INSIDE_LOOPS && appeared == null) appeared = planner.gateAzimuth
+            if (figure == Figure.INSIDE_LOOPS && appeared == null) {
+                appeared = planner.gateAzimuth
+            }
         }
         schedule.takeoff()
         schedule.figure { schedule.tracks.reverseWingover(it) }
         schedule.figure { schedule.tracks.loops(it, 3) }
         schedule.pause(1f)
-        assertTrue(seen.map { it.first }.containsAll(listOf(Figure.TAKEOFF, Figure.REVERSE_WINGOVER, Figure.INSIDE_LOOPS)))
+        assertTrue(
+            seen.map { it.first }.containsAll(listOf(Figure.TAKEOFF, Figure.REVERSE_WINGOVER, Figure.INSIDE_LOOPS))
+        )
         val (_, plane) = seen.first { it.first == Figure.INSIDE_LOOPS }
         assertEquals(wrapDegrees(plane + 90f), checkNotNull(appeared), 1e-2f)
-        // the pilot flew the loops where the guide was not, and they were scored: the guide is gone and the next is waiting
+        // the pilot flew the loops where the guide was not, and they were scored: the guide is gone and the next is
+        // waiting
         assertNotNull(schedule.judge.sheet[Figure.INSIDE_LOOPS])
         assertFalse(planner.figure == Figure.INSIDE_LOOPS)
     }

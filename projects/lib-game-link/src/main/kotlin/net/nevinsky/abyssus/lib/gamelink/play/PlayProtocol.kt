@@ -5,13 +5,13 @@
 package net.nevinsky.abyssus.lib.gamelink.play
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import net.nevinsky.abyssus.lib.core.editor.json.JsonObjectWriter
-import net.nevinsky.abyssus.lib.core.io.JsonObjectReader
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.EOFException
 import java.io.IOException
+import net.nevinsky.abyssus.lib.core.editor.json.JsonObjectWriter
+import net.nevinsky.abyssus.lib.core.io.JsonObjectReader
 
 /** The play protocol version this build speaks; `play.json` and `hello` carry it. */
 const val PLAY_PROTOCOL = 1
@@ -21,14 +21,25 @@ private const val MAX_FRAME = 64 * 1024 * 1024
 
 /** Stable wire discriminants, shared by both protocol directions. */
 internal enum class FrameType(val id: Int) {
-    HELLO(1), READY(2), POSES(3), LINES(4), TELEMETRY(5), ERROR(6),
-    LOAD(20), PLAY(21), PAUSE(22), STEP(23), STOP(24), INPUT(25), BYE(26),
+    HELLO(1),
+    READY(2),
+    POSES(3),
+    LINES(4),
+    TELEMETRY(5),
+    ERROR(6),
+    LOAD(20),
+    PLAY(21),
+    PAUSE(22),
+    STEP(23),
+    STOP(24),
+    INPUT(25),
+    BYE(26),
 }
 
 /**
  * A frame of the play protocol between Abyssus Physics (the IDE) and a play host. Commands and events are UTF-8 JSON;
- * [Poses] and [Lines] are binary. Every frame on the wire is `int length`, `byte type`, then `length - 1` payload bytes,
- * big-endian.
+ * [Poses] and [Lines] are binary. Every frame on the wire is `int length`, `byte type`, then `length - 1` payload
+ * bytes, big-endian.
  */
 sealed interface PlayFrame {
     // host -> IDE
@@ -56,8 +67,11 @@ sealed interface PlayFrame {
     data class Load(val sceneText: String, val projectDir: String, val selection: Int) : PlayFrame
 
     data object Play : PlayFrame
+
     data object Pause : PlayFrame
+
     data object Step : PlayFrame
+
     data object Stop : PlayFrame
 
     /** Keyboard or mouse input while the Scene view has focus. */
@@ -68,14 +82,37 @@ sealed interface PlayFrame {
 }
 
 /** One entity's pose: its scene id, position and rotation (a quaternion). */
-data class EntityPose(val id: Int, val x: Float, val y: Float, val z: Float, val qx: Float, val qy: Float, val qz: Float, val qw: Float)
+data class EntityPose(
+    val id: Int,
+    val x: Float,
+    val y: Float,
+    val z: Float,
+    val qx: Float,
+    val qy: Float,
+    val qz: Float,
+    val qw: Float,
+)
 
 /** A segment from ([x1], [y1], [z1]) to ([x2], [y2], [z2]) in [color] (RGBA8888). */
-data class DebugLine(val x1: Float, val y1: Float, val z1: Float, val x2: Float, val y2: Float, val z2: Float, val color: Int)
+data class DebugLine(
+    val x1: Float,
+    val y1: Float,
+    val z1: Float,
+    val x2: Float,
+    val y2: Float,
+    val z2: Float,
+    val color: Int,
+)
 
 /** What happened: a key ([key] is its name, as `W`) or a mouse button ([button]) at view pixel ([x], [y]). */
 data class PlayInput(val kind: Kind, val key: String = "", val button: Int = 0, val x: Int = 0, val y: Int = 0) {
-    enum class Kind { KEY_DOWN, KEY_UP, BUTTON_DOWN, BUTTON_UP, MOUSE_MOVE }
+    enum class Kind {
+        KEY_DOWN,
+        KEY_UP,
+        BUTTON_DOWN,
+        BUTTON_UP,
+        MOUSE_MOVE,
+    }
 }
 
 /** A frame that cannot be read: an unknown type, a bad length or a malformed payload. */
@@ -89,42 +126,68 @@ class PlayProtocol(json: ObjectMapper = ObjectMapper()) {
     fun write(out: DataOutputStream, frame: PlayFrame) {
         val payload = ByteArrayOutputStream()
         val data = DataOutputStream(payload)
-        val type = when (frame) {
-            is PlayFrame.Hello -> FrameType.HELLO.also { data.write(json(frame.protocol, frame.token, frame.module)) }
-            PlayFrame.Ready -> FrameType.READY
-            is PlayFrame.Poses -> FrameType.POSES.also {
-                data.writeLong(frame.frame)
-                data.writeDouble(frame.simTime)
-                data.writeInt(frame.poses.size)
-                for (p in frame.poses) {
-                    data.writeInt(p.id)
-                    for (f in floatArrayOf(p.x, p.y, p.z, p.qx, p.qy, p.qz, p.qw)) data.writeFloat(f)
-                }
+        val type =
+            when (frame) {
+                is PlayFrame.Hello ->
+                    FrameType.HELLO.also { data.write(json(frame.protocol, frame.token, frame.module)) }
+                PlayFrame.Ready -> FrameType.READY
+                is PlayFrame.Poses ->
+                    FrameType.POSES.also {
+                        data.writeLong(frame.frame)
+                        data.writeDouble(frame.simTime)
+                        data.writeInt(frame.poses.size)
+                        for (p in frame.poses) {
+                            data.writeInt(p.id)
+                            for (f in floatArrayOf(p.x, p.y, p.z, p.qx, p.qy, p.qz, p.qw)) data.writeFloat(f)
+                        }
+                    }
+                is PlayFrame.Lines ->
+                    FrameType.LINES.also {
+                        data.writeInt(frame.lines.size)
+                        for (l in frame.lines) {
+                            for (f in floatArrayOf(l.x1, l.y1, l.z1, l.x2, l.y2, l.z2)) data.writeFloat(f)
+                            data.writeInt(l.color)
+                        }
+                    }
+                is PlayFrame.Telemetry ->
+                    FrameType.TELEMETRY.also {
+                        data.write(writer.bytes(frame.values))
+                    }
+                is PlayFrame.Error ->
+                    FrameType.ERROR.also { data.write(writer.bytes(mapOf("message" to frame.message))) }
+                is PlayFrame.Load ->
+                    FrameType.LOAD.also {
+                        data.write(
+                            writer.bytes(
+                                mapOf(
+                                    "sceneText" to frame.sceneText,
+                                    "projectDir" to frame.projectDir,
+                                    "selection" to frame.selection,
+                                )
+                            )
+                        )
+                    }
+                PlayFrame.Play -> FrameType.PLAY
+                PlayFrame.Pause -> FrameType.PAUSE
+                PlayFrame.Step -> FrameType.STEP
+                PlayFrame.Stop -> FrameType.STOP
+                is PlayFrame.Input ->
+                    FrameType.INPUT.also {
+                        val e = frame.event
+                        data.write(
+                            writer.bytes(
+                                mapOf(
+                                    "kind" to e.kind.name,
+                                    "key" to e.key,
+                                    "button" to e.button,
+                                    "x" to e.x,
+                                    "y" to e.y,
+                                )
+                            )
+                        )
+                    }
+                PlayFrame.Bye -> FrameType.BYE
             }
-            is PlayFrame.Lines -> FrameType.LINES.also {
-                data.writeInt(frame.lines.size)
-                for (l in frame.lines) {
-                    for (f in floatArrayOf(l.x1, l.y1, l.z1, l.x2, l.y2, l.z2)) data.writeFloat(f)
-                    data.writeInt(l.color)
-                }
-            }
-            is PlayFrame.Telemetry -> FrameType.TELEMETRY.also {
-                data.write(writer.bytes(frame.values))
-            }
-            is PlayFrame.Error -> FrameType.ERROR.also { data.write(writer.bytes(mapOf("message" to frame.message))) }
-            is PlayFrame.Load -> FrameType.LOAD.also {
-                data.write(writer.bytes(mapOf("sceneText" to frame.sceneText, "projectDir" to frame.projectDir, "selection" to frame.selection)))
-            }
-            PlayFrame.Play -> FrameType.PLAY
-            PlayFrame.Pause -> FrameType.PAUSE
-            PlayFrame.Step -> FrameType.STEP
-            PlayFrame.Stop -> FrameType.STOP
-            is PlayFrame.Input -> FrameType.INPUT.also {
-                val e = frame.event
-                data.write(writer.bytes(mapOf("kind" to e.kind.name, "key" to e.key, "button" to e.button, "x" to e.x, "y" to e.y)))
-            }
-            PlayFrame.Bye -> FrameType.BYE
-        }
         val bytes = payload.toByteArray()
         out.writeInt(bytes.size + 1)
         out.writeByte(type.id)
@@ -135,7 +198,9 @@ class PlayProtocol(json: ObjectMapper = ObjectMapper()) {
     /** The next frame; throws [EOFException] when the stream ends between frames. */
     fun read(input: DataInputStream): PlayFrame {
         val length = input.readInt()
-        if (length < 1 || length > MAX_FRAME) throw PlayProtocolException("bad frame length $length")
+        if (length < 1 || length > MAX_FRAME) {
+            throw PlayProtocolException("bad frame length $length")
+        }
         val type = input.readUnsignedByte()
         val payload = ByteArray(length - 1)
         input.readFully(payload)
@@ -150,38 +215,83 @@ class PlayProtocol(json: ObjectMapper = ObjectMapper()) {
 
     private fun decode(type: Int, payload: ByteArray): PlayFrame {
         val data = DataInputStream(payload.inputStream())
-        val frameType = FrameType.entries.firstOrNull { it.id == type } ?: throw PlayProtocolException("unknown frame type $type")
+        val frameType =
+            FrameType.entries.firstOrNull { it.id == type } ?: throw PlayProtocolException("unknown frame type $type")
         return when (frameType) {
-            FrameType.HELLO -> obj(payload).let { PlayFrame.Hello(it.requireInt("protocol"), it.requireText("token"), it.requireText("module")) }
+            FrameType.HELLO ->
+                obj(payload).let {
+                    PlayFrame.Hello(it.requireInt("protocol"), it.requireText("token"), it.requireText("module"))
+                }
             FrameType.READY -> PlayFrame.Ready
             FrameType.POSES -> {
                 val frame = data.readLong()
                 val time = data.readDouble()
                 val count = data.readInt()
-                if (count < 0 || count.toLong() * 32 > payload.size) throw PlayProtocolException("bad pose count $count")
-                PlayFrame.Poses(frame, time, List(count) {
-                    EntityPose(data.readInt(), data.readFloat(), data.readFloat(), data.readFloat(),
-                        data.readFloat(), data.readFloat(), data.readFloat(), data.readFloat())
-                })
+                if (count < 0 || count.toLong() * 32 > payload.size) {
+                    throw PlayProtocolException("bad pose count $count")
+                }
+                PlayFrame.Poses(
+                    frame,
+                    time,
+                    List(count) {
+                        EntityPose(
+                            data.readInt(),
+                            data.readFloat(),
+                            data.readFloat(),
+                            data.readFloat(),
+                            data.readFloat(),
+                            data.readFloat(),
+                            data.readFloat(),
+                            data.readFloat(),
+                        )
+                    },
+                )
             }
             FrameType.LINES -> {
                 val count = data.readInt()
-                if (count < 0 || count.toLong() * 28 > payload.size) throw PlayProtocolException("bad line count $count")
-                PlayFrame.Lines(List(count) {
-                    DebugLine(data.readFloat(), data.readFloat(), data.readFloat(), data.readFloat(), data.readFloat(), data.readFloat(), data.readInt())
-                })
+                if (count < 0 || count.toLong() * 28 > payload.size) {
+                    throw PlayProtocolException("bad line count $count")
+                }
+                PlayFrame.Lines(
+                    List(count) {
+                        DebugLine(
+                            data.readFloat(),
+                            data.readFloat(),
+                            data.readFloat(),
+                            data.readFloat(),
+                            data.readFloat(),
+                            data.readFloat(),
+                            data.readInt(),
+                        )
+                    }
+                )
             }
             FrameType.TELEMETRY -> PlayFrame.Telemetry(obj(payload).entries())
             FrameType.ERROR -> PlayFrame.Error(obj(payload).requireText("message"))
-            FrameType.LOAD -> obj(payload).let { PlayFrame.Load(it.requireText("sceneText"), it.requireText("projectDir"), it.requireInt("selection")) }
+            FrameType.LOAD ->
+                obj(payload).let {
+                    PlayFrame.Load(
+                        it.requireText("sceneText"),
+                        it.requireText("projectDir"),
+                        it.requireInt("selection"),
+                    )
+                }
             FrameType.PLAY -> PlayFrame.Play
             FrameType.PAUSE -> PlayFrame.Pause
             FrameType.STEP -> PlayFrame.Step
             FrameType.STOP -> PlayFrame.Stop
-            FrameType.INPUT -> obj(payload).let {
-                PlayFrame.Input(PlayInput(PlayInput.Kind.valueOf(it.requireText("kind")), it.asText("key").orEmpty(),
-                    it.intOr("button", 0), it.intOr("x", 0), it.intOr("y", 0)))
-            }
+            FrameType.INPUT ->
+                obj(payload).let {
+                    PlayFrame.Input(
+                        PlayInput(
+                            PlayInput.Kind.valueOf(it.requireText("kind")),
+                            it.asText("key").orEmpty(),
+                            it.intOr("button", 0),
+                            it.intOr("x", 0),
+                            it.intOr("y", 0),
+                        )
+                    )
+                }
             FrameType.BYE -> PlayFrame.Bye
         }
     }
@@ -193,9 +303,16 @@ class PlayProtocol(json: ObjectMapper = ObjectMapper()) {
      */
     fun accept(input: DataInputStream, out: DataOutputStream, token: String): PlayFrame.Hello? {
         val hello = read(input) as? PlayFrame.Hello ?: return null
-        if (hello.token != token) return null
+        if (hello.token != token) {
+            return null
+        }
         if (hello.protocol != PLAY_PROTOCOL) {
-            write(out, PlayFrame.Error("play protocol ${hello.protocol} is not supported; Abyssus Physics speaks $PLAY_PROTOCOL"))
+            write(
+                out,
+                PlayFrame.Error(
+                    "play protocol ${hello.protocol} is not supported; Abyssus Physics speaks $PLAY_PROTOCOL"
+                ),
+            )
             return null
         }
         return hello

@@ -60,7 +60,9 @@ class HdrEnvironment(
     private var disposed = false
 
     override fun dispose() {
-        if (disposed) return
+        if (disposed) {
+            return
+        }
         disposed = true
         specular.dispose()
         irradiance.dispose()
@@ -72,7 +74,9 @@ class HdrSkyEnvironment(val background: GpuTexture, val lighting: HdrEnvironment
     private var disposed = false
 
     override fun dispose() {
-        if (disposed) return
+        if (disposed) {
+            return
+        }
         disposed = true
         background.dispose()
         lighting.dispose()
@@ -120,7 +124,9 @@ class HdrEnvironmentBuild(private val input: EnvironmentSource, private val shad
     /** Does the next step; true when the environment is complete. */
     fun step(): Boolean {
         check(!disposed) { "Environment build was released" }
-        if (done >= HDR_BUILD_STEPS) return true
+        if (done >= HDR_BUILD_STEPS) {
+            return true
+        }
         try {
             when (done) {
                 0 -> prepareSource()
@@ -191,7 +197,9 @@ class HdrEnvironmentBuild(private val input: EnvironmentSource, private val shad
     private fun projectToCube() {
         val src = if (input is EquirectSource) {
             cube(SPECULAR_SIZE, SOURCE_LEVELS).also { source = it; ownsSource = true }
-        } else checkNotNull(source)
+        } else {
+            checkNotNull(source)
+        }
         specular = cube(SPECULAR_SIZE, SPECULAR_LEVELS)
         irradiance = cube(IRRADIANCE_SIZE, 1)
         fbo = Gdx.gl.glGenFramebuffer()
@@ -264,7 +272,11 @@ class HdrEnvironmentBuild(private val input: EnvironmentSource, private val shad
             )
         }
         gl.glTexParameteri(GL20.GL_TEXTURE_CUBE_MAP, GL30.GL_TEXTURE_MAX_LEVEL, levels - 1)
-        val min = if (levels > 1) GL20.GL_LINEAR_MIPMAP_LINEAR else GL20.GL_LINEAR
+        val min = if (levels > 1) {
+            GL20.GL_LINEAR_MIPMAP_LINEAR
+        } else {
+            GL20.GL_LINEAR
+        }
         parameters(GL20.GL_TEXTURE_CUBE_MAP, min, GL20.GL_LINEAR, GL20.GL_CLAMP_TO_EDGE, GL20.GL_CLAMP_TO_EDGE)
         gl.glBindTexture(GL20.GL_TEXTURE_CUBE_MAP, 0)
         return texture
@@ -324,13 +336,17 @@ class HdrEnvironmentBuild(private val input: EnvironmentSource, private val shad
     }
 
     private fun releaseSource() {
-        if (ownsSource) source?.dispose()
+        if (ownsSource) {
+            source?.dispose()
+        }
         source = null
         ownsSource = false
     }
 
     override fun dispose() {
-        if (disposed) return
+        if (disposed) {
+            return
+        }
         disposed = true
         releaseSource()
         listOfNotNull(
@@ -350,7 +366,9 @@ class HdrEnvironmentBuild(private val input: EnvironmentSource, private val shad
         prefilter = null
         convolve = null
         mesh = null
-        if (fbo != 0) Gdx.gl.glDeleteFramebuffer(fbo)
+        if (fbo != 0) {
+            Gdx.gl.glDeleteFramebuffer(fbo)
+        }
         fbo = 0
     }
 }

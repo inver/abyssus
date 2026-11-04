@@ -12,5 +12,6 @@ private const val BUNDLE = "messages.AbyssusPhysicsBundle"
 /** User-facing text of Abyssus Physics. */
 object AbyssusPhysicsBundle : DynamicBundle(BUNDLE) {
     @JvmStatic
-    fun message(@PropertyKey(resourceBundle = BUNDLE) key: String, vararg params: Any): String = getMessage(key, *params)
+    fun message(@PropertyKey(resourceBundle = BUNDLE) key: String, vararg params: Any): String =
+        getMessage(key, *params)
 }

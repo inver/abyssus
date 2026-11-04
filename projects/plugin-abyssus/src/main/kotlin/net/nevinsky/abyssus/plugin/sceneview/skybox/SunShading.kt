@@ -26,6 +26,8 @@ class SunShading(val lights: LightSet, val mapLightIndex: Int?, val outside: Flo
  */
 fun planSunShading(lights: LightSet, sunId: Long?, cloudsDrawn: Boolean, mapReady: Boolean, scale: Float): SunShading {
     val index = lights.directionalIndexOf(sunId)
-    if (cloudsDrawn && mapReady && index != null) return SunShading(lights, index, scale)
+    if (cloudsDrawn && mapReady && index != null) {
+        return SunShading(lights, index, scale)
+    }
     return SunShading(lights.withSunScale(sunId, scale), null, 1f)
 }

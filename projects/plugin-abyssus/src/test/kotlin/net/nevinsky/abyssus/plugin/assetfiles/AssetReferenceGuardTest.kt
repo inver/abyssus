@@ -21,7 +21,8 @@ class AssetReferenceGuardTest : BasePlatformTestCase() {
     private lateinit var store: LocalAssetFileStore
 
     private val meadowMeta =
-        """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"uuid":"meadow-uuid","type":"FOLIAGE","additional":{"terrain":"t"}}"""
+        """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"uuid":"meadow-uuid","type":"FOLIAGE",
+"additional":{"terrain":"t"}}"""
 
     override fun setUp() {
         super.setUp()
@@ -42,14 +43,24 @@ class AssetReferenceGuardTest : BasePlatformTestCase() {
 
     /** Creates the foliage asset folder, as New Foliage would, with the given scene already on disk. */
     private fun createFoliage(scene: String? = null): AssetTransaction {
-        val txn = AssetTransaction(
-            "New Foliage",
-            changes = listOf(FileChange("assets/meadow/meta.json", FileSnapshot.Absent, FileSnapshot.Bytes(meadowMeta.toByteArray()))),
-            createdDirs = listOf("assets/meadow"),
-            guard = { AssetReferenceGuard(disk).blocker("meadow", "meadow-uuid") },
-        )
+        val txn =
+            AssetTransaction(
+                "New Foliage",
+                changes =
+                    listOf(
+                        FileChange(
+                            "assets/meadow/meta.json",
+                            FileSnapshot.Absent,
+                            FileSnapshot.Bytes(meadowMeta.toByteArray()),
+                        )
+                    ),
+                createdDirs = listOf("assets/meadow"),
+                guard = { AssetReferenceGuard(disk).blocker("meadow", "meadow-uuid") },
+            )
         AssetFileCommand(project, store).execute(txn)
-        if (scene != null) writeScene(scene)
+        if (scene != null) {
+            writeScene(scene)
+        }
         return txn
     }
 
@@ -72,7 +83,8 @@ class AssetReferenceGuardTest : BasePlatformTestCase() {
     }
 
     private val withFoliage =
-        """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"1":{"components":{"FoliageComponent":{"assetName":"meadow"}}}}}"""
+        """{"format":"abyssus","formatVersion":1,"name":"Main",
+"ecs":{"1":{"components":{"FoliageComponent":{"assetName":"meadow"}}}}}"""
 
     fun testAFoliageComponentNamingTheAssetBlocksUndo() {
         assertUndoRefused(createFoliage(withFoliage))
@@ -86,9 +98,11 @@ class AssetReferenceGuardTest : BasePlatformTestCase() {
     }
 
     fun testAFoliageComponentNamingAnotherAssetDoesNotBlock() {
-        val txn = createFoliage(
-            """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"1":{"components":{"FoliageComponent":{"assetName":"other"}}}}}""",
-        )
+        val txn =
+            createFoliage(
+                """{"format":"abyssus","formatVersion":1,"name":"Main",
+"ecs":{"1":{"components":{"FoliageComponent":{"assetName":"other"}}}}}"""
+            )
         WriteCommandAction.runWriteCommandAction(project) { undoOf(txn).undo() }
         assertFalse(File(disk, "assets/meadow").exists())
     }

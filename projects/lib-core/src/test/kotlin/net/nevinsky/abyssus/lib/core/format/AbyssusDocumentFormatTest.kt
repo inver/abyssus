@@ -16,52 +16,81 @@ class AbyssusDocumentFormatTest {
     private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
     private val format = AbyssusDocumentFormat()
 
-    @Test fun nativeHeadersSupportEachDocumentKindWithoutChangingThePayload() {
+    @Test
+    fun nativeHeadersSupportEachDocumentKindWithoutChangingThePayload() {
         for (kind in DocumentKind.entries) {
-            val node = json.readObject("""{"format":"abyssus","formatVersion":1,"version":7,"extra":{"class":"custom"}}""")
+            val node =
+                json.readObject("""{"format":"abyssus","formatVersion":1,"version":7,"extra":{"class":"custom"}}""")
             val before = json.toString(node)
             assertNull(format.validate(node, kind))
             assertEquals(before, json.toString(node))
         }
     }
 
-    @Test fun theFormatMarkerIsNotRequiredAndIsIgnoredWhenPresent() {
-        for (text in listOf("""{"formatVersion":1}""", """{"format":null,"formatVersion":1}""", """{"format":"foreign","formatVersion":1}""", """{"format":true,"formatVersion":1}""")) {
+    @Test
+    fun theFormatMarkerIsNotRequiredAndIsIgnoredWhenPresent() {
+        for (text in
+            listOf(
+                """{"formatVersion":1}""",
+                """{"format":null,"formatVersion":1}""",
+                """{"format":"foreign","formatVersion":1}""",
+                """{"format":true,"formatVersion":1}""",
+            )) {
             assertNull(text, format.validate(json.readObject(text), DocumentKind.SCENE))
         }
     }
 
-    @Test fun aMissingVersionIsRejected() {
+    @Test
+    fun aMissingVersionIsRejected() {
         val reason = format.validate(json.readObject("{}"), DocumentKind.SCENE)
         assertEquals(FormatProblem.VERSION, reason?.problem)
         assertEquals("formatVersion", reason?.path)
     }
 
-    @Test fun onlyIntegralVersionOneIsAccepted() {
+    @Test
+    fun onlyIntegralVersionOneIsAccepted() {
         for (version in listOf("null", "\"1\"", "1.0", "1.5", "2", "-1", "0", "true", "999999999999999999999999")) {
             val node = json.readObject("""{"format":"abyssus","formatVersion":$version}""")
             assertEquals(version, FormatProblem.VERSION, format.validate(node, DocumentKind.SCENE)?.problem)
         }
-        assertEquals(FormatProblem.VERSION, format.validate(json.readObject("""{"format":"abyssus"}"""), DocumentKind.PROJECT)?.problem)
+        assertEquals(
+            FormatProblem.VERSION,
+            format.validate(json.readObject("""{"format":"abyssus"}"""), DocumentKind.PROJECT)?.problem,
+        )
     }
 
-    @Test fun markersCannotAdmitLegacyIdentifiersOrRenderableClasses() {
-        for (ecs in listOf("""{"componentIdentifiers":null}""", """{"componentIdentifiers":{}}""", """{"0":{"components":{"RenderComponent":{"renderable":{"class":null,"kind":"asset"}}}}}""")) {
+    @Test
+    fun markersCannotAdmitLegacyIdentifiersOrRenderableClasses() {
+        for (ecs in
+            listOf(
+                """{"componentIdentifiers":null}""",
+                """{"componentIdentifiers":{}}""",
+                """{"0":{"components":{"RenderComponent":{"renderable":{"class":null,"kind":"asset"}}}}}""",
+            )) {
             val node = json.readObject("""{"format":"abyssus","formatVersion":1,"ecs":$ecs}""")
             assertEquals(FormatProblem.LEGACY_FIELD, format.validate(node, DocumentKind.SCENE)?.problem)
             assertEquals(FormatProblem.LEGACY_FIELD, format.validateEcs(node["ecs"])?.problem)
         }
     }
 
-    @Test fun reservedFieldsAreCheckedOnlyAtTheirDefinedPaths() {
-        val node = json.readObject("""{"format":"abyssus","formatVersion":1,"ecs":{"0":{"components":{"WindComponent":{"class":"net.example.Wind","componentIdentifiers":{},"renderable":{"class":"opaque"}},"RenderComponent":{"renderable":{"kind":"debug-marker","payload":{"class":"opaque"}}}}}}}""")
+    @Test
+    fun reservedFieldsAreCheckedOnlyAtTheirDefinedPaths() {
+        val node =
+            json.readObject(
+                """{"format":"abyssus","formatVersion":1,
+"ecs":{"0":{"components":{"WindComponent":{"class":"net.example.Wind","componentIdentifiers":{},""" +
+                        """"renderable":{"class":"opaque"}},"RenderComponent":{"renderable":{"kind":"debug-marker",
+"payload":{"class":"opaque"}}}}}}}"""
+            )
         assertNull(format.validate(node, DocumentKind.SCENE))
         assertNull(format.validateEcs(node["ecs"]))
     }
 
-    @Test fun requireMethodsReportTheDocumentKindAndReservedPath() {
+    @Test
+    fun requireMethodsReportTheDocumentKindAndReservedPath() {
         val node = json.readObject("""{"format":"abyssus","formatVersion":1,"ecs":{"componentIdentifiers":{}}}""")
-        val failure = assertThrows(UnsupportedDocumentFormat::class.java) { format.requireSupported(node, DocumentKind.SCENE) }
+        val failure =
+            assertThrows(UnsupportedDocumentFormat::class.java) { format.requireSupported(node, DocumentKind.SCENE) }
         assertEquals(DocumentKind.SCENE, failure.kind)
         assertEquals("ecs.componentIdentifiers", failure.reason.path)
         assertTrue(failure.message!!.contains("componentIdentifiers"))
@@ -71,26 +100,44 @@ class AbyssusDocumentFormatTest {
     private fun sceneWith(entity: String) =
         json.readObject("""{"format":"abyssus","formatVersion":1,"ecs":{"0":$entity}}""")
 
-    @Test fun enabledFlagIsAdmittedWhenMissingOrBoolean() {
-        for (entity in listOf(
-            """{"components":{"NameComponent":{"name":"a"}}}""",
-            """{"flags":1,"components":{"NameComponent":{"name":"a","enabled":true}}}""",
-            """{"disabledComponents":["NameComponent"],"components":{"NameComponent":{"name":"a"}}}""",
-        )) assertNull(entity, format.validate(sceneWith(entity), DocumentKind.SCENE))
+    @Test
+    fun enabledFlagIsAdmittedWhenMissingOrBoolean() {
+        for (entity in
+            listOf(
+                """{"components":{"NameComponent":{"name":"a"}}}""",
+                """{"flags":1,"components":{"NameComponent":{"name":"a","enabled":true}}}""",
+                """{"disabledComponents":["NameComponent"],"components":{"NameComponent":{"name":"a"}}}""",
+            )) assertNull(entity, format.validate(sceneWith(entity), DocumentKind.SCENE))
     }
 
-    @Test fun theHeaderMembersAreValidated() {
-        for ((entity, path) in listOf(
-            """{"type":"NOPE","components":{}}""" to "ecs.0.type",
-            """{"disabledComponents":"NameComponent","components":{}}""" to "ecs.0.disabledComponents",
-            """{"disabledComponents":[1],"components":{}}""" to "ecs.0.disabledComponents",
-            """{"components":{"Type""" + """Component":{}}}""" to "ecs.0.components.TypeComponent",
-        )) assertEquals(entity, path, format.validate(sceneWith(entity), DocumentKind.SCENE)?.path)
-        assertNull(format.validate(sceneWith("""{"type":"OBJECT","disabledComponents":["NameComponent"],"components":{"NameComponent":{}}}"""), DocumentKind.SCENE))
+    @Test
+    fun theHeaderMembersAreValidated() {
+        for ((entity, path) in
+            listOf(
+                """{"type":"NOPE","components":{}}""" to "ecs.0.type",
+                """{"disabledComponents":"NameComponent","components":{}}""" to "ecs.0.disabledComponents",
+                """{"disabledComponents":[1],"components":{}}""" to "ecs.0.disabledComponents",
+                """{"components":{"Type""" + """Component":{}}}""" to "ecs.0.components.TypeComponent",
+            )) assertEquals(entity, path, format.validate(sceneWith(entity), DocumentKind.SCENE)?.path)
+        assertNull(
+            format.validate(
+                sceneWith(
+                    """{"type":"OBJECT","disabledComponents":["NameComponent"],"components":{"NameComponent":{}}}"""
+                ),
+                DocumentKind.SCENE,
+            )
+        )
     }
 
-    @Test fun theOldEntityShapeMakesTheSceneUnsupported() {
-        val wrapper = format.validate(json.readObject("""{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":{"components":{}}}}}"""), DocumentKind.SCENE)
+    @Test
+    fun theOldEntityShapeMakesTheSceneUnsupported() {
+        val wrapper =
+            format.validate(
+                json.readObject(
+                    """{"format":"abyssus","formatVersion":1,"ecs":{"entities":{"0":{"components":{}}}}}"""
+                ),
+                DocumentKind.SCENE,
+            )
         assertEquals(FormatProblem.LEGACY_FIELD, wrapper?.problem)
         assertEquals("ecs.entities", wrapper?.path)
         val entity = format.validate(sceneWith("""{"enabled":false,"components":{}}"""), DocumentKind.SCENE)
@@ -98,8 +145,10 @@ class AbyssusDocumentFormatTest {
         assertEquals("ecs.0.enabled", entity?.path)
     }
 
-    @Test fun flagsMustBeIntegralAndComponentsAnObject() {
-        for (bad in listOf("""{"flags":1.5,"components":{}}""", """{"flags":"1","components":{}}""", """{"components":[]}""")) {
+    @Test
+    fun flagsMustBeIntegralAndComponentsAnObject() {
+        for (bad in
+            listOf("""{"flags":1.5,"components":{}}""", """{"flags":"1","components":{}}""", """{"components":[]}""")) {
             assertEquals(bad, FormatProblem.ENTITY_SHAPE, format.validate(sceneWith(bad), DocumentKind.SCENE)?.problem)
         }
         assertNull(format.validate(sceneWith("""{"flags":5,"components":{}}"""), DocumentKind.SCENE))

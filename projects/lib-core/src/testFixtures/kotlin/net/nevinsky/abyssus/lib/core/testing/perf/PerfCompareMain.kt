@@ -10,7 +10,8 @@ import java.io.File
 import kotlin.system.exitProcess
 
 /**
- * Prints the verdict of every workload of a candidate report against a baseline: `PerfCompareMain <baseline> <candidate>`.
+  * Prints the verdict of every workload of a candidate report against a baseline: `PerfCompareMain <baseline>
+  * <candidate>`.
  * The exit status is 1 when any workload regressed and 0 otherwise; inconclusive, mismatched and unmeasured workloads
  * are printed and are never a pass. Run through `./gradlew :lib-core:comparePerf -Pbaseline=<file> -Pcandidate=<file>`.
  */
@@ -22,5 +23,7 @@ fun main(args: Array<String>) {
     val files = PerfReportFiles()
     val findings = PerfComparison().compare(files.read(File(args[0])), files.read(File(args[1])))
     findings.forEach { println("%-22s %-12s %s".format(java.util.Locale.ROOT, it.workload, it.verdict, it.detail)) }
-    if (findings.any { it.verdict == PerfVerdict.REGRESSION }) exitProcess(1)
+    if (findings.any { it.verdict == PerfVerdict.REGRESSION }) {
+        exitProcess(1)
+    }
 }

@@ -14,13 +14,13 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
-import net.nevinsky.abyssus.lib.core.editor.terrain.TERRAIN_RECIPE_FILE
-import net.nevinsky.abyssus.plugin.properties.AssetPropertiesPanel
-import net.nevinsky.abyssus.plugin.properties.PanelState
 import java.awt.Component
 import java.awt.Container
 import java.io.File
 import javax.swing.JButton
+import net.nevinsky.abyssus.lib.core.editor.terrain.TERRAIN_RECIPE_FILE
+import net.nevinsky.abyssus.plugin.properties.AssetPropertiesPanel
+import net.nevinsky.abyssus.plugin.properties.PanelState
 import net.nevinsky.abyssus.plugin.testPanelServices
 
 class TerrainGenerationPanelTest : BasePlatformTestCase() {
@@ -42,29 +42,47 @@ class TerrainGenerationPanelTest : BasePlatformTestCase() {
         folder.refresh(false, true)
     }
 
-    private fun panel(): AssetPropertiesPanel = AssetPropertiesPanel(
-        project, testRootDisposable, testPanelServices(project),
-        background = { if (deferred) queue += it else it.run() },
-        ui = { it.run() },
-    )
+    private fun panel(): AssetPropertiesPanel =
+        AssetPropertiesPanel(
+            project,
+            testRootDisposable,
+            testPanelServices(project),
+            background = {
+                if (deferred) {
+                    queue += it
+                } else {
+                    it.run()
+                }
+            },
+            ui = { it.run() },
+        )
 
     private fun runQueued() {
         while (queue.isNotEmpty()) queue.removeFirst().run()
     }
 
     private fun find(c: Component, name: String): Component? =
-        if (c.name == name) c else (c as? Container)?.components?.firstNotNullOfOrNull { find(it, name) }
+        if (c.name == name) {
+            c
+        } else {
+            (c as? Container)?.components?.firstNotNullOfOrNull { find(it, name) }
+        }
 
     private fun button(p: Component, name: String) = find(p, name) as JButton
+
     private fun field(p: Component, key: String) = find(p, "terrain-gen-$key") as JBTextField
+
     private fun label(p: Component, name: String) = (find(p, name) as? JBLabel)?.text
+
     private fun type(f: JBTextField, text: String) {
         f.text = text
         f.postActionEvent()
     }
 
     private fun bytes(name: String) = File(folder.path, name).readBytes()
+
     private fun text(name: String) = File(folder.path, name).readText()
+
     private fun recipeExists() = File(folder.path, TERRAIN_RECIPE_FILE).exists()
 
     private fun shown(): AssetPropertiesPanel = panel().also { it.showFolder(folder) }
@@ -86,13 +104,22 @@ class TerrainGenerationPanelTest : BasePlatformTestCase() {
         val p = shown()
         button(p, "terrain-preview").doClick()
         assertTrue("apply after preview: ${label(p, "terrain-message")}", button(p, "terrain-apply").isEnabled)
-        assertTrue("step1 ${label(p, "terrain-message")}/${label(p, "terrain-problems")}", label(p, "terrain-message")!!.contains("Preview ready"))
+        assertTrue(
+            "step1 ${label(p, "terrain-message")}/${label(p, "terrain-problems")}",
+            label(p, "terrain-message")!!.contains("Preview ready"),
+        )
         type(field(p, "seed"), "99")
         assertFalse("changing a setting invalidates the preview", button(p, "terrain-apply").isEnabled)
         button(p, "terrain-preview").doClick()
-        assertTrue("step2 ${label(p, "terrain-message")}/${label(p, "terrain-problems")}", button(p, "terrain-apply").isEnabled)
+        assertTrue(
+            "step2 ${label(p, "terrain-message")}/${label(p, "terrain-problems")}",
+            button(p, "terrain-apply").isEnabled,
+        )
         button(p, "terrain-randomize").doClick()
-        assertFalse("step3 ${label(p, "terrain-message")}/${label(p, "terrain-problems")}", button(p, "terrain-apply").isEnabled)
+        assertFalse(
+            "step3 ${label(p, "terrain-message")}/${label(p, "terrain-problems")}",
+            button(p, "terrain-apply").isEnabled,
+        )
         assertNotSame("99", field(p, "seed").text)
     }
 
@@ -124,7 +151,11 @@ class TerrainGenerationPanelTest : BasePlatformTestCase() {
         assertEquals("metadata is byte for byte unchanged", metaBefore, text("meta.json"))
         assertTrue(recipeExists())
         assertTrue(text(TERRAIN_RECIPE_FILE).contains("\"seed\": 2024"))
-        assertEquals("1600 and 60.0 survive", true, text("meta.json").contains("\"size\": 1600") && text("meta.json").contains("\"uv\": 60.0"))
+        assertEquals(
+            "1600 and 60.0 survive",
+            true,
+            text("meta.json").contains("\"size\": 1600") && text("meta.json").contains("\"uv\": 60.0"),
+        )
         val reopened = shown()
         assertTrue(label(reopened, "terrain-recipe-status")!!.contains("Generated with the settings shown"))
         assertEquals("2024", field(reopened, "seed").text)
@@ -139,22 +170,40 @@ class TerrainGenerationPanelTest : BasePlatformTestCase() {
         assertTrue(recipeExists())
         val undo = UndoManager.getInstance(project)
         assertTrue(button(find(p, "asset-undo")!!.parent, "asset-undo").isEnabled || true)
-        val editor = com.intellij.ide.DataManager.getInstance().let {
-            var found: com.intellij.openapi.fileEditor.FileEditor? = null
-            p.uiDataSnapshot(object : com.intellij.openapi.actionSystem.DataSink {
-                override fun <T : Any> set(key: com.intellij.openapi.actionSystem.DataKey<T>, data: T?) {
-                    if (key == com.intellij.openapi.actionSystem.PlatformCoreDataKeys.FILE_EDITOR) found = data as? com.intellij.openapi.fileEditor.FileEditor
-                }
-                override fun <T : Any> setNull(key: com.intellij.openapi.actionSystem.DataKey<T>) {}
-                override fun <T : Any> lazy(key: com.intellij.openapi.actionSystem.DataKey<T>, data: () -> T?) {}
-                override fun <T : Any> lazyNull(key: com.intellij.openapi.actionSystem.DataKey<T>) {}
-                override fun uiDataSnapshot(provider: com.intellij.openapi.actionSystem.UiDataProvider) {}
-                override fun dataSnapshot(provider: com.intellij.openapi.actionSystem.DataSnapshotProvider) {}
-                override fun uiDataSnapshot(provider: com.intellij.openapi.actionSystem.DataProvider) {}
-                override fun <T : Any> lazyValue(key: com.intellij.openapi.actionSystem.DataKey<T>, data: (com.intellij.openapi.actionSystem.DataMap) -> T?) {}
-            })
-            found!!
-        }
+        val editor =
+            com.intellij.ide.DataManager.getInstance().let {
+                var found: com.intellij.openapi.fileEditor.FileEditor? = null
+                p.uiDataSnapshot(
+                    object : com.intellij.openapi.actionSystem.DataSink {
+                        override fun <T : Any> set(key: com.intellij.openapi.actionSystem.DataKey<T>, data: T?) {
+                            if (key == com.intellij.openapi.actionSystem.PlatformCoreDataKeys.FILE_EDITOR) {
+                                found = data as? com.intellij.openapi.fileEditor.FileEditor
+                            }
+                        }
+
+                        override fun <T : Any> setNull(key: com.intellij.openapi.actionSystem.DataKey<T>) {}
+
+                        override fun <T : Any> lazy(
+                            key: com.intellij.openapi.actionSystem.DataKey<T>,
+                            data: () -> T?,
+                        ) {}
+
+                        override fun <T : Any> lazyNull(key: com.intellij.openapi.actionSystem.DataKey<T>) {}
+
+                        override fun uiDataSnapshot(provider: com.intellij.openapi.actionSystem.UiDataProvider) {}
+
+                        override fun dataSnapshot(provider: com.intellij.openapi.actionSystem.DataSnapshotProvider) {}
+
+                        override fun uiDataSnapshot(provider: com.intellij.openapi.actionSystem.DataProvider) {}
+
+                        override fun <T : Any> lazyValue(
+                            key: com.intellij.openapi.actionSystem.DataKey<T>,
+                            data: (com.intellij.openapi.actionSystem.DataMap) -> T?,
+                        ) {}
+                    }
+                )
+                found!!
+            }
         assertTrue(undo.isUndoAvailable(editor))
         undo.undo(editor)
         assertEquals(dataBefore.toList(), bytes("terrain.data").toList())
@@ -221,7 +270,10 @@ class TerrainGenerationPanelTest : BasePlatformTestCase() {
         assertEquals("{ not json", text(TERRAIN_RECIPE_FILE))
         button(p, "terrain-preview").doClick()
         button(p, "terrain-apply").doClick()
-        assertTrue("the malformed recipe is replaced only on an explicit apply", text(TERRAIN_RECIPE_FILE).contains("\"schemaVersion\": 1"))
+        assertTrue(
+            "the malformed recipe is replaced only on an explicit apply",
+            text(TERRAIN_RECIPE_FILE).contains("\"schemaVersion\": 1"),
+        )
     }
 
     fun testAnExternalHeightsChangeAfterPreviewRejectsApplyWithoutOverwriting() {
@@ -249,27 +301,50 @@ class TerrainGenerationPanelTest : BasePlatformTestCase() {
         assertTrue(p.state is PanelState.Details)
     }
 
-    /** Makes the folder a terrain sculpted over a stored base: the fixture heights plus a bump, as the files hold it. */
+    /**
+     * Makes the folder a terrain sculpted over a stored base: the fixture heights plus a bump, as the files hold it.
+     */
     private fun sculpt(): ByteArray {
         val core = net.nevinsky.abyssus.plugin.testCore
         val base = bytes("terrain.data")
         val baseHeights = net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.decodeSculptGrid(base, 180)!!
-        val delta = FloatArray(baseHeights.size) { if (it % 181 == 0) 4f else 0f }
+        val delta =
+            FloatArray(baseHeights.size) {
+                if (it % 181 == 0) {
+                    4f
+                } else {
+                    0f
+                }
+            }
         val deltaBytes = core.heightEncoder.encode(delta)
-        val composed = core.heightEncoder.encode(net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.composeSculpt(baseHeights, delta))
+        val composed =
+            core.heightEncoder.encode(
+                net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.composeSculpt(baseHeights, delta)
+            )
         val sha = { bytes: ByteArray -> net.nevinsky.abyssus.lib.core.editor.terrain.sha256Hex(bytes) }
-        val manifest = net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptManifest(
-            net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptBaseKind.STORED, 180, sha(deltaBytes), sha(composed), sha(base),
-        )
+        val manifest =
+            net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptManifest(
+                net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptBaseKind.STORED,
+                180,
+                sha(deltaBytes),
+                sha(composed),
+                sha(base),
+            )
         File(folder.path, "abyssus-terrain.base").writeBytes(base)
         File(folder.path, "abyssus-terrain.sculpt").writeBytes(deltaBytes)
-        File(folder.path, "abyssus-terrain.sculpt.json").writeText(net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptManifestCodec(core.json).encode(manifest))
+        File(folder.path, "abyssus-terrain.sculpt.json")
+            .writeText(
+                net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptManifestCodec(core.json).encode(manifest)
+            )
         File(folder.path, "terrain.data").writeBytes(composed)
         folder.refresh(false, true)
         return base
     }
 
-    private fun sculptFiles() = listOf("abyssus-terrain.base", "abyssus-terrain.sculpt", "abyssus-terrain.sculpt.json").filter { File(folder.path, it).exists() }
+    private fun sculptFiles() =
+        listOf("abyssus-terrain.base", "abyssus-terrain.sculpt", "abyssus-terrain.sculpt.json").filter {
+            File(folder.path, it).exists()
+        }
 
     fun testASculptedTerrainShowsItsStateAndOffersReset() {
         sculpt()
@@ -295,7 +370,9 @@ class TerrainGenerationPanelTest : BasePlatformTestCase() {
         assertEquals(base.toList(), bytes("terrain.data").toList())
         assertTrue(sculptFiles().isEmpty())
         val undo = UndoManager.getInstance(project)
-        val editor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().createEditor(project, folder.findChild("meta.json")!!)
+        val editor =
+            com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance()
+                .createEditor(project, folder.findChild("meta.json")!!)
         try {
             assertTrue(undo.isUndoAvailable(editor))
             undo.undo(editor)

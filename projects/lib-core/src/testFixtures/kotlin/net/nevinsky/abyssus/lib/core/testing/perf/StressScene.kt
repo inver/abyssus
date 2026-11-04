@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.lib.core.testing.perf
 
+import java.io.File
+import java.security.MessageDigest
+import java.util.Random
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageBake
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageCopy
@@ -16,9 +19,6 @@ import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.slf4j.helpers.NOPLogger
-import java.io.File
-import java.security.MessageDigest
-import java.util.Random
 
 /** What [StressScene.generate] made, for a test or a report to assert on. */
 data class StressSceneInfo(
@@ -31,7 +31,8 @@ data class StressSceneInfo(
     val seed: Long,
 ) {
     /** Triangles of the repeated models alone. */
-    val modelTriangles get() = trianglesPerModel * modelPlacements
+    val modelTriangles
+        get() = trianglesPerModel * modelPlacements
 }
 
 /**
@@ -42,9 +43,12 @@ data class StressSceneInfo(
 class StressScene(private val seed: Long = SEED) {
     /** [triangles] is the number of triangles in one model, which the caller reads with the model loader. */
     fun generate(source: File, target: File, triangles: Long = 0L): StressSceneInfo {
-        val model = File(source, "assets").listFiles { f -> f.isDirectory && f.name.startsWith("model_") && File(f, "model.gltf").isFile }!!
-            .minBy { it.name }
-        val terrain = File(source, "assets").listFiles { f -> f.isDirectory && f.name.startsWith("terrain_") }!!.minBy { it.name }
+        val model =
+            File(source, "assets")
+                .listFiles { f -> f.isDirectory && f.name.startsWith("model_") && File(f, "model.gltf").isFile }!!
+                .minBy { it.name }
+        val terrain =
+            File(source, "assets").listFiles { f -> f.isDirectory && f.name.startsWith("terrain_") }!!.minBy { it.name }
         target.mkdirs()
         File(source, "Untitled.abss").copyTo(File(target, "Untitled.abss"), overwrite = true)
         model.copyRecursively(File(target, "assets/${model.name}"), overwrite = true)
@@ -61,7 +65,12 @@ class StressScene(private val seed: Long = SEED) {
         digest.update(scene.toByteArray())
         digest.update(File(target, "assets/$FOLIAGE_NAME/foliage.data").readBytes())
         return StressSceneInfo(
-            "$SCENE_NAME.scene", digest.digest().joinToString("") { "%02x".format(it) }, MODELS, foliage, triangles, seed,
+            "$SCENE_NAME.scene",
+            digest.digest().joinToString("") { "%02x".format(it) },
+            MODELS,
+            foliage,
+            triangles,
+            seed,
         )
     }
 
@@ -71,13 +80,15 @@ class StressScene(private val seed: Long = SEED) {
     private fun sceneText(terrain: String, model: String, size: Float, random: Random): String {
         val entities = StringBuilder()
         entities.append(
-            """"1":{"type":"TERRAIN","components":{"NameComponent":{"name":"Terrain"},"PositionComponent":{"localPosition":{"x":0.0,"y":0.0,"z":0.0}},""" +
+            """"1":{"type":"TERRAIN","components":{"NameComponent":{"name":"Terrain"},
+"PositionComponent":{"localPosition":{"x":0.0,"y":0.0,"z":0.0}},""" +
                 """"RenderComponent":{"shaderKey":"terrain","type":"TERRAIN","assetName":"$terrain"},""" +
                 """"FoliageComponent":{"assetName":"$FOLIAGE_NAME"}}}"""
         )
         entities.append(
-            ""","2":{"type":"LIGHT_DIRECTIONAL","components":{"NameComponent":{"name":"Sun"},""" +
-                """"PositionComponent":{"localRotation":{"x":0.38268328,"w":-0.9238796},"localPosition":{"x":0.0,"y":50.0,"z":0.0}}}}"""
+            ""","2":{"type":"LIGHT_DIRECTIONAL","components":{"NameComponent":{"name":"Sun"},
+"PositionComponent":{"localRotation":{"x":0.38268328,"w":-0.9238796},"localPosition":{"x":0.0,""" +
+                    """"y":50.0,"z":0.0}}}}"""
         )
         // a square grid with a seeded jitter, so the placements spread over the terrain without overlapping much
         val side = Math.ceil(Math.sqrt(MODELS.toDouble())).toInt()
@@ -86,22 +97,27 @@ class StressScene(private val seed: Long = SEED) {
             val x = ((i % side) + random.nextFloat()) * step - size / 2
             val z = ((i / side) + random.nextFloat()) * step - size / 2
             entities.append(
-                ""","${i + 3}":{"type":"OBJECT","components":{"NameComponent":{"name":"Model ${i + 3}"},""" +
-                    """"PositionComponent":{"localPosition":{"x":${"%.3f".format(java.util.Locale.ROOT, x)},"y":0.0,"z":${"%.3f".format(java.util.Locale.ROOT, z)}}},""" +
+                ""","${i + 3}":{"type":"OBJECT","components":{"NameComponent":{"name":"Model ${i + 3}"},
+"PositionComponent":{"localPosition":{"x":${"%.3f".format(java.util.Locale.ROOT, x)},"y":0.0,""" +
+                        """"z":${"%.3f".format(java.util.Locale.ROOT, z)}}},""" +
                     """"RenderComponent":{"shaderKey":"defaultShader","type":"MODEL","assetName":"$model"}}}"""
             )
         }
-        return """{"format":"abyssus","formatVersion":1,"id":0,"name":"$SCENE_NAME","ambientLightEnabled":true,""" +
-            """"ambientLight":{"color":{"r":1.0,"g":1.0,"b":1.0,"a":1.0},"intensity":0.3},"fogEnabled":false,"skyboxEnabled":false,"ecs":{$entities}}"""
+        return """{"format":"abyssus","formatVersion":1,"id":0,"name":"$SCENE_NAME","ambientLightEnabled":true,
+"ambientLight":{"color":{"r":1.0,"g":1.0,"b":1.0,"a":1.0},"intensity":0.3},"fogEnabled":false,""" +
+                """"skyboxEnabled":false,"ecs":{$entities}}"""
     }
 
     /** Writes the foliage asset and its bake; returns the number of copies. */
     private fun writeFoliage(target: File, terrain: String, model: String, size: Float, random: Random): Int {
         val dir = File(target, "assets/$FOLIAGE_NAME").also { it.mkdirs() }
-        File(dir, "meta.json").writeText(
-            """{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","additional":{"terrain":"$terrain","maskResolution":16,""" +
-                """"layers":[{"id":1,"kind":"OBJECT","models":[{"asset":"$model","weight":1.0}],"alignToNormal":0.0}]}}"""
-        )
+        File(dir, "meta.json")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","additional":{"terrain":"$terrain",
+"maskResolution":16,""" +
+                    """"layers":[{"id":1,"kind":"OBJECT","models":[{"asset":"$model","weight":1.0}],
+"alignToNormal":0.0}]}}"""
+            )
         val files = FileLoader(target)
         val metas = AssetMetaLoader(JsonProcessor(NOPLogger.NOP_LOGGER), files)
         val prepared = FoliageLoader(files, metas, TerrainLoader(files, metas)).prepare(FOLIAGE_NAME)!!.staged
@@ -115,9 +131,11 @@ class StressScene(private val seed: Long = SEED) {
             val cz = (z / chunk).toInt().coerceIn(0, CHUNKS - 1)
             chunks[cz * CHUNKS + cx] += FoliageCopy(0, x, z, random.nextFloat() * 6.2831855f, 0.5f + random.nextFloat())
         }
-        File(dir, "foliage.data").writeBytes(
-            FoliageDataFile().write(FoliageBake(fingerprint, chunk, listOf(FoliageLayerBake(1, 1, CHUNKS, CHUNKS, chunks))))
-        )
+        File(dir, "foliage.data")
+            .writeBytes(
+                FoliageDataFile()
+                    .write(FoliageBake(fingerprint, chunk, listOf(FoliageLayerBake(1, 1, CHUNKS, CHUNKS, chunks))))
+            )
         return FOLIAGE_COPIES
     }
 

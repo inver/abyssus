@@ -5,21 +5,21 @@
 
 package net.nevinsky.abyssus.lib.core.editor.modelimport
 
-import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
-import net.nevinsky.abyssus.lib.core.util.sha256Hex
 import javax.imageio.ImageIO
+import net.nevinsky.abyssus.lib.core.util.sha256Hex
+import net.nevinsky.abyssus.lib.gdx.model.ModelData
 
 /** The textures of an import: [files] by their path in the asset folder, [uris] from texture file name to that path. */
 class GatheredTextures(val files: Map<String, ByteArray>, val uris: Map<String, String>, val leftOut: List<LeftOutItem>)
 
 /**
- * Collects the texture files the materials use into `textures/<name>.png`. Each image is read with ImageIO (PNG,
- * JPEG, BMP, GIF; no libGDX natives needed): a PNG is kept byte for byte, any other image is re-encoded as PNG.
- * Images with the same content share one file. A missing file, or one ImageIO cannot read (TGA, DDS, KTX2, WebP...),
- * is reported and left out; the writer then drops that material slot.
+ * Collects the texture files the materials use into `textures/<name>.png`. Each image is read with ImageIO (PNG, JPEG,
+ * BMP, GIF; no libGDX natives needed): a PNG is kept byte for byte, any other image is re-encoded as PNG. Images with
+ * the same content share one file. A missing file, or one ImageIO cannot read (TGA, DDS, KTX2, WebP...), is reported
+ * and left out; the writer then drops that material slot.
  */
 class TextureGather {
     fun gather(data: ModelData, cancel: () -> Unit = {}): GatheredTextures {
@@ -35,21 +35,26 @@ class TextureGather {
                 leftOut += LeftOutItem(source.name, LeftOutReason.MISSING)
                 continue
             }
-            val png = try {
-                toPng(source)
-            } catch (e: IOException) {
-                null
-            }
+            val png =
+                try {
+                    toPng(source)
+                } catch (e: IOException) {
+                    null
+                }
             if (png == null) {
                 leftOut += LeftOutItem(source.name, LeftOutReason.UNSUPPORTED_TEXTURE)
                 continue
             }
-            val path = byContent.getOrPut(sha256Hex(png)) {
-                val stem = source.nameWithoutExtension.replace(Regex("[^A-Za-z0-9_.-]+"), "_").trim('_', '.').ifEmpty { "texture" }
-                val candidate = uniqueTexturePath(files.keys, "$stem.png")
-                files[candidate] = png
-                candidate
-            }
+            val path =
+                byContent.getOrPut(sha256Hex(png)) {
+                    val stem =
+                        source.nameWithoutExtension.replace(Regex("[^A-Za-z0-9_.-]+"), "_").trim('_', '.').ifEmpty {
+                            "texture"
+                        }
+                    val candidate = uniqueTexturePath(files.keys, "$stem.png")
+                    files[candidate] = png
+                    candidate
+                }
             uris[name] = path
         }
         return GatheredTextures(files, uris, leftOut)
@@ -59,9 +64,13 @@ class TextureGather {
     private fun toPng(file: File): ByteArray? {
         val bytes = file.readBytes()
         val image = ImageIO.read(bytes.inputStream()) ?: return null
-        if (bytes.size >= 8 && bytes.copyOfRange(0, 8).contentEquals(PNG_SIGNATURE)) return bytes
+        if (bytes.size >= 8 && bytes.copyOfRange(0, 8).contentEquals(PNG_SIGNATURE)) {
+            return bytes
+        }
         val out = ByteArrayOutputStream()
-        if (!ImageIO.write(image, "png", out)) return null
+        if (!ImageIO.write(image, "png", out)) {
+            return null
+        }
         return out.toByteArray()
     }
 }

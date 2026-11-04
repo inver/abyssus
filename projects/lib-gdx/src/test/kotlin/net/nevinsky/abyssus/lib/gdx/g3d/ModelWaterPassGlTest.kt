@@ -18,21 +18,21 @@ import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.graphics.g3d.Environment
 import com.badlogic.gdx.graphics.g3d.Material
 import com.badlogic.gdx.graphics.g3d.ModelBatch
+import com.badlogic.gdx.graphics.g3d.Renderable
 import com.badlogic.gdx.graphics.g3d.RenderableProvider
 import com.badlogic.gdx.graphics.g3d.Shader
-import com.badlogic.gdx.graphics.g3d.utils.ShaderProvider
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute
 import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
+import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader
 import com.badlogic.gdx.graphics.g3d.utils.DefaultTextureBinder
 import com.badlogic.gdx.graphics.g3d.utils.RenderContext
+import com.badlogic.gdx.graphics.g3d.utils.ShaderProvider
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.utils.BufferUtils
-import com.badlogic.gdx.graphics.g3d.Renderable
 import net.nevinsky.abyssus.lib.gdx.model.PBRFloatAttribute
-import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader
 import net.nevinsky.abyssus.lib.gdx.shader.ClipPlaneAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
@@ -60,21 +60,29 @@ class ModelWaterPassGlTest {
 
     /** A quad (two triangles, 32-bit indices) in the z = 0 plane covering x and y from -0.8 to 0.8. */
     private fun quad(extraAttributes: List<VertexAttribute> = emptyList(), boneIndex: Float? = null): IntMesh {
-        val attributes = listOf(VertexAttribute.Position(), VertexAttribute.Normal(), VertexAttribute.TexCoords(0)) + extraAttributes
+        val attributes =
+            listOf(VertexAttribute.Position(), VertexAttribute.Normal(), VertexAttribute.TexCoords(0)) + extraAttributes
         val corners = listOf(-0.8f to -0.8f, 0.8f to -0.8f, 0.8f to 0.8f, -0.8f to 0.8f)
         val uv = listOf(0f to 1f, 1f to 1f, 1f to 0f, 0f to 0f)
         val mesh = IntMesh(true, 4, 6, *attributes.toTypedArray())
         val data = ArrayList<Float>()
         for ((i, c) in corners.withIndex()) {
             data += listOf(c.first, c.second, 0f, 0f, 0f, 1f, uv[i].first, uv[i].second)
-            if (boneIndex != null) data += listOf(boneIndex, 1f)
+            if (boneIndex != null) {
+                data += listOf(boneIndex, 1f)
+            }
         }
         mesh.setVertices(data.toFloatArray())
         mesh.setIndices(intArrayOf(0, 1, 2, 0, 2, 3))
         return mesh
     }
 
-    private fun renderable(mesh: IntMesh, material: Material, environment: Environment?, bones: Array<Matrix4>? = null): Renderable =
+    private fun renderable(
+        mesh: IntMesh,
+        material: Material,
+        environment: Environment?,
+        bones: Array<Matrix4>? = null,
+    ): Renderable =
         Renderable().apply {
             meshPart.set("quad", mesh, 0, 6, GL20.GL_TRIANGLES)
             this.material = material
@@ -83,22 +91,37 @@ class ModelWaterPassGlTest {
             worldTransform.idt()
         }
 
-    private fun lit(): Environment = Environment().apply {
-        add(DirectionalLight().set(Color(0.8f, 0.8f, 0.8f, 1f), 0f, 0f, -1f))
-        set(ColorAttribute.createAmbientLight(0.4f, 0.4f, 0.4f, 1f))
-    }
+    private fun lit(): Environment =
+        Environment().apply {
+            add(DirectionalLight().set(Color(0.8f, 0.8f, 0.8f, 1f), 0f, 0f, -1f))
+            set(ColorAttribute.createAmbientLight(0.4f, 0.4f, 0.4f, 1f))
+        }
 
     private fun material(pbr: Boolean = false): Material {
         val material = Material(ColorAttribute.createDiffuse(Color.WHITE))
-        if (pbr) material.set(PBRFloatAttribute.createMetallic(0f), PBRFloatAttribute.createRoughness(1f))
+        if (pbr) {
+            material.set(PBRFloatAttribute.createMetallic(0f), PBRFloatAttribute.createRoughness(1f))
+        }
         return material
     }
 
-    private fun orthographic() = OrthographicCamera(2f, 2f).apply { position.set(0f, 0f, 2f); lookAt(0f, 0f, 0f); near = 0.1f; far = 4f; update() }
+    private fun orthographic() =
+        OrthographicCamera(2f, 2f).apply {
+            position.set(0f, 0f, 2f)
+            lookAt(0f, 0f, 0f)
+            near = 0.1f
+            far = 4f
+            update()
+        }
 
-    private fun perspective() = PerspectiveCamera(60f, SIZE.toFloat(), SIZE.toFloat()).apply {
-        position.set(0f, 0f, 2f); lookAt(0f, 0f, 0f); near = 0.1f; far = 4f; update()
-    }
+    private fun perspective() =
+        PerspectiveCamera(60f, SIZE.toFloat(), SIZE.toFloat()).apply {
+            position.set(0f, 0f, 2f)
+            lookAt(0f, 0f, 0f)
+            near = 0.1f
+            far = 4f
+            update()
+        }
 
     private fun <T> offscreen(clear: Color = Color.BLACK, block: () -> T): T {
         val framebuffer = FrameBuffer(Pixmap.Format.RGBA8888, SIZE, SIZE, true)
@@ -135,9 +158,16 @@ class ModelWaterPassGlTest {
         readPixels()
     }
 
-    private fun provider() = ModelShaderProvider(DefaultShader.Config().apply { numPointLights = 0; numSpotLights = 0 })
+    private fun provider() =
+        ModelShaderProvider(
+            DefaultShader.Config().apply {
+                numPointLights = 0
+                numSpotLights = 0
+            }
+        )
 
-    @Test fun theClipPlaneRemovesGeometryBelowItInTheColorShaders() = TestGl.run {
+    @Test
+    fun theClipPlaneRemovesGeometryBelowItInTheColorShaders() = TestGl.run {
         for (pbr in listOf(false, true)) {
             val mesh = quad()
             val provider = provider()
@@ -147,12 +177,14 @@ class ModelWaterPassGlTest {
                 assertTrue("upper half is drawn (pbr=$pbr)", pixels.red(SIZE / 2, SIZE * 3 / 4) > 20)
                 assertEquals("lower half is clipped (pbr=$pbr)", 0, pixels.red(SIZE / 2, SIZE / 4))
             } finally {
-                provider.dispose(); mesh.dispose()
+                provider.dispose()
+                mesh.dispose()
             }
         }
     }
 
-    @Test fun theClipPlaneBiasKeepsGeometryJustBelowTheLevel() = TestGl.run {
+    @Test
+    fun theClipPlaneBiasKeepsGeometryJustBelowTheLevel() = TestGl.run {
         val mesh = quad()
         val provider = provider()
         try {
@@ -162,11 +194,13 @@ class ModelWaterPassGlTest {
             assertTrue("inside the band", pixels.red(SIZE / 2, SIZE * 7 / 16) > 20)
             assertEquals("below the band", 0, pixels.red(SIZE / 2, SIZE / 8))
         } finally {
-            provider.dispose(); mesh.dispose()
+            provider.dispose()
+            mesh.dispose()
         }
     }
 
-    @Test fun withoutTheAttributeNothingIsClippedAndTheShaderHasNoClipTest() = TestGl.run {
+    @Test
+    fun withoutTheAttributeNothingIsClippedAndTheShaderHasNoClipTest() = TestGl.run {
         val mesh = quad()
         val provider = provider()
         try {
@@ -180,11 +214,13 @@ class ModelWaterPassGlTest {
             assertTrue("a different variant is compiled for the clipped pass", provider.getShader(clipped) !== shader)
             assertTrue("the plain variant still renders plain renderables", provider.getShader(plain) === shader)
         } finally {
-            provider.dispose(); mesh.dispose()
+            provider.dispose()
+            mesh.dispose()
         }
     }
 
-    @Test fun anUnlitRenderableWithoutAnEnvironmentClipsThroughItsMaterial() = TestGl.run {
+    @Test
+    fun anUnlitRenderableWithoutAnEnvironmentClipsThroughItsMaterial() = TestGl.run {
         val mesh = quad()
         val provider = provider()
         try {
@@ -193,7 +229,8 @@ class ModelWaterPassGlTest {
             assertTrue(pixels.red(SIZE / 2, SIZE * 3 / 4) > 20)
             assertEquals(0, pixels.red(SIZE / 2, SIZE / 4))
         } finally {
-            provider.dispose(); mesh.dispose()
+            provider.dispose()
+            mesh.dispose()
         }
     }
 
@@ -204,7 +241,11 @@ class ModelWaterPassGlTest {
         return c(0) / 16581375f + c(1) / 65025f + c(2) / 255f + c(3)
     }
 
-    private fun depthPass(renderable: Renderable, pass: ShadowDepthPass, camera: com.badlogic.gdx.graphics.Camera): ByteArray =
+    private fun depthPass(
+        renderable: Renderable,
+        pass: ShadowDepthPass,
+        camera: com.badlogic.gdx.graphics.Camera,
+    ): ByteArray =
         offscreen(Color.WHITE) {
             val provider = ModelDepthShaderProvider(pass)
             try {
@@ -221,10 +262,15 @@ class ModelWaterPassGlTest {
             }
         }
 
-    @Test fun theDepthPassClipsAndWritesLinearViewDepth() = TestGl.run {
+    @Test
+    fun theDepthPassClipsAndWritesLinearViewDepth() = TestGl.run {
         val mesh = quad()
         try {
-            val pass = ShadowDepthPass().apply { linearFar = 4f; clipPlane = floatArrayOf(0f, 1f, 0f, 0f) }
+            val pass =
+                ShadowDepthPass().apply {
+                    linearFar = 4f
+                    clipPlane = floatArrayOf(0f, 1f, 0f, 0f)
+                }
             val pixels = depthPass(renderable(mesh, Material(), null), pass, perspective())
             // the quad is 2 units from the camera, a half of the far distance
             assertEquals(0.5f, pixels.depth(SIZE / 2, SIZE * 3 / 4), 0.002f)
@@ -234,44 +280,71 @@ class ModelWaterPassGlTest {
         }
     }
 
-    @Test fun theDepthPassDefaultsStayAsTheShadowPassWrote() = TestGl.run {
+    @Test
+    fun theDepthPassDefaultsStayAsTheShadowPassWrote() = TestGl.run {
         val mesh = quad()
         try {
             val pixels = depthPass(renderable(mesh, Material(), null), ShadowDepthPass(), orthographic())
             val covered = pixels.depth(SIZE / 2, SIZE / 4)
-            assertTrue("both halves are drawn without a clip plane", covered < 0.99f && pixels.depth(SIZE / 2, SIZE * 3 / 4) < 0.99f)
-            assertEquals("window depth of a plane 2 units from an ortho camera with 0.1 / 4", (2f - 0.1f) / 3.9f, covered, 0.01f)
+            assertTrue(
+                "both halves are drawn without a clip plane",
+                covered < 0.99f && pixels.depth(SIZE / 2, SIZE * 3 / 4) < 0.99f,
+            )
+            assertEquals(
+                "window depth of a plane 2 units from an ortho camera with 0.1 / 4",
+                (2f - 0.1f) / 3.9f,
+                covered,
+                0.01f,
+            )
         } finally {
             mesh.dispose()
         }
     }
 
-    @Test fun alphaCutoutHolesStayHolesUnderTheClipPlane() = TestGl.run {
+    @Test
+    fun alphaCutoutHolesStayHolesUnderTheClipPlane() = TestGl.run {
         val pixmap = Pixmap(2, 1, Pixmap.Format.RGBA8888)
-        pixmap.setColor(1f, 1f, 1f, 1f); pixmap.drawPixel(0, 0)
-        pixmap.setColor(1f, 1f, 1f, 0f); pixmap.drawPixel(1, 0)
-        val texture = Texture(pixmap).also { it.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest) }
+        pixmap.setColor(1f, 1f, 1f, 1f)
+        pixmap.drawPixel(0, 0)
+        pixmap.setColor(1f, 1f, 1f, 0f)
+        pixmap.drawPixel(1, 0)
+        val texture =
+            Texture(pixmap).also { it.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest) }
         val mesh = quad()
         try {
             val material = Material(TextureAttribute.createDiffuse(texture), FloatAttribute.createAlphaTest(0.5f))
-            val pass = ShadowDepthPass().apply { linearFar = 4f; clipPlane = floatArrayOf(0f, 1f, 0f, 0f) }
+            val pass =
+                ShadowDepthPass().apply {
+                    linearFar = 4f
+                    clipPlane = floatArrayOf(0f, 1f, 0f, 0f)
+                }
             val pixels = depthPass(renderable(mesh, material, null), pass, perspective())
             assertTrue("the opaque left half writes depth", pixels.depth(SIZE / 4, SIZE * 3 / 4) < 0.99f)
             assertTrue("the cutout right half is a hole", pixels.depth(SIZE * 3 / 4, SIZE * 3 / 4) >= 0.999f)
         } finally {
-            mesh.dispose(); texture.dispose(); pixmap.dispose()
+            mesh.dispose()
+            texture.dispose()
+            pixmap.dispose()
         }
     }
 
-    @Test fun skinnedMeshesAreClippedAfterTheirBonesPoseThem() = TestGl.run {
+    @Test
+    fun skinnedMeshesAreClippedAfterTheirBonesPoseThem() = TestGl.run {
         val bone = VertexAttribute(VertexAttributes.Usage.BoneWeight, 2, "a_boneWeight0", 0)
         val mesh = quad(listOf(bone), boneIndex = 0f)
         try {
             // the bone lifts the quad by 1.0, so what used to be below y = 0 (clipped) is now fully above the plane
             val lifted = arrayOf(Matrix4().setToTranslation(0f, 1.0f, 0f))
-            val pass = ShadowDepthPass().apply { linearFar = 4f; clipPlane = floatArrayOf(0f, 1f, 0f, 0f) }
+            val pass =
+                ShadowDepthPass().apply {
+                    linearFar = 4f
+                    clipPlane = floatArrayOf(0f, 1f, 0f, 0f)
+                }
             val posed = depthPass(renderable(mesh, Material(), null, lifted), pass, perspective())
-            assertTrue("the posed quad's lower corner is now above the plane and drawn", posed.depth(SIZE / 2, SIZE / 2 + SIZE / 8) < 0.99f)
+            assertTrue(
+                "the posed quad's lower corner is now above the plane and drawn",
+                posed.depth(SIZE / 2, SIZE / 2 + SIZE / 8) < 0.99f,
+            )
             val rest = depthPass(renderable(mesh, Material(), null, arrayOf(Matrix4())), pass, perspective())
             assertTrue("unposed, the lower half is clipped", rest.depth(SIZE / 2, SIZE / 4) >= 0.999f)
         } finally {
@@ -279,13 +352,16 @@ class ModelWaterPassGlTest {
         }
     }
 
-    @Test fun theFilterDropsRefusedRenderables() = TestGl.run {
+    @Test
+    fun theFilterDropsRefusedRenderables() = TestGl.run {
         val mesh = quad()
         val real = provider()
         val asked = mutableListOf<Renderable>()
-        val counting = object : ShaderProvider by real {
-            override fun getShader(renderable: Renderable): Shader = real.getShader(renderable).also { asked += renderable }
-        }
+        val counting =
+            object : ShaderProvider by real {
+                override fun getShader(renderable: Renderable): Shader =
+                    real.getShader(renderable).also { asked += renderable }
+            }
         try {
             val batch = ModelBatch(counting)
             val first = renderable(mesh, material(), lit())
@@ -303,7 +379,8 @@ class ModelWaterPassGlTest {
             assertEquals("with no filter everything is drawn", listOf(first), asked)
             assertEquals(GL20.GL_NO_ERROR, Gdx.gl.glGetError())
         } finally {
-            real.dispose(); mesh.dispose()
+            real.dispose()
+            mesh.dispose()
         }
     }
 }

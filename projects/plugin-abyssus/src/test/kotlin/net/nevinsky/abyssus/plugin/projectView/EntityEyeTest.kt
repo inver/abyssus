@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.command.undo.UndoManager
@@ -13,27 +12,41 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.openapi.util.IconLoader
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
-import net.nevinsky.abyssus.lib.core.editor.parseScene
 import java.io.File
+import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.editor.parseScene
 
-/** The eye on entity and component rows (spec `abyssus-project-view`): which rows have one, what it writes, how a disabled subtree looks. */
+/**
+ * The eye on entity and component rows (spec `abyssus-project-view`): which rows have one, what it writes, how a
+ * disabled subtree looks.
+ */
 class EntityEyeTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
 
     private fun scene(text: String) = net.nevinsky.abyssus.plugin.parsedScene(text)
+
     private fun componentTexts(entity: net.nevinsky.abyssus.lib.core.dto.EntityDto) =
-        entity.components.filterNot { it is HeaderComponent }.map { com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.json.toString(it) }
+        entity.components
+            .filterNot { it is HeaderComponent }
+            .map {
+                com.intellij.openapi.components
+                    .service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>()
+                    .documents
+                    .json
+                    .toString(it)
+            }
 
     // ---- which rows have an eye ----
 
     fun testEntityRowsHaveAnEyeExceptGroups() {
-        val ecs = parseScene(
-            """{"formatVersion":1,"ecs":{
+        val ecs =
+            parseScene(
+                """{"formatVersion":1,"ecs":{
               "0":{"type":"OBJECT","components":{}},
               "1":{"flags":1,"type":"OBJECT","components":{}},
-              "2":{"type":"GROUP","components":{}}}}""",
-        )
+              "2":{"type":"GROUP","components":{}}}}"""
+            )
         val rows = ecsRows(ecs).associateBy { it.name }
         assertEquals(true, rows.getValue("0").enabled)
         assertEquals(false, rows.getValue("1").enabled)
@@ -41,13 +54,28 @@ class EntityEyeTest : BasePlatformTestCase() {
     }
 
     fun testComponentRowsFollowTheTogglableMatrix() {
-        val entity = parseScene(
-            """{"formatVersion":1,"ecs":{"0":{"disabledComponents":["ColliderComponent"],"components":{"NameComponent":{},"PositionComponent":{},"ParentComponent":{},"RenderComponent":{},"RigidBodyComponent":{},"ColliderComponent":{},"LightComponent":{},"FoliageComponent":{},"PlaneComponent":{},"PilotComponent":{}}}}}""",
-        )
+        val entity =
+            parseScene(
+                """{"formatVersion":1,"ecs":{"0":{"disabledComponents":["ColliderComponent"],""" +
+                    """"components":{"NameComponent":{},"PositionComponent":{},"ParentComponent":{},""" +
+                    """"RenderComponent":{},"RigidBodyComponent":{},"ColliderComponent":{},""" +
+                    """"LightComponent":{},"FoliageComponent":{},"PlaneComponent":{},""" +
+                    """"PilotComponent":{}}}}}"""
+            )
         val rows = entityRows(net.nevinsky.abyssus.plugin.projectView.EntityNode(entity, 0)).associateBy { it.name }
-        for (name in listOf("NameComponent", "PositionComponent", "ParentComponent")) assertNull(name, rows.getValue(name).enabled)
-        for (name in listOf("RenderComponent", "RigidBodyComponent", "LightComponent", "FoliageComponent", "PlaneComponent", "PilotComponent"))
-            assertEquals(name, true, rows.getValue(name).enabled)
+        for (name in listOf("NameComponent", "PositionComponent", "ParentComponent")) assertNull(
+            name,
+            rows.getValue(name).enabled,
+        )
+        for (name in
+            listOf(
+                "RenderComponent",
+                "RigidBodyComponent",
+                "LightComponent",
+                "FoliageComponent",
+                "PlaneComponent",
+                "PilotComponent",
+            )) assertEquals(name, true, rows.getValue(name).enabled)
         assertEquals(false, rows.getValue("ColliderComponent").enabled)
     }
 
@@ -56,20 +84,37 @@ class EntityEyeTest : BasePlatformTestCase() {
     private fun copyProject() {
         myFixture.copyFileToProject("Untitled/Untitled.abss", "Untitled/Untitled.abss")
         myFixture.copyFileToProject("Untitled/scenes/Main Scene.scene", "Untitled/scenes/Main Scene.scene")
-        File("$testDataPath/Untitled/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
-            d.listFiles { f -> f.isFile && f.extension == "json" }!!.forEach {
-                myFixture.addFileToProject("Untitled/assets/${d.name}/${it.name}", it.readText().trimEnd() + "\n")
+        File("$testDataPath/Untitled/assets")
+            .listFiles { f -> f.isDirectory }!!
+            .forEach { d ->
+                d.listFiles { f -> f.isFile && f.extension == "json" }!!.forEach {
+                        myFixture.addFileToProject(
+                            "Untitled/assets/${d.name}/${it.name}",
+                            it.readText().trimEnd() + "\n",
+                        )
+                    }
             }
-        }
     }
 
-    private fun children(node: AbstractTreeNode<*>) = node.children.map { (it as AbstractTreeNode<*>).also { c -> c.parent = node } }
+    private fun children(node: AbstractTreeNode<*>) =
+        node.children.map { (it as AbstractTreeNode<*>).also { c -> c.parent = node } }
+
     private fun entry(node: AbstractTreeNode<*>) = (node as DtoEntryNode).value
-    private fun label(node: AbstractTreeNode<*>) = (node as? DtoEntryNode)?.let { it.label ?: it.value.name } ?: (node as AbyssusAssetNode).virtualFile.name
+
+    private fun label(node: AbstractTreeNode<*>) =
+        (node as? DtoEntryNode)?.let { it.label ?: it.value.name } ?: (node as AbyssusAssetNode).virtualFile.name
+
     private fun root() = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
-    private fun ecs() = children(children(children(root()).single { label(it) == "scenes" }).single()).single { label(it) == "ecs" }
+
+    private fun ecs() =
+        children(children(children(root()).single { label(it) == "scenes" }).single()).single { label(it) == "ecs" }
+
     private fun entity(id: String) = children(ecs()).first { entry(it).name == id }
-    private fun sceneText() = FileDocumentManager.getInstance().getDocument(myFixture.findFileInTempDir("Untitled/scenes/Main Scene.scene"))!!.text
+
+    private fun sceneText() =
+        FileDocumentManager.getInstance()
+            .getDocument(myFixture.findFileInTempDir("Untitled/scenes/Main Scene.scene"))!!
+            .text
 
     fun testClickingTheEyeOnAnEntityWritesOnlyItsFlagAndUndoRestoresTheRow() {
         copyProject()
@@ -120,6 +165,11 @@ class EntityEyeTest : BasePlatformTestCase() {
         assertNotSame("the disabled entity is gray", icon(on), icon(disabled))
         assertSame(IconLoader.getDisabledIcon(icon(normalComponent)).iconWidth, dimmedComponent.iconWidth)
         // a text row of the subtree is dimmed too
-        assertTrue(component.presentation.coloredText.all { it.attributes == com.intellij.ui.SimpleTextAttributes.GRAYED_ATTRIBUTES || it.attributes == com.intellij.ui.SimpleTextAttributes.GRAY_ATTRIBUTES })
+        assertTrue(
+            component.presentation.coloredText.all {
+                it.attributes == com.intellij.ui.SimpleTextAttributes.GRAYED_ATTRIBUTES ||
+                    it.attributes == com.intellij.ui.SimpleTextAttributes.GRAY_ATTRIBUTES
+            }
+        )
     }
 }

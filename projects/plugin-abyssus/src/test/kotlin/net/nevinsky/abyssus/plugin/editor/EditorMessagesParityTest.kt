@@ -6,15 +6,23 @@
 package net.nevinsky.abyssus.lib.core.editor
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.plugin.EditorBundle
 import java.util.Properties
+import net.nevinsky.abyssus.plugin.EditorBundle
 
 /** The plugin and a caller without the IDE read the editing library's messages to the same text. */
 class EditorMessagesParityTest : BasePlatformTestCase() {
     fun testEveryEditorMessageReadsTheSameWithAndWithoutTheIde() {
-        val keys = Properties().apply {
-            EditorMessages::class.java.classLoader.getResourceAsStream("messages/AbyssusEditorBundle.properties")!!.reader().use(::load)
-        }.stringPropertyNames()
+        val keys =
+            Properties()
+                .apply {
+                    EditorMessages::class
+                        .java
+                        .classLoader
+                        .getResourceAsStream("messages/AbyssusEditorBundle.properties")!!
+                        .reader()
+                        .use(::load)
+                }
+                .stringPropertyNames()
         val headless = ResourceEditorMessages()
         for (key in keys) {
             assertEquals(key, EditorBundle.message(key), headless.message(key))

@@ -38,10 +38,18 @@ class RaySliceInstance(
         require(tint.size == 3 && tint.all { it.isFinite() && it in 0f..1f })
     }
 
-    internal fun uniforms() = matrix + tint + floatArrayOf(if (reflective) 1f else 0f)
+    internal fun uniforms() = matrix + tint + floatArrayOf(if (reflective) {
+        1f
+    } else {
+        0f
+    })
 
     /** Metal's 21-float instance record: [uniforms] plus the ray visibility mask. */
-    internal fun metalUniforms() = uniforms() + floatArrayOf(if (primaryOnly) 2f else 3f)
+    internal fun metalUniforms() = uniforms() + floatArrayOf(if (primaryOnly) {
+        2f
+    } else {
+        3f
+    })
 }
 
 class RaySliceCamera(

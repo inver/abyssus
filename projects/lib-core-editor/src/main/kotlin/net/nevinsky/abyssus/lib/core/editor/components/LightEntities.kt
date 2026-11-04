@@ -6,14 +6,14 @@ package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.ecs.component.LightDto
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.LightDto
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.util.Util
-import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.format.EntityType
 
 /** Sun is a directional light with different initial values, never a separate file type. */
 enum class LightPreset(
@@ -32,7 +32,7 @@ enum class LightPreset(
         Color(1f, 1f, 1f, 1f),
         1f,
         -45f,
-        0f
+        0f,
     ),
     SUN(
         "lightSun",
@@ -41,7 +41,7 @@ enum class LightPreset(
         Color(1f, 0.96f, 0.84f, 1f),
         1.2f,
         -30f,
-        0f
+        0f,
     ),
     SPOT("lightSpot", "lightSpotName", EntityType.LIGHT_SPOT, Color(1f, 1f, 1f, 1f), 1f, -90f, 5f),
 }
@@ -57,7 +57,10 @@ class LightEntities(private val messages: EditorMessages) {
         val transform = PositionComponent(position.x, position.y + preset.height, position.z)
         transform.localRotation.set(Vector3.X, preset.rotationDegrees)
         val light = LightComponent(LightDto(intensity = preset.intensity).also { it.color.set(preset.color) })
-        val id = scene.add(preset.type) { id -> listOf(NameComponent(messages.message(preset.nameKey, id.toString())), transform, light) }
+        val id =
+            scene.add(preset.type) { id ->
+                listOf(NameComponent(messages.message(preset.nameKey, id.toString())), transform, light)
+            }
         return AddedLight(EditResult.Changed, id)
     }
 }

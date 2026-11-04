@@ -22,7 +22,9 @@ class UiAssetNamesDeserializer : JsonDeserializer<List<String>>() {
             while (parser.nextToken() != JsonToken.END_ARRAY) {
                 if (parser.currentToken == JsonToken.VALUE_STRING) {
                     add(parser.text)
-                } else parser.skipChildren()
+                } else {
+                    parser.skipChildren()
+                }
             }
         }
     }

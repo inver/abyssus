@@ -24,7 +24,9 @@ class AssetFileCommandTest : BasePlatformTestCase() {
 
     private val oldHeights = byteArrayOf(1, 2, 3, 4)
     private val newHeights = byteArrayOf(9, 8, 7, 6)
-    private val metaText = """{"format":"abyssus","formatVersion":1,"type":"TERRAIN","uuid":"t","additional":{"terrainFile":"terrain.data","size":100}}"""
+    private val metaText =
+        """{"format":"abyssus","formatVersion":1,"type":"TERRAIN","uuid":"t",
+"additional":{"terrainFile":"terrain.data","size":100}}"""
 
     override fun setUp() {
         super.setUp()
@@ -38,28 +40,45 @@ class AssetFileCommandTest : BasePlatformTestCase() {
     }
 
     private fun bytes(b: ByteArray) = FileSnapshot.Bytes(b)
+
     private fun bytesOf(path: String): ByteArray? = File(disk, path).takeIf { it.exists() }?.readBytes()
+
     private fun file(path: String) = root.findFileByRelativePath(path)!!
 
-    private fun regenerate() = AssetTransaction(
-        "Regenerate Terrain",
-        changes = listOf(
-            FileChange("assets/t/terrain.data", bytes(oldHeights), bytes(newHeights)),
-            FileChange("assets/t/abyssus-terrain.recipe.json", FileSnapshot.Absent, bytes("{}\n".toByteArray())),
-        ),
-        expectedFiles = mapOf("assets/t/meta.json" to bytes(metaText.toByteArray())),
-    )
+    private fun regenerate() =
+        AssetTransaction(
+            "Regenerate Terrain",
+            changes =
+                listOf(
+                    FileChange("assets/t/terrain.data", bytes(oldHeights), bytes(newHeights)),
+                    FileChange(
+                        "assets/t/abyssus-terrain.recipe.json",
+                        FileSnapshot.Absent,
+                        bytes("{}\n".toByteArray()),
+                    ),
+                ),
+            expectedFiles = mapOf("assets/t/meta.json" to bytes(metaText.toByteArray())),
+        )
 
     private fun metaEditor(): TextEditor {
         val meta = file("assets/t/meta.json")
         return TextEditorProvider.getInstance().createEditor(project, meta) as TextEditor
     }
 
-    private fun run(txn: AssetTransaction, cancelled: () -> Boolean = { false }, store: AssetFileStore = this.store): Pair<AssetCommandResult, Int> {
+    private fun run(
+        txn: AssetTransaction,
+        cancelled: () -> Boolean = { false },
+        store: AssetFileStore = this.store,
+    ): Pair<AssetCommandResult, Int> {
         var done = 0
-        val result = AssetFileCommand(project, store).execute(
-            txn, affected = { listOf(file("assets/t/meta.json"), file("assets/t/terrain.data")) }, isCancelled = cancelled, onDone = { done++ },
-        )
+        val result =
+            AssetFileCommand(project, store)
+                .execute(
+                    txn,
+                    affected = { listOf(file("assets/t/meta.json"), file("assets/t/terrain.data")) },
+                    isCancelled = cancelled,
+                    onDone = { done++ },
+                )
         return result to done
     }
 
@@ -109,13 +128,22 @@ class AssetFileCommandTest : BasePlatformTestCase() {
         assertEquals(oldHeights.toList(), bytesOf("assets/t/terrain.data")!!.toList())
     }
 
-    private class FailingStore(private val real: AssetFileStore, private val failOnWrite: Int, private val after: Boolean) : AssetFileStore by real {
+    private class FailingStore(
+        private val real: AssetFileStore,
+        private val failOnWrite: Int,
+        private val after: Boolean,
+    ) : AssetFileStore by real {
         var writes = 0
+
         override fun write(path: String, bytes: ByteArray) {
             val n = writes++
-            if (n == failOnWrite && !after) throw java.io.IOException("injected before $n")
+            if (n == failOnWrite && !after) {
+                throw java.io.IOException("injected before $n")
+            }
             real.write(path, bytes)
-            if (n == failOnWrite && after) throw java.io.IOException("injected after $n")
+            if (n == failOnWrite && after) {
+                throw java.io.IOException("injected after $n")
+            }
         }
     }
 
@@ -137,12 +165,13 @@ class AssetFileCommandTest : BasePlatformTestCase() {
         assertEquals(oldHeights.toList(), bytesOf("assets/t/terrain.data")!!.toList())
 
         var flag = false
-        val late = object : AssetFileStore by store {
-            override fun write(path: String, bytes: ByteArray) {
-                store.write(path, bytes)
-                flag = true
+        val late =
+            object : AssetFileStore by store {
+                override fun write(path: String, bytes: ByteArray) {
+                    store.write(path, bytes)
+                    flag = true
+                }
             }
-        }
         val (result, done) = run(regenerate(), cancelled = { flag }, store = late)
         assertEquals(AssetCommandResult.Done, result)
         assertEquals(1, done)
@@ -169,18 +198,24 @@ class AssetFileCommandTest : BasePlatformTestCase() {
 
     // creation (5.2): a new asset, undone and redone, and what blocks its undo
 
-    private val hillsMeta = """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"uuid":"hills-uuid","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":100}}"""
+    private val hillsMeta =
+        """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"uuid":"hills-uuid","type":"TERRAIN",
+"additional":{"terrainFile":"terrain.data","size":100}}"""
     private val hillsHeights = byteArrayOf(0, 0, 0, 0)
 
-    private fun creation(guard: () -> String? = AssetReferenceGuard(disk).let { g -> { g.blocker("hills", "hills-uuid") } }) = AssetTransaction(
-        "New Terrain",
-        changes = listOf(
-            FileChange("assets/hills/meta.json", FileSnapshot.Absent, bytes(hillsMeta.toByteArray())),
-            FileChange("assets/hills/terrain.data", FileSnapshot.Absent, bytes(hillsHeights)),
-        ),
-        createdDirs = listOf("assets/hills"),
-        guard = guard,
-    )
+    private fun creation(
+        guard: () -> String? = AssetReferenceGuard(disk).let { g -> { g.blocker("hills", "hills-uuid") } }
+    ) =
+        AssetTransaction(
+            "New Terrain",
+            changes =
+                listOf(
+                    FileChange("assets/hills/meta.json", FileSnapshot.Absent, bytes(hillsMeta.toByteArray())),
+                    FileChange("assets/hills/terrain.data", FileSnapshot.Absent, bytes(hillsHeights)),
+                ),
+            createdDirs = listOf("assets/hills"),
+            guard = guard,
+        )
 
     private fun create(txn: AssetTransaction = creation()): Pair<AssetCommandResult, Int> {
         var done = 0
@@ -215,11 +250,13 @@ class AssetFileCommandTest : BasePlatformTestCase() {
     fun testCreatingTheMissingAssetsFolderToo() {
         File(disk, "assets").deleteRecursively()
         root.refresh(false, true)
-        val txn = AssetTransaction(
-            "New Terrain",
-            changes = listOf(FileChange("assets/hills/meta.json", FileSnapshot.Absent, bytes(hillsMeta.toByteArray()))),
-            createdDirs = listOf("assets", "assets/hills"),
-        )
+        val txn =
+            AssetTransaction(
+                "New Terrain",
+                changes =
+                    listOf(FileChange("assets/hills/meta.json", FileSnapshot.Absent, bytes(hillsMeta.toByteArray()))),
+                createdDirs = listOf("assets", "assets/hills"),
+            )
         assertEquals(AssetCommandResult.Done, create(txn).first)
         UndoManager.getInstance(project).undo(null)
         assertFalse("created and empty again, so removed with its parent", File(disk, "assets").exists())
@@ -241,7 +278,11 @@ class AssetFileCommandTest : BasePlatformTestCase() {
         val txn = creation()
         create(txn)
         File(disk, "scenes").mkdirs()
-        File(disk, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"0":{"components":{"RenderComponent":{"type":"TERRAIN","assetName":"hills"}}}}}""")
+        File(disk, "scenes/Main.scene")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"name":"Main",
+"ecs":{"0":{"components":{"RenderComponent":{"type":"TERRAIN","assetName":"hills"}}}}}"""
+            )
         assertUndoRefused(txn, "Main.scene uses hills")
     }
 
@@ -251,9 +292,13 @@ class AssetFileCommandTest : BasePlatformTestCase() {
         File(disk, "scenes").mkdirs()
         File(disk, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{}}""")
         root.refresh(false, true)
-        val document = FileDocumentManager.getInstance().getDocument(root.findFileByRelativePath("scenes/Main.scene")!!)!!
+        val document =
+            FileDocumentManager.getInstance().getDocument(root.findFileByRelativePath("scenes/Main.scene")!!)!!
         WriteCommandAction.runWriteCommandAction(project) {
-            document.setText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"0":{"components":{"RenderComponent":{"assetName":"hills"}}}}}""")
+            document.setText(
+                """{"format":"abyssus","formatVersion":1,"name":"Main",
+"ecs":{"0":{"components":{"RenderComponent":{"assetName":"hills"}}}}}"""
+            )
         }
         assertTrue(FileDocumentManager.getInstance().isDocumentUnsaved(document))
         assertUndoRefused(txn, "Main.scene uses hills")
@@ -263,11 +308,15 @@ class AssetFileCommandTest : BasePlatformTestCase() {
         val txn = creation()
         create(txn)
         File(disk, "scenes").mkdirs()
-        File(disk, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","skyboxName":"hills","ecs":{}}""")
+        File(disk, "scenes/Main.scene")
+            .writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","skyboxName":"hills","ecs":{}}""")
         assertUndoRefused(txn, "Main.scene")
         File(disk, "scenes/Main.scene").delete()
         File(disk, "assets/other").mkdirs()
-        File(disk, "assets/other/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{"materials":["hills-uuid"]}}""")
+        File(disk, "assets/other/meta.json")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{"materials":["hills-uuid"]}}"""
+            )
         assertUndoRefused(txn, "other uses hills")
     }
 
@@ -275,7 +324,11 @@ class AssetFileCommandTest : BasePlatformTestCase() {
         val txn = creation()
         create(txn)
         File(disk, "scenes").mkdirs()
-        File(disk, "scenes/Main.scene").writeText("""{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{"0":{"components":{"RenderComponent":{"assetName":"t"}}}}}""")
+        File(disk, "scenes/Main.scene")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"name":"Main",
+"ecs":{"0":{"components":{"RenderComponent":{"assetName":"t"}}}}}"""
+            )
         WriteCommandAction.runWriteCommandAction(project) { undoOf(txn).undo() }
         assertFalse(File(disk, "assets/hills").exists())
     }

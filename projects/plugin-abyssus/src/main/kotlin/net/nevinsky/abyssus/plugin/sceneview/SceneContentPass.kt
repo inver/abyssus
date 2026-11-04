@@ -5,13 +5,14 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-
+import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.g3d.Environment
 import com.badlogic.gdx.graphics.g3d.Model
 import com.badlogic.gdx.graphics.g3d.ModelBatch
 import com.badlogic.gdx.graphics.g3d.Renderable
+import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDrawable
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
@@ -25,17 +26,19 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.gdx.g3d.FilteredRenderables
 import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
-import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
-import net.nevinsky.abyssus.lib.render.light.setSkyLight
-import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
-import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
-import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
 import net.nevinsky.abyssus.lib.gdx.shader.ClipPlaneAttribute
-import com.badlogic.gdx.graphics.Camera
-import com.badlogic.gdx.graphics.g3d.attributes.BlendingAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
+import net.nevinsky.abyssus.lib.render.light.setSkyLight
+import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
 import net.nevinsky.abyssus.plugin.sceneview.terrain.TerrainShader
 
-internal enum class ContentParts { ALL, OPAQUE, BLENDED }
+internal enum class ContentParts {
+    ALL,
+    OPAQUE,
+    BLENDED,
+}
 
 /** Owns content draw lists and programs; only snapshot packing and list queries are CPU-only. */
 internal class SceneContentPass(
@@ -53,10 +56,20 @@ internal class SceneContentPass(
 
     val environment = Environment()
     @Volatile var fogCoefficient: Float? = null
+
     fun create(resources: RenderResources) {
-        contentShaders = resources.own(ModelShaderProvider(com.badlogic.gdx.graphics.g3d.shaders.DefaultShader.Config().apply {
-            numSpotLights = MAX_SPOT
-        }), ModelShaderProvider::dispose).value.also { contentBatch = ModelBatch(it) }
+        contentShaders =
+            resources
+                .own(
+                    ModelShaderProvider(
+                        com.badlogic.gdx.graphics.g3d.shaders.DefaultShader.Config().apply {
+                            numSpotLights = MAX_SPOT
+                        }
+                    ),
+                    ModelShaderProvider::dispose,
+                )
+                .value
+                .also { contentBatch = ModelBatch(it) }
         terrainShader = resources.own(TerrainShader(shaders), TerrainShader::dispose).value
     }
 
@@ -88,7 +101,11 @@ internal class SceneContentPass(
             drawnVersion,
         )
     }
-    /** Which parts of the content a pass draws: all of it; the opaque and alpha-tested parts; or the blended model parts only. */
+
+    /**
+     * Which parts of the content a pass draws: all of it; the opaque and alpha-tested parts; or the blended model parts
+     * only.
+     */
     private fun isBlended(renderable: Renderable): Boolean =
         (renderable.material?.get(BlendingAttribute.Type) as? BlendingAttribute)?.blended == true
 
@@ -108,51 +125,118 @@ internal class SceneContentPass(
         val contentBatch = contentBatch ?: return
         // after the grid: a built HDR sky replaces the ambient color for the content only (applyEnvironment undoes it)
         val ambient = SceneAmbient.of(c.skybox, p.ambient) { skybox?.environment(it) }
-        val sky = if (unlit) null else (ambient as? SceneAmbient.Sky)?.environment
-        val to = if (sky != null) skybox?.fadingTo(c.skybox) else null
+        val sky =
+            if (unlit) {
+                null
+            } else {
+                (ambient as? SceneAmbient.Sky)?.environment
+            }
+        val to =
+            if (sky != null) {
+                skybox?.fadingTo(c.skybox)
+            } else {
+                null
+            }
         if (sky != null) {
             environment.setSkyLight(sky, to?.environment, to?.weight ?: 0f)
         }
-        if (atlas != null) environment.set(atlas)
-        if (!unlit) sunVisibility?.let { environment.set(it) }
+        if (atlas != null) {
+            environment.set(atlas)
+        }
+        if (!unlit) {
+            sunVisibility?.let { environment.set(it) }
+        }
         if (parts != ContentParts.BLENDED) {
             terrainShader?.draw(
-                view, terrains.drawn, if (unlit) UNLIT_AMBIENT else p.ambient, if (display.fog) p.fog else null,
-                if (unlit) NO_LIGHTS else frameLights, sky?.irradiance, atlas,
-                to?.environment?.irradiance, to?.weight ?: 0f, if (unlit) null else sunVisibility, clip,
+                view,
+                terrains.drawn,
+                if (unlit) {
+                    UNLIT_AMBIENT
+                } else {
+                    p.ambient
+                },
+                if (display.fog) {
+                    p.fog
+                } else {
+                    null
+                },
+                if (unlit) {
+                    NO_LIGHTS
+                } else {
+                    frameLights
+                },
+                sky?.irradiance,
+                atlas,
+                to?.environment?.irradiance,
+                to?.weight ?: 0f,
+                if (unlit) {
+                    null
+                } else {
+                    sunVisibility
+                },
+                clip,
             )
         }
-        if (clip != null) environment.set(ClipPlaneAttribute(clip))
-        val accept: ((Renderable) -> Boolean)? = when (parts) {
-            ContentParts.ALL -> null
-            ContentParts.OPAQUE -> { r -> !isBlended(r) }
-            ContentParts.BLENDED -> { r -> isBlended(r) }
+        if (clip != null) {
+            environment.set(ClipPlaneAttribute(clip))
         }
+        val accept: ((Renderable) -> Boolean)? =
+            when (parts) {
+                ContentParts.ALL -> null
+                ContentParts.OPAQUE -> { r ->
+                    !isBlended(r)
+                }
+                ContentParts.BLENDED -> { r ->
+                    isBlended(r)
+                }
+            }
         try {
             contentBatch.begin(view)
             for (entity in models.drawn) {
-                contentBatch.render(if (accept == null) entity.instance else FilteredRenderables(entity.instance, accept), environment)
+                contentBatch.render(
+                    if (accept == null) {
+                        entity.instance
+                    } else {
+                        FilteredRenderables(entity.instance, accept)
+                    },
+                    environment,
+                )
             }
-            if (parts != ContentParts.BLENDED) foliage.draw(contentBatch, environment, accept)
+            if (parts != ContentParts.BLENDED) {
+                foliage.draw(contentBatch, environment, accept)
+            }
             contentBatch.end()
         } finally {
             environment.remove(ClipPlaneAttribute.Type)
         }
     }
 
-    /** Fog color comes from the environment; density through [net.nevinsky.abyssus.plugin.sceneview.fog.FogShader] (see [FogParams] for what cannot be matched). */
+    /**
+     * Fog color comes from the environment; density through [net.nevinsky.abyssus.plugin.sceneview.fog.FogShader] (see
+     * [FogParams] for what cannot be matched).
+     */
     fun applyEnvironment(p: SceneRenderParams, display: ViewDisplay) {
         val unlit = display.shading == Shading.UNLIT
         environment.remove(ShadowAtlasAttribute.Type)
         environment.remove(DirectionalVisibilityAttribute.Type)
         environment.remove(EnvironmentLightAttribute.Type)
-        val ambient = if (unlit) UNLIT_AMBIENT else p.ambient
+        val ambient =
+            if (unlit) {
+                UNLIT_AMBIENT
+            } else {
+                p.ambient
+            }
         if (ambient != null) {
             environment.set(ColorAttribute(ColorAttribute.AmbientLight, ambient.r, ambient.g, ambient.b, 1f))
         } else {
             environment.remove(ColorAttribute.AmbientLight)
         }
-        val fog = if (display.fog) p.fog else null
+        val fog =
+            if (display.fog) {
+                p.fog
+            } else {
+                null
+            }
         if (fog != null) {
             environment.set(ColorAttribute(ColorAttribute.Fog, fog.color.r, fog.color.g, fog.color.b, 1f))
             fogCoefficient = fog.shaderCoefficient

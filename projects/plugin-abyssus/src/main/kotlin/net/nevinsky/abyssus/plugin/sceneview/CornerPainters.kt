@@ -7,8 +7,6 @@ package net.nevinsky.abyssus.plugin.sceneview
 
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
-import net.nevinsky.abyssus.lib.core.editor.pick.GizmoAxis
-import net.nevinsky.abyssus.lib.core.editor.pick.OrientationProjection
 import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Dimension
@@ -21,6 +19,8 @@ import java.awt.geom.RoundRectangle2D
 import java.awt.image.BufferedImage
 import javax.swing.JComponent
 import kotlin.math.roundToInt
+import net.nevinsky.abyssus.lib.core.editor.pick.GizmoAxis
+import net.nevinsky.abyssus.lib.core.editor.pick.OrientationProjection
 
 /** A viewport overlay that Swing paints and GL shows (a Swing component cannot sit over the heavyweight canvas). */
 internal abstract class CornerPainter(val corner: Corner) : JComponent() {
@@ -40,7 +40,12 @@ internal abstract class CornerPainter(val corner: Corner) : JComponent() {
     fun toImage(scale: Double): BufferedImage {
         val size = measure()
         setSize(size)
-        val image = BufferedImage((size.width * scale).roundToInt().coerceAtLeast(1), (size.height * scale).roundToInt().coerceAtLeast(1), BufferedImage.TYPE_INT_ARGB)
+        val image =
+            BufferedImage(
+                (size.width * scale).roundToInt().coerceAtLeast(1),
+                (size.height * scale).roundToInt().coerceAtLeast(1),
+                BufferedImage.TYPE_INT_ARGB,
+            )
         val g = image.createGraphics()
         try {
             g.scale(scale, scale)
@@ -51,11 +56,12 @@ internal abstract class CornerPainter(val corner: Corner) : JComponent() {
         return image
     }
 
-    protected fun smooth(g: Graphics): Graphics2D = (g.create() as Graphics2D).apply {
-        setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-        setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-        setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE)
-    }
+    protected fun smooth(g: Graphics): Graphics2D =
+        (g.create() as Graphics2D).apply {
+            setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+            setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE)
+        }
 
     companion object {
         val PANEL_FILL = JBColor(Color(0xF7, 0xF8, 0xFA, 0xDD), Color(0x2B, 0x2D, 0x30, 0xD9))
@@ -74,7 +80,9 @@ internal class OrientationWidget : CornerPainter(Corner.UPPER_RIGHT) {
 
     /** Shows the axes for a camera at [yaw] and [pitch]; true when that changed the picture. */
     fun show(yaw: Float, pitch: Float): Boolean {
-        if (yaw == this.yaw && pitch == this.pitch) return false
+        if (yaw == this.yaw && pitch == this.pitch) {
+            return false
+        }
         this.yaw = yaw
         this.pitch = pitch
         projection = OrientationProjection(yaw, pitch)
@@ -135,13 +143,16 @@ internal class StatsStrip : CornerPainter(Corner.LOWER_LEFT) {
 
     /** Shows [value]; true when that changed the picture. */
     fun show(value: String): Boolean {
-        if (value == text) return false
+        if (value == text) {
+            return false
+        }
         text = value
         version++
         return true
     }
 
-    private val statsFont: Font get() = Font(Font.MONOSPACED, Font.PLAIN, 11)
+    private val statsFont: Font
+        get() = Font(Font.MONOSPACED, Font.PLAIN, 11)
 
     override fun measure(): Dimension {
         val metrics = getFontMetrics(statsFont)

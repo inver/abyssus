@@ -4,31 +4,33 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
-import net.nevinsky.abyssus.plugin.canonicalUi
-import net.nevinsky.abyssus.plugin.uiRoot
-import net.nevinsky.abyssus.plugin.uiWidgetIds
-
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.util.concurrent.Executor
+import javax.swing.JPanel
 import net.nevinsky.abyssus.lib.core.editor.ui.UiEditError
 import net.nevinsky.abyssus.lib.core.editor.ui.UiGesturePreview
 import net.nevinsky.abyssus.lib.core.ui.layout.UiLayoutEngine
 import net.nevinsky.abyssus.lib.core.ui.layout.UiMeasurer
 import net.nevinsky.abyssus.lib.core.ui.layout.UiSizeF
-import java.util.concurrent.Executor
-import javax.swing.JPanel
+import net.nevinsky.abyssus.plugin.canonicalUi
+import net.nevinsky.abyssus.plugin.uiRoot
+import net.nevinsky.abyssus.plugin.uiWidgetIds
 
 class UiEditorControllerTest : BasePlatformTestCase() {
-    private val source = canonicalUi("""{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main","screens":[
+    private val source =
+        canonicalUi(
+            """{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main","screens":[
         {"id":"main","name":"Main","root":{"id":"root","type":"panel","children":[
           {"id":"free","type":"button","layout":{"x":50,"y":40,"width":100,"height":40}},
           {"id":"list","type":"column","layout":{"x":400,"y":100,"width":200,"height":300,"spacing":10},"children":[
             {"id":"a","type":"label","layout":{"height":30}},{"id":"b","type":"label","layout":{"height":30}}]}]}},
-        {"id":"other","name":"Other","root":{"id":"o-root","type":"panel"}}]}}}""")!!
+        {"id":"other","name":"Other","root":{"id":"o-root","type":"panel"}}]}}}"""
+        )
 
     private lateinit var file: VirtualFile
     private val queue = ArrayDeque<Runnable>()
@@ -41,8 +43,12 @@ class UiEditorControllerTest : BasePlatformTestCase() {
     }
 
     private fun controller(manual: Boolean = false): UiEditorController {
-        val c = if (manual) UiEditorController(project, file, { queue.addLast(it) }, { uiQueue.addLast(it) })
-        else UiEditorController(project, file, Executor { it.run() }, { it.run() })
+        val c =
+            if (manual) {
+                UiEditorController(project, file, { queue.addLast(it) }, { uiQueue.addLast(it) })
+            } else {
+                UiEditorController(project, file, Executor { it.run() }, { it.run() })
+            }
         c.layoutProvider = { id ->
             c.collection?.screen(id)?.let { UiLayoutEngine(UiMeasurer { UiSizeF(100f, 20f) }).resolve(it, 1280f, 720f) }
         }
@@ -56,7 +62,10 @@ class UiEditorControllerTest : BasePlatformTestCase() {
         return uiWidgetIds(text())
     }
 
-    private fun setDocument(newText: String) = ApplicationManager.getApplication().runWriteAction { FileDocumentManager.getInstance().getDocument(file)!!.setText(newText) }
+    private fun setDocument(newText: String) =
+        ApplicationManager.getApplication().runWriteAction {
+            FileDocumentManager.getInstance().getDocument(file)!!.setText(newText)
+        }
 
     fun testTheTreeCanvasAndPanelsShareOneSelection() {
         val c = controller()
@@ -91,7 +100,8 @@ class UiEditorControllerTest : BasePlatformTestCase() {
         c.select("free")
         assertTrue("adding next to a leaf goes into its parent", c.addWidget("label"))
         assertEquals(listOf("root", "free", "list", "a", "b", "button", "label"), ids())
-        c.select("free"); assertFalse("the root cannot be deleted", c.select("root").let { c.deleteSelected() })
+        c.select("free")
+        assertFalse("the root cannot be deleted", c.select("root").let { c.deleteSelected() })
         assertEquals(UiEditError.ROOT_WIDGET, c.lastError)
     }
 
@@ -112,7 +122,8 @@ class UiEditorControllerTest : BasePlatformTestCase() {
         val before = text()
         val layout = c.layoutProvider("main")!!
         val fit = layout.fit!!
-        val x = fit.toViewportX(60f); val y = fit.toViewportY(50f)
+        val x = fit.toViewportX(60f)
+        val y = fit.toViewportY(50f)
         c.beginGesture("free", x, y)
         assertTrue(c.gestureActive)
         repeat(10) { c.updateGesture(x + it * 5, y + it * 2) }
@@ -121,7 +132,8 @@ class UiEditorControllerTest : BasePlatformTestCase() {
         assertTrue(c.endGesture(x + 50, y + 30))
         assertFalse(c.gestureActive)
         val moved = uiRoot(text()).children!![0].layout!!
-        assertEquals(100, moved.x); assertEquals(70, moved.y)
+        assertEquals(100, moved.x)
+        assertEquals(70, moved.y)
         val editor = UiFileEditor(project, file, Executor { it.run() }) { JPanel() }
         UndoManager.getInstance(project).undo(editor)
         assertEquals(before, text())
@@ -132,7 +144,8 @@ class UiEditorControllerTest : BasePlatformTestCase() {
         val c = controller()
         val layout = c.layoutProvider("main")!!
         val fit = layout.fit!!
-        val x = fit.toViewportX(60f); val y = fit.toViewportY(50f)
+        val x = fit.toViewportX(60f)
+        val y = fit.toViewportY(50f)
         c.beginGesture("free", x, y)
         assertFalse("no movement, no command", c.endGesture(x + 1, y))
         assertEquals("free", c.selection.widgetId)
@@ -142,7 +155,9 @@ class UiEditorControllerTest : BasePlatformTestCase() {
         assertFalse(c.endGesture(x + 40, y + 40))
         assertEquals(UiEditError.STALE, c.lastError)
         assertTrue(text().contains("\"spacing\": 12"))
-        c.beginGesture("free", x, y); c.updateGesture(x + 40, y + 40); c.cancelGesture()
+        c.beginGesture("free", x, y)
+        c.updateGesture(x + 40, y + 40)
+        c.cancelGesture()
         assertFalse(c.endGesture(x + 40, y + 40))
     }
 
@@ -169,12 +184,12 @@ class UiEditorControllerTest : BasePlatformTestCase() {
     fun testASlowOlderReadNeverOverwritesANewerOne() {
         val c = controller(manual = true) // the helper issues read #1 of the original text
         setDocument(text().replace("\"name\": \"Main\"", "\"name\": \"Renamed\""))
-        c.reload()                       // read #2 of the edited text
+        c.reload() // read #2 of the edited text
         assertEquals(2, queue.size)
-        queue.removeLast().run()         // the newer worker finishes first
+        queue.removeLast().run() // the newer worker finishes first
         uiQueue.removeFirst().run()
         assertEquals("Renamed", c.collection!!.screens[0].name)
-        queue.removeFirst().run()        // then the old one, which must be dropped
+        queue.removeFirst().run() // then the old one, which must be dropped
         uiQueue.removeFirst().run()
         assertEquals("Renamed", c.collection!!.screens[0].name)
     }

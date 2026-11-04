@@ -41,7 +41,8 @@ class WaterDepthMath {
     /**
      * The world position of the pixel at normalised device coordinates ([ndcX], [ndcY]) whose view depth is
      * [viewDepth] (world units along [forward]), for a camera at [eye] looking along the unit [forward] with
-     * [inverseViewProjection] the inverse of its projection-view matrix. Null when the pixel's ray runs (nearly) at right
+      * [inverseViewProjection] the inverse of its projection-view matrix. Null when the pixel's ray runs (nearly) at
+      * right
      * angles to [forward], where a view depth fixes no point.
      */
     fun worldPosition(
@@ -51,7 +52,9 @@ class WaterDepthMath {
         val far = Vector3(ndcX, ndcY, 1f).prj(inverseViewProjection)
         val ray = far.sub(near).nor()
         val along = ray.dot(forward)
-        if (!along.isFinite() || along < MIN_ALONG) return null
+        if (!along.isFinite() || along < MIN_ALONG) {
+            return null
+        }
         return Vector3(eye).mulAdd(ray, viewDepth / along)
     }
 

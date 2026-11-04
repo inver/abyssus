@@ -19,7 +19,8 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.editor.document.SceneJson
 
 class SceneRaySettingsEditTest : BasePlatformTestCase() {
-    private val original=SceneJson().pretty(SceneJson().parse("""{"format":"abyssus","formatVersion":1,"rayTracing":{"maxReflectionBounces":3},"other":2.500,"ecs":{"0":{"components":{"RenderComponent":{}}}}}"""))
+    private val original=SceneJson().pretty(SceneJson().parse("""{"format":"abyssus","formatVersion":1,
+"rayTracing":{"maxReflectionBounces":3},"other":2.500,"ecs":{"0":{"components":{"RenderComponent":{}}}}}"""))
     fun testSceneEditsAreOneCommandWithExactUndoRedoAndNoOtherWrites() {
         val file=myFixture.addFileToProject("p/scenes/main.scene",original).virtualFile
         val projectFile=myFixture.addFileToProject("p/p.abss","untouched project").virtualFile
@@ -53,10 +54,12 @@ class SceneRaySettingsEditTest : BasePlatformTestCase() {
         val file=myFixture.addFileToProject("s.scene",original).virtualFile
         myFixture.openFileInEditor(file)
         val identities=listOf(RayMaterialIdentity("glass",true))
-        assertEquals(RayDataEdit.Changed,SceneRayEdits.material(project,file,"0","glass",RayOpticalField.TRANSMISSION,null,"1",identities))
+        assertEquals(RayDataEdit.Changed,SceneRayEdits.material(project,file,"0","glass",RayOpticalField.TRANSMISSION,
+            null,"1",identities))
         val document=FileDocumentManager.getInstance().getDocument(file)!!
         val edited=document.text
-        assertEquals(RayDataEdit.Conflict,SceneRayEdits.material(project,file,"0","glass",RayOpticalField.TRANSMISSION,null,"0.5",identities))
+        assertEquals(RayDataEdit.Conflict,SceneRayEdits.material(project,file,"0","glass",RayOpticalField.TRANSMISSION,
+            null,"0.5",identities))
         assertEquals(edited,document.text)
         val editor=TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
         UndoManager.getInstance(project).undo(editor);assertEquals(original,document.text)

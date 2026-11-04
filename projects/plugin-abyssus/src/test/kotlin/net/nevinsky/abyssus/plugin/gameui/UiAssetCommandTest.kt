@@ -4,8 +4,6 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
-import net.nevinsky.abyssus.plugin.admitUi
-
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.components.service
@@ -14,15 +12,16 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.io.File
+import java.util.UUID
 import net.nevinsky.abyssus.lib.core.editor.ui.UiEditError
 import net.nevinsky.abyssus.lib.core.editor.ui.UiEditResult
 import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
 import net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
+import net.nevinsky.abyssus.plugin.admitUi
 import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.ProjectReader
-import java.io.File
-import java.util.UUID
 
 class UiAssetCommandTest : BasePlatformTestCase() {
     private lateinit var dir: File
@@ -37,7 +36,11 @@ class UiAssetCommandTest : BasePlatformTestCase() {
         File(dir, "scenes").mkdirs()
         File(dir, "scenes/Main.scene").writeText(sceneText)
         File(dir, "assets/tree").mkdirs()
-        File(dir, "assets/tree/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"uuid":"${UUID.nameUUIDFromBytes("tree".toByteArray())}","type":"MODEL","additional":{}}""")
+        File(dir, "assets/tree/meta.json")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"uuid":"${UUID.nameUUIDFromBytes("tree".toByteArray())}",
+"type":"MODEL","additional":{}}"""
+            )
         abss = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(dir, "P.abss"))!!
         abss.parent.refresh(false, true)
     }
@@ -50,14 +53,21 @@ class UiAssetCommandTest : BasePlatformTestCase() {
     private fun text(path: String) = File(dir, path).readText()
 
     private fun undo() = UndoManager.getInstance(project).undo(null)
+
     private fun redo() = UndoManager.getInstance(project).redo(null)
 
-    /** A store that delegates but fails the first write of [path] (so the rollback itself can write), to see what rolls back. */
+    /**
+     * A store that delegates but fails the first write of [path] (so the rollback itself can write), to see what rolls
+     * back.
+     */
     private class FailingStore(private val inner: AssetFileStore, private val path: String) : AssetFileStore by inner {
         private var failed = false
 
         override fun write(path: String, bytes: ByteArray) {
-            if (path == this.path && !failed) { failed = true; throw java.io.IOException("disk full") }
+            if (path == this.path && !failed) {
+                failed = true
+                throw java.io.IOException("disk full")
+            }
             inner.write(path, bytes)
         }
     }
@@ -66,7 +76,14 @@ class UiAssetCommandTest : BasePlatformTestCase() {
         assertEquals(AssetCommandResult.Done, create())
         abss.parent.refresh(false, true)
         assertTrue(admitUi(text("assets/menus/meta.json")) is UiAdmission.Admitted)
-        assertEquals(listOf("menus"), service<AbyssusPluginCtx>().documents.json.parse(text("P.abss"), net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java).uiAssetNames)
+        assertEquals(
+            listOf("menus"),
+            service<AbyssusPluginCtx>()
+                .documents
+                .json
+                .parse(text("P.abss"), net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java)
+                .uiAssetNames,
+        )
         assertEquals(sceneText, text("scenes/Main.scene"))
         val listed = project.service<ProjectReader>().read(abss).obj!!.assets.single { it.name == "menus" }
         assertEquals("UI", listed.type.name)
@@ -90,8 +107,11 @@ class UiAssetCommandTest : BasePlatformTestCase() {
 
     fun testUndoIsRefusedWhileAnotherUiAssetNavigatesToTheNewOne() {
         assertEquals(AssetCommandResult.Done, create())
-        val other = """{"format":"abyssus","formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"screens":[{"id":"s","root":{"id":"r","type":"panel","children":[
-            {"id":"b","type":"button","actions":{"click":{"type":"openScreen","assetName":"menus","screenId":"main"}}}]}}]}}}"""
+        val other =
+            """{"format":"abyssus","formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,
+"screens":[{"id":"s","root":{"id":"r","type":"panel","children":[
+            {"id":"b","type":"button","actions":{"click":{"type":"openScreen","assetName":"menus",
+"screenId":"main"}}}]}}]}}}"""
         File(dir, "assets/hud").mkdirs()
         File(dir, "assets/hud/meta.json").writeText(other)
         assertEquals("hud navigates to menus.", uiNavigationBlocker(dir, "menus"))
@@ -155,7 +175,9 @@ class UiAssetCommandTest : BasePlatformTestCase() {
 
     fun testUnsavedProjectTextIsRefusedRatherThanOverwritten() {
         val document = FileDocumentManager.getInstance().getDocument(abss)!!
-        ApplicationManager.getApplication().runWriteAction { document.setText(projectText.replace("\"P\"", "\"Edited\"")) }
+        ApplicationManager.getApplication().runWriteAction {
+            document.setText(projectText.replace("\"P\"", "\"Edited\""))
+        }
         val failure = runCatching { factory().stage(abss, "menus") }.exceptionOrNull()
         assertTrue(failure is IllegalArgumentException)
         val projectJson = service<AbyssusPluginCtx>().documents.json
@@ -188,7 +210,12 @@ class UiAssetCommandTest : BasePlatformTestCase() {
         assertEquals(UiEditOutcome.Edited(UiEditResult.Added("button")), outcome)
         assertTrue(document.text.contains("\"button\""))
         assertTrue(document.text.contains("\"uuid\""))
-        UndoManager.getInstance(project).undo(com.intellij.openapi.fileEditor.FileEditorManager.getInstance(project).openFile(meta, false).firstOrNull())
+        UndoManager.getInstance(project)
+            .undo(
+                com.intellij.openapi.fileEditor.FileEditorManager.getInstance(project)
+                    .openFile(meta, false)
+                    .firstOrNull()
+            )
         assertEquals("one undo restores the exact previous text", before, document.text)
     }
 
@@ -198,13 +225,21 @@ class UiAssetCommandTest : BasePlatformTestCase() {
         val start = document.text
         ApplicationManager.getApplication().runWriteAction { document.setText(start.replace("Hello", "Unsaved")) }
         val newer = document.text
-        assertEquals("a gesture that began on the older text is refused", UiEditOutcome.Stale,
-            editUiMeta(project, meta, baseText = start) { e, m -> e.addWidget(m, "root", "button") })
+        assertEquals(
+            "a gesture that began on the older text is refused",
+            UiEditOutcome.Stale,
+            editUiMeta(project, meta, baseText = start) { e, m -> e.addWidget(m, "root", "button") },
+        )
         assertEquals(newer, document.text)
-        assertTrue(editUiMeta(project, meta, baseText = newer) { e, m -> e.addWidget(m, "root", "button") } is UiEditOutcome.Edited)
+        assertTrue(
+            editUiMeta(project, meta, baseText = newer) { e, m -> e.addWidget(m, "root", "button") }
+                is UiEditOutcome.Edited
+        )
         assertTrue("the unsaved edit survived", document.text.contains("Unsaved"))
         // an invalid document is never edited
-        ApplicationManager.getApplication().runWriteAction { document.setText(document.text.replace("\"schemaVersion\": 1", "\"schemaVersion\": 9")) }
+        ApplicationManager.getApplication().runWriteAction {
+            document.setText(document.text.replace("\"schemaVersion\": 1", "\"schemaVersion\": 9"))
+        }
         val rejected = editUiMeta(project, meta) { e, m -> e.addWidget(m, "root", "button") } as UiEditOutcome.Rejected
         assertEquals(UiEditError.NOT_EDITABLE, rejected.error)
         assertTrue(rejected.issues.isNotEmpty())
@@ -217,7 +252,14 @@ class UiAssetCommandTest : BasePlatformTestCase() {
 
     fun testRegisteringAndUnregisteringAreUndoableProjectEdits() {
         assertTrue(registerUiAsset(project, abss, "menus"))
-        assertEquals(listOf("menus"), service<AbyssusPluginCtx>().documents.json.parse(text("P.abss"), net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java).uiAssetNames)
+        assertEquals(
+            listOf("menus"),
+            service<AbyssusPluginCtx>()
+                .documents
+                .json
+                .parse(text("P.abss"), net.nevinsky.abyssus.lib.core.dto.ProjectDto::class.java)
+                .uiAssetNames,
+        )
         assertFalse("registering twice changes nothing", registerUiAsset(project, abss, "menus"))
         assertTrue(unregisterUiAsset(project, abss, "menus"))
         val projectJson = service<AbyssusPluginCtx>().documents.json

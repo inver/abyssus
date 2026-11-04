@@ -17,8 +17,9 @@ private const val TRANSFER_SHARE = 0.5f
 /**
  * Thermal erosion: moves material downhill between neighbours whose slope exceeds the [talusAngleDegrees], for
  * [iterations] passes over a copy of the footprint in a fixed row order, with no randomness. A pair moves material in
- * proportion to the smaller of its two brush weights, and gives to the lower vertex exactly what it takes from the higher,
- * so the height under the brush is conserved (to float tolerance) and the vertices outside the footprint stay put.
+ * proportion to the smaller of its two brush weights, and gives to the lower vertex exactly what it takes from the
+ * higher, so the height under the brush is conserved (to float tolerance) and the vertices outside the footprint stay
+ * put.
  */
 class ThermalErosionTool(val talusAngleDegrees: Float, val iterations: Int = EROSION_ITERATIONS_DEFAULT) : SculptTool {
     init {
@@ -35,7 +36,12 @@ class ThermalErosionTool(val talusAngleDegrees: Float, val iterations: Int = ERO
         val allowedZ = slope * stamp.cellWorldZ
         repeat(iterations) {
             for (z in 0 until scratch.height) for (x in 0 until w - 1) move(scratch, z * w + x, z * w + x + 1, allowedX)
-            for (z in 0 until scratch.height - 1) for (x in 0 until w) move(scratch, z * w + x, (z + 1) * w + x, allowedZ)
+            for (z in 0 until scratch.height - 1) for (x in 0 until w) move(
+                scratch,
+                z * w + x,
+                (z + 1) * w + x,
+                allowedZ,
+            )
         }
         val f = stamp.footprint
         for (i in 0 until f.count) {
@@ -46,12 +52,21 @@ class ThermalErosionTool(val talusAngleDegrees: Float, val iterations: Int = ERO
 
     private fun move(s: FootprintScratch, a: Int, b: Int, allowed: Float) {
         val share = minOf(s.weight[a], s.weight[b])
-        if (share <= 0f) return
+        if (share <= 0f) {
+            return
+        }
         val d = s.work[a] - s.work[b]
         val excess = abs(d) - allowed
-        if (excess <= 0f) return
+        if (excess <= 0f) {
+            return
+        }
         val moved = excess * TRANSFER_SHARE * share / 2f
-        val sign = if (d > 0f) 1f else -1f
+        val sign =
+            if (d > 0f) {
+                1f
+            } else {
+                -1f
+            }
         s.work[a] -= sign * moved
         s.work[b] += sign * moved
     }

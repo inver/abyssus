@@ -17,7 +17,8 @@ const val CONTROL_SPEED = 8f
 private const val GRAVITY = 9.81f
 
 /**
- * The tracking half of the bot (design decision 2): from one [FlightObservation] and a [Course], the tilt that turns the
+  * The tracking half of the bot (design decision 2): from one [FlightObservation] and a [Course], the tilt that turns
+  * the
  * plane onto it. Pure and GL-free.
  *
  * The plane only pitches: its up stays across the lines, so the elevator turns it within the sphere's tangent plane, to
@@ -47,13 +48,17 @@ class F2bPilot(
     /** The tilt that steers the plane of [o] along [course]; neutral below [CONTROL_SPEED]. */
     fun tilt(o: FlightObservation, course: Course): Float {
         val u = Vector3(o.offset).sub(0f, BASE_HEIGHT, 0f)
-        if (u.len2() < 1e-6f) return 0f
+        if (u.len2() < 1e-6f) {
+            return 0f
+        }
         u.nor()
         val speed = o.velocity.len()
         // the course follows the plane on the ground roll too, so its progress shows the plane moving
         val aim = course.aim(u, speed * lead)
         val along = tangentAt(u, o.velocity)
-        if (speed < CONTROL_SPEED || !along.x.isFinite()) return 0f
+        if (speed < CONTROL_SPEED || !along.x.isFinite()) {
+            return 0f
+        }
         val left = Vector3(aim.point).crs(aim.tangent)
         crossTrack = Vector3(u).sub(aim.point).dot(left) * course.radius
         headingError = turn(along, tangentAt(u, aim.tangent), u)
@@ -62,11 +67,19 @@ class F2bPilot(
         val wanted = (aim.curvature + 2f * sin(eta) / distance).coerceIn(-handling.maxCurvature, handling.maxCurvature)
         curvature = wanted
         // a pull turns towards the plane's up: left when it is on the left of the way it flies
-        val side = if (o.up.dot(Vector3(u).crs(along)) >= 0f) 1f else -1f
+        val side = if (o.up.dot(Vector3(u).crs(along)) >= 0f) {
+            1f
+        } else {
+            -1f
+        }
         val towardsUp = wanted * side
         val turning = o.angularVelocity.dot(u) / speed * side
         val gravityUp = -GRAVITY * o.up.y
         val tilt = handling.tilt(towardsUp, gravityUp, speed) + rateGain * (towardsUp - turning)
-        return if (tilt.isFinite()) tilt.coerceIn(-1f, 1f) else 0f
+        return if (tilt.isFinite()) {
+            tilt.coerceIn(-1f, 1f)
+        } else {
+            0f
+        }
     }
 }

@@ -55,7 +55,9 @@ fun foliageChunkGrid(
         for (x in 0 until resolution) {
             val i = minOf(((x * cell) / chunkSize).toInt(), layer.chunksX - 1)
             val j = minOf(((z * cell) / chunkSize).toInt(), layer.chunksZ - 1)
-            if (i < 0 || j < 0) continue // a terrain of no extent
+            if (i < 0 || j < 0) {
+                continue // a terrain of no extent
+            }
             val index = layer.index(i, j)
             val height = heights[z * resolution + x]
             mins[index] = minOf(mins[index], height)
@@ -99,7 +101,11 @@ fun visibleFoliageChunks(
     out: BooleanArray,
 ): BooleanArray {
     require(out.size == grid.boxes.size) { "a ${grid.boxes.size}-chunk visibility" }
-    val distance2 = if (kind == FoliageLayerKind.DETAIL) drawDistance * drawDistance else -1f
+    val distance2 = if (kind == FoliageLayerKind.DETAIL) {
+        drawDistance * drawDistance
+    } else {
+        -1f
+    }
     val world2 = BoundingBox()
     val cornerPoint = Vector3()
     val nearest = Vector3()
@@ -109,9 +115,21 @@ fun visibleFoliageChunks(
         for (bit in 0 until 8) { // the eight corners of the box, moved into world space
             world2.ext(
                 cornerPoint.set(
-                    if (bit and 1 == 0) local.min.x else local.max.x,
-                    if (bit and 2 == 0) local.min.y else local.max.y,
-                    if (bit and 4 == 0) local.min.z else local.max.z,
+                    if (bit and 1 == 0) {
+                        local.min.x
+                    } else {
+                        local.max.x
+                    },
+                    if (bit and 2 == 0) {
+                        local.min.y
+                    } else {
+                        local.max.y
+                    },
+                    if (bit and 4 == 0) {
+                        local.min.z
+                    } else {
+                        local.max.z
+                    },
                 ).mul(world)
             )
         }

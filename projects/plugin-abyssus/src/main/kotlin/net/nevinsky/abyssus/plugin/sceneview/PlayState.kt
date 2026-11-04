@@ -44,12 +44,16 @@ class PlayState(
     /** Availability refreshes retain a still-available provider, including third-party Play. */
     fun refreshProviders(candidates: List<SceneSimulationProvider>) {
         val available = candidates.filterNot { it in disabled }
-        if (provider !in available) updateProvider(available.firstOrNull())
+        if (provider !in available) {
+            updateProvider(available.firstOrNull())
+        }
     }
 
     fun updateProvider(next: SceneSimulationProvider?) {
         val selected = next?.takeUnless { it in disabled }
-        if (provider === selected) return
+        if (provider === selected) {
+            return
+        }
         stop()
         provider = selected
         failure = null
@@ -66,18 +70,24 @@ class PlayState(
     }
 
     fun pause() {
-        if (phase == Phase.PLAYING) call { it.pause() }?.let { change(Phase.PAUSED) }
+        if (phase == Phase.PLAYING) {
+            call { it.pause() }?.let { change(Phase.PAUSED) }
+        }
     }
 
     /** Advances a paused simulation by one step; it stays paused. */
     fun step() {
-        if (phase == Phase.PAUSED) call { it.step() }
+        if (phase == Phase.PAUSED) {
+            call { it.step() }
+        }
     }
 
     /** Ends the simulation; the view shows the scene as the document holds it. */
     fun stop() {
         if (!active) {
-            if (phase == Phase.FAILED) change(Phase.IDLE)
+            if (phase == Phase.FAILED) {
+                change(Phase.IDLE)
+            }
             return
         }
         end()
@@ -85,18 +95,26 @@ class PlayState(
     }
 
     /** Escape while playing stops; it returns whether it did, so Escape does nothing else then. */
-    fun escape(): Boolean = active.also { if (it) stop() }
+    fun escape(): Boolean = active.also {
+        if (it) {
+            stop()
+        }
+    }
 
     /** The scene's document is about to change: play stops first, so the edit applies to the authored scene. */
     fun documentChanging() = stop()
 
     fun input(event: SimulationInput) {
-        if (phase == Phase.PLAYING || phase == Phase.PAUSED) call { it.input(event) }
+        if (phase == Phase.PLAYING || phase == Phase.PAUSED) {
+            call { it.input(event) }
+        }
     }
 
     /** The simulated poses to show, or null for the authored ones. */
     fun poses(): Map<Long, Pose>? {
-        if (!active) return null
+        if (!active) {
+            return null
+        }
         val sim = simulation ?: return null
         // the simulation names entities by their id text; a name that is no id has no entity to pose
         return runCatchingKeepingCancellation { sim.poses() }.getOrNull()
@@ -109,11 +127,23 @@ class PlayState(
         val g = ++generation
         change(Phase.STARTING)
         val listener = object : SimulationListener {
-            override fun started() = ui(Runnable { if (g == generation && phase == Phase.STARTING) change(Phase.PLAYING) })
-            override fun failed(message: String) = ui(Runnable { if (g == generation && active) fail(message) })
+            override fun started() = ui(Runnable {
+                if (g == generation && phase == Phase.STARTING) {
+                    change(Phase.PLAYING)
+                }
+            })
+            override fun failed(message: String) = ui(Runnable {
+                if (g == generation && active) {
+                    fail(message)
+                }
+            })
         }
         runCatchingKeepingCancellation { p.start(request(), listener) }
-            .onSuccess { if (g == generation && active) simulation = it else it.stop() }
+            .onSuccess { if (g == generation && active) {
+                simulation = it
+            } else {
+                it.stop()
+            } }
             .onFailure { disable(it) }
     }
 

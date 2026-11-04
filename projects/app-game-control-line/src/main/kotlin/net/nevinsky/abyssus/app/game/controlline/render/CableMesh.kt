@@ -23,23 +23,32 @@ const val CABLE_MAX_COUNT = 4
 const val CABLE_MAX_POINTS = 16
 
 /**
- * The control lines as geometry the model pipeline draws: one dynamic mesh of fixed size, rewritten every frame by [update]
- * without allocating, drawn as steel PBR material through the same `ModelBatch` and environment as the models, so the sun,
- * the sky light and the shadow light it and the output transform ends it. It is a [RenderableProvider]: hand it to
- * `ModelBatch.render`. GL thread only.
+ * The control lines as geometry the model pipeline draws: one dynamic mesh of fixed size, rewritten every frame by
+ * [update] without allocating, drawn as steel PBR material through the same `ModelBatch` and environment as the models,
+ * so the sun, the sky light and the shadow light it and the output transform ends it. It is a [RenderableProvider]:
+ * hand it to `ModelBatch.render`. GL thread only.
  */
 class CableMesh : RenderableProvider, Disposable {
     private val geometry = CableGeometry()
-    private val mesh = Mesh(
-        false, CABLE_MAX_COUNT * CABLE_MAX_POINTS * CABLE_SIDES, CABLE_MAX_COUNT * (CABLE_MAX_POINTS - 1) * CABLE_SIDES * 6,
-        VertexAttribute.Position(), VertexAttribute.Normal(),
-    )
+    private val mesh =
+        Mesh(
+            false,
+            CABLE_MAX_COUNT * CABLE_MAX_POINTS * CABLE_SIDES,
+            CABLE_MAX_COUNT * (CABLE_MAX_POINTS - 1) * CABLE_SIDES * 6,
+            VertexAttribute.Position(),
+            VertexAttribute.Normal(),
+        )
     private val vertices = FloatArray(mesh.maxVertices * CABLE_VERTEX_FLOATS)
     private val indices = ShortArray(mesh.maxIndices)
     private val radii = FloatArray(CABLE_MAX_POINTS)
-    private val materials = kotlin.Array(CABLE_MAX_COUNT) {
-        Material(ColorAttribute.createDiffuse(1f, 1f, 1f, 1f), PBRFloatAttribute.createMetallic(METALLIC), PBRFloatAttribute.createRoughness(ROUGHNESS))
-    }
+    private val materials =
+        kotlin.Array(CABLE_MAX_COUNT) {
+            Material(
+                ColorAttribute.createDiffuse(1f, 1f, 1f, 1f),
+                PBRFloatAttribute.createMetallic(METALLIC),
+                PBRFloatAttribute.createRoughness(ROUGHNESS),
+            )
+        }
 
     /** Where each cable of the last [update] starts in [indices], and how many indices it has. */
     private val starts = IntArray(CABLE_MAX_COUNT)
@@ -47,11 +56,14 @@ class CableMesh : RenderableProvider, Disposable {
     private var drawn = 0
 
     /** Cables kept by the last [update]. */
-    val count: Int get() = drawn
+    val count: Int
+        get() = drawn
 
     /** The vertices and indices of the last [update], for tests. */
     internal fun vertexData(): FloatArray = vertices
+
     internal fun indexData(): ShortArray = indices
+
     internal fun indexRange(cable: Int): IntRange = starts[cable] until starts[cable] + counts[cable]
 
     /**
@@ -65,8 +77,14 @@ class CableMesh : RenderableProvider, Disposable {
         var firstIndex = 0
         for (c in 0 until drawn) {
             val cable = cables[c]
-            val points = if (cable.points.size > CABLE_MAX_POINTS) cable.points.subList(0, CABLE_MAX_POINTS) else cable.points
-            for (i in points.indices) radii[i] = geometry.radiusAt(cable.diameter / 2f, points[i].dst(camera.position), fov, viewportHeight)
+            val points =
+                if (cable.points.size > CABLE_MAX_POINTS) {
+                    cable.points.subList(0, CABLE_MAX_POINTS)
+                } else {
+                    cable.points
+                }
+            for (i in points.indices) radii[i] =
+                geometry.radiusAt(cable.diameter / 2f, points[i].dst(camera.position), fov, viewportHeight)
             (materials[c].get(ColorAttribute.Diffuse) as ColorAttribute).color.set(cable.color)
             val written = geometry.build(points, radii, vertices, firstVertex, indices, firstIndex)
             starts[c] = firstIndex
@@ -82,11 +100,13 @@ class CableMesh : RenderableProvider, Disposable {
 
     override fun getRenderables(renderables: Array<Renderable>, pool: Pool<Renderable>) {
         for (c in 0 until drawn) {
-            renderables.add(pool.obtain().also {
-                it.material = materials[c]
-                it.meshPart.set("cable$c", mesh, starts[c], counts[c], GL20.GL_TRIANGLES)
-                it.worldTransform.idt()
-            })
+            renderables.add(
+                pool.obtain().also {
+                    it.material = materials[c]
+                    it.meshPart.set("cable$c", mesh, starts[c], counts[c], GL20.GL_TRIANGLES)
+                    it.worldTransform.idt()
+                }
+            )
         }
     }
 

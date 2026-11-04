@@ -40,9 +40,16 @@ class FoliageFollowsSculptTest {
         val before = bake.map(::position)
         val size = terrain.size
         val resolution = terrain.resolution
-        val draft = SculptDraft(resolution, terrain.heights.copyOf(), terrain.heights.copyOf(), FloatArray(resolution * resolution))
+        val draft =
+            SculptDraft(
+                resolution,
+                terrain.heights.copyOf(),
+                terrain.heights.copyOf(),
+                FloatArray(resolution * resolution),
+            )
         val centre = Vector3(800f, 0f, 800f)
-        val rect = SculptBrush(draft, size, Matrix4()).stroke(centre, centre, 150f, 1f, RaiseLowerTool(rate = 40f), false)
+        val rect =
+            SculptBrush(draft, size, Matrix4()).stroke(centre, centre, 150f, 1f, RaiseLowerTool(rate = 40f), false)
         assertTrue(!rect.isEmpty)
         // the view copies the draft's heights into its own terrain in place; foliage reads that terrain
         terrain.copyHeights(draft.composed, rect.minX, rect.minZ, rect.maxX, rect.maxZ)
@@ -52,10 +59,14 @@ class FoliageFollowsSculptTest {
             assertEquals("x is the bake's", bake[i].x, after[i].x, 1e-3f)
             assertEquals("z is the bake's", bake[i].z, after[i].z, 1e-3f)
             assertEquals(terrain.heightAt(bake[i].x, bake[i].z)!!, after[i].y, 1e-3f)
-            if (after[i].y > before[i].y + 1f) raised++
+            if (after[i].y > before[i].y + 1f) {
+                raised++
+            }
         }
         assertTrue("copies under the hill moved up", raised > 0)
-        assertNotNull(bake.firstOrNull { position(it).y == before[bake.indexOf(it)].y }) // far copies stay where they were
+        assertNotNull(
+            bake.firstOrNull { position(it).y == before[bake.indexOf(it)].y }
+        ) // far copies stay where they were
     }
 
     private companion object {

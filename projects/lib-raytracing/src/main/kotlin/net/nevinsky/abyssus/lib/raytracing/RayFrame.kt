@@ -38,9 +38,18 @@ class RayFrame internal constructor(
         }
         require(color.all { it.isFinite() }) { "Color must contain finite linear values" }
         require(depth.all { it.isFinite() && it in 0f..1f }) { "Depth must use GL window depth" }
-        // adopted arrays are owned by this frame from now on (the caller never touches them again), which saves a copy per frame
-        this.color = if (adopt) color else color.copyOf()
-        this.depth = if (adopt) depth else depth.copyOf()
+        // adopted arrays are owned by this frame from now on (the caller never touches them again), which saves a copy
+        // per frame
+        this.color = if (adopt) {
+            color
+        } else {
+            color.copyOf()
+        }
+        this.depth = if (adopt) {
+            depth
+        } else {
+            depth.copyOf()
+        }
     }
 
     fun colorValues(): FloatArray = color.copyOf()

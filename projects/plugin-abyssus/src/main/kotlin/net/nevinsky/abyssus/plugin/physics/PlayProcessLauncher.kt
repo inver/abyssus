@@ -4,7 +4,6 @@
  */
 package net.nevinsky.abyssus.plugin.physics
 
-import net.nevinsky.abyssus.lib.gamelink.play.PlayProtocol
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.DataInputStream
@@ -16,6 +15,7 @@ import java.net.SocketTimeoutException
 import java.security.SecureRandom
 import java.util.ArrayDeque
 import java.util.HexFormat
+import net.nevinsky.abyssus.lib.gamelink.play.PlayProtocol
 
 /** How long a play process has to connect. */
 const val CONNECT_TIMEOUT_SECONDS = 20
@@ -29,12 +29,13 @@ class OutputTail(private val capacity: Int = OUTPUT_TAIL_LINES) {
 
     @Synchronized
     fun add(line: String) {
-        if (lines.size == capacity) lines.removeFirst()
+        if (lines.size == capacity) {
+            lines.removeFirst()
+        }
         lines.addLast(line)
     }
 
-    @Synchronized
-    fun lines(): List<String> = lines.toList()
+    @Synchronized fun lines(): List<String> = lines.toList()
 
     /** The last [count] lines, joined. */
     fun last(count: Int = 20): String = lines().takeLast(count).joinToString("\n")
@@ -45,8 +46,8 @@ class PlayStartException(message: String, val output: String) : Exception(messag
 
 /**
  * Starts a play process for a [PlayLaunch.Plan]: opens a loopback port, runs the JVM at [java] with a fresh token, and
- * waits [timeoutSeconds] for it to connect and say hello. Its output is drained into an [OutputTail]; the protocol
- * uses only the socket. A process that does not connect in time, or fails the handshake, is killed with its children.
+ * waits [timeoutSeconds] for it to connect and say hello. Its output is drained into an [OutputTail]; the protocol uses
+ * only the socket. A process that does not connect in time, or fails the handshake, is killed with its children.
  */
 class PlayProcessLauncher(
     private val java: String = File(System.getProperty("java.home"), "bin/java").path,
@@ -56,30 +57,45 @@ class PlayProcessLauncher(
     fun launch(plan: PlayLaunch.Plan, workingDir: File): PlayClient {
         val token = HexFormat.of().formatHex(ByteArray(16).also { SecureRandom().nextBytes(it) })
         ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
-            val process = ProcessBuilder(plan.command(java, server.localPort, token))
-                .directory(workingDir).redirectErrorStream(true).start()
+            val process =
+                ProcessBuilder(plan.command(java, server.localPort, token))
+                    .directory(workingDir)
+                    .redirectErrorStream(true)
+                    .start()
             started(process)
             val tail = OutputTail()
-            Thread({
-                process.inputStream.bufferedReader().useLines { lines -> lines.forEach(tail::add) }
-            }, "abyssus-play-output").apply { isDaemon = true; start() }
+            Thread(
+                    {
+                        process.inputStream.bufferedReader().useLines { lines -> lines.forEach(tail::add) }
+                    },
+                    "abyssus-play-output",
+                )
+                .apply {
+                    isDaemon = true
+                    start()
+                }
             server.soTimeout = timeoutSeconds * 1000
             try {
-                val socket = try {
-                    server.accept()
-                } catch (_: SocketTimeoutException) {
-                    throw PlayStartException(AbyssusPhysicsBundle.message("playNoConnection", timeoutSeconds), tail.last())
-                }
+                val socket =
+                    try {
+                        server.accept()
+                    } catch (_: SocketTimeoutException) {
+                        throw PlayStartException(
+                            AbyssusPhysicsBundle.message("playNoConnection", timeoutSeconds),
+                            tail.last(),
+                        )
+                    }
                 socket.tcpNoDelay = true
                 val input = DataInputStream(BufferedInputStream(socket.getInputStream()))
                 val output = DataOutputStream(BufferedOutputStream(socket.getOutputStream()))
                 val protocol = PlayProtocol()
                 socket.soTimeout = timeoutSeconds * 1000
-                val hello = try {
-                    protocol.accept(input, output, token)
-                } catch (e: Exception) {
-                    null
-                }
+                val hello =
+                    try {
+                        protocol.accept(input, output, token)
+                    } catch (e: Exception) {
+                        null
+                    }
                 if (hello == null) {
                     socket.close()
                     throw PlayStartException(AbyssusPhysicsBundle.message("playCouldNotStart"), tail.last())

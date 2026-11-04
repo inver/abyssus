@@ -22,39 +22,58 @@ val packageCycles = tasks.register("checkPackageCycles") {
                 .filter { it == "net.nevinsky.abyssus" || it.startsWith("net.nevinsky.abyssus.") }.toSet()
             // Strip the common package prefix of this module, then group its immediate child packages.
             val parts = packages.map { it.split('.') }
-            val prefixLength = if (parts.isEmpty()) 0 else parts.first().indices.takeWhile { index ->
-                parts.all { it.getOrNull(index) == parts.first()[index] }
-            }.size
+            val prefixLength = if (parts.isEmpty()) {
+                0
+            } else {
+                parts.first().indices.takeWhile { index ->
+                    parts.all { it.getOrNull(index) == parts.first()[index] }
+                }.size
+            }
 
             fun group(pkg: String): String {
                 val segments = pkg.split('.').drop(prefixLength)
                 // The root temporarily contains editor slices; distinguish their neutral leaf packages.
-                return if (segments.firstOrNull() == "editor") segments.take(2).joinToString(".")
-                else segments.firstOrNull() ?: "(root)"
+                return if (segments.firstOrNull() == "editor") {
+                    segments.take(2).joinToString(".")
+                } else {
+                    segments.firstOrNull() ?: "(root)"
+                }
             }
 
             val graph = mutableMapOf<String, MutableSet<String>>()
             for (text in texts) {
                 val pkg = declaration.find(text)?.groupValues?.get(1) ?: continue
-                if (pkg !in packages) continue
+                if (pkg !in packages) {
+                    continue
+                }
                 val from = group(pkg)
-                if (from == "(root)") continue
+                if (from == "(root)") {
+                    continue
+                }
                 for (match in imports.findAll(text)) {
                     val imported = match.groupValues[1]
                     val target = packages.filter { imported.startsWith("$it.") }.maxByOrNull { it.length } ?: continue
                     val to = group(target)
-                    if (to != "(root)" && from != to) graph.getOrPut(from) { mutableSetOf() }.add(to)
+                    if (to != "(root)" && from != to) {
+                        graph.getOrPut(from) { mutableSetOf() }.add(to)
+                    }
                 }
             }
             fun reaches(start: String, target: String, visited: MutableSet<String>): Boolean {
-                if (start == target) return true
-                if (!visited.add(start)) return false
+                if (start == target) {
+                    return true
+                }
+                if (!visited.add(start)) {
+                    return false
+                }
                 return graph[start].orEmpty().any { reaches(it, target, visited) }
             }
             for ((from, targets) in graph) for (to in targets) {
                 if (reaches(to, from, mutableSetOf())) {
                     val edge = "$module $from -> $to"
-                    if (edge !in allowed) violations.add(edge)
+                    if (edge !in allowed) {
+                        violations.add(edge)
+                    }
                 }
             }
         }

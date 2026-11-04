@@ -9,6 +9,8 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g3d.ModelInstance
+import com.badlogic.gdx.graphics.g3d.Renderable
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.math.Matrix4
@@ -17,8 +19,6 @@ import com.badlogic.gdx.math.Vector4
 import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.Disposable
 import com.badlogic.gdx.utils.Pool
-import com.badlogic.gdx.graphics.g3d.ModelInstance
-import com.badlogic.gdx.graphics.g3d.Renderable
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasView
@@ -34,31 +34,38 @@ const val SHADOW_MAP_SIZE = 2048
 /** The RGBA8888 value of the map's clear colour. */
 private const val WHITE = -1
 
-/** Side of the square the sun's shadow covers around the pilot, in metres: the field, the facilities, street and railway. */
+/**
+ * Side of the square the sun's shadow covers around the pilot, in metres: the field, the facilities, street and
+ * railway.
+ */
 const val SHADOW_EXTENT = 160f
 
 /**
  * The sun's shadow for the game (design decision "Game shadows"): one [SHADOW_MAP_SIZE] depth map drawn from
- * [sunShadowCamera] with `gdx-model`'s [ModelDepthShaderProvider], read by the models through a
- * [ShadowAtlasAttribute] with a single full-map tile, and by the terrain shader through [bind]. Models and terrain cast
- * and receive; the sky and the control lines do not. GL thread only.
+ * [sunShadowCamera] with `gdx-model`'s [ModelDepthShaderProvider], read by the models through a [ShadowAtlasAttribute]
+ * with a single full-map tile, and by the terrain shader through [bind]. Models and terrain cast and receive; the sky
+ * and the control lines do not. GL thread only.
  */
 class FieldShadows : Disposable {
-    private val framebuffer = FrameBuffer(Pixmap.Format.RGBA8888, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE, true).apply {
-        colorBufferTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest)
-        colorBufferTexture.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge)
-    }
+    private val framebuffer =
+        FrameBuffer(Pixmap.Format.RGBA8888, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE, true).apply {
+            colorBufferTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest)
+            colorBufferTexture.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge)
+        }
     private val depth = DepthCasters()
     private var camera = OrthographicCamera()
     private var attribute: ShadowAtlasAttribute? = null
     private var light: DirectionalLight? = null
 
-    val texture: Texture get() = framebuffer.colorBufferTexture
+    val texture: Texture
+        get() = framebuffer.colorBufferTexture
 
     /** World to light clip space of the current map. */
-    val matrix: Matrix4 get() = camera.combined
+    val matrix: Matrix4
+        get() = camera.combined
 
-    val bias: Float get() = sunShadowBias(camera, SHADOW_MAP_SIZE)
+    val bias: Float
+        get() = sunShadowBias(camera, SHADOW_MAP_SIZE)
 
     /** Aims the map at [center] for [sun] (whose direction points away from the sun). */
     fun aim(sun: DirectionalLight, towardSun: Vector3, center: Vector3) {
@@ -66,15 +73,21 @@ class FieldShadows : Disposable {
         if (light !== sun || attribute == null || !aimed.combined.`val`.contentEquals(camera.combined.`val`)) {
             camera = aimed
             light = sun
-            attribute = ShadowAtlasAttribute(
-                texture,
-                listOf(
-                    ShadowLightRecord(
-                        "sun", ShadowLightKind.DIRECTIONAL, sun, listOf(ShadowAtlasView(camera.combined, Vector4(0f, 0f, 1f, 1f))),
-                        Vector3(camera.position), 1f, bias,
-                    )
-                ),
-            )
+            attribute =
+                ShadowAtlasAttribute(
+                    texture,
+                    listOf(
+                        ShadowLightRecord(
+                            "sun",
+                            ShadowLightKind.DIRECTIONAL,
+                            sun,
+                            listOf(ShadowAtlasView(camera.combined, Vector4(0f, 0f, 1f, 1f))),
+                            Vector3(camera.position),
+                            1f,
+                            bias,
+                        )
+                    ),
+                )
         }
     }
 
@@ -88,7 +101,11 @@ class FieldShadows : Disposable {
             val pixmap = Pixmap.createFromFrameBuffer(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE)
             try {
                 var count = 0
-                for (y in 0 until SHADOW_MAP_SIZE) for (x in 0 until SHADOW_MAP_SIZE) if (pixmap.getPixel(x, y) != WHITE) count++
+                for (y in 0 until SHADOW_MAP_SIZE) for (x in 0 until SHADOW_MAP_SIZE) if (
+                    pixmap.getPixel(x, y) != WHITE
+                ) {
+                    count++
+                }
                 return count
             } finally {
                 pixmap.dispose()
@@ -108,7 +125,8 @@ class FieldShadows : Disposable {
     fun casterCamera(): OrthographicCamera = camera.also { it.update(true) }
 
     /** How many depth shaders the last [render] drew its casters with (each bound once). */
-    val depthShaders: Int get() = depth.lastShaderGroups
+    val depthShaders: Int
+        get() = depth.lastShaderGroups
 
     /**
      * Draws the depth of [models], [terrains] (mesh to world transform) and the extra casters [extra] adds (foliage

@@ -5,24 +5,23 @@
 
 package net.nevinsky.abyssus.lib.core.editor.terrain
 
+import java.io.DataOutputStream
+import java.io.File
+import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
+import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.core.editor.meta.TERRAIN_DATA_FILE
 import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.assets.testProject
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
-import java.io.DataOutputStream
 
 class TerrainAssetEncodingTest {
-    @get:Rule
-    val tmp = TemporaryFolder()
+    @get:Rule val tmp = TemporaryFolder()
 
     private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
     private val encoder = TerrainHeightEncoder()
@@ -32,7 +31,10 @@ class TerrainAssetEncodingTest {
     @Test
     fun `encoding matches DataOutputStream writeFloat`() {
         val heights = floatArrayOf(0f, 1.5f, -2.25f, 120f, Float.MIN_VALUE, 1234.5678f)
-        val expected = java.io.ByteArrayOutputStream().also { out -> DataOutputStream(out).use { d -> heights.forEach(d::writeFloat) } }
+        val expected =
+            java.io.ByteArrayOutputStream().also { out ->
+                DataOutputStream(out).use { d -> heights.forEach(d::writeFloat) }
+            }
         assertArrayEquals(expected.toByteArray(), encoder.encode(heights))
         assertEquals(heights.size * 4, encoder.encode(heights).size)
     }
@@ -40,8 +42,13 @@ class TerrainAssetEncodingTest {
     @Test
     fun `the 180 resolution fixture round trips byte for byte`() {
         val original = File(fixture, "terrain.data").readBytes()
-        val data = java.nio.ByteBuffer.wrap(original).asFloatBuffer().let { buffer -> FloatArray(buffer.remaining()).also(buffer::get) }
-            .let { heights -> TerrainData(Math.round(Math.sqrt(heights.size.toDouble())).toInt(), heights, 1600, 60f) }
+        val data =
+            java.nio.ByteBuffer.wrap(original)
+                .asFloatBuffer()
+                .let { buffer -> FloatArray(buffer.remaining()).also(buffer::get) }
+                .let { heights ->
+                    TerrainData(Math.round(Math.sqrt(heights.size.toDouble())).toInt(), heights, 1600, 60f)
+                }
         assertEquals(180, data.resolution)
         assertArrayEquals(original, encoder.encode(data.heights))
     }
@@ -50,7 +57,8 @@ class TerrainAssetEncodingTest {
     fun `new terrain meta follows the native writer`() {
         val text = writer.meta(java.util.UUID.fromString("2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"), 1699293063182L, 1600)
         assertEquals(
-            """{"formatVersion":1,"version":1,"lastModified":1699293063182,"uuid":"2cf70bf7-f7ee-4c41-934c-e40df1d35c8b","type":"TERRAIN",""" +
+            """{"formatVersion":1,"version":1,"lastModified":1699293063182,""" +
+                """"uuid":"2cf70bf7-f7ee-4c41-934c-e40df1d35c8b","type":"TERRAIN",""" +
                 """"additional":{"terrainFile":"terrain.data","size":1600,"uv":1.0}}""",
             text,
         )
@@ -59,14 +67,16 @@ class TerrainAssetEncodingTest {
     @Test
     fun `the fixture meta differs only in uv`() {
         val fixtureText = File(fixture, "meta.json").readText()
-        // The fixture is pretty printed and keeps a legacy `format` marker and null splat keys; the new meta has neither.
-        @Suppress("UNCHECKED_CAST")
-        fun values(text: String) = json.parse(text, Map::class.java) as Map<String, Any?>
+        // The fixture is pretty printed and keeps a legacy `format` marker and null splat keys; the new meta has
+        // neither.
+        @Suppress("UNCHECKED_CAST") fun values(text: String) = json.parse(text, Map::class.java) as Map<String, Any?>
         val old = values(fixtureText)
         @Suppress("UNCHECKED_CAST")
-        val oldAdditional = (old["additional"] as Map<String, Any?>).filterValues { it != null }.toMutableMap().also { it["uv"] = 1.0 }
+        val oldAdditional =
+            (old["additional"] as Map<String, Any?>).filterValues { it != null }.toMutableMap().also { it["uv"] = 1.0 }
         val expected = old.filterKeys { it != "format" && it != "additional" } + ("additional" to oldAdditional)
-        val written = values(writer.meta(java.util.UUID.fromString("2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"), 1699293063182L, 1600))
+        val written =
+            values(writer.meta(java.util.UUID.fromString("2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"), 1699293063182L, 1600))
         assertEquals(expected, written)
         assertEquals(expected.keys.toList(), written.keys.toList().let { keys -> expected.keys.filter { it in keys } })
     }
@@ -80,7 +90,8 @@ class TerrainAssetEncodingTest {
         File(dir, TERRAIN_DATA_FILE).writeBytes(files.heightBytes)
 
         val fileLoader = FileLoader(tmp.root)
-        val read = checkNotNull(TerrainLoader(fileLoader, AssetMetaLoader(json, fileLoader)).prepare("hills")).staged.data
+        val read =
+            checkNotNull(TerrainLoader(fileLoader, AssetMetaLoader(json, fileLoader)).prepare("hills")).staged.data
         assertEquals(800, read.size)
         assertEquals(1f, read.uv)
         assertEquals(33, read.resolution)

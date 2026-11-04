@@ -33,21 +33,22 @@ import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.lib.render.shadow.cameraUp
 import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
-import net.nevinsky.abyssus.plugin.splat.SplatDrafts
-import net.nevinsky.abyssus.plugin.terrain.SculptDrafts
 import net.nevinsky.abyssus.plugin.sceneview.fog.FogShaderProvider
 import net.nevinsky.abyssus.plugin.sceneview.gizmo.GizmoDraw
 import net.nevinsky.abyssus.plugin.sceneview.shadows.SceneShadows
 import net.nevinsky.abyssus.plugin.sceneview.skybox.SunDirection
 import net.nevinsky.abyssus.plugin.sceneview.skybox.blendAxisColors
+import net.nevinsky.abyssus.plugin.splat.SplatDrafts
+import net.nevinsky.abyssus.plugin.terrain.SculptDrafts
 import org.lwjgl.opengl.GL11
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 
 /**
  * Draws a scene's environment, a ground grid and the content the scene places (skybox, terrains, models), and picks
- * entities under the cursor. Assets come from [assets]; the grid, overlay and terrain programs from [shaders]. Call only inside [GdxRuntime.withContext]
- * with the GL context current; picking, ground queries and interaction geometry use CPU data only.
+ * entities under the cursor. Assets come from [assets]; the grid, overlay and terrain programs from [shaders]. Call
+ * only inside [GdxRuntime.withContext] with the GL context current; picking, ground queries and interaction geometry
+ * use CPU data only.
  */
 class SceneRenderer(
     val assets: ViewAssets,
@@ -63,60 +64,95 @@ class SceneRenderer(
     /** Where problems that leave the view working (for example, no cloud shadow map) are logged, once each. */
     private val log: Logger = NOPLogger.NOP_LOGGER,
 ) : Disposable {
-    @Volatile
-    var params: SceneRenderParams = SceneRenderParams.DEFAULT
+    @Volatile var params: SceneRenderParams = SceneRenderParams.DEFAULT
 
-    /** The unwritten changes laid over the scene; the queries below read the same layers, so picking sees what is drawn. */
+    /**
+     * The unwritten changes laid over the scene; the queries below read the same layers, so picking sees what is drawn.
+     */
     private val layers = ScenePreviewLayers(state)
 
     /** The scene's content with simulated poses and then the previewed transforms and draft copies applied. */
-    internal val content: SceneContent get() = layers.apply(layers.posed(params.content))
+    internal val content: SceneContent
+        get() = layers.apply(layers.posed(params.content))
 
     /** Other plugins' overlays for this view; drawn after the markers, then again over everything. */
     internal var overlays: SceneOverlayHost? = null
 
     private val contentPass = SceneContentPass(assets, shaders, foliageDrafts)
-    private val models get() = contentPass.models
-    private val terrains get() = contentPass.terrains
+    private val models
+        get() = contentPass.models
+
+    private val terrains
+        get() = contentPass.terrains
+
     private val sculptSync = SculptViewSync(sculptDrafts) { names -> assets.invalidate(names) }
     private val splatSync = SplatViewSync(splatDrafts) { names -> assets.invalidate(names) }
     private val splatTexture = net.nevinsky.abyssus.lib.core.assets.terrain.SplatTexture()
-    private val foliage get() = contentPass.foliage
-    private val environment get() = contentPass.environment
+    private val foliage
+        get() = contentPass.foliage
+
+    private val environment
+        get() = contentPass.environment
+
     private var batch: ModelBatch? = null
 
     /** Asset changes waiting for a frame that can safely replace GL resources; merged until [render] takes them. */
     private val pendingRevision = PendingAssetRevision()
 
-    /** The GL objects of the current context that only this renderer owns; abandoned or released as a whole (see [RenderResources]). */
+    /**
+     * The GL objects of the current context that only this renderer owns; abandoned or released as a whole (see
+     * [RenderResources]).
+     */
     private val resources = RenderResources()
     private var shadows: SceneShadows? = null
     internal var shadowedLightIds: Set<Long> = emptySet()
         private set
+
     private val skyPass = SceneSkyPass(assets, shaders, state, environment, log)
-    private val skybox get() = skyPass.skybox
-    private val lights get() = skyPass.lights
-    private val frameLights get() = skyPass.frameLights
-    private val sunVisibility get() = skyPass.sunVisibility
-    internal val skyClock get() = skyPass.skyClock
-    internal val cloudShadowsActive get() = skyPass.cloudShadowsActive
-    internal val sunScale get() = skyPass.sunScale
-    internal val litLights get() = skyPass.litLights
-    internal val skyLeaseActive get() = skyPass.skyLeaseActive
+    private val skybox
+        get() = skyPass.skybox
+
+    private val lights
+        get() = skyPass.lights
+
+    private val frameLights
+        get() = skyPass.frameLights
+
+    private val sunVisibility
+        get() = skyPass.sunVisibility
+
+    internal val skyClock
+        get() = skyPass.skyClock
+
+    internal val cloudShadowsActive
+        get() = skyPass.cloudShadowsActive
+
+    internal val sunScale
+        get() = skyPass.sunScale
+
+    internal val litLights
+        get() = skyPass.litLights
+
+    internal val skyLeaseActive
+        get() = skyPass.skyLeaseActive
+
     internal var drawnCloudTechnique: CloudTechnique? = null
         private set
 
     internal fun cloudsEnabled(p: SceneRenderParams = params) = skyPass.cloudsEnabled(p)
+
     private var overlay: LoadingOverlay? = null
     private var corners: CornerOverlay? = null
 
-    /** The Swing-painted images drawn in the corners of the view after everything else; set on the AWT thread before a frame. */
-    @Volatile
-    internal var cornerSprites: List<CornerSprite> = emptyList()
+    /**
+     * The Swing-painted images drawn in the corners of the view after everything else; set on the AWT thread before a
+     * frame.
+     */
+    @Volatile internal var cornerSprites: List<CornerSprite> = emptyList()
 
     /**
-     * What this view draws: the Shadows, Fog and Grid toggles and the shading. Per view and never saved; set on the AWT thread
-     * and read on the next frame. Leaving Unlit makes the lights be applied to the environment again.
+     * What this view draws: the Shadows, Fog and Grid toggles and the shading. Per view and never saved; set on the AWT
+     * thread and read on the next frame. Leaving Unlit makes the lights be applied to the environment again.
      */
     var display: ViewDisplay = ViewDisplay()
         set(value) {
@@ -126,7 +162,8 @@ class SceneRenderer(
             field = value
         }
 
-    private val unlit: Boolean get() = display.shading == Shading.UNLIT
+    private val unlit: Boolean
+        get() = display.shading == Shading.UNLIT
 
     private var lineBatch: LineBatch? = null
     internal var brushCursor: BrushCursor? = null
@@ -141,7 +178,6 @@ class SceneRenderer(
     internal var presentedRayFrame = false
         private set
 
-
     /** True while assets are loading and the overlay is drawn. */
     @Volatile
     internal var loading = false
@@ -149,17 +185,21 @@ class SceneRenderer(
 
     internal var lastWidth = 0
         private set
+
     internal var lastHeight = 0
         private set
 
     /** The model entities drawn in the last frame (for tests). */
-    internal val drawnModels: Collection<ModelEntity> get() = models.drawn
+    internal val drawnModels: Collection<ModelEntity>
+        get() = models.drawn
 
-    internal val drawnTerrains: Collection<TerrainEntity> get() = terrains.drawn
+    internal val drawnTerrains: Collection<TerrainEntity>
+        get() = terrains.drawn
 
     /** How many camera markers and whether a gizmo were drawn in the last frame (for tests). */
     internal var drawnCameraMarkers = 0
         private set
+
     internal var drewGizmo = false
         private set
 
@@ -177,23 +217,29 @@ class SceneRenderer(
     /** Changes only when a model or terrain enters or leaves the drawn lists, including context replacement. */
     var drawnVersion: Long = 0
         private set
+
     private var drawnIds: Pair<Set<Long>, Set<Long>> = emptySet<Long>() to emptySet()
     private var drawnAssets: Set<Pair<Long, Int>> = emptySet()
 
     private fun updateDrawnVersion() {
         val fresh =
-            models.drawn.mapTo(HashSet()) { it.placement.entityId } to terrains.drawn.mapTo(HashSet()) { it.placement.entityId }
+            models.drawn.mapTo(HashSet()) { it.placement.entityId } to
+                terrains.drawn.mapTo(HashSet()) { it.placement.entityId }
         // a replaced asset (new heights under the same entity) changes what the entities are standing on
         // as sets: the drawn lists may come in another order without anything entering or leaving them
-        val assets = models.drawn.mapTo(HashSet()) { it.placement.entityId to System.identityHashCode(it.model) } +
+        val assets =
+            models.drawn.mapTo(HashSet()) { it.placement.entityId to System.identityHashCode(it.model) } +
                 terrains.drawn.map { it.placement.entityId to System.identityHashCode(it.terrain) }
         if (fresh != drawnIds || assets != drawnAssets) {
-            drawnIds = fresh; drawnAssets = assets; drawnVersion++
+            drawnIds = fresh
+            drawnAssets = assets
+            drawnVersion++
         }
     }
 
     /** The camera as of the last frame (for tests). */
-    internal val frameCamera: PerspectiveCamera get() = camera
+    internal val frameCamera: PerspectiveCamera
+        get() = camera
 
     /**
      * Starts with a clean slate. When the previous GL context was abandoned instead of released (the view was hidden),
@@ -225,15 +271,17 @@ class SceneRenderer(
     }
 
     /**
-     * Asks for the assets of [revision] to be loaded again. Any thread; nothing is touched until the next [render], which
-     * only runs while the canvas can safely draw, so a hidden view applies it when it is shown again. Revisions made
-     * meanwhile are merged.
+     * Asks for the assets of [revision] to be loaded again. Any thread; nothing is touched until the next [render],
+     * which only runs while the canvas can safely draw, so a hidden view applies it when it is shown again. Revisions
+     * made meanwhile are merged.
      */
     fun queueAssetRevision(revision: AssetRevisionBatch) {
         pendingRevision.queue(revision)
     }
 
-    /** Applies the queued revision on the GL thread: the unsaved text for later loads, then the changed names reload. */
+    /**
+     * Applies the queued revision on the GL thread: the unsaved text for later loads, then the changed names reload.
+     */
     private fun applyPendingRevision() {
         val revision = pendingRevision.take() ?: return
         assets.replaceUnsaved(revision.unsaved)
@@ -256,7 +304,9 @@ class SceneRenderer(
         skyPass.applyLights(c, orbit)
         skyPass.applySunScale(c, orbit)
         // Unlit: no lights reach the materials, and applyEnvironment already made the ambient white
-        if (unlit) NO_LIGHTS.applyTo(environment)
+        if (unlit) {
+            NO_LIGHTS.applyTo(environment)
+        }
         models.update(c.models, p.projectDir, deltaSeconds)
         terrains.update(c.terrains, p.projectDir)
         sculptSync.apply(terrains.drawn.map { it.sculptTarget() })
@@ -273,7 +323,7 @@ class SceneRenderer(
             SunDirection.of(c.lights),
             skyClock.seconds,
             true,
-            skyClock.lastStep.toDouble()
+            skyClock.lastStep.toDouble(),
         )
         val skyLight =
             (SceneAmbient.of(c.skybox, p.ambient) { skybox?.environment(it) } as? SceneAmbient.Sky)?.environment
@@ -281,32 +331,38 @@ class SceneRenderer(
             val fading = skybox?.fadingTo(c.skybox)
             blendAxisColors(current.ambient, fading?.environment?.ambient, fading?.weight ?: 0f)
         }
-        val rayDisplay = rayFrameProvider?.invoke(
-            RayFrameContext(
-                p,
-                c,
-                camera,
-                lights,
-                models.drawn,
-                width,
-                height,
-                state.viewCamera,
-                hdrAmbient,
-                bakedSky = { skyPass.bakedProceduralSky(c, p) },
-                sunVisibility = { skyPass.raySunVisibility() },
-            )
-        )
-            ?.takeIf { compatibleRayDisplay(it, c, width, height) }
+        val rayDisplay =
+            rayFrameProvider
+                ?.invoke(
+                    RayFrameContext(
+                        p,
+                        c,
+                        camera,
+                        lights,
+                        models.drawn,
+                        width,
+                        height,
+                        state.viewCamera,
+                        hdrAmbient,
+                        bakedSky = { skyPass.bakedProceduralSky(c, p) },
+                        sunVisibility = { skyPass.raySunVisibility() },
+                    )
+                )
+                ?.takeIf { compatibleRayDisplay(it, c, width, height) }
         presentedRayFrame = rayDisplay != null
         val atlas =
-            if (rayDisplay == null && display.drawsShadows) shadows?.render(
-                camera,
-                lights,
-                environment,
-                models.drawn,
-                terrains.drawn,
-                foliage
-            ) else null
+            if (rayDisplay == null && display.drawsShadows) {
+                shadows?.render(
+                    camera,
+                    lights,
+                    environment,
+                    models.drawn,
+                    terrains.drawn,
+                    foliage,
+                )
+            } else {
+                null
+            }
         shadowedLightIds = atlas?.records?.mapTo(HashSet()) { it.lightId.toLong() } ?: emptySet()
         // G7: the water passes (reflection and surface drawing) are disabled; scene water is no longer modeled.
         Gdx.gl.glViewport(0, 0, width, height)
@@ -346,14 +402,16 @@ class SceneRenderer(
 
         // grayed out with a spinner for as long as the scene's assets are on their way
         loading = (skybox?.isLoading ?: false) || models.isLoading || terrains.isLoading
-        if (loading) overlay?.draw(width, height, deltaSeconds)
+        if (loading) {
+            overlay?.draw(width, height, deltaSeconds)
+        }
         corners?.draw(width, height, cornerSprites)
         publishSnapshot()
     }
 
     /**
-     * Sets the frame's camera: from the camera entity [SceneViewState.viewCamera] when the scene has it, else from [orbit]. Needs no GL,
-     * so tests can call it directly.
+     * Sets the frame's camera: from the camera entity [SceneViewState.viewCamera] when the scene has it, else from
+     * [orbit]. Needs no GL, so tests can call it directly.
      */
     internal fun updateCamera(width: Int, height: Int, orbit: OrbitCamera) {
         applyCamera(width, height, orbit)
@@ -395,7 +453,7 @@ class SceneRenderer(
         width: Int,
         height: Int,
         c: SceneContent = content,
-        displayCamera: PerspectiveCamera = camera
+        displayCamera: PerspectiveCamera = camera,
     ) {
         val lines = lineBatch ?: return
         drewGizmo = false
@@ -404,7 +462,9 @@ class SceneRenderer(
         lines.begin(displayCamera, depthTest = true)
         SceneMarkers().draw(lines, c, aspect, state.viewCamera)
         drawPaths(lines, c)
-        if (state.brushing) brushCursor?.draw(lines)
+        if (state.brushing) {
+            brushCursor?.draw(lines)
+        }
         overlays?.draw(overlayView(c, displayCamera, height, onTop = false), lines)
         lines.end()
         lines.begin(displayCamera, depthTest = false)
@@ -421,7 +481,10 @@ class SceneRenderer(
         lines.end()
     }
 
-    /** The ground under the last drawn frame, for the preview of path arrangements; the line's own height without terrain. */
+    /**
+     * The ground under the last drawn frame, for the preview of path arrangements; the line's own height without
+     * terrain.
+     */
     internal fun groundHeights(): GroundHeight? {
         val frame = snapshot ?: return null
         return ground(frame)
@@ -432,14 +495,19 @@ class SceneRenderer(
 
     /** [GroundHeights] over the frame's terrains, with answers kept until a terrain's data or transform changes. */
     private fun ground(frame: FrameSnapshot): GroundHeight {
-        val key = frame.terrains.map {
-            Triple(
-                System.identityHashCode(it.data),
-                it.entityId,
-                it.world.values.contentHashCode()
-            )
-        }
-        groundMemo?.takeIf { key == groundKey }?.let { return it }
+        val key =
+            frame.terrains.map {
+                Triple(
+                    System.identityHashCode(it.data),
+                    it.entityId,
+                    it.world.values.contentHashCode(),
+                )
+            }
+        groundMemo
+            ?.takeIf { key == groundKey }
+            ?.let {
+                return it
+            }
         return MemoizedGround(GroundHeights(frame.terrains)).also {
             groundKey = key
             groundMemo = it
@@ -452,25 +520,40 @@ class SceneRenderer(
         override fun heightAt(x: Float, z: Float, fallbackY: Float): Float {
             val key = (x.toRawBits().toLong() shl 32) or (z.toRawBits().toLong() and 0xFFFFFFFFL)
             val terrain = answers.getOrPut(key) { inner.terrainHeight(x, z) ?: Float.NaN }
-            return if (terrain.isNaN()) fallbackY else terrain
+            return if (terrain.isNaN()) {
+                fallbackY
+            } else {
+                terrain
+            }
         }
     }
 
     /**
-     * The path being drawn with a handle on each point, and the arrangements of the scene: the selected one with handles
-     * (at the points being dragged, when a drag is on), the others as a bare line a click can select.
+     * The path being drawn with a handle on each point, and the arrangements of the scene: the selected one with
+     * handles (at the points being dragged, when a drag is on), the others as a bare line a click can select.
      */
     private fun drawPaths(lines: LineBatch, c: SceneContent) {
         val frame = snapshot
-        val ground = if (frame != null) ground(frame) else LineHeights()
+        val ground =
+            if (frame != null) {
+                ground(frame)
+            } else {
+                LineHeights()
+            }
         val markers = SceneMarkers()
         state.drawing?.let { markers.drawPath(lines, arrangementAlong(it.points), ground, handles = true) }
         // a line and its handles show only while its control points are edited
         for (placement in c.arrangements) {
-            if (placement.entityId != state.pathEditing) continue
+            if (placement.entityId != state.pathEditing) {
+                continue
+            }
             val edited = (state.pathEdit ?: state.pathDraft)?.takeIf { it.entityId == placement.entityId }
             val path =
-                if (edited != null) arrangementAlong(edited.points, placement.arrangement) else placement.arrangement
+                if (edited != null) {
+                    arrangementAlong(edited.points, placement.arrangement)
+                } else {
+                    placement.arrangement
+                }
             markers.drawPath(lines, path, ground, handles = true, slots = true, selectedPoint = state.selectedPathPoint)
         }
     }
@@ -489,25 +572,33 @@ class SceneRenderer(
 
     /** The world bounds of the entity [id] as the last frame drew it. */
     internal fun boundsOf(c: SceneContent, id: Long): BoundingBox? {
-        models.drawn.firstOrNull { it.placement.entityId == id }?.let {
-            val transform =
-                c.models.firstOrNull { model -> model.entityId == id }?.transform?.toMatrix() ?: it.instance.transform
-            return BoundingBox(it.localBounds).mul(transform)
-        }
-        terrains.drawn.firstOrNull { it.placement.entityId == id }?.let {
-            return BoundingBox(it.localBounds).mul(
-                c.terrains.firstOrNull { terrain -> terrain.entityId == id }?.transform?.toMatrix() ?: it.world
-            )
-        }
+        models.drawn
+            .firstOrNull { it.placement.entityId == id }
+            ?.let {
+                val transform =
+                    c.models.firstOrNull { model -> model.entityId == id }?.transform?.toMatrix()
+                        ?: it.instance.transform
+                return BoundingBox(it.localBounds).mul(transform)
+            }
+        terrains.drawn
+            .firstOrNull { it.placement.entityId == id }
+            ?.let {
+                return BoundingBox(it.localBounds)
+                    .mul(
+                        c.terrains.firstOrNull { terrain -> terrain.entityId == id }?.transform?.toMatrix() ?: it.world
+                    )
+            }
         return SceneMarkers().boundsOf(c, id)
     }
 
     /**
-     * The world box of the entity [id], or of everything the last frame drew when [id] is null; null when there is nothing
-     * to frame. Reads CPU data only.
+     * The world box of the entity [id], or of everything the last frame drew when [id] is null; null when there is
+     * nothing to frame. Reads CPU data only.
      */
     internal fun framedBounds(id: Long?): BoundingBox? {
-        if (id != null) return boundsOf(content, id)
+        if (id != null) {
+            return boundsOf(content, id)
+        }
         val box = BoundingBox().inf()
         for (entity in models.drawn) box.ext(BoundingBox(entity.localBounds).mul(entity.instance.transform))
         for (entity in terrains.drawn) box.ext(BoundingBox(entity.localBounds).mul(entity.world))
@@ -520,7 +611,7 @@ class SceneRenderer(
         c: SceneContent,
         atlas: ShadowAtlasAttribute?,
         view: Camera,
-        clip: FloatArray
+        clip: FloatArray,
     ) {
         wireframePass {
             skyPass.draw(view, p)
@@ -532,19 +623,27 @@ class SceneRenderer(
     /** Runs [block] with `GL_LINE` polygon mode when shading is Wireframe, restoring `GL_FILL` afterwards. */
     private fun wireframePass(block: () -> Unit) {
         val wireframe = display.shading == Shading.WIREFRAME
-        if (wireframe) GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_LINE)
+        if (wireframe) {
+            GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_LINE)
+        }
         try {
             block()
         } finally {
-            if (wireframe) GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_FILL)
+            if (wireframe) {
+                GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_FILL)
+            }
         }
     }
 
     private fun applyEnvironment(p: SceneRenderParams) = contentPass.applyEnvironment(p, display)
 
     private fun renderContent(
-        p: SceneRenderParams, c: SceneContent, atlas: ShadowAtlasAttribute?,
-        view: Camera = camera, clip: FloatArray? = null, parts: ContentParts = ContentParts.ALL,
+        p: SceneRenderParams,
+        c: SceneContent,
+        atlas: ShadowAtlasAttribute?,
+        view: Camera = camera,
+        clip: FloatArray? = null,
+        parts: ContentParts = ContentParts.ALL,
     ) = contentPass.render(p, c, atlas, view, clip, parts, display, skybox, frameLights, sunVisibility)
 
     /** No GL calls: used immediately when a hidden canvas loses its context, including final editor disposal. */
@@ -591,7 +690,10 @@ class SceneRenderer(
         /** The outer share of the cloud shadow square over which its shade fades into the uniform sun dimming. */
         const val CLOUD_SHADOW_EDGE_FADE = 0.1f
 
-        /** Texels across the ray tracing copy of the cloud shadow map (512 on the GPU, halved to keep the payload small). */
+        /**
+         * Texels across the ray tracing copy of the cloud shadow map (512 on the GPU, halved to keep the payload
+         * small).
+         */
         const val RAY_SUN_VISIBILITY_SIZE = 256
     }
 
@@ -599,12 +701,15 @@ class SceneRenderer(
         display: RaySceneDisplay,
         current: SceneContent,
         width: Int,
-        height: Int
+        height: Int,
     ): Boolean {
         val metadata = display.metadata
         fun keys(placements: List<AssetPlacement>) = placements.map { it.entityId to it.storageName }.toSet()
-        return metadata.width == width && metadata.height == height && metadata.viewCamera == state.viewCamera &&
-                metadata.projectDir == params.projectDir && keys(metadata.content.models) == keys(current.models) &&
-                keys(metadata.content.terrains) == keys(current.terrains)
+        return metadata.width == width &&
+            metadata.height == height &&
+            metadata.viewCamera == state.viewCamera &&
+            metadata.projectDir == params.projectDir &&
+            keys(metadata.content.models) == keys(current.models) &&
+            keys(metadata.content.terrains) == keys(current.terrains)
     }
 }

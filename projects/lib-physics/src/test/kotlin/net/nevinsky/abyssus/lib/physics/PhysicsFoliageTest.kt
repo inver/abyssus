@@ -22,20 +22,24 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Foliage colliders in a native world: a box dropped on a capsule trunk settles on it, and every failure is isolated. */
+/**
+ * Foliage colliders in a native world: a box dropped on a capsule trunk settles on it, and every failure is isolated.
+ */
 class PhysicsFoliageTest {
     private val project = FoliageProject()
     private val natives = JoltNatives()
     private val messages = mutableListOf<String>()
     private val trunk = listOf(FoliageCopy(0, 50f, 50f, 0f, 1f))
 
-    @After
-    fun cleanUp() = project.close()
+    @After fun cleanUp() = project.close()
 
     private fun load(text: String): SceneContext =
-        requireNotNull(physicsLoader(project.dir, warningsTo(messages)).loadFromText(text)) { messages.joinToString("\n") }
+        requireNotNull(physicsLoader(project.dir, warningsTo(messages)).loadFromText(text)) {
+            messages.joinToString("\n")
+        }
 
-    private fun world(scene: SceneContext) = PhysicsWorld(scene.engine, PhysicsAssets(project.dir), warningsTo(messages), natives)
+    private fun world(scene: SceneContext) =
+        PhysicsWorld(scene.engine, PhysicsAssets(project.dir), warningsTo(messages), natives)
 
     private fun ready(collider: String? = CAPSULE, kind: String = "OBJECT", stale: Boolean = false) {
         project.foliage("[${layerJson(collider, kind = kind)}]")
@@ -106,7 +110,9 @@ class PhysicsFoliageTest {
     @Test
     fun aMovingOwnerGetsNoFoliageCollision() {
         ready()
-        val moving = ""","RigidBodyComponent":{"motionType":"KINEMATIC"},"ColliderComponent":{"shape":"BOX","halfExtents":{"x":0.1,"y":0.1,"z":0.1}}"""
+        val moving =
+            ""","RigidBodyComponent":{"motionType":"KINEMATIC"},"ColliderComponent":{"shape":"BOX",
+"halfExtents":{"x":0.1,"y":0.1,"z":0.1}}"""
         val scene = load(scene(terrainExtra = moving, extra = box(50f, 5f, 50f)))
         world(scene).use { world ->
             assertEquals(0, world.foliageBodies)

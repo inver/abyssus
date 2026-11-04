@@ -48,7 +48,7 @@ class GltfPsiTest : BasePlatformTestCase() {
     fun testPropertyNamesAndValues() {
         val file = parse("""{"version": "2.0", "count": 3}""")
         val props = PsiTreeUtil.findChildrenOfType(file, GltfProp::class.java).toList()
-        assertEquals(listOf("\"version\"", "\"count\""), props.map { it.fName!!.text })
+        assertEquals(listOf("\"version\"", "\"count\""), props.map { it.fName.text })
         assertNotNull(props[0].value!!.string)
         assertNotNull(props[1].value!!.number)
     }

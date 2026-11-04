@@ -15,7 +15,9 @@ class SynchronizeCameraComponentSystem(private val ids: SceneEntityIds, priority
     private val positionMapper = ComponentMapper.getFor(PositionComponent::class.java)
 
     override fun processEntity(entity: Entity, deltaTime: Float) {
-        if (!entity.isActive(CameraComponent::class.java)) return
+        if (!entity.isActive(CameraComponent::class.java)) {
+            return
+        }
         val camera = cameraMapper[entity].camera
         val position = positionMapper[entity]
         camera.position.set(position.localPosition)

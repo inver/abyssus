@@ -7,7 +7,10 @@ package net.nevinsky.abyssus.app.game.controlline.components
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.math.Vector3
 
-/** The kind of control-line plane, shown on plane select. [SCALE] is a replica of a real aircraft (see `ScaleComponent`). */
+/**
+ * The kind of control-line plane, shown on plane select. [SCALE] is a replica of a real aircraft (see
+ * `ScaleComponent`).
+ */
 enum class PlaneClass { SPEED, STUNT, TRAINER, SCALE }
 
 /**

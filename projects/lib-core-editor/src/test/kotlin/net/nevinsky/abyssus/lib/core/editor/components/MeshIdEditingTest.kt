@@ -8,9 +8,7 @@ package net.nevinsky.abyssus.lib.core.editor.components
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.core.editor.meta.EntityAssetChoices
@@ -18,8 +16,10 @@ import net.nevinsky.abyssus.lib.core.editor.meta.EntitySections
 import net.nevinsky.abyssus.lib.core.editor.meta.readEntitySections
 import net.nevinsky.abyssus.lib.core.editor.panel.ChoiceRow
 import net.nevinsky.abyssus.lib.core.editor.panel.PanelBuilders
-import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
+import net.nevinsky.abyssus.lib.core.format.EntityType
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -33,7 +33,9 @@ class MeshIdEditingTest {
     private val editor = ComponentEditor(messages)
     private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
 
-    private fun scene(render: String): SceneDto = parseScene("""{
+    private fun scene(render: String): SceneDto =
+        parseScene(
+            """{
   "format": "abyssus",
   "formatVersion": 1,
   "ecs": {
@@ -48,10 +50,14 @@ class MeshIdEditingTest {
     }
   }
 }
-""")
+"""
+        )
 
-    private val glass get() = scene("""{ "type": "MODEL", "assetName": "duo", "meshId": "glass", "shaderKey": "defaultShader" }""")
-    private val whole get() = scene("""{ "type": "MODEL", "assetName": "duo", "shaderKey": "defaultShader" }""")
+    private val glass
+        get() = scene("""{ "type": "MODEL", "assetName": "duo", "meshId": "glass", "shaderKey": "defaultShader" }""")
+
+    private val whole
+        get() = scene("""{ "type": "MODEL", "assetName": "duo", "shaderKey": "defaultShader" }""")
 
     @Test
     fun theViewPlacesTheNamedMeshOnly() {
@@ -110,9 +116,19 @@ class MeshIdEditingTest {
     }
 
     private fun sections(scene: SceneDto, meshes: (String) -> List<String>?): EntitySections.Read =
-        readEntitySections(scene, 1L, "RenderComponent", editor, EntityAssetChoices(listOf("duo"), emptyMap(), meshes), messages, json) as EntitySections.Read
+        readEntitySections(
+            scene,
+            1L,
+            "RenderComponent",
+            editor,
+            EntityAssetChoices(listOf("duo"), emptyMap(), meshes),
+            messages,
+            json,
+        )
+            as EntitySections.Read
 
-    private fun meshField(read: EntitySections.Read) = read.sections.single().fields.firstOrNull { it.field == "meshId" }
+    private fun meshField(read: EntitySections.Read) =
+        read.sections.single().fields.firstOrNull { it.field == "meshId" }
 
     @Test
     fun theFieldOffersTheMeshesOfTheModel() {
@@ -135,7 +151,10 @@ class MeshIdEditingTest {
         fun row(scene: SceneDto, meshes: List<String>): ChoiceRow {
             val read = sections(scene) { meshes }
             val panel = builders.entity(scene, 1L, read, "x.abss")
-            return panel.sections.flatMap { it.rows }.filterIsInstance<ChoiceRow>().single { it.field?.field == "meshId" }
+            return panel.sections
+                .flatMap { it.rows }
+                .filterIsInstance<ChoiceRow>()
+                .single { it.field?.field == "meshId" }
         }
         val known = row(glass, listOf("body", "glass"))
         assertFalse(known.unknown)

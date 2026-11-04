@@ -28,11 +28,16 @@ internal class DrawingSession(
         changed()
     }
 
-    /** A click in drawing mode: closes the loop on the first point, finishes on a double click, else adds a point where it hits the terrain. */
+    /**
+     * A click in drawing mode: closes the loop on the first point, finishes on a double click, else adds a point where
+     * it hits the terrain.
+     */
     fun click(x: Int, y: Int, clickCount: Int) {
         val drawing = state.drawing ?: return
         val view = size()
-        if (view.isEmpty) return
+        if (view.isEmpty) {
+            return
+        }
         // the first click of a double click already added its point
         if (clickCount >= 2) {
             finish(closed = false)
@@ -58,12 +63,16 @@ internal class DrawingSession(
         changed()
     }
 
-    /** Enter: finishes the drawing as an open line; nothing happens, and drawing continues, with fewer than two points. */
+    /**
+     * Enter: finishes the drawing as an open line; nothing happens, and drawing continues, with fewer than two points.
+     */
     fun enter() = finish(closed = false)
 
     private fun finish(closed: Boolean) {
         val drawing = state.drawing ?: return
-        if (drawing.points.size < 2) return
+        if (drawing.points.size < 2) {
+            return
+        }
         val written = onCreate()?.invoke(drawing.asset, drawing.points.toList(), closed) ?: false
         if (written) {
             state.drawing = null
@@ -74,7 +83,9 @@ internal class DrawingSession(
     /** Backspace: drops the last point of the drawing. */
     fun backspace() {
         val drawing = state.drawing ?: return
-        if (drawing.points.isEmpty()) return
+        if (drawing.points.isEmpty()) {
+            return
+        }
         drawing.points.removeAt(drawing.points.lastIndex)
         changed()
     }
@@ -88,10 +99,15 @@ internal class DrawingSession(
     /** Whether a point of the arrangement [entityId] can be removed: at least two points must remain. */
     fun canRemovePoint(entityId: Long): Boolean = (queries.pathPoints(entityId)?.size ?: 0) > 2
 
-    /** Removes point [index] of the arrangement [entityId] through the edit callback; false when it cannot be removed or was not written. */
+    /**
+     * Removes point [index] of the arrangement [entityId] through the edit callback; false when it cannot be removed or
+     * was not written.
+     */
     fun removePoint(entityId: Long, index: Int): Boolean {
         val points = queries.pathPoints(entityId) ?: return false
-        if (points.size <= 2 || index !in points.indices) return false
+        if (points.size <= 2 || index !in points.indices) {
+            return false
+        }
         return onEdit()?.invoke(entityId, points.toMutableList().also { it.removeAt(index) }) ?: false
     }
 }

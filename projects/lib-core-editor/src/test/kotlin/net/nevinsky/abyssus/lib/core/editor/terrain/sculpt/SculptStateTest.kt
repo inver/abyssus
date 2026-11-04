@@ -29,7 +29,14 @@ class SculptStateTest {
     private val size = 100
     private val settings = TerrainGenerationSettings()
     private val base = generator.generate(resolution, size, settings)
-    private val delta = FloatArray(base.size) { if (it % 7 == 0) 2.5f else 0f }
+    private val delta =
+        FloatArray(base.size) {
+            if (it % 7 == 0) {
+                2.5f
+            } else {
+                0f
+            }
+        }
     private val composed = FloatArray(base.size) { base[it] + delta[it] }
 
     private val baseBytes = encodeSculptGrid(base)
@@ -37,9 +44,22 @@ class SculptStateTest {
     private val composedBytes = encodeSculptGrid(composed)
     private val recipeText = recipes.encode(TerrainRecipe(settings, size, resolution, sha256Hex(baseBytes)))
 
-    private fun manifestText(kind: SculptBaseKind = SculptBaseKind.RECIPE, composedSha: String = sha256Hex(composedBytes)) =
+    private fun manifestText(
+        kind: SculptBaseKind = SculptBaseKind.RECIPE,
+        composedSha: String = sha256Hex(composedBytes),
+    ) =
         manifests.encode(
-            SculptManifest(kind, resolution, sha256Hex(deltaBytes), composedSha, if (kind == SculptBaseKind.STORED) sha256Hex(baseBytes) else null),
+            SculptManifest(
+                kind,
+                resolution,
+                sha256Hex(deltaBytes),
+                composedSha,
+                if (kind == SculptBaseKind.STORED) {
+                    sha256Hex(baseBytes)
+                } else {
+                    null
+                },
+            )
         )
 
     private fun files(
@@ -67,7 +87,8 @@ class SculptStateTest {
 
     @Test
     fun `a stored base is read from its file even without a recipe`() {
-        val state = reader.read(files(recipe = null, manifest = manifestText(SculptBaseKind.STORED), stored = baseBytes))
+        val state =
+            reader.read(files(recipe = null, manifest = manifestText(SculptBaseKind.STORED), stored = baseBytes))
         assertArrayEquals(base, (state as SculptState.Sculpted).base, 0f)
         assertEquals(SculptBaseKind.STORED, state.kind)
     }
@@ -85,7 +106,10 @@ class SculptStateTest {
 
     @Test
     fun `a changed or short delta is unsafe`() {
-        assertEquals(SculptProblem.DELTA_MISMATCH, problem(reader.read(files(delta = deltaBytes.copyOf().also { it[0] = 1 }))))
+        assertEquals(
+            SculptProblem.DELTA_MISMATCH,
+            problem(reader.read(files(delta = deltaBytes.copyOf().also { it[0] = 1 }))),
+        )
         assertEquals(SculptProblem.DELTA_MISMATCH, problem(reader.read(files(delta = deltaBytes.copyOf(8)))))
     }
 
@@ -104,14 +128,25 @@ class SculptStateTest {
     fun `a missing or changed stored base is unsafe`() {
         val stored = manifestText(SculptBaseKind.STORED)
         assertEquals(SculptProblem.BASE_MISSING, problem(reader.read(files(manifest = stored))))
-        assertEquals(SculptProblem.BASE_MISMATCH, problem(reader.read(files(manifest = stored, stored = baseBytes.copyOf().also { it[0] = 9 }))))
+        assertEquals(
+            SculptProblem.BASE_MISMATCH,
+            problem(reader.read(files(manifest = stored, stored = baseBytes.copyOf().also { it[0] = 9 }))),
+        )
     }
 
     @Test
     fun `malformed unsupported and other resolution manifests are unsafe`() {
         assertEquals(SculptProblem.MANIFEST_MALFORMED, problem(reader.read(files(manifest = "nope"))))
-        assertEquals(SculptProblem.MANIFEST_UNSUPPORTED, problem(reader.read(files(manifest = manifestText().replace("\"schemaVersion\": 1", "\"schemaVersion\": 0")))))
-        assertEquals(SculptProblem.RESOLUTION, problem(reader.read(files(manifest = manifestText().replace("\"resolution\": 9", "\"resolution\": 10")))))
+        assertEquals(
+            SculptProblem.MANIFEST_UNSUPPORTED,
+            problem(
+                reader.read(files(manifest = manifestText().replace("\"schemaVersion\": 1", "\"schemaVersion\": 0")))
+            ),
+        )
+        assertEquals(
+            SculptProblem.RESOLUTION,
+            problem(reader.read(files(manifest = manifestText().replace("\"resolution\": 9", "\"resolution\": 10")))),
+        )
     }
 
     @Test

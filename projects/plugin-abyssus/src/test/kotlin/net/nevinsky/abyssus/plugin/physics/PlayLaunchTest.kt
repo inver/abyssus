@@ -4,16 +4,16 @@
  */
 package net.nevinsky.abyssus.plugin.physics
 
+import java.io.File
+import java.nio.file.Files
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import net.nevinsky.abyssus.lib.gamelink.play.PlayModule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 /** A game module that never lets its play host connect. */
 class BlockingPlayModule : PlayModule {
@@ -39,10 +39,18 @@ class PlayLaunchTest {
         val dir = project()
         try {
             File(dir, "abyssus").mkdirs()
-            File(dir, "abyssus/play.json").writeText("""{"protocol": 1, "module": "com.example.Game", "classpath": ["${dir.path}/gone/game.jar"]}""")
+            File(dir, "abyssus/play.json")
+                .writeText(
+                    """{"protocol": 1, "module": "com.example.Game", "classpath": ["${dir.path}/gone/game.jar"]}"""
+                )
             val launch = PlayLaunch.choose(dir, null) as PlayLaunch.Refused
-            assertTrue(launch.message, launch.message.contains("${dir.path}/gone/game.jar") && launch.message.contains("Export the game again"))
-            File(dir, "abyssus/play.json").writeText("""{"protocol": 2, "module": "com.example.Game", "classpath": []}""")
+            assertTrue(
+                launch.message,
+                launch.message.contains("${dir.path}/gone/game.jar") &&
+                    launch.message.contains("Export the game again"),
+            )
+            File(dir, "abyssus/play.json")
+                .writeText("""{"protocol": 2, "module": "com.example.Game", "classpath": []}""")
             assertTrue((PlayLaunch.choose(dir, null) as PlayLaunch.Refused).message.contains("protocol 2"))
         } finally {
             dir.deleteRecursively()
@@ -69,20 +77,26 @@ class PlayLaunchTest {
     fun aModuleThatNeverConnectsFailsAfterTheTimeoutWithNoProcessLeft() {
         var process: Process? = null
         val launcher = PlayProcessLauncher(timeoutSeconds = 2, started = { process = it })
-        val error = assertThrows(PlayStartException::class.java) {
-            launcher.launch(PlayLaunch.Plan(classpath, BlockingPlayModule::class.java.name, emptyList()), File("."))
-        }
+        val error =
+            assertThrows(PlayStartException::class.java) {
+                launcher.launch(PlayLaunch.Plan(classpath, BlockingPlayModule::class.java.name, emptyList()), File("."))
+            }
         assertTrue(error.message!!, error.message!!.contains("did not connect within 2 seconds"))
         assertTrue("the play process is still running", process!!.waitFor(5, TimeUnit.SECONDS))
-        assertEquals(0L, process!!.descendants().count())
+        assertEquals(0L, process.descendants().count())
     }
 
     @Test
     fun aKilledHostFailsWithItsLastOutputLines() {
-        val client = PlayProcessLauncher().launch(PlayLaunch.Plan(classpath, ChattyPlayModule::class.java.name, emptyList()), File("."))
+        val client =
+            PlayProcessLauncher()
+                .launch(PlayLaunch.Plan(classpath, ChattyPlayModule::class.java.name, emptyList()), File("."))
         val failed = CountDownLatch(1)
         var message = ""
-        client.onFailed = { message = it; failed.countDown() }
+        client.onFailed = {
+            message = it
+            failed.countDown()
+        }
         client.start()
         // the module printed before the host connected, so its lines are already being drained
         val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
@@ -97,7 +111,9 @@ class PlayLaunchTest {
 
     @Test
     fun stopEndsTheProcessWithoutAFailure() {
-        val client = PlayProcessLauncher().launch(PlayLaunch.Plan(classpath, ChattyPlayModule::class.java.name, emptyList()), File("."))
+        val client =
+            PlayProcessLauncher()
+                .launch(PlayLaunch.Plan(classpath, ChattyPlayModule::class.java.name, emptyList()), File("."))
         var failures = 0
         client.onFailed = { failures++ }
         client.start()

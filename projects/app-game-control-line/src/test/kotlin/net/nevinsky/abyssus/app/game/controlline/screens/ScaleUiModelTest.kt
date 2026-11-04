@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.screens
 
+import java.time.Instant
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneClass
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightEnd
 import net.nevinsky.abyssus.app.game.controlline.flight.fieldSession
@@ -26,33 +27,45 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.time.Instant
 
 /** What the screens show of Scale and the vitrine's replica card, without graphics. */
 class ScaleUiModelTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
-    private val field = loadField().engine.let { engine -> planeChoices(engine.ids.ids.associateWith { engine.ids[it]!! }) }
-        .filter { it.planeClass != PlaneClass.SCALE }
+    private val field =
+        loadField()
+            .engine
+            .let { engine -> planeChoices(engine.ids.ids.associateWith { engine.ids[it]!! }) }
+            .filter { it.planeClass != PlaneClass.SCALE }
 
-    private val replica = PlaneChoice(99, "Mig-3", PlaneClass.SCALE, 18f, 1.2f, 240f, ScaleFacts("MiG-3", 1940, 10.3f, 8))
+    private val replica =
+        PlaneChoice(99, "Mig-3", PlaneClass.SCALE, 18f, 1.2f, 240f, ScaleFacts("MiG-3", 1940, 10.3f, 8))
 
-    private fun flowOf(planes: List<PlaneChoice>) = GameFlow(
-        planes, ScoreTable(temp.root.toPath().resolve("s.json")), PatternScoreTable(temp.root.toPath().resolve("p.json")),
-        ScaleScoreTable(temp.root.toPath().resolve("sc.json")),
-    ) { Instant.parse("2026-10-04T12:00:00Z") }
+    private fun flowOf(planes: List<PlaneChoice>) =
+        GameFlow(
+            planes,
+            ScoreTable(temp.root.toPath().resolve("s.json")),
+            PatternScoreTable(temp.root.toPath().resolve("p.json")),
+            ScaleScoreTable(temp.root.toPath().resolve("sc.json")),
+        ) {
+            Instant.parse("2026-10-04T12:00:00Z")
+        }
 
-    private fun values(model: GameUiModel, session: net.nevinsky.abyssus.app.game.controlline.flight.FlightSession? = null, judge: ScaleJudge? = null) =
-        model.snapshot(session, null, 0f, judge).toMap()
+    private fun values(
+        model: GameUiModel,
+        session: net.nevinsky.abyssus.app.game.controlline.flight.FlightSession? = null,
+        judge: ScaleJudge? = null,
+    ) = model.snapshot(session, null, 0f, judge).toMap()
 
     private fun UiSnapshotValues.flag(name: String) = (getValue(name) as UiValue.Bool).value
 
     private fun UiSnapshotValues.text(name: String) = (getValue(name) as UiValue.Text).value
 
-    private fun UiSnapshotValues.rows(name: String) = (getValue(name) as UiValue.Rows).items.map { r -> r.mapValues { (it.value as UiValue.Text).value } }
+    private fun UiSnapshotValues.rows(name: String) =
+        (getValue(name) as UiValue.Rows).items.map { r -> r.mapValues { (it.value as UiValue.Text).value } }
 
-    private fun scaleReport() = FlightReport("Mig-3", FlightEnd.LANDED, 61f, FlightResult.Scale(ScaleMarks(400, 300, 200), 5))
+    private fun scaleReport() =
+        FlightReport("Mig-3", FlightEnd.LANDED, 61f, FlightResult.Scale(ScaleMarks(400, 300, 200), 5))
 
     @Test
     fun theMenuOffersScaleOnlyWithAReplica() {
@@ -165,8 +178,10 @@ class ScaleUiModelTest {
         assertEquals("tabSelected", v.text("tabScaleStyle"))
         assertEquals("tab", v.text("tabFreeStyle"))
         val row = v.rows("scaleRows").single()
-        assertEquals(listOf("1", "Ann", "Mig-3", "900", "400", "300", "200"),
-            listOf("rank", "name", "plane", "score", "speed", "level", "landing").map(row::getValue))
+        assertEquals(
+            listOf("1", "Ann", "Mig-3", "900", "400", "300", "200"),
+            listOf("rank", "name", "plane", "score", "speed", "level", "landing").map(row::getValue),
+        )
         assertEquals("highlight", row["style"])
         assertEquals(emptyList<Map<String, String>>(), v.rows("freeRows"))
     }

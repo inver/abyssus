@@ -20,12 +20,15 @@ fun interface PathEditListener {
     /** Apply was pressed for [target]: its Scene view writes the changes, then the edit ends. */
     fun applyRequested(target: PathEditTarget) {}
 
-    /** Drop path to terrain was pressed for [target]: its Scene view drops the control points as an unapplied change. */
+    /**
+     * Drop path to terrain was pressed for [target]: its Scene view drops the control points as an unapplied change.
+     */
     fun dropRequested(target: PathEditTarget) {}
 
     companion object {
         @JvmField
-        val TOPIC: Topic<PathEditListener> = Topic.create("Path arrangement control point edit", PathEditListener::class.java)
+        val TOPIC: Topic<PathEditListener> =
+            Topic.create("Path arrangement control point edit", PathEditListener::class.java)
     }
 }
 
@@ -44,24 +47,36 @@ class PathEditSession(private val project: Project) {
     /** Writes the changes of the edit of [file] (the Scene view does) and ends it. */
     fun apply(file: VirtualFile) {
         val target = current?.takeIf { it.file == file } ?: return
-        if (!project.isDisposed) project.messageBus.syncPublisher(PathEditListener.TOPIC).applyRequested(target)
+        if (!project.isDisposed) {
+            project.messageBus.syncPublisher(PathEditListener.TOPIC).applyRequested(target)
+        }
         stop(file)
     }
 
     /** Asks the Scene view of [file] to drop the control points being edited onto the terrain. */
     fun drop(file: VirtualFile) {
         val target = current?.takeIf { it.file == file } ?: return
-        if (!project.isDisposed) project.messageBus.syncPublisher(PathEditListener.TOPIC).dropRequested(target)
+        if (!project.isDisposed) {
+            project.messageBus.syncPublisher(PathEditListener.TOPIC).dropRequested(target)
+        }
     }
 
-    /** Ends the edit of [file] without writing the changes (Close)'s arrangement; an edit of another file is left alone. */
+    /**
+     * Ends the edit of [file] without writing the changes (Close)'s arrangement; an edit of another file is left alone.
+     */
     fun stop(file: VirtualFile? = null) {
-        if (file == null || current?.file == file) set(null)
+        if (file == null || current?.file == file) {
+            set(null)
+        }
     }
 
     private fun set(target: PathEditTarget?) {
-        if (current == target) return
+        if (current == target) {
+            return
+        }
         current = target
-        if (!project.isDisposed) project.messageBus.syncPublisher(PathEditListener.TOPIC).changed(target)
+        if (!project.isDisposed) {
+            project.messageBus.syncPublisher(PathEditListener.TOPIC).changed(target)
+        }
     }
 }

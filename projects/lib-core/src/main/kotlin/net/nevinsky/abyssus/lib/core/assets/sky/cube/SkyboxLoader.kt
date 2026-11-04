@@ -51,7 +51,9 @@ class PreparedSkybox(val faces: List<Pixmap>, val shaderName: String) {
 
     /** Frees the faces unless the cube map took them already. Safe to call more than once. */
     fun dispose() {
-        if (disposed) return
+        if (disposed) {
+            return
+        }
         disposed = true
         faces.forEach(Pixmap::dispose)
     }

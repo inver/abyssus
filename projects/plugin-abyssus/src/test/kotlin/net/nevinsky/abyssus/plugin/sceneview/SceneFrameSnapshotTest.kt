@@ -69,7 +69,8 @@ class SceneFrameSnapshotTest {
                     val before = animation.current!!.time
                     renderer.render(renderer.lastWidth, renderer.lastHeight, orbit, 0.05f)
                     step = animation.current!!.time - before
-                    passes = (renderer.waterStatus?.let { it.reflectionPasses + it.depthPasses + it.drawnSurfaces } ?: 0)
+                    passes = (renderer.waterStatus?.let { it.reflectionPasses + it.depthPasses + it.drawnSurfaces } ?:
+                        0)
                 }
             }
             r.error?.let { throw it }
@@ -87,34 +88,46 @@ class SceneFrameSnapshotTest {
         WaterGlRig.shoot(params, OrbitCamera(Vector3(0f, 0f, 0f), 25f, 0.6f, 0.35f), configure = configure)
 
     private fun identical(a: BufferedImage, b: BufferedImage): Boolean {
-        if (a.width != b.width || a.height != b.height) return false
-        for (y in 0 until a.height) for (x in 0 until a.width) if (a.getRGB(x, y) != b.getRGB(x, y)) return false
+        if (a.width != b.width || a.height != b.height) {
+            return false
+        }
+        for (y in 0 until a.height) for (x in 0 until a.width) if (a.getRGB(x, y) != b.getRGB(x, y)) {
+            return false
+        }
         return true
     }
 
     @Test fun aTransformPreviewShowsTheSamePoseInTheViewAndTheReflection() {
         val base = withWater("Untitled", "Main Scene.scene", 0.0, 0.0, 0.0)
         val model = base.content.models.first { it.entityId == 2L }
-        val moved = Vector3(model.transform.position.x + 4f, model.transform.position.y, model.transform.position.z - 2f)
+        val moved = Vector3(model.transform.position.x + 4f, model.transform.position.y, model.transform.position.z -
+            2f)
         val previewed = image(base) { renderer ->
             renderer.state.preview = mapOf("2" to DragResult(model.transform.copy(position = moved), null))
         }
         // the same scene with the entity really placed there
         val dir = File("src/test/testData/project/Untitled")
         val root = SceneJson().parseObject(File(dir, "scenes/Main Scene.scene").readText())
-        val position = net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree(root).components("2")!!.get("PositionComponent").get("localPosition") as ObjectNode
+        val position =
+            net.nevinsky.abyssus.lib.core.editor.document.SceneEntityTree(root)
+                .components("2")!!
+                .get("PositionComponent")
+                .get("localPosition") as ObjectNode
         position.put("x", moved.x.toDouble()).put("z", moved.z.toDouble())
         val lake = presets.defaults(WaterPreset.LAKE, "w1", "Lake", 0.0, 0.0, 0.0).copy(width = 200.0, length = 200.0)
         root.putObject("abyssus").putObject("waterSurfaces").set<ObjectNode>("w1", WaterCodec().node(lake))
         root.put("fogEnabled", false)
         val placed = image(renderParamsOf(parseScene(SceneJson().compact(root)), CameraParams.DEFAULT, dir))
         val unmoved = image(base)
-        assertTrue("the reflection follows the preview", !sameBytes(previewed.reflection.getValue(0), unmoved.reflection.getValue(0)))
-        assertTrue("the reflection of a preview is that of the moved entity", sameBytes(previewed.reflection.getValue(0), placed.reflection.getValue(0)))
+        assertTrue("the reflection follows the preview", !sameBytes(previewed.reflection.getValue(0),
+            unmoved.reflection.getValue(0)))
+        assertTrue("the reflection of a preview is that of the moved entity",
+            sameBytes(previewed.reflection.getValue(0), placed.reflection.getValue(0)))
         assertTrue("the depth targets agree too", sameBytes(previewed.sceneDepth!!, placed.sceneDepth!!))
     }
 
-    private fun sameBytes(a: TargetImage, b: TargetImage) = a.width == b.width && a.height == b.height && a.bytes.contentEquals(b.bytes)
+    private fun sameBytes(a: TargetImage, b: TargetImage) = a.width == b.width && a.height == b.height &&
+        a.bytes.contentEquals(b.bytes)
 
     @Test fun aSceneWithoutVisibleWaterRendersAsBefore() {
         val plain = withoutWater("Untitled", "Main Scene.scene")
@@ -131,8 +144,11 @@ class SceneFrameSnapshotTest {
         val variants = mapOf(
             "an empty extension" to variant { it.putObject("abyssus") },
             "an empty container" to variant { it.putObject("abyssus").putObject("waterSurfaces") },
-            "a hidden surface" to variant { it.putObject("abyssus").putObject("waterSurfaces").set<ObjectNode>("w1", WaterCodec().node(lake.copy(enabled = false))) },
-            "an invalid surface" to variant { it.putObject("abyssus").putObject("waterSurfaces").putObject("bad").put("preset", "LAKE").put("width", -3) },
+            "a hidden surface" to variant { it.putObject("abyssus").putObject("waterSurfaces").set<ObjectNode>("w1",
+                WaterCodec().node(lake.copy(enabled = false))) },
+            "an invalid surface" to variant {
+                it.putObject("abyssus").putObject("waterSurfaces").putObject("bad").put("preset", "LAKE").put("width",
+                -3) },
             "unrelated extension data" to variant { it.putObject("abyssus").put("other", 1) },
         )
         for ((name, params) in variants) {

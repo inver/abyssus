@@ -35,7 +35,10 @@ class SceneRowActionTest : BasePlatformTestCase() {
         children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { text(it).startsWith("Untitled") }
 
     fun testStandaloneSceneNodeHasViewTarget() {
-        val file = myFixture.addFileToProject("Loose/a.scene", """{"format":"abyssus","formatVersion":1,"name":"a"}""").virtualFile
+        val file =
+            myFixture
+                .addFileToProject("Loose/a.scene", """{"format":"abyssus","formatVersion":1,"name":"a"}""")
+                .virtualFile
         assertEquals(file, viewableSceneFile(AbyssusAssetNode(project, file, ViewSettings.DEFAULT)))
     }
 
@@ -56,7 +59,13 @@ class SceneRowActionTest : BasePlatformTestCase() {
     }
 
     fun testSceneInternalsAndNonNodesHaveNoViewTarget() {
-        val file = myFixture.addFileToProject("Loose/b.scene", """{"format":"abyssus","formatVersion":1,"name":"b","fogEnabled":true,"fog":{"density":0.1}}""").virtualFile
+        val file =
+            myFixture
+                .addFileToProject(
+                    "Loose/b.scene",
+                    """{"format":"abyssus","formatVersion":1,"name":"b","fogEnabled":true,"fog":{"density":0.1}}""",
+                )
+                .virtualFile
         val sceneNode = AbyssusAssetNode(project, file, ViewSettings.DEFAULT)
         for (child in children(sceneNode)) assertNull(text(child), viewableSceneFile(child))
         assertNull(viewableSceneFile(null))

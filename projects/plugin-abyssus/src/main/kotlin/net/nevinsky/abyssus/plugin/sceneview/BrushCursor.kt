@@ -14,12 +14,19 @@ import kotlin.math.sin
 
 private const val SEGMENTS = 64
 
-/** The circle a terrain brush covers on [terrain] around the world point [at]: the footprint of every brush, from [BrushPath]'s own terrain-local axes. */
+/**
+ * The circle a terrain brush covers on [terrain] around the world point [at]: the footprint of every brush, from
+ * [BrushPath]'s own terrain-local axes.
+ */
 internal class BrushCursor(val terrain: TerrainTarget, val at: Vector3, val radius: Float) {
     fun draw(lines: LineSink) {
-        if (terrain.world.det() == 0f) return
+        if (terrain.world.det() == 0f) {
+            return
+        }
         val path = BrushPath(terrain.data.size, terrain.data.resolution, terrain.world)
-        if (path.scaleX <= 0f || path.scaleZ <= 0f) return
+        if (path.scaleX <= 0f || path.scaleZ <= 0f) {
+            return
+        }
         val centre = Vector3(path.toLocal(at))
         fun point(i: Int): Vector3? {
             val angle = i * Math.PI * 2.0 / SEGMENTS
@@ -33,7 +40,9 @@ internal class BrushCursor(val terrain: TerrainTarget, val at: Vector3, val radi
         var previous = point(0)
         for (i in 1..SEGMENTS) {
             val next = point(i)
-            if (previous != null && next != null) lines.line(previous, next, Color(1f, 0.8f, 0.2f, 1f))
+            if (previous != null && next != null) {
+                lines.line(previous, next, Color(1f, 0.8f, 0.2f, 1f))
+            }
             previous = next
         }
     }

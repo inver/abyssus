@@ -19,7 +19,8 @@ import net.nevinsky.abyssus.lib.core.assets.sky.procedural.SkyAmbient
 
 
 /**
- * What a cloud technique draws in one frame: the cloud asset [clouds] seen from [camera] (whose rotation-only inverse view-projection
+  * What a cloud technique draws in one frame: the cloud asset [clouds] seen from [camera] (whose rotation-only inverse
+  * view-projection
  * is [invViewProj]) at [timeSeconds], lit by the sun toward [sun] through the atmosphere [params], with [ambient] the
  * sky's light around them.
  */
@@ -37,7 +38,8 @@ class CloudScene(
 
 /**
  * One way of drawing clouds over a procedural sky's atmosphere: blended premultiplied over what is already drawn, far
- * band first. Built on the GL thread (throws when it cannot be: a shader that does not compile, a resource that cannot be
+  * band first. Built on the GL thread (throws when it cannot be: a shader that does not compile, a resource that cannot
+  * be
  * created) and drawn there with the context current; the caller has depth testing and writing off.
  */
 abstract class CloudRenderer : Disposable {
@@ -50,7 +52,8 @@ abstract class CloudRenderer : Disposable {
     abstract fun draw(scene: CloudScene)
 
     /**
-     * Sets the uniforms of `clouds_light.glsl` that the whole frame shares, for a target [targetHeight] pixels high (the
+      * Sets the uniforms of `clouds_light.glsl` that the whole frame shares, for a target [targetHeight] pixels high
+      * (the
      * camera's viewport when null).
      */
     protected fun setCloudFrame(program: ShaderProgram, scene: CloudScene, targetHeight: Float? = null) {
@@ -111,7 +114,9 @@ abstract class CloudRenderer : Disposable {
             block()
         } finally {
             gl.glBlendFuncSeparate(srcRgb, dstRgb, srcAlpha, dstAlpha)
-            if (!wasOn) gl.glDisable(GL20.GL_BLEND)
+            if (!wasOn) {
+                gl.glDisable(GL20.GL_BLEND)
+            }
         }
     }
 }

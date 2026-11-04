@@ -6,12 +6,15 @@
 package net.nevinsky.abyssus.lib.gdx.shader
 
 /**
- * Expands `#pragma include "name"` lines of a GLSL source in place. An unexpanded pragma is ignored by a GLSL compiler, so a
+  * Expands `#pragma include "name"` lines of a GLSL source in place. An unexpanded pragma is ignored by a GLSL
+  * compiler, so a
  * source that is never assembled still compiles when it does not need the included code.
  *
  * Expanding in place keeps the `#define`s and declarations above the directive ahead of the included functions. Each
- * expansion is wrapped in `// begin include` / `// end include` comments naming the resource, so a compiler log line can be
- * traced to its source. [resolve] returns the text of an include name, or null when there is none; a missing include throws
+  * expansion is wrapped in `// begin include` / `// end include` comments naming the resource, so a compiler log line
+  * can be
+  * traced to its source. [resolve] returns the text of an include name, or null when there is none; a missing include
+  * throws
  * with [label] and the line, so the failure names the shader that asked for it. Pure text, no GL.
  */
 class ShaderSourceAssembler(private val resolve: (String) -> String?) {
@@ -31,7 +34,11 @@ class ShaderSourceAssembler(private val resolve: (String) -> String?) {
                 out.append("// end include ").append(name).append('\n')
             }
         }
-        return out.toString().removeSuffix("\n").let { if (source.endsWith("\n")) it + "\n" else it }
+        return out.toString().removeSuffix("\n").let { if (source.endsWith("\n")) {
+            it + "\n"
+        } else {
+            it
+        } }
     }
 
     private companion object {

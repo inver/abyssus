@@ -42,7 +42,9 @@ fun wireGlint(tangent: Vector3, toSun: Vector3, toViewer: Vector3): Float {
     val hy = toSun.y + toViewer.y
     val hz = toSun.z + toViewer.z
     val length = sqrt(hx * hx + hy * hy + hz * hz)
-    if (length < 1e-4f) return 0f
+    if (length < 1e-4f) {
+        return 0f
+    }
     val along = (tangent.x * hx + tangent.y * hy + tangent.z * hz) / length
     return max(0f, 1f - along * along).pow(GLINT_SHARPNESS / 2f)
 }

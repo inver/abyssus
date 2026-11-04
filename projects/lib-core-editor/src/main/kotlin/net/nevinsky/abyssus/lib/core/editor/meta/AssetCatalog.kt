@@ -32,7 +32,9 @@ class AssetCatalog(
     fun folders(assetsDir: File): List<File> =
         assetsDir.listFiles { f -> f.isDirectory }?.sortedBy { it.name }.orEmpty()
 
-    /** The native `meta.json` of [folder], or null when it is missing, unreadable, not JSON or not a native document. */
+    /**
+     * The native `meta.json` of [folder], or null when it is missing, unreadable, not JSON or not a native document.
+     */
     fun meta(folder: File): MetaDocument? = runCatchingKeepingCancellation {
         readText(File(folder, META_FILE))?.let(reader::read)
     }.getOrNull()
@@ -43,7 +45,9 @@ class AssetCatalog(
             meta(dir)?.takeIf { types.isEmpty() || it.type in types }?.text("uuid")?.let { same(it, uuid) } == true
         }
 
-    /** The names of the asset folders other than [except] whose [type] meta holds [uuid] in its `additional.[field]`. */
+    /**
+     * The names of the asset folders other than [except] whose [type] meta holds [uuid] in its `additional.[field]`.
+     */
     fun users(assetsDir: File, type: MetaType, field: String, uuid: String, except: String? = null): List<String> =
         folders(assetsDir).filter { it.name != except }.filter { dir ->
             meta(dir)?.takeIf { it.type == type }?.text("additional", field)?.let { same(it, uuid) } == true
@@ -55,6 +59,10 @@ class AssetCatalog(
     private fun same(a: String, b: String): Boolean {
         val left = parseUuidOrNull(a)
         val right = parseUuidOrNull(b)
-        return if (left != null && right != null) left == right else a == b
+        return if (left != null && right != null) {
+            left == right
+        } else {
+            a == b
+        }
     }
 }

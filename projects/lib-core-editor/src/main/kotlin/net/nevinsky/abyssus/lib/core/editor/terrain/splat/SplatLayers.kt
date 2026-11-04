@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.terrain.splat
 
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_LAYERS
 import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
@@ -13,7 +14,6 @@ import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.util.obj
 import net.nevinsky.abyssus.lib.core.util.text
-import java.io.File
 
 /**
  * One of a terrain's five layer slots: [slot] 0 is Base and 1 to 4 are the splat map's R, G, B and A, [field] is the
@@ -21,22 +21,33 @@ import java.io.File
  * reference that names no readable texture asset is [resolved] false and keeps its [uuid] as the [name]; a resolved one
  * has the texture asset's folder name as [name] and its [image] file for a thumbnail.
  */
-class SplatLayer(val slot: Int, val field: String, val uuid: String?, val name: String?, val resolved: Boolean, val image: File?)
+class SplatLayer(
+    val slot: Int,
+    val field: String,
+    val uuid: String?,
+    val name: String?,
+    val resolved: Boolean,
+    val image: File?,
+)
 
-/** Reads the five layer slots of a terrain from its `meta.json` text and the project's texture assets. Plain [File] access. */
+/**
+ * Reads the five layer slots of a terrain from its `meta.json` text and the project's texture assets. Plain [File]
+ * access.
+ */
 class SplatLayers(private val json: JsonProcessor) {
     private val metas = AssetMetaReader(json)
     private val choices = AssetReferenceChoices(json)
 
     /** The slots in order Base, R, G, B, A; empty when [terrainMetaText] is not a supported native document. */
     fun read(assetsDir: File, terrainMetaText: String): List<SplatLayer> {
-        val additional = try {
-            metas.read(terrainMetaText)
-        } catch (e: IllegalArgumentException) {
-            null
-        } catch (e: com.fasterxml.jackson.core.JsonProcessingException) {
-            null
-        } ?: return emptyList()
+        val additional =
+            try {
+                metas.read(terrainMetaText)
+            } catch (e: IllegalArgumentException) {
+                null
+            } catch (e: com.fasterxml.jackson.core.JsonProcessingException) {
+                null
+            } ?: return emptyList()
         val textures = assetsDir.listFiles { f -> f.isDirectory }?.sortedBy { it.name }.orEmpty()
         return SPLAT_LAYERS.mapIndexed { slot, field ->
             val uuid = additional.text("additional", field)?.takeIf { it.isNotBlank() }
@@ -49,13 +60,19 @@ class SplatLayers(private val json: JsonProcessor) {
         }
     }
 
-    /** The texture assets that can be chosen for a slot currently holding [current], as [AssetReferenceChoices.textures]. */
+    /**
+     * The texture assets that can be chosen for a slot currently holding [current], as
+     * [AssetReferenceChoices.textures].
+     */
     fun choices(assetsDir: File, current: String?) = choices.textures(assetsDir, current)
 
     private fun imageOf(folder: File): File? {
         val file = runCatchingKeepingCancellation {
             metas.read(File(folder, META_FILE).readText()).text("additional", "file")
-        }.getOrElse { return null }
+        }
+            .getOrElse {
+                return null
+            }
         return file?.let { choices.inside(folder, it) }
     }
 }

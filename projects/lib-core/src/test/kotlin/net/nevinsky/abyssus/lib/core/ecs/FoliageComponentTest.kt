@@ -36,7 +36,9 @@ class FoliageComponentTest {
 
     @Test
     fun registeringItAgainIsRefused() {
-        assertThrows(IllegalStateException::class.java) { registry.register("FoliageComponent", FoliageComponent::class.java) }
+        assertThrows(IllegalStateException::class.java) {
+            registry.register("FoliageComponent", FoliageComponent::class.java)
+        }
         assertThrows(IllegalStateException::class.java) {
             registry.register(FoliageComponent::class.qualifiedName!!, FoliageComponent::class.java)
         }
@@ -45,7 +47,9 @@ class FoliageComponentTest {
     @Test
     fun bindsEitherNameAndKeepsOtherMembersLexically() {
         for (key in listOf("FoliageComponent", FoliageComponent::class.qualifiedName!!)) {
-            val source = """"$key": {"assetName": "foliage_meadow", "note": "x", "extra": {"weight": 2.50, "epsilon": 1.0E-4, "z": -0.0}}"""
+            val source =
+                """"$key": {"assetName": "foliage_meadow", "note": "x", "extra": {"weight": 2.50, "epsilon": 1.0E-4,
+"z": -0.0}}"""
             val (engine, warns) = load(source)
             assertEquals("foliage_meadow", foliage(engine).assetName)
             assertTrue(warns.warnings.toString(), warns.warnings.isEmpty())

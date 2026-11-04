@@ -19,7 +19,8 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
  * Binds the foliage asset of a terrain entity: [assetName] is the name of a `FOLIAGE` asset folder, or null for none.
  * Only a string (or null) binds; any other value fails the binding, so the loader keeps the whole component raw.
  *
- * Members the component does not model are kept in [extras] (in file order) and written back after `assetName`. The name
+  * Members the component does not model are kept in [extras] (in file order) and written back after `assetName`. The
+  * name
  * is not checked against the project here: that is the asset read's job.
  */
 class FoliageComponent : Component {

@@ -10,7 +10,13 @@ import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute
+import com.badlogic.gdx.graphics.g3d.model.Node as StockNode
+import com.badlogic.gdx.graphics.g3d.model.NodePart
+import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
+import com.badlogic.gdx.graphics.g3d.model.data.ModelNodePart
 import com.badlogic.gdx.graphics.g3d.utils.TextureProvider
+import java.io.File
+import java.nio.file.Files
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import net.nevinsky.abyssus.model.GridModel
@@ -19,21 +25,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
-import com.badlogic.gdx.graphics.g3d.model.Node as StockNode
-import com.badlogic.gdx.graphics.g3d.model.NodePart
-import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
-import com.badlogic.gdx.graphics.g3d.model.data.ModelNodePart
 
 /** [IntModel] against the model the fork builds from the same [ModelData]. Opt-in: `-Dabyssus.glTests=true`. */
 class IntModelGlTest {
-    @Before
-    fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
+    @Before fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
 
     /** Hands out a 2 x 2 texture per file name and counts how often each file was asked for. */
     private class CountingTextures : TextureProvider {
         val loads = HashMap<String, Int>()
+
         override fun load(fileName: String): Texture {
             loads.merge(fileName, 1, Int::plus)
             return Texture(Pixmap(2, 2, Pixmap.Format.RGBA8888))
@@ -73,7 +73,10 @@ class IntModelGlTest {
             assertSameAsData(data, model)
             assertTrue("the crate has a texture", textures.loads.isNotEmpty())
             assertTrue("one load per file", textures.loads.values.all { it == 1 })
-            assertEquals(data.materials.flatMap { it.textures?.map { t -> t.fileName } ?: emptyList() }.toSet(), textures.loads.keys)
+            assertEquals(
+                data.materials.flatMap { it.textures?.map { t -> t.fileName } ?: emptyList() }.toSet(),
+                textures.loads.keys,
+            )
             assertTrue("a textured material", model.materials.any { it.has(TextureAttribute.Diffuse) })
         } finally {
             model.dispose()
@@ -94,7 +97,11 @@ class IntModelGlTest {
             assertEquals(grid.indexCount, mesh.numIndices)
             assertEquals(1, model.meshParts.size)
             assertEquals("the part spans every index", grid.indexCount, model.meshParts[0].size)
-            assertEquals((grid.size - 1).toFloat(), model.meshParts[0].center.x + model.meshParts[0].halfExtents.x, 1e-4f)
+            assertEquals(
+                (grid.size - 1).toFloat(),
+                model.meshParts[0].center.x + model.meshParts[0].halfExtents.x,
+                1e-4f,
+            )
         } finally {
             model.dispose()
         }
@@ -104,6 +111,7 @@ class IntModelGlTest {
         (parts?.toList() ?: emptyList()) + (children?.flatMap { it.allParts() } ?: emptyList())
 
     private fun ModelNode.ids(): List<String> = listOf(id) + (children?.flatMap { it.ids() } ?: emptyList())
+
     private fun StockNode.ids(): List<String> = listOf(id) + children.flatMap { it.ids() }
 
     /** The model is what its data describes: nodes, parts, materials, animations and 32-bit meshes. */
@@ -114,11 +122,19 @@ class IntModelGlTest {
         assertEquals("part ids", partIds, builtParts)
         assertEquals("materials", data.materials.map { it.id }.toSet(), model.materials.map { it.id }.toSet())
         assertEquals("animations", data.animations.map { it.id }, model.animations.map { it.id })
-        assertEquals("meshes", data.meshes.map { it.vertices.size / it.attributes.sumOf { a -> a.numComponents } }.sorted(),
-            model.meshes.map { it.numVertices }.sorted())
-        assertEquals("indices", data.meshes.sumOf { m -> m.parts.sumOf { it.indices.size } }, model.meshes.sumOf { it.numIndices })
+        assertEquals(
+            "meshes",
+            data.meshes.map { it.vertices.size / it.attributes.sumOf { a -> a.numComponents } }.sorted(),
+            model.meshes.map { it.numVertices }.sorted(),
+        )
+        assertEquals(
+            "indices",
+            data.meshes.sumOf { m -> m.parts.sumOf { it.indices.size } },
+            model.meshes.sumOf { it.numIndices },
+        )
         assertTrue("every mesh is 32-bit", model.meshes.all { it is IntMesh })
     }
 
-    private fun collectParts(node: StockNode): List<NodePart> = node.parts.toList() + node.children.flatMap { collectParts(it) }
+    private fun collectParts(node: StockNode): List<NodePart> =
+        node.parts.toList() + node.children.flatMap { collectParts(it) }
 }

@@ -24,7 +24,8 @@ class CloudNoise(val baseSize: Int, val base: ByteArray, val detailSize: Int, va
 /**
  * Makes [CloudNoise] with [FastNoiseLite]: the base is Perlin-Worley (simplex fbm minus cellular distance, the billowy
  * look of heaped clouds) and the detail inverted cellular distance. FastNoiseLite does not repeat, so within
- * [tileMargin] of a face each texel fades into the copy of the noise shifted by one volume across that face, which makes
+  * [tileMargin] of a face each texel fades into the copy of the noise shifted by one volume across that face, which
+  * makes
  * the volume tile under the texture's repeat wrapping; the result is stretched back to the full 0..255 range. Pure,
  * from fixed seeds; slices are made in parallel. No GL.
  */
@@ -82,8 +83,22 @@ class CloudNoiseGenerator {
                         val ay = corner shr 1 and 1
                         val az = corner shr 2 and 1
                         val weight =
-                            (if (ax == 1) wx else 1f - wx) * (if (ay == 1) wy else 1f - wy) * (if (az == 1) wz else 1f - wz)
-                        if (weight > 0f) sum += weight * sample(x - ax * s, y - ay * s, z - az * s)
+                            (if (ax == 1) {
+                                wx
+                            } else {
+                                1f - wx
+                            }) * (if (ay == 1) {
+                                wy
+                            } else {
+                                1f - wy
+                            }) * (if (az == 1) {
+                                wz
+                            } else {
+                                1f - wz
+                            })
+                        if (weight > 0f) {
+                            sum += weight * sample(x - ax * s, y - ay * s, z - az * s)
+                        }
                     }
                     values[(z * size + y) * size + x] = sum
                 }
@@ -92,8 +107,12 @@ class CloudNoiseGenerator {
         var low = Float.MAX_VALUE
         var high = -Float.MAX_VALUE
         for (v in values) {
-            if (v < low) low = v
-            if (v > high) high = v
+            if (v < low) {
+                low = v
+            }
+            if (v > high) {
+                high = v
+            }
         }
         val range = (high - low).takeIf { it > 0f } ?: 1f
         return ByteArray(values.size) { i -> ((values[i] - low) / range * 255f + 0.5f).toInt().toByte() }

@@ -28,7 +28,9 @@ class RayModelPoses {
         val captured = LinkedHashMap<Long, Last>()
         for (entity in entities) {
             val roots = entity.instance.nodes
-            if (entity.animation == null && roots.none(::skinned)) continue
+            if (entity.animation == null && roots.none(::skinned)) {
+                continue
+            }
             val nodes = LinkedHashMap<String, FloatArray>()
             val bones = LinkedHashMap<String, List<FloatArray>>()
             roots.forEach { collect(it, nodes, bones) }
@@ -40,7 +42,11 @@ class RayModelPoses {
             } else {
                 RayModelPose((before?.pose?.revision ?: 0L) + 1, nodes, bones)
             }
-            captured[id] = if (unchanged) before else Last(pose, nodes, bones)
+            captured[id] = if (unchanged) {
+                before
+            } else {
+                Last(pose, nodes, bones)
+            }
         }
         previous = captured
         return captured.mapValues { it.value.pose }

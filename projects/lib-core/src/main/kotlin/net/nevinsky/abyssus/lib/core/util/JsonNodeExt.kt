@@ -18,7 +18,9 @@ fun JsonNode.float(name: String): Float? = opt(name)?.takeIf { it.isNumber }?.fl
 
 /** The child [name] when it is an object. */
 fun JsonNode.obj(name: String): JsonNode? = opt(name)?.takeIf { it.isObject }
-private fun JsonNode.walk(path: Array<out String>): JsonNode? = path.fold(this as JsonNode?) { node, key -> node?.opt(key) }
+
+private fun JsonNode.walk(path: Array<out String>): JsonNode? =
+    path.fold(this as JsonNode?) { node, key -> node?.opt(key) }
 
 /** The string at [path] below this node, or null when anything on the way is missing, null or of another kind. */
 fun JsonNode.textAt(vararg path: String): String? = walk(path)?.takeIf { it.isTextual }?.textValue()
@@ -44,7 +46,8 @@ fun JsonNode.namesAt(vararg path: String): List<String> =
     walk(path)?.takeIf { it.isObject }?.fieldNames()?.asSequence()?.toList().orEmpty()
 
 /** True when this node is an object, an array or a string/number/boolean/null scalar: the kind a tree row shows. */
-val JsonNode.isContainer: Boolean get() = isContainerNode
+val JsonNode.isContainer: Boolean
+    get() = isContainerNode
 
 /** True when [path] below this node leads to a member that is present. */
 fun JsonNode.hasAt(vararg path: String): Boolean = walk(path.copyOfRange(0, path.size - 1))?.has(path.last()) == true
@@ -63,22 +66,34 @@ fun JsonNode?.numberTextOrNull(): String? = this?.takeIf { it.isNumber }?.asText
 
 /** The value at [path] below this node as display text; empty when it is missing or null. */
 fun JsonNode.displayTextAt(vararg path: String): String =
-    path.fold(this as JsonNode?) { node, key -> node?.get(key) }?.takeIf { !it.isMissingNode && !it.isNull }?.asText().orEmpty()
+    path
+        .fold(this as JsonNode?) { node, key -> node?.get(key) }
+        ?.takeIf { !it.isMissingNode && !it.isNull }
+        ?.asText()
+        .orEmpty()
 
-/** The members of an object (name to value, in file order) or the elements of an array (index to value); empty for a scalar. */
+/**
+ * The members of an object (name to value, in file order) or the elements of an array (index to value); empty for a
+ * scalar.
+ */
 fun JsonNode.members(): List<Pair<String, JsonNode>> =
-    if (isObject) properties().map { (k, v) -> k to v } else mapIndexed { i, v -> "$i" to v }
+    if (isObject) {
+        properties().map { (k, v) -> k to v }
+    } else {
+        mapIndexed { i, v -> "$i" to v }
+    }
 
 /** Every string held under a member called one of [fields], anywhere below this node. */
 fun JsonNode.textValuesOf(vararg fields: String): Set<String> =
     fields.flatMap { field -> findValues(field).filter { it.isTextual }.map { it.textValue() } }.toSet()
 
 /** True when [text] is one of the strings below this node, at any depth. */
-fun JsonNode.containsText(text: String): Boolean = when {
-    isTextual -> textValue() == text
-    isContainerNode -> any { it.containsText(text) }
-    else -> false
-}
+fun JsonNode.containsText(text: String): Boolean =
+    when {
+        isTextual -> textValue() == text
+        isContainerNode -> any { it.containsText(text) }
+        else -> false
+    }
 
 /** The whole number at [path] below this node (`40` or `40.0`), or null when it is missing or fractional. */
 fun JsonNode.wholeNumberAt(vararg path: String): Int? =

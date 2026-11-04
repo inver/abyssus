@@ -8,7 +8,6 @@ package net.nevinsky.abyssus.lib.core.assets.terrain
 import com.badlogic.gdx.math.Vector3
 import kotlin.math.sqrt
 
-
 /** Floats per terrain vertex: position, normal and uv. */
 const val TERRAIN_FLOATS_PER_VERTEX = 8
 
@@ -23,7 +22,9 @@ class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, v
     init {
         require(resolution >= 2) { "terrain needs at least 2x2 heights" }
         require(heights.size == resolution * resolution) { "height count ${heights.size} is not $resolution squared" }
-        require(resolution <= MAX_TERRAIN_RESOLUTION) { "terrain resolution $resolution is above the supported $MAX_TERRAIN_RESOLUTION" }
+        require(resolution <= MAX_TERRAIN_RESOLUTION) {
+            "terrain resolution $resolution is above the supported $MAX_TERRAIN_RESOLUTION"
+        }
     }
 
     /** Interleaved position (3), normal (3), texture coordinate (2) per vertex, in the terrain mesh. */
@@ -53,14 +54,22 @@ class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, v
     }
 
     /**
-     * Copies the heights of the rectangle [minX]..[maxX] by [minZ]..[maxZ] (both inclusive) of [source], a grid of the same
-     * resolution, over this terrain's heights, in place: the array this terrain was built with is the one that changes,
-     * so everything holding it sees the new heights.
+     * Copies the heights of the rectangle [minX]..[maxX] by [minZ]..[maxZ] (both inclusive) of [source], a grid of the
+     * same resolution, over this terrain's heights, in place: the array this terrain was built with is the one that
+     * changes, so everything holding it sees the new heights.
      */
     fun copyHeights(source: FloatArray, minX: Int, minZ: Int, maxX: Int, maxZ: Int) {
         require(source.size == heights.size) { "source has ${source.size} heights, not ${heights.size}" }
-        require(minX in 0..maxX && maxX < resolution && minZ in 0..maxZ && maxZ < resolution) { "rectangle outside the terrain" }
-        for (z in minZ..maxZ) System.arraycopy(source, z * resolution + minX, heights, z * resolution + minX, maxX - minX + 1)
+        require(minX in 0..maxX && maxX < resolution && minZ in 0..maxZ && maxZ < resolution) {
+            "rectangle outside the terrain"
+        }
+        for (z in minZ..maxZ) System.arraycopy(
+            source,
+            z * resolution + minX,
+            heights,
+            z * resolution + minX,
+            maxX - minX + 1,
+        )
     }
 
     /** Central differences, clamped at the edges. */
@@ -97,11 +106,17 @@ class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, v
     }
 
     /**
-     * Runs [use] on the bilinear patch under terrain-local [x],[z]: its four corner heights, the fractions within the cell
-     * and the cell size; null outside the terrain. Inline so the sampling allocates nothing.
+     * Runs [use] on the bilinear patch under terrain-local [x],[z]: its four corner heights, the fractions within the
+     * cell and the cell size; null outside the terrain. Inline so the sampling allocates nothing.
      */
-    private inline fun <R> patch(x: Float, z: Float, use: (h00: Float, h10: Float, h01: Float, h11: Float, fx: Float, fz: Float, cell: Float) -> R): R? {
-        if (x < 0f || z < 0f || x > size || z > size) return null
+    private inline fun <R> patch(
+        x: Float,
+        z: Float,
+        use: (h00: Float, h10: Float, h01: Float, h11: Float, fx: Float, fz: Float, cell: Float) -> R,
+    ): R? {
+        if (x < 0f || z < 0f || x > size || z > size) {
+            return null
+        }
         val cell = size.toFloat() / (resolution - 1)
         val gx = minOf((x / cell).toInt(), resolution - 2)
         val gz = minOf((z / cell).toInt(), resolution - 2)
@@ -117,12 +132,16 @@ class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, v
     }
 
     /** Height at terrain-local [x],[z] (world units from the terrain's corner), bilinear; null outside the terrain. */
-    fun heightAt(x: Float, z: Float): Float? = patch(x, z) { h00, h10, h01, h11, fx, fz, _ ->
-        (h00 * (1 - fx) + h10 * fx) * (1 - fz) + (h01 * (1 - fx) + h11 * fx) * fz
-    }
+    fun heightAt(x: Float, z: Float): Float? =
+        patch(x, z) { h00, h10, h01, h11, fx, fz, _ ->
+            (h00 * (1 - fx) + h10 * fx) * (1 - fz) + (h01 * (1 - fx) + h11 * fx) * fz
+        }
 
-    /** Height at terrain-local [x],[z] like [heightAt], with the position clamped onto the terrain instead of refused. */
-    fun clampedHeightAt(x: Float, z: Float): Float = heightAt(x.coerceIn(0f, size.toFloat()), z.coerceIn(0f, size.toFloat()))!!
+    /**
+     * Height at terrain-local [x],[z] like [heightAt], with the position clamped onto the terrain instead of refused.
+     */
+    fun clampedHeightAt(x: Float, z: Float): Float =
+        heightAt(x.coerceIn(0f, size.toFloat()), z.coerceIn(0f, size.toFloat()))!!
 
     /**
      * The unit surface normal at terrain-local [x],[z] in [out], from the exact gradient of the bilinear patch:
@@ -130,18 +149,21 @@ class TerrainData(val resolution: Int, val heights: FloatArray, val size: Int, v
      * over the grid, so the two agree to within a cell's gradient, which is the same bound the scatter's slope rules
      * work to.
      */
-    fun normalAt(x: Float, z: Float, out: Vector3): Vector3? = patch(x, z) { h00, h10, h01, h11, fx, fz, cell ->
-        val slopeX = ((h10 - h00) * (1 - fz) + (h11 - h01) * fz) / cell
-        val slopeZ = ((h01 - h00) * (1 - fx) + (h11 - h10) * fx) / cell
-        out.set(-slopeX, 1f, -slopeZ).nor()
-    }
+    fun normalAt(x: Float, z: Float, out: Vector3): Vector3? =
+        patch(x, z) { h00, h10, h01, h11, fx, fz, cell ->
+            val slopeX = ((h10 - h00) * (1 - fz) + (h11 - h01) * fz) / cell
+            val slopeZ = ((h01 - h00) * (1 - fx) + (h11 - h10) * fx) / cell
+            out.set(-slopeX, 1f, -slopeZ).nor()
+        }
 
     /**
      * The slope in degrees at terrain-local [x],[z], clamped onto the terrain: the angle between [normalAt]'s gradient
      * and straight up. Zero for a terrain with no size.
      */
     fun slopeDegreesAt(x: Float, z: Float): Float {
-        if (size <= 0) return 0f
+        if (size <= 0) {
+            return 0f
+        }
         val limit = size.toFloat()
         return patch(x.coerceIn(0f, limit), z.coerceIn(0f, limit)) { h00, h10, h01, h11, fx, fz, cell ->
             val slopeX = ((h10 - h00) * (1 - fz) + (h11 - h01) * fz) / cell

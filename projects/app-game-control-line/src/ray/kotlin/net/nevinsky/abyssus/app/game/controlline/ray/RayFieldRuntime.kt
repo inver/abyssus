@@ -23,12 +23,16 @@ class RayFieldRuntime(private val view: RayViewRuntime<Unit>) {
 
     /** Offers [frame] at the window's size; the first call also asks for ray mode. */
     fun offer(frame: RayFieldFrame, width: Int, height: Int) {
-        if (failure != null) return
+        if (failure != null) {
+            return
+        }
         if (!requested) {
             requested = true
             view.setRequested(true)
         }
-        if (check()) return
+        if (check()) {
+            return
+        }
         val scene = frame.scene
         scene.unsupportedReason()?.let { failure = "ray scene not supported ($it)"; return }
         val request = RaySceneRequest(
@@ -46,11 +50,17 @@ class RayFieldRuntime(private val view: RayViewRuntime<Unit>) {
     }
 
     /** The newest completed ray frame, or null while there is none (or after a failure). */
-    fun latest(): RayFrame? = if (check()) null else view.latest()?.frame
+    fun latest(): RayFrame? = if (check()) {
+        null
+    } else {
+        view.latest()?.frame
+    }
 
     /** Reads the view's mode; true when ray mode is over. */
     fun check(): Boolean {
-        if (failure != null) return true
+        if (failure != null) {
+            return true
+        }
         val mode = view.mode
         when (mode.phase) {
             RayModePhase.Failed -> failure = "ray tracing stopped: ${mode.failure ?: "unknown reason"}"

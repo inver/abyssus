@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
-import net.nevinsky.abyssus.lib.core.dto.entityWriter
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.dto.entityWriter
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
@@ -41,7 +41,12 @@ class SceneTextEditorTest {
     @Test
     fun aLegacyOrMalformedDocumentIsRefusedAndNeverMutated() {
         var ran = false
-        for (bad in listOf("""{"ecs":{}}""", "not json", """{"format":"abyssus","formatVersion":1,"ecs":{"componentIdentifiers":{}}}""")) {
+        for (bad in
+            listOf(
+                """{"ecs":{}}""",
+                "not json",
+                """{"format":"abyssus","formatVersion":1,"ecs":{"componentIdentifiers":{}}}""",
+            )) {
             val outcome = editor().edit(bad) { true.also { ran = true } }
             assertTrue(bad, outcome is TextEditOutcome.Refused)
         }

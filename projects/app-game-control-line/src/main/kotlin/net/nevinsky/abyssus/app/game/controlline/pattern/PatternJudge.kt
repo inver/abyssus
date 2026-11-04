@@ -5,14 +5,17 @@
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
 import com.badlogic.gdx.math.Vector3
+import kotlin.math.abs
+import kotlin.math.max
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightEnd
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightJudge
 import net.nevinsky.abyssus.app.game.controlline.track.TrackSample
-import kotlin.math.abs
-import kotlin.math.max
 
 /** Where the plane flies between manoeuvres, for the Mid assist level's warning. */
-enum class HeightWarning { BELOW, ABOVE }
+enum class HeightWarning {
+    BELOW,
+    ABOVE,
+}
 
 /** Level flight between manoeuvres lower than this above the ground (m) is too low... */
 const val PAUSE_HEIGHT_MIN = 1f
@@ -33,12 +36,12 @@ private const val LIFTOFF = 0.1f
 private const val TAKEOFF_AZIMUTH = 1080f
 
 /**
- * The F2B judge (design decision 3): a sequencer that finds each manoeuvre in the flown path, in schedule order, and marks
- * it. It reads the samples of a flight from the start of its ground roll, and fills in a [ScoreSheet].
+ * The F2B judge (design decision 3): a sequencer that finds each manoeuvre in the flown path, in schedule order, and
+ * marks it. It reads the samples of a flight from the start of its ground roll, and fills in a [ScoreSheet].
  *
  * A burst of flying between two pauses (level flight for half a lap or more) is one manoeuvre, found by [Matchers] and
- * marked by [Grader]. A manoeuvre already passed is not scored again; one later than the expected scores the ones skipped
- * 0 as omitted. A whole manoeuvre scores its mark; otherwise it scores 0 with its reason.
+ * marked by [Grader]. A manoeuvre already passed is not scored again; one later than the expected scores the ones
+ * skipped 0 as omitted. A whole manoeuvre scores its mark; otherwise it scores 0 with its reason.
  */
 class PatternJudge(private val radius: Float, private val grader: Grader = Grader(radius)) : FlightJudge {
     private val recorder = RecordingBuilder(radius)
@@ -60,6 +63,7 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
     /** The entry decided last, and how many have been decided (for the toast). */
     var lastScored: SheetEntry? = null
         private set
+
     var decided = 0
         private set
 
@@ -71,7 +75,10 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
     var heightWarning: HeightWarning? = null
         private set
 
-    /** Whether the expected manoeuvre has started: the take-off has left the ground, or flying other than level has begun since the last manoeuvre ended. */
+    /**
+     * Whether the expected manoeuvre has started: the take-off has left the ground, or flying other than level has
+     * begun since the last manoeuvre ended.
+     */
     var started = false
         private set
 
@@ -88,42 +95,63 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
     private var finished = false
 
     /** The recording of the flight so far, for [plane] flown at [level]. */
-    fun recording(plane: String, level: AssistLevel): FlightRecording = recorder.build(plane, level, sheet, grader.weights)
+    fun recording(plane: String, level: AssistLevel): FlightRecording =
+        recorder.build(plane, level, sheet, grader.weights)
 
     override fun sample(sample: TrackSample) {
-        if (finished) return
+        if (finished) {
+            return
+        }
         recorder.add(sample)
         clock = sample.time
         path.feed(sample)
         val points = path.points
-        if (points.isEmpty()) return
+        if (points.isEmpty()) {
+            return
+        }
         val last = points.last()
-        pauseLaps = if (lastEnd >= 0) (last.azimuth - lastEndAzimuth) / 360f else null
-        val open = path.peekOpen()
-        heightWarning = if (expected != null && lastEnd >= 0 && open is Level && open.latitude < BASE_LATITUDE) {
-            when {
-                last.height < PAUSE_HEIGHT_MIN -> HeightWarning.BELOW
-                last.height > PAUSE_HEIGHT_MAX -> HeightWarning.ABOVE
-                else -> null
+        pauseLaps =
+            if (lastEnd >= 0) {
+                (last.azimuth - lastEndAzimuth) / 360f
+            } else {
+                null
             }
-        } else null
+        val open = path.peekOpen()
+        heightWarning =
+            if (expected != null && lastEnd >= 0 && open is Level && open.latitude < BASE_LATITUDE) {
+                when {
+                    last.height < PAUSE_HEIGHT_MIN -> HeightWarning.BELOW
+                    last.height > PAUSE_HEIGHT_MAX -> HeightWarning.ABOVE
+                    else -> null
+                }
+            } else {
+                null
+            }
         when (expected) {
-            null, Figure.LANDING -> Unit
+            null,
+            Figure.LANDING -> Unit
             Figure.TAKEOFF -> takeoff()
             else -> sequence(open)
         }
         started = startedNow(path.peekOpen())
     }
 
-    private fun startedNow(open: Token?): Boolean = when (val figure = expected) {
-        null, Figure.LANDING -> false
-        Figure.TAKEOFF -> liftoff >= 0
-        else -> burst().isNotEmpty() || (open != null && open.from > lastEnd && when (open) {
-            // level flight is the pause, except the inverted laps themselves
-            is Level -> open.latitude >= PAUSE_LATITUDE || (!open.upright && figure == Figure.INVERTED_LAPS)
-            else -> true
-        })
-    }
+    private fun startedNow(open: Token?): Boolean =
+        when (val figure = expected) {
+            null,
+            Figure.LANDING -> false
+            Figure.TAKEOFF -> liftoff >= 0
+            else ->
+                burst().isNotEmpty() ||
+                    (open != null &&
+                        open.from > lastEnd &&
+                        when (open) {
+                            // level flight is the pause, except the inverted laps themselves
+                            is Level ->
+                                open.latitude >= PAUSE_LATITUDE || (!open.upright && figure == Figure.INVERTED_LAPS)
+                            else -> true
+                        })
+        }
 
     // take-off: from the start of the ground roll to 3 laps after it
 
@@ -131,14 +159,21 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
         val points = path.points
         if (liftoff < 0) {
             val index = points.indexOfFirst { it.height > points[0].height + LIFTOFF }
-            if (index < 0) return
+            if (index < 0) {
+                return
+            }
             liftoff = index
         }
         val end = points.indexOfFirst { it.azimuth - points[0].azimuth >= TAKEOFF_AZIMUTH }
-        if (end < 0) return
+        if (end < 0) {
+            return
+        }
         val start = points[0].time
-        if (points[end].time > FLIGHT_TIME) zero(Figure.TAKEOFF, ZeroReason.AFTER_TIME, points[end].time, start)
-        else decide(Figure.TAKEOFF, grader.gradeTakeoff(points, liftoff, end), points[end].time, start)
+        if (points[end].time > FLIGHT_TIME) {
+            zero(Figure.TAKEOFF, ZeroReason.AFTER_TIME, points[end].time, start)
+        } else {
+            decide(Figure.TAKEOFF, grader.gradeTakeoff(points, liftoff, end), points[end].time, start)
+        }
         ended(end)
         expected = Figure.REVERSE_WINGOVER
     }
@@ -147,18 +182,28 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
 
     private fun burst(): List<Token> = path.tokens.filter { it.from > lastEnd && !isPause(it) }
 
-    private fun isPause(token: Token) = token is Level && token.latitude < PAUSE_LATITUDE && abs(token.azimuthSpan) >= PAUSE_AZIMUTH
+    private fun isPause(token: Token) =
+        token is Level && token.latitude < PAUSE_LATITUDE && abs(token.azimuthSpan) >= PAUSE_AZIMUTH
 
     private fun sequence(open: Token?) {
-        if (open !is Level || open.latitude >= PAUSE_LATITUDE || abs(open.azimuthSpan) < PAUSE_AZIMUTH) return
+        if (open !is Level || open.latitude >= PAUSE_LATITUDE || abs(open.azimuthSpan) < PAUSE_AZIMUTH) {
+            return
+        }
         val figure = expected ?: return
         // inverted laps: the first two laps of an inverted pause long enough for them
-        if (!open.upright && abs(open.azimuthSpan) >= 720f && figure.ordinal <= Figure.INVERTED_LAPS.ordinal && burst().isEmpty()) {
+        if (
+            !open.upright &&
+                abs(open.azimuthSpan) >= 720f &&
+                figure.ordinal <= Figure.INVERTED_LAPS.ordinal &&
+                burst().isEmpty()
+        ) {
             invertedLaps(open)
             return
         }
         val tokens = burst()
-        if (tokens.isEmpty()) return
+        if (tokens.isEmpty()) {
+            return
+        }
         val recognition = matchers.recognise(tokens, path.points)
         if (recognition == null) {
             // not one of the schedule's figures: nothing to score, but it is over
@@ -166,7 +211,14 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
             return
         }
         // a wingover goes on through half a lap inverted: not yet a pause
-        if (recognition.figure == Figure.REVERSE_WINGOVER && recognition.repeats == 1 && !open.upright && abs(open.azimuthSpan) < WINGOVER_PAUSE) return
+        if (
+            recognition.figure == Figure.REVERSE_WINGOVER &&
+                recognition.repeats == 1 &&
+                !open.upright &&
+                abs(open.azimuthSpan) < WINGOVER_PAUSE
+        ) {
+            return
+        }
         score(recognition, tokens)
         lastEnd = max(lastEnd, tokens.last().to)
     }
@@ -176,7 +228,8 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
         val from = open.from
         // on its lines a plane flies level inverted only clockwise, so the laps are counted either way round
         val end = (from until points.size).first { abs(points[it].azimuth - points[from].azimuth) >= 720f }
-        val recognition = Recognition(Figure.INVERTED_LAPS, Verdict.COMPLETE, from, end, 2, geometry.azimuth(points[from].u))
+        val recognition =
+            Recognition(Figure.INVERTED_LAPS, Verdict.COMPLETE, from, end, 2, geometry.azimuth(points[from].u))
         score(recognition, listOf(open))
     }
 
@@ -186,7 +239,9 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
     private fun score(recognition: Recognition, tokens: List<Token>) {
         val index = recognition.figure.ordinal
         val next = expected?.ordinal ?: return
-        if (index < next) return // already passed
+        if (index < next) {
+            return // already passed
+        }
         for (skipped in next until index) zero(SCHEDULE[skipped], ZeroReason.OMITTED, clock)
         val points = path.points
         val figure = recognition.figure
@@ -228,14 +283,19 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
     // the end of the flight
 
     override fun ended(end: FlightEnd) {
-        if (finished) return
+        if (finished) {
+            return
+        }
         finished = true
         path.flush()
         val remaining = expected
         when (end) {
-            FlightEnd.CRASHED, FlightEnd.LINES_SLACK -> {
+            FlightEnd.CRASHED,
+            FlightEnd.LINES_SLACK -> {
                 // a manoeuvre that was whole before the crash keeps its mark
-                if (remaining != null && remaining != Figure.TAKEOFF && remaining != Figure.LANDING) finishBurst(allowIncomplete = false)
+                if (remaining != null && remaining != Figure.TAKEOFF && remaining != Figure.LANDING) {
+                    finishBurst(allowIncomplete = false)
+                }
                 crashed()
             }
             FlightEnd.LANDED -> landed()
@@ -244,9 +304,13 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
 
     private fun finishBurst(allowIncomplete: Boolean) {
         val tokens = burst()
-        if (tokens.isEmpty()) return
+        if (tokens.isEmpty()) {
+            return
+        }
         val recognition = matchers.recognise(tokens, path.points) ?: return
-        if (!allowIncomplete && recognition.verdict != Verdict.COMPLETE) return
+        if (!allowIncomplete && recognition.verdict != Verdict.COMPLETE) {
+            return
+        }
         score(recognition, tokens)
     }
 
@@ -284,7 +348,12 @@ class PatternJudge(private val radius: Float, private val grader: Grader = Grade
             zero(Figure.LANDING, ZeroReason.AFTER_TIME, time, points[from].time)
         } else {
             val back = (touchdown downTo 0).firstOrNull { points[touchdown].time - points[it].time >= SINK_WINDOW } ?: 0
-            val sink = max(0f, (points[back].height - points[touchdown].height) / max(points[touchdown].time - points[back].time, 1e-3f))
+            val sink =
+                max(
+                    0f,
+                    (points[back].height - points[touchdown].height) /
+                        max(points[touchdown].time - points[back].time, 1e-3f),
+                )
             decide(Figure.LANDING, grader.gradeLanding(points, from, touchdown, sink), time, points[from].time)
         }
         expected = null

@@ -8,6 +8,10 @@ package net.nevinsky.abyssus.plugin.properties
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.io.File
+import javax.swing.tree.DefaultMutableTreeNode
+import javax.swing.tree.DefaultTreeModel
+import javax.swing.tree.TreePath
 import net.nevinsky.abyssus.plugin.projectView.AbyssusAssetNode
 import net.nevinsky.abyssus.plugin.projectView.AbyssusRootNode
 import net.nevinsky.abyssus.plugin.projectView.AbyssusSelection
@@ -16,10 +20,6 @@ import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
 import net.nevinsky.abyssus.plugin.projectView.assetFolderOf
 import net.nevinsky.abyssus.plugin.projectView.describeNonAsset
 import net.nevinsky.abyssus.plugin.projectView.publishSelectionOf
-import java.io.File
-import javax.swing.tree.DefaultMutableTreeNode
-import javax.swing.tree.DefaultTreeModel
-import javax.swing.tree.TreePath
 
 class AbyssusSelectionTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
@@ -28,22 +28,34 @@ class AbyssusSelectionTest : BasePlatformTestCase() {
         val dir = "Untitled"
         myFixture.copyFileToProject("Tree/Untitled.abss", "$dir/Untitled.abss")
         myFixture.copyFileToProject("Tree/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
-        File("$testDataPath/Tree/assets").listFiles { f -> f.isDirectory }!!.forEach {
-            myFixture.copyFileToProject("Tree/assets/${it.name}/meta.json", "$dir/assets/${it.name}/meta.json")
-        }
+        File("$testDataPath/Tree/assets")
+            .listFiles { f -> f.isDirectory }!!
+            .forEach {
+                myFixture.copyFileToProject("Tree/assets/${it.name}/meta.json", "$dir/assets/${it.name}/meta.json")
+            }
     }
 
     private fun children(node: AbstractTreeNode<*>) = node.children.map { it as AbstractTreeNode<*> }
 
-    private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+    private fun label(node: AbstractTreeNode<*>): String =
+        (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
 
     private fun abssNode(): AbyssusAssetNode =
-        children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") } as AbyssusAssetNode
+        children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
+            as AbyssusAssetNode
 
     private fun assetNodes() =
-        children(abssNode()).filter { label(it) == "assets" || label(it) == "ui" }.flatMap { folder ->
-            children(folder).flatMap { if ((it as DtoEntryNode).value.value is net.nevinsky.abyssus.lib.core.assets.Asset<*>) listOf(it) else children(it) }
-        }
+        children(abssNode())
+            .filter { label(it) == "assets" || label(it) == "ui" }
+            .flatMap { folder ->
+                children(folder).flatMap {
+                    if ((it as DtoEntryNode).value.value is net.nevinsky.abyssus.lib.core.assets.Asset<*>) {
+                        listOf(it)
+                    } else {
+                        children(it)
+                    }
+                }
+            }
 
     // 2.1 publishing
 
@@ -58,7 +70,9 @@ class AbyssusSelectionTest : BasePlatformTestCase() {
 
     fun testSelectingFiresTheTopicOnceAndClearingFiresNull() {
         val seen = mutableListOf<Any?>()
-        project.messageBus.connect(testRootDisposable).subscribe(AbyssusSelectionListener.TOPIC, AbyssusSelectionListener { seen += it })
+        project.messageBus
+            .connect(testRootDisposable)
+            .subscribe(AbyssusSelectionListener.TOPIC, AbyssusSelectionListener { seen += it })
         withTree { tree, a, b ->
             tree.selectionPath = TreePath(a.path)
             assertEquals(listOf<Any?>("a"), seen)

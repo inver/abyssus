@@ -80,8 +80,12 @@ internal class WaterResources(private val log: Logger) : Disposable {
             plan.reflected.size.coerceAtMost(MAX_REFLECTION_TARGETS),
         )
         lastAsked = wanted
-        if (failedFor == wanted) return false
-        if (current == wanted && present(wanted)) return true
+        if (failedFor == wanted) {
+            return false
+        }
+        if (current == wanted && present(wanted)) {
+            return true
+        }
         val state = ShadowGlState()
         return try {
             val max = maxTextureSize()
@@ -97,40 +101,47 @@ internal class WaterResources(private val log: Logger) : Disposable {
                 release()
                 fail(wanted, "a target is larger than the supported texture size $max")
                 false
-            } else runCatchingKeepingCancellation {
-                // only what is missing or the wrong size is made again, so a change in how many levels reflect keeps the rest
-                if (sceneColor?.let { it.width != viewWidth || it.height != viewHeight } == true) {
-                    sceneColor?.dispose(); sceneColor = null
-                }
-                if (sceneColor == null) {
-                    sceneColor = Texture(
-                        viewWidth,
-                        viewHeight,
-                        Pixmap.Format.RGBA8888
-                    ).also { it.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear) }
-                }
-                sceneDepth = packedTargetOf(sceneDepth, wanted.depthW, wanted.depthH)
-                terrainDepth = packedTargetOf(terrainDepth, wanted.depthW, wanted.depthH)
-                for (i in 0 until MAX_REFLECTION_TARGETS) {
-                    val existing = reflectionTargets[i]
-                    if (i >= wanted.reflections) {
-                        existing?.dispose(); reflectionTargets[i] = null
-                        continue
+            } else {
+                runCatchingKeepingCancellation {
+                    // only what is missing or the wrong size is made again, so a change in how many levels reflect
+                    // keeps the rest
+                    if (sceneColor?.let { it.width != viewWidth || it.height != viewHeight } == true) {
+                        sceneColor?.dispose(); sceneColor = null
                     }
-                    if (existing != null && existing.width == wanted.reflW && existing.height == wanted.reflH) continue
-                    existing?.dispose()
-                    reflectionTargets[i] = FrameBuffer(Pixmap.Format.RGBA8888, wanted.reflW, wanted.reflH, true).also {
-                        it.colorBufferTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
-                        it.colorBufferTexture.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge)
+                    if (sceneColor == null) {
+                        sceneColor = Texture(
+                            viewWidth,
+                            viewHeight,
+                            Pixmap.Format.RGBA8888
+                        ).also { it.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear) }
                     }
+                    sceneDepth = packedTargetOf(sceneDepth, wanted.depthW, wanted.depthH)
+                    terrainDepth = packedTargetOf(terrainDepth, wanted.depthW, wanted.depthH)
+                    for (i in 0 until MAX_REFLECTION_TARGETS) {
+                        val existing = reflectionTargets[i]
+                        if (i >= wanted.reflections) {
+                            existing?.dispose(); reflectionTargets[i] = null
+                            continue
+                        }
+                        if (existing != null && existing.width == wanted.reflW && existing.height == wanted.reflH) {
+                            continue
+                        }
+                        existing?.dispose()
+                        reflectionTargets[i] = FrameBuffer(Pixmap.Format.RGBA8888, wanted.reflW, wanted.reflH,
+                            true).also {
+                            it.colorBufferTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
+                            it.colorBufferTexture.setWrap(Texture.TextureWrap.ClampToEdge,
+                                Texture.TextureWrap.ClampToEdge)
+                        }
+                    }
+                    current = wanted
+                    failedFor = null
+                    true
+                }.getOrElse { e ->
+                    release()
+                    fail(wanted, e.message ?: e.javaClass.simpleName)
+                    false
                 }
-                current = wanted
-                failedFor = null
-                true
-            }.getOrElse { e ->
-                release()
-                fail(wanted, e.message ?: e.javaClass.simpleName)
-                false
             }
         } finally {
             state.restore()
@@ -138,7 +149,9 @@ internal class WaterResources(private val log: Logger) : Disposable {
     }
 
     private fun packedTargetOf(existing: FrameBuffer?, width: Int, height: Int): FrameBuffer {
-        if (existing != null && existing.width == width && existing.height == height) return existing
+        if (existing != null && existing.width == width && existing.height == height) {
+            return existing
+        }
         existing?.dispose()
         return packedTarget(width, height)
     }
@@ -158,7 +171,8 @@ internal class WaterResources(private val log: Logger) : Disposable {
     private fun fail(wanted: Wanted, reason: String) {
         failedFor = wanted
         current = null
-        log.warn("Water targets could not be allocated ($reason); water is drawn without reflections, refraction and foam until the view changes size")
+        log.warn("Water targets could not be allocated ($reason); water is drawn without reflections, refraction and " +
+            "foam until the view changes size")
     }
 
     private fun maxTextureSize(): Int {
@@ -184,10 +198,15 @@ internal class WaterResources(private val log: Logger) : Disposable {
         )
     }
 
-    /** Copies the colour of the current framebuffer, [width] by [height], into [sceneColor]. False when there is no such texture. */
+    /**
+     * Copies the colour of the current framebuffer, [width] by [height], into [sceneColor]. False when there is no such
+     * texture.
+     */
     fun captureScene(width: Int, height: Int): Boolean {
         val texture = sceneColor ?: return false
-        if (texture.width != width || texture.height != height) return false
+        if (texture.width != width || texture.height != height) {
+            return false
+        }
         val active = BufferUtils.newIntBuffer(1).also { Gdx.gl.glGetIntegerv(GL20.GL_ACTIVE_TEXTURE, it) }.get(0)
         Gdx.gl.glActiveTexture(GL20.GL_TEXTURE0)
         texture.bind()

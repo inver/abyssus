@@ -36,42 +36,70 @@ import org.junit.rules.TemporaryFolder
 
 /** The instructor's toggle, HUD values and GAME OVER row as the screens publish them, without graphics. */
 class InstructorUiModelTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
-    private val planes = loadField().engine.let { engine -> planeChoices(engine.ids.ids.associateWith { engine.ids[it]!! }) }
+    private val planes =
+        loadField().engine.let { engine -> planeChoices(engine.ids.ids.associateWith { engine.ids[it]!! }) }
     private val flow by lazy {
-        GameFlow(planes, ScoreTable(temp.root.toPath().resolve("s.json")), PatternScoreTable(temp.root.toPath().resolve("p.json")), ScaleScoreTable(temp.root.toPath().resolve("sc.json")))
+        GameFlow(
+            planes,
+            ScoreTable(temp.root.toPath().resolve("s.json")),
+            PatternScoreTable(temp.root.toPath().resolve("p.json")),
+            ScaleScoreTable(temp.root.toPath().resolve("sc.json")),
+        )
     }
     private val model by lazy { GameUiModel(flow) {} }
 
-    private val stunter = PlaneComponent().apply { lineLength = 18f; wingArea = 0.325f; liftSlope = 8f; elevatorEffect = 3f }
+    private val stunter =
+        PlaneComponent().apply {
+            lineLength = 18f
+            wingArea = 0.325f
+            liftSlope = 8f
+            elevatorEffect = 3f
+        }
     private var student = 0f
     private var rescue = 0f
 
-    private val instructor = InstructorControl(
-        FlightControlSource { student },
-        DangerGauge(Handling(stunter, 1.1f)),
-        object : RescueSource {
-            override fun tilt(observation: FlightObservation) = rescue
-            override fun release() = Unit
-        },
-    )
+    private val instructor =
+        InstructorControl(
+            FlightControlSource { student },
+            DangerGauge(Handling(stunter, 1.1f)),
+            object : RescueSource {
+                override fun tilt(observation: FlightObservation) = rescue
+
+                override fun release() = Unit
+            },
+        )
 
     private var time = 10f
 
-    private fun observation(height: Float, vy: Float = 0f) = FlightObservation(
-        time, Vector3(18f, height, 0f), Vector3(0f, vy, -22f), Vector3(), Vector3(0f, 0f, -1f), Vector3(0f, 1f, 0f),
-        height, 25f, 100f, true, 18f, null,
-    ).also { time += 1f / 120f }
+    private fun observation(height: Float, vy: Float = 0f) =
+        FlightObservation(
+                time,
+                Vector3(18f, height, 0f),
+                Vector3(0f, vy, -22f),
+                Vector3(),
+                Vector3(0f, 0f, -1f),
+                Vector3(0f, 1f, 0f),
+                height,
+                25f,
+                100f,
+                true,
+                18f,
+                null,
+            )
+            .also { time += 1f / 120f }
 
     private fun values(instructor: InstructorControl? = null) = model.snapshot(null, null, 0f, null, instructor).toMap()
 
-    private fun flag(name: String, instructor: InstructorControl? = null) = (values(instructor).getValue(name) as UiValue.Bool).value
+    private fun flag(name: String, instructor: InstructorControl? = null) =
+        (values(instructor).getValue(name) as UiValue.Bool).value
 
-    private fun number(name: String, instructor: InstructorControl? = null) = (values(instructor).getValue(name) as UiValue.Num).value
+    private fun number(name: String, instructor: InstructorControl? = null) =
+        (values(instructor).getValue(name) as UiValue.Num).value
 
-    private fun text(name: String, instructor: InstructorControl? = null) = (values(instructor).getValue(name) as UiValue.Text).value
+    private fun text(name: String, instructor: InstructorControl? = null) =
+        (values(instructor).getValue(name) as UiValue.Text).value
 
     private fun flying() {
         flow.freeFlight()
@@ -159,7 +187,8 @@ class InstructorUiModelTest {
         flying()
         assertFalse(flag("isInstructed"))
         instructor.tilt(observation(0.4f, vy = -8f))
-        flow.pause(); flow.mainMenu()
+        flow.pause()
+        flow.mainMenu()
         assertFalse("the main menu shows none", flag("isInstructed", instructor))
         assertFalse(flag("ghostVisible", instructor))
     }
@@ -168,7 +197,10 @@ class InstructorUiModelTest {
     fun gameOverSaysTheInstructorWasNotNeededOrHowOftenItTookOver() {
         flying()
         val flying = flow.screen as Screen.Flying
-        fun facts() = (values().getValue("facts") as UiValue.Rows).items.associate { (it.getValue("name") as UiValue.Text).value to (it.getValue("value") as UiValue.Text).value }
+        fun facts() =
+            (values().getValue("facts") as UiValue.Rows).items.associate {
+                (it.getValue("name") as UiValue.Text).value to (it.getValue("value") as UiValue.Text).value
+            }
         val untouched = FlightReport(flying.plane.name, FlightEnd.LANDED, 100f, FlightResult.Free(0, 0, 1))
         flow.flightEnded(untouched)
         // an empty table takes any score
@@ -187,7 +219,8 @@ class InstructorUiModelTest {
         flow.freeFlight()
         flow.choosePlane()
         flow.flightEnded(FlightReport("Stunter", FlightEnd.LANDED, 100f, FlightResult.Free(0, 0, 1)))
-        val names = (values().getValue("facts") as UiValue.Rows).items.map { (it.getValue("name") as UiValue.Text).value }
+        val names =
+            (values().getValue("facts") as UiValue.Rows).items.map { (it.getValue("name") as UiValue.Text).value }
         assertFalse("Instructor" in names)
     }
 }

@@ -11,19 +11,24 @@ import net.nevinsky.abyssus.lib.core.ui.model.UiWidget
 
 /** Appearance states, lowest priority first: a later state in [UiVisualState.entries] wins over an earlier one. */
 enum class UiVisualState(val json: String) {
-    NORMAL("normal"), FOCUSED("focused"), HOVER("hover"), PRESSED("pressed"), DISABLED(
-        "disabled"
-    )
+    NORMAL("normal"),
+    FOCUSED("focused"),
+    HOVER("hover"),
+    PRESSED("pressed"),
+    DISABLED("disabled"),
 }
 
-enum class UiStyleIssue { MISSING_STYLE, BAD_VALUE }
+enum class UiStyleIssue {
+    MISSING_STYLE,
+    BAD_VALUE,
+}
 
 data class UiStyleDiagnostic(val code: UiStyleIssue, val widgetId: String, val key: String? = null)
 
 /** The merged style values of one widget in one set of states, with typed readers that ignore a malformed value. */
 class UiResolvedStyle(
     private val values: Map<String, JsonNode>,
-    val diagnostics: List<UiStyleDiagnostic> = emptyList()
+    val diagnostics: List<UiStyleDiagnostic> = emptyList(),
 ) {
     fun string(key: String): String? = values[key]?.takeIf { it.isTextual }?.textValue()
 
@@ -42,11 +47,20 @@ class UiResolvedStyle(
 }
 
 fun parseUiColor(text: String): Int? {
-    if (!text.startsWith("#") || (text.length != 7 && text.length != 9)) return null
+    if (!text.startsWith("#") || (text.length != 7 && text.length != 9)) {
+        return null
+    }
     val digits = text.substring(1)
-    if (!digits.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }) return null
+    if (!digits.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }) {
+        return null
+    }
     val rgb = digits.substring(0, 6).toLong(16).toInt()
-    val alpha = if (digits.length == 8) digits.substring(6).toInt(16) else 0xff
+    val alpha =
+        if (digits.length == 8) {
+            digits.substring(6).toInt(16)
+        } else {
+            0xff
+        }
     return (rgb shl 8) or alpha
 }
 
@@ -54,12 +68,20 @@ fun parseUiColor(text: String): Int? {
 private class StyleLayer(val base: Map<String, JsonNode>, val states: Map<UiVisualState, Map<String, JsonNode>>)
 
 private fun layerOf(node: JsonNode?): StyleLayer {
-    if (node == null || !node.isObject) return StyleLayer(emptyMap(), emptyMap())
+    if (node == null || !node.isObject) {
+        return StyleLayer(emptyMap(), emptyMap())
+    }
     val base = node.properties().filter { it.key != "states" && it.key != "name" }.associate { it.key to it.value }
-    val states = UiVisualState.entries.mapNotNull { state ->
-        node.get("states")?.get(state.json)?.takeIf { it.isObject }
-            ?.let { state to it.properties().associate { e -> e.key to e.value } }
-    }.toMap()
+    val states =
+        UiVisualState.entries
+            .mapNotNull { state ->
+                node
+                    .get("states")
+                    ?.get(state.json)
+                    ?.takeIf { it.isObject }
+                    ?.let { state to it.properties().associate { e -> e.key to e.value } }
+            }
+            .toMap()
     return StyleLayer(base, states)
 }
 
@@ -70,7 +92,9 @@ private fun layerOf(node: JsonNode?): StyleLayer {
 class UiStyleResolver(json: JsonProcessor) {
     private val bundled: Map<String, StyleLayer> = run {
         val text =
-            checkNotNull(UiStyleResolver::class.java.getResourceAsStream("/ui/default-theme.json")) { "default UI theme missing" }
+            checkNotNull(UiStyleResolver::class.java.getResourceAsStream("/ui/default-theme.json")) {
+                    "default UI theme missing"
+                }
                 .use { String(it.readAllBytes(), Charsets.UTF_8) }
         json.readObject(text).properties().associate { it.key to layerOf(it.value) }
     }
@@ -78,14 +102,17 @@ class UiStyleResolver(json: JsonProcessor) {
     /** The bundled default for a widget type name (`button`, ...); empty for a type the theme does not style. */
     fun bundledValue(type: String, key: String): JsonNode? = bundled[type]?.base?.get(key)
 
-    // The named styles of the collection last resolved against, built once per collection instance (a republish is a new one).
+    // The named styles of the collection last resolved against, built once per collection instance (a republish is a
+    // new one).
     private var layersFor: UiCollection? = null
     private var layers: Map<String, StyleLayer> = emptyMap()
 
     private fun namedLayers(collection: UiCollection): Map<String, StyleLayer> {
         if (layersFor !== collection) {
             val built = LinkedHashMap<String, StyleLayer>()
-            for (style in collection.styles) if (style.name !in built) built[style.name] = layerOf(style.values)
+            for (style in collection.styles) if (style.name !in built) {
+                built[style.name] = layerOf(style.values)
+            }
             layers = built
             layersFor = collection
         }
@@ -97,14 +124,18 @@ class UiStyleResolver(json: JsonProcessor) {
         collection: UiCollection,
         widget: UiWidget,
         states: Set<UiVisualState>,
-        styleName: String? = widget.style
+        styleName: String? = widget.style,
     ): UiResolvedStyle {
         val diagnostics = mutableListOf<UiStyleDiagnostic>()
         val default = widget.type?.let { bundled[it.json] } ?: StyleLayer(emptyMap(), emptyMap())
-        val named = styleName?.let { name ->
-            namedLayers(collection)[name]
-                ?: run { diagnostics += UiStyleDiagnostic(UiStyleIssue.MISSING_STYLE, widget.id, name); null }
-        } ?: StyleLayer(emptyMap(), emptyMap())
+        val named =
+            styleName?.let { name ->
+                namedLayers(collection)[name]
+                    ?: run {
+                        diagnostics += UiStyleDiagnostic(UiStyleIssue.MISSING_STYLE, widget.id, name)
+                        null
+                    }
+            } ?: StyleLayer(emptyMap(), emptyMap())
         val own = layerOf(widget.properties["styleOverrides"])
         val merged = LinkedHashMap<String, JsonNode>()
         for (layer in listOf(default, named, own)) {
@@ -112,11 +143,14 @@ class UiStyleResolver(json: JsonProcessor) {
         }
         val active = UiVisualState.entries.filter { it == UiVisualState.NORMAL || it in states }
         for (state in active) for (layer in listOf(default, named, own)) layer.states[state]?.let(merged::putAll)
-        for ((key, value) in merged) if (value.isNull) diagnostics += UiStyleDiagnostic(
-            UiStyleIssue.BAD_VALUE,
-            widget.id,
-            key
-        )
+        for ((key, value) in merged) if (value.isNull) {
+            diagnostics +=
+                UiStyleDiagnostic(
+                    UiStyleIssue.BAD_VALUE,
+                    widget.id,
+                    key,
+                )
+        }
         return UiResolvedStyle(merged.filterValues { !it.isNull }, diagnostics)
     }
 }

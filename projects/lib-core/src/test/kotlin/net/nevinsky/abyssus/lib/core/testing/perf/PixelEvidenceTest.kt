@@ -5,22 +5,30 @@
 
 package net.nevinsky.abyssus.lib.core.testing.perf
 
-import org.junit.Assert.*
-import org.junit.Test
 import java.awt.image.BufferedImage
 import java.nio.file.Files
+import org.junit.Assert.*
+import org.junit.Test
 
 class PixelEvidenceTest {
     private val evidence = PixelEvidence()
 
-    private fun image(color: Int) = BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB).also { for (y in 0 until 10) for (x in 0 until 10) it.setRGB(x, y, color) }
+    private fun image(color: Int) =
+        BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB).also {
+            for (y in 0 until 10) for (x in 0 until 10) it.setRGB(x, y, color)
+        }
 
     @Test
-    fun identicalImagesDifferByNothing() = assertEquals(PixelDiff(0, 0.0, 0.0), evidence.diff(image(0x102030), image(0x102030)))
+    fun identicalImagesDifferByNothing() =
+        assertEquals(PixelDiff(0, 0.0, 0.0), evidence.diff(image(0x102030), image(0x102030)))
 
     @Test
     fun theLargestChannelAndTheShareOfDifferingPixelsAreReported() {
-        val b = image(0x102030).also { it.setRGB(0, 0, 0x102034); it.setRGB(1, 0, 0x102030 + 0x050000) }
+        val b =
+            image(0x102030).also {
+                it.setRGB(0, 0, 0x102034)
+                it.setRGB(1, 0, 0x102030 + 0x050000)
+            }
         val diff = evidence.diff(image(0x102030), b)
         assertEquals(5, diff.maxChannel)
         assertEquals(0.02, diff.differingShare, 1e-9)
@@ -37,7 +45,9 @@ class PixelEvidenceTest {
 
     @Test
     fun differentSizesAreRefused() {
-        assertThrows(IllegalArgumentException::class.java) { evidence.diff(image(0), BufferedImage(5, 5, BufferedImage.TYPE_INT_RGB)) }
+        assertThrows(IllegalArgumentException::class.java) {
+            evidence.diff(image(0), BufferedImage(5, 5, BufferedImage.TYPE_INT_RGB))
+        }
     }
 
     @Test
@@ -48,7 +58,10 @@ class PixelEvidenceTest {
             evidence.writeTolerance(tolerance, dir.resolve("t/untitled.json"))
             assertEquals(tolerance, evidence.readTolerance(dir.resolve("t/untitled.json")))
             evidence.writeImage(image(0x336699), dir.resolve("i/a.png"))
-            assertEquals(PixelDiff(0, 0.0, 0.0), evidence.diff(image(0x336699), evidence.readImage(dir.resolve("i/a.png"))))
+            assertEquals(
+                PixelDiff(0, 0.0, 0.0),
+                evidence.diff(image(0x336699), evidence.readImage(dir.resolve("i/a.png"))),
+            )
         } finally {
             dir.deleteRecursively()
         }

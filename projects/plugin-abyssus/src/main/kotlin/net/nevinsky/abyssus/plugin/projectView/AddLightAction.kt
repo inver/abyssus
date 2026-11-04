@@ -4,15 +4,15 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
-import com.intellij.openapi.components.service
-import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
+import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.components.LightPreset
-import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 import net.nevinsky.abyssus.plugin.dto.textOf
@@ -42,7 +42,9 @@ class AddLightGroup(
 
 /** Publish a new entity immediately, then select its row when the asynchronous tree refresh reaches it. */
 internal fun selectCreatedEntity(project: Project, file: VirtualFile, entityId: Long) {
-    val scene = runCatchingKeepingCancellation { service<AbyssusPluginCtx>().documents.parsing.parse(textOf(file)) }.getOrNull()
+    val scene = runCatchingKeepingCancellation {
+        service<AbyssusPluginCtx>().documents.parsing.parse(textOf(file))
+    }.getOrNull()
     val entity = scene?.entity(entityId)
     if (scene != null && entity != null) {
         val row = DtoRow(entityId.toString(), EntityNode(scene, entityId), enabled = entityEye(entity))
@@ -51,8 +53,7 @@ internal fun selectCreatedEntity(project: Project, file: VirtualFile, entityId: 
     selectEntityInAbyssusView(project, file, entityId)
 }
 
-internal fun canAddLight(file: VirtualFile, cache: SceneDocumentCache): Boolean =
-    cache.read(file) != null
+internal fun canAddLight(file: VirtualFile, cache: SceneDocumentCache): Boolean = cache.read(file) != null
 
 /** Only scene rows can create an entity; the tree uses the origin as its placement point. */
 open class AddLightAction : AbyssusTreeAction<VirtualFile>() {
@@ -66,6 +67,10 @@ open class AddLightAction : AbyssusTreeAction<VirtualFile>() {
         e.project?.let { canAddLight(target, SceneDocumentCache.of(it)) } ?: false
 
     override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
-        showActionGroup(e, AddLightGroup(project, target, { Vector3(0f, 0f, 0f) }), AbyssusBundle.message("addLightTitle"))
+        showActionGroup(
+            e,
+            AddLightGroup(project, target, { Vector3(0f, 0f, 0f) }),
+            AbyssusBundle.message("addLightTitle"),
+        )
     }
 }

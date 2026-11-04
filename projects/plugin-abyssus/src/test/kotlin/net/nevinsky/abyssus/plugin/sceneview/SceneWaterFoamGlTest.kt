@@ -26,10 +26,12 @@ class SceneWaterFoamGlTest {
 
     private val orbit = OrbitCamera(WaterGlScenes.BOWL_CENTRE, 520f, 0.0f, 0.5f)
 
-    private fun shoot(params: SceneRenderParams, orbit: OrbitCamera = this.orbit) = WaterGlRig.shoot(params, orbit, size = 800 to 500)
+    private fun shoot(params: SceneRenderParams, orbit: OrbitCamera = this.orbit) = WaterGlRig.shoot(params, orbit,
+        size = 800 to 500)
 
     /** A dark, murky lake: the floor hardly shows, so foam is the only bright thing in the water. */
-    private fun dark(level: Double = 0.0, edit: (WaterSettings) -> WaterSettings = { it }) = WaterGlScenes.bowlLake(level) {
+    private fun dark(level: Double = 0.0, edit: (WaterSettings) -> WaterSettings = { it }) =
+        WaterGlScenes.bowlLake(level) {
         edit(it.copy(tintR = 0.02, tintG = 0.08, tintB = 0.12, clarity = 2.0, waveAmplitude = 0.02))
     }
 
@@ -53,14 +55,18 @@ class SceneWaterFoamGlTest {
 
     private fun luminance(shot: WaterShot, world: Vector3): Double {
         val (x, y) = pixel(shot, world)
-        return WaterGlRig.luminance(WaterGlRig.rgb(shot.image, x.coerceIn(0, shot.image.width - 1), y.coerceIn(0, shot.image.height - 1)))
+        return WaterGlRig.luminance(WaterGlRig.rgb(shot.image, x.coerceIn(0, shot.image.width - 1), y.coerceIn(0,
+            shot.image.height - 1)))
     }
 
     private fun waterMask(shot: WaterShot, land: WaterShot): Array<BooleanArray> =
-        Array(shot.image.height) { y -> BooleanArray(shot.image.width) { x -> shot.image.getRGB(x, y) != land.image.getRGB(x, y) } }
+        Array(shot.image.height) { y -> BooleanArray(shot.image.width) { x -> shot.image.getRGB(x, y) !=
+            land.image.getRGB(x, y) } }
 
     private fun identical(a: BufferedImage, b: BufferedImage): Boolean {
-        for (y in 0 until a.height) for (x in 0 until a.width) if (a.getRGB(x, y) != b.getRGB(x, y)) return false
+        for (y in 0 until a.height) for (x in 0 until a.width) if (a.getRGB(x, y) != b.getRGB(x, y)) {
+            return false
+        }
         return true
     }
 
@@ -88,7 +94,9 @@ class SceneWaterFoamGlTest {
             val mask = waterMask(shot, land)
             var count = 0
             for (y in 0 until shot.image.height) for (x in 0 until shot.image.width) {
-                if (mask[y][x] && WaterGlRig.luminance(WaterGlRig.rgb(shot.image, x, y)) > 0.5) count++
+                if (mask[y][x] && WaterGlRig.luminance(WaterGlRig.rgb(shot.image, x, y)) > 0.5) {
+                    count++
+                }
             }
             return count
         }
@@ -102,16 +110,21 @@ class SceneWaterFoamGlTest {
     @Test fun theFoamBandFollowsTheLevelUpTheShore() {
         val land = shoot(WaterGlScenes.bowlScene(far = 3000f), wide)
         fun ringRadius(level: Double): Float {
-            val shot = shoot(WaterGlScenes.bowlScene(dark(level) { it.copy(foamAmount = 1.0, foamWidth = 1.2) }, far = 3000f), wide)
+            val shot = shoot(WaterGlScenes.bowlScene(dark(level) { it.copy(foamAmount = 1.0, foamWidth = 1.2) }, far =
+                3000f), wide)
             val mask = waterMask(shot, land)
             val radii = (400..760 step 5).map { it.toFloat() }
             var best = radii.first()
             var brightest = -1.0
             for ((i, point) in lateral(radii, wide).withIndex()) {
                 val (x, y) = pixel(shot, point)
-                if (x !in 0 until shot.image.width || y !in 0 until shot.image.height || !mask[y][x]) continue
+                if (x !in 0 until shot.image.width || y !in 0 until shot.image.height || !mask[y][x]) {
+                    continue
+                }
                 val l = luminance(shot, point)
-                if (l > brightest) { brightest = l; best = radii[i] }
+                if (l > brightest) {
+                    brightest = l; best = radii[i]
+                }
             }
             return best
         }
@@ -125,17 +138,21 @@ class SceneWaterFoamGlTest {
 
     @Test fun deepWaterModelsAndTheSurfaceEdgeMakeNoFoam() {
         // a flat floor two units under the lake: models stand in it, and its edges end over open floor
-        fun scene(foam: Double) = WaterGlScenes.flatLake(listOf(WaterGlScenes.lake().copy(foamAmount = foam, foamWidth = 1.5)))
+        fun scene(foam: Double) = WaterGlScenes.flatLake(listOf(WaterGlScenes.lake().copy(foamAmount = foam, foamWidth
+            = 1.5)))
         val with = WaterGlRig.shoot(scene(1.0), OrbitCamera(Vector3(0f, 0f, 0f), 25f, 0.6f, 0.35f))
         val without = WaterGlRig.shoot(scene(0.0), OrbitCamera(Vector3(0f, 0f, 0f), 25f, 0.6f, 0.35f))
-        assertTrue("no foam anywhere over a deep floor, round models or at the edge", identical(with.image, without.image))
+        assertTrue("no foam anywhere over a deep floor, round models or at the edge", identical(with.image,
+            without.image))
         // the edge itself is on screen: a lake that fits inside the view
         val small = WaterGlRig.shoot(
-            WaterGlScenes.flatLake(listOf(WaterGlScenes.lake().copy(width = 20.0, length = 20.0, foamAmount = 1.0, foamWidth = 1.5))),
+            WaterGlScenes.flatLake(listOf(WaterGlScenes.lake().copy(width = 20.0, length = 20.0, foamAmount = 1.0,
+                foamWidth = 1.5))),
             OrbitCamera(Vector3(0f, 0f, 0f), 40f, 0.6f, 0.6f),
         )
         val smallOff = WaterGlRig.shoot(
-            WaterGlScenes.flatLake(listOf(WaterGlScenes.lake().copy(width = 20.0, length = 20.0, foamAmount = 0.0, foamWidth = 1.5))),
+            WaterGlScenes.flatLake(listOf(WaterGlScenes.lake().copy(width = 20.0, length = 20.0, foamAmount = 0.0,
+                foamWidth = 1.5))),
             OrbitCamera(Vector3(0f, 0f, 0f), 40f, 0.6f, 0.6f),
         )
         assertTrue("an extent edge over empty floor shows no foam", identical(small.image, smallOff.image))
@@ -149,7 +166,10 @@ class SceneWaterFoamGlTest {
         var changedLand = 0
         for ((_, point) in lateral(listOf(620f, 640f, 660f, 700f)).withIndex()) {
             val (x, y) = pixel(with, point)
-            if (x in 0 until with.image.width && y in 0 until with.image.height && with.image.getRGB(x, y) != land.image.getRGB(x, y)) changedLand++
+            if (x in 0 until with.image.width && y in 0 until with.image.height && with.image.getRGB(x, y) !=
+                land.image.getRGB(x, y)) {
+                changedLand++
+            }
         }
         assertEquals("land above the water is untouched", 0, changedLand)
         assertTrue("while some water pixels do differ from the land", mask.sumOf { row -> row.count { it } } > 5000)

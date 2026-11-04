@@ -14,6 +14,8 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.io.File
+import java.util.UUID
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
 import net.nevinsky.abyssus.lib.core.editor.pick.SCULPT_BRUSH
@@ -23,8 +25,6 @@ import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SmoothTool
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileStore
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
 import net.nevinsky.abyssus.plugin.testCore
-import java.io.File
-import java.util.UUID
 
 class SculptStrokeCommandTest : BasePlatformTestCase() {
     private val resolution = 17
@@ -48,18 +48,30 @@ class SculptStrokeCommandTest : BasePlatformTestCase() {
     }
 
     private fun bytes(name: String) = File(folder.path, name).takeIf { it.exists() }?.readBytes()
-    private fun sculptFiles() = listOf("abyssus-terrain.base", "abyssus-terrain.sculpt", "abyssus-terrain.sculpt.json").filter { File(folder.path, it).exists() }
 
-    private val target get() = TerrainTarget(1L, TerrainData(resolution, FloatArray(resolution * resolution), size, 1f), Matrix4())
+    private fun sculptFiles() =
+        listOf("abyssus-terrain.base", "abyssus-terrain.sculpt", "abyssus-terrain.sculpt.json").filter {
+            File(folder.path, it).exists()
+        }
+
+    private val target
+        get() = TerrainTarget(1L, TerrainData(resolution, FloatArray(resolution * resolution), size, 1f), Matrix4())
 
     private fun command(
         store: AssetFileStore = LocalAssetFileStore(disk),
         tool: net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptTool = RaiseLowerTool(),
-    ) = SculptStrokeCommand(
-        project, folder, drafts, testCore.terrainSculpt, store,
-        { readTerrainFolder(folder, testCore.json, testCore.terrainRecipes, testCore.terrainSculpt) },
-        { BrushMode(SCULPT_BRUSH, 1L, 30f, 1f) }, { tool }, { reports += it },
-    )
+    ) =
+        SculptStrokeCommand(
+            project,
+            folder,
+            drafts,
+            testCore.terrainSculpt,
+            store,
+            { readTerrainFolder(folder, testCore.json, testCore.terrainRecipes, testCore.terrainSculpt) },
+            { BrushMode(SCULPT_BRUSH, 1L, 30f, 1f) },
+            { tool },
+            { reports += it },
+        )
 
     private fun stroke(c: SculptStrokeCommand) {
         assertTrue(c.pressed(target, Vector3(80f, 0f, 80f)))
@@ -71,7 +83,11 @@ class SculptStrokeCommandTest : BasePlatformTestCase() {
         stroke(command())
         assertFalse(bytes("terrain.data")!!.contentEquals(original))
         assertEquals(3, sculptFiles().size)
-        assertEquals("the base holds the heights from before the stroke", original.toList(), bytes("abyssus-terrain.base")!!.toList())
+        assertEquals(
+            "the base holds the heights from before the stroke",
+            original.toList(),
+            bytes("abyssus-terrain.base")!!.toList(),
+        )
         assertNull("the draft is dropped so every view loads the files", drafts.of(folder.name))
         assertTrue(reports.isEmpty())
     }
@@ -123,12 +139,15 @@ class SculptStrokeCommandTest : BasePlatformTestCase() {
     fun testAFailedWriteRestoresEveryFileAndReportsTheReason() {
         val real = LocalAssetFileStore(disk)
         var writes = 0
-        val failing = object : AssetFileStore by real {
-            override fun write(path: String, bytes: ByteArray) {
-                if (++writes == 2) throw java.io.IOException("disk full")
-                real.write(path, bytes)
+        val failing =
+            object : AssetFileStore by real {
+                override fun write(path: String, bytes: ByteArray) {
+                    if (++writes == 2) {
+                        throw java.io.IOException("disk full")
+                    }
+                    real.write(path, bytes)
+                }
             }
-        }
         stroke(command(failing))
         assertEquals(original.toList(), bytes("terrain.data")!!.toList())
         assertTrue(sculptFiles().isEmpty())

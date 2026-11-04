@@ -6,48 +6,49 @@
 package net.nevinsky.abyssus.plugin.design
 
 import com.intellij.icons.AllIcons
+import com.intellij.ide.projectView.ViewSettings
+import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.tree.TreeUtil
-import net.nevinsky.abyssus.plugin.filetype.AssetIcons
-import net.nevinsky.abyssus.plugin.filetype.ComponentIcons
-import net.nevinsky.abyssus.plugin.filetype.EyeIcons
-import net.nevinsky.abyssus.plugin.filetype.PropertyIcons
-import net.nevinsky.abyssus.plugin.filetype.SceneIcons
-import net.nevinsky.abyssus.plugin.filetype.ScenesIcons
-import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectIcons
-import net.nevinsky.abyssus.plugin.projectView.AbyssusProjectViewPane
 import java.awt.Color
 import java.awt.Component
 import java.awt.Container
 import java.awt.Font
 import java.awt.GridLayout
-import javax.swing.JPanel
-import javax.swing.UIManager
-import com.intellij.ide.projectView.ViewSettings
-import com.intellij.ide.util.treeView.AbstractTreeNode
-import net.nevinsky.abyssus.lib.core.assets.Asset
-import net.nevinsky.abyssus.plugin.projectView.AbyssusAssetNode
-import net.nevinsky.abyssus.plugin.projectView.AbyssusRootNode
-import net.nevinsky.abyssus.plugin.projectView.DtoEntry
-import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
-import net.nevinsky.abyssus.plugin.projectView.SkyboxChoice
-import net.nevinsky.abyssus.plugin.projectView.SkyboxChooserDialog
-import net.nevinsky.abyssus.plugin.properties.AssetPropertiesPanel
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
 import javax.swing.Icon
 import javax.swing.JComponent
-import net.nevinsky.abyssus.plugin.testPanelServices
+import javax.swing.JPanel
+import javax.swing.UIManager
+import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectIcons
+import net.nevinsky.abyssus.plugin.filetype.AssetIcons
+import net.nevinsky.abyssus.plugin.filetype.ComponentIcons
+import net.nevinsky.abyssus.plugin.filetype.EyeIcons
+import net.nevinsky.abyssus.plugin.filetype.PropertyIcons
+import net.nevinsky.abyssus.plugin.filetype.SceneIcons
+import net.nevinsky.abyssus.plugin.filetype.ScenesIcons
+import net.nevinsky.abyssus.plugin.projectView.AbyssusAssetNode
+import net.nevinsky.abyssus.plugin.projectView.AbyssusProjectViewPane
+import net.nevinsky.abyssus.plugin.projectView.AbyssusRootNode
+import net.nevinsky.abyssus.plugin.projectView.DtoEntry
+import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
+import net.nevinsky.abyssus.plugin.projectView.SkyboxChoice
+import net.nevinsky.abyssus.plugin.projectView.SkyboxChooserDialog
+import net.nevinsky.abyssus.plugin.properties.AssetPropertiesPanel
 import net.nevinsky.abyssus.plugin.testCore
+import net.nevinsky.abyssus.plugin.testPanelServices
 
 /**
- * Screenshots of the plugin's components, written to `build/screenshots/`, and the measurable parts of the design canvas
- * ("Abyssus Panel Design": its icon set, row sizes and texts) checked against them. The design is HTML, so pixels are not
- * compared; the sheet `build/screenshots/icons.png` and the panel images are for looking at next to the canvas.
+ * Screenshots of the plugin's components, written to `build/screenshots/`, and the measurable parts of the design
+ * canvas ("Abyssus Panel Design": its icon set, row sizes and texts) checked against them. The design is HTML, so
+ * pixels are not compared; the sheet `build/screenshots/icons.png` and the panel images are for looking at next to the
+ * canvas.
  */
 class DesignScreenshotTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
@@ -74,56 +75,91 @@ class DesignScreenshotTest : BasePlatformTestCase() {
     }
 
     private fun save(name: String, image: BufferedImage) {
-        assertTrue("$name is blank", (0 until image.width step 3).any { x -> (0 until image.height step 3).any { y -> image.getRGB(x, y) ushr 24 != 0 } })
+        assertTrue(
+            "$name is blank",
+            (0 until image.width step 3).any { x ->
+                (0 until image.height step 3).any { y -> image.getRGB(x, y) ushr 24 != 0 }
+            },
+        )
         ImageIO.write(image, "png", File(out, "$name.png"))
     }
 
-    /** Writes what differs from the design to `build/screenshots/<name>-diff.txt`; fails on it only with `-Dabyssus.designStrict=true`. */
+    /**
+     * Writes what differs from the design to `build/screenshots/<name>-diff.txt`; fails on it only with
+     * `-Dabyssus.designStrict=true`.
+     */
     private fun report(name: String, differences: List<String>) {
-        File(out, "$name-diff.txt").writeText(if (differences.isEmpty()) "matches the design\n" else differences.joinToString("\n", postfix = "\n"))
-        if (differences.isNotEmpty()) println("design differences ($name):\n" + differences.joinToString("\n"))
-        if (System.getProperty("abyssus.designStrict") == "true") assertTrue("differs from the design ($name):\n" + differences.joinToString("\n"), differences.isEmpty())
+        File(out, "$name-diff.txt")
+            .writeText(
+                if (differences.isEmpty()) {
+                    "matches the design\n"
+                } else {
+                    differences.joinToString("\n", postfix = "\n")
+                }
+            )
+        if (differences.isNotEmpty()) {
+            println("design differences ($name):\n" + differences.joinToString("\n"))
+        }
+        if (System.getProperty("abyssus.designStrict") == "true") {
+            assertTrue("differs from the design ($name):\n" + differences.joinToString("\n"), differences.isEmpty())
+        }
     }
 
     private fun children(node: AbstractTreeNode<*>) = node.children.map { it as AbstractTreeNode<*> }
-    private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.label() ?: (node as AbyssusAssetNode).virtualFile.name
+
+    private fun label(node: AbstractTreeNode<*>): String =
+        (node as? DtoEntryNode)?.value?.label() ?: (node as AbyssusAssetNode).virtualFile.name
+
     private fun DtoEntry.label() = name
+
     private fun descend(from: AbstractTreeNode<*>, vararg names: String) =
         names.fold(from) { node, name -> children(node).single { label(it) == name } }
+
     private fun abss() = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
+
     private fun entity(id: String) = descend(children(descend(abss(), "scenes")).single(), "ecs", id)
-    private fun asset(name: String) = children(descend(abss(), "assets")).flatMap { children(it) }.single { (it as DtoEntryNode).label == name }
+
+    private fun asset(name: String) =
+        children(descend(abss(), "assets")).flatMap { children(it) }.single { (it as DtoEntryNode).label == name }
 
     private fun copyProject() {
         val dir = "Untitled"
         myFixture.copyFileToProject("$dir/Untitled.abss", "$dir/Untitled.abss")
         myFixture.copyFileToProject("$dir/scenes/Main Scene.scene", "$dir/scenes/Main Scene.scene")
-        File("$testDataPath/$dir/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
-            d.listFiles { f -> f.isFile }!!.filter { it.extension in setOf("json", "png") }.forEach {
-                myFixture.copyFileToProject("$dir/assets/${d.name}/${it.name}", "$dir/assets/${d.name}/${it.name}")
+        File("$testDataPath/$dir/assets")
+            .listFiles { f -> f.isDirectory }!!
+            .forEach { d ->
+                d.listFiles { f -> f.isFile }!!
+                    .filter { it.extension in setOf("json", "png") }
+                    .forEach {
+                        myFixture.copyFileToProject(
+                            "$dir/assets/${d.name}/${it.name}",
+                            "$dir/assets/${d.name}/${it.name}",
+                        )
+                    }
             }
-        }
     }
 
     /** What the design's icon set says each icon looks like: its name there, the icon here, and its hue (`#rrggbb`). */
-    private val designIcons: List<Triple<String, Icon, Int>> = listOf(
-        Triple("Project", AbyssusProjectIcons.FILE, 0x3fb8c9),
-        Triple("Scene", SceneIcons.FILE, 0x7bd88f),
-        Triple("Ambient light", PropertyIcons.LIGHT, 0xe0c458),
-        Triple("Fog", PropertyIcons.FOG, 0x9da0a8),
-        Triple("Skybox", PropertyIcons.SKYBOX, 0x5aa7ff),
-        Triple("ECS", PropertyIcons.ECS, 0xc792ea),
-        Triple("Folder", ScenesIcons.LIST, 0x9da0a8),
-        Triple("Model", AssetIcons.forType("MODEL"), 0xff9e6b),
-        Triple("Terrain", AssetIcons.forType("TERRAIN"), 0xb5c46a),
-        Triple("Transform", ComponentIcons.TRANSFORM, 0x9ec1ff),
-        Triple("Material", AssetIcons.forType("MATERIAL"), 0xf2a07b),
-        Triple("Physics", ComponentIcons.PHYSICS, 0x7bd88f),
-        Triple("Particles", ComponentIcons.PARTICLES, 0x5aa7ff),
-        Triple("Enabled", EyeIcons.ON, 0x3fb8c9),
-        Triple("Disabled", EyeIcons.OFF, 0x8a8e96),
-        Triple("Shader", AssetIcons.forType("SHADER"), 0xf47fb0),
-    )
+    private val designIcons: List<Triple<String, Icon, Int>> =
+        listOf(
+            Triple("Project", AbyssusProjectIcons.FILE, 0x3fb8c9),
+            Triple("Scene", SceneIcons.FILE, 0x7bd88f),
+            Triple("Ambient light", PropertyIcons.LIGHT, 0xe0c458),
+            Triple("Fog", PropertyIcons.FOG, 0x9da0a8),
+            Triple("Skybox", PropertyIcons.SKYBOX, 0x5aa7ff),
+            Triple("ECS", PropertyIcons.ECS, 0xc792ea),
+            Triple("Folder", ScenesIcons.LIST, 0x9da0a8),
+            Triple("Model", AssetIcons.forType("MODEL"), 0xff9e6b),
+            Triple("Terrain", AssetIcons.forType("TERRAIN"), 0xb5c46a),
+            Triple("Transform", ComponentIcons.TRANSFORM, 0x9ec1ff),
+            Triple("Material", AssetIcons.forType("MATERIAL"), 0xf2a07b),
+            Triple("Physics", ComponentIcons.PHYSICS, 0x7bd88f),
+            Triple("Particles", ComponentIcons.PARTICLES, 0x5aa7ff),
+            Triple("Enabled", EyeIcons.ON, 0x3fb8c9),
+            Triple("Disabled", EyeIcons.OFF, 0x8a8e96),
+            Triple("Shader", AssetIcons.forType("SHADER"), 0xf47fb0),
+        )
 
     private fun drawn(icon: Icon, size: Int = 32): BufferedImage {
         val image = BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
@@ -137,17 +173,29 @@ class DesignScreenshotTest : BasePlatformTestCase() {
     /** The average colour of the icon's mostly opaque pixels. */
     private fun hue(icon: Icon): Color {
         val image = drawn(icon)
-        var r = 0L; var gr = 0L; var b = 0L; var n = 0
+        var r = 0L
+        var gr = 0L
+        var b = 0L
+        var n = 0
         for (x in 0 until image.width) for (y in 0 until image.height) {
             val c = Color(image.getRGB(x, y), true)
-            if (c.alpha > 160) { r += c.red; gr += c.green; b += c.blue; n++ }
+            if (c.alpha > 160) {
+                r += c.red
+                gr += c.green
+                b += c.blue
+                n++
+            }
         }
         assertTrue("an icon draws nothing", n > 0)
         return Color((r / n).toInt(), (gr / n).toInt(), (b / n).toInt())
     }
 
     private fun distance(a: Color, b: Int) =
-        maxOf(Math.abs(a.red - (b shr 16 and 255)), Math.abs(a.green - (b shr 8 and 255)), Math.abs(a.blue - (b and 255)))
+        maxOf(
+            Math.abs(a.red - (b shr 16 and 255)),
+            Math.abs(a.green - (b shr 8 and 255)),
+            Math.abs(a.blue - (b and 255)),
+        )
 
     fun testIconSheetAgainstTheDesignsIconSet() {
         val cell = 220
@@ -171,7 +219,9 @@ class DesignScreenshotTest : BasePlatformTestCase() {
             g.color = Color(0xdfe1e5)
             g.drawString(name, x + 84, y + 36)
             val got = hue(icon)
-            if (distance(got, want) > ICON_TOLERANCE) off += "$name is #%06x, the design has #%06x".format(got.rgb and 0xffffff, want)
+            if (distance(got, want) > ICON_TOLERANCE) {
+                off += "$name is #%06x, the design has #%06x".format(got.rgb and 0xffffff, want)
+            }
         }
         g.dispose()
         save("icons", sheet)
@@ -180,7 +230,8 @@ class DesignScreenshotTest : BasePlatformTestCase() {
 
     fun testAbyssusTree() {
         copyProject()
-        // Headless runs keep Swing's Metal look and feel, whose expand/collapse icons throw when painted without a parent.
+        // Headless runs keep Swing's Metal look and feel, whose expand/collapse icons throw when painted without a
+        // parent.
         UIManager.put("Tree.expandedIcon", AllIcons.General.ArrowDown)
         UIManager.put("Tree.collapsedIcon", AllIcons.General.ArrowRight)
         val pane = AbyssusProjectViewPane(project)
@@ -196,7 +247,8 @@ class DesignScreenshotTest : BasePlatformTestCase() {
         }
     }
 
-    private fun panel() = AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
+    private fun panel() =
+        AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
 
     fun testPropertiesPanelStates() {
         copyProject()
@@ -207,8 +259,18 @@ class DesignScreenshotTest : BasePlatformTestCase() {
         }
         shot("empty", null)
         shot("skybox", asset("skybox_default"))
-        shot("model", children(descend(abss(), "assets")).flatMap { children(it) }.first { (it as DtoEntryNode).value.value.let { v -> v is Asset<*> && v.meta.type.name == "MODEL" } })
-        shot("terrain", children(descend(abss(), "assets")).flatMap { children(it) }.first { (it as DtoEntryNode).value.value.let { v -> v is Asset<*> && v.meta.type.name == "TERRAIN" } })
+        shot(
+            "model",
+            children(descend(abss(), "assets"))
+                .flatMap { children(it) }
+                .first { (it as DtoEntryNode).value.value.let { v -> v is Asset<*> && v.meta.type.name == "MODEL" } },
+        )
+        shot(
+            "terrain",
+            children(descend(abss(), "assets"))
+                .flatMap { children(it) }
+                .first { (it as DtoEntryNode).value.value.let { v -> v is Asset<*> && v.meta.type.name == "TERRAIN" } },
+        )
         shot("entity", entity("0"))
         shot("entity-camera", entity("4"))
         shot("component", descend(entity("4"), "CameraComponent"))
@@ -217,11 +279,12 @@ class DesignScreenshotTest : BasePlatformTestCase() {
     }
 
     fun testSkyboxChooser() {
-        val choices = listOf(
-            SkyboxChoice("nebula", 6, listOf("png"), 1, false),
-            SkyboxChoice("dusk", 6, listOf("png"), 0, true),
-            SkyboxChoice("abyss-night", 6, listOf("png"), 0, true),
-        )
+        val choices =
+            listOf(
+                SkyboxChoice("nebula", 6, listOf("png"), 1, false),
+                SkyboxChoice("dusk", 6, listOf("png"), 0, true),
+                SkyboxChoice("abyss-night", 6, listOf("png"), 0, true),
+            )
         val d = SkyboxChooserDialog(project, choices, "nebula", testCore.hdrPreviews.preview)
         Disposer.register(testRootDisposable, d.disposable)
         val rows = JPanel(GridLayout(0, 1))
@@ -231,7 +294,9 @@ class DesignScreenshotTest : BasePlatformTestCase() {
         // the design's picker rows are 56px high, with the selection #2e436e
         choices.indices.forEach {
             val h = d.renderedRow(it + 1, false).preferredSize.height
-            if (h < 56) differences += "chooser row ${it + 1} is ${h}px high, the design has 56px"
+            if (h < 56) {
+                differences += "chooser row ${it + 1} is ${h}px high, the design has 56px"
+            }
         }
         report("chooser", differences)
     }

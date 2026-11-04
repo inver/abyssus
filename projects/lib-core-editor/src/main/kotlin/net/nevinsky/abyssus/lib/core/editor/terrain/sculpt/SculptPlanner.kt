@@ -15,8 +15,8 @@ import net.nevinsky.abyssus.lib.core.editor.terrain.sha256Hex
 
 /**
  * The content every file of a terrain's height layer should have after an operation: `terrain.data`, the recipe and the
- * three sculpt files. A null is a file that should not exist. The plugin compares this with the files as they are
- * and stages the differences as one undoable transaction; nothing here touches the disk.
+ * three sculpt files. A null is a file that should not exist. The plugin compares this with the files as they are and
+ * stages the differences as one undoable transaction; nothing here touches the disk.
  */
 class SculptFileSet(
     val terrain: ByteArray,
@@ -44,7 +44,9 @@ class SculptPlanner(
      */
     fun regenerate(files: SculptFiles, state: SculptState, preview: TerrainPreview, discard: Boolean): SculptFileSet {
         require(state !is SculptState.Unsafe) { "an unsafe sculpt state cannot be regenerated" }
-        require(preview.size == files.size && preview.resolution == files.resolution) { "the preview is of other geometry" }
+        require(preview.size == files.size && preview.resolution == files.resolution) {
+            "the preview is of other geometry"
+        }
         val baseBytes = encoder.encode(preview.heights)
         val recipe = TerrainRecipe(preview.settings, preview.size, preview.resolution, sha256Hex(baseBytes))
         val recipeBytes = recipes.encode(recipe).toByteArray()
@@ -53,7 +55,8 @@ class SculptPlanner(
         }
         val deltaBytes = checkNotNull(files.deltaBytes) { "a sculpted terrain has its delta file" }
         val composed = encoder.encode(composeSculpt(preview.heights, state.delta))
-        val manifest = SculptManifest(SculptBaseKind.RECIPE, files.resolution, sha256Hex(deltaBytes), sha256Hex(composed))
+        val manifest =
+            SculptManifest(SculptBaseKind.RECIPE, files.resolution, sha256Hex(deltaBytes), sha256Hex(composed))
         return SculptFileSet(composed, recipeBytes, manifests.encode(manifest).toByteArray(), deltaBytes, base = null)
     }
 
@@ -63,25 +66,37 @@ class SculptPlanner(
      */
     fun reset(files: SculptFiles, state: SculptState): SculptFileSet {
         require(state is SculptState.Sculpted) { "only a sculpted terrain can be reset" }
-        val base = if (state.kind == SculptBaseKind.STORED) checkNotNull(files.baseBytes) else encoder.encode(state.base)
+        val base =
+            if (state.kind == SculptBaseKind.STORED) {
+                checkNotNull(files.baseBytes)
+            } else {
+                encoder.encode(state.base)
+            }
         return SculptFileSet(base, files.recipeText?.toByteArray(), manifest = null, delta = null, base = null)
     }
 
     /**
      * Forget sculpting: the sculpt files go and `terrain.data` and the recipe stay exactly as they are, so the current
-     * heights become an unsculpted terrain. Offered for an unsafe state; a terrain with no manifest has nothing to forget.
+     * heights become an unsculpted terrain. Offered for an unsafe state; a terrain with no manifest has nothing to
+     * forget.
      */
     fun forget(files: SculptFiles, state: SculptState): SculptFileSet {
         require(state !is SculptState.None) { "there is no sculpting to forget" }
-        return SculptFileSet(files.terrainBytes, files.recipeText?.toByteArray(), manifest = null, delta = null, base = null)
+        return SculptFileSet(
+            files.terrainBytes,
+            files.recipeText?.toByteArray(),
+            manifest = null,
+            delta = null,
+            base = null,
+        )
     }
 
     /**
      * Commits a sculpting stroke held in [draft] (already [SculptDraft.recompose]d) over the terrain whose files are
-     * [files] and whose state was [state]: `terrain.data` takes the composed heights and the delta and manifest are written.
-     * The first stroke of an unsculpted terrain decides the base: a recipe that still reproduces the heights stays the
-     * base (no base file, the recipe is not rewritten); otherwise the heights from before the stroke are written as the
-     * stored base. An unsafe [state] is refused.
+     * [files] and whose state was [state]: `terrain.data` takes the composed heights and the delta and manifest are
+     * written. The first stroke of an unsculpted terrain decides the base: a recipe that still reproduces the heights
+     * stays the base (no base file, the recipe is not rewritten); otherwise the heights from before the stroke are
+     * written as the stored base. An unsafe [state] is refused.
      */
     fun commitStroke(files: SculptFiles, state: SculptState, draft: SculptDraft): SculptFileSet {
         require(state !is SculptState.Unsafe) { "an unsafe sculpt state cannot be sculpted" }
@@ -89,13 +104,22 @@ class SculptPlanner(
         val terrain = encoder.encode(draft.composed)
         val delta = encoder.encode(draft.delta)
         val recipeBytes = files.recipeText?.toByteArray()
-        val kind = when {
-            state is SculptState.Sculpted -> state.kind
-            recipeReproduces(files) -> SculptBaseKind.RECIPE
-            else -> SculptBaseKind.STORED
-        }
-        val base = if (kind != SculptBaseKind.STORED) null else if (state is SculptState.Sculpted) files.baseBytes else files.terrainBytes
-        val manifest = SculptManifest(kind, files.resolution, sha256Hex(delta), sha256Hex(terrain), base?.let { sha256Hex(it) })
+        val kind =
+            when {
+                state is SculptState.Sculpted -> state.kind
+                recipeReproduces(files) -> SculptBaseKind.RECIPE
+                else -> SculptBaseKind.STORED
+            }
+        val base =
+            if (kind != SculptBaseKind.STORED) {
+                null
+            } else if (state is SculptState.Sculpted) {
+                files.baseBytes
+            } else {
+                files.terrainBytes
+            }
+        val manifest =
+            SculptManifest(kind, files.resolution, sha256Hex(delta), sha256Hex(terrain), base?.let { sha256Hex(it) })
         return SculptFileSet(terrain, recipeBytes, manifests.encode(manifest).toByteArray(), delta, base)
     }
 
@@ -103,9 +127,12 @@ class SculptPlanner(
     private fun recipeReproduces(files: SculptFiles): Boolean {
         val text = files.recipeText ?: return false
         val recipe = (recipes.decode(text) as? TerrainRecipeCodec.Decoded.Recipe)?.recipe ?: return false
-        if (recipe.size != files.size || recipe.resolution != files.resolution) return false
-        val heights = runCatchingKeepingCancellation { generator.generate(files.resolution, files.size, recipe.settings) }
-            .getOrNull() ?: return false
+        if (recipe.size != files.size || recipe.resolution != files.resolution) {
+            return false
+        }
+        val heights =
+            runCatchingKeepingCancellation { generator.generate(files.resolution, files.size, recipe.settings) }
+                .getOrNull() ?: return false
         val bytes = encoder.encode(heights)
         return sha256Hex(bytes) == recipe.heightsSha256 && bytes.contentEquals(files.terrainBytes)
     }

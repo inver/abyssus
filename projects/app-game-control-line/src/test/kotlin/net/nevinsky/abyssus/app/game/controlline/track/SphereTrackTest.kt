@@ -84,7 +84,18 @@ class SphereTrackTest {
     fun heightAndOffsetOfAPlaneThirtyDegreesUp() {
         // 18 m from the handle, 30 degrees above its horizon, at azimuth 0 over ground at y = 0
         val position = Vector3(18f * 0.8660254f, 1.5f + 9f, 0f)
-        val s = track.sample(1f, handle, position, Vector3(0f, 0f, -20f), levelAtZero, airborne = true, height = 10.5f, engineRunning = false, handleHeight = 1.5f)
+        val s =
+            track.sample(
+                1f,
+                handle,
+                position,
+                Vector3(0f, 0f, -20f),
+                levelAtZero,
+                airborne = true,
+                height = 10.5f,
+                engineRunning = false,
+                handleHeight = 1.5f,
+            )
         assertEquals(10.5f, s.height, 1e-3f)
         assertEquals(15.588457f, s.offset.x, 1e-3f)
         assertEquals(10.5f, s.offset.y, 1e-3f)

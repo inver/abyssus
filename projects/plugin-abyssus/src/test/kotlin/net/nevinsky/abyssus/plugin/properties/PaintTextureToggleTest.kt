@@ -4,44 +4,69 @@
  */
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.plugin.prettyScene
-
 import com.intellij.openapi.components.service
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.Component
+import java.awt.Container
+import javax.swing.JToggleButton
+import net.nevinsky.abyssus.plugin.prettyScene
 import net.nevinsky.abyssus.plugin.projectView.ComponentTarget
 import net.nevinsky.abyssus.plugin.sceneview.PaintTextureRequests
 import net.nevinsky.abyssus.plugin.sceneview.SculptRequests
 import net.nevinsky.abyssus.plugin.testMetaFiles
 import net.nevinsky.abyssus.plugin.testPanelServices
-import java.awt.Component
-import java.awt.Container
-import javax.swing.JToggleButton
 
 class PaintTextureToggleTest : BasePlatformTestCase() {
     private fun scene(): VirtualFile {
         myFixture.addFileToProject("p/p.abss", """{"format":"abyssus","formatVersion":1,"name":"p"}""")
         val terrain = """{"shaderKey":"terrain","type":"TERRAIN","assetName":"hills"}"""
-        return myFixture.addFileToProject("p/scenes/s.scene", prettyScene("""{"formatVersion":1,"ecs":{
+        return myFixture
+            .addFileToProject(
+                "p/scenes/s.scene",
+                prettyScene(
+                    """{"formatVersion":1,"ecs":{
             "0":{"components":{"RenderComponent":$terrain}},
-            "1":{"components":{"RenderComponent":$terrain}}}}""")).virtualFile
+            "1":{"components":{"RenderComponent":$terrain}}}}"""
+                ),
+            )
+            .virtualFile
     }
 
-    /** Built and then notified, as when the Properties panel shows it: the toggles follow the project's requests from then on. */
-    private fun view(file: VirtualFile, entity: Long = 0L) = EntityDetailsView(
-        project, readEntityState(ComponentTarget(file, entity, null), testPanelServices(project)) as PanelState.EntityDetails, testMetaFiles(),
-    ).also { shown += it; it.addNotify() }
+    /**
+     * Built and then notified, as when the Properties panel shows it: the toggles follow the project's requests from
+     * then on.
+     */
+    private fun view(file: VirtualFile, entity: Long = 0L) =
+        EntityDetailsView(
+                project,
+                readEntityState(ComponentTarget(file, entity, null), testPanelServices(project))
+                    as PanelState.EntityDetails,
+                testMetaFiles(),
+            )
+            .also {
+                shown += it
+                it.addNotify()
+            }
 
     private val shown = mutableListOf<Component>()
 
     override fun tearDown() {
-        try { shown.forEach { it.removeNotify() } } finally { super.tearDown() }
+        try {
+            shown.forEach { it.removeNotify() }
+        } finally {
+            super.tearDown()
+        }
     }
 
     private fun toggle(c: Component, name: String): JToggleButton = find(c, name) as JToggleButton
 
     private fun find(c: Component, name: String): Component? =
-        if (c.name == name) c else (c as? Container)?.components?.firstNotNullOfOrNull { find(it, name) }
+        if (c.name == name) {
+            c
+        } else {
+            (c as? Container)?.components?.firstNotNullOfOrNull { find(it, name) }
+        }
 
     fun testEachToggleEndsTheOther() {
         val file = scene()

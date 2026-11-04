@@ -6,7 +6,8 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 /**
- * A resource made while one GL context was current. [generation] names that context: once it is abandoned or released the
+  * A resource made while one GL context was current. [generation] names that context: once it is abandoned or released
+  * the
  * handle is stale, and nothing may delete the underlying GL object through a later context.
  */
 class Owned<T : Any> internal constructor(
@@ -21,9 +22,11 @@ class Owned<T : Any> internal constructor(
  * the release and abandon functions it is given do.
  *
  * - [own] registers a resource in the current generation.
- * - [releaseAll] (valid context only) and [release] call the resources' release functions, newest first, and forget them. A
+  * - [releaseAll] (valid context only) and [release] call the resources' release functions, newest first, and forget
+  *   them. A
  *   handle of an older generation is never released: its context is gone.
- * - [abandonAll] (no GL, any time, including when a hidden canvas lost its context) calls each resource's abandon function
+  * - [abandonAll] (no GL, any time, including when a hidden canvas lost its context) calls each resource's abandon
+  *   function
  *   (GL-free cleanup of CPU state), forgets them without releasing, and starts the next generation.
  *
  * Releasing and abandoning stay separate operations; this is not a service container and resolves nothing.
@@ -43,9 +46,14 @@ class RenderResources {
     fun <T : Any> own(value: T, release: (T) -> Unit, abandon: (T) -> Unit = {}): Owned<T> =
         Owned(value, generation, release, abandon).also { owned += it }
 
-    /** Releases [handle] when it belongs to the current generation and is still held; false for a stale or unknown handle. */
+    /**
+     * Releases [handle] when it belongs to the current generation and is still held; false for a stale or unknown
+     * handle.
+     */
     fun <T : Any> release(handle: Owned<T>): Boolean {
-        if (handle.generation != generation || !owned.remove(handle)) return false
+        if (handle.generation != generation || !owned.remove(handle)) {
+            return false
+        }
         handle.release(handle.value)
         return true
     }
@@ -61,7 +69,11 @@ class RenderResources {
                 @Suppress("UNCHECKED_CAST")
                 (handle as Owned<Any>).release(handle.value)
             } catch (e: Exception) {
-                if (failure == null) failure = e else failure.addSuppressed(e)
+                if (failure == null) {
+                    failure = e
+                } else {
+                    failure.addSuppressed(e)
+                }
             }
         }
         failure?.let { throw it }

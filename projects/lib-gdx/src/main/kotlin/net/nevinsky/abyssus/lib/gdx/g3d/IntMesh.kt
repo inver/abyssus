@@ -71,7 +71,11 @@ open class IntMesh(isStatic: Boolean, maxVertices: Int, maxIndices: Int, attribu
         if (autoBind) {
             bind(shader)
         }
-        val numInstances = if (isInstanced) instances.numInstances else 0
+        val numInstances = if (isInstanced) {
+            instances.numInstances
+        } else {
+            0
+        }
         if (indices.numIndices > 0) {
             if (count + offset > indices.numMaxIndices) {
                 throw GdxRuntimeException(
@@ -112,7 +116,11 @@ open class IntMesh(isStatic: Boolean, maxVertices: Int, maxIndices: Int, attribu
     }
 
     override fun extendBoundingBox(out: BoundingBox, offset: Int, count: Int, transform: Matrix4?): BoundingBox {
-        val max = if (numIndices == 0) numVertices else numIndices
+        val max = if (numIndices == 0) {
+            numVertices
+        } else {
+            numIndices
+        }
         if (offset < 0 || count < 1 || offset + count > max) {
             throw GdxRuntimeException("Invalid part specified ( offset=$offset, count=$count, max=$max )")
         }
@@ -139,18 +147,34 @@ open class IntMesh(isStatic: Boolean, maxVertices: Int, maxIndices: Int, attribu
     /** Calls [action] with the (transformed) position of each index of the part; the vector is reused. */
     private inline fun forEachPosition(offset: Int, count: Int, transform: Matrix4?, action: (Vector3) -> Unit) {
         val verts = vertices.getBuffer(false)
-        val index = if (numIndices > 0) indexData.intBuffer(false) else null
+        val index = if (numIndices > 0) {
+            indexData.intBuffer(false)
+        } else {
+            null
+        }
         val position = getVertexAttribute(VertexAttributes.Usage.Position)
         val positionOffset = position.offset / Float.SIZE_BYTES
         val stride = vertices.attributes.vertexSize / Float.SIZE_BYTES
         val components = position.numComponents
         for (i in offset until offset + count) {
-            val vertex = if (index != null) index.get(i) else i
+            val vertex = if (index != null) {
+                index.get(i)
+            } else {
+                i
+            }
             val at = vertex * stride + positionOffset
             tmp.set(
                 verts.get(at),
-                if (components > 1) verts.get(at + 1) else 0f,
-                if (components > 2) verts.get(at + 2) else 0f
+                if (components > 1) {
+                    verts.get(at + 1)
+                } else {
+                    0f
+                },
+                if (components > 2) {
+                    verts.get(at + 2)
+                } else {
+                    0f
+                }
             )
             if (transform != null) {
                 tmp.mul(transform)

@@ -6,12 +6,12 @@
 package net.nevinsky.abyssus.lib.core.editor.modelimport
 
 import com.badlogic.gdx.math.Vector3
+import java.io.File
 import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class ImportTransformTest {
     private val fixtures = importFixtures()
@@ -30,7 +30,11 @@ class ImportTransformTest {
             assertEquals(0f, box.getCenterX(), 1e-5f)
             assertEquals(0f, box.getCenterZ(), 1e-5f)
             assertEquals(IMPORT_ROOT, result.data.nodes.single().id)
-            assertSame("the source roots are wrapped, not copied", source.data.nodes.first(), result.data.nodes.single().children.single())
+            assertSame(
+                "the source roots are wrapped, not copied",
+                source.data.nodes.first(),
+                result.data.nodes.single().children.single(),
+            )
             assertEquals("the source is not changed", 1, source.data.nodes.size)
         }
     }
@@ -58,7 +62,8 @@ class ImportTransformTest {
             assertEquals(1.8f, result.size.y, 1e-5f)
         }
         open("crate.obj").use { source ->
-            val result = transform.apply(source.data, ImportSettings("c", LengthUnit.M, UpAxis.Y, FitSize.LargestExtent(3.0)))
+            val result =
+                transform.apply(source.data, ImportSettings("c", LengthUnit.M, UpAxis.Y, FitSize.LargestExtent(3.0)))
             assertEquals(Vector3(3f, 3f, 3f).toString(), result.size.toString())
         }
     }
@@ -73,7 +78,10 @@ class ImportTransformTest {
                 val after = posedPositions(result.data, animation, time)
                 assertEquals(before.size, after.size)
                 for (i in before.indices) {
-                    assertTrue("$animation@$time vertex $i: ${before[i]} != ${after[i]}", before[i].epsilonEquals(after[i], 1e-4f))
+                    assertTrue(
+                        "$animation@$time vertex $i: ${before[i]} != ${after[i]}",
+                        before[i].epsilonEquals(after[i], 1e-4f),
+                    )
                 }
             }
             // mid-Run the spine bends: the top of the bar is no longer straight above the hip

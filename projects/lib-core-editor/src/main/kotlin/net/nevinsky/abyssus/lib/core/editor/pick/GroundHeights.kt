@@ -27,11 +27,19 @@ class GroundHeights(private val terrains: List<TerrainTarget>) : GroundHeight {
             val size = t.data.size.toFloat()
             for (x in floatArrayOf(0f, size)) for (y in floatArrayOf(low, high)) for (z in floatArrayOf(0f, size)) {
                 corner.set(x, y, z).mul(t.world)
-                if (corner.y > top) top = corner.y
-                if (corner.y < bottom) bottom = corner.y
+                if (corner.y > top) {
+                    top = corner.y
+                }
+                if (corner.y < bottom) {
+                    bottom = corner.y
+                }
             }
         }
-        if (top.isFinite() && bottom.isFinite()) top to bottom else null
+        if (top.isFinite() && bottom.isFinite()) {
+            top to bottom
+        } else {
+            null
+        }
     }
 
     private val coarsest: Float = terrains.maxOfOrNull { it.data.size.toFloat() / (it.data.resolution - 1) * 2f } ?: 0f

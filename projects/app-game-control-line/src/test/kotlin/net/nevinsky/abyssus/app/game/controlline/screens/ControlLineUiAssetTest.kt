@@ -43,7 +43,11 @@ class ControlLineUiAssetTest {
     @Test
     fun declaredBindingsAreExactlyThePublishedOnes() {
         val declared = collection.bindings.associate { b ->
-            b.name to if (b.fields.isEmpty()) b.type.json else "list:" + b.fields.joinToString(",") { it.name }
+            b.name to if (b.fields.isEmpty()) {
+                b.type.json
+            } else {
+                "list:" + b.fields.joinToString(",") { it.name }
+            }
         }
         assertEquals(PUBLISHED_BINDINGS, declared)
     }
@@ -76,7 +80,11 @@ class ControlLineUiAssetTest {
     fun everyWidgetStyleIsDefined() {
         val known = collection.styles.map { it.name }.toSet()
         val missing = mutableSetOf<String>()
-        collection.screens.forEach { screen -> walk(screen.root) { w -> w.style?.let { if (it !in known) missing += it } } }
+        collection.screens.forEach { screen -> walk(screen.root) { w -> w.style?.let {
+            if (it !in known) {
+                missing += it
+            }
+        } } }
         assertTrue("undefined styles $missing", missing.isEmpty())
     }
 }

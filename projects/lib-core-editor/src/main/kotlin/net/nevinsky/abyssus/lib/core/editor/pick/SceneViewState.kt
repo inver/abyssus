@@ -21,7 +21,10 @@ val SCULPT_BRUSH = BrushKind.SCULPT
 /** The kind of the Paint Texture brush in [BrushMode.kind]. */
 val SPLAT_BRUSH = BrushKind.SPLAT
 
-/** What a brush kind keeps beside the shared fields of its [BrushMode] (the foliage layer, say); nothing reads it but the kind itself. */
+/**
+ * What a brush kind keeps beside the shared fields of its [BrushMode] (the foliage layer, say); nothing reads it but
+ * the kind itself.
+ */
 interface BrushOptions
 
 /**
@@ -90,7 +93,10 @@ class SceneViewState {
     /** The camera entity the viewport renders from instead of the orbit view, or null. */
     var viewCamera: Long? = null
 
-    /** Transforms shown over the scene's own while a gizmo drag or completed drop is previewed (entity id to where it is now). */
+    /**
+     * Transforms shown over the scene's own while a gizmo drag or completed drop is previewed (entity id to where it is
+     * now).
+     */
     var preview: Map<Long, DragResult> = emptyMap()
 
     /** Simulated poses shown instead of the authored placements while playing (entity id to pose); empty otherwise. */
@@ -103,7 +109,8 @@ class SceneViewState {
     var cloudTechnique: CloudTechnique? = null
 
     /**
-     * The terrain brush mode this view is in, or null; gizmos are hidden and the left button strokes the terrain while it
+      * The terrain brush mode this view is in, or null; gizmos are hidden and the left button strokes the terrain while
+      * it
      * is set. Selecting another entity (or nothing) ends it. Only one brush holds at a time.
      */
     var brush: BrushMode? = null
@@ -116,16 +123,26 @@ class SceneViewState {
         brush = null
     }
 
-    /** The path arrangement being drawn (the model and the points clicked so far), or null; the left click adds points. */
+    /**
+     * The path arrangement being drawn (the model and the points clicked so far), or null; the left click adds points.
+     */
     var drawing: PathDrawing? = null
 
-    /** The points of an arrangement while a handle is dragged or just dropped, shown over the file's; null otherwise. */
+    /**
+     * The points of an arrangement while a handle is dragged or just dropped, shown over the file's; null otherwise.
+     */
     var pathEdit: PathEdit? = null
 
-    /** The points of [pathEditing] edited so far and not yet written; Apply writes them, Close drops them. Null before the first change. */
+    /**
+     * The points of [pathEditing] edited so far and not yet written; Apply writes them, Close drops them. Null before
+     * the first change.
+     */
     var pathDraft: PathEdit? = null
 
-    /** The arrangement whose control points are being edited (Edit in the Properties panel until Apply or Close), or null. */
+    /**
+     * The arrangement whose control points are being edited (Edit in the Properties panel until Apply or Close), or
+     * null.
+     */
     var pathEditing: Long? = null
 
     /** The control point of [pathEditing] that wears the move gizmo, or null. */

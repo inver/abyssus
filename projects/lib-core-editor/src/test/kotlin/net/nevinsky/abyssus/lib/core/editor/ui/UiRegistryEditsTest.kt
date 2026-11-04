@@ -18,19 +18,22 @@ class UiRegistryEditsTest {
     private val edits = UiRegistryEdits()
     private val project = ProjectDto(name = "P", uiAssetNames = listOf("menus"))
 
-    @Test fun registeringAppendsOnce() {
+    @Test
+    fun registeringAppendsOnce() {
         val added = edits.register(project, "hud")!!
         assertEquals(listOf("menus", "hud"), added.uiAssetNames)
         assertNull(edits.register(added, "hud"))
         assertNull(edits.register(project, " "))
     }
 
-    @Test fun unregisteringRemovesOnlyThatName() {
+    @Test
+    fun unregisteringRemovesOnlyThatName() {
         assertEquals(emptyList<String>(), edits.unregister(project, "menus")!!.uiAssetNames)
         assertNull(edits.unregister(project, "other"))
     }
 
-    @Test fun anEmptiedListIsNotWritten() {
+    @Test
+    fun anEmptiedListIsNotWritten() {
         val bare = """{"formatVersion":1,"name":"P"}"""
         val editor = ProjectTextEditor(parsing, json)
         val with = editor.edit(bare) { edits.register(it, "menus") } as TextEditOutcome.Edited
@@ -40,8 +43,11 @@ class UiRegistryEditsTest {
         assertEquals(TextEditOutcome.Unchanged, editor.edit(bare) { edits.unregister(it, "menus") })
     }
 
-    @Test fun otherProjectKeysSurviveAnEdit() {
-        val text = """{"formatVersion":1,"name":"P","activeSceneName":"A","mainCamera":{"near":0.1},"uiAssetNames":["menus"]}"""
+    @Test
+    fun otherProjectKeysSurviveAnEdit() {
+        val text =
+            """{"formatVersion":1,"name":"P","activeSceneName":"A","mainCamera":{"near":0.1},
+"uiAssetNames":["menus"]}"""
         val edited = ProjectTextEditor(parsing, json).edit(text) { edits.register(it, "hud") } as TextEditOutcome.Edited
         val after = parsing.project(edited.text)
         assertEquals("A", after.activeSceneName)

@@ -25,12 +25,17 @@ data class PathSlot(val x: Float, val z: Float, val fallbackY: Float, val yawDeg
     /** Where the copy stands on [heights]. */
     fun position(heights: GroundHeight): Vector3 = Vector3(x, heights.heightAt(x, z, fallbackY), z)
 
-    /** The turn about Y by [yawDegrees] with `w` not negative; libGDX returns the negated, equal rotation for negative angles. */
+    /**
+     * The turn about Y by [yawDegrees] with `w` not negative; libGDX returns the negated, equal rotation for negative
+     * angles.
+     */
     fun rotation(): Quaternion {
         val q = Quaternion().setFromAxis(0f, 1f, 0f, yawDegrees)
         return if (q.w < 0f) {
             q.set(-q.x, -q.y, -q.z, -q.w)
-        } else q
+        } else {
+            q
+        }
     }
 }
 
@@ -51,18 +56,28 @@ class PathLayout {
     fun slots(arrangement: PathArrangementComponent): List<PathSlot>? {
         val points = arrangement.points
         val spacing = arrangement.spacing.toDouble()
-        if (!arrangement.isUsable()) return emptyList()
+        if (!arrangement.isUsable()) {
+            return emptyList()
+        }
 
         // the copies follow the smooth line through the control points, so they are where the view draws it
         val sampled = curve.sample(pointsOf(arrangement), arrangement.closed)
         // a closed line of two points goes there and back
         val line = if (arrangement.closed && points.size == 2) {
             sampled + sampled.first()
-        } else sampled
+        } else {
+            sampled
+        }
         val segments = segments(line, false)
         val length = segments.sumOf { it.length }
-        val perStation = if (arrangement.sides == PathSides.BOTH) 2 else 1
-        val stations = if (length <= 0.0) 1.0 else if (arrangement.closed) {
+        val perStation = if (arrangement.sides == PathSides.BOTH) {
+            2
+        } else {
+            1
+        }
+        val stations = if (length <= 0.0) {
+            1.0
+        } else if (arrangement.closed) {
             ceil((length - EPS) / spacing)
         } else {
             floor((length + EPS) / spacing) + 1
@@ -81,12 +96,18 @@ class PathLayout {
     private fun segments(points: List<Vector3>, closed: Boolean): List<Segment> {
         val out = ArrayList<Segment>()
         var start = 0.0
-        val count = if (closed) points.size else points.size - 1
+        val count = if (closed) {
+            points.size
+        } else {
+            points.size - 1
+        }
         for (i in 0 until count) {
             val from = points[i]
             val to = points[(i + 1) % points.size]
             val length = hypot((to.x - from.x).toDouble(), (to.z - from.z).toDouble())
-            if (length <= 0.0) continue
+            if (length <= 0.0) {
+                continue
+            }
             out += Segment(from, to, start, length)
             start += length
         }
@@ -116,7 +137,11 @@ class PathLayout {
             z = segment.from.z + (segment.to.z - segment.from.z) * t
             y = segment.from.y + (segment.to.y - segment.from.y) * t
         }
-        val heading = if (a.alignToPath) azimuthOf(dx, dz) else 0.0
+        val heading = if (a.alignToPath) {
+            azimuthOf(dx, dz)
+        } else {
+            0.0
+        }
         val offset = a.offset.toDouble()
         // left is up x direction
         val leftX = dz
@@ -135,7 +160,11 @@ class PathLayout {
             PathSides.RIGHT -> add(-1.0, 0.0)
             PathSides.BOTH -> {
                 add(1.0, 0.0)
-                add(-1.0, if (a.alignToPath) 180.0 else 0.0)
+                add(-1.0, if (a.alignToPath) {
+                    180.0
+                } else {
+                    0.0
+                })
             }
         }
     }

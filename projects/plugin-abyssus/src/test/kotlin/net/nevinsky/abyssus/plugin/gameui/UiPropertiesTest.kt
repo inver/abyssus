@@ -4,12 +4,6 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
-import net.nevinsky.abyssus.plugin.uiDocJson
-
-import net.nevinsky.abyssus.plugin.canonicalUi
-import net.nevinsky.abyssus.plugin.admitUi
-
-import net.nevinsky.abyssus.lib.core.editor.ui.*
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
@@ -17,23 +11,29 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.assets.ui.UiPreparedResource
-import net.nevinsky.abyssus.lib.core.assets.ui.UiResourcePreparer
-import net.nevinsky.abyssus.lib.core.assets.ui.UiResourceResolver
-import net.nevinsky.abyssus.lib.core.ui.model.UiActionType
-import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
-import net.nevinsky.abyssus.lib.core.ui.model.UiCollection
-import net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder
-import net.nevinsky.abyssus.plugin.assetfiles.*
 import java.awt.image.BufferedImage
 import java.io.File
 import java.util.concurrent.Executor
 import javax.imageio.ImageIO
 import javax.swing.JComboBox
 import javax.swing.JTextField
+import net.nevinsky.abyssus.lib.core.assets.ui.UiPreparedResource
+import net.nevinsky.abyssus.lib.core.assets.ui.UiResourcePreparer
+import net.nevinsky.abyssus.lib.core.assets.ui.UiResourceResolver
+import net.nevinsky.abyssus.lib.core.editor.ui.*
+import net.nevinsky.abyssus.lib.core.ui.model.UiActionType
+import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
+import net.nevinsky.abyssus.lib.core.ui.model.UiCollection
+import net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder
+import net.nevinsky.abyssus.plugin.admitUi
+import net.nevinsky.abyssus.plugin.assetfiles.*
+import net.nevinsky.abyssus.plugin.canonicalUi
+import net.nevinsky.abyssus.plugin.uiDocJson
 
 class UiPropertiesTest : BasePlatformTestCase() {
-    private val source = canonicalUi("""{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main",
+    private val source =
+        canonicalUi(
+            """{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main",
         "bindings":[
           {"name":"score","type":"number","sample":1},
           {"name":"volume","type":"number","access":"write","sample":0.5},
@@ -44,13 +44,15 @@ class UiPropertiesTest : BasePlatformTestCase() {
         {"id":"main","name":"Main","root":{"id":"root","type":"panel","children":[
           {"id":"title","type":"label","properties":{"text":"Hi"},"layout":{"anchor":"center"}},
           {"id":"list","type":"column","children":[
-            {"id":"go","type":"button","style":"gone","layout":{"grow":1},"actions":{"click":{"type":"openScreen","screenId":"nowhere"}}},
+            {"id":"go","type":"button","style":"gone","layout":{"grow":1},"actions":{"click":{"type":"openScreen",
+"screenId":"nowhere"}}},
             {"id":"vol","type":"slider","bindings":{"value":"score"}},
             {"id":"bad","type":"slider","bindings":{"value":"name","enabled":"ghost"}}]},
           {"id":"pic","type":"image","properties":{"image":"missing"}},
           {"id":"bar","type":"progressBar"},
           {"id":"odd","type":"hologram"}]}},
-        {"id":"other","name":"Other","root":{"id":"o","type":"panel"}}]}}}""")!!
+        {"id":"other","name":"Other","root":{"id":"o","type":"panel"}}]}}}"""
+        )
 
     private val model = UiPropertiesModel()
     private lateinit var file: VirtualFile
@@ -66,9 +68,11 @@ class UiPropertiesTest : BasePlatformTestCase() {
         file = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(File(dir, "assets/menus/meta.json"))!!
     }
 
-    private val collection: UiCollection get() = (admitUi(source) as UiAdmission.Admitted).collection
+    private val collection: UiCollection
+        get() = (admitUi(source) as UiAdmission.Admitted).collection
 
-    private fun controller(): UiEditorController = UiEditorController(project, file, Executor { it.run() }, { it.run() }).also { it.reload() }
+    private fun controller(): UiEditorController =
+        UiEditorController(project, file, Executor { it.run() }, { it.run() }).also { it.reload() }
 
     private fun fields(id: String) = model.fieldsFor(collection, id)!!
 
@@ -79,20 +83,58 @@ class UiPropertiesTest : BasePlatformTestCase() {
     // ---- type-sensitive controls ----
 
     fun testLayoutFieldsFollowTheParentsLayoutPolicy() {
-        assertEquals(listOf("layout.anchor", "layout.pivot", "layout.x", "layout.y", "layout.width", "layout.height"), keys(fields("title").layout))
-        assertEquals("a row or column positions its children: grow, not offsets",
-            listOf("layout.grow", "layout.width", "layout.height"), keys(fields("go").layout))
-        assertEquals(listOf("layout.anchor", "layout.pivot", "layout.x", "layout.y", "layout.width", "layout.height", "layout.padding"), keys(fields("root").layout))
-        assertEquals(listOf("layout.anchor", "layout.pivot", "layout.x", "layout.y", "layout.width", "layout.height", "layout.padding", "layout.spacing", "layout.align"), keys(fields("list").layout))
+        assertEquals(
+            listOf("layout.anchor", "layout.pivot", "layout.x", "layout.y", "layout.width", "layout.height"),
+            keys(fields("title").layout),
+        )
+        assertEquals(
+            "a row or column positions its children: grow, not offsets",
+            listOf("layout.grow", "layout.width", "layout.height"),
+            keys(fields("go").layout),
+        )
+        assertEquals(
+            listOf(
+                "layout.anchor",
+                "layout.pivot",
+                "layout.x",
+                "layout.y",
+                "layout.width",
+                "layout.height",
+                "layout.padding",
+            ),
+            keys(fields("root").layout),
+        )
+        assertEquals(
+            listOf(
+                "layout.anchor",
+                "layout.pivot",
+                "layout.x",
+                "layout.y",
+                "layout.width",
+                "layout.height",
+                "layout.padding",
+                "layout.spacing",
+                "layout.align",
+            ),
+            keys(fields("list").layout),
+        )
     }
 
     fun testContentAndStyleRowsDependOnTheWidgetKind() {
-        assertEquals(listOf("property.text", "property.prefix", "property.suffix", "property.precision"), keys(fields("title").content))
+        assertEquals(
+            listOf("property.text", "property.prefix", "property.suffix", "property.precision"),
+            keys(fields("title").content),
+        )
         assertEquals(listOf("property.text"), keys(fields("go").content))
         assertEquals(listOf("property.image"), keys(fields("pic").content))
         assertEquals(listOf("property.value", "property.maximum"), keys(fields("bar").content))
         assertTrue(fields("vol").content.isEmpty())
-        assertTrue("an unknown widget keeps its place but has no kind-specific rows", fields("odd").let { it.content.isEmpty() && it.style.isEmpty() && it.bindings.isEmpty() && it.actions.isEmpty() })
+        assertTrue(
+            "an unknown widget keeps its place but has no kind-specific rows",
+            fields("odd").let {
+                it.content.isEmpty() && it.style.isEmpty() && it.bindings.isEmpty() && it.actions.isEmpty()
+            },
+        )
         assertEquals(listOf("big"), (fields("go").style.single() as UiField.Choice).options)
         assertEquals(listOf("style"), keys(fields("title").style))
     }
@@ -100,9 +142,20 @@ class UiPropertiesTest : BasePlatformTestCase() {
     fun testBindingRowsOfferOnlyCompatibleBindingsAndTheActionRowOnlyForButtons() {
         val slider = fields("vol").bindings.associateBy { it.key }
         assertEquals(setOf("binding.value", "binding.visible", "binding.enabled", "binding.style"), slider.keys)
-        assertEquals("a number slider value lists number bindings", listOf("score", "volume"), (slider.getValue("binding.value") as UiField.Binding).options)
-        assertEquals("visible and enabled list booleans", listOf("muted"), (slider.getValue("binding.visible") as UiField.Binding).options)
-        assertEquals(setOf("binding.text", "binding.visible", "binding.enabled", "binding.style"), fields("go").bindings.map { it.key }.toSet())
+        assertEquals(
+            "a number slider value lists number bindings",
+            listOf("score", "volume"),
+            (slider.getValue("binding.value") as UiField.Binding).options,
+        )
+        assertEquals(
+            "visible and enabled list booleans",
+            listOf("muted"),
+            (slider.getValue("binding.visible") as UiField.Binding).options,
+        )
+        assertEquals(
+            setOf("binding.text", "binding.visible", "binding.enabled", "binding.style"),
+            fields("go").bindings.map { it.key }.toSet(),
+        )
         assertEquals(listOf("action.click"), keys(fields("go").actions))
         assertTrue(fields("title").actions.isEmpty())
     }
@@ -113,7 +166,11 @@ class UiPropertiesTest : BasePlatformTestCase() {
         val vol = fields("vol").bindings.single { it.key == "binding.value" } as UiField.Binding
         assertEquals("a slider writes back, but score is read-only", UiFieldWarning.READ_ONLY_TARGET, vol.warning)
         val bad = fields("bad").bindings.associateBy { it.key } as Map<String, UiField.Binding>
-        assertEquals("a string binding cannot drive a number slider", UiFieldWarning.INCOMPATIBLE_TARGET, bad.getValue("binding.value").warning)
+        assertEquals(
+            "a string binding cannot drive a number slider",
+            UiFieldWarning.INCOMPATIBLE_TARGET,
+            bad.getValue("binding.value").warning,
+        )
         assertEquals(UiFieldWarning.UNKNOWN_BINDING, bad.getValue("binding.enabled").warning)
         assertNull((fields("title").bindings.first() as UiField.Binding).warning)
     }
@@ -149,9 +206,13 @@ class UiPropertiesTest : BasePlatformTestCase() {
         assertTrue(c.edit("b", model.edit("binding.text", "go", "score")!!))
         assertTrue(c.edit("a", model.actionEdit("go", UiActionType.OPEN_SCREEN, "other")))
         val go = c.collection!!.screens[0].root.children[1].children[0]
-        assertEquals("big", go.style); assertEquals("score", go.bindings["text"])
+        assertEquals("big", go.style)
+        assertEquals("score", go.bindings["text"])
         assertEquals("other", go.actions.getValue("click").screenId)
-        assertTrue("an emit action carries a name", c.edit("a", model.actionEdit("go", UiActionType.EMIT_ACTION, "startGame")))
+        assertTrue(
+            "an emit action carries a name",
+            c.edit("a", model.actionEdit("go", UiActionType.EMIT_ACTION, "startGame")),
+        )
         assertEquals("startGame", c.collection!!.screens[0].root.children[1].children[0].actions.getValue("click").name)
         assertTrue(c.edit("a", model.actionEdit("go", null, null)))
         assertTrue(c.collection!!.screens[0].root.children[1].children[0].actions.isEmpty())
@@ -170,15 +231,20 @@ class UiPropertiesTest : BasePlatformTestCase() {
         c.select("title")
         assertTrue(panel.warnings.isEmpty())
         val width = panel.components.getValue("layout.width") as JTextField
-        width.text = "abc"; width.postActionEvent()
+        width.text = "abc"
+        width.postActionEvent()
         assertFalse("a bad value is not written", text().contains("\"width\""))
-        width.text = "180"; width.postActionEvent()
+        width.text = "180"
+        width.postActionEvent()
         assertTrue(text().contains("\"width\": 180"))
         val anchor = panel.components.getValue("layout.anchor") as JComboBox<*>
         anchor.selectedItem = "topRight"
         assertTrue(text().contains("\"anchor\": \"topRight\""))
         c.select("vol")
-        assertEquals(UiFieldWarning.READ_ONLY_TARGET.name, (panel.warnings.getValue("binding.value").text.let { UiFieldWarning.READ_ONLY_TARGET.name }))
+        assertEquals(
+            UiFieldWarning.READ_ONLY_TARGET.name,
+            (panel.warnings.getValue("binding.value").text.let { UiFieldWarning.READ_ONLY_TARGET.name }),
+        )
         assertTrue(panel.warnings.getValue("binding.value").text.contains("read-only"))
     }
 
@@ -187,8 +253,13 @@ class UiPropertiesTest : BasePlatformTestCase() {
         c.select("title")
         val panel = UiPropertiesPanel(c)
         val before = panel.components.getValue("property.text")
-        (before as JTextField).text = "Typed"; before.postActionEvent()
-        assertSame("the control being edited survives its own commit", before, panel.components["property.text"] ?: before)
+        (before as JTextField).text = "Typed"
+        before.postActionEvent()
+        assertSame(
+            "the control being edited survives its own commit",
+            before,
+            panel.components["property.text"] ?: before,
+        )
         c.select("bar")
         assertTrue(panel.components.containsKey("property.maximum"))
         assertFalse(panel.components.containsKey("property.text"))
@@ -196,13 +267,18 @@ class UiPropertiesTest : BasePlatformTestCase() {
 
     // ---- resource import ----
 
-    private fun png(name: String, w: Int = 8, h: Int = 8): File = File(FileUtil.createTempDirectory("src", null), name).also {
-        ImageIO.write(BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB), "png", it)
-    }
+    private fun png(name: String, w: Int = 8, h: Int = 8): File =
+        File(FileUtil.createTempDirectory("src", null), name).also {
+            ImageIO.write(BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB), "png", it)
+        }
 
-    private fun fnt(dir: File, name: String = "game.fnt", page: String = "game_0.png"): File = File(dir, name).also {
-        it.writeText("info face=\"T\" size=8 padding=0,0,0,0 spacing=1,1\ncommon lineHeight=8 base=6 scaleW=8 scaleH=8 pages=1\npage id=0 file=\"$page\"\nchars count=0\n")
-    }
+    private fun fnt(dir: File, name: String = "game.fnt", page: String = "game_0.png"): File =
+        File(dir, name).also {
+            it.writeText(
+                "info face=\"T\" size=8 padding=0,0,0,0 spacing=1,1\ncommon lineHeight=8 base=6 scaleW=8 scaleH=8 " +
+                    "pages=1\npage id=0 file=\"$page\"\nchars count=0\n"
+            )
+        }
 
     private val importer = UiResourceImporter()
 
@@ -246,22 +322,39 @@ class UiPropertiesTest : BasePlatformTestCase() {
         assertEquals(AssetCommandResult.Done, importUiResource(project, file, staged))
         val folder = File(dir, "assets/menus/fonts/game")
         assertEquals(setOf("game.fnt", "game_0.png"), folder.list()!!.toSet())
-        val prepared = UiResourcePreparer(UiResourceResolver(File(dir, "assets/menus"))).prepare(controller().collection!!)
+        val prepared =
+            UiResourcePreparer(UiResourceResolver(File(dir, "assets/menus"))).prepare(controller().collection!!)
         assertEquals(listOf("game_0.png"), (prepared["game"] as UiPreparedResource.Font).pages.map { it.name })
     }
 
     fun testBadSourcesAreRefusedBeforeAnythingIsCopied() {
         val before = text()
         val big = png("big.png", 8193, 1)
-        for ((what, block) in listOf<Pair<String, () -> Unit>>(
-            "oversized image" to { importer.stageImage(file, big) },
-            "not an image" to { importer.stageImage(file, File.createTempFile("x", ".png").also { it.writeText("no") }) },
-            "a gif" to { importer.stageImage(file, File.createTempFile("x", ".gif")) },
-            "a missing file" to { importer.stageImage(file, File("/nonexistent/none.png")) },
-            "a binary font" to { importer.stageFont(file, File.createTempFile("x", ".fnt").also { it.writeBytes(byteArrayOf(66, 77, 70, 3)) }) },
-            "a font without its page" to { importer.stageFont(file, fnt(FileUtil.createTempDirectory("nopage", null))) },
-            "a page outside the font's folder" to { importer.stageFont(file, fnt(FileUtil.createTempDirectory("esc", null), page = "../other.png")) },
-        )) assertTrue(what, runCatching(block).exceptionOrNull() is IllegalArgumentException)
+        for ((what, block) in
+            listOf<Pair<String, () -> Unit>>(
+                "oversized image" to { importer.stageImage(file, big) },
+                "not an image" to
+                    {
+                        importer.stageImage(file, File.createTempFile("x", ".png").also { it.writeText("no") })
+                    },
+                "a gif" to { importer.stageImage(file, File.createTempFile("x", ".gif")) },
+                "a missing file" to { importer.stageImage(file, File("/nonexistent/none.png")) },
+                "a binary font" to
+                    {
+                        importer.stageFont(
+                            file,
+                            File.createTempFile("x", ".fnt").also { it.writeBytes(byteArrayOf(66, 77, 70, 3)) },
+                        )
+                    },
+                "a font without its page" to
+                    {
+                        importer.stageFont(file, fnt(FileUtil.createTempDirectory("nopage", null)))
+                    },
+                "a page outside the font's folder" to
+                    {
+                        importer.stageFont(file, fnt(FileUtil.createTempDirectory("esc", null), page = "../other.png"))
+                    },
+            )) assertTrue(what, runCatching(block).exceptionOrNull() is IllegalArgumentException)
         assertEquals(before, text())
         assertFalse(File(dir, "assets/menus/images").exists() || File(dir, "assets/menus/fonts").exists())
     }
@@ -269,18 +362,30 @@ class UiPropertiesTest : BasePlatformTestCase() {
     fun testUnsavedOrConcurrentlyChangedMetadataBlocksTheImport() {
         val staged = importer.stageImage(file, png("late.png"))
         val document = FileDocumentManager.getInstance().getDocument(file)!!
-        ApplicationManager.getApplication().runWriteAction { document.setText(document.text.replace("\"Main\"", "\"Edited\"")) }
-        assertEquals("the document changed since staging", AssetCommandResult.Conflict(file.path), importUiResource(project, file, staged))
+        ApplicationManager.getApplication().runWriteAction {
+            document.setText(document.text.replace("\"Main\"", "\"Edited\""))
+        }
+        assertEquals(
+            "the document changed since staging",
+            AssetCommandResult.Conflict(file.path),
+            importUiResource(project, file, staged),
+        )
         assertFalse(File(dir, "assets/menus/images").exists())
         assertTrue("and the author's edit survives", document.text.contains("Edited"))
-        assertTrue("an unsaved document is refused at staging", runCatching { importer.stageImage(file, png("again.png")) }.exceptionOrNull() is IllegalArgumentException)
+        assertTrue(
+            "an unsaved document is refused at staging",
+            runCatching { importer.stageImage(file, png("again.png")) }.exceptionOrNull() is IllegalArgumentException,
+        )
     }
 
     fun testAFailureWhileCopyingLeavesNothingBehind() {
         val staged = importer.stageImage(file, png("fail.png"))
-        val store = object : AssetFileStore by LocalAssetFileStore(File(dir, "assets/menus")) {
-            override fun write(path: String, bytes: ByteArray) { throw java.io.IOException("disk full") }
-        }
+        val store =
+            object : AssetFileStore by LocalAssetFileStore(File(dir, "assets/menus")) {
+                override fun write(path: String, bytes: ByteArray) {
+                    throw java.io.IOException("disk full")
+                }
+            }
         val before = text()
         assertTrue(importUiResource(project, file, staged, store) is AssetCommandResult.Failed)
         assertEquals(before, text())
@@ -290,38 +395,83 @@ class UiPropertiesTest : BasePlatformTestCase() {
     // ---- declaration forms and panel ----
 
     private fun valid(r: FormResult<Any?>) = (r as FormResult.Valid).value
+
     private fun js(v: Any?) = uiDocJson.toString(v!!)
+
     private fun errors(r: FormResult<*>) = (r as FormResult.Invalid).errors.map { it.field to it.message }
 
     fun testBindingFormsAreValidatedBeforeAnythingIsWritten() {
-        assertEquals("""{"access":"write","sample":0.5,"min":0,"max":1,"step":0.05,"maxLength":12}""",
-            js(valid(bindingMembers(BindingForm("v", "number", "write", "0.5", "0", "1", "0.05", "12"), uiDocJson))))
+        assertEquals(
+            """{"access":"write","sample":0.5,"min":0,"max":1,"step":0.05,"maxLength":12}""",
+            js(valid(bindingMembers(BindingForm("v", "number", "write", "0.5", "0", "1", "0.05", "12"), uiDocJson))),
+        )
         assertEquals("""{}""", js(valid(bindingMembers(BindingForm("v", "number", "readOnly"), uiDocJson))))
-        assertEquals("""{"sample":true}""", js(valid(bindingMembers(BindingForm("m", "boolean", "readOnly", "TRUE"), uiDocJson))))
-        assertEquals("""{"sample":"hi"}""", js(valid(bindingMembers(BindingForm("s", "string", "readOnly", "hi"), uiDocJson))))
+        assertEquals(
+            """{"sample":true}""",
+            js(valid(bindingMembers(BindingForm("m", "boolean", "readOnly", "TRUE"), uiDocJson))),
+        )
+        assertEquals(
+            """{"sample":"hi"}""",
+            js(valid(bindingMembers(BindingForm("s", "string", "readOnly", "hi"), uiDocJson))),
+        )
         assertEquals(listOf("name" to "name"), errors(bindingMembers(BindingForm(" ", "number"), uiDocJson)))
-        assertEquals(listOf("sample" to "sample"), errors(bindingMembers(BindingForm("v", "number", sample = "abc"), uiDocJson)))
-        assertEquals(listOf("sample" to "sample"), errors(bindingMembers(BindingForm("m", "boolean", sample = "maybe"), uiDocJson)))
-        assertEquals(listOf("min" to "range"), errors(bindingMembers(BindingForm("v", "number", min = "5", max = "1"), uiDocJson)))
-        assertEquals(listOf("step" to "positive"), errors(bindingMembers(BindingForm("v", "number", step = "0"), uiDocJson)))
-        assertEquals(listOf("maxLength" to "length"), errors(bindingMembers(BindingForm("s", "string", maxLength = "-1"), uiDocJson)))
-        assertEquals(listOf("min" to "number"), errors(bindingMembers(BindingForm("v", "number", min = "NaN"), uiDocJson)))
+        assertEquals(
+            listOf("sample" to "sample"),
+            errors(bindingMembers(BindingForm("v", "number", sample = "abc"), uiDocJson)),
+        )
+        assertEquals(
+            listOf("sample" to "sample"),
+            errors(bindingMembers(BindingForm("m", "boolean", sample = "maybe"), uiDocJson)),
+        )
+        assertEquals(
+            listOf("min" to "range"),
+            errors(bindingMembers(BindingForm("v", "number", min = "5", max = "1"), uiDocJson)),
+        )
+        assertEquals(
+            listOf("step" to "positive"),
+            errors(bindingMembers(BindingForm("v", "number", step = "0"), uiDocJson)),
+        )
+        assertEquals(
+            listOf("maxLength" to "length"),
+            errors(bindingMembers(BindingForm("s", "string", maxLength = "-1"), uiDocJson)),
+        )
+        assertEquals(
+            listOf("min" to "number"),
+            errors(bindingMembers(BindingForm("v", "number", min = "NaN"), uiDocJson)),
+        )
     }
 
     fun testStyleFormsBuildStateOverridesAndRejectBadColours() {
-        assertEquals("""{"fontSize":24,"color":"#ff0000","background":"#101010ff","padding":4,"font":"game","states":{"hover":{"background":"#202020"},"disabled":{"background":"#333333"}}}""",
-            js(valid(styleValues(StyleForm("s", "24", "#ff0000", "#101010ff", "4", "game", "#202020", "", "#333333")))))
+        assertEquals(
+            """{"fontSize":24,"color":"#ff0000","background":"#101010ff","padding":4,"font":"game",""" +
+                """"states":{"hover":{"background":"#202020"},"disabled":{"background":"#333333"}}}""",
+            js(valid(styleValues(StyleForm("s", "24", "#ff0000", "#101010ff", "4", "game", "#202020", "", "#333333")))),
+        )
         assertEquals("{}", js(valid(styleValues(StyleForm("s")))))
-        assertEquals(listOf("name" to "name", "color" to "color", "hover" to "color", "fontSize" to "number"),
-            errors(styleValues(StyleForm("", "-3", "red", hover = "#12"))).sortedBy { listOf("name", "color", "hover", "fontSize").indexOf(it.first) })
+        assertEquals(
+            listOf("name" to "name", "color" to "color", "hover" to "color", "fontSize" to "number"),
+            errors(styleValues(StyleForm("", "-3", "red", hover = "#12"))).sortedBy {
+                listOf("name", "color", "hover", "fontSize").indexOf(it.first)
+            },
+        )
     }
 
     fun testTheDeclarationsListShowBindingsStylesAndResourcesWithTheirProblems() {
-        val declared = source.replace("\"styles\"", "\"resources\":[{\"id\":\"gone\",\"kind\":\"image\",\"path\":\"images/none.png\"},{\"id\":\"esc\",\"kind\":\"image\",\"path\":\"../x.png\"}],\"styles\"")
-        ApplicationManager.getApplication().runWriteAction { FileDocumentManager.getInstance().getDocument(file)!!.setText(declared) }
+        val declared =
+            source.replace(
+                "\"styles\"",
+                "\"resources\":[{\"id\":\"gone\",\"kind\":\"image\",\"path\":\"images/none.png\"}," +
+                    "{\"id\":\"esc\",\"kind\":\"image\",\"path\":\"../x.png\"}],\"styles\"",
+            )
+        ApplicationManager.getApplication().runWriteAction {
+            FileDocumentManager.getInstance().getDocument(file)!!.setText(declared)
+        }
         val c = controller()
         val panel = UiDeclarationsPanel(project, c)
-        assertEquals(listOf("score : number", "volume : number (write)", "name : string (write)", "muted : boolean (write)"), panel.bindings.model.let { m -> (0 until m.size).map { m.getElementAt(it) } })
+        assertEquals(
+            listOf("score : number", "volume : number (write)", "name : string (write)", "muted : boolean (write)"),
+            panel.bindings.model.let { m -> (0 until m.size).map { m.getElementAt(it) } },
+        )
         assertEquals(listOf("big"), panel.styles.model.let { m -> (0 until m.size).map { m.getElementAt(it) } })
         val rows = panel.resources.model.let { m -> (0 until m.size).map { m.getElementAt(it) } }
         assertTrue(rows[0], rows[0].contains("The file is missing."))

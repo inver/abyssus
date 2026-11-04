@@ -16,17 +16,29 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PhongToPbrTest {
-    private fun phong(configure: ModelMaterial.() -> Unit) = ModelMaterial().apply {
-        id = "m"
-        textures = Array()
-        configure()
-    }
+    private fun phong(configure: ModelMaterial.() -> Unit) =
+        ModelMaterial().apply {
+            id = "m"
+            textures = Array()
+            configure()
+        }
 
-    private fun texture(usage: Int) = ModelTexture().apply { this.usage = usage; fileName = "t$usage.png" }
+    private fun texture(usage: Int) =
+        ModelTexture().apply {
+            this.usage = usage
+            fileName = "t$usage.png"
+        }
 
     @Test
     fun diffuseBecomesTheBaseColourAndMetallicIsZero() {
-        val result = PhongToPbr().convert(phong { diffuse = Color(0.5f, 0.25f, 1f, 1f); textures.add(texture(ModelTexture.USAGE_DIFFUSE)) })
+        val result =
+            PhongToPbr()
+                .convert(
+                    phong {
+                        diffuse = Color(0.5f, 0.25f, 1f, 1f)
+                        textures.add(texture(ModelTexture.USAGE_DIFFUSE))
+                    }
+                )
         assertEquals(Color(0.5f, 0.25f, 1f, 1f), result.material.baseColor)
         assertEquals(0f, result.material.metallic!!, 0f)
         assertEquals(listOf(ModelTexture.USAGE_DIFFUSE), result.material.textures.map { it.usage })
@@ -41,24 +53,36 @@ class PhongToPbrTest {
 
     @Test
     fun withoutShininessTheRoughnessIsTheDefault() {
-        assertEquals(PhongToPbr.DEFAULT_ROUGHNESS, PhongToPbr().convert(phong { }).material.roughness!!, 0f)
+        assertEquals(PhongToPbr.DEFAULT_ROUGHNESS, PhongToPbr().convert(phong {}).material.roughness!!, 0f)
     }
 
     @Test
     fun opacityBelowOneBlends() {
-        val material = PhongToPbr().convert(phong { diffuse = Color.RED; opacity = 0.4f }).material
+        val material =
+            PhongToPbr()
+                .convert(
+                    phong {
+                        diffuse = Color.RED
+                        opacity = 0.4f
+                    }
+                )
+                .material
         assertEquals(PbrModelMaterial.AlphaMode.BLEND, material.alphaMode)
         assertEquals(0.4f, material.baseColor!!.a, 1e-6f)
-        assertEquals(PbrModelMaterial.AlphaMode.OPAQUE, PhongToPbr().convert(phong { }).material.alphaMode)
+        assertEquals(PbrModelMaterial.AlphaMode.OPAQUE, PhongToPbr().convert(phong {}).material.alphaMode)
     }
 
     @Test
     fun specularIsReportedAsDropped() {
-        val result = PhongToPbr().convert(phong {
-            specular = Color(0.9f, 0.9f, 0.9f, 1f)
-            textures.add(texture(ModelTexture.USAGE_SPECULAR))
-            textures.add(texture(ModelTexture.USAGE_NORMAL))
-        })
+        val result =
+            PhongToPbr()
+                .convert(
+                    phong {
+                        specular = Color(0.9f, 0.9f, 0.9f, 1f)
+                        textures.add(texture(ModelTexture.USAGE_SPECULAR))
+                        textures.add(texture(ModelTexture.USAGE_NORMAL))
+                    }
+                )
         assertEquals(listOf("specular colour dropped", "specular map dropped"), result.approximated)
         assertEquals(listOf(ModelTexture.USAGE_NORMAL), result.material.textures.map { it.usage })
     }
@@ -70,7 +94,11 @@ class PhongToPbrTest {
 
     @Test
     fun aPbrMaterialIsKept() {
-        val pbr = PbrModelMaterial().apply { metallic = 1f; roughness = 0.3f }
+        val pbr =
+            PbrModelMaterial().apply {
+                metallic = 1f
+                roughness = 0.3f
+            }
         val result = PhongToPbr().convert(pbr)
         assertSame(pbr, result.material)
         assertTrue(result.approximated.isEmpty())

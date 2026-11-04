@@ -23,13 +23,13 @@ fun interface ComponentSchemasListener {
     fun schemasChanged()
 
     companion object {
-        @Topic.ProjectLevel
-        val TOPIC = Topic.create("Abyssus component schemas", ComponentSchemasListener::class.java)
+        @Topic.ProjectLevel val TOPIC = Topic.create("Abyssus component schemas", ComponentSchemasListener::class.java)
     }
 }
 
 /**
- * The component editor of a project's scenes. It edits built-ins and, for enabled native projects, the fixed physics kinds. Game components remain opaque.
+ * The component editor of a project's scenes. It edits built-ins and, for enabled native projects, the fixed physics
+ * kinds. Game components remain opaque.
  */
 @Service(Service.Level.PROJECT)
 class ComponentSchemas(private val project: Project) : Disposable {
@@ -38,16 +38,24 @@ class ComponentSchemas(private val project: Project) : Disposable {
     private val settings = project.service<AbyssusProjectSettings>()
 
     init {
-        project.messageBus.connect(this).subscribe(ProjectSettingsListener.TOPIC, ProjectSettingsListener { _, _ -> reload() })
+        project.messageBus
+            .connect(this)
+            .subscribe(ProjectSettingsListener.TOPIC, ProjectSettingsListener { _, _ -> reload() })
     }
 
     /** The component editor for [sceneFile]'s scene. */
     fun editorFor(sceneFile: VirtualFile): ComponentEditor =
-        if (ProjectLayout.abssFor(sceneFile)?.let { settings.getSettings(it).physicsEnabled } == true) physicsEditor else editor
+        if (ProjectLayout.abssFor(sceneFile)?.let { settings.getSettings(it).physicsEnabled } == true) {
+            physicsEditor
+        } else {
+            editor
+        }
 
     /** Tells the listeners to read the components again. */
     fun reload() {
-        if (!project.isDisposed) project.messageBus.syncPublisher(ComponentSchemasListener.TOPIC).schemasChanged()
+        if (!project.isDisposed) {
+            project.messageBus.syncPublisher(ComponentSchemasListener.TOPIC).schemasChanged()
+        }
     }
 
     override fun dispose() = Unit

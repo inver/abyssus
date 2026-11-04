@@ -1,12 +1,12 @@
 package net.nevinsky.abyssus.lib.core.io
 
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.SCENES_DIR
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.SCENES_DIR
 
 class FileLoader(val projectDir: File) {
 
@@ -39,20 +39,24 @@ class FileLoader(val projectDir: File) {
 
     fun folder(assetName: String): File? {
         // an asset name is a folder name: refuse anything that could leave the assets folder
-        if (assetName.isEmpty() || assetName.contains('/') || assetName.contains('\\') || assetName == ".." || assetName == ".") {
+        if (
+            assetName.isEmpty() ||
+                assetName.contains('/') ||
+                assetName.contains('\\') ||
+                assetName == ".." ||
+                assetName == "."
+        ) {
             return null
         }
         return File(assetsDir, assetName).takeIf { it.isDirectory }
     }
 
     fun loadProjectFile(projectName: String): File {
-        return file(projectDir, projectName)
-            ?: throw IllegalStateException("Failed to load scene '$projectName'")
+        return file(projectDir, projectName) ?: throw IllegalStateException("Failed to load scene '$projectName'")
     }
 
     fun loadSceneFile(sceneName: String): File {
-        return file(scenesDir, sceneName)
-            ?: throw IllegalStateException("Failed to load scene '$sceneName'")
+        return file(scenesDir, sceneName) ?: throw IllegalStateException("Failed to load scene '$sceneName'")
     }
 
     /** The file [name] inside [folder], or null when it is blank, missing, absolute or outside the folder. */
@@ -65,16 +69,29 @@ class FileLoader(val projectDir: File) {
 }
 
 /**
- * The regular file [name] under [folder] when it is relative, names no network location and neither `..` nor a
- * symbolic link leads out of [folder]; null otherwise.
+ * The regular file [name] under [folder] when it is relative, names no network location and neither `..` nor a symbolic
+ * link leads out of [folder]; null otherwise.
  */
 fun confinedFile(folder: File, name: String): File? {
-    if (name.isBlank() || name.contains("://") || name.startsWith("//") || name.startsWith("\\\\")) return null
-    if (File(name).isAbsolute || name.startsWith("/") || name.startsWith("\\")) return null
+    if (name.isBlank() || name.contains("://") || name.startsWith("//") || name.startsWith("\\\\")) {
+        return null
+    }
+    if (File(name).isAbsolute || name.startsWith("/") || name.startsWith("\\")) {
+        return null
+    }
     val root = folder.toPath().toAbsolutePath().normalize()
-    val candidate = try { root.resolve(name).normalize() } catch (e: InvalidPathException) { return null }
-    if (candidate == root || !candidate.startsWith(root)) return null
-    if (!Files.isRegularFile(candidate)) return null
+    val candidate =
+        try {
+            root.resolve(name).normalize()
+        } catch (e: InvalidPathException) {
+            return null
+        }
+    if (candidate == root || !candidate.startsWith(root)) {
+        return null
+    }
+    if (!Files.isRegularFile(candidate)) {
+        return null
+    }
     val real: Path
     val realRoot: Path
     try {
@@ -83,6 +100,8 @@ fun confinedFile(folder: File, name: String): File? {
     } catch (e: IOException) {
         return null
     }
-    if (!real.startsWith(realRoot)) return null
+    if (!real.startsWith(realRoot)) {
+        return null
+    }
     return candidate.toFile()
 }

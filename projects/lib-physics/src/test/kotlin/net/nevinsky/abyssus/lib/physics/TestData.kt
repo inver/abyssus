@@ -32,7 +32,9 @@ fun physicsLoader(
 ): RuntimeSceneLoader {
     val json = JsonProcessor(log)
     val registry = ComponentRegistry().also {
-        if (physics) it.registerAll(PHYSICS_COMPONENTS)
+        if (physics) {
+            it.registerAll(PHYSICS_COMPONENTS)
+        }
         it.registerAll(extra)
     }
     return RuntimeSceneLoader(

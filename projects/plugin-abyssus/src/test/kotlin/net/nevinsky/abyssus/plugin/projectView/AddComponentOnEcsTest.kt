@@ -4,7 +4,6 @@
  */
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.plugin.testMetaFiles
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.actionSystem.ActionGroup
@@ -17,8 +16,9 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.ecs.component.*
 import java.io.File
+import net.nevinsky.abyssus.lib.core.ecs.component.*
+import net.nevinsky.abyssus.plugin.testMetaFiles
 
 /** Add Component... on a scene's `ecs` row: a new entity holding the chosen component. */
 class AddComponentOnEcsTest : BasePlatformTestCase() {
@@ -28,22 +28,41 @@ class AddComponentOnEcsTest : BasePlatformTestCase() {
         val dir = "Untitled"
         myFixture.copyFileToProject("Tree/Untitled.abss", "$dir/Untitled.abss")
         myFixture.copyFileToProject(sceneFixture, "$dir/scenes/Main Scene.scene")
-        File("$testDataPath/Tree/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
-            d.listFiles { f -> f.isFile && f.extension == "json" }!!.forEach {
-                myFixture.copyFileToProject("Tree/assets/${d.name}/${it.name}", "$dir/assets/${d.name}/${it.name}")
+        File("$testDataPath/Tree/assets")
+            .listFiles { f -> f.isDirectory }!!
+            .forEach { d ->
+                d.listFiles { f -> f.isFile && f.extension == "json" }!!.forEach {
+                        myFixture.copyFileToProject(
+                            "Tree/assets/${d.name}/${it.name}",
+                            "$dir/assets/${d.name}/${it.name}",
+                        )
+                    }
             }
-        }
     }
 
     private fun children(node: AbstractTreeNode<*>) = node.children.map { it as AbstractTreeNode<*> }
-    private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+
+    private fun label(node: AbstractTreeNode<*>): String =
+        (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+
     private fun abss() = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
+
     private fun sceneNode() = children(children(abss()).single { label(it) == "scenes" }).single()
+
     private fun ecsRow() = children(sceneNode()).single { label(it) == "ecs" }
+
     private fun scene() = viewableSceneFile(sceneNode())!!
+
     private fun document() = FileDocumentManager.getInstance().getDocument(scene())!!
+
     private fun root() = net.nevinsky.abyssus.plugin.parsedScene(document().text)
-    private fun text(e: net.nevinsky.abyssus.lib.core.dto.EntityDto) = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.json.toString(e)
+
+    private fun text(e: net.nevinsky.abyssus.lib.core.dto.EntityDto) =
+        com.intellij.openapi.components
+            .service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>()
+            .documents
+            .json
+            .toString(e)
 
     private class AddOn(val node: Any?) : AddComponentOnEcsAction() {
         override fun selected(e: AnActionEvent) = node
@@ -100,7 +119,10 @@ class AddComponentOnEcsTest : BasePlatformTestCase() {
         copyProject()
         val entityRow = children(ecsRow()).first { componentTargetOf(it)?.entityId == 0L }
         val target = componentTargetOf(entityRow)!!
-        val light = AddComponentAction().choices(project, target, testMetaFiles()).getChildren(null).first { it.templatePresentation.text == "Light" }
+        val light =
+            AddComponentAction().choices(project, target, testMetaFiles()).getChildren(null).first {
+                it.templatePresentation.text == "Light"
+            }
         light.actionPerformed(TestActionEvent.createTestEvent(light))
         val ecs = root().ecs
         assertNotNull(ecs.getValue(0L).component(LightComponent::class.java))

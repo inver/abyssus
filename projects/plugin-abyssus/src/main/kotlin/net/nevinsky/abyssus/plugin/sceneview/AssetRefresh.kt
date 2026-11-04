@@ -45,8 +45,14 @@ class AssetRefresh(
 
     /** Something under the project's assets (a file, or the text of a metadata document) changed. */
     fun changed() {
-        if (disposed) return
-        if (running) again = true else schedule()
+        if (disposed) {
+            return
+        }
+        if (running) {
+            again = true
+        } else {
+            schedule()
+        }
     }
 
     fun dispose() {
@@ -54,7 +60,9 @@ class AssetRefresh(
     }
 
     private fun schedule() {
-        if (disposed) return
+        if (disposed) {
+            return
+        }
         running = true
         again = false
         val overrides = unsavedMeta()
@@ -69,15 +77,21 @@ class AssetRefresh(
 
     private fun finished(snapshot: ProjectRevisions?, overrides: Map<File, String>) {
         running = false
-        if (disposed) return
+        if (disposed) {
+            return
+        }
         if (snapshot != null) {
             val before = baseline
             baseline = snapshot
             if (before != null) {
                 val names = tracker.changed(before, snapshot)
-                if (names.isNotEmpty()) deliver(AssetRevisionBatch(names, overrides))
+                if (names.isNotEmpty()) {
+                    deliver(AssetRevisionBatch(names, overrides))
+                }
             }
         }
-        if (again) schedule()
+        if (again) {
+            schedule()
+        }
     }
 }

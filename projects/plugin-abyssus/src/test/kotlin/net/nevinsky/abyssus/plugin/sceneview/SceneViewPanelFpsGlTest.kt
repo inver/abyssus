@@ -10,7 +10,10 @@ import com.intellij.util.ui.UIUtil
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import javax.swing.JFrame
 
-/** A real panel in a real window: the frame rate must become a number through the actual render loop. Opt-in: `-Dabyssus.glTests=true`. */
+/**
+ * A real panel in a real window: the frame rate must become a number through the actual render loop. Opt-in:
+ * `-Dabyssus.glTests=true`.
+ */
 class SceneViewPanelFpsGlTest : BasePlatformTestCase() {
     /** Lets the Swing timers and paints run (this test already is the EDT) for [millis]. */
     private fun pump(millis: Long) {
@@ -22,7 +25,9 @@ class SceneViewPanelFpsGlTest : BasePlatformTestCase() {
     }
 
     fun testTheFrameRateBecomesANumberWhileTheSettingIsOnAndGoesWhenItIsOff() {
-        if (!GlHarness.enabled) return // opt-in: -Dabyssus.glTests=true and a display
+        if (!GlHarness.enabled) {
+            return // opt-in: -Dabyssus.glTests=true and a display
+        }
         var shown = true
         val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer(), showFps = { shown })
         val window = JFrame().apply {

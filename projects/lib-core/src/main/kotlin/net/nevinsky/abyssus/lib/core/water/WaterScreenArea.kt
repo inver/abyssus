@@ -28,7 +28,8 @@ class WaterScreenArea {
             clip(viewProjection, surface.x + hw, surface.level, surface.z + hl),
             clip(viewProjection, surface.x - hw, surface.level, surface.z + hl),
         )
-        // the five planes that bound what is seen: near, left, right, bottom, top (far is ignored: a far surface still shows)
+        // the five planes that bound what is seen: near, left, right, bottom, top (far is ignored: a far surface still
+        // shows)
         val planes: List<(Vertex) -> Double> = listOf(
             { v -> v.z + v.w }, { v -> v.w + v.x }, { v -> v.w - v.x }, { v -> v.w + v.y }, { v -> v.w - v.y },
         )
@@ -70,7 +71,9 @@ class WaterScreenArea {
             val b = polygon[(i + 1) % polygon.size]
             val da = distance(a)
             val db = distance(b)
-            if (da >= 0) out += a
+            if (da >= 0) {
+                out += a
+            }
             if ((da >= 0) != (db >= 0)) {
                 val t = da / (da - db)
                 out += Vertex(

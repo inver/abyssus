@@ -5,18 +5,17 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
-import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
-
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import org.slf4j.helpers.NOPLogger
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.slf4j.helpers.NOPLogger
 
 class SceneRenderParamsTest {
     private fun scene(json: String) = parseScene(json)
@@ -26,16 +25,35 @@ class SceneRenderParamsTest {
         for (fields in listOf("", "\"coneAngle\":60,\"edgeSoftness\":0.25,")) {
             val values = """{$fields"future":1.23400}"""
             val light = """{"light":$values}"""
-            val text = """{"format":"abyssus","formatVersion":1,"ecs":{"4":{"type":"LIGHT_SPOT","components":{"LightComponent":$light}}}}"""
+            val text =
+                """{"format":"abyssus","formatVersion":1,"ecs":{"4":{"type":"LIGHT_SPOT",
+"components":{"LightComponent":$light}}}}"""
             val p = renderParamsOf(scene(text), CameraParams.DEFAULT).content.lights.single()
             assertEquals(LightKind.SPOT, p.kind)
-            assertEquals(if (fields.isEmpty()) 45f else 60f, p.coneAngle, 0f)
-            assertEquals(if (fields.isEmpty()) 0.2f else 0.25f, p.edgeSoftness, 0f)
+            assertEquals(
+                if (fields.isEmpty()) {
+                    45f
+                } else {
+                    60f
+                },
+                p.coneAngle,
+                0f,
+            )
+            assertEquals(
+                if (fields.isEmpty()) {
+                    0.2f
+                } else {
+                    0.25f
+                },
+                p.edgeSoftness,
+                0f,
+            )
         }
     }
 
-
-    private val full = """{"format":"abyssus","formatVersion":1,"ambientLightEnabled":true,"ambientLight":{"color":{"r":1.0,"g":0.5,"b":0.0,"a":1.0},"intensity":0.5},
+    private val full =
+        """{"format":"abyssus","formatVersion":1,"ambientLightEnabled":true,"ambientLight":{"color":{"r":1.0,"g":0.5,
+"b":0.0,"a":1.0},"intensity":0.5},
         "fogEnabled":true,"fog":{"color":{"r":0.2,"g":0.3,"b":0.4,"a":1.0},"density":0.01,"gradient":1.5}}"""
 
     @Test
@@ -55,7 +73,11 @@ class SceneRenderParamsTest {
 
     @Test
     fun disabledFeaturesAreOmitted() {
-        val p = renderParamsOf(scene("""{"format":"abyssus","formatVersion":1,"ambientLightEnabled":false,"fogEnabled":false}"""), CameraParams.DEFAULT)
+        val p =
+            renderParamsOf(
+                scene("""{"format":"abyssus","formatVersion":1,"ambientLightEnabled":false,"fogEnabled":false}"""),
+                CameraParams.DEFAULT,
+            )
         assertNull(p.ambient)
         assertNull(p.fog)
         assertEquals(SceneRenderParams.DEFAULT_CLEAR, p.clear)
@@ -63,7 +85,11 @@ class SceneRenderParamsTest {
 
     @Test
     fun missingObjectsDoNotThrow() {
-        val p = renderParamsOf(scene("""{"format":"abyssus","formatVersion":1,"ambientLightEnabled":true,"fogEnabled":true}"""), CameraParams.DEFAULT)
+        val p =
+            renderParamsOf(
+                scene("""{"format":"abyssus","formatVersion":1,"ambientLightEnabled":true,"fogEnabled":true}"""),
+                CameraParams.DEFAULT,
+            )
         assertNull(p.ambient)
         assertNull(p.fog)
     }
@@ -71,7 +97,9 @@ class SceneRenderParamsTest {
     @Test
     fun zeroOrNullFogDensityMeansNoFog() {
         for (density in listOf("0", "0.0", "null", "-1")) {
-            val json = """{"format":"abyssus","formatVersion":1,"fogEnabled":true,"fog":{"color":{"r":1,"g":1,"b":1,"a":1},"density":$density}}"""
+            val json =
+                """{"format":"abyssus","formatVersion":1,"fogEnabled":true,"fog":{"color":{"r":1,"g":1,"b":1,"a":1},
+"density":$density}}"""
             val p = renderParamsOf(scene(json), CameraParams.DEFAULT)
             assertNull("density $density", p.fog)
             assertEquals(SceneRenderParams.DEFAULT_CLEAR, p.clear)
@@ -80,19 +108,25 @@ class SceneRenderParamsTest {
 
     @Test
     fun invalidFogGradientFallsBackToOne() {
-        val json = """{"format":"abyssus","formatVersion":1,"fogEnabled":true,"fog":{"color":{"r":1,"g":1,"b":1,"a":1},"density":0.5,"gradient":0}}"""
+        val json =
+            """{"format":"abyssus","formatVersion":1,"fogEnabled":true,"fog":{"color":{"r":1,"g":1,"b":1,"a":1},
+"density":0.5,"gradient":0}}"""
         assertEquals(1f, renderParamsOf(scene(json), CameraParams.DEFAULT).fog!!.gradient, 0f)
     }
 
     @Test
     fun missingIntensityDefaultsToOne() {
-        val json = """{"format":"abyssus","formatVersion":1,"ambientLightEnabled":true,"ambientLight":{"color":{"r":0.4,"g":0.4,"b":0.4,"a":1}}}"""
+        val json =
+            """{"format":"abyssus","formatVersion":1,"ambientLightEnabled":true,"ambientLight":{"color":{"r":0.4,
+"g":0.4,"b":0.4,"a":1}}}"""
         assertEquals(Color(0.4f, 0.4f, 0.4f, 1f), renderParamsOf(scene(json), CameraParams.DEFAULT).ambient)
     }
 
     @Test
     fun parsesMainCamera() {
-        val abss = """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":-0.5,"y":0.0,"z":-0.5},"position":{"x":4.0,"y":3.0,"z":6.0},
+        val abss =
+            """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":-0.5,"y":0.0,"z":-0.5},
+"position":{"x":4.0,"y":3.0,"z":6.0},
             "far":100.0,"near":1.0,"fieldOfView":67.0},"name":"Untitled"}"""
         val cam = MainCamera(JsonProcessor(NOPLogger.NOP_LOGGER)).parse(abss)!!
         assertEquals(Vector3(4f, 3f, 6f), cam.position)
@@ -107,12 +141,17 @@ class SceneRenderParamsTest {
         assertNull(MainCamera(JsonProcessor(NOPLogger.NOP_LOGGER)).parse("not json"))
         assertNull(MainCamera(JsonProcessor(NOPLogger.NOP_LOGGER)).parse("[]"))
         assertNull(MainCamera(JsonProcessor(NOPLogger.NOP_LOGGER)).parse("""{"name":"x"}"""))
-        assertNull(MainCamera(JsonProcessor(NOPLogger.NOP_LOGGER)).parse("""{"format":"abyssus","formatVersion":1,"mainCamera":{"position":{"x":1,"y":2,"z":3}}}"""))
+        assertNull(
+            MainCamera(JsonProcessor(NOPLogger.NOP_LOGGER))
+                .parse("""{"format":"abyssus","formatVersion":1,"mainCamera":{"position":{"x":1,"y":2,"z":3}}}""")
+        )
     }
 
     @Test
     fun zeroLengthViewDirectionIsRejected() {
-        val abss = """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":0},"position":{"x":1,"y":2,"z":3}}}"""
+        val abss =
+            """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":0},
+"position":{"x":1,"y":2,"z":3}}}"""
         assertNull(MainCamera(JsonProcessor(NOPLogger.NOP_LOGGER)).parse(abss))
     }
 
@@ -143,7 +182,9 @@ class SceneRenderParamsTest {
 
     @Test
     fun nullNearKeepsTheRestOfTheCamera() {
-        val abss = """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":1,"y":2,"z":3},"near":null,"far":50.0}}"""
+        val abss =
+            """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},
+"position":{"x":1,"y":2,"z":3},"near":null,"far":50.0}}"""
         val cam = MainCamera(JsonProcessor(NOPLogger.NOP_LOGGER)).parse(abss)!!
         assertEquals(Vector3(1f, 2f, 3f), cam.position)
         assertEquals(CameraParams.DEFAULT.near, cam.near, 0f)
@@ -153,7 +194,9 @@ class SceneRenderParamsTest {
     @Test
     fun nearNotBelowFarFallsBackToDefaultClipRange() {
         for ((near, far) in listOf(10 to 10, 100 to 1)) {
-            val abss = """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":1,"y":2,"z":3},"near":$near,"far":$far}}"""
+            val abss =
+                """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},
+"position":{"x":1,"y":2,"z":3},"near":$near,"far":$far}}"""
             val cam = MainCamera(JsonProcessor(NOPLogger.NOP_LOGGER)).parse(abss)!!
             assertEquals(CameraParams.DEFAULT.near, cam.near, 0f)
             assertEquals(CameraParams.DEFAULT.far, cam.far, 0f)
@@ -162,7 +205,8 @@ class SceneRenderParamsTest {
 
     @Test
     fun contentAndProjectDirFlowThrough() {
-        val json = """{"format":"abyssus","formatVersion":1,"skyboxEnabled":true,"skyboxName":"sky","ecs":{"1":{"components":
+        val json =
+            """{"format":"abyssus","formatVersion":1,"skyboxEnabled":true,"skyboxName":"sky","ecs":{"1":{"components":
             {"RenderComponent":{"type":"MODEL","assetName":"m"}}}}}"""
         val dir = java.io.File("proj")
         val p = renderParamsOf(scene(json), CameraParams.DEFAULT, dir)

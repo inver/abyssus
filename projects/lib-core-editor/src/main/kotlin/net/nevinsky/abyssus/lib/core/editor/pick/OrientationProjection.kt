@@ -28,7 +28,9 @@ class OrientationProjection(yaw: Float, pitch: Float) {
 
     /** The nearest-to-the-viewer mark whose center is within [markRadius] of ([x], [y]) in the unit disc, or null. */
     fun hit(x: Float, y: Float, markRadius: Float): AxisMark? =
-        marks().filter { (it.x - x) * (it.x - x) + (it.y - y) * (it.y - y) <= markRadius * markRadius }.maxByOrNull { it.depth }
+        marks()
+            .filter { (it.x - x) * (it.x - x) + (it.y - y) * (it.y - y) <= markRadius * markRadius }
+            .maxByOrNull { it.depth }
 
     private fun mark(axis: GizmoAxis): AxisMark {
         val d = axis.direction

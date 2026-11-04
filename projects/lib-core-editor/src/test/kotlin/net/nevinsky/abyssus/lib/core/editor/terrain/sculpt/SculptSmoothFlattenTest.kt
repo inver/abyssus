@@ -7,10 +7,10 @@ package net.nevinsky.abyssus.lib.core.editor.terrain.sculpt
 
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
+import kotlin.math.abs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.abs
 
 class SculptSmoothFlattenTest {
     private val resolution = 33
@@ -21,8 +21,14 @@ class SculptSmoothFlattenTest {
         return SculptDraft(resolution, base, base.copyOf(), FloatArray(base.size))
     }
 
-    private fun stroke(d: SculptDraft, tool: SculptTool, radius: Float = 10f, from: Vector3 = Vector3(32f, 0f, 32f), to: Vector3 = from, strength: Float = 1f) =
-        SculptBrush(d, size, Matrix4()).stroke(from, to, radius, strength, tool, false)
+    private fun stroke(
+        d: SculptDraft,
+        tool: SculptTool,
+        radius: Float = 10f,
+        from: Vector3 = Vector3(32f, 0f, 32f),
+        to: Vector3 = from,
+        strength: Float = 1f,
+    ) = SculptBrush(d, size, Matrix4()).stroke(from, to, radius, strength, tool, false)
 
     @Test
     fun `smooth on a flat area is an empty stroke`() {
@@ -33,7 +39,13 @@ class SculptSmoothFlattenTest {
 
     @Test
     fun `smooth lowers a spike and keeps the rest within the radius`() {
-        val d = draft { x, z -> if (x == 16 && z == 16) 10f else 0f }
+        val d = draft { x, z ->
+            if (x == 16 && z == 16) {
+                10f
+            } else {
+                0f
+            }
+        }
         stroke(d, SmoothTool())
         assertTrue(d.composed[16 * resolution + 16] < 10f)
         assertEquals(0f, d.composed[0], 0f)
@@ -46,7 +58,10 @@ class SculptSmoothFlattenTest {
         stroke(d, SmoothTool())
         // every change is the neighbour average of the heights from before the stamp
         val at = 16 * resolution + 16
-        val expected = before[at] + ((before[at - 1] + before[at + 1] + before[at - resolution] + before[at + resolution]) / 4f - before[at])
+        val expected =
+            before[at] +
+                ((before[at - 1] + before[at + 1] + before[at - resolution] + before[at + resolution]) / 4f -
+                    before[at])
         assertEquals(expected, d.composed[at], 1e-5f)
     }
 

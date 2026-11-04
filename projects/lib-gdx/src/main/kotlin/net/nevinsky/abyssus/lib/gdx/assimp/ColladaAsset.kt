@@ -12,10 +12,10 @@ import javax.xml.stream.XMLStreamConstants
 import javax.xml.stream.XMLStreamException
 
 /**
- * Reads the unit and up axis a COLLADA (DAE) file states in `COLLADA/asset` (`unit@meter`, `up_axis`). Assimp's
- * Collada importer applies them itself and does not report them, so an import that lets the user choose reads them
- * here. `X_UP` is returned as [UpAxis.X]: stated, though an import may not offer it. Nothing else is read; DTDs and
- * external entities are refused.
+ * Reads the unit and up axis a COLLADA (DAE) file states in `COLLADA/asset` (`unit@meter`, `up_axis`). Assimp's Collada
+ * importer applies them itself and does not report them, so an import that lets the user choose reads them here. `X_UP`
+ * is returned as [UpAxis.X]: stated, though an import may not offer it. Nothing else is read; DTDs and external
+ * entities are refused.
  */
 class ColladaAsset {
     fun read(file: File): StatedFrame = file.inputStream().buffered().use { read(it) }
@@ -40,17 +40,24 @@ class ColladaAsset {
                             depth == 2 && name == "asset" -> inAsset = true
                             depth == 2 -> return StatedFrame(unit, up) // asset comes first, if at all
                             inAsset && depth == 3 && name == "unit" ->
-                                unit = reader.getAttributeValue(null, "meter")?.trim()?.toFloatOrNull()?.takeIf { it > 0f && it.isFinite() }
-                            inAsset && depth == 3 && name == "up_axis" -> up = when (reader.elementText.trim()) {
-                                "X_UP" -> UpAxis.X
-                                "Y_UP" -> UpAxis.Y
-                                "Z_UP" -> UpAxis.Z
-                                else -> null
-                            }.also { depth-- } // getElementText consumed the end tag
+                                unit =
+                                    reader.getAttributeValue(null, "meter")?.trim()?.toFloatOrNull()?.takeIf {
+                                        it > 0f && it.isFinite()
+                                    }
+                            inAsset && depth == 3 && name == "up_axis" ->
+                                up =
+                                    when (reader.elementText.trim()) {
+                                        "X_UP" -> UpAxis.X
+                                        "Y_UP" -> UpAxis.Y
+                                        "Z_UP" -> UpAxis.Z
+                                        else -> null
+                                    }.also { depth-- } // getElementText consumed the end tag
                         }
                     }
                     XMLStreamConstants.END_ELEMENT -> {
-                        if (inAsset && depth == 2) return StatedFrame(unit, up)
+                        if (inAsset && depth == 2) {
+                            return StatedFrame(unit, up)
+                        }
                         depth--
                     }
                 }

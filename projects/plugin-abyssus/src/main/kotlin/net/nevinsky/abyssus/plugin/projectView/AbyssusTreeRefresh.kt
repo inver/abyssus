@@ -31,15 +31,18 @@ import javax.swing.JTree
 import javax.swing.tree.TreePath
 
 /**
- * Keeps the Abyssus tree current: plugin edits ([AbyssusSceneEdited]), document changes (typing, Undo, Redo, unsaved text)
- * and the IDE's VFS create/delete/move/rename/content events for native documents and asset metadata of this project each
+  * Keeps the Abyssus tree current: plugin edits ([AbyssusSceneEdited]), document changes (typing, Undo, Redo, unsaved
+  * text)
+  * and the IDE's VFS create/delete/move/rename/content events for native documents and asset metadata of this project
+  * each
  * mark the tree stale. Marks coalesce in a [RefreshCoalescer], so a burst rebuilds once and an event during a rebuild
  * triggers one more. A rebuild never writes a file or opens an undo entry: it re-reads through the reader caches, which
  * prefer unsaved text, and then restores selection and expansion by row identity.
  *
  * Identities are captured on the EDT before the rebuild; the platform builds the children in the background under read
  * access; the UI update and the restoration run on the EDT. The coordinator lives as long as the pane: disposal cancels
- * pending work, and a run that finds the project closed or the tree gone does nothing, so a closed project is never reopened.
+  * pending work, and a run that finds the project closed or the tree gone does nothing, so a closed project is never
+  * reopened.
  */
 internal class AbyssusTreeRefresh(
     private val project: Project,
@@ -68,7 +71,9 @@ internal class AbyssusTreeRefresh(
      * whose VFS events start a rebuild after the direct selection ran against a tree that did not have the row yet.
      */
     fun selectAfterRebuild(visitor: TreeVisitor, evenIfIdle: Boolean = false): Boolean {
-        if (idle && !evenIfIdle) return false
+        if (idle && !evenIfIdle) {
+            return false
+        }
         selectAfter = visitor
         selectUntil = System.nanoTime() + SELECT_AFTER_WINDOW_NANOS
         return true
@@ -85,13 +90,17 @@ internal class AbyssusTreeRefresh(
         connection.subscribe(AbyssusSceneEdited.TOPIC, AbyssusSceneEdited { file -> changed(file.path) })
         project.getService(NativeFileChanges::class.java).subscribe(this) { events ->
             for (event in events) {
-                if (isRelevant(event)) changed(event.path)
+                if (isRelevant(event)) {
+                    changed(event.path)
+                }
             }
         }
         EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) {
                 val file = FileDocumentManager.getInstance().getFile(event.document) ?: return
-                if (inProject(file.path) && isTreePath(file.path, directory = false)) changed(file.path)
+                if (inProject(file.path) && isTreePath(file.path, directory = false)) {
+                    changed(file.path)
+                }
             }
         }, this)
     }
@@ -101,7 +110,9 @@ internal class AbyssusTreeRefresh(
 
     /** Marks the tree stale because [key] changed, from any thread. */
     fun changed(key: String) {
-        if (coalescer.mark(key)) onEdt { run() }
+        if (coalescer.mark(key)) {
+            onEdt { run() }
+        }
     }
 
     private fun isRelevant(event: VFileEvent): Boolean {
@@ -130,7 +141,9 @@ internal class AbyssusTreeRefresh(
     }
 
     private fun finishRun() {
-        if (coalescer.finish()) onEdt { run() }
+        if (coalescer.finish()) {
+            onEdt { run() }
+        }
     }
 
     private fun capture(tree: JTree): NavigationState {
@@ -140,11 +153,14 @@ internal class AbyssusTreeRefresh(
     }
 
     /**
-     * Opens the captured rows that survived, shallow first, then selects the surviving selected rows. A selected row that is
+      * Opens the captured rows that survived, shallow first, then selects the surviving selected rows. A selected row
+      * that is
      * gone leaves no selection (the platform may have moved it onto the row's parent), so no stale details stay shown.
      */
     private fun restore(tree: JTree, state: NavigationState) {
-        if (project.isDisposed) return
+        if (project.isDisposed) {
+            return
+        }
         val found = LinkedHashSet<String>()
         fun step(index: Int, order: List<String>) {
             if (index == order.size) {
@@ -153,7 +169,9 @@ internal class AbyssusTreeRefresh(
             }
             val key = order[index]
             TreeUtil.promiseExpand(tree, TreeVisitor { path -> visitStep(key, path) })
-                .onProcessed { if (it != null) found += key; step(index + 1, order) }
+                .onProcessed { if (it != null) {
+                    found += key
+                }; step(index + 1, order) }
         }
         step(0, restoreNavigation(state, state.expanded.toSet()).expand)
     }
@@ -162,7 +180,11 @@ internal class AbyssusTreeRefresh(
         selectAfter?.takeIf { System.nanoTime() <= selectUntil }?.let { wanted ->
             selectAfter = null
             // a row that cannot be found (the entity is gone again) falls back to what the rebuild would have restored
-            TreeUtil.promiseSelect(tree, wanted).onError { if (!project.isDisposed) selectCaptured(tree, state, found) }
+            TreeUtil.promiseSelect(tree, wanted).onError {
+                if (!project.isDisposed) {
+                    selectCaptured(tree, state, found)
+                }
+            }
             return
         }
         selectCaptured(tree, state, found)
@@ -171,13 +193,17 @@ internal class AbyssusTreeRefresh(
     private fun selectCaptured(tree: JTree, state: NavigationState, found: MutableSet<String>) {
         val restore = restoreNavigation(state, found + state.selected.toSet())
         if (restore.select.isEmpty()) {
-            if (state.selected.isNotEmpty()) tree.clearSelection()
+            if (state.selected.isNotEmpty()) {
+                tree.clearSelection()
+            }
             return
         }
         val visitors = restore.select.map { key -> TreeVisitor { path -> visitStep(key, path) } }
         TreeUtil.promiseSelect(tree, visitors.stream()).onError {
             // none of the selected rows survived the rebuild
-            if (!project.isDisposed) tree.clearSelection()
+            if (!project.isDisposed) {
+                tree.clearSelection()
+            }
         }
     }
 
@@ -197,7 +223,9 @@ internal class AbyssusTreeRefresh(
     companion object {
         private const val SELECT_AFTER_WINDOW_NANOS = 5_000_000_000L
 
-        /** The identity of the row [path] ends at: a DTO entry's path or an asset folder's path; null for the view root. */
+        /**
+         * The identity of the row [path] ends at: a DTO entry's path or an asset folder's path; null for the view root.
+         */
         fun keyOf(path: TreePath): String? = when (val node = TreeUtil.getUserObject(path.lastPathComponent)) {
             is DtoEntryNode -> node.value.path
             is AbyssusAssetNode -> node.virtualFile.path
@@ -205,7 +233,8 @@ internal class AbyssusTreeRefresh(
         }
 
         /**
-         * True when a change at [path] can change what the tree shows: a native document (`.scene`, `.abss`), an asset's
+          * True when a change at [path] can change what the tree shows: a native document (`.scene`, `.abss`), an
+          * asset's
          * `meta.json`, or a folder created, deleted, moved or renamed under the project's `assets` folder.
          */
         fun isTreePath(path: String, directory: Boolean): Boolean {

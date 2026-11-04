@@ -44,7 +44,8 @@ private const val CLOUD_LIGHT_ALTITUDE = 1500f
  * when the shaders do not compile, which the asset cache logs once and remembers.
  *
  * Its clouds, the `CLOUDS` asset it names, are read from [assets] on every draw (a reloaded cloud asset is picked up
- * without rebuilding the sky, which never owns or disposes it) and drawn over the atmosphere by a plugin-owned pass (the
+  * without rebuilding the sky, which never owns or disposes it) and drawn over the atmosphere by a plugin-owned pass
+  * (the
  * asset's shader never sees them) with the technique the frame asks for, or the cloud asset's own. Each technique's
  * renderer is built from [shaders] the first time it is needed ([cloudFactory] replaces that, for tests); one that
  * cannot be built is logged to [log] once and the next simpler one draws instead.
@@ -55,7 +56,10 @@ class ProceduralSky(
     shaders: ShaderStorage = ShaderStorage(),
     log: Logger = NOPLogger.NOP_LOGGER,
     cloudFactory: ((CloudTechnique) -> CloudRenderer)? = null,
-    /** Whether a sky whose shader declares `SKY_CACHEABLE` uses the cache; false draws it per pixel (a test compares the two). */
+    /**
+     * Whether a sky whose shader declares `SKY_CACHEABLE` uses the cache; false draws it per pixel (a test compares the
+     * two).
+     */
     cacheAtmosphere: Boolean = true,
 ) : SkyRenderer {
     /** The atmosphere the asset's shader is given; clouds sit on its planet. */
@@ -110,15 +114,27 @@ class ProceduralSky(
      * [EnvironmentLease]; null otherwise, so nothing is built for nobody. Owned by this sky and released with it.
      */
     var lighting: ProceduralSkyLighting? =
-        if (lightsScene) ProceduralSkyLighting(params, shaders, prepared.name, log) else null
+        if (lightsScene) {
+            ProceduralSkyLighting(params, shaders, prepared.name, log)
+        } else {
+            null
+        }
         private set
 
-    /** The completed lighting environment to light the scene with; null without opt-in or until the first build is done. */
-    val lightingEnvironment: HdrEnvironment? get() = if (lightsScene) lighting?.current else null
+    /**
+     * The completed lighting environment to light the scene with; null without opt-in or until the first build is done.
+     */
+    val lightingEnvironment: HdrEnvironment? get() = if (lightsScene) {
+        lighting?.current
+    } else {
+        null
+    }
 
     /**
-     * A consumer's claim on this sky's cloudy environment, the cube lighting the sky gives, independent of `lightsScene`
-     * and without replacing the scene's ambient light. While any lease is open the sky builds it and keeps it up to date
+      * A consumer's claim on this sky's cloudy environment, the cube lighting the sky gives, independent of
+      * `lightsScene`
+      * and without replacing the scene's ambient light. While any lease is open the sky builds it and keeps it up to
+      * date
      * with the sun, the clouds and their wind; when the last closes (and the asset does not opt in) it is released.
      * [environment] and [revision] are read on the GL thread: the environment is borrowed from the sky, valid until the
      * next frame's update, and a changed [revision] says a new one replaced it (so a consumer can drop what it derived
@@ -127,14 +143,27 @@ class ProceduralSky(
     inner class EnvironmentLease internal constructor() : AutoCloseable {
         private var closed = false
 
-        /** The completed environment, or null while the first build is under way, after close or after the sky is released. */
-        val environment: HdrEnvironment? get() = if (closed) null else lighting?.current
+        /**
+         * The completed environment, or null while the first build is under way, after close or after the sky is
+         * released.
+         */
+        val environment: HdrEnvironment? get() = if (closed) {
+            null
+        } else {
+            lighting?.current
+        }
 
         /** Counts the replacements of [environment]; 0 until the first one is complete. */
-        val revision: Long get() = if (closed) 0L else lighting?.revision ?: 0L
+        val revision: Long get() = if (closed) {
+            0L
+        } else {
+            lighting?.revision ?: 0L
+        }
 
         override fun close() {
-            if (closed) return
+            if (closed) {
+                return
+            }
             closed = true
             leases--
             if (leases == 0 && !lightsScene) {
@@ -147,7 +176,9 @@ class ProceduralSky(
     /** Starts building the cloudy environment for a consumer (see [EnvironmentLease]); GL thread. */
     fun acquireEnvironment(): EnvironmentLease {
         leases++
-        if (lighting == null) lighting = ProceduralSkyLighting(params, lightingShaders, lightingName, lightingLog)
+        if (lighting == null) {
+            lighting = ProceduralSkyLighting(params, lightingShaders, lightingName, lightingLog)
+        }
         return EnvironmentLease()
     }
 

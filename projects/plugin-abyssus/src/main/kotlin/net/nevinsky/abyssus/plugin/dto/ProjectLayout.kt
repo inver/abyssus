@@ -11,7 +11,8 @@ import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DI
 import java.io.File
 
 /**
- * Where a native Abyssus project keeps its files: `<name>.abss` beside a `scenes` folder of `.scene` files and an `assets`
+  * Where a native Abyssus project keeps its files: `<name>.abss` beside a `scenes` folder of `.scene` files and an
+  * `assets`
  * folder with one folder per asset, each described by its `meta.json`.
  */
 object ProjectLayout {

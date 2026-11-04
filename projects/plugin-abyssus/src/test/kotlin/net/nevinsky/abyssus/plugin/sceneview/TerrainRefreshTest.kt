@@ -36,7 +36,11 @@ class TerrainRefreshTest {
         val placements = listOf(placement(1L, "hills", 0f), placement(2L, "hills", 500f), placement(3L, "other", 9f))
         var hills = Heights("hills v1")
         val other = Heights("other")
-        val assetOf = { name: String -> if (name == "hills") hills else other }
+        val assetOf = { name: String -> if (name == "hills") {
+            hills
+        } else {
+            other
+        } }
         entities.update(placements, assetOf)
         val before = entities.drawn.associateBy { it.placement.entityId }
 

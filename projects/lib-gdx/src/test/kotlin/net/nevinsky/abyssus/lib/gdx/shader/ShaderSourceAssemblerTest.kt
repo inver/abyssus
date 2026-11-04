@@ -12,7 +12,13 @@ import org.junit.Assert.fail
 import org.junit.Test
 
 class ShaderSourceAssemblerTest {
-    private val assembler = ShaderSourceAssembler { if (it == "shared.glsl") "float shared() { return 1.0; }\n" else null }
+    private val assembler = ShaderSourceAssembler {
+        if (it == "shared.glsl") {
+            "float shared() { return 1.0; }\n"
+        } else {
+            null
+        }
+    }
 
     @Test
     fun sourceWithoutAnIncludeIsReturnedUnchanged() {
@@ -22,7 +28,11 @@ class ShaderSourceAssemblerTest {
 
     @Test
     fun definesAndDeclarationsAboveTheDirectiveStayAheadOfTheIncludedFunctions() {
-        val out = assembler.assemble("#define shadowAtlasFlag\nuniform float u;\n#pragma include \"shared.glsl\"\nvoid main() {}", "s")
+        val out =
+            assembler.assemble(
+                "#define shadowAtlasFlag\nuniform float u;\n#pragma include \"shared.glsl\"\nvoid main() {}",
+                "s",
+            )
         val define = out.indexOf("#define shadowAtlasFlag")
         val uniform = out.indexOf("uniform float u;")
         val function = out.indexOf("float shared()")
@@ -34,7 +44,10 @@ class ShaderSourceAssemblerTest {
     @Test
     fun anExpansionIsLabelledWithItsResource() {
         val lines = assembler.assemble("#pragma include \"shared.glsl\"", "s").lines()
-        assertEquals(listOf("// begin include shared.glsl", "float shared() { return 1.0; }", "// end include shared.glsl"), lines)
+        assertEquals(
+            listOf("// begin include shared.glsl", "float shared() { return 1.0; }", "// end include shared.glsl"),
+            lines,
+        )
     }
 
     @Test
@@ -43,7 +56,10 @@ class ShaderSourceAssemblerTest {
             assembler.assemble("void a() {}\n#pragma include \"nope.glsl\"\n", "my.frag")
             fail("expected a failure")
         } catch (e: IllegalStateException) {
-            assertTrue(e.message, e.message!!.contains("my.frag") && e.message!!.contains("line 2") && e.message!!.contains("nope.glsl"))
+            assertTrue(
+                e.message,
+                e.message!!.contains("my.frag") && e.message!!.contains("line 2") && e.message!!.contains("nope.glsl"),
+            )
         }
     }
 }

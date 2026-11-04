@@ -6,6 +6,9 @@ package net.nevinsky.abyssus.plugin.sceneview
 
 import com.badlogic.gdx.math.Vector3
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.Component
+import java.awt.Container
+import javax.swing.JToggleButton
 import net.nevinsky.abyssus.lib.core.editor.pick.BrushStroke
 import net.nevinsky.abyssus.lib.core.editor.pick.FOLIAGE_BRUSH
 import net.nevinsky.abyssus.lib.core.editor.pick.SCULPT_BRUSH
@@ -14,56 +17,83 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.plugin.foliage.FoliagePaintSession
 import net.nevinsky.abyssus.plugin.terrain.SculptSession
 import net.nevinsky.abyssus.plugin.terrain.StampImages
-import java.awt.Component
-import java.awt.Container
-import javax.swing.JToggleButton
 
 class BrushKindsTest : BasePlatformTestCase() {
-    private val stroke = object : BrushStroke {
-        override fun pressed(terrain: TerrainTarget, at: Vector3) = true
-        override fun dragged(to: Vector3, reversed: Boolean) {}
-        override fun released() {}
-        override fun cancelled() {}
-    }
+    private val stroke =
+        object : BrushStroke {
+            override fun pressed(terrain: TerrainTarget, at: Vector3) = true
 
-    private fun named(c: Component, name: String): Component? = if (c.name == name) c else
-        (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
+            override fun dragged(to: Vector3, reversed: Boolean) {}
+
+            override fun released() {}
+
+            override fun cancelled() {}
+        }
+
+    private fun named(c: Component, name: String): Component? =
+        if (c.name == name) {
+            c
+        } else {
+            (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
+        }
 
     private fun namesInOrder(c: Component): List<String> =
         listOfNotNull(c.name) + ((c as? Container)?.components?.flatMap(::namesInOrder) ?: emptyList())
 
     private fun panel(renderer: SceneRenderer, onSculptEnded: () -> Unit = {}): SceneViewPanel {
-        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, renderer,
-            sculptSession = { _, _, _, ready ->
-                ready(SculptSession(null, stroke, null, StampImages(net.nevinsky.abyssus.plugin.testCore.json)) {})
-            },
-            paintSession = { _, _, ready -> ready(FoliagePaintSession(listOf(3), stroke) {}) })
+        val panel =
+            SceneViewPanel(
+                SceneRenderParams.DEFAULT,
+                renderer,
+                sculptSession = { _, _, _, ready ->
+                    ready(SculptSession(null, stroke, null, StampImages(net.nevinsky.abyssus.plugin.testCore.json)) {})
+                },
+                paintSession = { _, _, ready -> ready(FoliagePaintSession(listOf(3), stroke) {}) },
+            )
         panel.onSculptEnded = onSculptEnded
         return panel
     }
 
     fun testThePaintTextureStripComesLastAndTheOtherBrushControlsAreUnchanged() {
-        val panel = SceneViewPanel(SceneRenderParams.DEFAULT, testRenderer(),
-            sculptSession = { _, _, _, ready -> ready(null) },
-            paintSession = { _, _, ready -> ready(null) },
-            splatSession = { _, _, ready -> ready(null) })
+        val panel =
+            SceneViewPanel(
+                SceneRenderParams.DEFAULT,
+                testRenderer(),
+                sculptSession = { _, _, _, ready -> ready(null) },
+                paintSession = { _, _, ready -> ready(null) },
+                splatSession = { _, _, ready -> ready(null) },
+            )
         try {
-            val brushNames = setOf("paint-foliage", "foliage-brush-strip", "sculpt-strip", "paint-texture-strip", "sculpt-terrain", "paint-texture")
+            val brushNames =
+                setOf(
+                    "paint-foliage",
+                    "foliage-brush-strip",
+                    "sculpt-strip",
+                    "paint-texture-strip",
+                    "sculpt-terrain",
+                    "paint-texture",
+                )
             val order = namesInOrder(panel).filter { it in brushNames }
             assertEquals(listOf("paint-foliage", "foliage-brush-strip", "sculpt-strip", "paint-texture-strip"), order)
-            for (name in listOf("sculpt-tool", "paint-texture-slot-0", "paint-texture-mode", "paint-texture-exclusive")) {
+            for (name in
+                listOf("sculpt-tool", "paint-texture-slot-0", "paint-texture-mode", "paint-texture-exclusive")) {
                 assertNotNull("control $name", named(panel, name))
             }
             assertFalse("the strip is hidden until the brush is on", named(panel, "paint-texture-strip")!!.isVisible)
-        } finally { panel.dispose() }
+        } finally {
+            panel.dispose()
+        }
     }
 
     fun testToggleOrderIsPaintFoliageThenItsStripThenSculptStrip() {
         val panel = panel(testRenderer())
         try {
-            val order = namesInOrder(panel).filter { it in setOf("paint-foliage", "foliage-brush-strip", "sculpt-strip") }
+            val order =
+                namesInOrder(panel).filter { it in setOf("paint-foliage", "foliage-brush-strip", "sculpt-strip") }
             assertEquals(listOf("paint-foliage", "foliage-brush-strip", "sculpt-strip"), order)
-        } finally { panel.dispose() }
+        } finally {
+            panel.dispose()
+        }
     }
 
     fun testStartingPaintFoliageEndsSculptTerrainAndTellsTheHost() {
@@ -79,7 +109,9 @@ class BrushKindsTest : BasePlatformTestCase() {
             assertEquals(FOLIAGE_BRUSH, renderer.state.brush?.kind)
             assertEquals("the host is told the sculpting is over", 1, ended)
             assertFalse(named(panel, "sculpt-strip")!!.isVisible)
-        } finally { panel.dispose() }
+        } finally {
+            panel.dispose()
+        }
     }
 
     fun testStartingSculptTerrainEndsPaintFoliageAndDeselectsItsToggle() {
@@ -95,6 +127,8 @@ class BrushKindsTest : BasePlatformTestCase() {
             assertEquals(SCULPT_BRUSH, renderer.state.brush?.kind)
             assertFalse(button.isSelected)
             assertFalse(named(panel, "foliage-brush-strip")!!.isVisible)
-        } finally { panel.dispose() }
+        } finally {
+            panel.dispose()
+        }
     }
 }

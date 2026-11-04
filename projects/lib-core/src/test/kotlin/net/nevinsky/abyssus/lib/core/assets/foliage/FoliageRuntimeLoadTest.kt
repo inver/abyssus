@@ -5,6 +5,9 @@
 
 package net.nevinsky.abyssus.lib.core.assets.foliage
 
+import java.io.DataOutputStream
+import java.io.File
+import java.nio.file.Files
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
@@ -16,9 +19,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import java.io.DataOutputStream
-import java.io.File
-import java.nio.file.Files
 
 /** The headless runtime read policy: no GL, no IDE and no writes. */
 class FoliageRuntimeLoadTest {
@@ -29,25 +29,29 @@ class FoliageRuntimeLoadTest {
     private val loader = FoliageLoader(files, metas, terrains)
     private val runtime = FoliageRuntimeLoad(files, metas, terrains)
 
-    private val copies = listOf(
-        FoliageCopy(0, 1f, 1f, 0f, 1f),
-        FoliageCopy(1, 2f, 2f, 0.5f, 1.5f),
-        FoliageCopy(0, 3f, 4f, 1f, 1f),
-    )
+    private val copies =
+        listOf(
+            FoliageCopy(0, 1f, 1f, 0f, 1f),
+            FoliageCopy(1, 2f, 2f, 0.5f, 1.5f),
+            FoliageCopy(0, 3f, 4f, 1f, 1f),
+        )
 
     init {
         File(dir, "assets/terr").mkdirs()
         DataOutputStream(File(dir, "assets/terr/terrain.data").outputStream()).use { out ->
             repeat(4) { out.writeFloat(it.toFloat() * 2f) }
         }
-        File(dir, "assets/terr/meta.json").writeText(
-            """{"format":"abyssus","formatVersion":1,"type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":10,"uv":1.0}}"""
-        )
+        File(dir, "assets/terr/meta.json")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"type":"TERRAIN","additional":{"terrainFile":"terrain.data",
+"size":10,"uv":1.0}}"""
+            )
         for (model in listOf("tree", "rock")) {
             File(dir, "assets/$model").mkdirs()
-            File(dir, "assets/$model/meta.json").writeText(
-                """{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{"file":"model.gltf"}}"""
-            )
+            File(dir, "assets/$model/meta.json")
+                .writeText(
+                    """{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{"file":"model.gltf"}}"""
+                )
         }
         meta(TWO_MODELS)
         bakeCurrent()
@@ -67,11 +71,17 @@ class FoliageRuntimeLoadTest {
     private fun bakeCurrent(modelCount: Int = 2, layerId: Int = 1) {
         val prepared = loader.prepare("foliage_meadow")!!.staged
         val fingerprint = FoliageFingerprint().of(prepared.meta, prepared.terrain, prepared.masks)
-        File(dir, "assets/foliage_meadow/foliage.data").writeBytes(
-            FoliageDataFile().write(
-                FoliageBake(fingerprint, 32f, listOf(FoliageLayerBake(layerId, modelCount, 1, 1, listOf(copies))))
+        File(dir, "assets/foliage_meadow/foliage.data")
+            .writeBytes(
+                FoliageDataFile()
+                    .write(
+                        FoliageBake(
+                            fingerprint,
+                            32f,
+                            listOf(FoliageLayerBake(layerId, modelCount, 1, 1, listOf(copies))),
+                        )
+                    )
             )
-        )
     }
 
     private fun total(read: FoliageRuntimeRead) = read.foliage!!.bake.copyCount
@@ -136,10 +146,17 @@ class FoliageRuntimeLoadTest {
     fun nonFiniteCopiesAreDropped() {
         val prepared = loader.prepare("foliage_meadow")!!.staged
         val fingerprint = FoliageFingerprint().of(prepared.meta, prepared.terrain, prepared.masks)
-        val bad = listOf(copies[0], FoliageCopy(0, Float.NaN, 1f, 0f, 1f), FoliageCopy(0, 1f, 1f, 0f, Float.POSITIVE_INFINITY))
-        File(dir, "assets/foliage_meadow/foliage.data").writeBytes(
-            FoliageDataFile().write(FoliageBake(fingerprint, 32f, listOf(FoliageLayerBake(1, 2, 1, 1, listOf(bad)))))
-        )
+        val bad =
+            listOf(
+                copies[0],
+                FoliageCopy(0, Float.NaN, 1f, 0f, 1f),
+                FoliageCopy(0, 1f, 1f, 0f, Float.POSITIVE_INFINITY),
+            )
+        File(dir, "assets/foliage_meadow/foliage.data")
+            .writeBytes(
+                FoliageDataFile()
+                    .write(FoliageBake(fingerprint, 32f, listOf(FoliageLayerBake(1, 2, 1, 1, listOf(bad)))))
+            )
         assertEquals(1, total(runtime.read("foliage_meadow")))
     }
 
@@ -168,12 +185,17 @@ class FoliageRuntimeLoadTest {
 
     @Test
     fun warningsAreBounded() {
-        val layers = (1..40).joinToString(",") { """{"id":$it,"kind":"OBJECT","models":[{"asset":"tree","weight":1.0}]}""" }
-        meta("""{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","additional":{"terrain":"terr","maskResolution":16,"layers":[$layers]}}""")
+        val layers =
+            (1..40).joinToString(",") { """{"id":$it,"kind":"OBJECT","models":[{"asset":"tree","weight":1.0}]}""" }
+        meta(
+            """{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","additional":{"terrain":"terr",
+"maskResolution":16,"layers":[$layers]}}"""
+        )
         val prepared = loader.prepare("foliage_meadow")!!.staged
         val fingerprint = FoliageFingerprint().of(prepared.meta, prepared.terrain, prepared.masks)
         val removed = (101..140).map { FoliageLayerBake(it, 1, 1, 1, listOf(listOf(copies[0]))) }
-        File(dir, "assets/foliage_meadow/foliage.data").writeBytes(FoliageDataFile().write(FoliageBake(fingerprint, 32f, removed)))
+        File(dir, "assets/foliage_meadow/foliage.data")
+            .writeBytes(FoliageDataFile().write(FoliageBake(fingerprint, 32f, removed)))
         val read = runtime.read("foliage_meadow")
         assertEquals(FOLIAGE_MAX_WARNINGS + 1, read.warnings.size)
         assertTrue(read.warnings.last(), read.warnings.last().startsWith("and "))
@@ -190,7 +212,11 @@ class FoliageRuntimeLoadTest {
 
     @Test
     fun theReaderNeedsNeitherTheIdeNorTheEditorGenerator() {
-        for (name in listOf("com.intellij.openapi.application.ApplicationManager", "net.nevinsky.abyssus.lib.core.editor.foliage.FoliageScatter")) {
+        for (name in
+            listOf(
+                "com.intellij.openapi.application.ApplicationManager",
+                "net.nevinsky.abyssus.lib.core.editor.foliage.FoliageScatter",
+            )) {
             try {
                 Class.forName(name)
                 fail("$name is on the lib-core classpath")
@@ -200,15 +226,20 @@ class FoliageRuntimeLoadTest {
         }
     }
 
-    private fun snapshot(): Map<String, Pair<Long, Int>> = dir.walkTopDown().filter { it.isFile }
-        .associate { it.path to (it.lastModified() to it.readBytes().contentHashCode()) }
+    private fun snapshot(): Map<String, Pair<Long, Int>> =
+        dir.walkTopDown()
+            .filter { it.isFile }
+            .associate { it.path to (it.lastModified() to it.readBytes().contentHashCode()) }
 
     private companion object {
         const val TWO_MODELS =
-            """{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","additional":{"terrain":"terr","maskResolution":16,""" +
-                """"layers":[{"id":1,"kind":"OBJECT","models":[{"asset":"tree","weight":1.0},{"asset":"rock","weight":1.0}]}]}}"""
+            """{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","additional":{"terrain":"terr",
+"maskResolution":16,""" +
+                """"layers":[{"id":1,"kind":"OBJECT","models":[{"asset":"tree","weight":1.0},{"asset":"rock",
+"weight":1.0}]}]}}"""
         const val ONE_MODEL =
-            """{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","additional":{"terrain":"terr","maskResolution":16,""" +
+            """{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","additional":{"terrain":"terr",
+"maskResolution":16,""" +
                 """"layers":[{"id":1,"kind":"OBJECT","models":[{"asset":"tree","weight":1.0}]}]}}"""
     }
 }

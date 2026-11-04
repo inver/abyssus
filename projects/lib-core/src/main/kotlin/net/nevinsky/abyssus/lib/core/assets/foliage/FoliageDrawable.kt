@@ -5,19 +5,14 @@
 
 package net.nevinsky.abyssus.lib.core.assets.foliage
 
-import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
-import com.badlogic.gdx.graphics.g3d.Renderable
-import com.badlogic.gdx.graphics.g3d.RenderableProvider
-import net.nevinsky.abyssus.lib.gdx.g3d.InstanceAttributes
-import net.nevinsky.abyssus.lib.gdx.g3d.IntMesh
-import com.badlogic.gdx.graphics.g3d.model.MeshPart
-import com.badlogic.gdx.graphics.g3d.Model
-import com.badlogic.gdx.graphics.g3d.model.Node
-import com.badlogic.gdx.graphics.g3d.model.NodePart
-
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.g3d.Material
+import com.badlogic.gdx.graphics.g3d.Model
+import com.badlogic.gdx.graphics.g3d.Renderable
+import com.badlogic.gdx.graphics.g3d.RenderableProvider
+import com.badlogic.gdx.graphics.g3d.model.MeshPart
+import com.badlogic.gdx.graphics.g3d.model.Node
+import com.badlogic.gdx.graphics.g3d.model.NodePart
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
@@ -25,28 +20,32 @@ import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.Disposable
 import com.badlogic.gdx.utils.Pool
 import kotlin.math.abs
+import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
+import net.nevinsky.abyssus.lib.gdx.g3d.InstanceAttributes
+import net.nevinsky.abyssus.lib.gdx.g3d.IntMesh
 
 /**
  * A foliage asset's GL side: for every node part of a layer's model one instanced copy of that part, the per-copy
- * instance matrices, and the frustum and draw-distance culling (design decision 5). The shared model `Mesh` cannot
- * be drawn this way: instancing changes the vertex layout, and normal entities keep drawing it.
+ * instance matrices, and the frustum and draw-distance culling (design decision 5). The shared model `Mesh` cannot be
+ * drawn this way: instancing changes the vertex layout, and normal entities keep drawing it.
  *
  * [update] culls and refills the instance buffers; [getRenderables] then hands the visible parts to the batch. Its
- * renderables carry the identity `worldTransform`: the `instancedFlag` shaders take the world matrix of each copy
- * from the instance attributes. Copies are drawn in their bind pose, so no animation runs over the model.
+ * renderables carry the identity `worldTransform`: the `instancedFlag` shaders take the world matrix of each copy from
+ * the instance attributes. Copies are drawn in their bind pose, so no animation runs over the model.
  *
- * One instance buffer set belongs to a *(model folder, layer kind)* pair, not to the folder alone: the same model
- * can stand in an OBJECT and in a DETAIL layer, and a flat instance buffer cannot be drawn for one kind only.
- * [getRenderablesOf] hands over one kind's set, so the shadow depth pass can take the OBJECT layers' copies and
- * leave the DETAIL layers' to the lit pass.
+ * One instance buffer set belongs to a *(model folder, layer kind)* pair, not to the folder alone: the same model can
+ * stand in an OBJECT and in a DETAIL layer, and a flat instance buffer cannot be drawn for one kind only.
+ * [getRenderablesOf] hands over one kind's set, so the shadow depth pass can take the OBJECT layers' copies and leave
+ * the DETAIL layers' to the lit pass.
  *
  * A light pass has its own culling: [updateCasters] keeps the OBJECT layers' copies a light camera's frustum meets, in
  * instance buffers of their own that [getCasterRenderables] hands over, so an OBJECT copy outside the viewer's frustum
  * still casts its shadow and the viewer's buffers, filled by [update], are never touched by it. DETAIL copies never
  * cast. A drawable nobody calls [updateCasters] on holds no caster buffers.
  *
- * The instance buffer of a model holds as many copies as the bake gives it, so a later, smaller bake reuses the
- * meshes; only a bake that grows past the capacity rebuilds them.
+ * The instance buffer of a model holds as many copies as the bake gives it, so a later, smaller bake reuses the meshes;
+ * only a bake that grows past the capacity rebuilds them.
  */
 class FoliageDrawable(
     private val staged: PreparedFoliage,
@@ -54,13 +53,15 @@ class FoliageDrawable(
 ) : RenderableProvider, Disposable {
 
     /** The prepared data: settings, terrain, masks, bake and staleness, as the loader read them. */
-    val foliage: PreparedFoliage get() = staged
+    val foliage: PreparedFoliage
+        get() = staged
 
     /** The model assets of the layers, by folder name; a missing one dropped only its own copies. */
-    val layerModels: Map<String, Disposable?> = staged.meta.layers
-        .flatMap { layer -> layer.models.map { it.asset } }
-        .distinct()
-        .associateWith { models.get(it) }
+    val layerModels: Map<String, Disposable?> =
+        staged.meta.layers
+            .flatMap { layer -> layer.models.map { it.asset } }
+            .distinct()
+            .associateWith { models.get(it) }
 
     /** The bake whose copies are drawn; a freshly generated one is handed over with [setBake]. */
     var bake: FoliageBake? = staged.bake
@@ -75,7 +76,9 @@ class FoliageDrawable(
         for ((folder, value) in layerModels) {
             val box = BoundingBox()
             (value as? Model)?.calculateBoundingBox(box)
-            if (box.min.x <= box.max.x) put(folder, box)
+            if (box.min.x <= box.max.x) {
+                put(folder, box)
+            }
         }
     }
 
@@ -131,9 +134,9 @@ class FoliageDrawable(
     }
 
     /**
-     * Culls the chunks against [camera] and refills the instance buffers when what is drawn has changed: a new bake
-     * or terrain, a moved [entity], another set of visible chunks, or a moved camera under a DETAIL layer. Call it
-     * once per frame on the GL thread, before [getRenderables].
+     * Culls the chunks against [camera] and refills the instance buffers when what is drawn has changed: a new bake or
+     * terrain, a moved [entity], another set of visible chunks, or a moved camera under a DETAIL layer. Call it once
+     * per frame on the GL thread, before [getRenderables].
      */
     fun update(camera: Camera, entity: Matrix4) {
         if (terrain == null || bake == null) {
@@ -143,8 +146,12 @@ class FoliageDrawable(
         var changed = false
         var detail = false
         for (layer in layers) {
-            if (layer.cull(camera, entity)) changed = true
-            if (layer.kind == FoliageLayerKind.DETAIL) detail = true
+            if (layer.cull(camera, entity)) {
+                changed = true
+            }
+            if (layer.kind == FoliageLayerKind.DETAIL) {
+                detail = true
+            }
         }
         val entityMoved = cameraPass.moved(entity)
         // OBJECT copies are drawn to the far plane, so only a DETAIL layer cares where the camera stands
@@ -177,7 +184,9 @@ class FoliageDrawable(
     }
 
     override fun getRenderables(renderables: Array<Renderable>, pool: Pool<Renderable>) {
-        for ((key, mesh) in meshes) if (!key.caster) mesh.renderables(renderables, pool)
+        for ((key, mesh) in meshes) if (!key.caster) {
+            mesh.renderables(renderables, pool)
+        }
     }
 
     /**
@@ -196,7 +205,9 @@ class FoliageDrawable(
             return
         }
         var changed = false
-        for (layer in layers) if (layer.castCull(light, entity)) changed = true
+        for (layer in layers) if (layer.castCull(light, entity)) {
+            changed = true
+        }
         val moved = casterPass.moved(entity)
         if (casterDirty || changed || moved) {
             rebuildMeshes()
@@ -208,7 +219,9 @@ class FoliageDrawable(
 
     /** The instanced parts of the copies [updateCasters] kept: OBJECT layers only. */
     fun getCasterRenderables(renderables: Array<Renderable>, pool: Pool<Renderable>) {
-        for ((key, mesh) in meshes) if (key.caster) mesh.renderables(renderables, pool)
+        for ((key, mesh) in meshes) if (key.caster) {
+            mesh.renderables(renderables, pool)
+        }
     }
 
     /**
@@ -217,7 +230,9 @@ class FoliageDrawable(
      */
     fun getRenderablesOf(kind: FoliageLayerKind, renderables: Array<Renderable>, pool: Pool<Renderable>) {
         for ((key, mesh) in meshes) {
-            if (!key.caster && key.kind == kind) mesh.renderables(renderables, pool)
+            if (!key.caster && key.kind == kind) {
+                mesh.renderables(renderables, pool)
+            }
         }
     }
 
@@ -237,9 +252,13 @@ class FoliageDrawable(
     /** Drops everything drawn: what a terrain or bake handed over as null leaves to show. */
     private fun clear() {
         objectBounds = null
-        if (drawnCopies == 0) return
+        if (drawnCopies == 0) {
+            return
+        }
         for ((key, mesh) in meshes) {
-            if (key.caster) continue
+            if (key.caster) {
+                continue
+            }
             mesh.reset()
             mesh.upload()
         }
@@ -248,9 +267,13 @@ class FoliageDrawable(
 
     /** Empties the caster buffers: what a terrain or bake handed over as null leaves to cast. */
     private fun clearCasters() {
-        if (casterCopies == 0) return
+        if (casterCopies == 0) {
+            return
+        }
         for ((key, mesh) in meshes) {
-            if (!key.caster) continue
+            if (!key.caster) {
+                continue
+            }
             mesh.reset()
             mesh.upload()
         }
@@ -260,54 +283,81 @@ class FoliageDrawable(
     /** Writes one instance matrix per copy the light sees into the caster buffers and uploads them. */
     private fun fillCasters(entity: Matrix4) {
         val ground = checkNotNull(terrain) { "a terrain to stand the copies on" }
-        for ((key, mesh) in meshes) if (key.caster) mesh.reset()
+        for ((key, mesh) in meshes) if (key.caster) {
+            mesh.reset()
+        }
         var kept = 0
         for (layer in layers) {
-            if (layer.kind != FoliageLayerKind.OBJECT) continue
+            if (layer.kind != FoliageLayerKind.OBJECT) {
+                continue
+            }
             val layerBake = layer.bakeLayer ?: continue
-            if (layer.grid == null) continue
+            if (layer.grid == null) {
+                continue
+            }
             for (index in layerBake.chunks.indices) {
-                if (!layer.casterVisible[index]) continue
+                if (!layer.casterVisible[index]) {
+                    continue
+                }
                 for (copy in layerBake.chunks[index]) {
                     val key = layer.casterKeyAt(copy.model) ?: continue
                     val mesh = meshes[key] ?: continue
-                    if (mesh.isEmpty) continue
+                    if (mesh.isEmpty) {
+                        continue
+                    }
                     val matrix = matrices.copy(ground, layer.align, entity, copy, instance) ?: continue
-                    if (mesh.append(matrix)) kept++
+                    if (mesh.append(matrix)) {
+                        kept++
+                    }
                 }
             }
         }
-        for ((key, mesh) in meshes) if (key.caster) mesh.upload()
+        for ((key, mesh) in meshes) if (key.caster) {
+            mesh.upload()
+        }
         casterCopies = kept
     }
 
     /** Writes one instance matrix per visible copy into the buffers and uploads them all. */
     private fun fill(camera: Camera, entity: Matrix4) {
         val ground = checkNotNull(terrain) { "a terrain to stand the copies on" }
-        for ((key, mesh) in meshes) if (!key.caster) mesh.reset()
+        for ((key, mesh) in meshes) if (!key.caster) {
+            mesh.reset()
+        }
         var drawn = 0
         var objects: BoundingBox? = null
         for (layer in layers) {
             val layerBake = layer.bakeLayer ?: continue
-            if (layer.grid == null) continue
-            val distance2 = if (layer.kind == FoliageLayerKind.DETAIL) {
-                layer.drawDistance * layer.drawDistance
-            } else {
-                -1f // OBJECT copies are drawn to the far plane
+            if (layer.grid == null) {
+                continue
             }
+            val distance2 =
+                if (layer.kind == FoliageLayerKind.DETAIL) {
+                    layer.drawDistance * layer.drawDistance
+                } else {
+                    -1f // OBJECT copies are drawn to the far plane
+                }
             val casts = layer.kind == FoliageLayerKind.OBJECT
             for (index in layerBake.chunks.indices) {
-                if (!layer.visible[index]) continue
+                if (!layer.visible[index]) {
+                    continue
+                }
                 for (copy in layerBake.chunks[index]) {
                     val key = layer.keyAt(copy.model) ?: continue
                     val mesh = meshes[key] ?: continue // a missing model drops only its own copies
-                    if (mesh.isEmpty) continue
+                    if (mesh.isEmpty) {
+                        continue
+                    }
                     val matrix = matrices.copy(ground, layer.align, entity, copy, instance) ?: continue
                     if (distance2 >= 0f) {
                         matrix.getTranslation(nearest)
-                        if (nearest.dst2(camera.position) > distance2) continue
+                        if (nearest.dst2(camera.position) > distance2) {
+                            continue
+                        }
                     }
-                    if (!mesh.append(matrix)) continue
+                    if (!mesh.append(matrix)) {
+                        continue
+                    }
                     drawn++
                     if (casts) {
                         val box = modelBoxes[key.folder]
@@ -319,7 +369,9 @@ class FoliageDrawable(
                 }
             }
         }
-        for ((key, mesh) in meshes) if (!key.caster) mesh.upload()
+        for ((key, mesh) in meshes) if (!key.caster) {
+            mesh.upload()
+        }
         drawnCopies = drawn
         objectBounds = objects
         rebuilds++
@@ -327,8 +379,11 @@ class FoliageDrawable(
 
     /** Fits the meshes to the current bake: an unreferenced model is dropped, a grown capacity is rebuilt. */
     private fun rebuildMeshes() {
-        // the capacities only change with the bake, the terrain or the caster buffers: walking every copy per frame is waste
-        if (!meshesStale) return
+        // the capacities only change with the bake, the terrain or the caster buffers: walking every copy per frame is
+        // waste
+        if (!meshesStale) {
+            return
+        }
         meshesStale = false
         val capacities = capacities()
         val iterator = meshes.iterator()
@@ -341,7 +396,9 @@ class FoliageDrawable(
         }
         for ((key, capacity) in capacities) {
             val current = meshes[key]
-            if (current != null && current.capacity >= capacity) continue // never shrink what already fits
+            if (current != null && current.capacity >= capacity) {
+                continue // never shrink what already fits
+            }
             current?.dispose()
             meshes.remove(key)
             val model = layerModels[key.folder] as? Model ?: continue // a model that never loaded drops only its copies
@@ -369,9 +426,9 @@ class FoliageDrawable(
     }
 
     /**
-     * Grows [out] with [box] as [matrix] turns it into world space: the centre of the box through the matrix, its
-     * half extents through the absolute value of the 3x3, which is the axis-aligned box of a rotated box exactly.
-     * It runs once per drawn copy, so it stays clear of the eight-corner walk `BoundingBox.ext` does.
+     * Grows [out] with [box] as [matrix] turns it into world space: the centre of the box through the matrix, its half
+     * extents through the absolute value of the 3x3, which is the axis-aligned box of a rotated box exactly. It runs
+     * once per drawn copy, so it stays clear of the eight-corner walk `BoundingBox.ext` does.
      */
     private fun grow(out: BoundingBox, box: BoundingBox, matrix: Matrix4) {
         val m = matrix.`val`
@@ -401,9 +458,13 @@ class FoliageDrawable(
     private fun addParts(nodes: Iterable<Node>, capacity: Int, out: MutableList<PartMesh>) {
         for (node in nodes) {
             for (nodePart in node.parts) {
-                if (!nodePart.enabled) continue
+                if (!nodePart.enabled) {
+                    continue
+                }
                 val source = nodePart.meshPart ?: continue
-                if (source.size <= 0) continue
+                if (source.size <= 0) {
+                    continue
+                }
                 val material = nodePart.material ?: continue
                 val built = instancedPart(source, capacity) ?: continue
                 out += PartMesh(built, material, nodeWorld(nodePart, node), restPoseBones(nodePart), capacity)
@@ -413,14 +474,26 @@ class FoliageDrawable(
     }
 
     /**
-     * A new instanced mesh holding [part]'s own indices over the source mesh's vertices: instancing adds attributes
-     * to the vertex layout, so the shared model mesh cannot be reused.
+     * A new instanced mesh holding [part]'s own indices over the source mesh's vertices: instancing adds attributes to
+     * the vertex layout, so the shared model mesh cannot be reused.
      */
     private fun instancedPart(part: MeshPart, capacity: Int): MeshPart? {
         val source = part.mesh ?: return null
-        check(source is IntMesh) { "foliage models are built with 32-bit meshes (IntModel), not ${source.javaClass.name}" }
+        check(source is IntMesh) {
+            "foliage models are built with 32-bit meshes (IntModel), not ${source.javaClass.name}"
+        }
         val indexed = source.numIndices > 0
-        val mesh = IntMesh(true, source.numVertices, if (indexed) part.size else 0, source.vertexAttributes)
+        val mesh =
+            IntMesh(
+                true,
+                source.numVertices,
+                if (indexed) {
+                    part.size
+                } else {
+                    0
+                },
+                source.vertexAttributes,
+            )
         try {
             val vertices = FloatArray(source.numVertices * source.vertexSize / 4)
             source.getVertices(vertices)
@@ -435,17 +508,32 @@ class FoliageDrawable(
             mesh.dispose()
             throw t
         }
-        val built = MeshPart(part.id, mesh, if (indexed) 0 else part.offset, part.size, part.primitiveType)
+        val built =
+            MeshPart(
+                part.id,
+                mesh,
+                if (indexed) {
+                    0
+                } else {
+                    part.offset
+                },
+                part.size,
+                part.primitiveType,
+            )
         built.update()
         return built
     }
 
     /**
-     * The node's world transform, folded into every instance of a plain part. A skinned part gets the identity:
-     * its bones already carry the node hierarchy, and the shader applies them before the instance matrix.
+     * The node's world transform, folded into every instance of a plain part. A skinned part gets the identity: its
+     * bones already carry the node hierarchy, and the shader applies them before the instance matrix.
      */
     private fun nodeWorld(nodePart: NodePart, node: Node): Matrix4 =
-        if (nodePart.invBoneBindTransforms != null) Matrix4() else Matrix4(node.globalTransform)
+        if (nodePart.invBoneBindTransforms != null) {
+            Matrix4()
+        } else {
+            Matrix4(node.globalTransform)
+        }
 
     /** The model's rest pose for a skinned part: the same matrices `Node.calculateBoneTransforms` writes. */
     private fun restPoseBones(nodePart: NodePart): kotlin.Array<Matrix4>? {
@@ -460,12 +548,16 @@ class FoliageDrawable(
         val scale = staged.meta.layers.maxOfOrNull { it.scale.max } ?: 1f
         var reach = 0f
         for (box in modelBoxes.values) {
-            reach = maxOf(
-                reach,
-                abs(box.min.x), abs(box.max.x),
-                abs(box.min.y), abs(box.max.y),
-                abs(box.min.z), abs(box.max.z),
-            )
+            reach =
+                maxOf(
+                    reach,
+                    abs(box.min.x),
+                    abs(box.max.x),
+                    abs(box.min.y),
+                    abs(box.max.y),
+                    abs(box.min.z),
+                    abs(box.max.z),
+                )
         }
         return reach * scale
     }
@@ -502,7 +594,9 @@ class FoliageDrawable(
 
         private val casterKeys: List<MeshKey> = meta.models.map { MeshKey(it.asset, kind, caster = true) }
 
-        /** The caster mesh set of the layer's [index]-th model; null when the bake names one the meta no longer holds. */
+        /**
+         * The caster mesh set of the layer's [index]-th model; null when the bake names one the meta no longer holds.
+         */
         fun casterKeyAt(index: Int): MeshKey? = casterKeys.getOrNull(index)
 
         /** The mesh set each model index draws into: one per folder and kind, so either kind can be drawn alone. */
@@ -517,11 +611,12 @@ class FoliageDrawable(
             val ground = terrain
             val size = bake?.chunkSize
             bakeLayer = layerBake
-            grid = if (layerBake == null || ground == null || size == null) {
-                null
-            } else {
-                foliageChunkGrid(layerBake, size, ground, chunkPad)
-            }
+            grid =
+                if (layerBake == null || ground == null || size == null) {
+                    null
+                } else {
+                    foliageChunkGrid(layerBake, size, ground, chunkPad)
+                }
             val chunks = grid?.boxes?.size ?: 0
             visible = BooleanArray(chunks)
             lastVisible = BooleanArray(chunks)
@@ -531,14 +626,18 @@ class FoliageDrawable(
 
         /** Culls the chunks against the light [camera] and reports whether the kept set differs from the last one. */
         fun castCull(camera: Camera, entity: Matrix4): Boolean {
-            if (kind != FoliageLayerKind.OBJECT) return false
+            if (kind != FoliageLayerKind.OBJECT) {
+                return false
+            }
             val boxes = grid
             if (boxes == null) {
                 casterVisible.fill(false)
             } else {
                 visibleFoliageChunks(boxes, entity, FoliageLayerKind.OBJECT, drawDistance, camera, casterVisible)
             }
-            if (casterVisible.contentEquals(lastCasterVisible)) return false
+            if (casterVisible.contentEquals(lastCasterVisible)) {
+                return false
+            }
             lastCasterVisible = casterVisible.copyOf()
             return true
         }
@@ -551,7 +650,9 @@ class FoliageDrawable(
             } else {
                 visibleFoliageChunks(boxes, entity, kind, drawDistance, camera, visible)
             }
-            if (visible.contentEquals(lastVisible)) return false
+            if (visible.contentEquals(lastVisible)) {
+                return false
+            }
             lastVisible = visible.copyOf()
             return true
         }
@@ -565,11 +666,14 @@ class FoliageDrawable(
         var count: Int = 0
             private set
 
-        val isEmpty: Boolean get() = parts.isEmpty()
+        val isEmpty: Boolean
+            get() = parts.isEmpty()
 
         /** Hands every part over as a renderable; nothing is handed over for a set the last fill left empty. */
         fun renderables(out: Array<Renderable>, pool: Pool<Renderable>) {
-            if (count == 0) return
+            if (count == 0) {
+                return
+            }
             for (part in parts) {
                 val renderable = pool.obtain()
                 renderable.meshPart.set(part.meshPart)
@@ -590,7 +694,9 @@ class FoliageDrawable(
 
         /** Appends one copy's matrices; false when the buffers are full (the bake outgrew its capacity). */
         fun append(copy: Matrix4): Boolean {
-            if (count >= capacity) return false
+            if (count >= capacity) {
+                return false
+            }
             for (part in parts) part.append(copy)
             count++
             return true
@@ -625,7 +731,9 @@ class FoliageDrawable(
         }
 
         fun append(copy: Matrix4) {
-            if (count >= capacity) return
+            if (count >= capacity) {
+                return
+            }
             combined.set(copy).mul(nodeWorld)
             InstanceAttributes.write(combined, buffer, count * InstanceAttributes.FLOATS)
             count++
@@ -655,7 +763,9 @@ private class EntityMemo {
 
     /** Whether two matrices hold the same sixteen floats; `Matrix4` has no `equals` to ask. */
     private fun same(a: FloatArray, b: FloatArray): Boolean {
-        for (i in a.indices) if (a[i] != b[i]) return false
+        for (i in a.indices) if (a[i] != b[i]) {
+            return false
+        }
         return true
     }
 

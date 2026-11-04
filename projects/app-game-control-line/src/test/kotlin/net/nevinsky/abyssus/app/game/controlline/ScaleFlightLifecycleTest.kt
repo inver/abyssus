@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.app.game.controlline
 
+import java.time.Instant
 import net.nevinsky.abyssus.app.game.controlline.flow.FlightResult
 import net.nevinsky.abyssus.app.game.controlline.flow.GameFlow
 import net.nevinsky.abyssus.app.game.controlline.flow.Mode
@@ -24,34 +25,44 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.time.Instant
 
 /** A Scale flight through the game's own flight lifecycle, as `ControlLineGame` runs it, without a window. */
 class ScaleFlightLifecycleTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
     private val runners = ArrayList<FlightRunner>()
 
-    @After
-    fun closeRunners() = runners.forEach(FlightRunner::close)
+    @After fun closeRunners() = runners.forEach(FlightRunner::close)
 
     private inner class Game {
         val dir = temp.root.toPath()
         val free = ScoreTable(dir.resolve("scores.json"))
         val scale = ScaleScoreTable(dir.resolve("scale-scores.json"))
-        val flow = GameFlow(
-            loadField().engine.let { engine -> planeChoices(engine.ids.ids.associateWith { engine.ids[it]!! }) },
-            free, PatternScoreTable(dir.resolve("f2b-scores.json")), scale,
-        ) { Instant.parse("2026-10-20T12:00:00Z") }
-        val flights = FlightRunner(flow, { FieldScene(loadField()) }, { PhysicsAssets(bundledProject().toFile()) }, failOnWarnings(), JoltNatives())
-            .also { runners += it }
+        val flow =
+            GameFlow(
+                loadField().engine.let { engine -> planeChoices(engine.ids.ids.associateWith { engine.ids[it]!! }) },
+                free,
+                PatternScoreTable(dir.resolve("f2b-scores.json")),
+                scale,
+            ) {
+                Instant.parse("2026-10-20T12:00:00Z")
+            }
+        val flights =
+            FlightRunner(
+                    flow,
+                    { FieldScene(loadField()) },
+                    { PhysicsAssets(bundledProject().toFile()) },
+                    failOnWarnings(),
+                    JoltNatives(),
+                )
+                .also { runners += it }
 
         /** [seconds] of 60 Hz frames, as the game renders them: the flow first, then the flight. */
-        fun frames(seconds: Float) = repeat(Math.round(seconds * 60f)) {
-            flights.follow()
-            flights.advance(1f / 60f)
-        }
+        fun frames(seconds: Float) =
+            repeat(Math.round(seconds * 60f)) {
+                flights.follow()
+                flights.advance(1f / 60f)
+            }
 
         fun flyReplica() {
             flow.scale()

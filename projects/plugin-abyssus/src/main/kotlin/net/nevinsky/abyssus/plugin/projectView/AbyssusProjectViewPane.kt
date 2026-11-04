@@ -19,16 +19,6 @@ import com.intellij.ui.render.RenderingUtil
 import com.intellij.ui.tree.TreeVisitor
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.tree.TreeUtil
-import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.filetype.EyeIcons
-import net.nevinsky.abyssus.plugin.filetype.SceneIcons
-import net.nevinsky.abyssus.plugin.filetype.SceneViewIcons
-import net.nevinsky.abyssus.plugin.projectView.action.asset.AssetDropdownAction
-import net.nevinsky.abyssus.plugin.projectView.scene.SceneDropdownAction
-import net.nevinsky.abyssus.plugin.projectView.scene.ScenesDropdownAction
-import net.nevinsky.abyssus.plugin.projectView.action.ui.UiDropdownAction
-import net.nevinsky.abyssus.plugin.sceneview.SceneViewHost
-import net.nevinsky.abyssus.plugin.sceneview.openSceneView
 import java.awt.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -36,11 +26,21 @@ import java.util.function.Supplier
 import javax.swing.*
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreeCellRenderer
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.filetype.EyeIcons
+import net.nevinsky.abyssus.plugin.filetype.SceneIcons
+import net.nevinsky.abyssus.plugin.filetype.SceneViewIcons
+import net.nevinsky.abyssus.plugin.projectView.action.asset.AssetDropdownAction
+import net.nevinsky.abyssus.plugin.projectView.action.ui.UiDropdownAction
+import net.nevinsky.abyssus.plugin.projectView.scene.SceneDropdownAction
+import net.nevinsky.abyssus.plugin.projectView.scene.ScenesDropdownAction
+import net.nevinsky.abyssus.plugin.sceneview.SceneViewHost
+import net.nevinsky.abyssus.plugin.sceneview.openSceneView
 
 // Platform project-view implementation APIs supply its native selection, toolbar and tree lifecycle.
 // Keep that integration here; the public ViewSettings/node contracts do not construct a custom pane.
-class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project),
-    SceneViewHost by ProjectSceneViewHost(project) {
+class AbyssusProjectViewPane(project: Project) :
+    ProjectViewPane(project), SceneViewHost by ProjectSceneViewHost(project) {
     // Rebuilds the tree after plugin edits, document changes (Undo/Redo, unsaved text) and VFS changes, keeping
     // selection and expansion.
     internal val refresh =
@@ -54,12 +54,13 @@ class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project),
 
     override fun getWeight(): Int = WEIGHT
 
-    override fun createStructure(): ProjectAbstractTreeStructureBase = object : ProjectTreeStructure(myProject, ID) {
-        override fun createRoot(project: Project, settings: ViewSettings): AbstractTreeNode<*> =
-            AbyssusRootNode(project, settings)
+    override fun createStructure(): ProjectAbstractTreeStructureBase =
+        object : ProjectTreeStructure(myProject, ID) {
+            override fun createRoot(project: Project, settings: ViewSettings): AbstractTreeNode<*> =
+                AbyssusRootNode(project, settings)
 
-        override fun isToBuildChildrenInBackground(element: Any) = true
-    }
+            override fun isToBuildChildrenInBackground(element: Any) = true
+        }
 
     /** The platform sorts siblings by name; `Scenes`, `UI`, `Assets` and the type groups keep their specified order. */
     override fun createComparator(): java.util.Comparator<com.intellij.ide.util.treeView.NodeDescriptor<*>> {
@@ -74,11 +75,15 @@ class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project),
 
     private var wrapped: JComponent? = null
 
-    /** The platform's tree component with the counts footer under it; the platform caches its own component,
-     *  so the wrapper is cached too. */
+    /**
+     * The platform's tree component with the counts footer under it; the platform caches its own component, so the
+     * wrapper is cached too.
+     */
     override fun createComponent(): JComponent {
         val inner = super.createComponent()
-        wrapped?.let { return it }
+        wrapped?.let {
+            return it
+        }
         return JPanel(BorderLayout()).also {
             it.add(inner, BorderLayout.CENTER)
             it.add(AbyssusFooter(myProject, this), BorderLayout.SOUTH)
@@ -101,8 +106,9 @@ class AbyssusProjectViewPane(project: Project) : ProjectViewPane(project),
     }
 }
 
-/** Publishes the user object of [tree]'s selected node (null when nothing is selected) as the Abyssus selection of
- *  [project].
+/**
+ * Publishes the user object of [tree]'s selected node (null when nothing is selected) as the Abyssus selection of
+ * [project].
  */
 internal fun publishSelectionOf(tree: JTree, project: Project) {
     tree.addTreeSelectionListener { e ->
@@ -112,13 +118,19 @@ internal fun publishSelectionOf(tree: JTree, project: Project) {
 }
 
 /**
- * The platform repaints every fragment of a selected, focused row in the selection foreground, which
- * hides the gray of a disabled parameter exactly while it is selected (e.g. right after its eye is
- * clicked). Keep the gray for those fragments.
+ * The platform repaints every fragment of a selected, focused row in the selection foreground, which hides the gray of
+ * a disabled parameter exactly while it is selected (e.g. right after its eye is clicked). Keep the gray for those
+ * fragments.
  */
 private class GrayKeepingRenderer : ProjectViewRenderer() {
     override fun customizeCellRenderer(
-        tree: JTree, value: Any?, selected: Boolean, expanded: Boolean, leaf: Boolean, row: Int, hasFocus: Boolean,
+        tree: JTree,
+        value: Any?,
+        selected: Boolean,
+        expanded: Boolean,
+        leaf: Boolean,
+        row: Int,
+        hasFocus: Boolean,
     ) {
         super.customizeCellRenderer(tree, value, selected, expanded, leaf, row, hasFocus)
         val entry = (TreeUtil.getUserObject(value) as? DtoEntryNode)?.value
@@ -133,7 +145,9 @@ private class GrayKeepingRenderer : ProjectViewRenderer() {
         super.paintComponent(g)
         val index = (0 until fragmentCount).firstOrNull { getFragmentTag(it) === GameBadge.TAG } ?: return
         val xs = (0 until width).filter { findFragmentAt(it) == index }
-        if (xs.isEmpty()) return
+        if (xs.isEmpty()) {
+            return
+        }
         val g2 = g.create() as Graphics2D
         try {
             val h = g2.getFontMetrics(RelativeFont.SMALL.derive(font)).height
@@ -142,7 +156,6 @@ private class GrayKeepingRenderer : ProjectViewRenderer() {
             g2.dispose()
         }
     }
-
 
     override fun append(fragment: String, attributes: SimpleTextAttributes, isMainText: Boolean) {
         if (mySelected && attributes.fgColor == SimpleTextAttributes.GRAYED_ATTRIBUTES.fgColor) {
@@ -173,16 +186,19 @@ private class AbyssusSelectInTarget(project: Project) : ProjectViewSelectInTarge
  */
 class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectViewTree(model) {
 
-    private val dropdownActions: List<DropdownAction> = listOf(
-        AssetDropdownAction(),
-        SceneDropdownAction(),
-        ScenesDropdownAction(),
-        UiDropdownAction(),
-    )
+    private val dropdownActions: List<DropdownAction> =
+        listOf(
+            AssetDropdownAction(),
+            SceneDropdownAction(),
+            ScenesDropdownAction(),
+            UiDropdownAction(),
+        )
 
     override fun createCellRenderer(): TreeCellRenderer = GrayKeepingRenderer()
 
-    /** Each level's icon starts [LEVEL_INDENT] px right of its parent's, whatever indent the platform's tree UI brings. */
+    /**
+     * Each level's icon starts [LEVEL_INDENT] px right of its parent's, whatever indent the platform's tree UI brings.
+     */
     override fun updateUI() {
         super.updateUI()
         (ui as? javax.swing.plaf.basic.BasicTreeUI)?.let {
@@ -198,23 +214,34 @@ class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectVi
     private fun actionsFor(row: Int): List<RowAction> {
         val node = TreeUtil.getUserObject(getPathForRow(row)?.lastPathComponent)
         viewableSceneFile(node)?.let { file ->
-            return listOf(IconAction(SceneViewIcons.VIEW, AbyssusBundle.message("viewSceneTooltip")) {
-                openSceneView(
-                    project,
-                    file
-                )
-            })
+            return listOf(
+                IconAction(SceneViewIcons.VIEW, AbyssusBundle.message("viewSceneTooltip")) {
+                    openSceneView(
+                        project,
+                        file,
+                    )
+                }
+            )
         }
         val entry = (node as? DtoEntryNode)?.value ?: return emptyList()
         return listOfNotNull(eyeAction(entry), unusedBadgeFor(entry))
     }
 
     private fun eyeAction(entry: DtoEntry): RowAction? {
-        if (entry.enabled == null) return null
-        val icon = if (entry.enabled) EyeIcons.ON else EyeIcons.OFF
+        if (entry.enabled == null) {
+            return null
+        }
+        val icon =
+            if (entry.enabled) {
+                EyeIcons.ON
+            } else {
+                EyeIcons.OFF
+            }
         return IconAction(icon, null) { r ->
             val wasExpanded = isExpanded(getPathForRow(r))
-            if (toggleRow(project, entry)) reselect(entry.path, wasExpanded)
+            if (toggleRow(project, entry)) {
+                reselect(entry.path, wasExpanded)
+            }
         }
     }
 
@@ -224,12 +251,16 @@ class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectVi
         return layoutActions(rowBounds, visibleRect.let { it.x + it.width }, actions, this)
     }
 
-    /** The painted actions of [row] as `name=x..x2;...` (`unused`, `icon`), rightmost first; the UI tests read it to check spacing. */
+    /**
+     * The painted actions of [row] as `name=x..x2;...` (`unused`, `icon`), rightmost first; the UI tests read it to
+     * check spacing.
+     */
     fun actionLayout(row: Int): String {
         val actions = actionsFor(row)
         val bounds = actionBounds(row, actions) ?: return ""
         return actions.indices.joinToString(";") { i ->
-            "${if (actions[i] is UnusedBadge) "unused" else "icon"}=${bounds[i].x}..${bounds[i].x + bounds[i].width - 1}"
+            "${when { actions[i] is UnusedBadge -> "unused"
+ else -> "icon" }}=${bounds[i].x}..${bounds[i].x + bounds[i].width - 1}"
         }
     }
 
@@ -242,7 +273,8 @@ class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectVi
         val row = rowOf(e) ?: return null
         val actions = actionsFor(row)
         val bounds = actionBounds(row, actions) ?: return null
-        return actions.indices.firstOrNull { actions[it].run != null && bounds[it].contains(e.point) }
+        return actions.indices
+            .firstOrNull { actions[it].run != null && bounds[it].contains(e.point) }
             ?.let { row to actions[it] }
     }
 
@@ -252,28 +284,35 @@ class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectVi
         // This exact use is the project-tree finding in the recorded verifier baseline (design D9).
         putClientProperty(RenderingUtil.CUSTOM_SELECTION_BACKGROUND, Supplier<Color> { DesignColors.SELECTION })
         ToolTipManager.sharedInstance().registerComponent(this)
-        addMouseListener(object : MouseAdapter() {
-            override fun mouseClicked(e: MouseEvent) {
-                if (e.button != MouseEvent.BUTTON1) return
-                val (row, action) = actionAt(e) ?: return
-                e.consume()
-                action.run?.invoke(row)
-            }
-        })
-        addMouseMotionListener(object : MouseAdapter() {
-            override fun mouseMoved(e: MouseEvent) {
-                cursor = if (actionAt(e) != null) {
-                    Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-                } else {
-                    Cursor.getDefaultCursor()
+        addMouseListener(
+            object : MouseAdapter() {
+                override fun mouseClicked(e: MouseEvent) {
+                    if (e.button != MouseEvent.BUTTON1) {
+                        return
+                    }
+                    val (row, action) = actionAt(e) ?: return
+                    e.consume()
+                    action.run?.invoke(row)
                 }
             }
-        })
+        )
+        addMouseMotionListener(
+            object : MouseAdapter() {
+                override fun mouseMoved(e: MouseEvent) {
+                    cursor =
+                        if (actionAt(e) != null) {
+                            Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                        } else {
+                            Cursor.getDefaultCursor()
+                        }
+                }
+            }
+        )
     }
 
     /**
-     * The Assets row's right-click menu holds only Import Model and New, not the platform's project-view actions;
-     * every other row keeps the platform popup.
+     * The Assets row's right-click menu holds only Import Model and New, not the platform's project-view actions; every
+     * other row keeps the platform popup.
      */
     override fun processMouseEvent(e: MouseEvent) {
         if (e.isPopupTrigger) {
@@ -292,8 +331,8 @@ class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectVi
         actionAt(event)?.second?.tooltip ?: super.getToolTipText(event)
 
     /**
-     * A toggled row changes identity (see [DtoEntry.equals]), so the refresh drops the selection onto
-     * its parent; select the row with the same entry path again and restore its expansion.
+     * A toggled row changes identity (see [DtoEntry.equals]), so the refresh drops the selection onto its parent;
+     * select the row with the same entry path again and restore its expansion.
      */
     private fun reselect(entryPath: String, expand: Boolean) {
         val visitor = TreeVisitor { path ->
@@ -306,7 +345,9 @@ class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectVi
             }
         }
         TreeUtil.promiseSelect(this, visitor).onSuccess { path ->
-            if (expand) com.intellij.openapi.application.invokeLater { expandPath(path) }
+            if (expand) {
+                com.intellij.openapi.application.invokeLater { expandPath(path) }
+            }
         }
     }
 
@@ -315,7 +356,9 @@ class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectVi
         val clip = g.clipBounds ?: return
         val first = getClosestRowForLocation(0, clip.y)
         val last = getClosestRowForLocation(0, clip.y + clip.height)
-        if (first < 0) return
+        if (first < 0) {
+            return
+        }
         for (row in first..last) {
             val actions = actionsFor(row)
             val bounds = actionBounds(row, actions) ?: continue

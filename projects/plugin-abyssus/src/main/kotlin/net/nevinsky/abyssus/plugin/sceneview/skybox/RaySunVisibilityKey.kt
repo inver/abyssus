@@ -20,7 +20,8 @@ private const val SCALE_STEPS = 20
  * What a published ray copy of the clouds' shade on the sun was made for. A new copy is needed when any part changes:
  * the sun entity or direction, the cloud asset (by identity, so a reload is a change), whether the cloud shadow map or
  * the uniform dimming shades the sun, the uniform factor (in 5% steps), the orbit target's 500 m cell (the map is
- * centered on it) and, for drifting clouds, the [timeBucket] of the view's sky clock. Stationary clouds are copied once,
+  * centered on it) and, for drifting clouds, the [timeBucket] of the view's sky clock. Stationary clouds are copied
+  * once,
  * which bounds how often ray accumulation restarts.
  */
 data class RaySunVisibilityKey(
@@ -40,7 +41,19 @@ fun raySunVisibilityKey(
     targetX: Float, targetZ: Float, timeSeconds: Double,
 ) = RaySunVisibilityKey(
     sunId, sun, clouds, mapped, (scale * SCALE_STEPS).roundToInt(),
-    if (mapped) floor(targetX / RAY_SUN_VISIBILITY_CELL).toLong() else 0L,
-    if (mapped) floor(targetZ / RAY_SUN_VISIBILITY_CELL).toLong() else 0L,
-    if (drifting) floor(timeSeconds / CLOUD_DRIFT_REFRESH_SECONDS).toLong() else 0L,
+    if (mapped) {
+        floor(targetX / RAY_SUN_VISIBILITY_CELL).toLong()
+    } else {
+        0L
+    },
+    if (mapped) {
+        floor(targetZ / RAY_SUN_VISIBILITY_CELL).toLong()
+    } else {
+        0L
+    },
+    if (drifting) {
+        floor(timeSeconds / CLOUD_DRIFT_REFRESH_SECONDS).toLong()
+    } else {
+        0L
+    },
 )

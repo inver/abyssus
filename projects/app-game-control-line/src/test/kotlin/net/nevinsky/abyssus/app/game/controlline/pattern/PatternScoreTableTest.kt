@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
+import java.nio.file.Files
+import java.nio.file.Path
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -11,12 +13,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.nio.file.Files
-import java.nio.file.Path
 
 class PatternScoreTableTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
     private fun home(): Path = temp.root.toPath().resolve("home/.abyssus-control-line")
 
@@ -27,7 +26,10 @@ class PatternScoreTableTest {
 
     @Test
     fun theDefaultFileIsInTheHomeFolder() =
-        assertEquals(Path.of("/home/pilot/.abyssus-control-line/f2b-scores.json"), defaultPatternScoresFile("/home/pilot"))
+        assertEquals(
+            Path.of("/home/pilot/.abyssus-control-line/f2b-scores.json"),
+            defaultPatternScoresFile("/home/pilot"),
+        )
 
     @Test
     fun aMidFlightEntersOnlyTheMidBoardWithItsFifteenMarks() {
@@ -45,10 +47,15 @@ class PatternScoreTableTest {
     @Test
     fun theEleventhFlightReplacesTheLowest() {
         val table = PatternScoreTable(file())
-        listOf(500.0, 120.0, 300.0, 200.0, 450.0, 130.0, 900.0, 250.0, 160.0, 700.0).forEachIndexed { i, s -> table.add(AssistLevel.PRO, entry("P$i", s)) }
+        listOf(500.0, 120.0, 300.0, 200.0, 450.0, 130.0, 900.0, 250.0, 160.0, 700.0).forEachIndexed { i, s ->
+            table.add(AssistLevel.PRO, entry("P$i", s))
+        }
         assertTrue(table.qualifies(AssistLevel.PRO, 150.0))
         assertEquals(9, table.add(AssistLevel.PRO, entry("New", 150.0)))
-        assertEquals(listOf(900.0, 700.0, 500.0, 450.0, 300.0, 250.0, 200.0, 160.0, 150.0, 130.0), PatternScoreTable(file()).board(AssistLevel.PRO).map { it.score })
+        assertEquals(
+            listOf(900.0, 700.0, 500.0, 450.0, 300.0, 250.0, 200.0, 160.0, 150.0, 130.0),
+            PatternScoreTable(file()).board(AssistLevel.PRO).map { it.score },
+        )
         assertFalse(table.qualifies(AssistLevel.PRO, 130.0))
         assertNull(table.add(AssistLevel.PRO, entry("Late", 130.0)))
         // another board is not full
@@ -61,7 +68,10 @@ class PatternScoreTableTest {
         table.add(AssistLevel.PRO, entry("First", 200.0, "2026-10-01T10:00:00Z"))
         table.add(AssistLevel.PRO, entry("Second", 200.0, "2026-10-02T10:00:00Z"))
         table.add(AssistLevel.PRO, entry("Third", 300.0, "2026-10-03T10:00:00Z"))
-        assertEquals(listOf("Third", "First", "Second"), PatternScoreTable(file()).board(AssistLevel.PRO).map { it.name })
+        assertEquals(
+            listOf("Third", "First", "Second"),
+            PatternScoreTable(file()).board(AssistLevel.PRO).map { it.name },
+        )
     }
 
     @Test
@@ -90,7 +100,18 @@ class PatternScoreTableTest {
     fun theFileHoldsEveryFieldAndAMissingBoardReadsEmpty() {
         PatternScoreTable(file()).add(AssistLevel.MID, entry("Ann", 612.4))
         val text = Files.readString(file())
-        for (key in listOf("\"version\" : 1", "\"boards\"", "\"mid\"", "\"name\"", "\"plane\"", "\"score\" : 612.4", "\"flightTime\"", "\"date\"", "\"marks\"")) {
+        for (key in
+            listOf(
+                "\"version\" : 1",
+                "\"boards\"",
+                "\"mid\"",
+                "\"name\"",
+                "\"plane\"",
+                "\"score\" : 612.4",
+                "\"flightTime\"",
+                "\"date\"",
+                "\"marks\"",
+            )) {
             assertTrue("$key in $text", text.contains(key))
         }
         Files.writeString(file(), """{"version": 1, "boards": {"pro": []}}""")
@@ -106,7 +127,8 @@ class PatternScoreTableTest {
 
     private fun flights(): Path = home().resolve("f2b-flights")
 
-    private fun names(): Set<String> = Files.list(flights()).use { files -> files.map { it.fileName.toString() }.toList().toSet() }
+    private fun names(): Set<String> =
+        Files.list(flights()).use { files -> files.map { it.fileName.toString() }.toList().toSet() }
 
     @Test
     fun aMidFlightEnteringSavesItsRecordingAndNamesIt() {
@@ -143,7 +165,11 @@ class PatternScoreTableTest {
     @Test
     fun anEntryWithoutAFlightStillLoadsAndUnknownFieldsAreIgnored() {
         Files.createDirectories(home())
-        Files.writeString(file(), """{"version": 1, "boards": {"pro": [{"name": "Old", "plane": "Stunter", "score": 300.5, "flightTime": 400.0, "date": "2026-10-04T12:00:00Z", "marks": [7.5], "later": {"x": 1}}]}}""")
+        Files.writeString(
+            file(),
+            """{"version": 1, "boards": {"pro": [{"name": "Old", "plane": "Stunter", "score": 300.5,
+"flightTime": 400.0, "date": "2026-10-04T12:00:00Z", "marks": [7.5], "later": {"x": 1}}]}}""",
+        )
         val table = PatternScoreTable(file())
         assertFalse(table.damaged)
         assertNull(table.board(AssistLevel.PRO).single().flight)

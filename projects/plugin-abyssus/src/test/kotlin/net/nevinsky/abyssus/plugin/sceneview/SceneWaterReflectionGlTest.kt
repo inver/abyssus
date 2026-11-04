@@ -25,10 +25,14 @@ class SceneWaterReflectionGlTest {
 
     private val orbit = OrbitCamera(Vector3(0f, 0f, 0f), 25f, 0.6f, 0.35f)
 
-    private fun shoot(params: SceneRenderParams, orbit: OrbitCamera = this.orbit, configure: (SceneRenderer) -> Unit = {}) =
+    private fun shoot(params: SceneRenderParams, orbit: OrbitCamera = this.orbit, configure: (SceneRenderer) -> Unit =
+        {}) =
         WaterGlRig.shoot(params, orbit, configure = configure)
 
-    /** The mean absolute colour difference of two reflection images around the pixel of the world point [at] seen by the main camera. */
+    /**
+     * The mean absolute colour difference of two reflection images around the pixel of the world point [at] seen by the
+     * main camera.
+     */
     private fun differenceAround(shot: WaterShot, other: WaterShot, at: Vector3, radius: Int = 3): Double {
         val camera = shot.renderer.frameCamera
         val screen = Vector3(at)
@@ -59,7 +63,8 @@ class SceneWaterReflectionGlTest {
             val centre = centreOf(with, id)
             assertTrue("model $id stands above the level", centre.y > 0f)
             val mirrored = Vector3(centre.x, -centre.y, centre.z)
-            // the pixel where the main camera sees the mirror image holds the model in the reflection and sky or floor without it
+            // the pixel where the main camera sees the mirror image holds the model in the reflection and sky or floor
+            // without it
             val seen = differenceAround(with, without, mirrored)
             assertTrue("model $id shows in the reflection at its mirror image ($seen)", seen > 12.0)
             // where the model itself stands, the reflection (a view from beneath) shows nothing of it
@@ -78,18 +83,25 @@ class SceneWaterReflectionGlTest {
         for (y in 0 until a.height) for (x in 0 until a.width) {
             val (r1, g1, b1) = a.rgb(x, y)
             val (r2, g2, b2) = b.rgb(x, y)
-            if (kotlin.math.abs(r1 - r2) + kotlin.math.abs(g1 - g2) + kotlin.math.abs(b1 - b2) > 18) different++
+            if (kotlin.math.abs(r1 - r2) + kotlin.math.abs(g1 - g2) + kotlin.math.abs(b1 - b2) > 18) {
+                different++
+            }
         }
-        assertTrue("models and floor are all below the level: nothing reaches the reflection ($different of ${a.width * a.height}, ${camera.far})", different < a.width * a.height / 500)
+        assertTrue("models and floor are all below the level: nothing reaches the reflection ($different of " +
+            "${a.width * a.height}, ${camera.far})", different < a.width * a.height / 500)
     }
 
     private val clear = Color(0.92f, 0.94f, 0.98f, 1f)
 
-    /** The scene with no sky, a bright clear colour and no models: a reflection shows the clear colour wherever nothing stands. */
+    /**
+     * The scene with no sky, a bright clear colour and no models: a reflection shows the clear colour wherever nothing
+     * stands.
+     */
     private fun bareScene(): SceneRenderParams {
         // murky, still water: the floor does not show through, so what the water shows is its tint and the reflection
         val murky = WaterGlScenes.lake().copy(clarity = 0.3, waveAmplitude = 0.0, foamAmount = 0.0)
-        val params = WaterGlScenes.flatLake(listOf(murky), withModels = false) { _, root -> root.put("skyboxEnabled", false) }
+        val params = WaterGlScenes.flatLake(listOf(murky), withModels = false) { _, root -> root.put("skyboxEnabled",
+            false) }
         return params.copy(clear = clear)
     }
 
@@ -100,30 +112,37 @@ class SceneWaterReflectionGlTest {
         assertEquals(Math.round(clear.r * 255f).toFloat(), r.toFloat(), 3f)
         assertEquals(Math.round(clear.g * 255f).toFloat(), g.toFloat(), 3f)
         assertEquals(Math.round(clear.b * 255f).toFloat(), b.toFloat(), 3f)
-        val sky = shoot(WaterGlScenes.flatLake(withModels = false) { _, root -> root.put("skyboxEnabled", true).put("skyboxName", "skybox_default") })
+        val sky = shoot(WaterGlScenes.flatLake(withModels = false) { _, root -> root.put("skyboxEnabled",
+            true).put("skyboxName", "skybox_default") })
         val skyReflection = sky.reflection.getValue(0)
         val (sr, sg, sb) = skyReflection.rgb(skyReflection.width / 2, skyReflection.height * 9 / 10)
-        assertTrue("a cube sky shows in the reflection (${listOf(sr, sg, sb)})", kotlin.math.abs(sr - r) + kotlin.math.abs(sg - g) + kotlin.math.abs(sb - b) > 30)
+        assertTrue("a cube sky shows in the reflection (${listOf(sr, sg, sb)})", kotlin.math.abs(sr - r) +
+            kotlin.math.abs(sg - g) + kotlin.math.abs(sb - b) > 30)
     }
 
     @Test fun everySkyKindShowsInTheReflection() {
         val reference = shoot(bareScene()).reflection.getValue(0)
         val clearAt = reference.rgb(reference.width / 2, reference.height * 9 / 10)
-        fun skyAt(patch: (java.io.File, com.fasterxml.jackson.databind.node.ObjectNode) -> Unit): Triple<Int, Int, Int> {
+        fun skyAt(patch: (java.io.File, com.fasterxml.jackson.databind.node.ObjectNode) -> Unit): Triple<Int, Int, Int>
+            {
             val shot = shoot(WaterGlScenes.flatLake(withModels = false, patch = patch))
             val reflection = shot.reflection.getValue(0)
             return reflection.rgb(reflection.width / 2, reflection.height * 9 / 10)
         }
-        fun apart(a: Triple<Int, Int, Int>) = kotlin.math.abs(a.first - clearAt.first) + kotlin.math.abs(a.second - clearAt.second) + kotlin.math.abs(a.third - clearAt.third)
+        fun apart(a: Triple<Int, Int, Int>) = kotlin.math.abs(a.first - clearAt.first) + kotlin.math.abs(a.second -
+            clearAt.second) + kotlin.math.abs(a.third - clearAt.third)
         val cube = skyAt { _, root -> root.put("skyboxEnabled", true).put("skyboxName", "skybox_default") }
         val procedural = skyAt { dir, root ->
-            java.io.File(java.io.File("src/test/testData/project/Untitled"), "assets/skybox_physical").copyRecursively(java.io.File(dir, "assets/skybox_physical"), overwrite = true)
+            java.io.File(java.io.File("src/test/testData/project/Untitled"),
+                "assets/skybox_physical").copyRecursively(java.io.File(dir, "assets/skybox_physical"), overwrite = true)
             root.put("skyboxEnabled", true).put("skyboxName", "skybox_physical")
         }
         val hdr = skyAt { dir, root ->
             val sky = java.io.File(dir, "assets/sky")
-            net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrFixtures.writeExr(java.io.File(sky, "sky.exr"), 64, 32, pixel = { _, _ -> floatArrayOf(2.0f, 0.1f, 0.1f) })
-            java.io.File(sky, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{"file":"sky.exr"}}""")
+            net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrFixtures.writeExr(java.io.File(sky, "sky.exr"), 64, 32,
+                pixel = { _, _ -> floatArrayOf(2.0f, 0.1f, 0.1f) })
+            java.io.File(sky, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,
+"lastModified":0,"type":"SKYBOX_HDR","additional":{"file":"sky.exr"}}""")
             root.put("skyboxEnabled", true).put("skyboxName", "sky")
         }
         assertTrue("the cube sky shows ($cube vs clear $clearAt)", apart(cube) > 30)
@@ -137,13 +156,16 @@ class SceneWaterReflectionGlTest {
         val a = plain.reflection.getValue(0)
         val b = selected.reflection.getValue(0)
         assertTrue("the highlight and gizmo are editor overlays", a.bytes.contentEquals(b.bytes))
-        assertTrue("while the main view does show them", (0 until plain.image.height).any { y -> (0 until plain.image.width).any { x -> plain.image.getRGB(x, y) != selected.image.getRGB(x, y) } })
+        assertTrue("while the main view does show them", (0 until plain.image.height).any { y -> (0 until
+            plain.image.width).any { x -> plain.image.getRGB(x, y) != selected.image.getRGB(x, y) } })
     }
 
     @Test fun sceneFogIsAppliedOnceToTheWaterByDistance() {
-        val fogged = WaterGlScenes.flatLake(listOf(WaterGlScenes.lake(level = 0.0).copy(width = 2000.0, length = 2000.0, clarity = 0.3, waveAmplitude = 0.0)), withModels = false, keepFog = true) { _, root ->
+        val fogged = WaterGlScenes.flatLake(listOf(WaterGlScenes.lake(level = 0.0).copy(width = 2000.0, length =
+            2000.0, clarity = 0.3, waveAmplitude = 0.0)), withModels = false, keepFog = true) { _, root ->
             root.put("fogEnabled", true)
-            root.putObject("fog").put("density", 0.01).put("gradient", 1.0).putObject("color").put("r", 1.0).put("g", 0.0).put("b", 0.0).put("a", 1.0)
+            root.putObject("fog").put("density", 0.01).put("gradient", 1.0).putObject("color").put("r", 1.0).put("g",
+                0.0).put("b", 0.0).put("a", 1.0)
         }
         val view = OrbitCamera(Vector3(0f, 0f, 0f), 30f, 0.2f, 0.12f)
         val shot = shoot(fogged, view)
@@ -152,7 +174,8 @@ class SceneWaterReflectionGlTest {
         fun redShareAt(distance: Float): Double {
             val p = Vector3(eye.x + (0f - eye.x) / length * distance, 0f, eye.z + (0f - eye.z) / length * distance)
             shot.renderer.frameCamera.project(p, 0f, 0f, shot.image.width.toFloat(), shot.image.height.toFloat())
-            val (r, g, b) = WaterGlRig.rgb(shot.image, p.x.toInt().coerceIn(0, shot.image.width - 1), (shot.image.height - p.y).toInt().coerceIn(0, shot.image.height - 1))
+            val (r, g, b) = WaterGlRig.rgb(shot.image, p.x.toInt().coerceIn(0, shot.image.width - 1),
+                (shot.image.height - p.y).toInt().coerceIn(0, shot.image.height - 1))
             return r.toDouble() / (r + g + b + 1)
         }
         val near = redShareAt(25f)
@@ -167,7 +190,8 @@ class SceneWaterReflectionGlTest {
             val camera = shot.renderer.frameCamera
             val centre = Vector3(0f, 0f, 0f)
             camera.project(centre, 0f, 0f, shot.image.width.toFloat(), shot.image.height.toFloat())
-            return WaterGlRig.luminance(WaterGlRig.rgb(shot.image, centre.x.toInt(), (shot.image.height - centre.y).toInt()))
+            return WaterGlRig.luminance(WaterGlRig.rgb(shot.image, centre.x.toInt(), (shot.image.height -
+                centre.y).toInt()))
         }
         val overhead = waterBrightness(1.45f)
         val grazing = waterBrightness(0.12f)
@@ -181,7 +205,8 @@ class SceneWaterReflectionGlTest {
         val moved = shoot(base) { renderer ->
             renderer.state.preview = mapOf(
                 "2" to net.nevinsky.abyssus.lib.core.editor.pick.DragResult(
-                    model.transform.copy(position = Vector3(model.transform.position.x + 5f, model.transform.position.y, model.transform.position.z)), null,
+                    model.transform.copy(position = Vector3(model.transform.position.x + 5f,
+                        model.transform.position.y, model.transform.position.z)), null,
                 ),
             )
         }
@@ -194,18 +219,26 @@ class SceneWaterReflectionGlTest {
 
     @Test fun anAnimatedModelMovesInItsReflectionWithoutASecondAdvance() {
         val dir = java.io.File("src/test/testData/project/Animated")
-        val root = net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parseObject(java.io.File(dir, "scenes/Main.scene").readText())
+        val root = net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parseObject(java.io.File(dir,
+            "scenes/Main.scene").readText())
         val base = net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf(
-            net.nevinsky.abyssus.lib.core.editor.parseScene(net.nevinsky.abyssus.lib.core.editor.document.SceneJson().compact(root)),
+            net.nevinsky.abyssus.lib.core.editor.parseScene(
+                net.nevinsky.abyssus.lib.core.editor.document.SceneJson().compact(root)
+            ),
             net.nevinsky.abyssus.lib.core.editor.scene.CameraParams.DEFAULT, dir,
         )
         val position = base.content.models.first().transform.position
-        val lake = WaterGlScenes.lake(level = position.y - 0.3.toDouble()).copy(x = position.x.toDouble(), z = position.z.toDouble())
-        val text = net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parseObject(java.io.File(dir, "scenes/Main.scene").readText())
-        text.putObject("abyssus").putObject("waterSurfaces").set<com.fasterxml.jackson.databind.node.ObjectNode>("w1", net.nevinsky.abyssus.lib.core.editor.water.WaterCodec().node(lake))
+        val lake = WaterGlScenes.lake(level = position.y - 0.3.toDouble()).copy(x = position.x.toDouble(), z =
+            position.z.toDouble())
+        val text = net.nevinsky.abyssus.lib.core.editor.document.SceneJson().parseObject(java.io.File(dir,
+            "scenes/Main.scene").readText())
+        text.putObject("abyssus").putObject("waterSurfaces").set<com.fasterxml.jackson.databind.node.ObjectNode>("w1",
+            net.nevinsky.abyssus.lib.core.editor.water.WaterCodec().node(lake))
         text.put("fogEnabled", false)
         val wet = net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf(
-            net.nevinsky.abyssus.lib.core.editor.parseScene(net.nevinsky.abyssus.lib.core.editor.document.SceneJson().compact(text)),
+            net.nevinsky.abyssus.lib.core.editor.parseScene(
+                net.nevinsky.abyssus.lib.core.editor.document.SceneJson().compact(text)
+            ),
             net.nevinsky.abyssus.lib.core.editor.scene.CameraParams.DEFAULT, dir,
         )
         val target = Vector3(position.x, position.y, position.z)
@@ -213,13 +246,20 @@ class SceneWaterReflectionGlTest {
         var early: TargetImage? = null
         var late: TargetImage? = null
         WaterGlRig.shoot(wet, orbit, frames = 90, each = { renderer, index ->
-            if (index == 70) early = renderer.waterStatus?.targets?.reflection(0)?.let(WaterGlRig::read)
-            if (index == 89) late = renderer.waterStatus?.targets?.reflection(0)?.let(WaterGlRig::read)
+            if (index == 70) {
+                early = renderer.waterStatus?.targets?.reflection(0)?.let(WaterGlRig::read)
+            }
+            if (index == 89) {
+                late = renderer.waterStatus?.targets?.reflection(0)?.let(WaterGlRig::read)
+            }
         })
         val a = early!!
         val b = late!!
         var differing = 0
-        for (i in 0 until a.width * a.height) if (kotlin.math.abs((a.bytes[i * 4].toInt() and 255) - (b.bytes[i * 4].toInt() and 255)) > 6) differing++
+        for (i in 0 until a.width * a.height) if (kotlin.math.abs((a.bytes[i * 4].toInt() and 255) - (b.bytes[i *
+            4].toInt() and 255)) > 6) {
+            differing++
+        }
         assertTrue("the animation shows in the reflection ($differing pixels changed)", differing > 20)
     }
 }

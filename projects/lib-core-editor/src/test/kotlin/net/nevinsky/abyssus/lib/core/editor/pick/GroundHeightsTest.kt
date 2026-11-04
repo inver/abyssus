@@ -29,7 +29,8 @@ class GroundHeightsTest {
     fun theHeightOnTheFixtureTerrainMatchesItsLocalPoint() {
         val terrain = terrainData(testProject("Untitled"), "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b")
         // entity 1 of Main Scene stands at (-38.25267, 0, -32.7754)
-        val heights = GroundHeights(listOf(TerrainTarget(1L, terrain, Matrix4().setToTranslation(-38.25267f, 0f, -32.7754f))))
+        val heights =
+            GroundHeights(listOf(TerrainTarget(1L, terrain, Matrix4().setToTranslation(-38.25267f, 0f, -32.7754f))))
         assertEquals(terrain.heightAt(20f + 38.25267f, 32.7754f)!!, heights.heightAt(20f, 0f, -99f), 1e-3f)
     }
 
@@ -52,7 +53,8 @@ class GroundHeightsTest {
     fun theHighestTerrainWins() {
         val flatLow = TerrainData(2, FloatArray(4), 100, 1f)
         val flatHigh = TerrainData(2, FloatArray(4) { 7f }, 100, 1f)
-        val heights = GroundHeights(listOf(TerrainTarget(1001L, flatHigh, Matrix4()), TerrainTarget(1000L, flatLow, Matrix4())))
+        val heights =
+            GroundHeights(listOf(TerrainTarget(1001L, flatHigh, Matrix4()), TerrainTarget(1000L, flatLow, Matrix4())))
         assertEquals(7f, heights.heightAt(50f, 50f, -99f), 1e-3f)
     }
 

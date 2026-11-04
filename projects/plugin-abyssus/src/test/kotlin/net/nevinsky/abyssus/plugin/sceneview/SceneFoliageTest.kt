@@ -101,7 +101,11 @@ class SceneFoliageTest {
         val ghost = "model_without_a_folder"
         val meta = prepared.meta.copy(
             layers = prepared.meta.layers.mapIndexed { index, layer ->
-                if (index == 0) layer.copy(models = layer.models + FoliageModelMeta(ghost)) else layer
+                if (index == 0) {
+                    layer.copy(models = layer.models + FoliageModelMeta(ghost))
+                } else {
+                    layer
+                }
             },
         )
         assets.put(foliageName, drawable(prepared.with(meta = meta)) { it != ghost })
@@ -187,7 +191,11 @@ class SceneFoliageTest {
 
     /** A drawable whose model folders are all built ([has] says which of them the storage managed to build). */
     private fun drawable(staged: PreparedFoliage, has: (String) -> Boolean = { true }): FoliageDrawable =
-        FoliageDrawable(staged, BuiltAssets { name -> if (has(name)) unbuiltModel else null })
+        FoliageDrawable(staged, BuiltAssets { name -> if (has(name)) {
+            unbuiltModel
+        } else {
+            null
+        } })
 
     private fun warnings(fragment: String): List<String> = log.warnings.filter { fragment in it }
 

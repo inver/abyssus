@@ -26,30 +26,51 @@ fun expandLists(root: UiWidget, view: UiBindingView, budget: Int = UI_MAX_WIDGET
     fun size(w: UiWidget): Int = 1 + w.children.sumOf(::size)
 
     /** One copy of the template for row [row]: new ids, rewritten item bindings, nested lists left for [expand]. */
-    fun rowCopy(w: UiWidget, list: String, row: Int): UiWidget = w.copy(
-        id = "${w.id}#$row",
-        bindings = w.bindings.mapValues { (_, name) -> if (name.startsWith(UI_ITEM_PREFIX)) uiRowBinding(list, row, name.removePrefix(UI_ITEM_PREFIX)) else name },
-        // a named game action from a row says which row: `<name>#<row>`
-        actions = w.actions.mapValues { (_, a) -> if (a.type == UiActionType.EMIT_ACTION && a.name != null) a.copy(name = "${a.name}#$row") else a },
-        children = w.children.map { rowCopy(it, list, row) },
-        template = w.template?.let { rowCopy(it, list, row) },
-        empty = w.empty?.let { rowCopy(it, list, row) },
-    )
+    fun rowCopy(w: UiWidget, list: String, row: Int): UiWidget =
+        w.copy(
+            id = "${w.id}#$row",
+            bindings =
+                w.bindings.mapValues { (_, name) ->
+                    if (name.startsWith(UI_ITEM_PREFIX)) {
+                        uiRowBinding(list, row, name.removePrefix(UI_ITEM_PREFIX))
+                    } else {
+                        name
+                    }
+                },
+            // a named game action from a row says which row: `<name>#<row>`
+            actions =
+                w.actions.mapValues { (_, a) ->
+                    if (a.type == UiActionType.EMIT_ACTION && a.name != null) {
+                        a.copy(name = "${a.name}#$row")
+                    } else {
+                        a
+                    }
+                },
+            children = w.children.map { rowCopy(it, list, row) },
+            template = w.template?.let { rowCopy(it, list, row) },
+            empty = w.empty?.let { rowCopy(it, list, row) },
+        )
 
     fun expand(w: UiWidget): UiWidget {
         count++
-        if (w.type != UiWidgetType.LIST) return w.copy(children = w.children.map(::expand))
+        if (w.type != UiWidgetType.LIST) {
+            return w.copy(children = w.children.map(::expand))
+        }
         val name = w.bindings["items"]
         val items = name?.let(view::rows).orEmpty()
         val template = w.template
-        val maxRows = w.properties["maxRows"]?.takeIf { it.isIntegralNumber && it.intValue() >= 0 }?.intValue() ?: Int.MAX_VALUE
+        val maxRows =
+            w.properties["maxRows"]?.takeIf { it.isIntegralNumber && it.intValue() >= 0 }?.intValue() ?: Int.MAX_VALUE
         val rows = mutableListOf<UiWidget>()
         if (items.isEmpty() || template == null) {
             w.empty?.let { rows += expand(it) }
         } else {
             val per = size(template)
             for (i in 0 until minOf(items.size, maxRows)) {
-                if (count + per > budget) { diagnostics += UiBindingDiagnostic(UiBindingIssue.ROW_LIMIT, name, w.id); break }
+                if (count + per > budget) {
+                    diagnostics += UiBindingDiagnostic(UiBindingIssue.ROW_LIMIT, name, w.id)
+                    break
+                }
                 rows += expand(rowCopy(template, name!!, i))
             }
         }

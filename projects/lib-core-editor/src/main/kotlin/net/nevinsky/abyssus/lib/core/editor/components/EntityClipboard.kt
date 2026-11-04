@@ -23,9 +23,12 @@ sealed interface CopyResult {
 }
 
 /**
- * Copies a model entity of a scene as text and pastes it, in this or another scene, as a new entity. The text carries the
- * entity's components as they are, each under the name a scene file gives it with its JSON as text; a paste only gives them a new id and moves
- * the copy to the pasted point. A terrain, an entity without a render component, a path arrangement and an entity with a
+  * Copies a model entity of a scene as text and pastes it, in this or another scene, as a new entity. The text carries
+  * the
+  * entity's components as they are, each under the name a scene file gives it with its JSON as text; a paste only gives
+  * them a new id and moves
+  * the copy to the pasted point. A terrain, an entity without a render component, a path arrangement and an entity with
+  * a
  * parent are not copied, because their links to other entities would not hold in a copy. A component this editor does
  * not model travels as the text it was read from. Edits only the [SceneDto], as [AssetEntities] does.
  */
@@ -59,7 +62,10 @@ class EntityClipboard(
     /** Whether [text] is what [copy] makes. */
     fun holdsEntity(text: String?): Boolean = parse(text) != null
 
-    /** Adds the entity [text] holds to [scene] with its pivot at [point]; rejected, leaving [scene] as it was, otherwise. */
+    /**
+     * Adds the entity [text] holds to [scene] with its pivot at [point]; rejected, leaving [scene] as it was,
+     * otherwise.
+     */
     fun paste(scene: SceneDto, text: String?, point: Vector3): AddedEntity {
         val copied =
             parse(text) ?: return AddedEntity(EditResult.Rejected(messages.message("entityClipboardNotEntity")))

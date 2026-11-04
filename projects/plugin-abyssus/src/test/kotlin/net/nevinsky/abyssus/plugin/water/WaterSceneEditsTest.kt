@@ -101,11 +101,13 @@ class WaterSceneEditsTest : BasePlatformTestCase() {
     }
 
     fun testIncompatibleContainerIsNeverReplaced() {
-        val odd = myFixture.addFileToProject("odd.scene", """{"format":"abyssus","formatVersion":1,"abyssus":[1]}""").virtualFile
+        val odd = myFixture.addFileToProject("odd.scene", """{"format":"abyssus","formatVersion":1,
+"abyssus":[1]}""").virtualFile
         val result = edits.add(odd, WaterPreset.LAKE, 0.0, 0.0, 0.0)
         assertEquals(WaterEdit.Rejected(WaterEditError.IncompatibleContainer), result.edit)
         assertEquals(null, result.id)
-        assertEquals("""{"format":"abyssus","formatVersion":1,"abyssus":[1]}""", FileDocumentManager.getInstance().getDocument(odd)!!.text)
+        assertEquals("""{"format":"abyssus","formatVersion":1,
+"abyssus":[1]}""", FileDocumentManager.getInstance().getDocument(odd)!!.text)
     }
 
     fun testNonNativeSceneIsLeftUnchanged() {

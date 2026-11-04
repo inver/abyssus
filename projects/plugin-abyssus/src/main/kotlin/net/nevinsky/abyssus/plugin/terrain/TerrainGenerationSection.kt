@@ -13,9 +13,6 @@ import com.intellij.ui.components.panels.VerticalLayout
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.lib.core.editor.terrain.HeightmapImage
-import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptState
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
@@ -30,6 +27,9 @@ import javax.swing.BorderFactory
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
+import net.nevinsky.abyssus.lib.core.editor.terrain.HeightmapImage
+import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptState
+import net.nevinsky.abyssus.plugin.AbyssusBundle
 
 /** A square grayscale picture of a heightmap; a bordered blank square when there is no preview. */
 internal class HeightmapView(image: HeightmapImage? = null) : JComponent() {
@@ -71,41 +71,90 @@ internal class HeightmapView(image: HeightmapImage? = null) : JComponent() {
 }
 
 /**
- * The controls of a terrain's regeneration: resolution (read only), recipe status, the seven settings, Regenerate preview,
- * Randomize seed, Apply, Cancel and the grayscale preview. Editors are named `terrain-gen-<setting>`, the buttons
- * `terrain-preview`, `terrain-randomize`, `terrain-apply`, `terrain-cancel`, the picture `terrain-heightmap`, and the
- * status and message labels `terrain-recipe-status` and `terrain-message`, which is how tests reach them. The view holds no
- * state of its own: it is rebuilt from the [controller] whenever that changes.
+ * The controls of a terrain's regeneration: resolution (read only), recipe status, the seven settings, Regenerate
+ * preview, Randomize seed, Apply, Cancel and the grayscale preview. Editors are named `terrain-gen-<setting>`, the
+ * buttons `terrain-preview`, `terrain-randomize`, `terrain-apply`, `terrain-cancel`, the picture `terrain-heightmap`,
+ * and the status and message labels `terrain-recipe-status` and `terrain-message`, which is how tests reach them. The
+ * view holds no state of its own: it is rebuilt from the [controller] whenever that changes.
  */
 internal class TerrainGenerationSection(private val controller: TerrainGenerationController) : JPanel(BorderLayout()) {
     init {
         val box = JPanel(VerticalLayout(JBUI.scale(6)))
-        box.border = BorderFactory.createCompoundBorder(JBUI.Borders.customLine(JBColor.border(), 1, 0, 0, 0), JBUI.Borders.empty(12, 16, 16, 16))
-        box.add(JBLabel(AbyssusBundle.message("terrainSection").uppercase()).apply { foreground = UIUtil.getContextHelpForeground(); font = JBFont.small() })
-        box.add(JBLabel(AbyssusBundle.message("terrainResolution", controller.resolution.toString())).apply { name = "terrain-resolution" })
-        box.add(JBLabel("<html>${controller.recipeText()}</html>").apply { name = "terrain-recipe-status"; foreground = UIUtil.getContextHelpForeground() })
+        box.border =
+            BorderFactory.createCompoundBorder(
+                JBUI.Borders.customLine(JBColor.border(), 1, 0, 0, 0),
+                JBUI.Borders.empty(12, 16, 16, 16),
+            )
+        box.add(
+            JBLabel(AbyssusBundle.message("terrainSection").uppercase()).apply {
+                foreground = UIUtil.getContextHelpForeground()
+                font = JBFont.small()
+            }
+        )
+        box.add(
+            JBLabel(AbyssusBundle.message("terrainResolution", controller.resolution.toString())).apply {
+                name = "terrain-resolution"
+            }
+        )
+        box.add(
+            JBLabel("<html>${controller.recipeText()}</html>").apply {
+                name = "terrain-recipe-status"
+                foreground = UIUtil.getContextHelpForeground()
+            }
+        )
         controller.sculptText()?.let { text ->
-            box.add(JBLabel("<html>$text</html>").apply { name = "terrain-sculpt-status"; foreground = if (controller.sculptState is SculptState.Unsafe) JBColor.RED else UIUtil.getContextHelpForeground() })
+            box.add(
+                JBLabel("<html>$text</html>").apply {
+                    name = "terrain-sculpt-status"
+                    foreground =
+                        if (controller.sculptState is SculptState.Unsafe) {
+                            JBColor.RED
+                        } else {
+                            UIUtil.getContextHelpForeground()
+                        }
+                }
+            )
         }
         TerrainSettingField.entries.forEach { box.add(settingRow(it)) }
         val problems = controller.problems
-        if (problems.isNotEmpty()) box.add(JBLabel("<html>${problems.joinToString("<br>")}</html>").apply { name = "terrain-problems"; foreground = JBColor.RED })
-        if (controller.sculptState is SculptState.Sculpted) box.add(discardOption())
+        if (problems.isNotEmpty()) {
+            box.add(
+                JBLabel("<html>${problems.joinToString("<br>")}</html>").apply {
+                    name = "terrain-problems"
+                    foreground = JBColor.RED
+                }
+            )
+        }
+        if (controller.sculptState is SculptState.Sculpted) {
+            box.add(discardOption())
+        }
         box.add(buttons())
-        if (controller.sculptState !is SculptState.None) box.add(sculptButtons())
+        if (controller.sculptState !is SculptState.None) {
+            box.add(sculptButtons())
+        }
         box.add(HeightmapView(controller.previewImage).apply { name = "terrain-heightmap" })
         controller.message?.let { text ->
-            box.add(JBLabel("<html>$text</html>").apply { name = "terrain-message"; foreground = UIUtil.getContextHelpForeground() })
+            box.add(
+                JBLabel("<html>$text</html>").apply {
+                    name = "terrain-message"
+                    foreground = UIUtil.getContextHelpForeground()
+                }
+            )
         }
         add(box, BorderLayout.NORTH)
     }
 
     private fun settingRow(field: TerrainSettingField): JComponent {
-        val error = JBLabel("").apply { foreground = JBColor.RED; name = "terrain-error-${field.key}" }
-        val editor = JBTextField(field.textOf(controller.settings)).apply {
-            name = "terrain-gen-${field.key}"
-            font = Font(Font.MONOSPACED, Font.PLAIN, UIUtil.getLabelFont().size)
-        }
+        val error =
+            JBLabel("").apply {
+                foreground = JBColor.RED
+                name = "terrain-error-${field.key}"
+            }
+        val editor =
+            JBTextField(field.textOf(controller.settings)).apply {
+                name = "terrain-gen-${field.key}"
+                font = Font(Font.MONOSPACED, Font.PLAIN, UIUtil.getLabelFont().size)
+            }
         val save = {
             if (editor.text != field.textOf(controller.settings)) {
                 when (val parsed = field.parse(controller.settings, editor.text)) {
@@ -118,51 +167,88 @@ internal class TerrainGenerationSection(private val controller: TerrainGeneratio
             }
         }
         editor.addActionListener { save() }
-        editor.addFocusListener(object : FocusAdapter() {
-            override fun focusLost(e: FocusEvent) = save()
-        })
-        val label = JBLabel(field.label()).apply { preferredSize = Dimension(JBUI.scale(LABEL_WIDTH), preferredSize.height) }
+        editor.addFocusListener(
+            object : FocusAdapter() {
+                override fun focusLost(e: FocusEvent) = save()
+            }
+        )
+        val label =
+            JBLabel(field.label()).apply { preferredSize = Dimension(JBUI.scale(LABEL_WIDTH), preferredSize.height) }
         return JPanel(GridBagLayout()).apply {
-            add(label, GridBagConstraints().apply { gridx = 0; anchor = GridBagConstraints.WEST })
-            add(editor, GridBagConstraints().apply { gridx = 1; weightx = 1.0; fill = GridBagConstraints.HORIZONTAL })
-            add(error, GridBagConstraints().apply { gridx = 2; insets = JBUI.insetsLeft(8) })
+            add(
+                label,
+                GridBagConstraints().apply {
+                    gridx = 0
+                    anchor = GridBagConstraints.WEST
+                },
+            )
+            add(
+                editor,
+                GridBagConstraints().apply {
+                    gridx = 1
+                    weightx = 1.0
+                    fill = GridBagConstraints.HORIZONTAL
+                },
+            )
+            add(
+                error,
+                GridBagConstraints().apply {
+                    gridx = 2
+                    insets = JBUI.insetsLeft(8)
+                },
+            )
         }
     }
 
-    private fun discardOption(): JComponent = JPanel(VerticalLayout(JBUI.scale(2))).apply {
-        add(JBCheckBox(AbyssusBundle.message("terrainDiscardSculpt"), controller.discardSculpting).also { box ->
-            box.name = "terrain-discard-sculpt"
-            box.addActionListener { controller.discardSculpting = box.isSelected }
-        })
-        add(JBLabel("<html>${AbyssusBundle.message("terrainSculptNote")}</html>").apply { name = "terrain-sculpt-note"; foreground = UIUtil.getContextHelpForeground() })
-    }
-
-    private fun sculptButtons(): JComponent = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
-        val state = controller.sculptState
-        add(JButton(AbyssusBundle.message("terrainSculptReset")).also {
-            it.name = "terrain-sculpt-reset"
-            it.isEnabled = state is SculptState.Sculpted
-            it.addActionListener { controller.resetSculpting() }
-        })
-        add(JButton(AbyssusBundle.message("terrainSculptForget")).also {
-            it.name = "terrain-sculpt-forget"
-            it.isEnabled = state is SculptState.Unsafe
-            it.addActionListener { controller.forgetSculpting() }
-        })
-    }
-
-    private fun buttons(): JComponent = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
-        fun button(name: String, key: String, enabled: Boolean, action: () -> Unit) = JButton(AbyssusBundle.message(key)).also {
-            it.name = name
-            it.isEnabled = enabled
-            it.addActionListener { action() }
-            add(it)
+    private fun discardOption(): JComponent =
+        JPanel(VerticalLayout(JBUI.scale(2))).apply {
+            add(
+                JBCheckBox(AbyssusBundle.message("terrainDiscardSculpt"), controller.discardSculpting).also { box ->
+                    box.name = "terrain-discard-sculpt"
+                    box.addActionListener { controller.discardSculpting = box.isSelected }
+                }
+            )
+            add(
+                JBLabel("<html>${AbyssusBundle.message("terrainSculptNote")}</html>").apply {
+                    name = "terrain-sculpt-note"
+                    foreground = UIUtil.getContextHelpForeground()
+                }
+            )
         }
-        button("terrain-preview", "terrainPreview", controller.canPreview) { controller.preview() }
-        button("terrain-randomize", "terrainRandomize", true) { controller.randomizeSeed() }
-        button("terrain-apply", "terrainApply", controller.canApply) { controller.apply() }
-        button("terrain-cancel", "terrainCancel", true) { controller.cancel() }
-    }
+
+    private fun sculptButtons(): JComponent =
+        JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
+            val state = controller.sculptState
+            add(
+                JButton(AbyssusBundle.message("terrainSculptReset")).also {
+                    it.name = "terrain-sculpt-reset"
+                    it.isEnabled = state is SculptState.Sculpted
+                    it.addActionListener { controller.resetSculpting() }
+                }
+            )
+            add(
+                JButton(AbyssusBundle.message("terrainSculptForget")).also {
+                    it.name = "terrain-sculpt-forget"
+                    it.isEnabled = state is SculptState.Unsafe
+                    it.addActionListener { controller.forgetSculpting() }
+                }
+            )
+        }
+
+    private fun buttons(): JComponent =
+        JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
+            fun button(name: String, key: String, enabled: Boolean, action: () -> Unit) =
+                JButton(AbyssusBundle.message(key)).also {
+                    it.name = name
+                    it.isEnabled = enabled
+                    it.addActionListener { action() }
+                    add(it)
+                }
+            button("terrain-preview", "terrainPreview", controller.canPreview) { controller.preview() }
+            button("terrain-randomize", "terrainRandomize", true) { controller.randomizeSeed() }
+            button("terrain-apply", "terrainApply", controller.canApply) { controller.apply() }
+            button("terrain-cancel", "terrainCancel", true) { controller.cancel() }
+        }
 
     private companion object {
         const val LABEL_WIDTH = 120
@@ -170,7 +256,18 @@ internal class TerrainGenerationSection(private val controller: TerrainGeneratio
 }
 
 /** Shown instead of the controls when the terrain cannot be regenerated. */
-internal fun terrainUnusableNote(reason: String): JComponent = JPanel(BorderLayout()).apply {
-    border = BorderFactory.createCompoundBorder(JBUI.Borders.customLine(JBColor.border(), 1, 0, 0, 0), JBUI.Borders.empty(12, 16, 16, 16))
-    add(JBLabel("<html>${AbyssusBundle.message("terrainDataInvalid", reason)}</html>").apply { name = "terrain-unusable"; foreground = JBColor.RED }, BorderLayout.NORTH)
-}
+internal fun terrainUnusableNote(reason: String): JComponent =
+    JPanel(BorderLayout()).apply {
+        border =
+            BorderFactory.createCompoundBorder(
+                JBUI.Borders.customLine(JBColor.border(), 1, 0, 0, 0),
+                JBUI.Borders.empty(12, 16, 16, 16),
+            )
+        add(
+            JBLabel("<html>${AbyssusBundle.message("terrainDataInvalid", reason)}</html>").apply {
+                name = "terrain-unusable"
+                foreground = JBColor.RED
+            },
+            BorderLayout.NORTH,
+        )
+    }

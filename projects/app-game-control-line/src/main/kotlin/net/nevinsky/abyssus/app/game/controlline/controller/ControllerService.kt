@@ -4,9 +4,9 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.controller
 
+import kotlin.math.abs
 import net.nevinsky.abyssus.app.game.controlline.input.HandleInput
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import kotlin.math.abs
 
 /** What the game is showing, as far as the controller layer cares. */
 class ControllerContext(
@@ -18,14 +18,17 @@ class ControllerContext(
     val humanFlight: Boolean,
 )
 
-/** What a frame of the controller layer asks of the game: the [keys] to send the menu and whether to [pause] the flight. */
+/**
+ * What a frame of the controller layer asks of the game: the [keys] to send the menu and whether to [pause] the flight.
+ */
 class ControllerFrame(val keys: List<Int>, val pause: Boolean)
 
 /**
- * The controller layer of the game (design decision 3), polled once per frame on the main thread before the flow follows:
- * reads the devices from the [source], applies each one's profile from [profiles], feeds the handle's tilt to [input]
- * during a human flight, notices a pause button, navigates the menus through a [PadNavigator], runs the detect of the settings
- * screen and tells the game about a device that went away. Also the [ControllerSettings] the settings screen shows.
+ * The controller layer of the game (design decision 3), polled once per frame on the main thread before the flow
+ * follows: reads the devices from the [source], applies each one's profile from [profiles], feeds the handle's tilt to
+ * [input] during a human flight, notices a pause button, navigates the menus through a [PadNavigator], runs the detect
+ * of the settings screen and tells the game about a device that went away. Also the [ControllerSettings] the settings
+ * screen shows.
  */
 class ControllerService(
     private val source: ControllerSource,
@@ -41,11 +44,14 @@ class ControllerService(
     private var sessionGuid: String? = null
     private val pauseHeld = HashSet<String>()
 
-    override val damaged: Boolean get() = profiles.damaged
+    override val damaged: Boolean
+        get() = profiles.damaged
 
-    override val detecting: DetectKind? get() = sessionKind
+    override val detecting: DetectKind?
+        get() = sessionKind
 
-    override val detectRemaining: Float get() = session?.remaining ?: 0f
+    override val detectRemaining: Float
+        get() = session?.remaining ?: 0f
 
     /** The profile of [device]: its saved one, or its kind's default. */
     fun profileOf(device: DeviceState): ControllerProfile = profiles.profile(device.guid, device.gamepad)
@@ -59,7 +65,9 @@ class ControllerService(
         val now = runCatchingKeepingCancellation { source.poll() }.getOrDefault(emptyList())
         val gone = devices.map { it.guid }.toSet() - now.map { it.guid }.toSet()
         devices = now
-        if (selectedGuid == null || devices.none { it.guid == selectedGuid }) selectedGuid = devices.firstOrNull()?.guid
+        if (selectedGuid == null || devices.none { it.guid == selectedGuid }) {
+            selectedGuid = devices.firstOrNull()?.guid
+        }
         if (gone.isNotEmpty()) {
             navigator.reset()
             pauseHeld.removeAll { it.substringBefore('#') in gone }
@@ -74,7 +82,9 @@ class ControllerService(
             val button = profileOf(device).pauseButton ?: continue
             val key = "${device.guid}#$button"
             if (device.pressed(button)) {
-                if (pauseHeld.add(key) && context.humanFlight) pause = true
+                if (pauseHeld.add(key) && context.humanFlight) {
+                    pause = true
+                }
             } else {
                 pauseHeld.remove(key)
             }
@@ -84,7 +94,9 @@ class ControllerService(
             val best = devices.map { it to tiltOf(it) }.maxByOrNull { abs(it.second) }
             if (best != null) {
                 input.pad(best.second)
-                if (best.second != 0f) controlling = best.first.guid
+                if (best.second != 0f) {
+                    controlling = best.first.guid
+                }
             }
         }
 
@@ -101,9 +113,13 @@ class ControllerService(
         }
         val device = devices.firstOrNull { it.guid == sessionGuid }
         val outcome = current.update(device, seconds)
-        if (outcome == DetectOutcome.Waiting) return
+        if (outcome == DetectOutcome.Waiting) {
+            return
+        }
         val guid = sessionGuid
-        if (device != null && guid != null) profiles.put(guid, profileOf(device).applied(outcome))
+        if (device != null && guid != null) {
+            profiles.put(guid, profileOf(device).applied(outcome))
+        }
         session = null
         sessionKind = null
         sessionGuid = null
@@ -115,8 +131,14 @@ class ControllerService(
             val d = devices[index]
             val profile = profileOf(d)
             return SettingsDevice(
-                d.name, d.gamepad, profile, tiltOf(d), axisName(profile.axis, d.gamepad), buttonName(profile.pauseButton, d.gamepad),
-                index, devices.size,
+                d.name,
+                d.gamepad,
+                profile,
+                tiltOf(d),
+                axisName(profile.axis, d.gamepad),
+                buttonName(profile.pauseButton, d.gamepad),
+                index,
+                devices.size,
             )
         }
 
@@ -125,7 +147,9 @@ class ControllerService(
     override fun nextDevice() = turn(1)
 
     private fun turn(by: Int) {
-        if (devices.isEmpty()) return
+        if (devices.isEmpty()) {
+            return
+        }
         cancelDetect()
         val index = devices.indexOfFirst { it.guid == selectedGuid }.coerceAtLeast(0)
         selectedGuid = devices[Math.floorMod(index + by, devices.size)].guid

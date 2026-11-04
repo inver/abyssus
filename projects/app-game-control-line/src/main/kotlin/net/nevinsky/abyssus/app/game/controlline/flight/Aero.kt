@@ -7,7 +7,6 @@ package net.nevinsky.abyssus.app.game.controlline.flight
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -15,6 +14,7 @@ import kotlin.math.cos
 import kotlin.math.sign
 import kotlin.math.sin
 import kotlin.math.sqrt
+import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
 
 // The constants of the flight model that are not scene fields. Tuned with FlightTest; see games/control-line/README.md.
 /** Air density, kg/m³. */
@@ -35,7 +35,9 @@ const val PITCH_STABILITY = -0.6f
 /** The angle of attack (rad) a plane settles at with the elevator neutral. */
 const val TRIM_ANGLE = 2f * MathUtils.degreesToRadians
 
-/** The fin's side force per radian of sideslip, on the wing area, acting [TAIL_ARM] chords behind the centre of gravity. */
+/**
+ * The fin's side force per radian of sideslip, on the wing area, acting [TAIL_ARM] chords behind the centre of gravity.
+ */
 const val FIN_SIDE_FORCE = 0.6f
 const val TAIL_ARM = 3f
 
@@ -76,17 +78,31 @@ class Aero {
 
     /** Lift coefficient at [alpha] (rad): linear, held at its stall value past [STALL_ANGLE]. */
     fun liftCoefficient(plane: PlaneComponent, alpha: Float): Float =
-        plane.liftSlope * (if (abs(alpha) > STALL_ANGLE) sign(alpha) * STALL_ANGLE else alpha)
+        plane.liftSlope *
+            (if (abs(alpha) > STALL_ANGLE) {
+                sign(alpha) * STALL_ANGLE
+            } else {
+                alpha
+            })
 
     /** Drag coefficient at [alpha] (rad): zero-lift plus induced drag, doubled past [STALL_ANGLE]. */
     fun dragCoefficient(plane: PlaneComponent, alpha: Float): Float {
         val cl = liftCoefficient(plane, alpha)
         val cd = plane.zeroLiftDrag + cl * cl / (PI.toFloat() * ASPECT_RATIO)
-        return if (abs(alpha) > STALL_ANGLE) 2f * cd else cd
+        return if (abs(alpha) > STALL_ANGLE) {
+            2f * cd
+        } else {
+            cd
+        }
     }
 
     /** The engine's thrust (N) [flightTime] seconds after takeoff: full until the fuel is gone, then 0. */
-    fun thrust(plane: PlaneComponent, flightTime: Float): Float = if (flightTime < plane.fuelTime) plane.thrust else 0f
+    fun thrust(plane: PlaneComponent, flightTime: Float): Float =
+        if (flightTime < plane.fuelTime) {
+            plane.thrust
+        } else {
+            0f
+        }
 
     /** The drag of one line (N) at [airspeed]: `rho * Cd * d * L * V² / 8`, a line moving from 0 at the handle to V. */
     fun lineDrag(plane: PlaneComponent, airspeed: Float): Float =
@@ -97,8 +113,13 @@ class Aero {
      * space), with the elevator at [elevator] rad (positive pitches up) and the engine giving [thrust] N; into [out].
      */
     fun forces(
-        plane: PlaneComponent, rotation: Quaternion, velocity: Vector3, angularVelocity: Vector3,
-        elevator: Float, thrust: Float, out: AeroForces,
+        plane: PlaneComponent,
+        rotation: Quaternion,
+        velocity: Vector3,
+        angularVelocity: Vector3,
+        elevator: Float,
+        thrust: Float,
+        out: AeroForces,
     ): AeroForces {
         out.force.setZero()
         out.torque.setZero()
@@ -139,11 +160,16 @@ class Aero {
         // pitch, about the right wing (-X): elevator, stability towards the trim angle, damping
         val right = Vector3(left).scl(-1f)
         val pitchRate = angularVelocity.dot(right)
-        val pitch = q * area * c * (plane.elevatorEffect * elevator + PITCH_STABILITY * (alpha - TRIM_ANGLE) -
-            plane.pitchDamping * c * pitchRate / (2f * v))
+        val pitch =
+            q *
+                area *
+                c *
+                (plane.elevatorEffect * elevator + PITCH_STABILITY * (alpha - TRIM_ANGLE) -
+                    plane.pitchDamping * c * pitchRate / (2f * v))
         out.torque.mulAdd(right, pitch)
 
-        // the fin: a side force against the sideslip, behind the centre of gravity, so it also turns the nose into the wind
+        // the fin: a side force against the sideslip, behind the centre of gravity, so it also turns the nose into the
+        // wind
         val side = -q * area * FIN_SIDE_FORCE * beta
         out.force.mulAdd(left, side)
         out.torque.mulAdd(up, -side * TAIL_ARM * c)
@@ -151,7 +177,14 @@ class Aero {
         // the rudder offset turns the nose outward; yaw and roll are damped
         val yawRate = angularVelocity.dot(up)
         val rollRate = angularVelocity.dot(forward)
-        out.torque.mulAdd(up, -q * area * b * (RUDDER_EFFECT * plane.rudderOffset * MathUtils.degreesToRadians + YAW_DAMPING * b * yawRate / (2f * v)))
+        out.torque.mulAdd(
+            up,
+            -q *
+                area *
+                b *
+                (RUDDER_EFFECT * plane.rudderOffset * MathUtils.degreesToRadians +
+                    YAW_DAMPING * b * yawRate / (2f * v)),
+        )
         out.torque.mulAdd(forward, -q * area * b * ROLL_DAMPING * b * rollRate / (2f * v))
         return out
     }

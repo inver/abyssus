@@ -9,6 +9,8 @@ import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.PixmapIO
 import com.badlogic.gdx.utils.GdxNativesLoader
+import java.io.File
+import java.nio.file.Files
 import net.nevinsky.abyssus.lib.core.editor.terrain.FastNoiseSamplerFactory
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.After
@@ -16,8 +18,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
 
 class StampImageSourceTest {
     private val roots = mutableListOf<File>()
@@ -27,15 +27,26 @@ class StampImageSourceTest {
         GdxNativesLoader.load()
     }
 
-    @After
-    fun cleanUp() = roots.forEach(File::deleteRecursively)
+    @After fun cleanUp() = roots.forEach(File::deleteRecursively)
 
     private fun assets(): File = Files.createTempDirectory("abyssus-stamp").toFile().also(roots::add)
 
-    private fun textureAsset(assets: File, name: String, type: String, writeImage: Boolean, pixels: IntArray = intArrayOf(0x000000ff, 0xffffffff.toInt())) {
+    private fun textureAsset(
+        assets: File,
+        name: String,
+        type: String,
+        writeImage: Boolean,
+        pixels: IntArray = intArrayOf(0x000000ff, 0xffffffff.toInt()),
+    ) {
         val folder = File(assets, name).apply { mkdirs() }
-        File(folder, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"type":"$type","uuid":"${java.util.UUID.nameUUIDFromBytes(name.toByteArray())}","additional":{"file":"image.png"}}""")
-        if (!writeImage) return
+        File(folder, "meta.json")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"type":"$type",
+"uuid":"${java.util.UUID.nameUUIDFromBytes(name.toByteArray())}","additional":{"file":"image.png"}}"""
+            )
+        if (!writeImage) {
+            return
+        }
         val pixmap = Pixmap(pixels.size, 1, Pixmap.Format.RGBA8888)
         try {
             pixmap.setBlending(Pixmap.Blending.None)
@@ -52,14 +63,23 @@ class StampImageSourceTest {
         textureAsset(dir, "b_pixmap", "PIXMAP_TEXTURE", writeImage = true)
         textureAsset(dir, "a_texture", "TEXTURE", writeImage = true)
         textureAsset(dir, "missing_file", "TEXTURE", writeImage = false)
-        File(dir, "model_x").apply { mkdirs() }.resolve("meta.json").writeText("""{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{"file":"image.png"}}""")
+        File(dir, "model_x")
+            .apply { mkdirs() }
+            .resolve("meta.json")
+            .writeText("""{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{"file":"image.png"}}""")
         assertEquals(listOf("a_texture", "b_pixmap"), images.list(dir).map { it.name })
     }
 
     @Test
     fun `an image is read as luminance from black to white`() {
         val dir = assets()
-        textureAsset(dir, "stamp", "TEXTURE", writeImage = true, pixels = intArrayOf(0x000000ff, 0xffffffff.toInt(), 0xff0000ff.toInt()))
+        textureAsset(
+            dir,
+            "stamp",
+            "TEXTURE",
+            writeImage = true,
+            pixels = intArrayOf(0x000000ff, 0xffffffff.toInt(), 0xff0000ff.toInt()),
+        )
         val image = images.decode(images.list(dir).single().file)!!
         assertEquals(3, image.width)
         assertEquals(0f, image.sample(0f, 0.5f), 1e-3f)
@@ -85,6 +105,9 @@ class StampImageSourceTest {
         val values = SculptToolValues(stampImage = images.decode(images.list(dir).single().file))
         assertNotNull(tools.create(SculptToolKind.STAMP, values))
         for (kind in SculptToolKind.entries) assertNotNull(kind.name, tools.create(kind, values))
-        for (kind in SculptToolKind.entries.filter { it != SculptToolKind.STAMP }) assertNotNull(kind.name, tools.create(kind, SculptToolValues()))
+        for (kind in SculptToolKind.entries.filter { it != SculptToolKind.STAMP }) assertNotNull(
+            kind.name,
+            tools.create(kind, SculptToolValues()),
+        )
     }
 }

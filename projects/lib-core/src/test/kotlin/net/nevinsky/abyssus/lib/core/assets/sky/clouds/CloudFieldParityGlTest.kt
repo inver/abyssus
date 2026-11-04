@@ -23,7 +23,8 @@ private const val GRID = 32
 private const val GL_RGBA32F = 0x8814
 
 /**
- * `clouds_common.glsl` against [net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudField]: the shader evaluates a grid of points into a float target and every value
+  * `clouds_common.glsl` against [net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudField]: the shader evaluates a
+  * grid of points into a float target and every value
  * must match the Kotlin one within 1e-3. Opt-in: `-Dabyssus.glTests=true`.
  */
 class CloudFieldParityGlTest {

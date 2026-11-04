@@ -12,6 +12,8 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Matrix4
+import com.badlogic.gdx.math.Vector3
+import java.util.concurrent.ExecutorService
 import net.nevinsky.abyssus.app.game.controlline.render.Cable
 import net.nevinsky.abyssus.app.game.controlline.render.FailableFieldView
 import net.nevinsky.abyssus.app.game.controlline.render.FieldScene
@@ -21,8 +23,6 @@ import net.nevinsky.abyssus.lib.raytracing.RayColor
 import net.nevinsky.abyssus.lib.raytracing.RayFog
 import net.nevinsky.abyssus.lib.raytracing.RayLight
 import net.nevinsky.abyssus.lib.raytracing.RayLightKind
-import com.badlogic.gdx.math.Vector3
-import java.util.concurrent.ExecutorService
 import org.slf4j.LoggerFactory
 
 /**
@@ -43,30 +43,43 @@ class RayFieldPresenter(
     private val quad = RayFrameQuad()
     private var shapes: ShapeRenderer? = null
 
-    override val kind: String get() = "ray"
+    override val kind: String
+        get() = "ray"
 
-    override val failure: String? get() = runtime.failure ?: assetFailure
+    override val failure: String?
+        get() = runtime.failure ?: assetFailure
 
     private var assetFailure: String? = null
 
     override fun draw(
-        field: FieldScene, camera: Camera, lines: List<LineSegment>, hidden: Entity?,
-        clips: Map<Entity, String>, seconds: Float, cables: List<Cable>, poses: Map<Entity, Matrix4>,
+        field: FieldScene,
+        camera: Camera,
+        lines: List<LineSegment>,
+        hidden: Entity?,
+        clips: Map<Entity, String>,
+        seconds: Float,
+        cables: List<Cable>,
+        poses: Map<Entity, Matrix4>,
     ) {
         // `drawsCables` stays false: the game gives this view its control lines as `lines`, like the other overlays
         val fog = field.fogColor ?: Color(0.6f, 0.7f, 0.85f, 1f)
         Gdx.gl.glClearColor(fog.r, fog.g, fog.b, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
-        if (failure != null) return
+        if (failure != null) {
+            return
+        }
 
         val drawnModels = field.models.filter { it.first !== hidden }
         assets.update(
-            drawnModels.map { (entity, name) -> field.modelStorageName(entity, name) }.toSet(), field.terrains.map { it.second }.toSet(), field.skyName,
+            drawnModels.map { (entity, name) -> field.modelStorageName(entity, name) }.toSet(),
+            field.terrains.map { it.second }.toSet(),
+            field.skyName,
         )
         when (val state = assets.poll()) {
             is RayFieldAssetState.Preparing -> return
             is RayFieldAssetState.Failed -> {
-                assetFailure = "ray assets failed: " + state.failures.entries.joinToString { "${it.key}: ${it.value.message}" }
+                assetFailure =
+                    "ray assets failed: " + state.failures.entries.joinToString { "${it.key}: ${it.value.message}" }
                 return
             }
             is RayFieldAssetState.Ready -> {
@@ -75,12 +88,13 @@ class RayFieldPresenter(
                     assetFailure = "ray mode needs a perspective camera"
                     return
                 }
-                val frame = try {
-                    builder.build(inputsOf(field, drawnModels, state, perspective, poses))
-                } catch (e: RuntimeException) {
-                    assetFailure = "ray scene could not be built: ${e.message ?: e}"
-                    return
-                }
+                val frame =
+                    try {
+                        builder.build(inputsOf(field, drawnModels, state, perspective, poses))
+                    } catch (e: RuntimeException) {
+                        assetFailure = "ray scene could not be built: ${e.message ?: e}"
+                        return
+                    }
                 runtime.offer(frame, Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight)
             }
         }
@@ -89,34 +103,51 @@ class RayFieldPresenter(
     }
 
     private fun inputsOf(
-        field: FieldScene, models: List<Pair<Entity, String>>, state: RayFieldAssetState.Ready, camera: PerspectiveCamera,
+        field: FieldScene,
+        models: List<Pair<Entity, String>>,
+        state: RayFieldAssetState.Ready,
+        camera: PerspectiveCamera,
         poses: Map<Entity, Matrix4>,
     ): RayFieldInputs {
         fun ray(c: Color) = RayColor(c.r, c.g, c.b)
         val placedModels = models.mapIndexedNotNull { index, (entity, name) ->
-            state.models[field.modelStorageName(entity, name)]?.let { RayPlacedModel("m$index", it, Matrix4(poses[entity] ?: field.position(entity).getTransform())) }
+            state.models[field.modelStorageName(entity, name)]?.let {
+                RayPlacedModel("m$index", it, Matrix4(poses[entity] ?: field.position(entity).getTransform()))
+            }
         }
-        val placedTerrains = field.terrains.mapIndexedNotNull { index, (entity, name) ->
-            state.terrains[name]?.let { RayPlacedTerrain("t$index", it, Matrix4(field.position(entity).getTransform())) }
-        }
+        val placedTerrains =
+            field.terrains.mapIndexedNotNull { index, (entity, name) ->
+                state.terrains[name]?.let {
+                    RayPlacedTerrain("t$index", it, Matrix4(field.position(entity).getTransform()))
+                }
+            }
         // the light travels against the direction of the sun
         val sunTravel = Vector3(-field.sunDirection.x, -field.sunDirection.y, -field.sunDirection.z)
         val sun = RayLight("sun", RayLightKind.DIRECTIONAL, ray(field.sunColor), sunTravel)
         val background = field.fogColor ?: Color(0.6f, 0.7f, 0.85f, 1f)
         return RayFieldInputs(
-            placedModels, placedTerrains, listOf(sun), ray(field.ambient), ray(background),
-            field.fogColor?.let { RayFog(ray(it), field.fogDensity, field.fogGradient) }, state.sky,
+            placedModels,
+            placedTerrains,
+            listOf(sun),
+            ray(field.ambient),
+            ray(background),
+            field.fogColor?.let { RayFog(ray(it), field.fogDensity, field.fogGradient) },
+            state.sky,
             RayFieldCamera(
                 listOf(camera.position.x, camera.position.y, camera.position.z),
                 listOf(camera.direction.x, camera.direction.y, camera.direction.z),
                 listOf(camera.up.x, camera.up.y, camera.up.z),
-                camera.fieldOfView, camera.near, camera.far,
+                camera.fieldOfView,
+                camera.near,
+                camera.far,
             ),
         )
     }
 
     private fun drawLines(camera: Camera, lines: List<LineSegment>) {
-        if (lines.isEmpty()) return
+        if (lines.isEmpty()) {
+            return
+        }
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
         Gdx.gl.glEnable(GL20.GL_BLEND)
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)

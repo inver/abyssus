@@ -44,7 +44,7 @@ open class ModelShader(
     config: Config,
     prefix: String = modelPrefix(renderable, config),
     vertexSource: String = config.vertexShader ?: ShaderSources.read(ShaderSources.DEFAULT_VERTEX),
-    fragmentSource: String = config.fragmentShader ?: ShaderSources.readAssembled(ShaderSources.DEFAULT_FRAGMENT)
+    fragmentSource: String = config.fragmentShader ?: ShaderSources.readAssembled(ShaderSources.DEFAULT_FRAGMENT),
 ) : DefaultShader(renderable, config, prefix, vertexSource, fragmentSource) {
     /** `true` for the `instancedFlag` variant: the world matrix comes from the mesh's instance data. */
     val instanced: Boolean = renderable.meshPart.mesh.isInstanced
@@ -62,11 +62,19 @@ open class ModelShader(
     protected fun registerLocal(
         alias: String,
         overallMask: Long = 0,
-        set: (shader: BaseShader, inputId: Int, renderable: Renderable?, attributes: Attributes) -> Unit
-    ): Int = register(Uniform(alias, overallMask), object : LocalSetter() {
-        override fun set(shader: BaseShader, inputID: Int, renderable: Renderable?, combinedAttributes: Attributes?) =
-            set(shader, inputID, renderable, combinedAttributes!!)
-    })
+        set: (shader: BaseShader, inputId: Int, renderable: Renderable?, attributes: Attributes) -> Unit,
+    ): Int =
+        register(
+            Uniform(alias, overallMask),
+            object : LocalSetter() {
+                override fun set(
+                    shader: BaseShader,
+                    inputID: Int,
+                    renderable: Renderable?,
+                    combinedAttributes: Attributes?,
+                ) = set(shader, inputID, renderable, combinedAttributes!!)
+            },
+        )
 
     override fun canRender(renderable: Renderable): Boolean =
         instanced == renderable.meshPart.mesh.isInstanced && super.canRender(renderable)
@@ -86,7 +94,10 @@ open class ModelShader(
         }
     }
 
-    /** The exposure of the pass's output transform, when it set one; the program was compiled with the transform only in that case. */
+    /**
+     * The exposure of the pass's output transform, when it set one; the program was compiled with the transform only in
+     * that case.
+     */
     private fun bindOutputTransform(attributes: Attributes) {
         val output = attributes.get(OutputTransformAttribute.Type) as? OutputTransformAttribute ?: return
         val location = program.fetchUniformLocation("u_exposure", false)
@@ -108,7 +119,11 @@ open class ModelShader(
 
     private fun bindShadowAtlas(attributes: Attributes) {
         val atlas = attributes.get(ShadowAtlasAttribute.Type) as? ShadowAtlasAttribute ?: return
-        records(atlas, (attributes.get(DirectionalLightsAttribute.Type) as? DirectionalLightsAttribute)?.lights, dirRecords)
+        records(
+            atlas,
+            (attributes.get(DirectionalLightsAttribute.Type) as? DirectionalLightsAttribute)?.lights,
+            dirRecords,
+        )
         records(atlas, (attributes.get(PointLightsAttribute.Type) as? PointLightsAttribute)?.lights, pointRecords)
         records(atlas, (attributes.get(SpotLightsAttribute.Type) as? SpotLightsAttribute)?.lights, spotRecords)
         val unit = context.textureBinder.bind(atlas.atlas)
@@ -116,30 +131,43 @@ open class ModelShader(
     }
 
     /** Fills [out] with [atlas]'s record of each of [lights] (null for a light it has none of). */
-    private fun records(atlas: ShadowAtlasAttribute, lights: com.badlogic.gdx.utils.Array<out com.badlogic.gdx.graphics.g3d.environment.BaseLight<*>>?, out: ArrayList<ShadowLightRecord?>) {
+    private fun records(
+        atlas: ShadowAtlasAttribute,
+        lights: com.badlogic.gdx.utils.Array<out com.badlogic.gdx.graphics.g3d.environment.BaseLight<*>>?,
+        out: ArrayList<ShadowLightRecord?>,
+    ) {
         out.clear()
-        if (lights == null) return
+        if (lights == null) {
+            return
+        }
         val records = atlas.records
         for (i in 0 until lights.size) {
             val light = lights[i]
             var found: ShadowLightRecord? = null
-            for (r in records.indices) if (records[r].light === light) { found = records[r]; break }
+            for (r in records.indices) if (records[r].light === light) {
+                found = records[r]
+                break
+            }
             out.add(found)
         }
     }
 
     private fun bindDirectionalVisibility(attributes: Attributes) {
-        val visibility = attributes.get(DirectionalVisibilityAttribute.Type) as? DirectionalVisibilityAttribute ?: return
+        val visibility =
+            attributes.get(DirectionalVisibilityAttribute.Type) as? DirectionalVisibilityAttribute ?: return
         val unit = context.textureBinder.bind(visibility.texture)
         fun location(name: String) = program.fetchUniformLocation(name, false)
         location("u_dirVisMap").takeIf { it >= 0 }?.let { program.setUniformi(it, unit) }
         location("u_dirVisWorldToMap").takeIf { it >= 0 }?.let { program.setUniformMatrix(it, visibility.worldToMap) }
-        location("u_dirVisParams").takeIf { it >= 0 }?.let { program.setUniformf(it, visibility.edgeFade, visibility.outside) }
+        location("u_dirVisParams")
+            .takeIf { it >= 0 }
+            ?.let { program.setUniformf(it, visibility.edgeFade, visibility.outside) }
         location("u_dirVisIndex").takeIf { it >= 0 }?.let { program.setUniformi(it, visibility.lightIndex) }
     }
 
     /** The ambient cube: the sky's six colors (or the ambient light) plus the lights beyond the shader's own. */
-    internal class AmbientCubemapSetter(private val dirLightsOffset: Int, private val pointLightsOffset: Int) : LocalSetter() {
+    internal class AmbientCubemapSetter(private val dirLightsOffset: Int, private val pointLightsOffset: Int) :
+        LocalSetter() {
         private val cache = AmbientCubemap()
         private val position = Vector3()
 
@@ -170,9 +198,9 @@ open class ModelShader(
             private val ONES = FloatArray(18) { 1f }
 
             /**
-             * Starts [cubemap] from the sky's six irradiance colors when [attributes] has an [EnvironmentLightAttribute]
-             * (it replaces the ambient color), else from the ambient color when there is one; otherwise leaves it as it
-             * is. Lights beyond the shader's count are added after this.
+             * Starts [cubemap] from the sky's six irradiance colors when [attributes] has an
+             * [EnvironmentLightAttribute] (it replaces the ambient color), else from the ambient color when there is
+             * one; otherwise leaves it as it is. Lights beyond the shader's count are added after this.
              */
             fun setAmbientBase(cubemap: AmbientCubemap, attributes: Attributes) {
                 val sky = attributes.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute?
@@ -191,10 +219,13 @@ fun modelPrefix(renderable: Renderable, config: DefaultShader.Config): String {
     val attributes = Attributes()
     renderable.environment?.let { attributes.set(it) }
     renderable.material?.let { attributes.set(it) }
-    return DefaultShader.createPrefix(renderable, config) + extraDefines(
-        attributes, renderable.meshPart.mesh.vertexAttributes.mask, renderable.environment != null,
-        renderable.meshPart.mesh.isInstanced
-    )
+    return DefaultShader.createPrefix(renderable, config) +
+        extraDefines(
+            attributes,
+            renderable.meshPart.mesh.vertexAttributes.mask,
+            renderable.environment != null,
+            renderable.meshPart.mesh.isInstanced,
+        )
 }
 
 /**

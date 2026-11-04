@@ -5,8 +5,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class UtilTest {
-    @Test
-    fun aFreeNameIsKept() = assertEquals("tree", Util.uniqueName("tree") { false })
+    @Test fun aFreeNameIsKept() = assertEquals("tree", Util.uniqueName("tree") { false })
 
     @Test
     fun aTakenNameGetsTheNextFreeNumberStartingAtTwo() =
@@ -21,7 +20,10 @@ class UtilTest {
     @Test
     fun theCallerDecidesWhatTakenMeans() {
         val used = setOf("textures/A.png")
-        assertEquals("textures/a-2.png", Util.uniqueName("textures/a", ".png") { c -> used.any { it.equals(c, ignoreCase = true) } })
+        assertEquals(
+            "textures/a-2.png",
+            Util.uniqueName("textures/a", ".png") { c -> used.any { it.equals(c, ignoreCase = true) } },
+        )
     }
 
     @Test

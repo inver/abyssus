@@ -36,7 +36,11 @@ internal class PaintMaskTool : BrushTool<ByteGrid> {
         val f = stamp.footprint
         for (i in 0 until f.count) {
             val delta = stamp.strength * BRUSH_UNITS * smoothFalloff(f.falloff[i])
-            out[i] = if (stamp.reversed) -delta else delta
+            out[i] = if (stamp.reversed) {
+                -delta
+            } else {
+                delta
+            }
         }
     }
 }
@@ -50,11 +54,19 @@ internal class MaskTarget(override val grid: ByteGrid) : BrushTarget<ByteGrid> {
     override fun apply(gx: Int, gz: Int, changes: FloatArray, offset: Int): Boolean {
         val change = changes[offset]
         val delta = abs(change).roundToInt()
-        if (delta == 0) return false
+        if (delta == 0) {
+            return false
+        }
         val index = gz * grid.resolution + gx
         val old = grid.values[index].toInt() and 0xFF
-        val value = if (change > 0f) min(255, old + delta) else max(0, old - delta)
-        if (value == old) return false
+        val value = if (change > 0f) {
+            min(255, old + delta)
+        } else {
+            max(0, old - delta)
+        }
+        if (value == old) {
+            return false
+        }
         grid.values[index] = value.toByte()
         return true
     }

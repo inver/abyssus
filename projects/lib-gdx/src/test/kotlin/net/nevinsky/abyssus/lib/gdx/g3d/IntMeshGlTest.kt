@@ -22,39 +22,41 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.utils.BufferUtils
+import java.nio.IntBuffer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
-import java.nio.IntBuffer
 
 /**
  * A 90,000-vertex [IntMesh] drawn through the stock `ModelInstance`, `ModelBatch` and `DefaultShader`. Opt-in:
  * `-Dabyssus.glTests=true`.
  */
 class IntMeshGlTest {
-    @Before
-    fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
+    @Before fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
 
     private val size = 300
     private val edge = (size - 1).toFloat()
 
     /** The grid seen from above, `x` and `z` in 0..299 filling a 128 x 128 image, `z` growing downwards. */
-    private fun camera() = OrthographicCamera(size.toFloat(), size.toFloat()).apply {
-        position.set(edge / 2, 100f, edge / 2)
-        direction.set(0f, -1f, 0f)
-        up.set(0f, 0f, -1f)
-        near = 1f
-        far = 200f
-        update()
-    }
+    private fun camera() =
+        OrthographicCamera(size.toFloat(), size.toFloat()).apply {
+            position.set(edge / 2, 100f, edge / 2)
+            direction.set(0f, -1f, 0f)
+            up.set(0f, 0f, -1f)
+            near = 1f
+            far = 200f
+            update()
+        }
 
     private fun stockShaders(): DefaultShaderProvider {
         // the stock sources come from the libGDX jar, so the test needs no Gdx.files backend
         fun source(name: String) = javaClass.getResource("/com/badlogic/gdx/graphics/g3d/shaders/$name")!!.readText()
-        return DefaultShaderProvider(DefaultShader.Config(source("default.vertex.glsl"), source("default.fragment.glsl")))
+        return DefaultShaderProvider(
+            DefaultShader.Config(source("default.vertex.glsl"), source("default.fragment.glsl"))
+        )
     }
 
     /** Draws [mesh] through a stock batch and returns the 128 x 128 RGBA image. */
@@ -101,10 +103,16 @@ class IntMeshGlTest {
 
     @Test
     fun drawingWithSixteenBitIndicesLosesTheRowsAbove65535() = TestGl.run {
-        val image = draw(gridMesh(size) { vertices, indices, _, attributes ->
-            SixteenBitDrawMesh(vertices, indices, attributes)
-        })
-        assertTrue("rows below index 65,535 survive the truncation", image.at(150f, 100f) > 0 || image.at(150f, 10f) > 0)
+        val image =
+            draw(
+                gridMesh(size) { vertices, indices, _, attributes ->
+                    SixteenBitDrawMesh(vertices, indices, attributes)
+                }
+            )
+        assertTrue(
+            "rows below index 65,535 survive the truncation",
+            image.at(150f, 100f) > 0 || image.at(150f, 10f) > 0,
+        )
         assertEquals("rows above index 65,535 are gone with 16-bit indices", 0, image.at(150f, 280f))
         assertEquals(0, image.at(150f, edge - 1f))
     }
@@ -133,18 +141,19 @@ class IntMeshGlTest {
     fun theSixteenBitViewsThrow() = TestGl.run {
         val mesh = IntMesh(true, 4, 6, VertexAttribute.Position())
         try {
-            val blocked = listOf<() -> Unit>(
-                { mesh.getIndicesBuffer(false) },
-                { @Suppress("DEPRECATION") mesh.getIndicesBuffer() },
-                { mesh.setIndices(shortArrayOf(0, 1, 2)) },
-                { mesh.setIndices(shortArrayOf(0, 1, 2), 0, 3) },
-                { mesh.getIndices(ShortArray(3)) },
-                { mesh.getIndices(ShortArray(3), 0) },
-                { mesh.getIndices(0, ShortArray(3), 0) },
-                { mesh.getIndices(0, 3, ShortArray(3), 0) },
-                { mesh.copy(true) },
-                { mesh.copy(true, false, null) }
-            )
+            val blocked =
+                listOf<() -> Unit>(
+                    { mesh.getIndicesBuffer(false) },
+                    { @Suppress("DEPRECATION") mesh.getIndicesBuffer() },
+                    { mesh.setIndices(shortArrayOf(0, 1, 2)) },
+                    { mesh.setIndices(shortArrayOf(0, 1, 2), 0, 3) },
+                    { mesh.getIndices(ShortArray(3)) },
+                    { mesh.getIndices(ShortArray(3), 0) },
+                    { mesh.getIndices(0, ShortArray(3), 0) },
+                    { mesh.getIndices(0, 3, ShortArray(3), 0) },
+                    { mesh.copy(true) },
+                    { mesh.copy(true, false, null) },
+                )
             for (call in blocked) {
                 assertThrows(UnsupportedOperationException::class.java) { call() }
             }

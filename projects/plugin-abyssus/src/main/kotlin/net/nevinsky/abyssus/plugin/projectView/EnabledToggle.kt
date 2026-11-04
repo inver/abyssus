@@ -42,7 +42,10 @@ fun sceneFileOf(entry: DtoEntry): VirtualFile? =
 
 fun sceneNameOf(project: Project, file: VirtualFile): String? = SceneDocumentCache.of(project).read(file)?.scene?.name
 
-/** Sets the scene's `skyboxName` to [name] (an asset folder, or null for none); false, writing nothing, when it already is. */
+/**
+ * Sets the scene's `skyboxName` to [name] (an asset folder, or null for none); false, writing nothing, when it already
+ * is.
+ */
 fun setSkybox(project: Project, file: VirtualFile, name: String?): Boolean =
     editSceneSettings(project, file, AbyssusBundle.message("commandSetSkybox")) { it.copy(skyboxName = name) }
 

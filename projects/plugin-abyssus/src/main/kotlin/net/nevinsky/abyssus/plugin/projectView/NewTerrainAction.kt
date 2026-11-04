@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.plugin.assetfiles.assetResultMessage
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -15,24 +14,25 @@ import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.concurrency.AppExecutorUtil
+import java.io.File
+import javax.swing.JComponent
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileCommand
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
+import net.nevinsky.abyssus.plugin.assetfiles.assetResultMessage
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.projectView.action.asset.assetsNodeProjectFile
 import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetInAbyssusView
 import net.nevinsky.abyssus.plugin.terrain.NewTerrainForm
 import net.nevinsky.abyssus.plugin.terrain.NewTerrainRequest
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
-import java.io.File
-import javax.swing.JComponent
 
 /**
  * Right-click New Terrain on the Assets node of a recognized project: a dialog for the folder name, world size,
- * resolution and generation settings with a heightmap preview; Create writes the asset and selects it. The scene
- * files and the project file are not touched, so the terrain is unused until a scene references it.
+ * resolution and generation settings with a heightmap preview; Create writes the asset and selects it. The scene files
+ * and the project file are not touched, so the terrain is unused until a scene references it.
  */
 open class NewTerrainAction : AbyssusTreeAction<VirtualFile>() {
     override fun targetOf(node: Any?): VirtualFile? = assetsNodeProjectFile(node)
@@ -41,8 +41,8 @@ open class NewTerrainAction : AbyssusTreeAction<VirtualFile>() {
 }
 
 /**
- * The dialog around a [NewTerrainForm]; OK is enabled only while the form has a request to create from. The request is taken
- * when OK is pressed: closing disposes the form, which discards its draft.
+ * The dialog around a [NewTerrainForm]; OK is enabled only while the form has a request to create from. The request is
+ * taken when OK is pressed: closing disposes the form, which discards its draft.
  */
 internal class NewTerrainDialog(project: Project, val form: NewTerrainForm) : DialogWrapper(project) {
     /** What OK was pressed on, or null when the dialog was cancelled. */
@@ -74,42 +74,68 @@ private fun createInteractively(project: Project, abss: VirtualFile) {
     val core = service<AbyssusPluginCtx>()
     val terrain = core.terrain
     val projectDir = File(abss.parent.path)
-    val form = NewTerrainForm(
-        projectDir, terrain.generator,
-        background = { AppExecutorUtil.getAppExecutorService().execute(it) },
-        ui = { ApplicationManager.getApplication().invokeLater(it, ModalityState.any()) },
-    )
+    val form =
+        NewTerrainForm(
+            projectDir,
+            terrain.generator,
+            background = { AppExecutorUtil.getAppExecutorService().execute(it) },
+            ui = { ApplicationManager.getApplication().invokeLater(it, ModalityState.any()) },
+        )
     val dialog = NewTerrainDialog(project, form)
-    if (!dialog.showAndGet()) return
+    if (!dialog.showAndGet()) {
+        return
+    }
     val request = dialog.accepted ?: return
     createTerrain(project, abss, request)
 }
 
 /** Writes the terrain of [request] under [abss]'s project as one undoable command, then selects it in the view. */
-fun createTerrain(project: Project, abss: VirtualFile, request: NewTerrainRequest, report: (String) -> Unit = { Messages.showErrorDialog(project, it, AbyssusBundle.message("newTerrainTitle")) }): AssetCommandResult? {
+fun createTerrain(
+    project: Project,
+    abss: VirtualFile,
+    request: NewTerrainRequest,
+    report: (String) -> Unit = { Messages.showErrorDialog(project, it, AbyssusBundle.message("newTerrainTitle")) },
+): AssetCommandResult? {
     val core = service<AbyssusPluginCtx>()
     val terrain = core.terrain
-    val accepted = net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation {
-        core.documents.parsing.requireSupported(textOf(abss), net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT)
+    val accepted =
+        net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation {
+            core.documents.parsing.requireSupported(
+                textOf(abss),
+                net.nevinsky.abyssus.lib.core.format.DocumentKind.PROJECT,
+            )
+        }
+    accepted.exceptionOrNull()?.let {
+        report(it.documentDisplayMessage())
+        return null
     }
-    accepted.exceptionOrNull()?.let { report(it.documentDisplayMessage()); return null }
     val projectDir = File(abss.parent.path)
     val staged = terrain.newTerrains.stage(projectDir, request.name, request.preview)
     if (staged == null) {
         report(AbyssusBundle.message("newTerrainFailed", AbyssusBundle.message("newTerrainNameError.EXISTS")))
         return null
     }
-    val result = AssetFileCommand(project, LocalAssetFileStore(projectDir)).execute(
-        staged.transaction,
-        onDone = { ApplicationManager.getApplication().invokeLater({
-            selectAssetInAbyssusView(
-                project,
-                abss,
-                staged.name
+    val result =
+        AssetFileCommand(project, LocalAssetFileStore(projectDir))
+            .execute(
+                staged.transaction,
+                onDone = {
+                    ApplicationManager.getApplication()
+                        .invokeLater(
+                            {
+                                selectAssetInAbyssusView(
+                                    project,
+                                    abss,
+                                    staged.name,
+                                )
+                            },
+                            ModalityState.nonModal(),
+                        )
+                },
             )
-        }, ModalityState.nonModal()) },
-    )
     val problem = assetResultMessage(result, "terrainApplyCancelled")
-    if (problem != null) report(AbyssusBundle.message("newTerrainFailed", problem))
+    if (problem != null) {
+        report(AbyssusBundle.message("newTerrainFailed", problem))
+    }
     return result
 }

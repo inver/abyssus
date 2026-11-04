@@ -44,9 +44,12 @@ internal interface GlCanvasHooks {
 }
 
 /**
- * The GL context lifecycle every GL canvas of the plugin shares: creating the capabilities and the libGDX context, running
- * the view's create, draw and release inside `GdxRuntime.withContext` and only while the canvas is safe, and the abandoned
- * path. It owns the context, the capabilities and the frame clock; the view keeps its own CPU state across canvases made
+  * The GL context lifecycle every GL canvas of the plugin shares: creating the capabilities and the libGDX context,
+  * running
+  * the view's create, draw and release inside `GdxRuntime.withContext` and only while the canvas is safe, and the
+  * abandoned
+  * path. It owns the context, the capabilities and the frame clock; the view keeps its own CPU state across canvases
+  * made
  * by [newCanvas]. EDT only.
  */
 internal class GlCanvasHost(
@@ -62,7 +65,8 @@ internal class GlCanvasHost(
         private set
 
     /**
-     * The samples per pixel of the current context's default framebuffer, read when it was made; null before. A platform
+      * The samples per pixel of the current context's default framebuffer, read when it was made; null before. A
+      * platform
      * may accept a multisampled request and still give none (an AWT canvas on X11 draws into a window whose visual AWT
      * already chose), so this, not the request, says whether the view is antialiased.
      */
@@ -113,11 +117,16 @@ internal class GlCanvasHost(
     }
 }
 
-/** Renders [canvas] every [FRAME_MILLIS] while it is [GuardedGLCanvas.glSafe]; a throwing frame goes to [failed] (the timer keeps running unless it stops it). */
+/**
+ * Renders [canvas] every [FRAME_MILLIS] while it is [GuardedGLCanvas.glSafe]; a throwing frame goes to [failed] (the
+ * timer keeps running unless it stops it).
+ */
 internal class GlFrameTimer(canvas: () -> GuardedGLCanvas, failed: (Throwable) -> Unit) {
     private val timer: Timer = Timer(FRAME_MILLIS) {
         val c = canvas()
-        if (!c.glSafe()) return@Timer
+        if (!c.glSafe()) {
+            return@Timer
+        }
         try {
             c.render()
         } catch (e: Throwable) {

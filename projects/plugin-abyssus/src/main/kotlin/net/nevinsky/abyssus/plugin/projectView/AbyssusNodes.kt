@@ -33,7 +33,10 @@ import javax.swing.Icon
 /** Shown in a scene entry's label (`name (id)`) and edited via Rename, so not repeated as rows. */
 private val SCENE_HEADER = setOf("formatVersion", "id", "name")
 
-/** The `.scene` a project-view node can open in the scene view (a standalone scene or a project's scene entry), else null. */
+/**
+ * The `.scene` a project-view node can open in the scene view (a standalone scene or a project's scene entry), else
+ * null.
+ */
 fun viewableSceneFile(node: Any?): VirtualFile? = when (node) {
     is AbyssusAssetNode -> node.virtualFile.takeIf(ProjectLayout::isScene)
     is DtoEntryNode -> sceneFileOf(node.value)
@@ -45,7 +48,9 @@ fun findTopLevelAssets(project: Project): List<VirtualFile> {
     for (root in ProjectRootManager.getInstance(project).contentRoots) {
         VfsUtilCore.visitChildrenRecursively(root, object : VirtualFileVisitor<Unit>() {
             override fun visitFile(file: VirtualFile): Boolean {
-                if (ProjectLayout.isAssetFile(file) && !ProjectLayout.isProjectScene(file)) found += file
+                if (ProjectLayout.isAssetFile(file) && !ProjectLayout.isProjectScene(file)) {
+                    found += file
+                }
                 return true
             }
         })
@@ -54,7 +59,11 @@ fun findTopLevelAssets(project: Project): List<VirtualFile> {
 }
 
 private fun assetIcon(file: VirtualFile): Icon =
-    if (file.extension == ProjectLayout.PROJECT_EXTENSION) AbyssusProjectIcons.PROJECT else SceneIcons.FILE
+    if (file.extension == ProjectLayout.PROJECT_EXTENSION) {
+        AbyssusProjectIcons.PROJECT
+    } else {
+        SceneIcons.FILE
+    }
 
 /** Top level of the view: every `.abss` project (and any scene outside a project), with no folder nodes. */
 class AbyssusRootNode(project: Project, settings: ViewSettings?) :
@@ -116,7 +125,11 @@ class DtoEntry(
     // row looks (the toggle state, a scalar's value, the entity type) must take part to avoid stale rows.
     override fun equals(other: Any?) =
         other is DtoEntry && other.path == path && other.enabled == enabled && rowText(other) == rowText(this) &&
-            (if (isScalar(value)) scalarOf(value) == scalarOf(other.value) else !isScalar(other.value)) &&
+            (if (isScalar(value)) {
+                scalarOf(value) == scalarOf(other.value)
+            } else {
+                !isScalar(other.value)
+            }) &&
             (value as? Asset<*>)?.unused == (other.value as? Asset<*>)?.unused && entityType() == other.entityType() &&
             isGame == other.isGame
     override fun hashCode() = path.hashCode()
@@ -127,7 +140,9 @@ class DtoEntry(
 
 /** Reads only the admitted row's JSON, without loading runtime components or assets. */
 private fun DtoEntry.entityType(): EntityType? {
-    if (!isEntityEntry(this)) return null
+    if (!isEntityEntry(this)) {
+        return null
+    }
     return (value as? EntityNode)?.entity?.header()?.type
 }
 
@@ -135,8 +150,16 @@ private fun entryIcon(entry: DtoEntry): Icon {
     val dto = entry.value
     return when {
         dto is List<*> && entry.name == "scenes" -> ScenesIcons.LIST
-        dto is FolderRow -> if (dto.kind == FolderKind.UI) ScenesIcons.UI else ScenesIcons.ASSETS
-        dto is UiScreenGroup -> if (dto.kind == net.nevinsky.abyssus.lib.core.ui.model.UiScreenKind.OVERLAY) ScenesIcons.UI_OVERLAYS else ScenesIcons.UI_SCREENS
+        dto is FolderRow -> if (dto.kind == FolderKind.UI) {
+            ScenesIcons.UI
+        } else {
+            ScenesIcons.ASSETS
+        }
+        dto is UiScreenGroup -> if (dto.kind == net.nevinsky.abyssus.lib.core.ui.model.UiScreenKind.OVERLAY) {
+            ScenesIcons.UI_OVERLAYS
+        } else {
+            ScenesIcons.UI_SCREENS
+        }
         dto is TypeGroup -> ScenesIcons.FOLDER
         dto is UiScreen || dto is UiScreenEntry -> ScenesIcons.UI_SCREEN
         dto is Asset<*> -> AssetIcons.forType(dto.meta.type.name)
@@ -166,8 +189,13 @@ class DtoEntryNode(
         val v = value
         val ownSource = (v.value as? SceneEntry)?.file
         // an object read from its own file restarts the key path; otherwise it extends this entry's
-        val (src, baseKeys) = if (ownSource != null) ownSource to emptyList() else v.source to (v.parentKeys + v.name)
-        // keys the view skips (`entities`, `components`) stay in the path and the key path, so they still name the real location
+        val (src, baseKeys) = if (ownSource != null) {
+            ownSource to emptyList()
+        } else {
+            v.source to (v.parentKeys + v.name)
+        }
+        // keys the view skips (`entities`, `components`) stay in the path and the key path, so they still name the real
+        // location
         val keys = baseKeys + row.via
         val parentPath = row.via.fold(v.path) { acc, key -> "$acc/$key" }
         return DtoEntryNode(project!!, parentPath, row, src, keys, label, isGray)
@@ -176,13 +204,21 @@ class DtoEntryNode(
     /** The Game UI asset this row is, or the one it is a screen of, with the screen to show. */
     private fun uiTarget(): Pair<Asset<*>, String?>? {
         val own = value.value
-        if (own is UiScreenEntry) return own.asset to own.screen.id
-        if (own is Asset<*>) return own.takeIf { it.type == MetaType.UI }?.let { it to null }
-        if (own !is UiScreen) return null
+        if (own is UiScreenEntry) {
+            return own.asset to own.screen.id
+        }
+        if (own is Asset<*>) {
+            return own.takeIf { it.type == MetaType.UI }?.let { it to null }
+        }
+        if (own !is UiScreen) {
+            return null
+        }
         var node: AbstractTreeNode<*>? = parent
         while (node != null) {
             val asset = (node as? DtoEntryNode)?.value?.value as? Asset<*>
-            if (asset != null) return asset to own.id
+            if (asset != null) {
+                return asset to own.id
+            }
             node = node.parent
         }
         return null
@@ -211,7 +247,8 @@ class DtoEntryNode(
         val v = value
         val dto = v.value
         val rows = when {
-            // a path arrangement is a plain line: its copies are squashed into it and its components are edited in Properties
+            // a path arrangement is a plain line: its copies are squashed into it and its components are edited in
+            // Properties
             dto is EntityNode && dto.entity?.let(::isArrangementEntity) == true -> emptyList()
             else -> childrenOf(dto)
         }.filterNot { sceneFileOf(v) != null && it.name in SCENE_HEADER }.foldToggles()
@@ -228,9 +265,17 @@ class DtoEntryNode(
     override fun update(presentation: PresentationData) {
         val v = value
         val shown = rowText(v, label)
-        val attrs = if (isGray) SimpleTextAttributes.GRAYED_ATTRIBUTES else SimpleTextAttributes.REGULAR_ATTRIBUTES
+        val attrs = if (isGray) {
+            SimpleTextAttributes.GRAYED_ATTRIBUTES
+        } else {
+            SimpleTextAttributes.REGULAR_ATTRIBUTES
+        }
         val secondaryAttrs =
-            if (isGray) SimpleTextAttributes.GRAYED_ATTRIBUTES else SimpleTextAttributes.GRAY_ATTRIBUTES
+            if (isGray) {
+                SimpleTextAttributes.GRAYED_ATTRIBUTES
+            } else {
+                SimpleTextAttributes.GRAY_ATTRIBUTES
+            }
         if (isScalar(v.value)) {
             presentation.addText("${shown.label}: ", attrs)
             presentation.addText((scalarOf(v.value) ?: EditorBundle.message("dtoNullValue")).toString(), secondaryAttrs)
@@ -239,6 +284,10 @@ class DtoEntryNode(
             shown.secondary?.let { presentation.addText("  $it", secondaryAttrs) }
         }
         // a disabled row, and everything under a disabled one, shows a dimmed icon
-        presentation.setIcon(entryIcon(v).let { if (isDisabled) com.intellij.openapi.util.IconLoader.getDisabledIcon(it) else it })
+        presentation.setIcon(entryIcon(v).let { if (isDisabled) {
+            com.intellij.openapi.util.IconLoader.getDisabledIcon(it)
+        } else {
+            it
+        } })
     }
 }

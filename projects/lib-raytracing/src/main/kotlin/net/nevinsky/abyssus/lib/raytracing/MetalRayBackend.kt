@@ -4,11 +4,11 @@
  */
 package net.nevinsky.abyssus.lib.raytracing
 
-import org.slf4j.Logger
-import org.slf4j.helpers.NOPLogger
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
+import org.slf4j.Logger
+import org.slf4j.helpers.NOPLogger
 
 /** Optional, instance-owned loading. No native library is touched until load is requested. */
 internal class MetalLibrary(
@@ -17,26 +17,30 @@ internal class MetalLibrary(
 ) {
     private var loaded = false
 
-    fun load(): Unit = synchronized(javaClass) {
-        if (loaded) return@synchronized
-        val bytes = checkNotNull(resource()) { "Packaged Metal JNI library is missing" }
-        // The JVM caches native libraries by path. Share code within a classloader, never session state.
-        val digest = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
-        val directory = Path.of(
-            System.getProperty("java.io.tmpdir"),
-            "abyssus-metal-${ProcessHandle.current().pid()}-${System.identityHashCode(javaClass.classLoader)}"
-        )
-        Files.createDirectories(directory)
-        directory.toFile().deleteOnExit()
-        val file = directory.resolve("$digest.dylib")
-        if (!Files.exists(file)) {
-            Files.write(file, bytes)
-            file.toFile().deleteOnExit()
+    fun load(): Unit =
+        synchronized(javaClass) {
+            if (loaded) {
+                return@synchronized
+            }
+            val bytes = checkNotNull(resource()) { "Packaged Metal JNI library is missing" }
+            // The JVM caches native libraries by path. Share code within a classloader, never session state.
+            val digest = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+            val directory =
+                Path.of(
+                    System.getProperty("java.io.tmpdir"),
+                    "abyssus-metal-${ProcessHandle.current().pid()}-${System.identityHashCode(javaClass.classLoader)}",
+                )
+            Files.createDirectories(directory)
+            directory.toFile().deleteOnExit()
+            val file = directory.resolve("$digest.dylib")
+            if (!Files.exists(file)) {
+                Files.write(file, bytes)
+                file.toFile().deleteOnExit()
+            }
+            check(Files.readAllBytes(file).contentEquals(bytes)) { "Extracted Metal library is corrupt" }
+            systemLoad(file.toAbsolutePath().toString())
+            loaded = true
         }
-        check(Files.readAllBytes(file).contentEquals(bytes)) { "Extracted Metal library is corrupt" }
-        systemLoad(file.toAbsolutePath().toString())
-        loaded = true
-    }
 }
 
 /** The native bridge builds at most this many bottom-level structures and instances per session. */
@@ -54,52 +58,73 @@ class MetalRayBackendFactory(
     private var backend: MetalRayBackend? = null
 
     private fun resource(name: String): ByteArray? {
-        val arch = when (System.getProperty("os.arch")) {
-            "aarch64", "arm64" -> "macos-arm64"
-            "x86_64", "amd64" -> "macos-x86_64"
-            else -> error("Unsupported Metal architecture")
-        }
+        val arch =
+            when (System.getProperty("os.arch")) {
+                "aarch64",
+                "arm64" -> "macos-arm64"
+                "x86_64",
+                "amd64" -> "macos-x86_64"
+                else -> error("Unsupported Metal architecture")
+            }
         return javaClass.getResourceAsStream("/native/$arch/$name")?.use { it.readBytes() }
     }
 
     private fun prepare(): ByteArray {
         check(System.getProperty("os.name").startsWith("Mac")) { "Metal requires macOS" }
         library.load()
-        return shader ?: checkNotNull(resource("slice.metallib")) { "Packaged Metal shader is missing" }.also {
-            shader = it
-        }
+        return shader
+            ?: checkNotNull(resource("slice.metallib")) { "Packaged Metal shader is missing" }
+                .also {
+                    shader = it
+                }
     }
 
     override fun probe(): RayCapability {
-        if (!deviceAvailable()) return RayCapability.Unavailable(RayUnavailableReason.ACCELERATION_STRUCTURES)
-        backend?.takeUnless { it.disposed }?.let { return RayCapability.Available(it) }
-        log.info("Probing Metal")
-        return RayBackendProbe({
-            val values = bridge.probe(prepare())
-            check(values.size == 5) { "Invalid Metal probe response" }
-            RayCapabilities(
-                values[0] != 0L,
-                values[1] != 0L,
-                values[2] != 0L,
-                values[3].toInt(),
-                values[4],
-                METAL_MAX_INSTANCES,
-                sceneOptics = true
-            ).also { log.info("Metal probe: $it") }
-        }, { caps ->
-            val handle = bridge.create(prepare())
-            check(handle != 0L) { "Metal backend initialization failed" }
-            MetalRayBackend(bridge, handle, caps, bridge.deviceName(handle), health, log).also {
-                backend = it
-                log.info("Metal backend ready on '${it.info.gpu}'")
+        if (!deviceAvailable()) {
+            return RayCapability.Unavailable(RayUnavailableReason.ACCELERATION_STRUCTURES)
+        }
+        backend
+            ?.takeUnless { it.disposed }
+            ?.let {
+                return RayCapability.Available(it)
             }
-        }).probe()
-            .also { if (it is RayCapability.Unavailable) log.warn("Metal is unavailable: ${it.reason}${it.detail?.let { d -> " ($d)" } ?: ""}") }
+        log.info("Probing Metal")
+        return RayBackendProbe(
+                {
+                    val values = bridge.probe(prepare())
+                    check(values.size == 5) { "Invalid Metal probe response" }
+                    RayCapabilities(
+                            values[0] != 0L,
+                            values[1] != 0L,
+                            values[2] != 0L,
+                            values[3].toInt(),
+                            values[4],
+                            METAL_MAX_INSTANCES,
+                            sceneOptics = true,
+                        )
+                        .also { log.info("Metal probe: $it") }
+                },
+                { caps ->
+                    val handle = bridge.create(prepare())
+                    check(handle != 0L) { "Metal backend initialization failed" }
+                    MetalRayBackend(bridge, handle, caps, bridge.deviceName(handle), health, log).also {
+                        backend = it
+                        log.info("Metal backend ready on '${it.info.gpu}'")
+                    }
+                },
+            )
+            .probe()
+            .also {
+                if (it is RayCapability.Unavailable) {
+                    log.warn("Metal is unavailable: ${it.reason}${it.detail?.let { d -> " ($d)" } ?: ""}")
+                }
+            }
     }
 }
 
 /** All sessions share this device/queue; each keeps independent scene and readback resources. */
-class MetalRayBackend internal constructor(
+class MetalRayBackend
+internal constructor(
     private val bridge: MetalBridge,
     private var handle: Long,
     override val capabilities: RayCapabilities,
@@ -110,11 +135,17 @@ class MetalRayBackend internal constructor(
     override val info = RayBackendInfo("Metal", gpu)
     private val worker = Thread.currentThread()
     private val sessions = linkedMapOf<String, RaySession>()
-    internal val disposed: Boolean get() = handle == 0L
+    internal val disposed: Boolean
+        get() = handle == 0L
+
     override fun openSession(viewId: String, limits: RayLimits): RaySession {
         check(Thread.currentThread() === worker && !disposed) { "Metal backend is closed or used from another worker" }
         require(viewId.isNotEmpty() && viewId !in sessions) { "View already owns a Metal session" }
-        require(limits.maxDimension <= capabilities.maxFrameDimension && limits.maxPixels <= 4_194_304 && limits.maxInstances <= capabilities.maxInstances)
+        require(
+            limits.maxDimension <= capabilities.maxFrameDimension &&
+                limits.maxPixels <= 4_194_304 &&
+                limits.maxInstances <= capabilities.maxInstances
+        )
         health.checkUsable()
         log.atDebug().log { "Metal session '$viewId' opened, $limits" }
         val driver = MetalRaySession(bridge, bridge.openSession(handle), limits) { sessions.remove(viewId) }
@@ -123,7 +154,9 @@ class MetalRayBackend internal constructor(
 
     override fun dispose() {
         check(Thread.currentThread() === worker) { "Metal backend must stay on its owner worker" }
-        if (disposed) return
+        if (disposed) {
+            return
+        }
         log.info("Disposing the Metal backend (${sessions.size} open sessions)")
         sessions.values.toList().forEach { it.dispose() }
         val owned = handle
@@ -134,17 +167,23 @@ class MetalRayBackend internal constructor(
 
 internal class MetalBridge {
     external fun probe(shader: ByteArray): LongArray
+
     external fun create(shader: ByteArray): Long
+
     external fun openSession(backend: Long): Long
+
     external fun deviceName(backend: Long): String
+
     external fun destroy(handle: Long)
+
     external fun updateGeometry(handle: Long, meshes: IntArray, vertices: FloatArray)
+
     external fun setGeometry(
         handle: Long,
         vertices: FloatArray,
         indices: IntArray,
         vertexCounts: IntArray,
-        indexCounts: IntArray
+        indexCounts: IntArray,
     )
 
     external fun submit(
@@ -153,16 +192,20 @@ internal class MetalBridge {
         height: Int,
         camera: FloatArray,
         instances: FloatArray,
-        meshes: IntArray
+        meshes: IntArray,
     )
 
     external fun setSceneData(handle: Long, values: FloatArray?, bytes: ByteArray?)
+
     external fun poll(handle: Long, color: FloatArray, depth: FloatArray): Boolean
 }
 
-class MetalRaySession internal constructor(
-    private val bridge: MetalBridge, private var handle: Long,
-    private val limits: RayLimits, private val onDisposed: () -> Unit,
+class MetalRaySession
+internal constructor(
+    private val bridge: MetalBridge,
+    private var handle: Long,
+    private val limits: RayLimits,
+    private val onDisposed: () -> Unit,
 ) : RaySession {
     private val worker = Thread.currentThread()
     private var meshCount = 0
@@ -170,7 +213,9 @@ class MetalRaySession internal constructor(
     private var sceneGeometryKey: List<RayMesh>? = null
     private var lastScene: RaySceneSnapshot? = null
     private var builds = 0L
-    override val geometryBuilds: Long get() = builds
+    override val geometryBuilds: Long
+        get() = builds
+
     private var pending: Pending? = null
     private val accumulator = RayFrameAccumulator()
     private var opticalRequest: RaySceneRequest? = null
@@ -194,7 +239,7 @@ class MetalRaySession internal constructor(
             vertices.flatMap { it.asIterable() }.toFloatArray(),
             indices.flatMap { it.asIterable() }.toIntArray(),
             vertices.map { it.size / 3 }.toIntArray(),
-            indices.map { it.size }.toIntArray()
+            indices.map { it.size }.toIntArray(),
         )
         meshCount = meshes.size
         geometryKey = meshes.toList()
@@ -208,16 +253,22 @@ class MetalRaySession internal constructor(
         height: Int,
         camera: RaySliceCamera,
         instances: List<RaySliceInstance>,
-        nativeCamera: FloatArray = camera.uniforms(width, height)
+        nativeCamera: FloatArray = camera.uniforms(width, height),
     ) {
         checkOwner()
         check(pending == null) { "A Metal frame is already in flight" }
         requireFrameWithin(width, height, limits)
-        require(instances.isNotEmpty() && instances.size <= limits.maxInstances && instances.all { it.mesh < meshCount })
+        require(
+            instances.isNotEmpty() && instances.size <= limits.maxInstances && instances.all { it.mesh < meshCount }
+        )
         val request = Pending(key, width, height)
         bridge.submit(
-            handle, width, height, nativeCamera,
-            instances.flatMap { it.metalUniforms().asIterable() }.toFloatArray(), instances.map { it.mesh }.toIntArray()
+            handle,
+            width,
+            height,
+            nativeCamera,
+            instances.flatMap { it.metalUniforms().asIterable() }.toFloatArray(),
+            instances.map { it.mesh }.toIntArray(),
         )
         pending = request
     }
@@ -226,7 +277,9 @@ class MetalRaySession internal constructor(
     override fun poll(): RayFrame? {
         checkOwner()
         val request = pending ?: return null
-        if (!bridge.poll(handle, request.color, request.depth)) return null
+        if (!bridge.poll(handle, request.color, request.depth)) {
+            return null
+        }
         pending = null
         requireNativeOpticalFrame(request.color)
         val frame = RayFrame(request.key, request.width, request.height, request.color, request.depth)
@@ -235,13 +288,16 @@ class MetalRaySession internal constructor(
 
     override fun submit(request: RayRequest) {
         checkOwner()
-        opticalRequest = null; accumulator.clear()
+        opticalRequest = null
+        accumulator.clear()
         check(pending == null) { "A Metal frame is already in flight" }
         sceneGeometryKey = null
         lastScene = null
         bridge.setSceneData(handle, null, null)
         val meshes = request.meshes()
-        if (geometryKey != meshes) setGeometry(meshes)
+        if (geometryKey != meshes) {
+            setGeometry(meshes)
+        }
         submit(request.key, request.width, request.height, request.camera, request.instances())
     }
 
@@ -253,7 +309,8 @@ class MetalRaySession internal constructor(
         val scene = request.scene
         require(scene.instances.isNotEmpty()) { "Empty ray scenes are not supported yet" }
         scene.unsupportedReason()?.let { throw IllegalArgumentException(it) }
-        // Static geometry and shading data survive transform-only updates; only changed inputs are rebuilt or re-encoded.
+        // Static geometry and shading data survive transform-only updates; only changed inputs are rebuilt or
+        // re-encoded.
         val dirty = dirtyMeshes(sceneGeometryKey, scene.meshes)
         val geometryChanged = dirty == null || dirty.isNotEmpty()
         if (dirty == null) {
@@ -264,7 +321,7 @@ class MetalRaySession internal constructor(
             bridge.updateGeometry(
                 handle,
                 dirty.toIntArray(),
-                dirty.flatMap { scene.meshes[it].positions().asIterable() }.toFloatArray()
+                dirty.flatMap { scene.meshes[it].positions().asIterable() }.toFloatArray(),
             )
             builds += dirty.size
         }
@@ -278,7 +335,9 @@ class MetalRaySession internal constructor(
 
     override fun dispose() {
         check(Thread.currentThread() === worker) { "Metal session must stay on its owner worker" }
-        if (handle == 0L) return
+        if (handle == 0L) {
+            return
+        }
         val owned = handle
         handle = 0L
         bridge.destroy(owned)
@@ -292,16 +351,18 @@ class MetalRaySession internal constructor(
 
 /** The shading payload depends on everything except instance transforms and the camera. */
 internal fun shadingUnchanged(previous: RaySceneSnapshot?, next: RaySceneSnapshot): Boolean =
-    previous != null && previous.materials == next.materials && previous.lights == next.lights &&
-            previous.environment == next.environment && previous.fog == next.fog && previous.sunVisibility == next.sunVisibility &&
-            previous.instances.map { it.material } == next.instances.map { it.material } &&
-            previous.meshes.size == next.meshes.size && previous.meshes.indices.all {
-        previous.meshes[it].sameContentAs(
-            next.meshes[it]
-        )
-    } &&
-            previous.textures.size == next.textures.size && previous.textures.indices.all {
-        previous.textures[it].sameContentAs(
-            next.textures[it]
-        )
-    }
+    previous != null &&
+        previous.materials == next.materials &&
+        previous.lights == next.lights &&
+        previous.environment == next.environment &&
+        previous.fog == next.fog &&
+        previous.sunVisibility == next.sunVisibility &&
+        previous.instances.map { it.material } == next.instances.map { it.material } &&
+        previous.meshes.size == next.meshes.size &&
+        previous.meshes.indices.all {
+            previous.meshes[it].sameContentAs(next.meshes[it])
+        } &&
+        previous.textures.size == next.textures.size &&
+        previous.textures.indices.all {
+            previous.textures[it].sameContentAs(next.textures[it])
+        }

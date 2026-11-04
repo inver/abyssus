@@ -20,7 +20,9 @@ internal class FrameGuard(private val crashes: CrashReporter, private val exit: 
 
     /** Runs [body] unless an earlier call failed; a failure is reported once and ends the game. */
     fun run(body: () -> Unit) {
-        if (failed) return
+        if (failed) {
+            return
+        }
         try {
             body()
         } catch (error: Throwable) {
@@ -35,7 +37,9 @@ internal class FrameGuard(private val crashes: CrashReporter, private val exit: 
      * first; after an earlier one it only goes to [log], so the record keeps the failure that ended the game.
      */
     fun release(log: Logger, body: () -> Unit) {
-        if (!failed) return run(body)
+        if (!failed) {
+            return run(body)
+        }
         try {
             body()
         } catch (error: Throwable) {

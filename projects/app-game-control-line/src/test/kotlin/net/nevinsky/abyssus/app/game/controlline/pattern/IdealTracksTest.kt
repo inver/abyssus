@@ -4,29 +4,32 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.pattern
 
-import net.nevinsky.abyssus.lib.core.util.wrapDegrees
-
 import com.badlogic.gdx.math.Vector3
+import kotlin.math.abs
+import net.nevinsky.abyssus.lib.core.util.wrapDegrees
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.abs
 
 class IdealTracksTest {
     private val sphere = HemisphereGeometry(18f)
     private val ideal = IdealTracks(18f)
 
     private fun IdealTrack.lat(i: Int) = sphere.latitude(points[i].u)
+
     private fun IdealTrack.latitudes() = points.map { sphere.latitude(it.u) }
 
     /** The azimuth span (degrees) the track flies, summing its signed azimuth steps. */
     private fun IdealTrack.azimuthTravelled(): Float {
         var sum = 0f
-        for (i in 1 until points.size) if (sphere.latitude(points[i].u) < 85f) sum += wrapDegrees(sphere.azimuth(points[i].u) - sphere.azimuth(points[i - 1].u))
+        for (i in 1 until points.size) if (sphere.latitude(points[i].u) < 85f) {
+            sum += wrapDegrees(sphere.azimuth(points[i].u) - sphere.azimuth(points[i - 1].u))
+        }
         return sum
     }
 
-    private fun IdealTrack.length() = points.zipWithNext().sumOf { (a, b) -> sphere.angle(a.u, b.u).toDouble() }.toFloat()
+    private fun IdealTrack.length() =
+        points.zipWithNext().sumOf { (a, b) -> sphere.angle(a.u, b.u).toDouble() }.toFloat()
 
     @Test
     fun loopsAreCirclesBetweenTheBaseAndTheFortyFiveParallel() {
@@ -57,7 +60,16 @@ class IdealTracksTest {
         val track = ideal.takeoff(release = 10f, roll = 8f)
         assertEquals(ideal.groundLatitude, track.lat(0), 0.01f)
         val base = track.points.filter { it.tag == Tag.BASE }
-        assertEquals(720f, abs(base.zipWithNext().sumOf { (a, b) -> wrapDegrees(sphere.azimuth(b.u) - sphere.azimuth(a.u)).toDouble() }.toFloat()), 1f)
+        assertEquals(
+            720f,
+            abs(
+                base
+                    .zipWithNext()
+                    .sumOf { (a, b) -> wrapDegrees(sphere.azimuth(b.u) - sphere.azimuth(a.u)).toDouble() }
+                    .toFloat()
+            ),
+            1f,
+        )
         assertEquals(10f, sphere.azimuth(base.first().u), 0.5f)
         assertEquals(1080f, track.azimuthTravelled(), 1f)
         assertTrue(track.points.first { it.tag == Tag.ROLL }.let { sphere.lapsToMetres(0.0f) } == 0f)
@@ -94,9 +106,12 @@ class IdealTracksTest {
         val leg = track.points.filter { it.tag == Tag.LEG }
         val a = leg[leg.size / 8].u
         val b = leg[leg.size / 8 + 1].u
-        // the leg leaves the base 30 degrees off the meridian: its azimuth changes by tan(30 degrees) times its latitude
+        // the leg leaves the base 30 degrees off the meridian: its azimuth changes by tan(30 degrees) times its
+        // latitude
         val rise = sphere.latitude(b) - sphere.latitude(a)
-        val across = (sphere.azimuth(b) - sphere.azimuth(a)) * kotlin.math.cos(Math.toRadians(sphere.latitude(a).toDouble())).toFloat()
+        val across =
+            (sphere.azimuth(b) - sphere.azimuth(a)) *
+                kotlin.math.cos(Math.toRadians(sphere.latitude(a).toDouble())).toFloat()
         assertTrue(abs(across) / rise < 0.9f && abs(across) / rise > 0.3f)
     }
 
@@ -108,7 +123,10 @@ class IdealTracksTest {
         assertTrue(onAxis.isNotEmpty())
         assertEquals(45f, onAxis.map { sphere.latitude(it.u) }.average().toFloat(), 1f)
         // symmetric about the axis: for each point there is one mirrored in azimuth with the same latitude
-        for (p in track.points.filter { (it.tag == Tag.LEG || it.tag == Tag.OVER_TOP) && sphere.latitude(it.u) > 10f }.filterIndexed { i, _ -> i % 20 == 0 }) {
+        for (p in
+            track.points
+                .filter { (it.tag == Tag.LEG || it.tag == Tag.OVER_TOP) && sphere.latitude(it.u) > 10f }
+                .filterIndexed { i, _ -> i % 20 == 0 }) {
             val mirrored = place(sphere.latitude(p.u), 300f - sphere.azimuth(p.u))
             assertTrue(track.points.any { sphere.angle(it.u, mirrored) < 1f })
         }
@@ -153,12 +171,24 @@ class IdealTracksTest {
 
     @Test
     fun noTrackHasJumps() {
-        val tracks = listOf(
-            ideal.takeoff(0f), ideal.reverseWingover(0f), ideal.loops(0f, 3), ideal.invertedLaps(0f), ideal.loops(0f, 3, true),
-            ideal.squares(0f, 2), ideal.squares(0f, 2, true), ideal.triangles(0f, 2), ideal.horizontalEights(0f, 2),
-            ideal.squareEights(0f, 2), ideal.verticalEights(0f, 2), ideal.hourglass(0f), ideal.overheadEights(0f, 2),
-            ideal.clover(0f), ideal.landing(0f),
-        )
+        val tracks =
+            listOf(
+                ideal.takeoff(0f),
+                ideal.reverseWingover(0f),
+                ideal.loops(0f, 3),
+                ideal.invertedLaps(0f),
+                ideal.loops(0f, 3, true),
+                ideal.squares(0f, 2),
+                ideal.squares(0f, 2, true),
+                ideal.triangles(0f, 2),
+                ideal.horizontalEights(0f, 2),
+                ideal.squareEights(0f, 2),
+                ideal.verticalEights(0f, 2),
+                ideal.hourglass(0f),
+                ideal.overheadEights(0f, 2),
+                ideal.clover(0f),
+                ideal.landing(0f),
+            )
         for ((n, track) in tracks.withIndex()) {
             val worst = track.points.zipWithNext().maxOf { (a, b) -> sphere.angle(a.u, b.u) }
             assertTrue("track $n has a ${worst} degree jump", worst < 2f)

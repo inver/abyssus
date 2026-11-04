@@ -28,7 +28,9 @@ class SceneOverlayHost(overlays: List<NamedOverlay>, private val logError: (Stri
 
     fun draw(view: OverlayView, lines: LineSink) {
         for (named in active.toList()) {
-            if (!named.available) continue
+            if (!named.available) {
+                continue
+            }
             runCatchingKeepingCancellation { named.overlay.draw(view, lines) }.onFailure { error ->
                 active.remove(named)
                 logError("Scene overlay of ${named.source} failed and is switched off for this view", error)

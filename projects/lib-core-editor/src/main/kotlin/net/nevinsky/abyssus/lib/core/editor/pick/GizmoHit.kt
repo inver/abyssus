@@ -20,11 +20,12 @@ class GizmoHit {
         var best: GizmoAxis? = null
         var bestT = Float.MAX_VALUE
         for (axis in GizmoAxis.entries) {
-            val t = when (handles.mode) {
-                GizmoMode.MOVE -> arrowHit(ray, handles, axis, tolerance)
-                GizmoMode.ROTATE -> ringHit(ray, handles, axis, tolerance)
-                GizmoMode.SELECT -> null
-            } ?: continue
+            val t =
+                when (handles.mode) {
+                    GizmoMode.MOVE -> arrowHit(ray, handles, axis, tolerance)
+                    GizmoMode.ROTATE -> ringHit(ray, handles, axis, tolerance)
+                    GizmoMode.SELECT -> null
+                } ?: continue
             if (t < bestT) {
                 bestT = t
                 best = axis
@@ -35,7 +36,9 @@ class GizmoHit {
 
     /** The plane handle of [handles] that [ray] crosses, or null; only move gizmos have them. */
     fun findPlane(ray: Ray, handles: GizmoHandles): GizmoPlane? {
-        if (handles.mode != GizmoMode.MOVE) return null
+        if (handles.mode != GizmoMode.MOVE) {
+            return null
+        }
         var best: GizmoPlane? = null
         var bestT = Float.MAX_VALUE
         val margin = TOLERANCE_PIXELS / 2f * handles.worldPerPixel / handles.size
@@ -46,7 +49,9 @@ class GizmoHit {
             val local = Vector3(ray.origin).mulAdd(ray.direction, t).sub(handles.origin)
             val u = local.dot(a) / handles.size
             val v = local.dot(b) / handles.size
-            val inside = u in (PLANE_INNER - margin)..(PLANE_OUTER + margin) && v in (PLANE_INNER - margin)..(PLANE_OUTER + margin)
+            val inside =
+                u in (PLANE_INNER - margin)..(PLANE_OUTER + margin) &&
+                    v in (PLANE_INNER - margin)..(PLANE_OUTER + margin)
             if (inside && t < bestT) {
                 bestT = t
                 best = plane
@@ -65,13 +70,24 @@ class GizmoHit {
         val e = a.dot(w)
         val denominator = 1f - b * b
         // parallel lines are equally close everywhere along the arrow: take its middle
-        var s = if (denominator < 1e-6f) handles.size / 2f else (e - b * d) / denominator
+        var s =
+            if (denominator < 1e-6f) {
+                handles.size / 2f
+            } else {
+                (e - b * d) / denominator
+            }
         s = s.coerceIn(0f, handles.size)
         val onArrow = Vector3(origin).mulAdd(a, s)
         val t = Vector3(onArrow).sub(ray.origin).dot(ray.direction)
-        if (t < 0f) return null
+        if (t < 0f) {
+            return null
+        }
         val onRay = Vector3(ray.origin).mulAdd(ray.direction, t)
-        return if (onRay.dst(onArrow) <= tolerance) t else null
+        return if (onRay.dst(onArrow) <= tolerance) {
+            t
+        } else {
+            null
+        }
     }
 
     /** The distance along [ray] to the ring's plane, when it crosses it within [tolerance] of the ring. */
@@ -80,6 +96,10 @@ class GizmoHit {
         val normal = handles.axisVector(axis)
         val t = GizmoMath().rayPlane(ray, origin, normal) ?: return null
         val point = Vector3(ray.origin).mulAdd(ray.direction, t)
-        return if (abs(point.dst(origin) - handles.size) <= tolerance) t else null
+        return if (abs(point.dst(origin) - handles.size) <= tolerance) {
+            t
+        } else {
+            null
+        }
     }
 }

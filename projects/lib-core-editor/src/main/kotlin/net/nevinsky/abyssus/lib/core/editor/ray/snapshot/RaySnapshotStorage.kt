@@ -53,7 +53,9 @@ class RaySnapshotStore<S : RaySnapshot, D>(
         require(maxBytes > 0)
     }
 
-    /** A lease is closed on disable/deletion/project replacement; native workers receive only its immutable snapshot. */
+    /**
+     * A lease is closed on disable/deletion/project replacement; native workers receive only its immutable snapshot.
+     */
     fun acquire(name: String): RaySnapshotLease<S> {
         var fresh = false
         val entry = synchronized(lock) {
@@ -65,7 +67,9 @@ class RaySnapshotStore<S : RaySnapshot, D>(
             {
                 synchronized(lock) {
                     if (--entry.references == 0) {
-                        if (entries[name] === entry) entries.remove(name)
+                        if (entries[name] === entry) {
+                            entries.remove(name)
+                        }
                         bytes -= entry.snapshot?.byteSize ?: 0
                         entry.snapshot = null
                         entry.failure = null
@@ -73,14 +77,18 @@ class RaySnapshotStore<S : RaySnapshot, D>(
                 }
             }
         )
-        if (fresh) try {
-            executor.execute {
-                if (!wanted(name, entry)) return@execute
-                publish(name, entry, runCatchingKeepingCancellation { read(name) })
+        if (fresh) {
+            try {
+                executor.execute {
+                    if (!wanted(name, entry)) {
+                        return@execute
+                    }
+                    publish(name, entry, runCatchingKeepingCancellation { read(name) })
+                }
+            } catch (failure: Throwable) {
+                lease.close()
+                throw failure
             }
-        } catch (failure: Throwable) {
-            lease.close()
-            throw failure
         }
         return lease
     }
@@ -96,16 +104,24 @@ class RaySnapshotStore<S : RaySnapshot, D>(
     /** Capture request identity before IO so an old preparation cannot fill a replacement lease. */
     fun preparation(name: String): RaySnapshotCapture<D>? {
         val entry = synchronized(lock) { entries[name] } ?: return null
-        if (!wanted(name, entry)) return null
+        if (!wanted(name, entry)) {
+            return null
+        }
         return RaySnapshotCapture { source ->
-            if (wanted(name, entry)) publish(name, entry, runCatchingKeepingCancellation { loader.capture(source) })
+            if (wanted(name, entry)) {
+                publish(name, entry, runCatchingKeepingCancellation { loader.capture(source) })
+            }
         }
     }
 
     private fun read(name: String): S {
         // a model variant (one mesh, see ModelKey) reads its base asset's folder; the loader finds the mesh in the name
         val meta = checkNotNull(
-            metaLoader.loadBaseMeta(baseAssetName(name))?.let { if (isModelVariant(name)) it.forVariant(name) else it }
+            metaLoader.loadBaseMeta(baseAssetName(name))?.let { if (isModelVariant(name)) {
+                it.forVariant(name)
+            } else {
+                it
+            } }
         ) { "CPU $label '$name' is unreadable" }
         return checkNotNull(loader.load(meta)) { "CPU $label '$name' is unreadable" }
     }
@@ -115,12 +131,16 @@ class RaySnapshotStore<S : RaySnapshot, D>(
     }
 
     private fun publish(name: String, entry: Entry<S>, result: Result<S>) = synchronized(lock) {
-        if (!wanted(name, entry)) return@synchronized
+        if (!wanted(name, entry)) {
+            return@synchronized
+        }
         val snapshot = result.getOrNull()
-        if (snapshot == null) entry.failure = result.exceptionOrNull()
-        else if (snapshot.byteSize > maxBytes - bytes) entry.failure =
-            IllegalStateException("Shared CPU $label snapshots exceed $maxBytes bytes")
-        else {
+        if (snapshot == null) {
+            entry.failure = result.exceptionOrNull()
+        } else if (snapshot.byteSize > maxBytes - bytes) {
+            entry.failure =
+                IllegalStateException("Shared CPU $label snapshots exceed $maxBytes bytes")
+        } else {
             entry.snapshot = snapshot; bytes += snapshot.byteSize
         }
     }

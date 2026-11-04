@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.app.game.controlline
 
+import java.time.Instant
 import net.nevinsky.abyssus.app.game.controlline.flow.GameFlow
 import net.nevinsky.abyssus.app.game.controlline.flow.planeChoices
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
@@ -21,38 +22,50 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.time.Instant
 
 /** An instructed flight through the game's own flight lifecycle, as `ControlLineGame` runs it, without a window. */
 class InstructorFlightLifecycleTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
     private val runners = ArrayList<FlightRunner>()
 
-    @After
-    fun closeRunners() = runners.forEach(FlightRunner::close)
+    @After fun closeRunners() = runners.forEach(FlightRunner::close)
 
     private inner class Game(instructed: Boolean) {
         val dir = temp.root.toPath()
-        val flow = GameFlow(
-            loadField().engine.let { engine -> planeChoices(engine.ids.ids.associateWith { engine.ids[it]!! }) },
-            ScoreTable(dir.resolve("scores.json")), PatternScoreTable(dir.resolve("f2b-scores.json")), ScaleScoreTable(dir.resolve("scale-scores.json")),
-        ) { Instant.parse("2026-10-20T12:00:00Z") }
-        val flights = FlightRunner(flow, { FieldScene(loadField()) }, { PhysicsAssets(bundledProject().toFile()) }, failOnWarnings(), JoltNatives())
-            .also { runners += it }
+        val flow =
+            GameFlow(
+                loadField().engine.let { engine -> planeChoices(engine.ids.ids.associateWith { engine.ids[it]!! }) },
+                ScoreTable(dir.resolve("scores.json")),
+                PatternScoreTable(dir.resolve("f2b-scores.json")),
+                ScaleScoreTable(dir.resolve("scale-scores.json")),
+            ) {
+                Instant.parse("2026-10-20T12:00:00Z")
+            }
+        val flights =
+            FlightRunner(
+                    flow,
+                    { FieldScene(loadField()) },
+                    { PhysicsAssets(bundledProject().toFile()) },
+                    failOnWarnings(),
+                    JoltNatives(),
+                )
+                .also { runners += it }
 
         init {
             flow.freeFlight()
-            if (instructed) flow.toggleInstructor()
+            if (instructed) {
+                flow.toggleInstructor()
+            }
             flow.choosePlane()
             flights.follow()
         }
 
-        fun frames(seconds: Float) = repeat(Math.round(seconds * 60f)) {
-            flights.follow()
-            flights.advance(1f / 60f)
-        }
+        fun frames(seconds: Float) =
+            repeat(Math.round(seconds * 60f)) {
+                flights.follow()
+                flights.advance(1f / 60f)
+            }
     }
 
     @Test

@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 
 import com.badlogic.gdx.backends.lwjgl3.TestGl
 import com.badlogic.gdx.math.Vector3
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudMeta.CloudBand
@@ -18,27 +19,34 @@ import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.File
 
 /** The cloudy-sky environment a procedural sky hands to other features. Opt-in: `-Dabyssus.glTests=true`. */
 class ProceduralSkyTest {
-    @Before
-    fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
+    @Before fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
 
     private val skyDir = File(testProject("Untitled"), "assets/skybox_physical")
     private val noon = Vector3(0f, 1f, 0f)
     private val frame = 1.0 / 60
 
-    /** The fixture sky, naming the cloud asset held in [cloud] (reloaded by replacing it), with `lightsScene` as given. */
-    private fun sky(cloud: Array<Clouds?>, lightsScene: Boolean = false) = ProceduralSky(
-        PreparedProceduralSky(
-            AtmosphereParams(), File(skyDir, "sky.vert").readText(), File(skyDir, "sky.frag").readText(),
-            "skybox_physical", "weather", lightsScene,
-        ),
-        BuiltAssets { name -> cloud[0]?.takeIf { it.name == name } }, skyShaders(),
-    )
+    /**
+     * The fixture sky, naming the cloud asset held in [cloud] (reloaded by replacing it), with `lightsScene` as given.
+     */
+    private fun sky(cloud: Array<Clouds?>, lightsScene: Boolean = false) =
+        ProceduralSky(
+            PreparedProceduralSky(
+                AtmosphereParams(),
+                File(skyDir, "sky.vert").readText(),
+                File(skyDir, "sky.frag").readText(),
+                "skybox_physical",
+                "weather",
+                lightsScene,
+            ),
+            BuiltAssets { name -> cloud[0]?.takeIf { it.name == name } },
+            skyShaders(),
+        )
 
-    private fun ProceduralSky.frames(count: Int, time: Double = 0.0) = repeat(count) { updateLighting(noon, time, true, frame) }
+    private fun ProceduralSky.frames(count: Int, time: Double = 0.0) =
+        repeat(count) { updateLighting(noon, time, true, frame) }
 
     private val still = CloudMeta(low = CloudBand(CloudType.STRATUS, coverage = 1f, windX = 0f, windZ = 0f))
 
@@ -52,7 +60,8 @@ class ProceduralSkyTest {
             assertNull("no consumer, nothing built", sky.lighting)
             assertNull(sky.lightingEnvironment)
         } finally {
-            sky.dispose(); cloud[0]?.dispose()
+            sky.dispose()
+            cloud[0]?.dispose()
         }
     }
 
@@ -80,7 +89,8 @@ class ProceduralSkyTest {
             assertNull("and not rebuilt for nobody", sky.lighting)
             assertEquals(0L, lease.revision)
         } finally {
-            sky.dispose(); cloud[0]?.dispose()
+            sky.dispose()
+            cloud[0]?.dispose()
         }
     }
 
@@ -106,7 +116,8 @@ class ProceduralSkyTest {
                 assertNotEquals(firstAmbient.toList(), lease.environment!!.ambient.toList())
             }
         } finally {
-            sky.dispose(); cloud[0]?.dispose()
+            sky.dispose()
+            cloud[0]?.dispose()
         }
     }
 
@@ -123,7 +134,8 @@ class ProceduralSkyTest {
             assertNotNull("closing the last lease keeps an opted-in sky's lighting", sky.lighting)
             assertSame(lit, sky.lightingEnvironment)
         } finally {
-            sky.dispose(); cloud[0]?.dispose()
+            sky.dispose()
+            cloud[0]?.dispose()
         }
     }
 
@@ -136,7 +148,8 @@ class ProceduralSkyTest {
             sky.frames(30)
             assertNotNull(lease.environment)
         } finally {
-            sky.dispose(); cloud[0]?.dispose()
+            sky.dispose()
+            cloud[0]?.dispose()
         }
         assertNull("a disposed sky hands out nothing", lease.environment)
         lease.close()

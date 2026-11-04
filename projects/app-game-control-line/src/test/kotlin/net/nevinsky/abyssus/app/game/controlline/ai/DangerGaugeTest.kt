@@ -13,19 +13,49 @@ import org.junit.Test
 
 /** The danger measure on observations made up for it. */
 class DangerGaugeTest {
-    private val stunter = PlaneComponent().apply { lineLength = 18f; wingArea = 0.325f; liftSlope = 8f; elevatorEffect = 3f }
+    private val stunter =
+        PlaneComponent().apply {
+            lineLength = 18f
+            wingArea = 0.325f
+            liftSlope = 8f
+            elevatorEffect = 3f
+        }
 
-    private fun gauge() = DangerGauge(Handling(stunter, 1.1f)).also {
-        // a plane that has been in the air
-        it.danger(observation(height = 1.5f))
-    }
+    private fun gauge() =
+        DangerGauge(Handling(stunter, 1.1f)).also {
+            // a plane that has been in the air
+            it.danger(observation(height = 1.5f))
+        }
 
     private fun observation(
-        height: Float, vy: Float = 0f, speed: Float = 22f, upright: Boolean = true, tension: Float = 25f,
-    ): FlightObservation = FlightObservation(
-        10f, Vector3(18f, height, 0f), Vector3(0f, vy, -speed), Vector3(), Vector3(0f, 0f, -1f),
-        Vector3(0f, if (upright) 1f else -1f, 0f), height, tension, 100f, true, 18f, null,
-    )
+        height: Float,
+        vy: Float = 0f,
+        speed: Float = 22f,
+        upright: Boolean = true,
+        tension: Float = 25f,
+    ): FlightObservation =
+        FlightObservation(
+            10f,
+            Vector3(18f, height, 0f),
+            Vector3(0f, vy, -speed),
+            Vector3(),
+            Vector3(0f, 0f, -1f),
+            Vector3(
+                0f,
+                if (upright) {
+                    1f
+                } else {
+                    -1f
+                },
+                0f,
+            ),
+            height,
+            tension,
+            100f,
+            true,
+            18f,
+            null,
+        )
 
     @Test
     fun levelFlightAtTheBaseIsSafeUprightAndInverted() {

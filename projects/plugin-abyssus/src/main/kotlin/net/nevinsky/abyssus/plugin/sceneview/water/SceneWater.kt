@@ -32,7 +32,10 @@ import net.nevinsky.abyssus.plugin.sceneview.shadows.ShadowCasterBounds
 import net.nevinsky.abyssus.plugin.sceneview.shadows.shadowCasters
 import org.slf4j.Logger
 
-/** What a water frame reads of the scene: the camera and viewport, the surfaces, and the colours and geometry it draws with. */
+/**
+ * What a water frame reads of the scene: the camera and viewport, the surfaces, and the colours and geometry it draws
+ * with.
+ */
 internal class WaterFrameInput(
     val camera: PerspectiveCamera,
     val width: Int,
@@ -81,7 +84,10 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
     private val casterBounds = ShadowCasterBounds()
     private val surfaceFailures = HashSet<String>()
 
-    /** When set, the water animation stands at this time instead of advancing with real time; for tests that compare frames. */
+    /**
+     * When set, the water animation stands at this time instead of advancing with real time; for tests that compare
+     * frames.
+     */
     var frozenSeconds: Double? = null
 
     /** The plan of the last frame, or null when it had no water; for tests. */
@@ -128,7 +134,9 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
         if (plan.isEmpty || drawableFailed) {
             previousLevels = emptyList()
             // keep the targets for a while so a surface that flickers in and out of view does not reallocate them
-            if (++idleFrames > IDLE_FRAMES_BEFORE_RELEASE) resources.dispose()
+            if (++idleFrames > IDLE_FRAMES_BEFORE_RELEASE) {
+                resources.dispose()
+            }
             return null
         }
         idleFrames = 0
@@ -137,12 +145,15 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
             drawable = runCatchingKeepingCancellation { WaterDrawable(shaders) }.getOrElse { e ->
                 drawableFailed = true
                 log.warn(
-                    "The water shader could not be made (${e.message ?: e.javaClass.simpleName}); no water is drawn in this view",
+                    "The water shader could not be made (${e.message ?: e.javaClass.simpleName}); no water is drawn " +
+                        "in this view",
                     e
                 )
                 null
             }
-            if (drawable == null) return null
+            if (drawable == null) {
+                return null
+            }
         }
         degraded = !resources.ensure(plan, input.width, input.height)
         return plan
@@ -155,7 +166,9 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
      */
     fun renderReflections(plan: WaterPassPlan, input: WaterFrameInput, draw: (PerspectiveCamera, FloatArray) -> Unit) {
         reflectionOk.fill(false)
-        if (degraded) return
+        if (degraded) {
+            return
+        }
         for ((i, group) in plan.reflected.withIndex()) {
             val target = resources.reflection(i) ?: continue
             val level = group.level.toFloat()
@@ -172,7 +185,9 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
                 Gdx.gl.glFrontFace(GL20.GL_CW)
                 draw(mirrored, clip)
             }
-            if (reflectionOk[i]) reflectionPasses++
+            if (reflectionOk[i]) {
+                reflectionPasses++
+            }
         }
     }
 
@@ -185,10 +200,15 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
 
     /** The reflection image of level group [slot] if its pass succeeded, for tests and drawing. */
     private fun reflectionTexture(slot: Int): FrameBuffer? =
-        if (slot >= 0 && reflectionOk.getOrElse(slot) { false }) resources.reflection(slot) else null
+        if (slot >= 0 && reflectionOk.getOrElse(slot) { false }) {
+            resources.reflection(slot)
+        } else {
+            null
+        }
 
     /**
-     * Draws the surfaces of [plan] far to near over the opaque scene already on the canvas: copies the canvas, draws the
+      * Draws the surfaces of [plan] far to near over the opaque scene already on the canvas: copies the canvas, draws
+      * the
      * scene and terrain depth targets, then each surface. The caller restores nothing: the GL state this leaves is the
      * one a content pass starts from.
      */
@@ -206,7 +226,9 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
                     depthTarget(sceneDepth, input.camera, all) && depthTarget(terrainDepth, input.camera, terrainOnly)
             }
         }
-        if (!haveDepth && !degraded) degraded = true
+        if (!haveDepth && !degraded) {
+            degraded = true
+        }
         val frame = frameOf(input)
         for (surface in plan.drawOrder) {
             val group = plan.reflectionOf(surface)
@@ -219,12 +241,16 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
                     reflectionImage,
                     skyCube
                 )
-            } else WaterTextures(null, null, null, reflectionImage, skyCube)
+            } else {
+                WaterTextures(null, null, null, reflectionImage, skyCube)
+            }
             val ok = runCatchingKeepingCancellation { drawable.draw(surface, frame, textures) }
-            if (ok.isSuccess) drawnSurfaces++
-            else if (surfaceFailures.add(surface.id)) {
+            if (ok.isSuccess) {
+                drawnSurfaces++
+            } else if (surfaceFailures.add(surface.id)) {
                 log.warn(
-                    "Water surface '${surface.name}' could not be drawn (${ok.exceptionOrNull()?.message}); the rest of the scene is unaffected",
+                    "Water surface '${surface.name}' could not be drawn (${ok.exceptionOrNull()?.message}); the rest " +
+                        "of the scene is unaffected",
                     ok.exceptionOrNull()
                 )
             }
@@ -244,7 +270,9 @@ internal class SceneWater(private val shaders: ShaderStorage, private val log: L
                 camera,
                 casters.filter { camera.frustum.boundsInFrustum(it.bounds) }.map { it.renderable })
         }
-        if (ok) depthPasses++
+        if (ok) {
+            depthPasses++
+        }
         return ok
     }
 

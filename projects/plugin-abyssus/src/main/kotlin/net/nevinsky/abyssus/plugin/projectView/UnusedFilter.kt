@@ -24,14 +24,22 @@ object UnusedFilter {
     fun set(project: Project, on: Boolean) = PropertiesComponent.getInstance(project).setValue(KEY, on, false)
 
     /**
-     * [rows] of a project with the assets of its `UI` and `Assets` folders cut down to the unused ones while the filter is on.
-     * It runs on the folders, before they group by type, so a group without an unused asset is not built and counts follow what is listed.
+      * [rows] of a project with the assets of its `UI` and `Assets` folders cut down to the unused ones while the
+      * filter is on.
+      * It runs on the folders, before they group by type, so a group without an unused asset is not built and counts
+      * follow what is listed.
      */
     fun apply(project: Project, rows: List<DtoRow>): List<DtoRow> {
-        if (!isOn(project)) return rows
+        if (!isOn(project)) {
+            return rows
+        }
         return rows.map { row ->
             val folder = row.value as? FolderRow
-            if (folder != null) row.copy(value = folder.copy(assets = folder.assets.filter { it.unused })) else row
+            if (folder != null) {
+                row.copy(value = folder.copy(assets = folder.assets.filter { it.unused }))
+            } else {
+                row
+            }
         }
     }
 }
@@ -46,7 +54,11 @@ class UnusedFilterAction : ToggleAction(
     /** The pressed state is amber: the selected glyph replaces the plain one while the filter is on. */
     override fun update(e: AnActionEvent) {
         super.update(e)
-        e.presentation.icon = if (isSelected(e)) TreeActionIcons.UNUSED_FILTER_SELECTED else TreeActionIcons.UNUSED_FILTER
+        e.presentation.icon = if (isSelected(e)) {
+            TreeActionIcons.UNUSED_FILTER_SELECTED
+        } else {
+            TreeActionIcons.UNUSED_FILTER
+        }
     }
 
     override fun isSelected(e: AnActionEvent): Boolean = e.project?.let(UnusedFilter::isOn) ?: false

@@ -16,25 +16,34 @@ import javax.swing.AbstractButton
 import net.nevinsky.abyssus.plugin.SceneRayControls
 import net.nevinsky.abyssus.plugin.projectView.setSkybox
 
-/** The scene `skybox` field of Abyssus Properties and its Browse button (the tree row no longer has a Choose button). */
+/**
+ * The scene `skybox` field of Abyssus Properties and its Browse button (the tree row no longer has a Choose button).
+ */
 class SceneSkyboxBrowseTest : BasePlatformTestCase() {
     private fun named(c: Component, name: String): Component? =
-        if (c.name == name) c else (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
+        if (c.name == name) {
+            c
+        } else {
+            (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
+        }
 
     private fun scene(path: String): VirtualFile {
         myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""")
-        return myFixture.addFileToProject(
-            path,
-            """{"format":"abyssus","formatVersion":1,"name":"Main","skyboxName":"skybox_physical","ecs":{}}""",
-        ).virtualFile
+        return myFixture
+            .addFileToProject(
+                path,
+                """{"format":"abyssus","formatVersion":1,"name":"Main","skyboxName":"skybox_physical","ecs":{}}""",
+            )
+            .virtualFile
     }
 
-    private fun view(file: VirtualFile, browse: (VirtualFile) -> Boolean = { false }) = SceneDetailsView(
-        SceneRayControls(project) { _, _ -> error("no view") },
-        readSceneState(file, "Main") as PanelState.UISceneState,
-        testRootDisposable,
-        browseSkybox = browse,
-    )
+    private fun view(file: VirtualFile, browse: (VirtualFile) -> Boolean = { false }) =
+        SceneDetailsView(
+            SceneRayControls(project) { _, _ -> error("no view") },
+            readSceneState(file, "Main") as PanelState.UISceneState,
+            testRootDisposable,
+            browseSkybox = browse,
+        )
 
     fun testProjectSceneShowsTheFieldAndABrowseButton() {
         val view = view(scene("p/scenes/Main.scene"))
@@ -52,7 +61,13 @@ class SceneSkyboxBrowseTest : BasePlatformTestCase() {
     }
 
     fun testNullSkyboxReadsNone() {
-        val file = myFixture.addFileToProject("alone/N.scene", """{"format":"abyssus","formatVersion":1,"skyboxName":null,"ecs":{}}""").virtualFile
+        val file =
+            myFixture
+                .addFileToProject(
+                    "alone/N.scene",
+                    """{"format":"abyssus","formatVersion":1,"skyboxName":null,"ecs":{}}""",
+                )
+                .virtualFile
         assertEquals("none", (named(view(file), "scene-skybox") as JBTextField).text)
     }
 
@@ -60,7 +75,8 @@ class SceneSkyboxBrowseTest : BasePlatformTestCase() {
         val file = scene("p/scenes/Main.scene")
         val document = FileDocumentManager.getInstance().getDocument(file)!!
         myFixture.openFileInEditor(file)
-        val editor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
+        val editor =
+            com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
         // opening the scene in a text editor pretty-prints it (SceneFormatListener); the baseline is the text as opened
         val before = document.text
         val view = view(file) { setSkybox(project, it, "skybox_default") }

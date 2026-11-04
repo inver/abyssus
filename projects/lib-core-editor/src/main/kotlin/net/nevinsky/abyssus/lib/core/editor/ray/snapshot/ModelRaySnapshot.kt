@@ -8,25 +8,49 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
+import java.util.*
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
-import java.util.*
 
 internal fun <T> immutableModelList(values: Collection<T>): List<T> = Collections.unmodifiableList(values.toList())
 
 data class RayModelColor(val r: Float, val g: Float, val b: Float, val a: Float)
+
 data class RayModelVector(val x: Float, val y: Float, val z: Float)
+
 data class RayModelRotation(val x: Float, val y: Float, val z: Float, val w: Float)
+
 data class RayModelVertexAttribute(
-    val usage: Int, val components: Int, val type: Int, val normalized: Boolean,
-    val unit: Int, val alias: String, val offsetBytes: Int,
+    val usage: Int,
+    val components: Int,
+    val type: Int,
+    val normalized: Boolean,
+    val unit: Int,
+    val alias: String,
+    val offsetBytes: Int,
 )
 
 /** Bytes use the raster renderer's linear sampling convention, including diffuse/emissive images. */
-enum class RayTextureColorSpace { LINEAR }
-enum class RayTextureFilter { LINEAR, MIPMAP_LINEAR_LINEAR }
-enum class RayTextureWrap { REPEAT, CLAMP_TO_EDGE }
-enum class RayModelAlphaMode { OPAQUE, MASK, BLEND }
+enum class RayTextureColorSpace {
+    LINEAR
+}
+
+enum class RayTextureFilter {
+    LINEAR,
+    MIPMAP_LINEAR_LINEAR,
+}
+
+enum class RayTextureWrap {
+    REPEAT,
+    CLAMP_TO_EDGE,
+}
+
+enum class RayModelAlphaMode {
+    OPAQUE,
+    MASK,
+    BLEND,
+}
+
 data class RayTextureSampler(
     val minFilter: RayTextureFilter = RayTextureFilter.LINEAR,
     val magFilter: RayTextureFilter = RayTextureFilter.LINEAR,
@@ -36,8 +60,12 @@ data class RayTextureSampler(
 )
 
 data class RayModelTexture(
-    val fileName: String, val usage: Int,
-    val offsetU: Float, val offsetV: Float, val scaleU: Float, val scaleV: Float,
+    val fileName: String,
+    val usage: Int,
+    val offsetU: Float,
+    val offsetV: Float,
+    val scaleU: Float,
+    val scaleV: Float,
     val colorSpace: RayTextureColorSpace = RayTextureColorSpace.LINEAR,
     val sampler: RayTextureSampler = RayTextureSampler(),
 )
@@ -45,33 +73,54 @@ data class RayModelTexture(
 /** RGBA8888 rows retain Pixmap's upload order; no vertical flip or gamma conversion is introduced. */
 class RayModelImage internal constructor(val width: Int, val height: Int, rgba: ByteArray) {
     private val pixels = rgba.copyOf()
-    val byteSize: Long get() = pixels.size.toLong()
+    val byteSize: Long
+        get() = pixels.size.toLong()
+
     fun rgba(): ByteArray = pixels.copyOf()
 }
 
 class RayModelMeshPart internal constructor(val id: String?, val primitiveType: Int, indices: IntArray) {
     private val triangles = indices.copyOf()
-    val byteSize: Long get() = triangles.size.toLong() * 4
+    val byteSize: Long
+        get() = triangles.size.toLong() * 4
+
     fun indices(): IntArray = triangles.copyOf()
 }
 
-class RayModelMesh internal constructor(
-    val id: String?, vertices: FloatArray, val vertexSizeBytes: Int,
-    attributes: List<RayModelVertexAttribute>, parts: List<RayModelMeshPart>,
+class RayModelMesh
+internal constructor(
+    val id: String?,
+    vertices: FloatArray,
+    val vertexSizeBytes: Int,
+    attributes: List<RayModelVertexAttribute>,
+    parts: List<RayModelMeshPart>,
 ) {
     private val values = vertices.copyOf()
     val attributes: List<RayModelVertexAttribute> = immutableModelList(attributes)
     val parts: List<RayModelMeshPart> = immutableModelList(parts)
-    val byteSize: Long get() = values.size.toLong() * 4 + parts.sumOf { it.byteSize }
+    val byteSize: Long
+        get() = values.size.toLong() * 4 + parts.sumOf { it.byteSize }
+
     fun vertices(): FloatArray = values.copyOf()
 }
 
-class RayModelMaterial internal constructor(
-    val id: String?, val pbr: Boolean,
-    val ambient: RayModelColor?, val diffuse: RayModelColor?, val specular: RayModelColor?,
-    val emissive: RayModelColor?, val reflection: RayModelColor?, val shininess: Float, val opacity: Float,
-    val baseColor: RayModelColor?, val metallic: Float?, val roughness: Float?,
-    val doubleSided: Boolean, val alphaMode: RayModelAlphaMode, val alphaCutoff: Float,
+class RayModelMaterial
+internal constructor(
+    val id: String?,
+    val pbr: Boolean,
+    val ambient: RayModelColor?,
+    val diffuse: RayModelColor?,
+    val specular: RayModelColor?,
+    val emissive: RayModelColor?,
+    val reflection: RayModelColor?,
+    val shininess: Float,
+    val opacity: Float,
+    val baseColor: RayModelColor?,
+    val metallic: Float?,
+    val roughness: Float?,
+    val doubleSided: Boolean,
+    val alphaMode: RayModelAlphaMode,
+    val alphaCutoff: Float,
     textures: List<RayModelTexture>,
 ) {
     val textures: List<RayModelTexture> = immutableModelList(textures)
@@ -82,32 +131,44 @@ data class RayModelMaterialInfo(val id: String?, val pbr: Boolean)
 
 class RayModelMatrix internal constructor(matrix: FloatArray) {
     private val values = matrix.copyOf()
+
     fun values(): FloatArray = values.copyOf()
 }
 
-class RayModelNodePart internal constructor(
-    val meshPartId: String?, val materialId: String?, boneBindTransforms: Map<String, RayModelMatrix>,
+class RayModelNodePart
+internal constructor(
+    val meshPartId: String?,
+    val materialId: String?,
+    boneBindTransforms: Map<String, RayModelMatrix>,
 ) {
     val boneBindTransforms: Map<String, RayModelMatrix> = Collections.unmodifiableMap(boneBindTransforms.toMap())
 }
 
-class RayModelNode internal constructor(
-    val id: String?, val translation: RayModelVector, val rotation: RayModelRotation, val scale: RayModelVector,
-    parts: List<RayModelNodePart>, children: List<RayModelNode>,
+class RayModelNode
+internal constructor(
+    val id: String?,
+    val translation: RayModelVector,
+    val rotation: RayModelRotation,
+    val scale: RayModelVector,
+    parts: List<RayModelNodePart>,
+    children: List<RayModelNode>,
 ) {
     val parts: List<RayModelNodePart> = immutableModelList(parts)
     val children: List<RayModelNode> = immutableModelList(children)
 
     /** This node's transform relative to its parent (a new matrix). */
-    internal fun localMatrix(): Matrix4 = PlacementTransform(
-        Vector3(translation.x, translation.y, translation.z),
-        Quaternion(rotation.x, rotation.y, rotation.z, rotation.w),
-        Vector3(scale.x, scale.y, scale.z),
-    ).toMatrix()
+    internal fun localMatrix(): Matrix4 =
+        PlacementTransform(
+                Vector3(translation.x, translation.y, translation.z),
+                Quaternion(rotation.x, rotation.y, rotation.z, rotation.w),
+                Vector3(scale.x, scale.y, scale.z),
+            )
+            .toMatrix()
 }
 
 /** No mutable libGDX objects or GL handles escape asset preparation. Repeated instances share these bytes. */
-class RayModelSnapshot internal constructor(
+class RayModelSnapshot
+internal constructor(
     meshes: List<RayModelMesh>,
     materials: List<RayModelMaterial>,
     nodes: List<RayModelNode>,
@@ -127,7 +188,9 @@ class RayModelSnapshot internal constructor(
 
     /** The mesh that holds the part [meshPartId]; fails when the model has none. */
     internal fun requireMeshOfPart(meshPartId: String?): RayModelMesh =
-        requireNotNull(meshes.firstOrNull { mesh -> mesh.parts.any { it.id == meshPartId } }) { "Missing mesh part $meshPartId" }
+        requireNotNull(meshes.firstOrNull { mesh -> mesh.parts.any { it.id == meshPartId } }) {
+            "Missing mesh part $meshPartId"
+        }
 }
 
 /** Shares the raster upload's row order and converts arbitrary Pixmap formats to immutable RGBA8888. */

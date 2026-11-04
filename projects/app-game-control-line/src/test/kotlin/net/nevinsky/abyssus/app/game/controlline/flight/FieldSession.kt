@@ -19,7 +19,9 @@ import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
  * [judge]. [change] edits the plane's component first.
  */
 fun fieldSession(
-    planeName: String, judge: FlightJudge? = null, control: FlightControlSource = FlightControlSource { 0f },
+    planeName: String,
+    judge: FlightJudge? = null,
+    control: FlightControlSource = FlightControlSource { 0f },
     change: PlaneComponent.() -> Unit = {},
 ): FlightSession = fieldSession(planeName, change) { _, _ -> judge to control }
 
@@ -28,7 +30,8 @@ fun fieldSession(
  * game makes them.
  */
 fun fieldSession(
-    planeName: String, change: PlaneComponent.() -> Unit = {},
+    planeName: String,
+    change: PlaneComponent.() -> Unit = {},
     make: (PlaneComponent, Float) -> Pair<FlightJudge?, FlightControlSource>,
 ): FlightSession {
     val scene = loadField()
@@ -37,5 +40,14 @@ fun fieldSession(
     val mass = plane.getComponent(RigidBodyComponent::class.java).mass
     val pilot = scene.engine.entities.single { it.getComponent(PilotComponent::class.java) != null }
     val (judge, control) = make(settings, mass)
-    return FlightSession(scene.engine, pilot, plane, PhysicsAssets(bundledProject().toFile()), failOnWarnings(), JoltNatives(), judge, control)
+    return FlightSession(
+        scene.engine,
+        pilot,
+        plane,
+        PhysicsAssets(bundledProject().toFile()),
+        failOnWarnings(),
+        JoltNatives(),
+        judge,
+        control,
+    )
 }

@@ -9,7 +9,8 @@ import com.badlogic.ashley.core.Component
 
 /**
  * A component entry of a scene that is kept as read: [name] as the file spelled it, its payload as JSON text [json]
- * unchanged, [reason], the warning to report, and whether the entry's entity lists it as disabled ([disabled]). It is never
+  * unchanged, [reason], the warning to report, and whether the entry's entity lists it as disabled ([disabled]). It is
+  * never
  * added to an engine entity; the loader carries it so a scene can be written back without it being lost.
  */
 class RawComponent(

@@ -5,9 +5,9 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.lib.core.editor.document.*
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 
 class RowTextTest : BasePlatformTestCase() {
@@ -24,7 +24,10 @@ class RowTextTest : BasePlatformTestCase() {
     }
 
     fun testEcsShowsItsEntityCount() {
-        assertEquals(RowText("ecs", "2 entities"), rowText(entry("ecs", EcsNode(scene("""{"0":{"components":{}},"1":{"components":{}}}""")))))
+        assertEquals(
+            RowText("ecs", "2 entities"),
+            rowText(entry("ecs", EcsNode(scene("""{"0":{"components":{}},"1":{"components":{}}}""")))),
+        )
         assertEquals("1 entity", rowText(entry("ecs", EcsNode(scene("""{"0":{"components":{}}}""")))).secondary)
         assertEquals("0 entities", rowText(entry("ecs", EcsNode(scene("""{}""")))).secondary)
     }
@@ -42,7 +45,14 @@ class RowTextTest : BasePlatformTestCase() {
     }
 
     fun testComponentsLoseTheComponentSuffix() {
-        val c = entry("PositionComponent", ComponentNode(scene("""{"0":{"components":{"PositionComponent":{}}}}"""), 0, "PositionComponent"), "ecs", "0", "components")
+        val c =
+            entry(
+                "PositionComponent",
+                ComponentNode(scene("""{"0":{"components":{"PositionComponent":{}}}}"""), 0, "PositionComponent"),
+                "ecs",
+                "0",
+                "components",
+            )
         assertEquals(RowText("Position"), rowText(c))
     }
 

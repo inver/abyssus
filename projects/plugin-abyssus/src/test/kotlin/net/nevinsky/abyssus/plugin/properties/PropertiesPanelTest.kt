@@ -13,16 +13,19 @@ import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
+import java.awt.Component
+import java.awt.Container
+import java.io.File
 import net.nevinsky.abyssus.plugin.projectView.AbyssusAssetNode
 import net.nevinsky.abyssus.plugin.projectView.AbyssusRootNode
 import net.nevinsky.abyssus.plugin.projectView.AbyssusSelection
 import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
 import net.nevinsky.abyssus.plugin.testPanelServices
-import java.awt.Component
-import java.awt.Container
-import java.io.File
 
-/** What the panel shows for each kind of selection, its empty state, and the `Enabled` boxes (spec `object-properties-panel`). */
+/**
+ * What the panel shows for each kind of selection, its empty state, and the `Enabled` boxes (spec
+ * `object-properties-panel`).
+ */
 class PropertiesPanelTest : BasePlatformTestCase() {
     override fun getTestDataPath() = "src/test/testData/project"
 
@@ -41,39 +44,57 @@ class PropertiesPanelTest : BasePlatformTestCase() {
 
     private fun copyProject(dir: String) {
         myFixture.copyFileToProject("$dir/$dir.abss", "$dir/$dir.abss")
-        File("$testDataPath/$dir/scenes").listFiles()!!.forEach { myFixture.copyFileToProject("$dir/scenes/${it.name}", "$dir/scenes/${it.name}") }
-        File("$testDataPath/$dir/assets").listFiles { f -> f.isDirectory }!!.forEach { d ->
-            d.listFiles { f -> f.isFile && f.extension == "json" }!!.forEach {
-                myFixture.addFileToProject("$dir/assets/${d.name}/${it.name}", it.readText().trimEnd() + "\n")
-            }
+        File("$testDataPath/$dir/scenes").listFiles()!!.forEach {
+            myFixture.copyFileToProject("$dir/scenes/${it.name}", "$dir/scenes/${it.name}")
         }
+        File("$testDataPath/$dir/assets")
+            .listFiles { f -> f.isDirectory }!!
+            .forEach { d ->
+                d.listFiles { f -> f.isFile && f.extension == "json" }!!.forEach {
+                        myFixture.addFileToProject("$dir/assets/${d.name}/${it.name}", it.readText().trimEnd() + "\n")
+                    }
+            }
     }
 
     /** The children with their parent set, which the tree does and a screen row needs to find its asset. */
-    private fun children(node: AbstractTreeNode<*>) = node.children.map { (it as AbstractTreeNode<*>).also { child -> child.parent = node } }
+    private fun children(node: AbstractTreeNode<*>) =
+        node.children.map { (it as AbstractTreeNode<*>).also { child -> child.parent = node } }
+
     private fun label(node: AbstractTreeNode<*>): String =
         (node as? DtoEntryNode)?.let { it.label ?: it.value.name } ?: (node as AbyssusAssetNode).virtualFile.name
 
     private fun abss() = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
+
     private fun sceneNode() = children(children(abss()).single { label(it) == "scenes" }).single()
+
     private fun row(parent: AbstractTreeNode<*>, name: String) = children(parent).single { label(it) == name }
+
     private fun entity(id: String) = children(row(sceneNode(), "ecs")).first { (it as DtoEntryNode).value.name == id }
 
-    private fun panel() = AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
+    private fun panel() =
+        AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
 
-    private fun all(c: Component): List<Component> = listOf(c) + ((c as? Container)?.components?.flatMap { all(it) } ?: emptyList())
+    private fun all(c: Component): List<Component> =
+        listOf(c) + ((c as? Container)?.components?.flatMap { all(it) } ?: emptyList())
+
     private fun find(c: Component, name: String) = all(c).firstOrNull { it.name == name }
+
     private fun texts(c: Component) = all(c).filterIsInstance<JBLabel>().mapNotNull { it.text }
 
     private fun sceneFile() = myFixture.findFileInTempDir("Untitled/scenes/Main Scene.scene")
+
     private fun sceneText() = FileDocumentManager.getInstance().getDocument(sceneFile())!!.text
-    private fun sections(p: Component) = all(p).filter { it.name?.startsWith("section-title-") == true }.map { (it as JBLabel).text }
+
+    private fun sections(p: Component) =
+        all(p).filter { it.name?.startsWith("section-title-") == true }.map { (it as JBLabel).text }
 
     fun testNothingSelectedShowsTheEmptyState() {
         val p = panel()
         assertEquals("Nothing is selected.", (p.state as PanelState.Empty).message)
         assertTrue(texts(p).contains("Nothing is selected."))
-        assertTrue(texts(p).any { it.contains("Select a scene, an entity, a component or an asset in the Abyssus tree.") })
+        assertTrue(
+            texts(p).any { it.contains("Select a scene, an entity, a component or an asset in the Abyssus tree.") }
+        )
     }
 
     fun testProjectShowsProjectAndMainCameraSections() {
@@ -173,20 +194,26 @@ class PropertiesPanelTest : BasePlatformTestCase() {
         (find(p, "section-enabled-scene.fog") as JBCheckBox).doClick()
         val after = net.nevinsky.abyssus.plugin.parsedScene(sceneText())
         assertEquals(false, after.fogEnabled)
-        assertEquals(net.nevinsky.abyssus.plugin.printScene(before.copy(fogEnabled = false)), net.nevinsky.abyssus.plugin.printScene(after))
+        assertEquals(
+            net.nevinsky.abyssus.plugin.printScene(before.copy(fogEnabled = false)),
+            net.nevinsky.abyssus.plugin.printScene(after),
+        )
     }
 
     /** True when [c] and every ancestor up to [root] is visible (a hidden section body hides what is inside it). */
     private fun reallyVisible(c: Component, root: Component): Boolean {
         var at: Component? = c
         while (at != null && at !== root) {
-            if (!at.isVisible) return false
+            if (!at.isVisible) {
+                return false
+            }
             at = at.parent
         }
         return true
     }
 
-    private fun click(c: Component) = c.mouseListeners.forEach { it.mouseClicked(java.awt.event.MouseEvent(c, 0, 0, 0, 1, 1, 1, false)) }
+    private fun click(c: Component) =
+        c.mouseListeners.forEach { it.mouseClicked(java.awt.event.MouseEvent(c, 0, 0, 0, 1, 1, 1, false)) }
 
     fun testACollapsedSectionStaysCollapsedWhenTheFileChangesAndResetsOnAnotherNode() {
         copyProject("Untitled")
@@ -206,7 +233,10 @@ class PropertiesPanelTest : BasePlatformTestCase() {
 
     private fun uiProject() {
         val fixture = File("../app-game-control-line/project/ControlLine")
-        myFixture.addFileToProject("Ui/Ui.abss", """{"format":"abyssus","formatVersion":1,"name":"Ui","uiAssetNames":["screens"]}""")
+        myFixture.addFileToProject(
+            "Ui/Ui.abss",
+            """{"format":"abyssus","formatVersion":1,"name":"Ui","uiAssetNames":["screens"]}""",
+        )
         myFixture.addFileToProject("Ui/assets/screens/meta.json", File(fixture, "assets/screens/meta.json").readText())
     }
 

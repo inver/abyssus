@@ -15,8 +15,8 @@ import com.badlogic.gdx.math.Matrix4
  * to map coordinates (x and y in 0 to 1 cover the map); [lightIndex] is the light's index among the shader's
  * directional lights (the order [com.badlogic.gdx.graphics.g3d.Environment] lists them in). Positions beyond the map,
  * and its outer [edgeFade] (a share of the map's width), fade to [outside], so a caller can carry a coarser factor
- * there. The visibility multiplies the light's atlas shadow, if any, and never touches another light or the ambient.
- * It names no source; clouds, foliage or anything else can fill the texture.
+ * there. The visibility multiplies the light's atlas shadow, if any, and never touches another light or the ambient. It
+ * names no source; clouds, foliage or anything else can fill the texture.
  */
 class DirectionalVisibilityAttribute(
     val texture: GLTexture,
@@ -44,19 +44,31 @@ class DirectionalVisibilityAttribute(
     }
 
     override fun equals(other: Any?): Boolean =
-        other is DirectionalVisibilityAttribute && other.texture === texture && other.lightIndex == lightIndex &&
-            other.worldToMap.`val`.contentEquals(worldToMap.`val`) && other.edgeFade == edgeFade && other.outside == outside
+        other is DirectionalVisibilityAttribute &&
+            other.texture === texture &&
+            other.lightIndex == lightIndex &&
+            other.worldToMap.`val`.contentEquals(worldToMap.`val`) &&
+            other.edgeFade == edgeFade &&
+            other.outside == outside
 
     override fun compareTo(other: Attribute): Int {
-        if (type != other.type) return type.compareTo(other.type)
+        if (type != other.type) {
+            return type.compareTo(other.type)
+        }
         val o = other as DirectionalVisibilityAttribute
-        return compareValuesBy(this, o, { it.texture.textureObjectHandle }, { it.lightIndex }, { it.edgeFade }, { it.outside })
+        return compareValuesBy(
+            this,
+            o,
+            { it.texture.textureObjectHandle },
+            { it.lightIndex },
+            { it.edgeFade },
+            { it.outside },
+        )
     }
 
     companion object {
         const val Alias = "directionalVisibility"
 
-        @JvmField
-        val Type: Long = register(Alias)
+        @JvmField val Type: Long = register(Alias)
     }
 }

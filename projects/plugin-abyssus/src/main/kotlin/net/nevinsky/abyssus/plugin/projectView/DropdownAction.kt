@@ -15,7 +15,10 @@ interface DropdownAction {
     /** Whether [node] is a row of this kind. */
     fun appliesTo(node: Any?): Boolean
 
-    /** Handles the popup-trigger [e] on [row] when [node] is a row of this kind; true when it did (the event is consumed). */
+    /**
+     * Handles the popup-trigger [e] on [row] when [node] is a row of this kind; true when it did (the event is
+     * consumed).
+     */
     fun openDropdown(invoker: EyeTree, e: MouseEvent, row: Int, node: Any?): Boolean {
         if (!appliesTo(node)) {
             return false

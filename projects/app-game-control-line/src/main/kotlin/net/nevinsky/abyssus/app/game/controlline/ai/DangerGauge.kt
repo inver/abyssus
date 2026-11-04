@@ -49,18 +49,32 @@ class DangerGauge(handling: Handling) {
 
     /** The danger of the plane of [o], one fixed step on from the last call. */
     fun danger(o: FlightObservation): Float {
-        if (o.height > AIRBORNE_HEIGHT) flown = true
+        if (o.height > AIRBORNE_HEIGHT) {
+            flown = true
+        }
         val speed = o.velocity.len()
         val airborne = o.height > AIRBORNE_HEIGHT
-        slack = if (airborne && o.tension < CONTROL_TENSION) slack + PHYSICS_STEP else 0f
-        if (!flown || speed < CONTROL_SPEED) return 0f
+        slack = if (airborne && o.tension < CONTROL_TENSION) {
+            slack + PHYSICS_STEP
+        } else {
+            0f
+        }
+        if (!flown || speed < CONTROL_SPEED) {
+            return 0f
+        }
         val upright = o.up.y >= 0f
-        return maxOf(ground(o, speed, upright), if (upright) 0f else ramp(o.height, INVERTED_LOST, INVERTED_SAFE), ramp(slack, SLACK_SAFE, SLACK_LOST, rising = true))
+        return maxOf(ground(o, speed, upright), if (upright) {
+            0f
+        } else {
+            ramp(o.height, INVERTED_LOST, INVERTED_SAFE)
+        }, ramp(slack, SLACK_SAFE, SLACK_LOST, rising = true))
     }
 
     private fun ground(o: FlightObservation, speed: Float, upright: Boolean): Float {
         val sink = max(0f, -o.velocity.y)
-        if (sink <= 0f || (upright && sink < LANDING_SINK)) return 0f
+        if (sink <= 0f || (upright && sink < LANDING_SINK)) {
+            return 0f
+        }
         val gamma = asin((sink / speed).coerceIn(0f, 1f))
         val margin = o.height - radius * (1f - cos(gamma)) - sink * REACTION
         return ramp(margin, GROUND_LOST, GROUND_SAFE)
@@ -69,6 +83,10 @@ class DangerGauge(handling: Handling) {
     /** 1 at [low] and below, 0 at [high] and above (or the other way round when [rising]), linear between. */
     private fun ramp(value: Float, low: Float, high: Float, rising: Boolean = false): Float {
         val t = ((value - low) / (high - low)).coerceIn(0f, 1f)
-        return if (rising) t else 1f - t
+        return if (rising) {
+            t
+        } else {
+            1f - t
+        }
     }
 }

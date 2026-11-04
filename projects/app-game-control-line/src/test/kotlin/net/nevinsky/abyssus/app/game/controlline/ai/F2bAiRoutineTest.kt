@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.ai
 
+import java.util.Random
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightEnd
 import net.nevinsky.abyssus.app.game.controlline.pattern.FLIGHT_TIME
 import net.nevinsky.abyssus.app.game.controlline.pattern.Figure
@@ -12,7 +13,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.Random
 
 /**
  * The whole Watch AI demonstration with real physics: the bundled, unchanged `Stunter` from rest at its takeoff place,
@@ -21,26 +21,39 @@ import java.util.Random
  * inside the circle. The same under any frame timing and across a pause.
  */
 class F2bAiRoutineTest {
-    private class Outcome(val report: String, val marks: List<Int>, val end: FlightEnd?, val time: Float, val lineEnds: Float)
+    private class Outcome(
+        val report: String,
+        val marks: List<Int>,
+        val end: FlightEnd?,
+        val time: Float,
+        val lineEnds: Float,
+    )
 
-    /** Flies the whole routine in [frames]; [paused] says, before each frame, whether the game is paused (no advance). */
-    private fun fly(frames: Iterator<Float>, paused: (Float) -> Boolean = { false }): Outcome = AiFlight().use { f ->
-        val gated = object : Iterator<Float> {
-            override fun hasNext() = true
-            override fun next(): Float {
-                // a paused game draws frames without advancing the flight: its time stands still
-                while (paused(f.time)) {
-                    frames.next()
-                    pausedFrames++
-                    if (pausedFrames > 600) break
+    /**
+     * Flies the whole routine in [frames]; [paused] says, before each frame, whether the game is paused (no advance).
+     */
+    private fun fly(frames: Iterator<Float>, paused: (Float) -> Boolean = { false }): Outcome =
+        AiFlight().use { f ->
+            val gated =
+                object : Iterator<Float> {
+                    override fun hasNext() = true
+
+                    override fun next(): Float {
+                        // a paused game draws frames without advancing the flight: its time stands still
+                        while (paused(f.time)) {
+                            frames.next()
+                            pausedFrames++
+                            if (pausedFrames > 600) {
+                                break
+                            }
+                        }
+                        return frames.next()
+                    }
                 }
-                return frames.next()
-            }
+            f.fly(frames = gated)
+            assertComplete(f)
+            Outcome(f.describe(), SCHEDULE.map { f.entry(it)?.tenths ?: -1 }, f.result, f.time, f.lineEnds)
         }
-        f.fly(frames = gated)
-        assertComplete(f)
-        Outcome(f.describe(), SCHEDULE.map { f.entry(it)?.tenths ?: -1 }, f.result, f.time, f.lineEnds)
-    }
 
     private var pausedFrames = 0
 
@@ -51,7 +64,12 @@ class F2bAiRoutineTest {
         assertTrue(report, f.lineEnds <= 18.5f)
         assertTrue(report, f.lastSample?.inverted == false)
         assertTrue(report, f.bot.planner.diagnostics.isEmpty())
-        assertEquals("the engine stopped under the fuel rule\n$report", 360f, checkNotNull(f.engineStopped) { report }, 0.05f)
+        assertEquals(
+            "the engine stopped under the fuel rule\n$report",
+            360f,
+            checkNotNull(f.engineStopped) { report },
+            0.05f,
+        )
         var last = -1f
         for (figure in SCHEDULE) {
             val entry = checkNotNull(f.entry(figure)) { "${figure.label} undecided\n$report" }
@@ -78,13 +96,26 @@ class F2bAiRoutineTest {
         val regular = fly(generateSequence { 1f / 60f }.iterator())
         val random = Random(42)
         // frames of 4 to 40 ms, and now and then a stall the session clamps
-        val irregular = fly(generateSequence { if (random.nextInt(200) == 0) 0.25f else 0.004f + random.nextFloat() * 0.036f }.iterator())
+        val irregular =
+            fly(
+                generateSequence {
+                        if (random.nextInt(200) == 0) {
+                            0.25f
+                        } else {
+                            0.004f + random.nextFloat() * 0.036f
+                        }
+                    }
+                    .iterator()
+            )
         // paused for 300 frames in the inside loops, at about 1:30
         var pausedAt: Float? = null
-        val pauses = fly(generateSequence { 1f / 60f }.iterator()) { time ->
-            if (pausedAt == null && time >= 90f) pausedAt = time
-            pausedAt != null && pausedFrames < 300
-        }
+        val pauses =
+            fly(generateSequence { 1f / 60f }.iterator()) { time ->
+                if (pausedAt == null && time >= 90f) {
+                    pausedAt = time
+                }
+                pausedAt != null && pausedFrames < 300
+            }
         for ((name, other) in listOf("irregular frames" to irregular, "a pause" to pauses)) {
             assertEquals("$name\n${other.report}", regular.marks, other.marks)
             assertEquals(name, regular.end, other.end)

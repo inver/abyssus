@@ -5,7 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.panel
 
-import net.nevinsky.abyssus.plugin.ui.CommitOutcome
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.JBColor
@@ -13,6 +12,12 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
+import java.awt.Color
+import java.awt.Component
+import java.awt.Container
+import javax.swing.JButton
+import javax.swing.JComponent
+import javax.swing.JPanel
 import net.nevinsky.abyssus.lib.core.editor.components.EnabledTarget
 import net.nevinsky.abyssus.lib.core.editor.panel.AssetRow
 import net.nevinsky.abyssus.lib.core.editor.panel.Axis
@@ -37,27 +42,26 @@ import net.nevinsky.abyssus.lib.core.editor.panel.TableRow
 import net.nevinsky.abyssus.lib.core.editor.panel.TextRow
 import net.nevinsky.abyssus.lib.core.editor.panel.VectorRow
 import net.nevinsky.abyssus.plugin.projectView.DesignColors
-import java.awt.Color
-import java.awt.Component
-import java.awt.Container
-import javax.swing.JButton
-import javax.swing.JComponent
-import javax.swing.JPanel
+import net.nevinsky.abyssus.plugin.ui.CommitOutcome
 
 /** The row kinds of a section: label column, field height, units, axes, dim defaults, commit through the hook. */
 class FieldRowTest : BasePlatformTestCase() {
     private val saved = mutableListOf<Pair<FieldRef, String>>()
     private var screenEditorOpened = false
 
-    private val hooks = object : RowHooks {
-        override fun commit(ref: FieldRef, text: String): CommitOutcome {
-            saved += ref to text
-            return CommitOutcome.Saved
-        }
+    private val hooks =
+        object : RowHooks {
+            override fun commit(ref: FieldRef, text: String): CommitOutcome {
+                saved += ref to text
+                return CommitOutcome.Saved
+            }
 
-        override fun custom(key: String): JComponent? = JBLabel("custom-$key").apply { name = "custom-$key" }
-        override fun openScreenEditor() { screenEditorOpened = true }
-    }
+            override fun custom(key: String): JComponent? = JBLabel("custom-$key").apply { name = "custom-$key" }
+
+            override fun openScreenEditor() {
+                screenEditorOpened = true
+            }
+        }
 
     private fun all(c: Component): List<Component> = allComponents(c)
 
@@ -85,13 +89,20 @@ class FieldRowTest : BasePlatformTestCase() {
     fun testVectorHasOneLabelledBoxPerAxis() {
         val axes = listOf("x", "y", "z", "w").map { Axis(it, "1", FieldRef("PositionComponent", "localRotation.$it")) }
         val view = row(VectorRow("localRotation", axes))
-        assertEquals(listOf("x", "y", "z", "w"), all(view).filterIsInstance<JBLabel>().filter { it.name?.startsWith("axis-label-") == true }.map { it.text })
+        assertEquals(
+            listOf("x", "y", "z", "w"),
+            all(view).filterIsInstance<JBLabel>().filter { it.name?.startsWith("axis-label-") == true }.map { it.text },
+        )
         assertEquals(4, all(view).filterIsInstance<JBTextField>().size)
         find<JBTextField>(view, "field-PositionComponent-localRotation.w").apply { text = "0.5" }
     }
 
     fun testAxisBoxesAreAsTallAsTextFields() {
-        val text = find<JBTextField>(row(TextRow("name", "Racer", false, FieldRef("NameComponent", "name"))), "field-NameComponent-name")
+        val text =
+            find<JBTextField>(
+                row(TextRow("name", "Racer", false, FieldRef("NameComponent", "name"))),
+                "field-NameComponent-name",
+            )
         val view = row(VectorRow("pos", listOf(Axis("x", "1", FieldRef("PositionComponent", "localPosition.x")))))
         val box = find<JBTextField>(view, "field-PositionComponent-localPosition.x").parent as JComponent
         assertEquals(text.preferredSize.height, box.preferredSize.height)
@@ -106,25 +117,57 @@ class FieldRowTest : BasePlatformTestCase() {
     }
 
     fun testADimRowIsDrawnInTheSecondaryColorAndStaysEditable() {
-        val dim = find<JBTextField>(row(NumberRow("Friction", "0.2", "", true, FieldRef("RigidBodyComponent", "friction"))), "field-RigidBodyComponent-friction")
-        val normal = find<JBTextField>(row(NumberRow("Mass", "0.5", "", false, FieldRef("RigidBodyComponent", "mass"))), "field-RigidBodyComponent-mass")
+        val dim =
+            find<JBTextField>(
+                row(NumberRow("Friction", "0.2", "", true, FieldRef("RigidBodyComponent", "friction"))),
+                "field-RigidBodyComponent-friction",
+            )
+        val normal =
+            find<JBTextField>(
+                row(NumberRow("Mass", "0.5", "", false, FieldRef("RigidBodyComponent", "mass"))),
+                "field-RigidBodyComponent-mass",
+            )
         assertEquals(DesignColors.SECONDARY, dim.foreground)
         assertNotSame(DesignColors.SECONDARY, normal.foreground)
         assertTrue(dim.isEditable && dim.isEnabled)
     }
 
     fun testChoiceCheckAndColorRows() {
-        val choice = find<ComboBox<*>>(row(ChoiceRow("Shape", "SPHERE", listOf("SPHERE", "BOX"), false, FieldRef("ColliderComponent", "shape"))), "field-ColliderComponent-shape")
+        val choice =
+            find<ComboBox<*>>(
+                row(
+                    ChoiceRow("Shape", "SPHERE", listOf("SPHERE", "BOX"), false, FieldRef("ColliderComponent", "shape"))
+                ),
+                "field-ColliderComponent-shape",
+            )
         assertEquals("SPHERE", choice.selectedItem)
-        val check = find<JBCheckBox>(row(CheckRow("alignToPath", true, "", false, FieldRef("PathArrangementComponent", "alignToPath"))), "field-PathArrangementComponent-alignToPath")
+        val check =
+            find<JBCheckBox>(
+                row(CheckRow("alignToPath", true, "", false, FieldRef("PathArrangementComponent", "alignToPath"))),
+                "field-PathArrangementComponent-alignToPath",
+            )
         assertTrue(check.isSelected)
-        val color = row(ColorRow("color", "#FFF5E0", false, null, listOf(Axis("r", "1", FieldRef("LightComponent", "color.r")))))
+        val color =
+            row(
+                ColorRow("color", "#FFF5E0", false, null, listOf(Axis("r", "1", FieldRef("LightComponent", "color.r"))))
+            )
         assertEquals(Color.decode("#FFF5E0"), find<JPanel>(color, "swatch").background)
         assertEquals("#FFF5E0", find<JBLabel>(color, "hex").text)
     }
 
     fun testAssetReferenceHasAnIconAndA26PixelBrowseButton() {
-        val view = row(AssetRow("assetName", "model_racer", "model", true, listOf("model_racer", "model_pilot"), false, FieldRef("RenderComponent", "assetName")))
+        val view =
+            row(
+                AssetRow(
+                    "assetName",
+                    "model_racer",
+                    "model",
+                    true,
+                    listOf("model_racer", "model_pilot"),
+                    false,
+                    FieldRef("RenderComponent", "assetName"),
+                )
+            )
         val browse = find<JButton>(view, "browse-RenderComponent-assetName")
         assertEquals(JBUI.scale(PanelMetrics.BROWSE), browse.preferredSize.width)
         assertEquals(JBUI.scale(PanelMetrics.BROWSE), browse.preferredSize.height)

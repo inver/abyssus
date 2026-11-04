@@ -5,17 +5,16 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
-import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
-import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.graphics.Color
-
 import com.badlogic.gdx.graphics.PerspectiveCamera
+import com.badlogic.gdx.math.Vector3
+import java.io.File
 import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
+import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class SceneOverlayHostTest {
     private val scene = parseScene(File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
@@ -27,14 +26,20 @@ class SceneOverlayHostTest {
     /** Draws a small cross at each entity position the view shows. */
     private class MarkerOverlay : SceneOverlay {
         val seen = mutableListOf<Map<Long, Vector3>>()
+
         override fun draw(view: OverlayView, lines: LineSink) {
             seen += view.content.entityPositions
-            for (p in view.content.entityPositions.values) lines.line(Vector3(p.x - 0.1f, p.y, p.z), Vector3(p.x + 0.1f, p.y, p.z), Color(1f, 1f, 1f, 1f))
+            for (p in view.content.entityPositions.values) lines.line(
+                Vector3(p.x - 0.1f, p.y, p.z),
+                Vector3(p.x + 0.1f, p.y, p.z),
+                Color(1f, 1f, 1f, 1f),
+            )
         }
     }
 
     private class Recorder : LineSink {
         val centres = mutableListOf<Vector3>()
+
         override fun line(from: Vector3, to: Vector3, color: Color) {
             centres += Vector3((from.x + to.x) / 2, (from.y + to.y) / 2, (from.z + to.z) / 2)
         }
@@ -45,8 +50,15 @@ class SceneOverlayHostTest {
         var enabled = false
         val physics = MarkerOverlay()
         val other = MarkerOverlay()
-        val host = SceneOverlayHost(listOf(NamedOverlay("Physics", physics, false) { enabled },
-            NamedOverlay("Other", other))) { m, e -> throw AssertionError(m, e) }
+        val host =
+            SceneOverlayHost(
+                listOf(
+                    NamedOverlay("Physics", physics, false) { enabled },
+                    NamedOverlay("Other", other),
+                )
+            ) { m, e ->
+                throw AssertionError(m, e)
+            }
         host.draw(view(), Recorder())
         assertEquals(listOf("Other"), host.overlays.map { it.source })
         assertEquals(0, physics.seen.size)
@@ -66,7 +78,8 @@ class SceneOverlayHostTest {
     fun anOverlaySeesTheEntityPositionsOfMainScene() {
         val overlay = MarkerOverlay()
         val sink = Recorder()
-        SceneOverlayHost(listOf(NamedOverlay("Test", overlay))) { m, e -> throw AssertionError(m, e) }.draw(view(), sink)
+        SceneOverlayHost(listOf(NamedOverlay("Test", overlay))) { m, e -> throw AssertionError(m, e) }
+            .draw(view(), sink)
         assertEquals(content.entityPositions, overlay.seen.single())
         for (id in listOf(0L, 2L, 6L)) {
             val model = content.models.single { it.entityId == id }.transform.position
@@ -77,17 +90,25 @@ class SceneOverlayHostTest {
     @Test
     fun aThrowingOverlayIsSwitchedOffOnceAndTheOthersKeepDrawing() {
         var calls = 0
-        val thrower = object : SceneOverlay {
-            var disposed = false
-            override fun draw(view: OverlayView, lines: LineSink) {
-                calls++
-                error("broken")
+        val thrower =
+            object : SceneOverlay {
+                var disposed = false
+
+                override fun draw(view: OverlayView, lines: LineSink) {
+                    calls++
+                    error("broken")
+                }
+
+                override fun dispose() {
+                    disposed = true
+                }
             }
-            override fun dispose() { disposed = true }
-        }
         val good = MarkerOverlay()
         val errors = mutableListOf<String>()
-        val host = SceneOverlayHost(listOf(NamedOverlay("Broken Plugin", thrower), NamedOverlay("Test", good))) { m, _ -> errors += m }
+        val host =
+            SceneOverlayHost(listOf(NamedOverlay("Broken Plugin", thrower), NamedOverlay("Test", good))) { m, _ ->
+                errors += m
+            }
         host.draw(view(), Recorder())
         host.draw(view(onTop = true), Recorder())
         host.draw(view(), Recorder())

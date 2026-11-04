@@ -19,7 +19,9 @@ internal class FixedStepClock {
         accumulated += seconds
         val steps = min(floor(accumulated / PHYSICS_STEP + 1e-6).toInt(), MAX_STEPS_PER_ADVANCE)
         accumulated = max(0.0, accumulated - steps * PHYSICS_STEP.toDouble())
-        if (accumulated >= PHYSICS_STEP) accumulated %= PHYSICS_STEP.toDouble()
+        if (accumulated >= PHYSICS_STEP) {
+            accumulated %= PHYSICS_STEP.toDouble()
+        }
         return steps
     }
 }

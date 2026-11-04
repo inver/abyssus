@@ -30,7 +30,10 @@ class ComponentNode(val scene: SceneDto, val entityId: Long, val kind: String)
 
 private val toggles = SetEnabledAction()
 
-/** The components of [entity] as the tree lists them, in order: the header is not one; each unmodeled one is its own row. */
+/**
+ * The components of [entity] as the tree lists them, in order: the header is not one; each unmodeled one is its own
+ * row.
+ */
 fun componentNames(entity: EntityDto): List<String> = entity.components.flatMap { component ->
     when (component) {
         is HeaderComponent -> emptyList()
@@ -46,14 +49,24 @@ fun hasComponent(entity: EntityDto, simpleName: String): Boolean =
 
 fun isArrangementEntity(entity: EntityDto): Boolean = entity.component(PathArrangementComponent::class.java) != null
 
-/** The eye state of an entity row: on or off for an entity that can be switched (not a `GROUP`), else null for no eye. */
-fun entityEye(entity: EntityDto): Boolean? = if (toggles.isTogglable(entity)) entity.header().entityEnabled else null
+/**
+ * The eye state of an entity row: on or off for an entity that can be switched (not a `GROUP`), else null for no eye.
+ */
+fun entityEye(entity: EntityDto): Boolean? = if (toggles.isTogglable(entity)) {
+    entity.header().entityEnabled
+} else {
+    null
+}
 
 /** The eye state of component [name] of [entity]: null for a component that cannot be switched. */
 fun componentEye(entity: EntityDto, name: String): Boolean? {
-    if (!toggles.isTogglable(name)) return null
+    if (!toggles.isTogglable(name)) {
+        return null
+    }
     val header = entity.header()
-    if (header.disabledComponents.any { it.simpleName == name.substringAfterLast('.') }) return false
+    if (header.disabledComponents.any { it.simpleName == name.substringAfterLast('.') }) {
+        return false
+    }
     val raw = entity.components.filterIsInstance<RawComponentsWrapper>().flatMap { it.entries }
         .firstOrNull { it.name == name }
     return !(raw?.disabled ?: false)

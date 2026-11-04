@@ -5,6 +5,7 @@
 package net.nevinsky.abyssus.app.game.controlline.screens
 
 import com.badlogic.gdx.Input
+import java.nio.file.Files
 import net.nevinsky.abyssus.app.game.controlline.controller.ControllerContext
 import net.nevinsky.abyssus.app.game.controlline.controller.ControllerProfiles
 import net.nevinsky.abyssus.app.game.controlline.controller.ControllerService
@@ -27,22 +28,31 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.nio.file.Files
 
-/** The controller settings screen's values, writes and actions, with a real service over a fake device and no graphics. */
+/**
+ * The controller settings screen's values, writes and actions, with a real service over a fake device and no graphics.
+ */
 class SettingsUiModelTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
     private val source = FakeControllerSource()
-    private val dir get() = temp.root.toPath()
+    private val dir
+        get() = temp.root.toPath()
+
     private val profiles by lazy { ControllerProfiles(dir.resolve("controls.json")) }
     private val service by lazy { ControllerService(source, profiles, HandleInput()) }
     private val flow by lazy {
-        GameFlow(emptyList(), ScoreTable(dir.resolve("s.json")), PatternScoreTable(dir.resolve("p.json")), ScaleScoreTable(dir.resolve("sc.json")))
+        GameFlow(
+            emptyList(),
+            ScoreTable(dir.resolve("s.json")),
+            PatternScoreTable(dir.resolve("p.json")),
+            ScaleScoreTable(dir.resolve("sc.json")),
+        )
     }
+
     private class FakeDisplay(var isOn: Boolean = false, override var damaged: Boolean = false) : DisplayOptions {
-        override val fullscreen: Boolean get() = isOn
+        override val fullscreen: Boolean
+            get() = isOn
 
         override fun setFullscreen(on: Boolean) {
             isOn = on
@@ -59,7 +69,9 @@ class SettingsUiModelTest {
     }
 
     private fun Map<String, UiValue>.text(name: String) = (getValue(name) as UiValue.Text).value
+
     private fun Map<String, UiValue>.flag(name: String) = (getValue(name) as UiValue.Bool).value
+
     private fun Map<String, UiValue>.num(name: String) = (getValue(name) as UiValue.Num).value
 
     private fun write(binding: String, value: UiValue) = model.write(UiWrite(binding, value, "w"))
@@ -126,7 +138,12 @@ class SettingsUiModelTest {
         assertTrue(write("deadZone", UiValue.Text("x")) is UiWriteResult.Rejected)
         assertTrue(write("invert", UiValue.Num(1.0)) is UiWriteResult.Rejected)
         assertTrue(write("deadZone", UiValue.Num(Double.NaN)) is UiWriteResult.Rejected)
-        assertEquals("a rejected write changes nothing", 0.3f, ControllerProfiles(dir.resolve("controls.json")).profile("pad", true).deadZone, 1e-6f)
+        assertEquals(
+            "a rejected write changes nothing",
+            0.3f,
+            ControllerProfiles(dir.resolve("controls.json")).profile("pad", true).deadZone,
+            1e-6f,
+        )
     }
 
     @Test

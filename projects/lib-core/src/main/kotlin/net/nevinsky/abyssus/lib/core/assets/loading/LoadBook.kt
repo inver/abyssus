@@ -21,7 +21,8 @@ internal enum class Phase {
 
 /**
  * What [LoadBook] knows about one load of an asset: [id] is its generation (every request gets a new one, so a message
- * from a superseded load is told apart from the current one by id), [phase], and the names it waits for once it is prepared.
+  * from a superseded load is told apart from the current one by id), [phase], and the names it waits for once it is
+  * prepared.
  */
 internal interface LoadView {
     val id: Long
@@ -35,9 +36,12 @@ internal interface LoadView {
 }
 
 /**
- * The revision and dependency bookkeeping of an [AssetStorage]: the current load of each name ([lives]), the replacement of
- * a built asset while it loads ([revisions]), which generation owns a name, and the questions the pipeline asks about them
- * (is this settled, what does it still wait for, did a dependency fail, which loads form a cycle). It holds no GL object and
+  * The revision and dependency bookkeeping of an [AssetStorage]: the current load of each name ([lives]), the
+  * replacement of
+  * a built asset while it loads ([revisions]), which generation owns a name, and the questions the pipeline asks about
+  * them
+  * (is this settled, what does it still wait for, did a dependency fail, which loads form a cycle). It holds no GL
+  * object and
  * does no upload, build, discard or notification; the storage owns those, and calls this on its render thread only.
  */
 internal class LoadBook<L : LoadView> {
@@ -47,7 +51,10 @@ internal class LoadBook<L : LoadView> {
     /** Every load in flight or settled: the current ones, then the replacements. */
     fun active(): List<L> = lives.values.toList() + revisions.values
 
-    /** The load of [name] or its replacement that has generation [id]; null when it was forgotten or superseded meanwhile. */
+    /**
+     * The load of [name] or its replacement that has generation [id]; null when it was forgotten or superseded
+     * meanwhile.
+     */
     fun owner(name: String, id: Long): L? =
         revisions[name]?.takeIf { it.id == id } ?: lives[name]?.takeIf { it.id == id }
 
@@ -88,7 +95,10 @@ internal class LoadBook<L : LoadView> {
         return keep
     }
 
-    /** Why [view] cannot go on, when a dependency of it is gone or has failed; null while all of them may still be built. */
+    /**
+     * Why [view] cannot go on, when a dependency of it is gone or has failed; null while all of them may still be
+     * built.
+     */
     fun dependencyProblem(view: LoadView): Throwable? {
         for (dependency in view.dependencies ?: return null) {
             val other = lives[dependency]
@@ -126,7 +136,9 @@ internal class LoadBook<L : LoadView> {
                     0 -> dfs(dependency)
                     1 -> {
                         val at = stack.indexOf(dependency)
-                        if (at >= 0) cyclic.addAll(stack.subList(at, stack.size))
+                        if (at >= 0) {
+                            cyclic.addAll(stack.subList(at, stack.size))
+                        }
                     }
                 }
             }
@@ -135,7 +147,9 @@ internal class LoadBook<L : LoadView> {
         }
 
         for (live in active().filter { it.phase == Phase.Waiting }) {
-            if ((color[live.name] ?: 0) == 0) dfs(live.name)
+            if ((color[live.name] ?: 0) == 0) {
+                dfs(live.name)
+            }
         }
         return cyclic
     }

@@ -6,10 +6,10 @@
 package net.nevinsky.abyssus.lib.core.editor.terrain
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.assets.displayMessage
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.assets.terrain.MAX_TERRAIN_RESOLUTION
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
 /** The Abyssus-only file beside `terrain.data` that keeps how the applied heights were made. */
 const val TERRAIN_RECIPE_FILE = "abyssus-terrain.recipe.json"
@@ -21,8 +21,8 @@ private const val MAX_RESOLUTION = MAX_TERRAIN_RESOLUTION
 const val RECIPE_SCHEMA_VERSION = 1
 
 /**
- * How a terrain's heights were generated: the complete [settings], the [size] and [resolution] they were generated
- * for, the [generator] identifier and noise source revision, and the SHA-256 ([heightsSha256]) of the applied bytes.
+ * How a terrain's heights were generated: the complete [settings], the [size] and [resolution] they were generated for,
+ * the [generator] identifier and noise source revision, and the SHA-256 ([heightsSha256]) of the applied bytes.
  */
 data class TerrainRecipe(
     val settings: TerrainGenerationSettings,
@@ -52,7 +52,11 @@ sealed interface RecipeStatus {
     data class Matching(val recipe: TerrainRecipe) : RecipeStatus
 }
 
-enum class MismatchReason { SIZE, RESOLUTION, HEIGHTS }
+enum class MismatchReason {
+    SIZE,
+    RESOLUTION,
+    HEIGHTS,
+}
 
 /** Reads and writes [TerrainRecipe] text and compares a recipe with the terrain it sits next to. */
 class TerrainRecipeCodec(private val json: JsonProcessor) {
@@ -62,20 +66,31 @@ class TerrainRecipeCodec(private val json: JsonProcessor) {
             RecipeFile(
                 schemaVersion = recipe.schemaVersion,
                 generator = GeneratorFile(recipe.generator, recipe.sourceRevision),
-                settings = SettingsFile(s.seed, s.featureSize, s.minHeight, s.maxHeight, s.octaves, s.persistence, s.lacunarity),
+                settings =
+                    SettingsFile(
+                        s.seed,
+                        s.featureSize,
+                        s.minHeight,
+                        s.maxHeight,
+                        s.octaves,
+                        s.persistence,
+                        s.lacunarity,
+                    ),
                 size = recipe.size,
                 resolution = recipe.resolution,
                 heightsSha256 = recipe.heightsSha256,
-            ),
+            )
         )
     }
 
     /** The recipe in [text], or why it is not usable ([RecipeStatus.Malformed] or [RecipeStatus.Unsupported]). */
-    fun decode(text: String): Decoded = runCatchingKeepingCancellation { read(text) }
-        .getOrElse { Decoded.Failed(RecipeStatus.Malformed(it.displayMessage())) }
+    fun decode(text: String): Decoded = runCatchingKeepingCancellation {
+        read(text)
+    }.getOrElse { Decoded.Failed(RecipeStatus.Malformed(it.displayMessage())) }
 
     sealed interface Decoded {
         data class Recipe(val recipe: TerrainRecipe) : Decoded
+
         data class Failed(val status: RecipeStatus) : Decoded
     }
 
@@ -85,19 +100,22 @@ class TerrainRecipeCodec(private val json: JsonProcessor) {
             return Decoded.Failed(RecipeStatus.Unsupported("schemaVersion ${header.schemaVersion}"))
         }
         val id = header.generator.id
-        if (id != OPENSIMPLEX2_FBM_V1) return Decoded.Failed(RecipeStatus.Unsupported("generator $id"))
+        if (id != OPENSIMPLEX2_FBM_V1) {
+            return Decoded.Failed(RecipeStatus.Unsupported("generator $id"))
+        }
         val file = json.parse(text, RecipeFile::class.java)
         val s = file.settings
         check(s.floats().all { it.isFinite() }) { "settings are not finite" }
-        val settings = TerrainGenerationSettings(
-            seed = s.seed,
-            featureSize = s.featureSize,
-            minHeight = s.minHeight,
-            maxHeight = s.maxHeight,
-            octaves = s.octaves,
-            persistence = s.persistence,
-            lacunarity = s.lacunarity,
-        )
+        val settings =
+            TerrainGenerationSettings(
+                seed = s.seed,
+                featureSize = s.featureSize,
+                minHeight = s.minHeight,
+                maxHeight = s.maxHeight,
+                octaves = s.octaves,
+                persistence = s.persistence,
+                lacunarity = s.lacunarity,
+            )
         check(settings.valid) { "settings are not valid: ${settings.errors()}" }
         val sha = file.heightsSha256
         check(sha.length == SHA_HEX_LENGTH && sha.all { it in "0123456789abcdef" }) { "heightsSha256 is not a SHA-256" }
@@ -112,7 +130,7 @@ class TerrainRecipeCodec(private val json: JsonProcessor) {
                 generator = id,
                 sourceRevision = file.generator.sourceRevision,
                 schemaVersion = file.schemaVersion,
-            ),
+            )
         )
     }
 
@@ -121,17 +139,30 @@ class TerrainRecipeCodec(private val json: JsonProcessor) {
      * [resolution] heights per side and whose height file holds [heightBytes].
      */
     fun status(recipeText: String?, size: Int, resolution: Int, heightBytes: ByteArray): RecipeStatus {
-        if (recipeText == null) return RecipeStatus.Missing
-        val recipe = when (val decoded = decode(recipeText)) {
-            is Decoded.Failed -> return decoded.status
-            is Decoded.Recipe -> decoded.recipe
+        if (recipeText == null) {
+            return RecipeStatus.Missing
         }
+        val recipe =
+            when (val decoded = decode(recipeText)) {
+                is Decoded.Failed -> return decoded.status
+                is Decoded.Recipe -> decoded.recipe
+            }
         val reasons = buildSet {
-            if (recipe.size != size) add(MismatchReason.SIZE)
-            if (recipe.resolution != resolution) add(MismatchReason.RESOLUTION)
-            if (recipe.heightsSha256 != sha256Hex(heightBytes)) add(MismatchReason.HEIGHTS)
+            if (recipe.size != size) {
+                add(MismatchReason.SIZE)
+            }
+            if (recipe.resolution != resolution) {
+                add(MismatchReason.RESOLUTION)
+            }
+            if (recipe.heightsSha256 != sha256Hex(heightBytes)) {
+                add(MismatchReason.HEIGHTS)
+            }
         }
-        return if (reasons.isEmpty()) RecipeStatus.Matching(recipe) else RecipeStatus.Mismatch(reasons, recipe)
+        return if (reasons.isEmpty()) {
+            RecipeStatus.Matching(recipe)
+        } else {
+            RecipeStatus.Mismatch(reasons, recipe)
+        }
     }
 
     /** The settings a draft starts from: the recipe's when it matches the terrain, else the defaults. */
@@ -143,8 +174,7 @@ class TerrainRecipeCodec(private val json: JsonProcessor) {
 @JsonIgnoreProperties(ignoreUnknown = true)
 private data class RecipeHeader(val schemaVersion: Int, val generator: GeneratorHeader)
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-private data class GeneratorHeader(val id: String)
+@JsonIgnoreProperties(ignoreUnknown = true) private data class GeneratorHeader(val id: String)
 
 private data class RecipeFile(
     val schemaVersion: Int,

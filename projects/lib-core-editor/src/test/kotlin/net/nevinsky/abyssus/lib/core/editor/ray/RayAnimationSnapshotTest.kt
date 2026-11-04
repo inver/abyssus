@@ -4,47 +4,45 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.ray
 
-import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
-import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-
-import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
-
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.graphics.g3d.Material
+import com.badlogic.gdx.graphics.g3d.Model
+import com.badlogic.gdx.graphics.g3d.ModelInstance
+import com.badlogic.gdx.graphics.g3d.model.Animation
+import com.badlogic.gdx.graphics.g3d.model.MeshPart
+import com.badlogic.gdx.graphics.g3d.model.Node
+import com.badlogic.gdx.graphics.g3d.model.NodeAnimation
 import com.badlogic.gdx.graphics.g3d.model.NodeKeyframe
+import com.badlogic.gdx.graphics.g3d.model.NodePart
 import com.badlogic.gdx.graphics.g3d.model.data.ModelMaterial
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNodePart
+import com.badlogic.gdx.graphics.g3d.utils.AnimationController
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.ArrayMap
+import java.io.File
+import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.ModelRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSkinning
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSnapshot
-import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.ModelRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSource
-import com.badlogic.gdx.graphics.g3d.utils.AnimationController
-import com.badlogic.gdx.graphics.g3d.ModelInstance
+import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
+import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
-import com.badlogic.gdx.graphics.g3d.model.MeshPart
-import com.badlogic.gdx.graphics.g3d.Model
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import net.nevinsky.abyssus.lib.gdx.model.ModelMesh
 import net.nevinsky.abyssus.lib.gdx.model.ModelMeshPart
-import com.badlogic.gdx.graphics.g3d.model.Animation
-import com.badlogic.gdx.graphics.g3d.model.Node
-import com.badlogic.gdx.graphics.g3d.model.NodeAnimation
-import com.badlogic.gdx.graphics.g3d.model.NodePart
 import org.junit.Assert.*
 import org.junit.Test
-import java.io.File
 
 /** The animation is a joint sliding from x = 0 to x = 2 in one second; the skinned part follows that joint. */
 class RayAnimationSnapshotTest {
@@ -52,7 +50,8 @@ class RayAnimationSnapshotTest {
         com.badlogic.gdx.utils.GdxNativesLoader.load() // matrix products and the camera's frustum are native
     }
 
-    @Test fun firstAnimationIsCapturedAtItsCurrentTime() {
+    @Test
+    fun firstAnimationIsCapturedAtItsCurrentTime() {
         val entity = entity(1L)
         entity.animation!!.update(.5f)
         val pose = RayModelPoses().capture(listOf(entity)).getValue(1L)
@@ -60,21 +59,25 @@ class RayAnimationSnapshotTest {
         assertEquals(1f, pose.bones("skin", "part")!!.single()[12], 1e-5f)
     }
 
-    @Test fun twoInstancesOfOneModelKeepIndependentPoses() {
+    @Test
+    fun twoInstancesOfOneModelKeepIndependentPoses() {
         val model = model()
-        val first = entity(2L, model); val second = entity(3L, model)
-        first.animation!!.update(.25f); second.animation!!.update(.75f)
+        val first = entity(2L, model)
+        val second = entity(3L, model)
+        first.animation!!.update(.25f)
+        second.animation!!.update(.75f)
         val poses = RayModelPoses().capture(listOf(first, second))
         assertEquals(.5f, poses.getValue(2L).bones("skin", "part")!!.single()[12], 1e-5f)
         assertEquals(1.5f, poses.getValue(3L).bones("skin", "part")!!.single()[12], 1e-5f)
         // a captured pose is a copy: later animation or mutation of it never reaches the live instance
         poses.getValue(2L).bones("skin", "part")!!.single()[12] = 99f
         assertEquals(.5f, poses.getValue(2L).bones("skin", "part")!!.single()[12], 1e-5f)
-        first.animation!!.update(.25f)
+        first.animation.update(.25f)
         assertEquals(.5f, poses.getValue(2L).bones("skin", "part")!!.single()[12], 1e-5f)
     }
 
-    @Test fun revisionAdvancesOnlyWhenThePoseChanges() {
+    @Test
+    fun revisionAdvancesOnlyWhenThePoseChanges() {
         val entity = entity(1L)
         val poses = RayModelPoses()
         entity.animation!!.update(.2f)
@@ -84,41 +87,65 @@ class RayAnimationSnapshotTest {
         assertTrue(poses.capture(listOf(entity)).getValue(1L).revision > first)
     }
 
-    @Test fun removedEntitiesLoseTheirPoseAndStaticOnesHaveNone() {
-        val animated = entity(1L); val static = staticEntity(6L)
+    @Test
+    fun removedEntitiesLoseTheirPoseAndStaticOnesHaveNone() {
+        val animated = entity(1L)
+        val static = staticEntity(6L)
         val poses = RayModelPoses()
         assertEquals(setOf(1L), poses.capture(listOf(animated, static)).keys)
         assertEquals(emptySet<Long>(), poses.capture(listOf(static)).keys)
         assertEquals(setOf(1L), poses.capture(listOf(animated)).keys)
     }
 
-    @Test fun jointDeformationMovesOnlyTheAnimatedInstancesSnapshotGeometry() {
+    @Test
+    fun jointDeformationMovesOnlyTheAnimatedInstancesSnapshotGeometry() {
         val snapshot = snapshot()
         val model = model()
-        val moving = entity(4L, model); val still = entity(5L, model)
+        val moving = entity(4L, model)
+        val still = entity(5L, model)
         moving.animation!!.update(.75f)
         val poses = RayModelPoses().capture(listOf(moving, still))
-        val content = SceneContent(models = listOf(
-            AssetPlacement(4L, "model", PlacementTransform.IDENTITY), AssetPlacement(5L, "model", PlacementTransform.IDENTITY)))
-        val frame = (RaySceneSnapshots().capture(
-            SceneRenderParams.DEFAULT.copy(content = content, projectDir = File("project")), camera(), NO_LIGHTS,
-            RaySceneAssetState.Ready(mapOf("model" to snapshot), emptyMap()), poses = poses,
-            deform = { mesh, palette -> RayModelSkinning().deform(mesh, palette) },
-        ) as RaySceneConversion.Ready).frame.scene
+        val content =
+            SceneContent(
+                models =
+                    listOf(
+                        AssetPlacement(4L, "model", PlacementTransform.IDENTITY),
+                        AssetPlacement(5L, "model", PlacementTransform.IDENTITY),
+                    )
+            )
+        val frame =
+            (RaySceneSnapshots()
+                    .capture(
+                        SceneRenderParams.DEFAULT.copy(content = content, projectDir = File("project")),
+                        camera(),
+                        NO_LIGHTS,
+                        RaySceneAssetState.Ready(mapOf("model" to snapshot), emptyMap()),
+                        poses = poses,
+                        deform = { mesh, palette -> RayModelSkinning().deform(mesh, palette) },
+                    ) as RaySceneConversion.Ready)
+                .frame
+                .scene
         val x = frame.instances.associate { it.id.substringBefore('/') to frame.meshes[it.mesh].positions()[0] }
         assertEquals(1.5f, x.getValue("4"), 1e-5f)
         assertEquals(0f, x.getValue("5"), 1e-5f)
         assertEquals(2, frame.meshes.size)
     }
 
-    private fun camera() = PerspectiveCamera(60f, 800f, 600f).apply { position.set(0f, 0f, 5f); lookAt(0f, 0f, 0f); update() }
+    private fun camera() =
+        PerspectiveCamera(60f, 800f, 600f).apply {
+            position.set(0f, 0f, 5f)
+            lookAt(0f, 0f, 0f)
+            update()
+        }
 
     private fun staticEntity(id: Long) = ModelEntity(placement(id), Model(), ModelInstance(Model()), null)
+
     private fun entity(id: Long, model: Model = model()): ModelEntity {
         val instance = ModelInstance(model)
         val controller = AnimationController(instance).also { it.setAnimation("slide", -1) }
         return ModelEntity(placement(id), model, instance, controller)
     }
+
     private fun placement(id: Long) = AssetPlacement(id, "model", PlacementTransform.IDENTITY)
 
     private fun model(): Model {
@@ -126,17 +153,28 @@ class RayAnimationSnapshotTest {
         val joint = Node().apply { this.id = "joint" }
         val skin = Node().apply { this.id = "skin" }
         val part = NodePart(MeshPart().apply { id = "part" }, Material())
-        part.invBoneBindTransforms = ArrayMap<Node, Matrix4>(true, 1, Node::class.java, Matrix4::class.java).apply { put(joint, Matrix4()) }
+        part.invBoneBindTransforms =
+            ArrayMap<Node, Matrix4>(true, 1, Node::class.java, Matrix4::class.java).apply { put(joint, Matrix4()) }
         part.bones = Array<Matrix4>().apply { add(Matrix4()) }.toArray(Matrix4::class.java)
         skin.parts.add(part)
-        model.nodes.add(joint); model.nodes.add(skin)
-        val slide = NodeAnimation().apply {
-            node = joint
-            translation = Array<NodeKeyframe<Vector3>>().apply {
-                add(NodeKeyframe(0f, Vector3(0f, 0f, 0f))); add(NodeKeyframe(1f, Vector3(2f, 0f, 0f)))
+        model.nodes.add(joint)
+        model.nodes.add(skin)
+        val slide =
+            NodeAnimation().apply {
+                node = joint
+                translation =
+                    Array<NodeKeyframe<Vector3>>().apply {
+                        add(NodeKeyframe(0f, Vector3(0f, 0f, 0f)))
+                        add(NodeKeyframe(1f, Vector3(2f, 0f, 0f)))
+                    }
             }
-        }
-        model.animations.add(Animation().apply { id = "slide"; duration = 1f; nodeAnimations.add(slide) })
+        model.animations.add(
+            Animation().apply {
+                id = "slide"
+                duration = 1f
+                nodeAnimations.add(slide)
+            }
+        )
         model.calculateTransforms()
         return model
     }
@@ -144,26 +182,70 @@ class RayAnimationSnapshotTest {
     /** The same skinned asset as [model], read the way the scene view reads it: one joint bound to one vertex. */
     private fun snapshot(): RayModelSnapshot {
         val data = ModelData()
-        data.meshes.add(ModelMesh().apply {
-            id = "mesh"
-            attributes = arrayOf(VertexAttribute.Position(), VertexAttribute.Normal(), VertexAttribute.BoneWeight(0))
-            // position, normal, (joint, weight): three vertices, all fully bound to joint 0
-            vertices = floatArrayOf(
-                0f, 0f, 0f, 0f, 0f, 1f, 0f, 1f,
-                1f, 0f, 0f, 0f, 0f, 1f, 0f, 1f,
-                0f, 1f, 0f, 0f, 0f, 1f, 0f, 1f,
-            )
-            parts = arrayOf(ModelMeshPart().apply { id = "part"; primitiveType = GL20.GL_TRIANGLES; indices = intArrayOf(0, 1, 2) })
-        })
-        data.materials.add(ModelMaterial().apply { id = "mat"; diffuse = Color(Color.WHITE) })
+        data.meshes.add(
+            ModelMesh().apply {
+                id = "mesh"
+                attributes =
+                    arrayOf(VertexAttribute.Position(), VertexAttribute.Normal(), VertexAttribute.BoneWeight(0))
+                // position, normal, (joint, weight): three vertices, all fully bound to joint 0
+                vertices =
+                    floatArrayOf(
+                        0f,
+                        0f,
+                        0f,
+                        0f,
+                        0f,
+                        1f,
+                        0f,
+                        1f,
+                        1f,
+                        0f,
+                        0f,
+                        0f,
+                        0f,
+                        1f,
+                        0f,
+                        1f,
+                        0f,
+                        1f,
+                        0f,
+                        0f,
+                        0f,
+                        1f,
+                        0f,
+                        1f,
+                    )
+                parts =
+                    arrayOf(
+                        ModelMeshPart().apply {
+                            id = "part"
+                            primitiveType = GL20.GL_TRIANGLES
+                            indices = intArrayOf(0, 1, 2)
+                        }
+                    )
+            }
+        )
+        data.materials.add(
+            ModelMaterial().apply {
+                id = "mat"
+                diffuse = Color(Color.WHITE)
+            }
+        )
         data.nodes.add(ModelNode().apply { id = "joint" })
-        data.nodes.add(ModelNode().apply {
-            id = "skin"
-            parts = arrayOf(ModelNodePart().apply {
-                meshPartId = "part"; materialId = "mat"
-                bones = ArrayMap<String, Matrix4>().apply { put("joint", Matrix4()) }
-            })
-        })
-        return ModelRaySnapshotLoader(FileLoader(File(".")), AssimpModelLoader()).capture(RayModelSource(data, emptyMap()))
+        data.nodes.add(
+            ModelNode().apply {
+                id = "skin"
+                parts =
+                    arrayOf(
+                        ModelNodePart().apply {
+                            meshPartId = "part"
+                            materialId = "mat"
+                            bones = ArrayMap<String, Matrix4>().apply { put("joint", Matrix4()) }
+                        }
+                    )
+            }
+        )
+        return ModelRaySnapshotLoader(FileLoader(File(".")), AssimpModelLoader())
+            .capture(RayModelSource(data, emptyMap()))
     }
 }

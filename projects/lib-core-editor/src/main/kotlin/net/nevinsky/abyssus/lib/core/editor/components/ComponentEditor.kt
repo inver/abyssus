@@ -8,7 +8,6 @@ package net.nevinsky.abyssus.lib.core.editor.components
 import com.badlogic.ashley.core.Component
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.dto.EntityDto
-import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
@@ -16,6 +15,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.arrange.*
+import net.nevinsky.abyssus.lib.core.format.EntityType
 
 /** What an edit of a scene did. The scene is only touched for [Changed]. */
 sealed interface EditResult {
@@ -43,14 +43,14 @@ class ComponentEditor(
 
     fun kindOf(name: String): ComponentKind<*>? = byName[name]
 
-    private fun <C : Component> componentOf(entity: EntityDto, kind: ComponentKind<C>): C? =
-        entity.component(kind.type)
+    private fun <C : Component> componentOf(entity: EntityDto, kind: ComponentKind<C>): C? = entity.component(kind.type)
 
     /** The modeled kinds [entityId] lacks, in the order the view lists them; empty when the entity is missing. */
     fun missingKinds(scene: SceneDto, entityId: Long): List<ComponentKind<*>> {
         val entity = scene.entity(entityId) ?: return emptyList()
         return kinds.filter { kind ->
-            kind.name != PathArrangementComponent::class.simpleName && entity.components.none { kind.type.isInstance(it) }
+            kind.name != PathArrangementComponent::class.simpleName &&
+                entity.components.none { kind.type.isInstance(it) }
         }
     }
 
@@ -59,11 +59,18 @@ class ComponentEditor(
         val kind = byName[kindName] ?: return null
         val entity = scene.entity(entityId) ?: return null
         val fields = fieldsOf(kind, entity) ?: return null
-        val spotlight = entity.components.filterIsInstance<net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent>()
-            .firstOrNull()?.type == EntityType.LIGHT_SPOT
-        return if (kindName == "LightComponent" && !spotlight) fields.filterNot {
-            it.field in listOf("coneAngle", "edgeSoftness")
-        } else fields
+        val spotlight =
+            entity.components
+                .filterIsInstance<net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent>()
+                .firstOrNull()
+                ?.type == EntityType.LIGHT_SPOT
+        return if (kindName == "LightComponent" && !spotlight) {
+            fields.filterNot {
+                it.field in listOf("coneAngle", "edgeSoftness")
+            }
+        } else {
+            fields
+        }
     }
 
     private fun <C : Component> fieldsOf(kind: ComponentKind<C>, entity: EntityDto): List<FieldValue>? =
@@ -104,11 +111,13 @@ class ComponentEditor(
     ): EditResult {
         val entity = scene.entity(entityId) ?: return reject("componentEntityMissing", entityId)
         val kind = byName[kindName] ?: return reject("componentKindUnknown", kindName)
-        if (entity.components.any { kind.type.isInstance(it) }) return reject(
-            "componentAlreadyPresent",
-            entityId,
-            kind.label
-        )
+        if (entity.components.any { kind.type.isInstance(it) }) {
+            return reject(
+                "componentAlreadyPresent",
+                entityId,
+                kind.label,
+            )
+        }
         return addTo(scene, entity, entityId, kind, initial, Assets(assets, assetsByType))
     }
 
@@ -116,17 +125,25 @@ class ComponentEditor(
     private class Assets(val render: Set<String>?, val byType: Map<String, Set<String>>?)
 
     private fun <C : Component> addTo(
-        scene: SceneDto, entity: EntityDto, entityId: Long, kind: ComponentKind<C>,
-        initial: Map<String, String>, assets: Assets,
+        scene: SceneDto,
+        entity: EntityDto,
+        entityId: Long,
+        kind: ComponentKind<C>,
+        initial: Map<String, String>,
+        assets: Assets,
     ): EditResult {
         val component = kind.create()
         for ((name, text) in initial) {
-            val field = kind.fields.firstOrNull { it.name == name } ?: return reject(
-                "componentFieldUnknown",
-                kind.label,
-                name
-            )
-            checkValue(scene, entityId, kind, field, text, assets)?.let { return it }
+            val field =
+                kind.fields.firstOrNull { it.name == name }
+                    ?: return reject(
+                        "componentFieldUnknown",
+                        kind.label,
+                        name,
+                    )
+            checkValue(scene, entityId, kind, field, text, assets)?.let {
+                return it
+            }
             field.set(component, text)
         }
         if (kind.name == "RenderComponent" && (component as RenderComponent).assetName.isEmpty()) {
@@ -154,25 +171,44 @@ class ComponentEditor(
         val entity = scene.entity(entityId) ?: return reject("componentEntityMissing", entityId)
         val kind = byName[kindName] ?: return reject("componentKindUnknown", kindName)
         return updateIn(
-            scene, entity, entityId, kind, field, text, Assets(assets, assetsByType), heights ?: LineHeights()
+            scene,
+            entity,
+            entityId,
+            kind,
+            field,
+            text,
+            Assets(assets, assetsByType),
+            heights ?: LineHeights(),
         )
     }
 
     private fun <C : Component> updateIn(
-        scene: SceneDto, entity: EntityDto, entityId: Long, kind: ComponentKind<C>,
-        fieldName: String, text: String, assets: Assets, heights: GroundHeight,
+        scene: SceneDto,
+        entity: EntityDto,
+        entityId: Long,
+        kind: ComponentKind<C>,
+        fieldName: String,
+        text: String,
+        assets: Assets,
+        heights: GroundHeight,
     ): EditResult {
         val component = componentOf(entity, kind) ?: return reject("componentMissing", entityId, kind.label)
-        val field = kind.fields.firstOrNull { it.name == fieldName } ?: return reject(
-            "componentFieldUnknown",
-            kind.label,
-            fieldName
-        )
-        checkValue(scene, entityId, kind, field, text, assets)?.let { return it }
+        val field =
+            kind.fields.firstOrNull { it.name == fieldName }
+                ?: return reject(
+                    "componentFieldUnknown",
+                    kind.label,
+                    fieldName,
+                )
+        checkValue(scene, entityId, kind, field, text, assets)?.let {
+            return it
+        }
         val before = field.get(component)
         val previous = (component as? PathArrangementComponent)?.let { arrangementAlong(it.points, it) }
         field.set(component, text)
-        if (field.get(component) == before) return EditResult.Unchanged
+        if (field.get(component) == before) {
+            return EditResult.Unchanged
+        }
         if (component is PathArrangementComponent && PathLayout().slots(component) == null) {
             field.set(component, before)
             return reject("arrangementTooMany", MAX_ARRANGEMENT_SLOTS.toString())
@@ -184,17 +220,25 @@ class ComponentEditor(
                 return EditResult.Rejected(regenerated.reason)
             }
         }
-        if (component is PositionComponent) arrangements.detach(scene, entityId)
+        if (component is PositionComponent) {
+            arrangements.detach(scene, entityId)
+        }
         return EditResult.Changed
     }
 
-    /** Removes the component [kindName] from [entityId], unless another entity still refers to the position it holds. */
+    /**
+     * Removes the component [kindName] from [entityId], unless another entity still refers to the position it holds.
+     */
     fun remove(scene: SceneDto, entityId: Long, kindName: String): EditResult {
         val entity = scene.entity(entityId) ?: return reject("componentEntityMissing", entityId)
         val kind = byName[kindName] ?: return reject("componentKindUnknown", kindName)
-        if (entity.components.none { kind.type.isInstance(it) }) return reject("componentMissing", entityId, kind.label)
+        if (entity.components.none { kind.type.isInstance(it) }) {
+            return reject("componentMissing", entityId, kind.label)
+        }
         if (kindName == "PositionComponent") {
-            referrer(scene, entityId)?.let { return reject("componentReferencedBy", kind.label, entityId, it) }
+            referrer(scene, entityId)?.let {
+                return reject("componentReferencedBy", kind.label, entityId, it)
+            }
         }
         entity.components.removeAll { kind.type.isInstance(it) }
         return EditResult.Changed
@@ -203,8 +247,12 @@ class ComponentEditor(
     /** An entity other than [entityId] that has a reference field naming it, or null. */
     private fun referrer(scene: SceneDto, entityId: Long): Long? {
         for ((id, entity) in scene.entities()) {
-            if (id == entityId) continue
-            if (entity.components.any { references.fieldNaming(it, entityId) != null }) return id
+            if (id == entityId) {
+                continue
+            }
+            if (entity.components.any { references.fieldNaming(it, entityId) != null }) {
+                return id
+            }
         }
         return null
     }
@@ -220,50 +268,80 @@ class ComponentEditor(
         val label = "${kind.label} ${field.name}"
         val value = text.trim()
         return when (field.kind) {
-            FieldKind.FLOAT -> when {
-                value.toFloatOrNull()?.isFinite() != true -> reject("componentNotANumber", label, text)
-                kind.name == "LightComponent" && field.name == "range" && value.toFloat() <= 0f ->
-                    reject("componentNotPositive", label, text)
+            FieldKind.FLOAT ->
+                when {
+                    value.toFloatOrNull()?.isFinite() != true -> reject("componentNotANumber", label, text)
+                    kind.name == "LightComponent" && field.name == "range" && value.toFloat() <= 0f ->
+                        reject("componentNotPositive", label, text)
 
-                kind.name == "LightComponent" && field.name == "coneAngle" && (value.toFloat() <= 0f || value.toFloat() >= 180f) ->
-                    reject("componentConeAngleInvalid", label, text)
+                    kind.name == "LightComponent" &&
+                        field.name == "coneAngle" &&
+                        (value.toFloat() <= 0f || value.toFloat() >= 180f) ->
+                        reject("componentConeAngleInvalid", label, text)
 
-                kind.name == "LightComponent" && field.name == "edgeSoftness" && value.toFloat() !in 0f..100f ->
-                    reject("componentSoftnessInvalid", label, text)
+                    kind.name == "LightComponent" && field.name == "edgeSoftness" && value.toFloat() !in 0f..100f ->
+                        reject("componentSoftnessInvalid", label, text)
 
-                else -> checkLimits(field, label, value.toFloat().toDouble(), value)
-            }
+                    else -> checkLimits(field, label, value.toFloat().toDouble(), value)
+                }
 
             FieldKind.INT -> {
                 val number = value.toIntOrNull()
-                if (number == null) reject("componentNotAnInteger", label, text) else checkLimits(
-                    field,
-                    label,
-                    number.toDouble(),
-                    value
-                )
+                if (number == null) {
+                    reject("componentNotAnInteger", label, text)
+                } else {
+                    checkLimits(
+                        field,
+                        label,
+                        number.toDouble(),
+                        value,
+                    )
+                }
             }
 
-            FieldKind.BOOLEAN -> if (value == "true" || value == "false") null else reject(
-                "componentNotABoolean",
-                label,
-                text
-            )
+            FieldKind.BOOLEAN ->
+                if (value == "true" || value == "false") {
+                    null
+                } else {
+                    reject(
+                        "componentNotABoolean",
+                        label,
+                        text,
+                    )
+                }
 
             FieldKind.TEXT -> null
             // the meshes of a model are read from the model; whether the id is among them is shown, not enforced
             FieldKind.MESH_ID -> null
             FieldKind.CHOICE ->
-                if (value in field.choices || (field.optional && value.isEmpty())) null
-                else reject("componentNotAChoice", label, text, field.choices.joinToString(", "))
+                if (value in field.choices || (field.optional && value.isEmpty())) {
+                    null
+                } else {
+                    reject("componentNotAChoice", label, text, field.choices.joinToString(", "))
+                }
 
             FieldKind.ASSET_NAME -> {
                 val type = field.assetType
                 // a schema's asset reference may be cleared, and names a folder of its declared type
-                val known = if (type != null) assets.byType?.get(type).orEmpty() else assets.render
-                val checked = if (type != null) assets.byType != null else assets.render != null
+                val known =
+                    if (type != null) {
+                        assets.byType?.get(type).orEmpty()
+                    } else {
+                        assets.render
+                    }
+                val checked =
+                    if (type != null) {
+                        assets.byType != null
+                    } else {
+                        assets.render != null
+                    }
                 when {
-                    value.isEmpty() -> if (type != null) null else reject("componentAssetRequired")
+                    value.isEmpty() ->
+                        if (type != null) {
+                            null
+                        } else {
+                            reject("componentAssetRequired")
+                        }
                     checked && value !in known.orEmpty() -> reject("componentAssetUnknown", label, text)
                     else -> null
                 }
@@ -278,17 +356,18 @@ class ComponentEditor(
         field: ComponentField<*>,
         label: String,
         number: Double,
-        text: String
+        text: String,
     ): EditResult.Rejected? {
         val min = field.min
         val max = field.max
         return when {
-            min != null && field.minExclusive && number <= min -> reject(
-                "componentNotAboveMinimum",
-                label,
-                text,
-                limitText(min)
-            )
+            min != null && field.minExclusive && number <= min ->
+                reject(
+                    "componentNotAboveMinimum",
+                    label,
+                    text,
+                    limitText(min),
+                )
 
             min != null && number < min -> reject("componentBelowMinimum", label, text, limitText(min))
             max != null && number > max -> reject("componentAboveMaximum", label, text, limitText(max))
@@ -307,16 +386,24 @@ class ComponentEditor(
         value: String,
     ): EditResult.Rejected? {
         val target = value.toIntOrNull() ?: return reject("componentNotAnInteger", label, value)
-        if (target == NO_ENTITY) return null
-        if (scene.entity(target.toLong()) == null) return reject("componentUnknownEntity", label, target)
+        if (target == NO_ENTITY) {
+            return null
+        }
+        if (scene.entity(target.toLong()) == null) {
+            return reject("componentUnknownEntity", label, target)
+        }
         if (kind.name == "ParentComponent" && field.name == "parentEntityId") {
-            if (target.toLong() == entityId) return reject("componentParentSelf", label)
+            if (target.toLong() == entityId) {
+                return reject("componentParentSelf", label)
+            }
             var current: Int = target
             val seen = HashSet<Int>()
             while (current != NO_ENTITY && seen.add(current)) {
-                val next = scene.entity(current.toLong())?.component(ParentComponent::class.java)
-                    ?.parentEntityId ?: NO_ENTITY
-                if (next.toLong() == entityId) return reject("componentParentCycle", label, target, entityId)
+                val next =
+                    scene.entity(current.toLong())?.component(ParentComponent::class.java)?.parentEntityId ?: NO_ENTITY
+                if (next.toLong() == entityId) {
+                    return reject("componentParentCycle", label, target, entityId)
+                }
                 current = next
             }
         }
@@ -324,5 +411,4 @@ class ComponentEditor(
     }
 
     private fun reject(key: String, vararg params: Any) = EditResult.Rejected(messages.message(key, *params))
-
 }

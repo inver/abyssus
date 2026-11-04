@@ -30,8 +30,9 @@ class ScenePicker {
     fun restHeight(footprint: OrientedBox, boxes: List<OrientedBox>, terrains: List<TerrainTarget>): Float? {
         var best: Float? = null
         for (box in boxes) {
-            if (box.bottom < footprint.bottom + REST_EPS && footprint.overlaps(box))
+            if (box.bottom < footprint.bottom + REST_EPS && footprint.overlaps(box)) {
                 best = best?.let { maxOf(it, box.top) } ?: box.top
+            }
         }
         for (terrain in terrains) {
             val height = TerrainRestHeight().height(footprint, terrain) ?: continue
@@ -58,12 +59,19 @@ class ScenePicker {
         nearest(ray, boxes, terrains, maxDistance)?.first
 
     /** Like [pick], with the distance along [ray] to the hit. */
-    fun nearest(ray: Ray, boxes: List<BoxTarget>, terrains: List<TerrainTarget>, maxDistance: Float): Pair<Long, Float>? {
+    fun nearest(
+        ray: Ray,
+        boxes: List<BoxTarget>,
+        terrains: List<TerrainTarget>,
+        maxDistance: Float,
+    ): Pair<Long, Float>? {
         var best: Long? = null
         var bestDistance = Float.MAX_VALUE
         val hit = Vector3()
         for (b in boxes) {
-            if (!Intersector.intersectRayBounds(ray, b.bounds, hit)) continue
+            if (!Intersector.intersectRayBounds(ray, b.bounds, hit)) {
+                continue
+            }
             val d = hit.dst(ray.origin)
             if (d < bestDistance) {
                 bestDistance = d
@@ -82,7 +90,8 @@ class ScenePicker {
 
     /**
      * Marches the ray through the terrain's local space until it passes from above the surface to below it, then
-     * bisects the crossing. A ray that starts below the surface or outside the terrain only hits it by dropping onto it.
+     * bisects the crossing. A ray that starts below the surface or outside the terrain only hits it by dropping onto
+     * it.
      */
     internal fun terrainDistance(ray: Ray, t: TerrainTarget, maxDistance: Float): Float? {
         val inverse = Matrix4(t.world).inv()
@@ -90,7 +99,9 @@ class ScenePicker {
         val direction = Vector3(ray.direction).mul(inverse).sub(Vector3().mul(inverse)).nor()
         // world distance of one local unit along the ray (world transforms with uniform scale keep this at 1)
         val toWorld = Vector3(direction).mul(t.world).sub(Vector3().mul(t.world)).len()
-        if (!toWorld.isFinite() || toWorld <= 0f) return null
+        if (!toWorld.isFinite() || toWorld <= 0f) {
+            return null
+        }
         val step = t.data.size.toFloat() / (t.data.resolution - 1) / 2f
         val limit = maxDistance / toWorld
         fun above(d: Float): Boolean? {
@@ -102,7 +113,9 @@ class ScenePicker {
         var d = step
         while (d <= limit) {
             val now = above(d)
-            if (previousAbove == true && now == false) return refine(::above, previous, d) * toWorld
+            if (previousAbove == true && now == false) {
+                return refine(::above, previous, d) * toWorld
+            }
             previous = d
             previousAbove = now
             d += step
@@ -115,7 +128,11 @@ class ScenePicker {
         var hi = to
         repeat(24) {
             val mid = (lo + hi) / 2f
-            if (above(mid) == true) lo = mid else hi = mid
+            if (above(mid) == true) {
+                lo = mid
+            } else {
+                hi = mid
+            }
         }
         return (lo + hi) / 2f
     }

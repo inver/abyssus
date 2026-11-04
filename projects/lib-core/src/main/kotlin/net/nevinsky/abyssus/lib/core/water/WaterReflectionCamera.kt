@@ -16,7 +16,8 @@ class ViewPose(val position: Vector3, val direction: Vector3, val up: Vector3)
  * vectors only, no GL).
  *
  * The reflection is rendered by drawing the real scene through `view * reflection` (see [matrix]): each point `P`
- * lands where its mirror image `P'` would be seen from the real camera, so a water fragment at world position `W` on the
+  * lands where its mirror image `P'` would be seen from the real camera, so a water fragment at world position `W` on
+  * the
  * plane projects to the same pixel in the reflected image as in the main one, and the image can be sampled at the
  * fragment's own screen position. Because the mirror has determinant -1, triangles drawn through it have the opposite
  * winding ([flipsWinding]): the reflected pass draws with clockwise front faces.

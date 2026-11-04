@@ -11,64 +11,64 @@ import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.Mesh
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g3d.Environment
+import com.badlogic.gdx.graphics.g3d.Model
+import com.badlogic.gdx.graphics.g3d.ModelBatch
+import com.badlogic.gdx.graphics.g3d.Renderable
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
+import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader
 import com.badlogic.gdx.graphics.g3d.utils.TextureProvider
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.Pool
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
+import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.assets.testFileLoader
 import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.testProject
-import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
-import com.badlogic.gdx.graphics.g3d.ModelBatch
-import com.badlogic.gdx.graphics.g3d.Renderable
-import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
-import com.badlogic.gdx.graphics.Mesh
-import com.badlogic.gdx.graphics.g3d.Model
 import net.nevinsky.abyssus.lib.gdx.g3d.IntMesh
 import net.nevinsky.abyssus.lib.gdx.g3d.IntModel
 import net.nevinsky.abyssus.lib.gdx.g3d.ModelShader
 import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
-import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.File
 
 private const val CAMERA_MOVE = 0.001f
 
 /**
  * The GL side of design decision 5: the `Foliage` fixture's layers draw their baked copies as instanced parts of the
- * layer models, the instance buffers hold exactly the copies the culling keeps, and they are refilled only when what
- * is drawn changes.
+ * layer models, the instance buffers hold exactly the copies the culling keeps, and they are refilled only when what is
+ * drawn changes.
  *
  * The fixture's model folders hold no binaries, so the two models come from `Untitled` (the `tree` layer scatters
  * `model_828d51e4`, whose three meshes give the per-node-part instancing something to cut up). A `Mesh` allocates GL
  * buffers, so this is a GL test: opt-in `-Dabyssus.glTests=true`.
  */
 class FoliageDrawableGlTest {
-    @Before
-    fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
+    @Before fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
 
     private val untitled = testProject("Untitled")
 
     /** The folder names of the `Foliage` fixture's layers, backed by the models of `Untitled`. */
-    private val modelFolders = mapOf(
-        "tree" to "model_828d51e4-8427-4769-bcb6-13f8f21f23e9",
-        "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb" to "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb",
-    )
+    private val modelFolders =
+        mapOf(
+            "tree" to "model_828d51e4-8427-4769-bcb6-13f8f21f23e9",
+            "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb" to "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb",
+        )
 
     private fun prepared(): PreparedFoliage {
         val project = testProject("Foliage")
@@ -77,25 +77,31 @@ class FoliageDrawableGlTest {
         return checkNotNull(loader.prepare("foliage_meadow")) { "the Foliage fixture" }.staged
     }
 
-    private fun loadModels(): Map<String, Model> = modelFolders.map { (folder, asset) ->
-        val meta = checkNotNull(testMetaLoader(untitled).loadBaseMeta(asset)) { "$asset has a meta" }
-        val file = FileHandle(File(untitled, "assets/$asset/${checkNotNull(meta.typedAdditional<ModelMeta>().file)}"))
-        folder to IntModel(AssimpModelLoader().loadData(file), StubTextures())
-    }.toMap()
+    private fun loadModels(): Map<String, Model> =
+        modelFolders
+            .map { (folder, asset) ->
+                val meta = checkNotNull(testMetaLoader(untitled).loadBaseMeta(asset)) { "$asset has a meta" }
+                val file =
+                    FileHandle(File(untitled, "assets/$asset/${checkNotNull(meta.typedAdditional<ModelMeta>().file)}"))
+                folder to IntModel(AssimpModelLoader().loadData(file), StubTextures())
+            }
+            .toMap()
 
-    private fun camera(): PerspectiveCamera = PerspectiveCamera(60f, 4f, 3f).apply { // a 4 by 3 viewport: aspect 4/3
-        position.set(10f, 5f, 10f)
-        direction.set(1f, 0f, 0f)
-        near = 0.1f
-        far = 5000f
-        update()
-    }
+    private fun camera(): PerspectiveCamera =
+        PerspectiveCamera(60f, 4f, 3f).apply { // a 4 by 3 viewport: aspect 4/3
+            position.set(10f, 5f, 10f)
+            direction.set(1f, 0f, 0f)
+            near = 0.1f
+            far = 5000f
+            update()
+        }
 
     /** The camera the tiniest step further on: the same chunks, but a moved camera for a DETAIL layer. */
-    private fun moved(): PerspectiveCamera = camera().apply {
-        position.x += CAMERA_MOVE
-        update()
-    }
+    private fun moved(): PerspectiveCamera =
+        camera().apply {
+            position.x += CAMERA_MOVE
+            update()
+        }
 
     /** The copies the culling and the distance rules keep, computed here rather than through the drawable. */
     private fun expected(
@@ -105,7 +111,10 @@ class FoliageDrawableGlTest {
         kind: FoliageLayerKind? = null,
     ): Int = kept(prepared, drawable, camera, kind).size
 
-    /** The copies of one [kind] (of every kind when it is null) the culling and the distance rules keep, with their world positions. */
+    /**
+     * The copies of one [kind] (of every kind when it is null) the culling and the distance rules keep, with their
+     * world positions.
+     */
     private fun kept(
         prepared: PreparedFoliage,
         drawable: FoliageDrawable,
@@ -117,22 +126,39 @@ class FoliageDrawableGlTest {
         val position = Vector3()
         val kept = ArrayList<Vector3>()
         for (layerMeta in prepared.meta.layers) {
-            if (kind != null && layerMeta.layerKind() != kind) continue
+            if (kind != null && layerMeta.layerKind() != kind) {
+                continue
+            }
             val layerBake = bake.layers.firstOrNull { it.id == layerMeta.id } ?: continue
             val grid = foliageChunkGrid(layerBake, bake.chunkSize, ground, drawable.chunkPad)
             val layerKind = layerMeta.layerKind()
-            val visible = visibleFoliageChunks(
-                grid, Matrix4(), layerKind, layerMeta.drawDistance, camera, BooleanArray(grid.boxes.size)
-            )
-            val distance2 = if (layerKind == FoliageLayerKind.DETAIL) layerMeta.drawDistance * layerMeta.drawDistance else -1f
+            val visible =
+                visibleFoliageChunks(
+                    grid,
+                    Matrix4(),
+                    layerKind,
+                    layerMeta.drawDistance,
+                    camera,
+                    BooleanArray(grid.boxes.size),
+                )
+            val distance2 =
+                if (layerKind == FoliageLayerKind.DETAIL) {
+                    layerMeta.drawDistance * layerMeta.drawDistance
+                } else {
+                    -1f
+                }
             for (chunk in layerBake.chunks.indices) {
-                if (!visible[chunk]) continue
+                if (!visible[chunk]) {
+                    continue
+                }
                 for (copy in layerBake.chunks[chunk]) {
                     val folder = layerMeta.models.getOrNull(copy.model)?.asset ?: continue
                     assertTrue("$folder is a loaded model", drawable.layerModels[folder] is Model)
                     val height = ground.heightAt(copy.x, copy.z) ?: continue
                     position.set(copy.x, height, copy.z)
-                    if (distance2 >= 0f && position.dst2(camera.position) > distance2) continue
+                    if (distance2 >= 0f && position.dst2(camera.position) > distance2) {
+                        continue
+                    }
                     kept += Vector3(position)
                 }
             }
@@ -148,10 +174,20 @@ class FoliageDrawableGlTest {
         for (layerMeta in prepared.meta.layers) {
             val layerBake = bake.layers.firstOrNull { it.id == layerMeta.id } ?: continue
             val grid = foliageChunkGrid(layerBake, bake.chunkSize, ground, drawable.chunkPad)
-            val visible = visibleFoliageChunks(
-                grid, Matrix4(), layerMeta.layerKind(), layerMeta.drawDistance, camera, BooleanArray(grid.boxes.size)
-            )
-            visible.forEachIndexed { index, seen -> if (seen) out += "${layerMeta.id}:$index" }
+            val visible =
+                visibleFoliageChunks(
+                    grid,
+                    Matrix4(),
+                    layerMeta.layerKind(),
+                    layerMeta.drawDistance,
+                    camera,
+                    BooleanArray(grid.boxes.size),
+                )
+            visible.forEachIndexed { index, seen ->
+                if (seen) {
+                    out += "${layerMeta.id}:$index"
+                }
+            }
         }
         return out
     }
@@ -183,12 +219,17 @@ class FoliageDrawableGlTest {
             val step = moved()
             assertEquals(
                 "the step must be too small to change which chunks are seen",
-                visibleSet(foliage, drawable, camera), visibleSet(foliage, drawable, step),
+                visibleSet(foliage, drawable, camera),
+                visibleSet(foliage, drawable, step),
             )
             // a drift under the refill distance keeps the buffers: a refill walks every copy
             drawable.update(step, entity)
             assertEquals("a tiny drift refills nothing", 1, drawable.rebuilds)
-            val far = camera().apply { position.x += 5f; update() }
+            val far =
+                camera().apply {
+                    position.x += 5f
+                    update()
+                }
             drawable.update(far, entity)
             assertEquals("a DETAIL layer is distance culled, so a camera that moved on refills", 2, drawable.rebuilds)
             assertEquals(expected(foliage, drawable, far), drawable.drawnCopies)
@@ -201,7 +242,8 @@ class FoliageDrawableGlTest {
                 assertEquals(1, objectDrawable.rebuilds)
                 assertEquals(
                     "the step must be too small to change which chunks are seen",
-                    visibleSet(objects, objectDrawable, camera), visibleSet(objects, objectDrawable, step),
+                    visibleSet(objects, objectDrawable, camera),
+                    visibleSet(objects, objectDrawable, step),
                 )
                 objectDrawable.update(step, entity)
                 assertEquals("an OBJECT-only foliage is not camera culled", 1, objectDrawable.rebuilds)
@@ -281,7 +323,10 @@ class FoliageDrawableGlTest {
             val bounds = checkNotNull(drawable.objectBounds) { "the box of the drawn OBJECT copies" }
             val modelBox = BoundingBox()
             checkNotNull(models["tree"]) { "the OBJECT layer's model" }.calculateBoundingBox(modelBox)
-            assertTrue("the box only means anything if the model stands on its own origin", modelBox.contains(Vector3.Zero))
+            assertTrue(
+                "the box only means anything if the model stands on its own origin",
+                modelBox.contains(Vector3.Zero),
+            )
             val kept = kept(foliage, drawable, camera, FoliageLayerKind.OBJECT)
             assertTrue("the fixture draws OBJECT copies", kept.isNotEmpty())
             for (position in kept) {
@@ -311,11 +356,12 @@ class FoliageDrawableGlTest {
     private fun assertRenderablesAreInstancedPartsOfTheModels(drawable: FoliageDrawable, models: Map<String, Model>) {
         val renderables = renderables(drawable)
         assertTrue("the bake has parts to draw", renderables.size > 0)
-        val sources = models.values.flatMap { model ->
-            model.meshes.map { mesh ->
-                FloatArray(mesh.numVertices * mesh.vertexSize / 4).also { mesh.getVertices(it) }
+        val sources =
+            models.values.flatMap { model ->
+                model.meshes.map { mesh ->
+                    FloatArray(mesh.numVertices * mesh.vertexSize / 4).also { mesh.getVertices(it) }
+                }
             }
-        }
         for (renderable in renderables) {
             val mesh = checkNotNull(renderable.meshPart.mesh) { "a mesh" }
             assertTrue("the part is instanced", mesh.isInstanced)
@@ -328,17 +374,24 @@ class FoliageDrawableGlTest {
     }
 
     private fun assertTheyDrawWithoutGlErrors(drawable: FoliageDrawable, camera: Camera) {
-        val provider = ModelShaderProvider(DefaultShader.Config().apply { numPointLights = 0; numSpotLights = 0 })
+        val provider =
+            ModelShaderProvider(
+                DefaultShader.Config().apply {
+                    numPointLights = 0
+                    numSpotLights = 0
+                }
+            )
         try {
             val renderables = renderables(drawable)
             val shader = provider.getShader(renderables.first()) as ModelShader
             assertTrue("an instanced mesh is drawn by the instanced variant", shader.instanced)
 
             val batch = ModelBatch(provider)
-            val environment = Environment().apply {
-                add(DirectionalLight().set(Color(0.8f, 0.8f, 0.8f, 1f), 0f, -1f, 0f))
-                set(ColorAttribute.createAmbientLight(0.25f, 0.25f, 0.25f, 1f))
-            }
+            val environment =
+                Environment().apply {
+                    add(DirectionalLight().set(Color(0.8f, 0.8f, 0.8f, 1f), 0f, -1f, 0f))
+                    set(ColorAttribute.createAmbientLight(0.25f, 0.25f, 0.25f, 1f))
+                }
             while (Gdx.gl.glGetError() != GL20.GL_NO_ERROR) { // only this frame's own errors count
                 Gdx.gl.glGetError()
             }
@@ -376,19 +429,29 @@ class FoliageDrawableGlTest {
     /** `Matrix4` has no identity predicate in this libGDX version: read the sixteen floats. */
     private fun isIdentity(matrix: Matrix4): Boolean {
         val values = matrix.getValues()
-        for (index in values.indices) if (values[index] != (if (index % 5 == 0) 1f else 0f)) return false
+        for (index in values.indices) if (
+            values[index] !=
+                (if (index % 5 == 0) {
+                    1f
+                } else {
+                    0f
+                })
+        ) {
+            return false
+        }
         return true
     }
 
     /** The fixture with only its OBJECT layer, as a layer toggle or a later bake would leave it. */
-    private fun objectOnly(foliage: PreparedFoliage): PreparedFoliage = PreparedFoliage(
-        foliage.meta.copy(layers = listOf(foliage.meta.layers[0])),
-        foliage.terrain,
-        mapOf(foliage.meta.layers[0].id to foliage.masks.getValue(foliage.meta.layers[0].id)),
-        objectBake(foliage),
-        foliage.fingerprint,
-        foliage.dependencies,
-    )
+    private fun objectOnly(foliage: PreparedFoliage): PreparedFoliage =
+        PreparedFoliage(
+            foliage.meta.copy(layers = listOf(foliage.meta.layers[0])),
+            foliage.terrain,
+            mapOf(foliage.meta.layers[0].id to foliage.masks.getValue(foliage.meta.layers[0].id)),
+            objectBake(foliage),
+            foliage.fingerprint,
+            foliage.dependencies,
+        )
 
     /** The fixture with only its DETAIL layer: its copies are drawn, but they cast no shadow of their own. */
     private fun detailOnly(foliage: PreparedFoliage): PreparedFoliage {
@@ -405,14 +468,15 @@ class FoliageDrawableGlTest {
     }
 
     /** The fixture with both layers scattering the same model folder, as a project that reuses one asset would. */
-    private fun sharedFolder(foliage: PreparedFoliage): PreparedFoliage = PreparedFoliage(
-        foliage.meta.copy(layers = foliage.meta.layers.map { it.copy(models = listOf(FoliageModelMeta("tree"))) }),
-        foliage.terrain,
-        foliage.masks,
-        foliage.bake,
-        foliage.fingerprint,
-        foliage.dependencies,
-    )
+    private fun sharedFolder(foliage: PreparedFoliage): PreparedFoliage =
+        PreparedFoliage(
+            foliage.meta.copy(layers = foliage.meta.layers.map { it.copy(models = listOf(FoliageModelMeta("tree"))) }),
+            foliage.terrain,
+            foliage.masks,
+            foliage.bake,
+            foliage.fingerprint,
+            foliage.dependencies,
+        )
 
     private fun objectBake(foliage: PreparedFoliage): FoliageBake {
         val bake = checkNotNull(foliage.bake) { "the fixture bake" }
@@ -427,15 +491,16 @@ class FoliageDrawableGlTest {
     private class StubTextures : TextureProvider {
         private val byName = HashMap<String, Texture>()
 
-        override fun load(fileName: String): Texture = byName.getOrPut(fileName) {
-            val pixmap = Pixmap(1, 1, Pixmap.Format.RGBA8888)
-            pixmap.setColor(Color.WHITE)
-            pixmap.fill()
-            try {
-                Texture(pixmap)
-            } finally {
-                pixmap.dispose()
+        override fun load(fileName: String): Texture =
+            byName.getOrPut(fileName) {
+                val pixmap = Pixmap(1, 1, Pixmap.Format.RGBA8888)
+                pixmap.setColor(Color.WHITE)
+                pixmap.fill()
+                try {
+                    Texture(pixmap)
+                } finally {
+                    pixmap.dispose()
+                }
             }
-        }
     }
 }

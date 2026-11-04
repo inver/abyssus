@@ -28,17 +28,23 @@ internal class CanvasAntialiasing(
         private set
 
     fun setLevel(value: AntialiasingLevel, showing: Boolean) {
-        if (value == level) return
+        if (value == level) {
+            return
+        }
         level = value
         remaining = SampleFallback().counts(value)
         stale = true
-        if (showing) shown()
+        if (showing) {
+            shown()
+        }
     }
 
     fun abandoned() { stale = true }
 
     fun shown() {
-        if (!stale) return
+        if (!stale) {
+            return
+        }
         samples = remaining.first()
         replace(samples)
         // Disposing the old hidden canvas may call abandoned(); the new canvas is already fresh.

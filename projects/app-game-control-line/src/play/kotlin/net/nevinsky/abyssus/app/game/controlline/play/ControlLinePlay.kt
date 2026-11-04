@@ -93,7 +93,11 @@ class ControlLinePlay : PlayModule {
 
     override fun lines(world: PhysicsWorld): List<DebugLine> {
         val f = flight ?: return emptyList()
-        val color = if (f.tension >= CONTROL_TENSION) TAUT else SLACK
+        val color = if (f.tension >= CONTROL_TENSION) {
+            TAUT
+        } else {
+            SLACK
+        }
         val a = Vector3()
         val b = Vector3()
         return f.rig.lines.map { line ->
@@ -109,10 +113,14 @@ class ControlLinePlay : PlayModule {
         private var waited = 0f
 
         override fun update(deltaTime: Float) {
-            if (flights == 0) start()
+            if (flights == 0) {
+                start()
+            }
             if (flight.finished) {
                 waited += deltaTime
-                if (waited >= RESTART_DELAY) start()
+                if (waited >= RESTART_DELAY) {
+                    start()
+                }
                 return
             }
             input.update(deltaTime)

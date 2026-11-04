@@ -5,8 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.plugin.assetfiles.assetResultMessage
-
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -19,6 +17,10 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
+import java.io.File
+import javax.swing.JComponent
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.foliage.FOLIAGE_DATA_FILE
@@ -26,18 +28,17 @@ import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMeta
-import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_MASK_RESOLUTION_DIALOG_DEFAULT
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_MASK_RESOLUTION_MAX
 import net.nevinsky.abyssus.lib.core.editor.foliage.FOLIAGE_MASK_RESOLUTION_MIN
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageAssetWriter
 import net.nevinsky.abyssus.lib.core.editor.foliage.FoliageCreateError
+import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.ui.documentChanges
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.DocumentServices
 import net.nevinsky.abyssus.plugin.FoliageServices
@@ -48,14 +49,12 @@ import net.nevinsky.abyssus.plugin.assetfiles.AssetTransaction
 import net.nevinsky.abyssus.plugin.assetfiles.FileChange
 import net.nevinsky.abyssus.plugin.assetfiles.FileSnapshot
 import net.nevinsky.abyssus.plugin.assetfiles.LocalAssetFileStore
+import net.nevinsky.abyssus.plugin.assetfiles.assetResultMessage
 import net.nevinsky.abyssus.plugin.dto.textOf
 import net.nevinsky.abyssus.plugin.projectView.action.asset.assetsNodeProjectFile
 import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetLater
+import net.nevinsky.abyssus.plugin.ui.documentChanges
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
-import java.io.File
-import javax.swing.JComponent
-import javax.swing.event.DocumentEvent
-import javax.swing.event.DocumentListener
 
 /** The folder name New Foliage... starts with, plus the chosen terrain's folder name. */
 internal fun foliageFolderName(terrain: String) = FOLIAGE_NAME_PREFIX + terrain
@@ -70,14 +69,21 @@ private const val FOLIAGE_NAME_PREFIX = "foliage_"
 internal fun foliageTerrains(projectDir: File, json: JsonProcessor): List<String> {
     val files = FileLoader(projectDir)
     val metas = AssetMetaLoader(json, files)
-    return File(projectDir, ASSETS_DIR).listFiles { f -> f.isDirectory }.orEmpty().mapNotNull { folder ->
-        runCatchingKeepingCancellation {
-            val meta = metas.loadBaseMeta(folder.name) ?: return@runCatchingKeepingCancellation null
-            if (meta.type != MetaType.TERRAIN) return@runCatchingKeepingCancellation null
-            val heights = meta.typedAdditional<TerrainMeta>().terrainFile
-            folder.name.takeIf { heights != null && files.findAssetFile(folder.name, heights)?.isFile == true }
-        }.getOrNull()
-    }.sorted()
+    return File(projectDir, ASSETS_DIR)
+        .listFiles { f -> f.isDirectory }
+        .orEmpty()
+        .mapNotNull { folder ->
+            runCatchingKeepingCancellation {
+                val meta = metas.loadBaseMeta(folder.name) ?: return@runCatchingKeepingCancellation null
+                if (meta.type != MetaType.TERRAIN) {
+                    return@runCatchingKeepingCancellation null
+                }
+                val heights = meta.typedAdditional<TerrainMeta>().terrainFile
+                folder.name.takeIf { heights != null && files.findAssetFile(folder.name, heights)?.isFile == true }
+            }
+                .getOrNull()
+        }
+        .sorted()
 }
 
 /** The heights of the terrain [name], or null when the project cannot read them; needed before a bake is planned. */
@@ -85,15 +91,20 @@ internal fun foliageTerrainData(projectDir: File, json: JsonProcessor, name: Str
     runCatchingKeepingCancellation {
         val files = FileLoader(projectDir)
         TerrainLoader(files, AssetMetaLoader(json, files)).prepare(name)?.staged?.data
-    }.getOrNull()
+    }
+    .getOrNull()
 
 /** The localized reason [error] gives for refusing a new foliage asset, as the dialog and Create both show it. */
-internal fun FoliageCreateError.message(): String = when (this) {
-    is FoliageCreateError.FolderName -> AbyssusBundle.message("newTerrainNameError.${reason.name}")
-    FoliageCreateError.MaskResolution -> AbyssusBundle.message(
-        "newFoliageResolutionRange", FOLIAGE_MASK_RESOLUTION_MIN, FOLIAGE_MASK_RESOLUTION_MAX,
-    )
-}
+internal fun FoliageCreateError.message(): String =
+    when (this) {
+        is FoliageCreateError.FolderName -> AbyssusBundle.message("newTerrainNameError.${reason.name}")
+        FoliageCreateError.MaskResolution ->
+            AbyssusBundle.message(
+                "newFoliageResolutionRange",
+                FOLIAGE_MASK_RESOLUTION_MIN,
+                FOLIAGE_MASK_RESOLUTION_MAX,
+            )
+    }
 
 /**
  * Right-click New Foliage on the Assets node of a recognized project with at least one readable terrain: a dialog for
@@ -111,15 +122,20 @@ open class NewFoliageAction : AbyssusTreeAction<VirtualFile>() {
     /** Only offered where the project has a terrain to scatter on, so it is hidden elsewhere. */
     override fun targetOf(node: Any?): VirtualFile? = owningProject(node)?.takeIf { terrainsOf(it).isNotEmpty() }
 
-    private fun terrainsOf(abss: VirtualFile) = foliageTerrains(File(abss.parent.path), service<AbyssusPluginCtx>().json)
+    private fun terrainsOf(abss: VirtualFile) =
+        foliageTerrains(File(abss.parent.path), service<AbyssusPluginCtx>().json)
 
     override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
         val abss = target
         val terrains = terrainsOf(abss)
-        if (terrains.isEmpty()) return
+        if (terrains.isEmpty()) {
+            return
+        }
         val core = service<AbyssusPluginCtx>()
         val dialog = NewFoliageDialog(project, File(abss.parent.path), terrains, core.foliage.newFoliages)
-        if (!dialog.showAndGet()) return
+        if (!dialog.showAndGet()) {
+            return
+        }
         createFoliage(project, abss, dialog.terrain, dialog.name, dialog.maskResolution, core.documents, core.foliage)
     }
 }
@@ -133,14 +149,20 @@ internal class NewFoliageDialog(
 ) : DialogWrapper(project) {
     val terrainCombo = ComboBox(terrains.toTypedArray()).apply { name = "new-foliage-terrain" }
     val nameField = JBTextField(foliageFolderName(terrains.first())).apply { name = "new-foliage-name" }
-    val resolutionField = JBTextField(FOLIAGE_MASK_RESOLUTION_DIALOG_DEFAULT.toString(), 8).apply { name = "new-foliage-resolution" }
+    val resolutionField =
+        JBTextField(FOLIAGE_MASK_RESOLUTION_DIALOG_DEFAULT.toString(), 8).apply { name = "new-foliage-resolution" }
     val reason = JBLabel().apply { name = "new-foliage-reason" }
 
     private var suggested = foliageFolderName(terrains.first())
 
-    val terrain: String get() = (terrainCombo.selectedItem as? String) ?: terrains.first()
-    val name: String get() = nameField.text
-    val maskResolution: Int get() = resolutionField.text.trim().toIntOrNull() ?: Int.MIN_VALUE
+    val terrain: String
+        get() = (terrainCombo.selectedItem as? String) ?: terrains.first()
+
+    val name: String
+        get() = nameField.text
+
+    val maskResolution: Int
+        get() = resolutionField.text.trim().toIntOrNull() ?: Int.MIN_VALUE
 
     init {
         title = AbyssusBundle.message("newFoliageTitle")
@@ -151,7 +173,9 @@ internal class NewFoliageDialog(
         terrainCombo.addActionListener {
             val fresh = foliageFolderName(terrain)
             // the name is still the one this dialog suggested: follow the terrain it was suggested for
-            if (nameField.text == suggested) nameField.text = fresh
+            if (nameField.text == suggested) {
+                nameField.text = fresh
+            }
             suggested = fresh
             revalidate()
         }
@@ -164,21 +188,22 @@ internal class NewFoliageDialog(
         isOKActionEnabled = error == null
     }
 
-    override fun createCenterPanel(): JComponent = FormBuilder.createFormBuilder()
-        .addLabeledComponent(AbyssusBundle.message("newFoliageTerrain"), terrainCombo)
-        .addLabeledComponent(AbyssusBundle.message("newFoliageName"), nameField)
-        .addLabeledComponent(AbyssusBundle.message("newFoliageResolution"), resolutionField)
-        .addComponent(reason)
-        .panel
+    override fun createCenterPanel(): JComponent =
+        FormBuilder.createFormBuilder()
+            .addLabeledComponent(AbyssusBundle.message("newFoliageTerrain"), terrainCombo)
+            .addLabeledComponent(AbyssusBundle.message("newFoliageName"), nameField)
+            .addLabeledComponent(AbyssusBundle.message("newFoliageResolution"), resolutionField)
+            .addComponent(reason)
+            .panel
 
     override fun getPreferredFocusedComponent(): JComponent = nameField
 }
 
 /**
- * Writes the foliage of [terrainFolder] named [rawName] under [abss]'s project as one undoable command, then selects
- * it in the view. The project document is re-read first, the name and the resolution are re-checked against the
- * assets folder, and only a terrain the project can read is planned against; every refusal goes to [report] and
- * writes nothing.
+ * Writes the foliage of [terrainFolder] named [rawName] under [abss]'s project as one undoable command, then selects it
+ * in the view. The project document is re-read first, the name and the resolution are re-checked against the assets
+ * folder, and only a terrain the project can read is planned against; every refusal goes to [report] and writes
+ * nothing.
  */
 fun createFoliage(
     project: Project,
@@ -195,37 +220,62 @@ fun createFoliage(
     val accepted = runCatchingKeepingCancellation {
         documents.parsing.requireSupported(textOf(abss), DocumentKind.PROJECT)
     }
-    accepted.exceptionOrNull()?.let { report(it.documentDisplayMessage()); return null }
+    accepted.exceptionOrNull()?.let {
+        report(it.documentDisplayMessage())
+        return null
+    }
 
     val name = rawName.trim()
     foliage.newFoliages.check(projectDir, name, maskResolution)?.let {
         report(AbyssusBundle.message("newFoliageFailed", it.message()))
         return null
     }
-    val terrain = foliageTerrainData(projectDir, documents.json, terrainFolder) ?: run {
-        report(AbyssusBundle.message("newFoliageFailed", AbyssusBundle.message("newFoliageUnreadable", terrainFolder)))
-        return null
-    }
+    val terrain =
+        foliageTerrainData(projectDir, documents.json, terrainFolder)
+            ?: run {
+                report(
+                    AbyssusBundle.message(
+                        "newFoliageFailed",
+                        AbyssusBundle.message("newFoliageUnreadable", terrainFolder),
+                    )
+                )
+                return null
+            }
     // re-checked inside plan: the folder may have appeared since the dialog was opened
-    val staged = foliage.newFoliages.plan(projectDir, terrainFolder, name, maskResolution, terrain) ?: run {
-        report(AbyssusBundle.message("newFoliageFailed", AbyssusBundle.message("newTerrainNameError.EXISTS")))
-        return null
-    }
+    val staged =
+        foliage.newFoliages.plan(projectDir, terrainFolder, name, maskResolution, terrain)
+            ?: run {
+                report(AbyssusBundle.message("newFoliageFailed", AbyssusBundle.message("newTerrainNameError.EXISTS")))
+                return null
+            }
 
     val base = "$ASSETS_DIR/${staged.folder}"
-    val transaction = AssetTransaction(
-        AbyssusBundle.message("commandNewFoliage"),
-        changes = listOf(
-            FileChange("$base/$META_FILE", FileSnapshot.Absent, FileSnapshot.Bytes(staged.metaText.toByteArray())),
-            FileChange("$base/$FOLIAGE_DATA_FILE", FileSnapshot.Absent, FileSnapshot.Bytes(staged.dataBytes)),
-        ),
-        createdDirs = (if (File(projectDir, ASSETS_DIR).isDirectory) emptyList() else listOf(ASSETS_DIR)) + base,
-        guard = AssetReferenceGuard(projectDir).let { guard -> { guard.blocker(staged.folder, staged.uuid) } },
-    )
-    val result = AssetFileCommand(project, LocalAssetFileStore(projectDir)).execute(
-        transaction,
-        onDone = { select(staged.folder) },
-    )
+    val transaction =
+        AssetTransaction(
+            AbyssusBundle.message("commandNewFoliage"),
+            changes =
+                listOf(
+                    FileChange(
+                        "$base/$META_FILE",
+                        FileSnapshot.Absent,
+                        FileSnapshot.Bytes(staged.metaText.toByteArray()),
+                    ),
+                    FileChange("$base/$FOLIAGE_DATA_FILE", FileSnapshot.Absent, FileSnapshot.Bytes(staged.dataBytes)),
+                ),
+            createdDirs =
+                (if (File(projectDir, ASSETS_DIR).isDirectory) {
+                    emptyList()
+                } else {
+                    listOf(ASSETS_DIR)
+                }) + base,
+            guard = AssetReferenceGuard(projectDir).let { guard -> { guard.blocker(staged.folder, staged.uuid) } },
+        )
+    val result =
+        AssetFileCommand(project, LocalAssetFileStore(projectDir))
+            .execute(
+                transaction,
+                onDone = { select(staged.folder) },
+            )
     val problem = assetResultMessage(result, "newFoliageCancelled")
     problem?.let { report(AbyssusBundle.message("newFoliageFailed", it)) }
     return result

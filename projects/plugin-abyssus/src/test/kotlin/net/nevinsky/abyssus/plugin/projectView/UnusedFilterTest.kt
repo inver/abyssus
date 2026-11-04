@@ -16,9 +16,17 @@ class UnusedFilterTest : BasePlatformTestCase() {
         super.setUp()
         UnusedFilter.set(project, false)
         myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""")
-        myFixture.addFileToProject("p/scenes/S.scene", """{"format":"abyssus","formatVersion":1,"ecs":{"0":{"components":{"RenderComponent":{"type":"MODEL","assetName":"used"}}}}}""")
+        myFixture.addFileToProject(
+            "p/scenes/S.scene",
+            """{"format":"abyssus","formatVersion":1,"ecs":{"0":{"components":{"RenderComponent":{"type":"MODEL",
+"assetName":"used"}}}}}""",
+        )
         for ((name, uuid) in listOf("used" to "u1", "dead1" to "u2", "dead2" to "u3", "dead3" to "u4")) {
-            myFixture.addFileToProject("p/assets/$name/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"uuid":"${java.util.UUID.nameUUIDFromBytes(uuid.toByteArray())}","type":"MODEL","additional":{}}""")
+            myFixture.addFileToProject(
+                "p/assets/$name/meta.json",
+                """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,
+"uuid":"${java.util.UUID.nameUUIDFromBytes(uuid.toByteArray())}","type":"MODEL","additional":{}}""",
+            )
         }
     }
 
@@ -36,13 +44,15 @@ class UnusedFilterTest : BasePlatformTestCase() {
     }
 
     private fun assetsNode(): AbstractTreeNode<*> {
-        val abss = AbyssusRootNode(project, ViewSettings.DEFAULT).children.single { it is AbyssusAssetNode } as AbstractTreeNode<*>
+        val abss =
+            AbyssusRootNode(project, ViewSettings.DEFAULT).children.single { it is AbyssusAssetNode }
         return abss.children.map { it as AbstractTreeNode<*> }.single { text(it).startsWith("Assets") }
     }
 
     private fun groups() = assetsNode().children.map { it as AbstractTreeNode<*> }
 
-    private fun listed() = groups().flatMap { it.children.map { c -> c as AbstractTreeNode<*> } }.map { text(it).substringBefore("  ") }
+    private fun listed() =
+        groups().flatMap { it.children.map { c -> c as AbstractTreeNode<*> } }.map { text(it).substringBefore("  ") }
 
     fun testOffByDefaultListsEveryAsset() {
         assertEquals(listOf("dead1", "dead2", "dead3", "used"), listed())
@@ -63,7 +73,8 @@ class UnusedFilterTest : BasePlatformTestCase() {
 
     fun testScenesAreNotAffected() {
         UnusedFilter.set(project, true)
-        val abss = AbyssusRootNode(project, ViewSettings.DEFAULT).children.single { it is AbyssusAssetNode } as AbstractTreeNode<*>
+        val abss =
+            AbyssusRootNode(project, ViewSettings.DEFAULT).children.single { it is AbyssusAssetNode }
         val scenes = abss.children.map { it as AbstractTreeNode<*> }.single { text(it).startsWith("Scenes") }
         assertEquals("Scenes  1", text(scenes))
     }
@@ -84,9 +95,17 @@ class UnusedFilterTest : BasePlatformTestCase() {
     fun testGroupWithoutUnusedAssetsIsHiddenAndCountsFollow() {
         val scene = myFixture.findFileInTempDir("p/scenes/S.scene")
         com.intellij.openapi.application.runWriteAction {
-            com.intellij.openapi.vfs.VfsUtil.saveText(scene, """{"format":"abyssus","formatVersion":1,"ecs":{"0":{"components":{"RenderComponent":{"type":"MODEL","assetName":"used"}}},"1":{"components":{"RenderComponent":{"type":"TERRAIN","assetName":"hills"}}}}}""")
+            com.intellij.openapi.vfs.VfsUtil.saveText(
+                scene,
+                """{"format":"abyssus","formatVersion":1,"ecs":{"0":{"components":{"RenderComponent":{"type":"MODEL",
+"assetName":"used"}}},"1":{"components":{"RenderComponent":{"type":"TERRAIN","assetName":"hills"}}}}}""",
+            )
         }
-        myFixture.addFileToProject("p/assets/hills/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,"uuid":"${java.util.UUID.nameUUIDFromBytes("h1".toByteArray())}","type":"TERRAIN","additional":{}}""")
+        myFixture.addFileToProject(
+            "p/assets/hills/meta.json",
+            """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":1,
+"uuid":"${java.util.UUID.nameUUIDFromBytes("h1".toByteArray())}","type":"TERRAIN","additional":{}}""",
+        )
         assertEquals(listOf("Models  4", "Terrains  1"), groups().map { text(it) })
         UnusedFilter.set(project, true)
         assertEquals(listOf("Models  3"), groups().map { text(it) })

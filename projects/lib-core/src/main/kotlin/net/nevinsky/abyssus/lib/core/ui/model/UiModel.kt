@@ -18,30 +18,58 @@ const val UI_DEFAULT_REFERENCE_HEIGHT = 720f
 fun uiImageWithinLimits(width: Int, height: Int): Boolean =
     width in 1..UI_MAX_IMAGE_SIDE && height in 1..UI_MAX_IMAGE_SIDE
 
-enum class UiScreenKind(val json: String) { SCREEN("screen"), OVERLAY("overlay") }
+enum class UiScreenKind(val json: String) {
+    SCREEN("screen"),
+    OVERLAY("overlay"),
+}
 
 enum class UiWidgetType(val json: String, val container: Boolean) {
-    PANEL("panel", true), ROW("row", true), COLUMN("column", true),
-    LABEL("label", false), IMAGE("image", false), BUTTON("button", false),
-    PROGRESS_BAR("progressBar", false), SLIDER("slider", false),
-    CHECKBOX("checkbox", false), TEXT_FIELD("textField", false),
+    PANEL("panel", true),
+    ROW("row", true),
+    COLUMN("column", true),
+    LABEL("label", false),
+    IMAGE("image", false),
+    BUTTON("button", false),
+    PROGRESS_BAR("progressBar", false),
+    SLIDER("slider", false),
+    CHECKBOX("checkbox", false),
+    TEXT_FIELD("textField", false),
 
     /** Repeats its `template` widget for each item of its `items` list binding; laid out like a column. */
     LIST("list", false),
 }
 
 enum class UiAnchor(val json: String) {
-    TOP_LEFT("topLeft"), TOP("top"), TOP_RIGHT("topRight"),
-    LEFT("left"), CENTER("center"), RIGHT("right"),
-    BOTTOM_LEFT("bottomLeft"), BOTTOM("bottom"), BOTTOM_RIGHT("bottomRight"),
+    TOP_LEFT("topLeft"),
+    TOP("top"),
+    TOP_RIGHT("topRight"),
+    LEFT("left"),
+    CENTER("center"),
+    RIGHT("right"),
+    BOTTOM_LEFT("bottomLeft"),
+    BOTTOM("bottom"),
+    BOTTOM_RIGHT("bottomRight"),
 }
 
-enum class UiAlign(val json: String) { START("start"), CENTER("center"), END("end"), STRETCH("stretch") }
+enum class UiAlign(val json: String) {
+    START("start"),
+    CENTER("center"),
+    END("end"),
+    STRETCH("stretch"),
+}
 
-enum class UiBindingType(val json: String) { NUMBER("number"), BOOLEAN("boolean"), STRING("string"), LIST("list") }
+enum class UiBindingType(val json: String) {
+    NUMBER("number"),
+    BOOLEAN("boolean"),
+    STRING("string"),
+    LIST("list"),
+}
 
 /** How the keyboard moves focus on a screen: Tab / Shift-Tab, or Up / Down. */
-enum class UiNavigation(val json: String) { TAB("tab"), ARROWS("arrows") }
+enum class UiNavigation(val json: String) {
+    TAB("tab"),
+    ARROWS("arrows"),
+}
 
 /** A bindings prefix: `item.rank` names the `rank` field of the current row of the enclosing list. */
 const val UI_ITEM_PREFIX = "item."
@@ -49,19 +77,28 @@ const val UI_ITEM_PREFIX = "item."
 /** One typed field of a list binding's record. */
 data class UiRecordField(val name: String, val type: UiBindingType)
 
-enum class UiBindingAccess(val json: String) { READ_ONLY("readOnly"), WRITE("write") }
+enum class UiBindingAccess(val json: String) {
+    READ_ONLY("readOnly"),
+    WRITE("write"),
+}
 
-enum class UiResourceKind(val json: String) { IMAGE("image"), BITMAP_FONT("bitmapFont") }
+enum class UiResourceKind(val json: String) {
+    IMAGE("image"),
+    BITMAP_FONT("bitmapFont"),
+}
 
 enum class UiActionType(val json: String) {
-    OPEN_SCREEN("openScreen"), BACK("back"), SHOW_OVERLAY("showOverlay"),
-    CLOSE_OVERLAY("closeOverlay"), EMIT_ACTION("emitAction"),
+    OPEN_SCREEN("openScreen"),
+    BACK("back"),
+    SHOW_OVERLAY("showOverlay"),
+    CLOSE_OVERLAY("closeOverlay"),
+    EMIT_ACTION("emitAction"),
 }
 
 /**
- * Layout of one widget in logical, top-left-origin units. Fields not authored keep their defaults: [anchor] and
- * [pivot] apply inside a panel parent, [grow] inside a row or column, [padding], [spacing] and [align] to a container's
- * own children.
+ * Layout of one widget in logical, top-left-origin units. Fields not authored keep their defaults: [anchor] and [pivot]
+ * apply inside a panel parent, [grow] inside a row or column, [padding], [spacing] and [align] to a container's own
+ * children.
  */
 data class UiLayout(
     val anchor: UiAnchor? = null,
@@ -88,7 +125,12 @@ data class UiAction(
 
 /** The action that shows the overlay screen [screenId], as code (not a document) builds it. */
 fun showOverlayAction(screenId: String): UiAction =
-    UiAction(UiActionType.SHOW_OVERLAY.json, UiActionType.SHOW_OVERLAY, screenId = screenId, raw = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode())
+    UiAction(
+        UiActionType.SHOW_OVERLAY.json,
+        UiActionType.SHOW_OVERLAY,
+        screenId = screenId,
+        raw = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode(),
+    )
 
 /**
  * A widget. [type] is null for a kind this build does not know ([rawType] keeps the authored name); such a widget is an
@@ -133,21 +175,33 @@ data class UiBinding(
     /** For a `list` binding: the typed fields of one item. */
     val fields: List<UiRecordField> = emptyList(),
 ) {
-    /** [sample] as plain values (`String`, `Number`, `Boolean`, `List`, `Map`, or null), for readers that hold no tree. */
-    val sampleValue: Any? get() = sample?.let(::plainValue)
+    /**
+     * [sample] as plain values (`String`, `Number`, `Boolean`, `List`, `Map`, or null), for readers that hold no tree.
+     */
+    val sampleValue: Any?
+        get() = sample?.let(::plainValue)
 
     /** [sample] as text: a scalar as its value, a list as compact JSON. */
-    val sampleText: String? get() = sample?.let { if (it.isContainerNode) it.toString() else it.asText() }
+    val sampleText: String?
+        get() = sample?.let {
+            if (it.isContainerNode) {
+                it.toString()
+            } else {
+                it.asText()
+            }
+        }
 }
 
-private fun plainValue(node: JsonNode): Any? = when {
-    node.isNull || node.isMissingNode -> null
-    node.isTextual -> node.textValue()
-    node.isBoolean -> node.booleanValue()
-    node.isNumber -> node.numberValue()
-    node.isArray -> node.map(::plainValue)
-    else -> LinkedHashMap<String, Any?>().also { out -> node.properties().forEach { (k, v) -> out[k] = plainValue(v) } }
-}
+private fun plainValue(node: JsonNode): Any? =
+    when {
+        node.isNull || node.isMissingNode -> null
+        node.isTextual -> node.textValue()
+        node.isBoolean -> node.booleanValue()
+        node.isNumber -> node.numberValue()
+        node.isArray -> node.map(::plainValue)
+        else ->
+            LinkedHashMap<String, Any?>().also { out -> node.properties().forEach { (k, v) -> out[k] = plainValue(v) } }
+    }
 
 data class UiResource(val id: String, val kind: UiResourceKind, val path: String)
 
@@ -164,6 +218,7 @@ data class UiCollection(
     val styles: List<UiStyle>,
 ) {
     fun screen(id: String): UiScreen? = screens.firstOrNull { it.id == id }
+
     fun binding(name: String): UiBinding? = bindings.firstOrNull { it.name == name }
 }
 
@@ -171,11 +226,28 @@ data class UiCollection(
 data class UiMeta(val admission: UiAdmission)
 
 enum class UiIssueCode {
-    FORMAT_MARKER, FORMAT_VERSION, NOT_UI_ASSET, MISSING_UI_BLOCK, UI_VERSION, MALFORMED,
-    UNKNOWN_ENTRY_SCREEN, DUPLICATE_SCREEN_ID, DUPLICATE_WIDGET_ID, DUPLICATE_BINDING, DUPLICATE_RESOURCE,
-    BAD_GEOMETRY, TOO_DEEP, TOO_MANY_WIDGETS, CHILDREN_ON_LEAF, BAD_BINDING,
-    UNKNOWN_WIDGET, UNRESOLVED_BINDING, UNRESOLVED_SCREEN,
-    MISSING_TEMPLATE, UNRESOLVED_ITEM_FIELD, ITEM_OUTSIDE_LIST,
+    FORMAT_MARKER,
+    FORMAT_VERSION,
+    NOT_UI_ASSET,
+    MISSING_UI_BLOCK,
+    UI_VERSION,
+    MALFORMED,
+    UNKNOWN_ENTRY_SCREEN,
+    DUPLICATE_SCREEN_ID,
+    DUPLICATE_WIDGET_ID,
+    DUPLICATE_BINDING,
+    DUPLICATE_RESOURCE,
+    BAD_GEOMETRY,
+    TOO_DEEP,
+    TOO_MANY_WIDGETS,
+    CHILDREN_ON_LEAF,
+    BAD_BINDING,
+    UNKNOWN_WIDGET,
+    UNRESOLVED_BINDING,
+    UNRESOLVED_SCREEN,
+    MISSING_TEMPLATE,
+    UNRESOLVED_ITEM_FIELD,
+    ITEM_OUTSIDE_LIST,
 }
 
 /** A diagnostic carrying data, not text: [path] is a JSON pointer-like location, hosts choose presentation. */
@@ -184,5 +256,6 @@ data class UiIssue(val code: UiIssueCode, val path: String)
 /** Result of admitting a UI asset: refused as a whole, or [Admitted] with non-fatal [warnings]. */
 sealed interface UiAdmission {
     data class Admitted(val collection: UiCollection, val warnings: List<UiIssue>) : UiAdmission
+
     data class Refused(val issues: List<UiIssue>) : UiAdmission
 }

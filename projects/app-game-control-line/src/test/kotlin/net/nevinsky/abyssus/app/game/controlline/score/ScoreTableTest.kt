@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.score
 
+import java.nio.file.Files
+import java.nio.file.Path
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -11,12 +13,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.nio.file.Files
-import java.nio.file.Path
 
 class ScoreTableTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
     private fun file(): Path = temp.root.toPath().resolve("home/.abyssus-control-line/scores.json")
 
@@ -92,7 +91,17 @@ class ScoreTableTest {
     fun theFileHoldsEveryField() {
         ScoreTable(file()).add(entry("Ann", 420))
         val text = Files.readString(file())
-        for (key in listOf("\"version\" : 1", "\"name\"", "\"plane\"", "\"score\"", "\"laps\"", "\"bestCombo\"", "\"flightTime\"", "\"date\"")) {
+        for (key in
+            listOf(
+                "\"version\" : 1",
+                "\"name\"",
+                "\"plane\"",
+                "\"score\"",
+                "\"laps\"",
+                "\"bestCombo\"",
+                "\"flightTime\"",
+                "\"date\"",
+            )) {
             assertTrue("$key in $text", text.contains(key))
         }
     }

@@ -4,11 +4,10 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.ray
 
-import net.nevinsky.abyssus.lib.core.editor.ray.RayModeState
-import net.nevinsky.abyssus.lib.core.editor.ray.RayModePhase
 import net.nevinsky.abyssus.lib.core.editor.ray.RayBackendAttempt
 import net.nevinsky.abyssus.lib.core.editor.ray.RayBackendSelection
-
+import net.nevinsky.abyssus.lib.core.editor.ray.RayModePhase
+import net.nevinsky.abyssus.lib.core.editor.ray.RayModeState
 import net.nevinsky.abyssus.lib.raytracing.*
 import org.junit.Assert.*
 import org.junit.Test
@@ -16,7 +15,8 @@ import org.junit.Test
 class RayModeStateTest {
     private val info = RayBackendInfo("Metal", "Test GPU")
 
-    @Test fun offIsDefaultAndRequestPassesThroughCheckingPreparingAndActive() {
+    @Test
+    fun offIsDefaultAndRequestPassesThroughCheckingPreparingAndActive() {
         val mode = RayModeState()
         assertEquals(RayModePhase.Off, mode.phase)
         assertFalse(mode.requested)
@@ -34,7 +34,8 @@ class RayModeStateTest {
         assertTrue(mode.active)
     }
 
-    @Test fun failureClearsActivationAndOnlyExplicitRetryRestartsChecking() {
+    @Test
+    fun failureClearsActivationAndOnlyExplicitRetryRestartsChecking() {
         val mode = RayModeState()
         val revision = mode.request()
         mode.preparing(revision, info)
@@ -56,10 +57,12 @@ class RayModeStateTest {
         assertTrue(mode.active)
     }
 
-    @Test fun unavailableCarriesReasonsAndCannotActivateOrRetry() {
+    @Test
+    fun unavailableCarriesReasonsAndCannotActivateOrRetry() {
         val mode = RayModeState()
         val revision = mode.request()
-        val reason = RayBackendSelection.Unavailable(listOf(RayBackendAttempt("metal", RayUnavailableReason.RAY_QUERIES)))
+        val reason =
+            RayBackendSelection.Unavailable(listOf(RayBackendAttempt("metal", RayUnavailableReason.RAY_QUERIES)))
         mode.unavailable(revision, reason)
         assertEquals(RayModePhase.Unavailable, mode.phase)
         assertFalse(mode.requested)
@@ -70,7 +73,8 @@ class RayModeStateTest {
         assertFalse(mode.active)
     }
 
-    @Test fun offAndNewRequestIgnoreLatePreparationAndFailure() {
+    @Test
+    fun offAndNewRequestIgnoreLatePreparationAndFailure() {
         val mode = RayModeState()
         val obsolete = mode.request()
         mode.off()
@@ -87,17 +91,20 @@ class RayModeStateTest {
         assertTrue(mode.active)
     }
 
-    @Test fun hidingKeepsTheRequestAndInvalidatesOldWorkerTransitions() {
+    @Test
+    fun hidingKeepsTheRequestAndInvalidatesOldWorkerTransitions() {
         val mode = RayModeState()
         val old = mode.request()
-        mode.preparing(old, info); mode.prepared(old)
+        mode.preparing(old, info)
+        mode.prepared(old)
         val resumed = checkNotNull(mode.rechecking())
         assertTrue(mode.requested)
         assertEquals(RayModePhase.Checking, mode.phase)
         mode.failed(old, "Hidden old device")
         mode.prepared(old)
         assertEquals(RayModePhase.Checking, mode.phase)
-        mode.preparing(resumed, info); mode.prepared(resumed)
+        mode.preparing(resumed, info)
+        mode.prepared(resumed)
         assertTrue(mode.active)
     }
 }

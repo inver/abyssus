@@ -12,9 +12,17 @@ import org.junit.Test
 class RaySunVisibilityKeyTest {
     private val sun = Vector3(0f, 1f, 0f)
     private val clouds = Any()
+
     private fun key(
-        id: String = "sun", direction: Vector3 = sun, asset: Any? = clouds, drifting: Boolean = false, mapped: Boolean = true,
-        scale: Float = .6f, x: Float = 0f, z: Float = 0f, time: Double = 0.0,
+        id: String = "sun",
+        direction: Vector3 = sun,
+        asset: Any? = clouds,
+        drifting: Boolean = false,
+        mapped: Boolean = true,
+        scale: Float = .6f,
+        x: Float = 0f,
+        z: Float = 0f,
+        time: Double = 0.0,
     ) = raySunVisibilityKey(id, direction, asset, drifting, mapped, scale, x, z, time)
 
     @Test

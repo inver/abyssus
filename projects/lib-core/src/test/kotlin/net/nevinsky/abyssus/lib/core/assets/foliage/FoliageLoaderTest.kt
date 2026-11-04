@@ -5,16 +5,16 @@
 
 package net.nevinsky.abyssus.lib.core.assets.foliage
 
-import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
+import java.io.DataOutputStream
+import java.io.File
+import java.nio.file.Files
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
+import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.testing.warningsTo
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Test
-import java.io.DataOutputStream
-import java.io.File
-import java.nio.file.Files
 
 class FoliageLoaderTest {
     private val dir: File = Files.createTempDirectory("foliage-loader").toFile()
@@ -29,14 +29,17 @@ class FoliageLoaderTest {
         DataOutputStream(File(dir, "assets/terr/terrain.data").outputStream()).use { out ->
             repeat(4) { out.writeFloat(it.toFloat() * 2f) }
         }
-        File(dir, "assets/terr/meta.json").writeText(
-            """{"format":"abyssus","formatVersion":1,"type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":10,"uv":1.0}}"""
-        )
+        File(dir, "assets/terr/meta.json")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"type":"TERRAIN","additional":{"terrainFile":"terrain.data",
+"size":10,"uv":1.0}}"""
+            )
         for (model in listOf("tree", "rock")) {
             File(dir, "assets/$model").mkdirs()
-            File(dir, "assets/$model/meta.json").writeText(
-                """{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{"file":"model.gltf"}}"""
-            )
+            File(dir, "assets/$model/meta.json")
+                .writeText(
+                    """{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{"file":"model.gltf"}}"""
+                )
         }
         foliage()
     }
@@ -48,7 +51,11 @@ class FoliageLoaderTest {
 
     private fun bake(bake: FoliageBake?) {
         val file = File(dir, "assets/foliage_meadow/foliage.data")
-        if (bake == null) file.delete() else file.writeBytes(FoliageDataFile().write(bake))
+        if (bake == null) {
+            file.delete()
+        } else {
+            file.writeBytes(FoliageDataFile().write(bake))
+        }
     }
 
     @After
@@ -64,10 +71,12 @@ class FoliageLoaderTest {
 
     @Test
     fun aStaleBakeTriggersEditorGenerationButRuntimeKeepsItsSavedCopies() {
-        val saved = FoliageBake(
-            ByteArray(FOLIAGE_FINGERPRINT_BYTES), 32f,
-            listOf(FoliageLayerBake(1, 2, 1, 1, listOf(listOf(FoliageCopy(0, 1f, 1f, 0f, 1f))))),
-        )
+        val saved =
+            FoliageBake(
+                ByteArray(FOLIAGE_FINGERPRINT_BYTES),
+                32f,
+                listOf(FoliageLayerBake(1, 2, 1, 1, listOf(listOf(FoliageCopy(0, 1f, 1f, 0f, 1f))))),
+            )
         bake(saved)
         val warnings = mutableListOf<String>()
         val runtime = RuntimeFoliageLoader(metas, FoliageRuntimeLoad(files, metas, terrains), warnings::add)
@@ -121,7 +130,9 @@ class FoliageLoaderTest {
 
     private companion object {
         const val TWO_MODEL_LAYER =
-            """{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","additional":{"terrain":"terr","maskResolution":16,""" +
-                """"layers":[{"id":1,"kind":"OBJECT","models":[{"asset":"tree","weight":1.0},{"asset":"rock","weight":1.0}]}]}}"""
+            """{"format":"abyssus","formatVersion":1,"type":"FOLIAGE","additional":{"terrain":"terr",
+"maskResolution":16,""" +
+                """"layers":[{"id":1,"kind":"OBJECT","models":[{"asset":"tree","weight":1.0},{"asset":"rock",""" +
+                    """"weight":1.0}]}]}}"""
     }
 }

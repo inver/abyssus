@@ -17,7 +17,10 @@ interface BrushStroke {
     /** The press at the world [at] on the [terrain]; false refuses the stroke, so the gesture stays idle. */
     fun pressed(terrain: TerrainTarget, at: Vector3): Boolean
 
-    /** The drag to the world [to] on the terrain; [reversed] is the mode's sign as it is now (Erase, an inverted tool, Shift). */
+    /**
+     * The drag to the world [to] on the terrain; [reversed] is the mode's sign as it is now (Erase, an inverted tool,
+     * Shift).
+     */
     fun dragged(to: Vector3, reversed: Boolean)
 
     /** The button was released: the stroke's files are written as one undoable step. */

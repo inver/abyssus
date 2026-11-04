@@ -5,15 +5,11 @@
 
 package net.nevinsky.abyssus.plugin
 
+import com.intellij.ide.plugins.PluginManager
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
-import com.intellij.openapi.Disposable
-import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.vfs.VirtualFileManager
-import com.intellij.openapi.vfs.newvfs.BulkFileListener
-import com.intellij.openapi.vfs.newvfs.events.*
-import java.io.File
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditor
@@ -21,14 +17,18 @@ import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.openapi.fileEditor.FileEditorProvider
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.plugin.dto.ProjectLayout
-import net.nevinsky.abyssus.plugin.filetype.ProjectSettingsListener
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.plugin.dto.SceneReader
-import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VfsUtilCore
-import com.intellij.ide.plugins.PluginManager
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
+import com.intellij.openapi.vfs.newvfs.BulkFileListener
+import com.intellij.openapi.vfs.newvfs.events.*
+import java.io.File
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.plugin.dto.ProjectLayout
+import net.nevinsky.abyssus.plugin.dto.SceneReader
+import net.nevinsky.abyssus.plugin.filetype.ProjectSettingsListener
+import net.nevinsky.abyssus.plugin.foliage.FoliageDrafts
 import net.nevinsky.abyssus.plugin.projectView.AbyssusProjectViewPane
 import net.nevinsky.abyssus.plugin.projectView.ProjectSceneViewHost
 import net.nevinsky.abyssus.plugin.sceneview.NamedOverlay
@@ -53,8 +53,9 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
         val core = service<AbyssusPluginCtx>()
         val assets = core.assets
         val reader = service<SceneReader>()
-        val host = (com.intellij.ide.projectView.ProjectView.getInstance(project)
-            .getProjectViewPaneById(AbyssusProjectViewPane.ID) as? SceneViewHost) ?: ProjectSceneViewHost(project)
+        val host =
+            (com.intellij.ide.projectView.ProjectView.getInstance(project)
+                .getProjectViewPaneById(AbyssusProjectViewPane.ID) as? SceneViewHost) ?: ProjectSceneViewHost(project)
         // Ray tracing is optional: a missing service (e.g. a test without the application services) leaves raster only.
         val ray = runCatchingKeepingCancellation { RayIntegration.of(core.ray) }.getOrNull()
         return SceneFileEditor(
@@ -68,40 +69,88 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
         ) { params ->
             val play = playState(project, file)
             val overlays = overlays(project, file)
-            val panel = SceneViewPanel(
-                params, SceneRenderer(
-                    ViewAssets(assets.loading), assets.sceneShaders, project.service<FoliageDrafts>(), project.service<net.nevinsky.abyssus.plugin.terrain.SculptDrafts>(),
-                    project.service<net.nevinsky.abyssus.plugin.splat.SplatDrafts>(),
-                    log = core.loggers.getLogger("sceneview"),
-                ),
-                lightMenu = PlacementMenu({ host.canAddLight(file) }) { position -> host.lightActions(file, position) },
-                assetMenu = PlacementMenu({ host.canAddAsset(file) }) { position -> host.assetActions(file, position) },
-                pathMenu = PlacementMenu({ host.canAddPath(file) }) { start -> host.pathActions(file, start) },
-                ray = ray,
-                play = play,
-                simulationRequest = { selection -> simulationRequest(project, file, selection) },
-                overlays = overlays,
-                foliageActions = { entity -> net.nevinsky.abyssus.plugin.projectView.foliageGroup(project, file, entity) },
-                showFps = { project.service<net.nevinsky.abyssus.plugin.sceneview.SceneViewSettings>().showFps },
-                sculptSession = { entity, mode, tool, ready ->
-                    project.service<net.nevinsky.abyssus.plugin.terrain.SculptEditing>().open(file, entity, mode, tool,
-                        report = { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(project, reason, AbyssusBundle.message("sculptTitle")) },
-                        ready = ready)
-                },
-                splatSession = { entity, mode, ready ->
-                    project.service<net.nevinsky.abyssus.plugin.splat.SplatEditing>().open(file, entity, mode,
-                        report = { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(project, reason, AbyssusBundle.message("splatTitle")) },
-                        ready = ready)
-                },
-                paintSession = { entity, mode, ready ->
-                    project.service<net.nevinsky.abyssus.plugin.foliage.FoliageEditing>().open(file, entity, mode,
-                        report = { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(project, reason, AbyssusBundle.message("paintFoliageTitle")) },
-                        ready = ready)
-                },
-            )
+            val panel =
+                SceneViewPanel(
+                    params,
+                    SceneRenderer(
+                        ViewAssets(assets.loading),
+                        assets.sceneShaders,
+                        project.service<FoliageDrafts>(),
+                        project.service<net.nevinsky.abyssus.plugin.terrain.SculptDrafts>(),
+                        project.service<net.nevinsky.abyssus.plugin.splat.SplatDrafts>(),
+                        log = core.loggers.getLogger("sceneview"),
+                    ),
+                    lightMenu =
+                        PlacementMenu({ host.canAddLight(file) }) { position -> host.lightActions(file, position) },
+                    assetMenu =
+                        PlacementMenu({ host.canAddAsset(file) }) { position -> host.assetActions(file, position) },
+                    pathMenu = PlacementMenu({ host.canAddPath(file) }) { start -> host.pathActions(file, start) },
+                    ray = ray,
+                    play = play,
+                    simulationRequest = { selection -> simulationRequest(project, file, selection) },
+                    overlays = overlays,
+                    foliageActions = { entity ->
+                        net.nevinsky.abyssus.plugin.projectView.foliageGroup(project, file, entity)
+                    },
+                    showFps = { project.service<net.nevinsky.abyssus.plugin.sceneview.SceneViewSettings>().showFps },
+                    sculptSession = { entity, mode, tool, ready ->
+                        project
+                            .service<net.nevinsky.abyssus.plugin.terrain.SculptEditing>()
+                            .open(
+                                file,
+                                entity,
+                                mode,
+                                tool,
+                                report = { reason ->
+                                    com.intellij.openapi.ui.Messages.showInfoMessage(
+                                        project,
+                                        reason,
+                                        AbyssusBundle.message("sculptTitle"),
+                                    )
+                                },
+                                ready = ready,
+                            )
+                    },
+                    splatSession = { entity, mode, ready ->
+                        project
+                            .service<net.nevinsky.abyssus.plugin.splat.SplatEditing>()
+                            .open(
+                                file,
+                                entity,
+                                mode,
+                                report = { reason ->
+                                    com.intellij.openapi.ui.Messages.showInfoMessage(
+                                        project,
+                                        reason,
+                                        AbyssusBundle.message("splatTitle"),
+                                    )
+                                },
+                                ready = ready,
+                            )
+                    },
+                    paintSession = { entity, mode, ready ->
+                        project
+                            .service<net.nevinsky.abyssus.plugin.foliage.FoliageEditing>()
+                            .open(
+                                file,
+                                entity,
+                                mode,
+                                report = { reason ->
+                                    com.intellij.openapi.ui.Messages.showInfoMessage(
+                                        project,
+                                        reason,
+                                        AbyssusBundle.message("paintFoliageTitle"),
+                                    )
+                                },
+                                ready = ready,
+                            )
+                    },
+                )
             listenSceneAvailability(project, panel) {
                 overlays.refreshAvailability()
-                play.refreshProviders(SceneSimulationProvider.EP_NAME.extensionList.filter { it.isAvailable(project, file) })
+                play.refreshProviders(
+                    SceneSimulationProvider.EP_NAME.extensionList.filter { it.isAvailable(project, file) }
+                )
                 panel.revalidate()
                 panel.repaint()
             }
@@ -113,7 +162,8 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
     private fun playState(project: Project, file: VirtualFile): PlayState {
         val provider = SceneSimulationProvider.EP_NAME.extensionList.firstOrNull { it.isAvailable(project, file) }
         return PlayState(
-            provider, provider?.let(::pluginName).orEmpty(),
+            provider,
+            provider?.let(::pluginName).orEmpty(),
             ui = { ApplicationManager.getApplication().invokeLater(it, ModalityState.any()) },
             logError = { message, error -> thisLogger().error(message, error) },
         )
@@ -121,12 +171,22 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
 
     /** One overlay per installed provider; a provider that throws while creating it is left out with one error. */
     private fun overlays(project: Project, file: VirtualFile): SceneOverlayHost {
-        val created = SceneOverlayProvider.EP_NAME.extensionList.mapNotNull { provider ->
-            runCatchingKeepingCancellation { NamedOverlay(pluginName(provider), provider.create(project, file),
-                provider.isAvailable(project,file)) { provider.isAvailable(project,file) } }
-                .onFailure { thisLogger().error("Scene overlay of ${pluginName(provider)} could not be created", it) }
-                .getOrNull()
-        }
+        val created =
+            SceneOverlayProvider.EP_NAME.extensionList.mapNotNull { provider ->
+                runCatchingKeepingCancellation {
+                        NamedOverlay(
+                            pluginName(provider),
+                            provider.create(project, file),
+                            provider.isAvailable(project, file),
+                        ) {
+                            provider.isAvailable(project, file)
+                        }
+                    }
+                    .onFailure {
+                        thisLogger().error("Scene overlay of ${pluginName(provider)} could not be created", it)
+                    }
+                    .getOrNull()
+            }
         return SceneOverlayHost(created) { message, error -> thisLogger().error(message, error) }
     }
 
@@ -149,18 +209,35 @@ class SceneFileEditorProvider : FileEditorProvider, DumbAware {
     }
 }
 
-
 /** Ownership can change while the previous .abss stays valid, or a loose scene can acquire a new native project. */
 internal fun listenSceneAvailability(project: Project, parent: Disposable, refresh: () -> Unit) {
     val connection = project.messageBus.connect(parent)
     connection.subscribe(ProjectSettingsListener.TOPIC, ProjectSettingsListener { _, _ -> refresh() })
-    connection.subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
-        override fun after(events: List<VFileEvent>) {
-            if (events.none { it is VFileCreateEvent || it is VFileDeleteEvent || it is VFileMoveEvent ||
-                it is VFileCopyEvent || it is VFilePropertyChangeEvent && it.propertyName == VirtualFile.PROP_NAME }) return
-            ApplicationManager.getApplication().invokeLater({
-                if (!project.isDisposed && !Disposer.isDisposed(parent)) refresh()
-            }, ModalityState.any())
-        }
-    })
+    connection.subscribe(
+        VirtualFileManager.VFS_CHANGES,
+        object : BulkFileListener {
+            override fun after(events: List<VFileEvent>) {
+                if (
+                    events.none {
+                        it is VFileCreateEvent ||
+                            it is VFileDeleteEvent ||
+                            it is VFileMoveEvent ||
+                            it is VFileCopyEvent ||
+                            it is VFilePropertyChangeEvent && it.propertyName == VirtualFile.PROP_NAME
+                    }
+                ) {
+                    return
+                }
+                ApplicationManager.getApplication()
+                    .invokeLater(
+                        {
+                            if (!project.isDisposed && !Disposer.isDisposed(parent)) {
+                                refresh()
+                            }
+                        },
+                        ModalityState.any(),
+                    )
+            }
+        },
+    )
 }

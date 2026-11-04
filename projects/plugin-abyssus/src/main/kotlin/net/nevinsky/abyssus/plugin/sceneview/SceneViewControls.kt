@@ -13,7 +13,10 @@ data class CameraChoice(val id: Long?, val label: String) {
     override fun toString() = label
 }
 
-/** "Free camera" followed by the scene's cameras by name (their id when unnamed, which [CameraPlacement.name] already is). */
+/**
+ * "Free camera" followed by the scene's cameras by name (their id when unnamed, which [CameraPlacement.name] already
+ * is).
+ */
 fun cameraChoices(content: SceneContent, freeLabel: String): List<CameraChoice> =
     listOf(CameraChoice(null, freeLabel)) + content.cameras.map { CameraChoice(it.entityId, it.name) }
 

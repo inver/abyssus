@@ -70,20 +70,41 @@ fun fixtureAc(): String = buildString {
     appendLine("name \"Body\"")
     appendLine("texture \"/home/author/src/skin.rgb\"")
     appendLine("crease 45.0")
-    val box = listOf(
-        -1f to 0.2f to -0.2f, 1f to 0.2f to -0.2f, 1f to 0.6f to -0.2f, -1f to 0.6f to -0.2f,
-        -1f to 0.2f to 0.2f, 1f to 0.2f to 0.2f, 1f to 0.6f to 0.2f, -1f to 0.6f to 0.2f,
-    )
+    val box =
+        listOf(
+            -1f to 0.2f to -0.2f,
+            1f to 0.2f to -0.2f,
+            1f to 0.6f to -0.2f,
+            -1f to 0.6f to -0.2f,
+            -1f to 0.2f to 0.2f,
+            1f to 0.2f to 0.2f,
+            1f to 0.6f to 0.2f,
+            -1f to 0.6f to 0.2f,
+        )
     appendLine("numvert ${box.size + 1}")
     box.forEach { (xy, z) -> appendLine("${xy.first} ${xy.second} $z") }
     appendLine("0 1.2 0")
-    val faces = listOf(listOf(0, 3, 2, 1), listOf(4, 5, 6, 7), listOf(0, 1, 5, 4), listOf(3, 7, 6, 2), listOf(0, 4, 7, 3), listOf(1, 2, 6, 5))
+    val faces =
+        listOf(
+            listOf(0, 3, 2, 1),
+            listOf(4, 5, 6, 7),
+            listOf(0, 1, 5, 4),
+            listOf(3, 7, 6, 2),
+            listOf(0, 4, 7, 3),
+            listOf(1, 2, 6, 5),
+        )
     appendLine("numsurf ${faces.size + 1}")
     for (face in faces) {
         appendLine("SURF 0x10")
         appendLine("mat 0")
         appendLine("refs 4")
-        face.forEachIndexed { i, v -> appendLine("$v ${if (i == 1 || i == 2) 1 else 0} ${if (i >= 2) 1 else 0}") }
+        face.forEachIndexed { i, v ->
+            appendLine(
+                "$v ${when { i == 1 || i == 2 -> 1
+ else -> 0 }} ${when { i >= 2 -> 1
+ else -> 0 }}"
+            )
+        }
     }
     appendLine("SURF 0x02") // the antenna: a line, which is not imported
     appendLine("mat 0")
@@ -92,9 +113,27 @@ fun fixtureAc(): String = buildString {
     appendLine("8 0 0")
     appendLine("kids 0")
     // Wing: a two-sided quad, 3 m from tip to tip
-    quad("Wing", null, 1, 0x20, listOf(-0.2f to 0.6f to -1.5f, 0.2f to 0.6f to -1.5f, 0.2f to 0.6f to 1.5f, -0.2f to 0.6f to 1.5f))
-    quad("Prop", null, 0, 0, listOf(-1.05f to 0.3f to -0.3f, -1.05f to 0.3f to 0.3f, -1.05f to 0.5f to 0.3f, -1.05f to 0.5f to -0.3f))
-    quad("PropDisc", null, 2, 0x20, listOf(-1.06f to 0.1f to -0.5f, -1.06f to 0.1f to 0.5f, -1.06f to 0.7f to 0.5f, -1.06f to 0.7f to -0.5f))
+    quad(
+        "Wing",
+        null,
+        1,
+        0x20,
+        listOf(-0.2f to 0.6f to -1.5f, 0.2f to 0.6f to -1.5f, 0.2f to 0.6f to 1.5f, -0.2f to 0.6f to 1.5f),
+    )
+    quad(
+        "Prop",
+        null,
+        0,
+        0,
+        listOf(-1.05f to 0.3f to -0.3f, -1.05f to 0.3f to 0.3f, -1.05f to 0.5f to 0.3f, -1.05f to 0.5f to -0.3f),
+    )
+    quad(
+        "PropDisc",
+        null,
+        2,
+        0x20,
+        listOf(-1.06f to 0.1f to -0.5f, -1.06f to 0.1f to 0.5f, -1.06f to 0.7f to 0.5f, -1.06f to 0.7f to -0.5f),
+    )
     quad("Tail", "missing.rgb", 0, 0, listOf(0.8f to 0.6f to 0f, 1f to 0.6f to 0f, 1f to 1f to 0f, 0.8f to 1f to 0f))
 }
 
@@ -107,7 +146,13 @@ fun fixtureWheelAc(): String = buildString {
     quad("Wheel", null, 0, 0, listOf(-0.1f to 0f to 0f, 0.1f to 0f to 0f, 0.1f to 0.2f to 0f, -0.1f to 0.2f to 0f))
 }
 
-private fun StringBuilder.quad(name: String, texture: String?, material: Int, flags: Int, points: List<Pair<Pair<Float, Float>, Float>>) {
+private fun StringBuilder.quad(
+    name: String,
+    texture: String?,
+    material: Int,
+    flags: Int,
+    points: List<Pair<Pair<Float, Float>, Float>>,
+) {
     appendLine("OBJECT poly")
     appendLine("name \"$name\"")
     texture?.let { appendLine("texture \"$it\"") }
@@ -121,8 +166,11 @@ private fun StringBuilder.quad(name: String, texture: String?, material: Int, fl
     appendLine("kids 0")
 }
 
-/** The fixture aircraft's model XML: the AC file, a nested wheel 0.5 m ahead (FlightGear x is aft), a panel, selects. */
-fun fixtureModelXml(): String = """
+/**
+ * The fixture aircraft's model XML: the AC file, a nested wheel 0.5 m ahead (FlightGear x is aft), a panel, selects.
+ */
+fun fixtureModelXml(): String =
+    """
     <?xml version="1.0"?>
     <PropertyList>
      <path>fixture.ac</path>
@@ -143,11 +191,14 @@ fun fixtureModelXml(): String = """
      </animation>
      <animation><type>rotate</type><object-name>Prop</object-name></animation>
     </PropertyList>
-""".trimIndent()
+    """
+        .trimIndent()
 
 /** The files of the fixture archive, keyed by their path in it. [license] adds a `COPYING` file. */
 fun fixtureFiles(license: Boolean = false): Map<String, ByteArray> = buildMap {
-    put("fixture/fixture-set.xml", """
+    put(
+        "fixture/fixture-set.xml",
+        """
         <?xml version="1.0"?>
         <PropertyList>
          <sim>
@@ -156,14 +207,22 @@ fun fixtureFiles(license: Boolean = false): Map<String, ByteArray> = buildMap {
           <model><path>Aircraft/fixture/Models/fixture.xml</path></model>
          </sim>
         </PropertyList>
-    """.trimIndent().toByteArray())
+        """
+            .trimIndent()
+            .toByteArray(),
+    )
     put("fixture/Models/fixture.xml", fixtureModelXml().toByteArray())
     put("fixture/Models/fixture.ac", fixtureAc().toByteArray())
-    put("fixture/Models/wheel.xml", "<?xml version=\"1.0\"?>\n<PropertyList><path>wheel.ac</path></PropertyList>".toByteArray())
+    put(
+        "fixture/Models/wheel.xml",
+        "<?xml version=\"1.0\"?>\n<PropertyList><path>wheel.ac</path></PropertyList>".toByteArray(),
+    )
     put("fixture/Models/wheel.ac", fixtureWheelAc().toByteArray())
     put("fixture/Models/skin.rgb", sgiRle(4, 2, 3, ::fixtureSkinPixel))
     put("fixture/Panels/panel.xml", "<?xml version=\"1.0\"?>\n<PropertyList/>".toByteArray())
-    if (license) put("fixture/COPYING", "Fixture licence text\n".toByteArray())
+    if (license) {
+        put("fixture/COPYING", "Fixture licence text\n".toByteArray())
+    }
 }
 
 /** The time of every entry: fixed, so two archives of the same files are the same bytes whenever they are written. */
@@ -182,4 +241,5 @@ fun writeZip(target: File, files: Map<String, ByteArray>): File {
 }
 
 /** The fixture archive in [folder]. */
-fun fixtureArchive(folder: File, license: Boolean = false): File = writeZip(File(folder, "fixture.zip"), fixtureFiles(license))
+fun fixtureArchive(folder: File, license: Boolean = false): File =
+    writeZip(File(folder, "fixture.zip"), fixtureFiles(license))

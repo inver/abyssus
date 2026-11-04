@@ -7,13 +7,13 @@ package net.nevinsky.abyssus.app.game.controlline.flight
 import com.badlogic.ashley.core.EntitySystem
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
+import kotlin.math.max
 import net.nevinsky.abyssus.app.game.controlline.score.FlightScoring
 import net.nevinsky.abyssus.app.game.controlline.track.SphereTrack
 import net.nevinsky.abyssus.app.game.controlline.track.TrackSample
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.physics.GRAVITY
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
-import kotlin.math.max
 
 /**
  * One plane flying on its lines: the [rig], the aerodynamic forces, how the flight ends and its score. The same code
@@ -59,7 +59,8 @@ class Flight(
     var result: FlightEnd? = null
         private set
 
-    val finished: Boolean get() = result != null
+    val finished: Boolean
+        get() = result != null
 
     /** How fast the plane came down onto the ground when it crashed into it (m/s); 0 otherwise. */
     var impactSpeed = 0f
@@ -70,15 +71,16 @@ class Flight(
         private set
 
     /** Seconds of fuel left. */
-    val fuelLeft: Float get() = max(0f, rig.planeSettings.fuelTime - time)
+    val fuelLeft: Float
+        get() = max(0f, rig.planeSettings.fuelTime - time)
 
     /** The judge marking this flight, or null (Free flight, Play). */
     var judge: FlightJudge? = null
         private set
 
     /**
-     * Starts a new flight: the plane at takeoff on the circle at [azimuth] degrees, the score at 0. A [judge] gets every
-     * step's sample and the flight's end; the arcade score is kept either way.
+     * Starts a new flight: the plane at takeoff on the circle at [azimuth] degrees, the score at 0. A [judge] gets
+     * every step's sample and the flight's end; the arcade score is kept either way.
      */
     fun takeoff(azimuth: Float = 0f, judge: FlightJudge? = null) {
         this.judge = judge
@@ -109,7 +111,9 @@ class Flight(
     }
 
     fun update(seconds: Float) {
-        if (result != null) return
+        if (result != null) {
+            return
+        }
         val position = plane.getComponent(PositionComponent::class.java)
         val rotation = Quaternion(position.localRotation).nor()
         body.velocity(velocity)
@@ -121,12 +125,26 @@ class Flight(
             val engineRunning = aero.thrust(rig.planeSettings, time) > 0f
             val upright = rotation.transform(Vector3(0f, 1f, 0f)).y >= 0f
             val wasSlack = outcome.slackInAir
-            val ended = outcome.check(seconds, world.contacts(), -lastVelocity.y, upright, airborne, engineRunning, tension)
-            val sample = track.sample(time, rig.handle, p, velocity, rotation, airborne, height, engineRunning, rig.pilotSettings.handleHeight)
+            val ended =
+                outcome.check(seconds, world.contacts(), -lastVelocity.y, upright, airborne, engineRunning, tension)
+            val sample =
+                track.sample(
+                    time,
+                    rig.handle,
+                    p,
+                    velocity,
+                    rotation,
+                    airborne,
+                    height,
+                    engineRunning,
+                    rig.pilotSettings.handleHeight,
+                )
             lastSample = sample
             judge?.sample(sample)
             scoring.sample(sample)
-            if (outcome.slackInAir && !wasSlack) scoring.keeper.linesSlack()
+            if (outcome.slackInAir && !wasSlack) {
+                scoring.keeper.linesSlack()
+            }
             if (ended != null) {
                 result = ended
                 if (ended == FlightEnd.CRASHED) {
@@ -141,9 +159,19 @@ class Flight(
         started = true
         rig.beforeStep(seconds)
         body.angularVelocity(spin)
-        aero.forces(rig.planeSettings, rotation, velocity, spin, rig.elevator, aero.thrust(rig.planeSettings, time), forces)
+        aero.forces(
+            rig.planeSettings,
+            rotation,
+            velocity,
+            spin,
+            rig.elevator,
+            aero.thrust(rig.planeSettings, time),
+            forces,
+        )
         body.applyForce(forces.force)
-        if (started && time > 0f) body.applyForce(wireInertia(seconds))
+        if (started && time > 0f) {
+            body.applyForce(wireInertia(seconds))
+        }
         body.applyTorque(forces.torque)
         lastVelocity.set(velocity)
         time += seconds

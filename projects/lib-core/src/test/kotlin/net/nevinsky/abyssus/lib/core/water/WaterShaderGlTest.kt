@@ -28,17 +28,39 @@ class WaterShaderGlTest {
 
     private val presets = WaterPresets()
 
-    private fun camera() = PerspectiveCamera(60f, W.toFloat(), H.toFloat()).also {
-        it.position.set(0f, 14f, 14f); it.lookAt(0f, 0f, 0f); it.near = 0.1f; it.far = 500f; it.update()
-    }
+    private fun camera() =
+        PerspectiveCamera(60f, W.toFloat(), H.toFloat()).also {
+            it.position.set(0f, 14f, 14f)
+            it.lookAt(0f, 0f, 0f)
+            it.near = 0.1f
+            it.far = 500f
+            it.update()
+        }
 
-    private fun frame(seconds: Double) = WaterFrame(
-        camera(), W, H, seconds,
-        ambient = floatArrayOf(0.3f, 0.3f, 0.3f), skyColor = floatArrayOf(0.5f, 0.6f, 0.8f), fogColor = floatArrayOf(0f, 0f, 0f), fogK = 0f,
-        directionalCount = 1,
-        directionalDirections = FloatArray(MAX_DIRECTIONAL * 3).also { it[0] = 0.3f; it[1] = -0.8f; it[2] = -0.5f },
-        directionalColors = FloatArray(MAX_DIRECTIONAL * 3).also { it[0] = 4f; it[1] = 4f; it[2] = 4f },
-    )
+    private fun frame(seconds: Double) =
+        WaterFrame(
+            camera(),
+            W,
+            H,
+            seconds,
+            ambient = floatArrayOf(0.3f, 0.3f, 0.3f),
+            skyColor = floatArrayOf(0.5f, 0.6f, 0.8f),
+            fogColor = floatArrayOf(0f, 0f, 0f),
+            fogK = 0f,
+            directionalCount = 1,
+            directionalDirections =
+                FloatArray(MAX_DIRECTIONAL * 3).also {
+                    it[0] = 0.3f
+                    it[1] = -0.8f
+                    it[2] = -0.5f
+                },
+            directionalColors =
+                FloatArray(MAX_DIRECTIONAL * 3).also {
+                    it[0] = 4f
+                    it[1] = 4f
+                    it[2] = 4f
+                },
+        )
 
     private fun draw(drawable: WaterDrawable, surface: WaterSettings, seconds: Double): ByteArray {
         val target = FrameBuffer(Pixmap.Format.RGBA8888, W, H, true)
@@ -58,13 +80,18 @@ class WaterShaderGlTest {
         }
     }
 
-    private fun painted(pixels: ByteArray) = (0 until W * H).count { i ->
-        (pixels[i * 4].toInt() and 255) + (pixels[i * 4 + 1].toInt() and 255) + (pixels[i * 4 + 2].toInt() and 255) > 12
-    }
+    private fun painted(pixels: ByteArray) =
+        (0 until W * H).count { i ->
+            (pixels[i * 4].toInt() and 255) +
+                (pixels[i * 4 + 1].toInt() and 255) +
+                (pixels[i * 4 + 2].toInt() and 255) > 12
+        }
 
-    private fun difference(a: ByteArray, b: ByteArray) = a.indices.sumOf { kotlin.math.abs((a[it].toInt() and 255) - (b[it].toInt() and 255)) }
+    private fun difference(a: ByteArray, b: ByteArray) =
+        a.indices.sumOf { kotlin.math.abs((a[it].toInt() and 255) - (b[it].toInt() and 255)) }
 
-    @Test fun theShaderCompilesAndBothPresetsDrawAnimatedWater() = TestGl.run {
+    @Test
+    fun theShaderCompilesAndBothPresetsDrawAnimatedWater() = TestGl.run {
         val drawable = WaterDrawable(ShaderStorage())
         try {
             for (preset in WaterPreset.entries) {
@@ -80,20 +107,28 @@ class WaterShaderGlTest {
         }
     }
 
-    @Test fun flatWaterDoesNotMove() = TestGl.run {
+    @Test
+    fun flatWaterDoesNotMove() = TestGl.run {
         val drawable = WaterDrawable(ShaderStorage())
         try {
-            val flat = presets.defaults(WaterPreset.LAKE, "w", "w", 0.0, 0.0, 0.0).copy(width = 60.0, length = 60.0, waveAmplitude = 0.0)
+            val flat =
+                presets
+                    .defaults(WaterPreset.LAKE, "w", "w", 0.0, 0.0, 0.0)
+                    .copy(width = 60.0, length = 60.0, waveAmplitude = 0.0)
             assertEquals(0, difference(draw(drawable, flat, 0.0), draw(drawable, flat, 5.0)))
         } finally {
             drawable.dispose()
         }
     }
 
-    @Test fun surfacesKeepTheirOwnTintAndLevel() = TestGl.run {
+    @Test
+    fun surfacesKeepTheirOwnTintAndLevel() = TestGl.run {
         val drawable = WaterDrawable(ShaderStorage())
         try {
-            val green = presets.defaults(WaterPreset.LAKE, "a", "a", 0.0, 0.0, 0.0).copy(width = 60.0, length = 60.0, tintR = 0.0, tintG = 1.0, tintB = 0.0)
+            val green =
+                presets
+                    .defaults(WaterPreset.LAKE, "a", "a", 0.0, 0.0, 0.0)
+                    .copy(width = 60.0, length = 60.0, tintR = 0.0, tintG = 1.0, tintB = 0.0)
             val red = green.copy(tintR = 1.0, tintG = 0.0)
             val g = draw(drawable, green, 0.0)
             val r = draw(drawable, red, 0.0)
@@ -105,10 +140,15 @@ class WaterShaderGlTest {
         }
     }
 
-    @Test fun meshesAreKeptForRecentSurfacesAndBounded() = TestGl.run {
+    @Test
+    fun meshesAreKeptForRecentSurfacesAndBounded() = TestGl.run {
         val drawable = WaterDrawable(ShaderStorage())
         try {
-            for (i in 1..40) draw(drawable, presets.defaults(WaterPreset.LAKE, "w", "w", 0.0, 0.0, 0.0).copy(width = 10.0 + i, length = 10.0 + i), 0.0)
+            for (i in 1..40) draw(
+                drawable,
+                presets.defaults(WaterPreset.LAKE, "w", "w", 0.0, 0.0, 0.0).copy(width = 10.0 + i, length = 10.0 + i),
+                0.0,
+            )
             assertTrue("no more meshes than the cache keeps (${drawable.meshCount})", drawable.meshCount <= 16)
         } finally {
             drawable.dispose()

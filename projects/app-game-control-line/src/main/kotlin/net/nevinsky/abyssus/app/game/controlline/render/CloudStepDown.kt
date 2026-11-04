@@ -32,7 +32,9 @@ class CloudStepDown(private val budget: CloudFrameBudget = CloudFrameBudget()) {
 
     fun frame(seconds: Float, drawn: CloudTechnique?): CloudTechnique? {
         val watched = drawn != null && simplerThan(drawn) != null
-        if (!budget.frame(seconds, watched)) return null
+        if (!budget.frame(seconds, watched)) {
+            return null
+        }
         return drawn?.let(::simplerThan)
     }
 }

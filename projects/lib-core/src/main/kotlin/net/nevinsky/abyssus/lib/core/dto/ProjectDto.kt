@@ -17,7 +17,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * A native project: its [name], [scenes] and settings as the `.abss` file holds them (unknown keys are not kept). A project made from a folder ([dir]; not
+  * A native project: its [name], [scenes] and settings as the `.abss` file holds them (unknown keys are not kept). A
+  * project made from a folder ([dir]; not
  * part of the file) also knows the files of its layout, independent of the editor's virtual filesystem: names are
  * case-sensitive (`.abss`, `.scene`), and a folder with no `.abss` is not a project. A project that is not made from
  * a folder has no files.

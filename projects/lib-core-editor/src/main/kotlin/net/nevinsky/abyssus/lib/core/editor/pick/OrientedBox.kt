@@ -23,7 +23,9 @@ class OrientedBox(local: BoundingBox, world: Matrix4) {
 
     fun overlaps(other: OrientedBox): Boolean {
         if (hull.maxOf { it.x } < other.hull.minOf { it.x } || other.hull.maxOf { it.x } < hull.minOf { it.x } ||
-            hull.maxOf { it.y } < other.hull.minOf { it.y } || other.hull.maxOf { it.y } < hull.minOf { it.y }) return false
+            hull.maxOf { it.y } < other.hull.minOf { it.y } || other.hull.maxOf { it.y } < hull.minOf { it.y }) {
+            return false
+        }
         for (polygon in listOf(hull, other.hull)) for (i in polygon.indices) {
             val a = polygon[i]
             val b = polygon[(i + 1) % polygon.size]
@@ -31,14 +33,18 @@ class OrientedBox(local: BoundingBox, world: Matrix4) {
             val nz = b.x - a.x
             fun projection(p: Vector2) = p.x * nx + p.y * nz
             if (hull.maxOf(::projection) < other.hull.minOf(::projection) ||
-                other.hull.maxOf(::projection) < hull.minOf(::projection)) return false
+                other.hull.maxOf(::projection) < hull.minOf(::projection)) {
+                return false
+            }
         }
         return true
     }
 
     private fun convexHull(points: List<Vector2>): List<Vector2> {
         val sorted = points.distinctBy { it.x to it.y }.sortedWith(compareBy({ it.x }, { it.y }))
-        if (sorted.size <= 2) return sorted
+        if (sorted.size <= 2) {
+            return sorted
+        }
         fun turn(a: Vector2, b: Vector2, c: Vector2) = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
         fun half(order: List<Vector2>): List<Vector2> {
             val out = mutableListOf<Vector2>()

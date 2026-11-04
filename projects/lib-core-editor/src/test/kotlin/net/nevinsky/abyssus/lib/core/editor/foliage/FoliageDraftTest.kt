@@ -31,7 +31,9 @@ class FoliageDraftTest {
 
     private fun mask(value: Int): ByteArray = ByteArray(resolution * resolution) { value.toByte() }
 
-    /** The chunks a mask rectangle [rect] touches: its texel centres in terrain-local units, chunked like the scatter. */
+    /**
+     * The chunks a mask rectangle [rect] touches: its texel centres in terrain-local units, chunked like the scatter.
+     */
     private fun covering(rect: GridRect): Set<FoliageChunk> {
         val i0 = (rect.minX * cell / chunkSize).toInt()
         val i1 = (rect.maxX * cell / chunkSize).toInt()

@@ -53,7 +53,8 @@ class WaterSceneEditorTest : BasePlatformTestCase() {
             override fun assetActions(file: VirtualFile, position: () -> Vector3) = DefaultActionGroup()
             override fun canAddLight(file: VirtualFile) = false
             override fun canAddAsset(file: VirtualFile) = false
-            override fun listenWater(file: VirtualFile, parent: Disposable, selected: (String) -> Unit) { treeSelection = selected }
+            override fun listenWater(file: VirtualFile, parent: Disposable, selected: (String) -> Unit) { treeSelection
+                = selected }
             override fun selectWater(file: VirtualFile, waterId: String) { picked = waterId }
         }
         lateinit var view: FakeView
@@ -75,9 +76,12 @@ class WaterSceneEditorTest : BasePlatformTestCase() {
         val editor = newSceneEditor(project, scene) { FakeView(it).also { v -> view = v } }
         val commands = mutableListOf<String?>()
         val connection = project.messageBus.connect()
-        connection.subscribe(com.intellij.openapi.command.CommandListener.TOPIC, object : com.intellij.openapi.command.CommandListener {
+        connection.subscribe(com.intellij.openapi.command.CommandListener.TOPIC, object :
+            com.intellij.openapi.command.CommandListener {
             override fun commandFinished(event: com.intellij.openapi.command.CommandEvent) {
-                if (event.project == project) commands += event.commandName
+                if (event.project == project) {
+                    commands += event.commandName
+                }
             }
         })
         try {
@@ -88,7 +92,8 @@ class WaterSceneEditorTest : BasePlatformTestCase() {
             val after = textOf(scene)
             assertEquals(listOf("Move Water"), commands)
             val water = before.indexOf("\"waterSurfaces\"")
-            assertEquals(before.substring(0, water) + before.substring(water).replaceFirst("\"y\": 2", "\"y\": 4"), after)
+            assertEquals(before.substring(0, water) + before.substring(water).replaceFirst("\"y\": 2", "\"y\": 4"),
+                after)
             assertEquals(4.0, waters(view).single().level, 0.0)
             val undo = UndoManager.getInstance(project)
             assertTrue(undo.isUndoAvailable(editor))

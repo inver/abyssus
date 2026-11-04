@@ -14,15 +14,20 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Plane select's vitrine on the bundled field: every plane on a table of its own, its lowest point on the table-top. */
+/**
+ * Plane select's vitrine on the bundled field: every plane on a table of its own, its lowest point on the table-top.
+ */
 class VitrineSceneTest {
     private val assets = PhysicsAssets(bundledProject().toFile())
 
     private fun parked() = FieldScene(loadField()).also { it.standOnTables(assets::modelPoints) }
 
     private val FieldScene.tables
-        get() = engine.ids.ids.sorted().map { checkNotNull(engine.ids[it]) }
-            .filter { it.getComponent(VitrineTableComponent::class.java) != null }
+        get() =
+            engine.ids.ids
+                .sorted()
+                .map { checkNotNull(engine.ids[it]) }
+                .filter { it.getComponent(VitrineTableComponent::class.java) != null }
 
     @Test
     fun everyBundledPlaneRestsOnTheTopOfItsOwnTable() {
@@ -52,7 +57,10 @@ class VitrineSceneTest {
         for (table in scene.tables) {
             val at = table.getComponent(PositionComponent::class.java).localPosition
             val nearest = Math.hypot((at.x - pilot.x).toDouble(), (at.z - pilot.z).toDouble()) - 1.2
-            assertTrue("a display table is ${nearest} m from the pilot, inside the $widest m circle", nearest > widest + 2f)
+            assertTrue(
+                "a display table is ${nearest} m from the pilot, inside the $widest m circle",
+                nearest > widest + 2f,
+            )
         }
     }
 
@@ -65,6 +73,9 @@ class VitrineSceneTest {
         val after = parked.position(checkNotNull(parked.entity(choice.entityId))).localPosition
         assertTrue("the parked plane moved onto its table", before.dst(after) > 10f)
         // a second, fresh load is unaffected by the first one's rearranging
-        assertEquals(before, FieldScene(loadField()).let { it.position(checkNotNull(it.entity(choice.entityId))).localPosition })
+        assertEquals(
+            before,
+            FieldScene(loadField()).let { it.position(checkNotNull(it.entity(choice.entityId))).localPosition },
+        )
     }
 }

@@ -5,24 +5,23 @@
 
 package net.nevinsky.abyssus.lib.core.scene
 
+import java.io.File
+import java.nio.file.Files
 import net.nevinsky.abyssus.lib.core.assets.testProject
-import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.dto.EcsLoader
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Test
 import org.slf4j.helpers.NOPLogger
-import java.io.File
-import java.nio.file.Files
 
 /** A game ignores the editor-only scene keys, and loading never writes the file. */
 class SceneEditorKeysIgnoredTest {
     private val dirs = mutableListOf<File>()
 
-    @After
-    fun cleanUp() = dirs.forEach(File::deleteRecursively)
+    @After fun cleanUp() = dirs.forEach(File::deleteRecursively)
 
     /** A copy of `Untitled` whose `Main Scene` holds [extra] after its format keys; unchanged when [extra] is empty. */
     private fun project(extra: String = ""): File {
@@ -32,13 +31,19 @@ class SceneEditorKeysIgnoredTest {
         val text = scene.readText()
         val marker = "\"formatVersion\": 1,"
         assertTrue("fixture shape changed", marker in text)
-        if (extra.isNotEmpty()) scene.writeText(text.replaceFirst(marker, "$marker\n  $extra"))
+        if (extra.isNotEmpty()) {
+            scene.writeText(text.replaceFirst(marker, "$marker\n  $extra"))
+        }
         return root
     }
 
     private fun loader(root: File): RuntimeSceneLoader {
         val json = JsonProcessor(NOPLogger.NOP_LOGGER)
-        return RuntimeSceneLoader(SceneLoader(json, FileLoader(root), ComponentRegistry()), EcsLoader(), NOPLogger.NOP_LOGGER)
+        return RuntimeSceneLoader(
+            SceneLoader(json, FileLoader(root), ComponentRegistry()),
+            EcsLoader(),
+            NOPLogger.NOP_LOGGER,
+        )
     }
 
     @Test

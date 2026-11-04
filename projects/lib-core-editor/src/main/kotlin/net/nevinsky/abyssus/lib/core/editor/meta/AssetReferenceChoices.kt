@@ -5,15 +5,15 @@
 
 package net.nevinsky.abyssus.lib.core.editor.meta
 
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import net.nevinsky.abyssus.lib.core.util.obj
-import net.nevinsky.abyssus.lib.core.util.text
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.io.confinedFile
-import java.io.File
+import net.nevinsky.abyssus.lib.core.util.obj
+import net.nevinsky.abyssus.lib.core.util.text
 
 /**
  * One entry of a texture or image chooser: [value] is what is stored in the file (a texture asset's `uuid`, a face's
@@ -35,19 +35,31 @@ class AssetReferenceChoices(private val json: JsonProcessor) {
      * `uuid` is kept as a first-class, unresolved entry when it is not among them.
      */
     fun textures(assetsDir: File, current: String?): List<AssetChoice> {
-        val usable = assetsDir.listFiles { f -> f.isDirectory }?.sortedBy { it.name }.orEmpty()
-            .mapNotNull { dir -> textureUuid(dir)?.let { AssetChoice(it, dir.name) } }
+        val usable =
+            assetsDir
+                .listFiles { f -> f.isDirectory }
+                ?.sortedBy { it.name }
+                .orEmpty()
+                .mapNotNull { dir -> textureUuid(dir)?.let { AssetChoice(it, dir.name) } }
         val none = AssetChoice(null, "")
-        val unresolved = current?.takeIf { c -> usable.none { it.value == c } }?.let { AssetChoice(it, it, resolved = false) }
+        val unresolved =
+            current?.takeIf { c -> usable.none { it.value == c } }?.let { AssetChoice(it, it, resolved = false) }
         return listOfNotNull(none, unresolved) + usable
     }
 
-    /** The `uuid` of the texture asset in [folder], or null when it is not a texture, has no `uuid` or no readable image. */
+    /**
+     * The `uuid` of the texture asset in [folder], or null when it is not a texture, has no `uuid` or no readable
+     * image.
+     */
     internal fun textureUuid(folder: File): String? {
-        val meta = runCatchingKeepingCancellation {
-            File(folder, META_FILE).takeIf { it.isFile }?.let { AssetMetaReader(json).read(it.readText()) }
-        }.getOrNull() ?: return null
-        if (meta.type != MetaType.TEXTURE && meta.type != MetaType.PIXMAP_TEXTURE) return null
+        val meta =
+            runCatchingKeepingCancellation {
+                File(folder, META_FILE).takeIf { it.isFile }?.let { AssetMetaReader(json).read(it.readText()) }
+            }
+                .getOrNull() ?: return null
+        if (meta.type != MetaType.TEXTURE && meta.type != MetaType.PIXMAP_TEXTURE) {
+            return null
+        }
         val uuid = meta.text("uuid")?.takeIf { it.isNotBlank() } ?: return null
         return uuid.takeIf { isImage(folder, meta.text("additional", "file")) }
     }
@@ -57,22 +69,35 @@ class AssetReferenceChoices(private val json: JsonProcessor) {
      * separators. The stored [current] name is kept as an unresolved entry when it is not among them.
      */
     fun faces(folder: File, current: String?): List<AssetChoice> {
-        val meta = runCatchingKeepingCancellation { File(folder, META_FILE).takeIf { it.isFile }?.let { AssetMetaReader(
-            json
-        ).read(it.readText()) } }.getOrNull()
-        if (meta == null) return listOfNotNull(AssetChoice(null, ""), current?.let { AssetChoice(it, it, resolved = false) })
-        val found = folder.walkTopDown().maxDepth(MAX_FACE_DEPTH).filter { it.isFile }
-            .map { it.relativeTo(folder).invariantSeparatorsPath }
-            .filter { isImage(folder, it) }
-            .sorted().map { AssetChoice(it, it) }.toList()
-        val unresolved = current?.takeIf { c -> found.none { it.value == c } }?.let { AssetChoice(it, it, resolved = false) }
+        val meta = runCatchingKeepingCancellation {
+            File(folder, META_FILE).takeIf { it.isFile }?.let { AssetMetaReader(json).read(it.readText()) }
+        }.getOrNull()
+        if (meta == null) {
+            return listOfNotNull(AssetChoice(null, ""), current?.let { AssetChoice(it, it, resolved = false) })
+        }
+        val found =
+            folder
+                .walkTopDown()
+                .maxDepth(MAX_FACE_DEPTH)
+                .filter { it.isFile }
+                .map { it.relativeTo(folder).invariantSeparatorsPath }
+                .filter { isImage(folder, it) }
+                .sorted()
+                .map { AssetChoice(it, it) }
+                .toList()
+        val unresolved =
+            current?.takeIf { c -> found.none { it.value == c } }?.let { AssetChoice(it, it, resolved = false) }
         return listOfNotNull(AssetChoice(null, ""), unresolved) + found
     }
 
     /** Whether [name] is a readable image file of a type the loaders decode, inside [folder] after resolving links. */
     fun isImage(folder: File, name: String?): Boolean {
-        if (name.isNullOrBlank()) return false
-        if (name.substringAfterLast('.', "").lowercase() !in IMAGE_EXTENSIONS) return false
+        if (name.isNullOrBlank()) {
+            return false
+        }
+        if (name.substringAfterLast('.', "").lowercase() !in IMAGE_EXTENSIONS) {
+            return false
+        }
         val file = inside(folder, name) ?: return false
         return file.isFile && file.canRead()
     }

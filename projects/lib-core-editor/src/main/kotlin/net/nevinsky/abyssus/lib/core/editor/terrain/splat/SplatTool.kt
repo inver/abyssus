@@ -36,7 +36,11 @@ sealed interface SplatTool : BrushTool<ByteGrid> {
                 if (slot == 0) {
                     for (c in 0 until 4) out[i * 4 + c] = -delta
                 } else {
-                    out[i * 4 + slot - 1] = if (stamp.reversed) -delta else delta
+                    out[i * 4 + slot - 1] = if (stamp.reversed) {
+                        -delta
+                    } else {
+                        delta
+                    }
                 }
             }
         }

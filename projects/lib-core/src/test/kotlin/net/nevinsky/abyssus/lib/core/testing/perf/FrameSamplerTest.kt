@@ -27,9 +27,15 @@ class FrameSamplerTest {
         val sampler = FrameSampler()
         sampler.start()
         var keep: Any? = null
-        repeat(50) { keep = ByteArray(10_000); sampler.record(1_000_000L) }
+        repeat(50) {
+            keep = ByteArray(10_000)
+            sampler.record(1_000_000L)
+        }
         assertTrue(keep != null)
-        assertTrue("allocated ${sampler.stats().allocatedBytesPerFrame}", sampler.stats().allocatedBytesPerFrame >= 10_000)
+        assertTrue(
+            "allocated ${sampler.stats().allocatedBytesPerFrame}",
+            sampler.stats().allocatedBytesPerFrame >= 10_000,
+        )
     }
 
     @Test

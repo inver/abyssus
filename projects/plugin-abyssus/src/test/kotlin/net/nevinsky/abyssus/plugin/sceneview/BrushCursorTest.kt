@@ -48,7 +48,9 @@ class BrushCursorTest {
         var previous = point(0)
         for (i in 1..64) {
             val next = point(i)
-            if (previous != null && next != null) out += previous to next
+            if (previous != null && next != null) {
+                out += previous to next
+            }
             previous = next
         }
         return out

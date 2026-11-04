@@ -14,8 +14,16 @@ class RayOpticalPath(private val reflectionLimit: Int,private val refractionLimi
     var refractions=0; private set
     init { require(reflectionLimit in 0..16 && refractionLimit in 0..16) }
     fun consume(event: RayOpticalEvent): Boolean = when(event) {
-        RayOpticalEvent.REFLECTION -> if(reflections<reflectionLimit) { reflections++;true } else false
-        RayOpticalEvent.TRANSMISSION -> if(refractions<refractionLimit) { refractions++;true } else false
+        RayOpticalEvent.REFLECTION -> if(reflections<reflectionLimit) {
+            reflections++;true
+        } else {
+            false
+        }
+        RayOpticalEvent.TRANSMISSION -> if(refractions<refractionLimit) {
+            refractions++;true
+        } else {
+            false
+        }
     }
 }
 
@@ -26,13 +34,29 @@ class RayOpticalMedium {
     val inside get()=solid!=null
     fun incidentIor(id: Int,materialIor: Float,entering: Boolean): Float {
         require(solid==null || solid==id && !entering) { "Nested or intersecting dielectric solids are unsupported" }
-        if(solid==null && !entering) { solid=id;ior=materialIor }
-        return if(solid!=null) ior else if(entering) 1f else materialIor
+        if(solid==null && !entering) {
+            solid=id;ior=materialIor
+        }
+        return if(solid!=null) {
+            ior
+        } else if(entering) {
+            1f
+        } else {
+            materialIor
+        }
     }
     fun cross(id: Int,materialIor: Float,entering: Boolean) {
         incidentIor(id,materialIor,entering)
-        solid=if(entering) id else null
-        ior=if(entering) materialIor else 1f
+        solid=if(entering) {
+            id
+        } else {
+            null
+        }
+        ior=if(entering) {
+            materialIor
+        } else {
+            1f
+        }
     }
 }
 
@@ -42,22 +66,32 @@ class RayOptics {
         val eta=incidentIor/targetIor
         val cosine=(-incident.dot(opposingNormal)).coerceIn(0f,1f)
         val k=1f-eta*eta*(1f-cosine*cosine)
-        if(k<0f) return null
+        if(k<0f) {
+            return null
+        }
         return (incident*eta+opposingNormal*(eta*cosine-sqrt(k))).unit()
     }
     fun fresnel(cosine: Float,incidentIor: Float,targetIor: Float): Float {
-        if(incidentIor==targetIor) return 0f
+        if(incidentIor==targetIor) {
+            return 0f
+        }
         val c=cosine.coerceIn(0f,1f)
         val eta=incidentIor/targetIor
         val sin2=eta*eta*(1f-c*c)
-        if(sin2>=1f) return 1f
+        if(sin2>=1f) {
+            return 1f
+        }
         val transmitted=sqrt(1f-sin2)
         val rs=(incidentIor*c-targetIor*transmitted)/(incidentIor*c+targetIor*transmitted)
         val rp=(targetIor*c-incidentIor*transmitted)/(targetIor*c+incidentIor*transmitted)
         return ((rs*rs+rp*rp)*.5f).coerceIn(0f,1f)
     }
     fun offset(position: Vector3,geometricNormal: Vector3,direction: Vector3): Vector3 =
-        position+geometricNormal*(if(direction.dot(geometricNormal)>=0f) .001f else -.001f)
+        position+geometricNormal*(if(direction.dot(geometricNormal)>=0f) {
+            .001f
+        } else {
+            -.001f
+        })
 
     /** Integer hash shared with native kernels; exactly representable 24-bit fraction. */
     fun sample(x: Int,y: Int,sample: Int,event: Int): Float {

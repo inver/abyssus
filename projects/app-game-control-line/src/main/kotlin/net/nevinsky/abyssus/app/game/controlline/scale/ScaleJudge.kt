@@ -33,11 +33,17 @@ class ScaleJudge : FlightJudge {
 
     /** The marks so far; the landing scores once the flight has ended as a landing. */
     val marks: ScaleMarks
-        get() = scaleMarks(times, if (elevationCount == 0) 0f else (elevationSum / elevationCount).toFloat(), end == FlightEnd.LANDED)
+        get() = scaleMarks(times, if (elevationCount == 0) {
+            0f
+        } else {
+            (elevationSum / elevationCount).toFloat()
+        }, end == FlightEnd.LANDED)
 
     override fun sample(sample: TrackSample) {
         if (sample.airborne) {
-            if (lapStart == null) lapStart = sample.time
+            if (lapStart == null) {
+                lapStart = sample.time
+            }
             lapElevationSum += abs(sample.elevation)
             lapElevationCount++
         }

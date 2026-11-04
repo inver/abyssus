@@ -27,4 +27,8 @@ fun TrackKind.color(): Color = when (this) {
     TrackKind.GUIDE -> GUIDE_COLOR
 }
 
-fun TrackKind.lineWidth(): Float = if (this == TrackKind.GUIDE) 1f else 3f
+fun TrackKind.lineWidth(): Float = if (this == TrackKind.GUIDE) {
+    1f
+} else {
+    3f
+}

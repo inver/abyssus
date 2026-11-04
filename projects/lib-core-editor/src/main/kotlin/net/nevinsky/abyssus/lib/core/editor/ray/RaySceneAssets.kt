@@ -4,17 +4,17 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.ray
 
+import java.io.File
 import net.nevinsky.abyssus.lib.core.editor.content.storageName
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayModelSnapshot
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RaySkySnapshot
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.RayTerrainSnapshot
-import java.io.File
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 
 /**
- * Per-view optional CPU interest. Reconciliation and polling never wait for asset preparation or touch GL. A model drawn
- * by one mesh is its own lease, keyed by its encoded `ModelKey`; invalidating the view drops every lease, variants with
- * their model.
+ * Per-view optional CPU interest. Reconciliation and polling never wait for asset preparation or touch GL. A model
+ * drawn by one mesh is its own lease, keyed by its encoded `ModelKey`; invalidating the view drops every lease,
+ * variants with their model.
  */
 class RaySceneAssets(
     private val acquireModel: (File, String) -> RayAssetLease<RayModelSnapshot>,
@@ -31,8 +31,13 @@ class RaySceneAssets(
 
     fun update(projectDir: File?, content: SceneContent) {
         val key = projectDir?.absoluteFile?.toPath()?.normalize()?.toString()
-        if (key != project) { close(); project = key }
-        if (projectDir == null) return
+        if (key != project) {
+            close()
+            project = key
+        }
+        if (projectDir == null) {
+            return
+        }
         reconcile(models, content.models.map { it.storageName }.toSet()) { acquireModel(projectDir, it) }
         reconcile(terrains, content.terrains.map { it.assetName }.toSet()) { acquireTerrain(projectDir, it) }
         if (content.skybox != skyName) {
@@ -43,23 +48,33 @@ class RaySceneAssets(
     }
 
     fun poll(): RaySceneAssetState {
-        val failures = models.mapNotNull { (name, lease) -> lease.failure?.let { "model:$name" to it } } +
-            terrains.mapNotNull { (name, lease) -> lease.failure?.let { "terrain:$name" to it } }
-        if (failures.isNotEmpty()) return RaySceneAssetState.Failed(failures.toMap())
+        val failures =
+            models.mapNotNull { (name, lease) -> lease.failure?.let { "model:$name" to it } } +
+                terrains.mapNotNull { (name, lease) -> lease.failure?.let { "terrain:$name" to it } }
+        if (failures.isNotEmpty()) {
+            return RaySceneAssetState.Failed(failures.toMap())
+        }
         val preparedModels = models.mapNotNull { (name, lease) -> lease.snapshot?.let { name to it } }.toMap()
         val preparedTerrains = terrains.mapNotNull { (name, lease) -> lease.snapshot?.let { name to it } }.toMap()
-        val pending = models.keys.filter { it !in preparedModels }.map { "model:$it" } +
-            terrains.keys.filter { it !in preparedTerrains }.map { "terrain:$it" }
-        // A sky that is still reading or cannot be transferred (a procedural sky) never blocks or fails the view: it shows
+        val pending =
+            models.keys.filter { it !in preparedModels }.map { "model:$it" } +
+                terrains.keys.filter { it !in preparedTerrains }.map { "terrain:$it" }
+        // A sky that is still reading or cannot be transferred (a procedural sky) never blocks or fails the view: it
+        // shows
         // the background colour until, or instead of, the sky.
-        return if (pending.isNotEmpty()) RaySceneAssetState.Preparing(pending)
-        else RaySceneAssetState.Ready(preparedModels, preparedTerrains, sky?.snapshot)
+        return if (pending.isNotEmpty()) {
+            RaySceneAssetState.Preparing(pending)
+        } else {
+            RaySceneAssetState.Ready(preparedModels, preparedTerrains, sky?.snapshot)
+        }
     }
 
     /** VFS asset edits drop this view's old revision; stale companion preparations cannot publish into new leases. */
     fun invalidate() {
-        project?.let { invalidateAssets(File(it), models.keys.toSet(), terrains.keys.toSet())
-            skyName?.let { name -> invalidateSky(File(it), name) } }
+        project?.let {
+            invalidateAssets(File(it), models.keys.toSet(), terrains.keys.toSet())
+            skyName?.let { name -> invalidateSky(File(it), name) }
+        }
         close()
     }
 
@@ -67,25 +82,68 @@ class RaySceneAssets(
         models.values.forEach(AutoCloseable::close)
         terrains.values.forEach(AutoCloseable::close)
         sky?.close()
-        models.clear(); terrains.clear(); project = null; sky = null; skyName = null
+        models.clear()
+        terrains.clear()
+        project = null
+        sky = null
+        skyName = null
     }
 
-    private fun <T : Any> reconcile(leases: MutableMap<String, RayAssetLease<T>>, names: Set<String>, acquire: (String) -> RayAssetLease<T>) {
+    private fun <T : Any> reconcile(
+        leases: MutableMap<String, RayAssetLease<T>>,
+        names: Set<String>,
+        acquire: (String) -> RayAssetLease<T>,
+    ) {
         val removed = leases.keys.filter { it !in names }
         removed.forEach { leases.remove(it)?.close() }
-        names.forEach { name -> if (name !in leases) leases[name] = acquire(name) }
+        names.forEach { name ->
+            if (name !in leases) {
+                leases[name] = acquire(name)
+            }
+        }
     }
 }
 
-class RayAssetLease<T : Any>(private val read: () -> T?, private val failed: () -> Throwable?, private val release: () -> Unit) : AutoCloseable {
+class RayAssetLease<T : Any>(
+    private val read: () -> T?,
+    private val failed: () -> Throwable?,
+    private val release: () -> Unit,
+) : AutoCloseable {
     private var closed = false
-    val snapshot: T? get() = if (closed) null else read()
-    val failure: Throwable? get() = if (closed) null else failed()
-    override fun close() { if (!closed) { closed = true; release() } }
+    val snapshot: T?
+        get() =
+            if (closed) {
+                null
+            } else {
+                read()
+            }
+
+    val failure: Throwable?
+        get() =
+            if (closed) {
+                null
+            } else {
+                failed()
+            }
+
+    override fun close() {
+        if (!closed) {
+            closed = true
+            release()
+        }
+    }
 }
 
 sealed interface RaySceneAssetState {
-    data class Ready @JvmOverloads constructor(val models: Map<String, RayModelSnapshot>, val terrains: Map<String, RayTerrainSnapshot>, val sky: RaySkySnapshot? = null) : RaySceneAssetState
+    data class Ready
+    @JvmOverloads
+    constructor(
+        val models: Map<String, RayModelSnapshot>,
+        val terrains: Map<String, RayTerrainSnapshot>,
+        val sky: RaySkySnapshot? = null,
+    ) : RaySceneAssetState
+
     data class Preparing(val assets: List<String>) : RaySceneAssetState
+
     data class Failed(val failures: Map<String, Throwable>) : RaySceneAssetState
 }

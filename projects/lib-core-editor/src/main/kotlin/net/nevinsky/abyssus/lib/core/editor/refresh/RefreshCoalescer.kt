@@ -6,11 +6,14 @@
 package net.nevinsky.abyssus.lib.core.editor.refresh
 
 /**
- * Decides when a view must rebuild, for change events that arrive in bursts from any thread. It holds no timer, thread or
- * UI type: [mark] says whether the caller must schedule a run, and the run brackets its rebuild with [begin] and [finish].
+  * Decides when a view must rebuild, for change events that arrive in bursts from any thread. It holds no timer, thread
+  * or
+  * UI type: [mark] says whether the caller must schedule a run, and the run brackets its rebuild with [begin] and
+  * [finish].
  *
  * - A burst of [mark]s before the run starts yields one run: only the first returns true.
- * - A mark that arrives while a rebuild runs is kept; [finish] then returns true and the caller schedules a follow-up run,
+  * - A mark that arrives while a rebuild runs is kept; [finish] then returns true and the caller schedules a follow-up
+  *   run,
  *   so the view never settles on a state older than the last event.
  * - After [dispose] nothing is scheduled: [mark] returns false and [begin] returns null, so a pending run does nothing.
  */
@@ -20,21 +23,33 @@ class RefreshCoalescer {
     private var rebuilding = false
     private var disposed = false
 
-    /** True when [key] changed and the caller must now schedule a run; false when a run is already pending, or after [dispose]. */
+    /**
+     * True when [key] changed and the caller must now schedule a run; false when a run is already pending, or after
+     * [dispose].
+     */
     @Synchronized
     fun mark(key: String): Boolean {
-        if (disposed) return false
+        if (disposed) {
+            return false
+        }
         dirty += key
-        if (scheduled || rebuilding) return false
+        if (scheduled || rebuilding) {
+            return false
+        }
         scheduled = true
         return true
     }
 
-    /** Starts the scheduled run: the keys that changed since the last run, or null when the run has nothing to do (disposed). */
+    /**
+     * Starts the scheduled run: the keys that changed since the last run, or null when the run has nothing to do
+     * (disposed).
+     */
     @Synchronized
     fun begin(): Set<String>? {
         scheduled = false
-        if (disposed) return null
+        if (disposed) {
+            return null
+        }
         rebuilding = true
         return LinkedHashSet(dirty).also { dirty.clear() }
     }
@@ -43,7 +58,9 @@ class RefreshCoalescer {
     @Synchronized
     fun finish(): Boolean {
         rebuilding = false
-        if (disposed || dirty.isEmpty()) return false
+        if (disposed || dirty.isEmpty()) {
+            return false
+        }
         scheduled = true
         return true
     }

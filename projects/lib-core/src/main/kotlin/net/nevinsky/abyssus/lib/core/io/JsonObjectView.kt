@@ -34,7 +34,10 @@ class JsonObjectView internal constructor(private val node: ObjectNode) {
     /** The member [name] as a whole number, or [default] when missing. */
     fun intOr(name: String, default: Int): Int = node.get(name)?.takeIf { it.isNumber }?.asInt() ?: default
 
-    /** The list member [name] of text entries; null when it is not a list, and an [IllegalArgumentException] for a non-text entry. */
+    /**
+     * The list member [name] of text entries; null when it is not a list, and an [IllegalArgumentException] for a
+     * non-text entry.
+     */
     fun strings(name: String): List<String>? = (node.get(name) as? ArrayNode)?.map {
         it.takeIf { e -> e.isTextual }?.textValue() ?: throw IllegalArgumentException("$name holds a non-text entry")
     }

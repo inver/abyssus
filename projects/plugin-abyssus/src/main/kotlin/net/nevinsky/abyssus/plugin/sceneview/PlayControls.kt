@@ -53,7 +53,9 @@ internal class PlayControlsStrip(
 
     fun sync() {
         for (c in all) c.isVisible = play.available
-        if (!play.available) return
+        if (!play.available) {
+            return
+        }
         val phase = play.phase
         val controls = playControls(phase, play.active)
         playButton.isEnabled = controls.play

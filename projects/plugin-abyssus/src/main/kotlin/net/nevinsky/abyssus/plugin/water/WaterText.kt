@@ -20,7 +20,11 @@ data class WaterGroup(val surfaces: List<WaterSurface>)
 const val WATER_ROW = "water"
 
 fun waterPresetLabel(preset: WaterPreset): String =
-    AbyssusBundle.message(if (preset == WaterPreset.LAKE) "waterPresetLake" else "waterPresetSea")
+    AbyssusBundle.message(if (preset == WaterPreset.LAKE) {
+        "waterPresetLake"
+    } else {
+        "waterPresetSea"
+    })
 
 fun waterFieldLabel(field: WaterField): String = AbyssusBundle.message(
     when (field) {
@@ -58,6 +62,7 @@ fun waterErrorText(error: WaterEditError): String = when (error) {
     WaterEditError.BlankName -> AbyssusBundle.message("waterErrorBlankName")
     is WaterEditError.InvalidValue -> waterIssueText(error.issue)
     is WaterEditError.InvalidSurface -> error.issues.entries.firstOrNull()
-        ?.let { "${waterFieldLabel(it.key)}: ${waterIssueText(it.value)}" } ?: AbyssusBundle.message("waterErrorInvalidSurface")
+        ?.let { "${waterFieldLabel(it.key)}: ${waterIssueText(it.value)}" } ?:
+            AbyssusBundle.message("waterErrorInvalidSurface")
 }
 */

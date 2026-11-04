@@ -10,14 +10,19 @@ data class Ac3dMaterial(val name: String, val r: Float, val g: Float, val b: Flo
 
 /** An AC3D surface: [type] 0 polygon, 1 closed line, 2 line; [refs] index the object's vertices, [uvs] two per ref. */
 class Ac3dSurface(val flags: Int, val material: Int, val refs: IntArray, val uvs: FloatArray) {
-    val type: Int get() = flags and 0x0F
-    val smooth: Boolean get() = flags and 0x10 != 0
-    val twoSided: Boolean get() = flags and 0x20 != 0
+    val type: Int
+        get() = flags and 0x0F
+
+    val smooth: Boolean
+        get() = flags and 0x10 != 0
+
+    val twoSided: Boolean
+        get() = flags and 0x20 != 0
 }
 
 /**
- * An AC3D object: its vertices in its own frame, placed in its parent's by [rotation] (3x3, row-major) and
- * [location]. [textureRepeat] and [textureOffset] apply to its UVs.
+ * An AC3D object: its vertices in its own frame, placed in its parent's by [rotation] (3x3, row-major) and [location].
+ * [textureRepeat] and [textureOffset] apply to its UVs.
  */
 class Ac3dObject(
     val type: String,
@@ -50,7 +55,9 @@ class Ac3dReader {
 
         fun model(): Ac3dModel {
             val header = next() ?: fail("empty file")
-            if (!header.startsWith("AC3D")) fail("not an AC3D file")
+            if (!header.startsWith("AC3D")) {
+                fail("not an AC3D file")
+            }
             val materials = ArrayList<Ac3dMaterial>()
             while (true) {
                 val line = peek() ?: fail("no OBJECT")
@@ -71,7 +78,9 @@ class Ac3dReader {
             val name = tokens.getOrNull(1) ?: ""
             fun after(key: String, count: Int): List<Float> {
                 val i = tokens.indexOf(key)
-                if (i < 0) return List(count) { 0f }
+                if (i < 0) {
+                    return List(count) { 0f }
+                }
                 return (1..count).map { tokens.getOrNull(i + it)?.toFloatOrNull() ?: 0f }
             }
             val rgb = after("rgb", 3)
@@ -81,7 +90,9 @@ class Ac3dReader {
 
         private fun obj(): Ac3dObject {
             val head = next() ?: fail("missing OBJECT")
-            if (!head.startsWith("OBJECT")) fail("expected OBJECT, found '$head'")
+            if (!head.startsWith("OBJECT")) {
+                fail("expected OBJECT, found '$head'")
+            }
             val type = tokens(head).getOrElse(1) { "poly" }
             var name: String? = null
             var texture: String? = null
@@ -109,7 +120,8 @@ class Ac3dReader {
                         vertices = FloatArray(count * 3)
                         for (i in 0 until count) {
                             val v = tokens(next() ?: fail("missing vertex"))
-                            for (k in 0..2) vertices[i * 3 + k] = v.getOrNull(k)?.toFloatOrNull() ?: fail("bad vertex '$v'")
+                            for (k in 0..2) vertices[i * 3 + k] =
+                                v.getOrNull(k)?.toFloatOrNull() ?: fail("bad vertex '$v'")
                         }
                     }
                     "numsurf" -> {
@@ -119,7 +131,19 @@ class Ac3dReader {
                     "kids" -> {
                         val count = t.getOrNull(1)?.toIntOrNull() ?: fail("bad kids")
                         val kids = (0 until count).map { obj() }
-                        return Ac3dObject(type, name, texture, repeat, offset, crease, rotation, location, vertices, surfaces, kids)
+                        return Ac3dObject(
+                            type,
+                            name,
+                            texture,
+                            repeat,
+                            offset,
+                            crease,
+                            rotation,
+                            location,
+                            vertices,
+                            surfaces,
+                            kids,
+                        )
                     }
                     else -> Unit // url, subdiv, hidden, locked, folded: not needed
                 }
@@ -128,7 +152,9 @@ class Ac3dReader {
 
         private fun surface(vertexCount: Int): Ac3dSurface {
             val head = tokens(next() ?: fail("missing SURF"))
-            if (head.firstOrNull() != "SURF") fail("expected SURF, found '${head.joinToString(" ")}'")
+            if (head.firstOrNull() != "SURF") {
+                fail("expected SURF, found '${head.joinToString(" ")}'")
+            }
             val flags = head.getOrNull(1)?.let { java.lang.Long.decode(it).toInt() } ?: fail("bad SURF flags")
             var material = 0
             while (true) {
@@ -141,7 +167,9 @@ class Ac3dReader {
                         val uvs = FloatArray(count * 2)
                         for (i in 0 until count) {
                             val r = tokens(next() ?: fail("missing ref"))
-                            refs[i] = r.getOrNull(0)?.toIntOrNull()?.takeIf { it in 0 until vertexCount } ?: fail("bad ref '$r'")
+                            refs[i] =
+                                r.getOrNull(0)?.toIntOrNull()?.takeIf { it in 0 until vertexCount }
+                                    ?: fail("bad ref '$r'")
                             uvs[i * 2] = r.getOrNull(1)?.toFloatOrNull() ?: 0f
                             uvs[i * 2 + 1] = r.getOrNull(2)?.toFloatOrNull() ?: 0f
                         }
@@ -160,7 +188,10 @@ class Ac3dReader {
             }
         }
 
-        private fun floats(t: List<String>, count: Int) = FloatArray(count) { t.getOrNull(it + 1)?.toFloatOrNull() ?: fail("bad numbers in '${t.joinToString(" ")}'") }
+        private fun floats(t: List<String>, count: Int) =
+            FloatArray(count) {
+                t.getOrNull(it + 1)?.toFloatOrNull() ?: fail("bad numbers in '${t.joinToString(" ")}'")
+            }
 
         /** Whitespace-separated tokens; a quoted token keeps its spaces and loses its quotes. */
         private fun tokens(line: String): List<String> {
@@ -170,7 +201,14 @@ class Ac3dReader {
                 when {
                     line[i].isWhitespace() -> i++
                     line[i] == '"' -> {
-                        val end = line.indexOf('"', i + 1).let { if (it < 0) line.length else it }
+                        val end =
+                            line.indexOf('"', i + 1).let {
+                                if (it < 0) {
+                                    line.length
+                                } else {
+                                    it
+                                }
+                            }
                         out += line.substring(i + 1, end)
                         i = end + 1
                     }

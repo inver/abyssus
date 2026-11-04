@@ -1,5 +1,7 @@
 package net.nevinsky.abyssus.lib.core.assets
 
+import java.io.File
+import java.nio.file.Files
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import org.junit.After
@@ -7,8 +9,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
 
 class ShaderStorageTest {
     private val dir: File = Files.createTempDirectory("shader-storage").toFile()
@@ -16,8 +16,10 @@ class ShaderStorageTest {
     private val test = bare.withResources("/shader/test", ShaderStorageTest::class.java)
 
     /** The host's folder was added first, so it is searched before `/shader/test`. */
-    private val layered = bare.withResources("/shader/test_host", ShaderStorageTest::class.java)
-        .withResources("/shader/test", ShaderStorageTest::class.java)
+    private val layered =
+        bare
+            .withResources("/shader/test_host", ShaderStorageTest::class.java)
+            .withResources("/shader/test", ShaderStorageTest::class.java)
 
     @After
     fun cleanUp() {
@@ -38,12 +40,19 @@ class ShaderStorageTest {
 
     @Test
     fun fragmentsAreJoinedInOrder() {
-        assertEquals("float a() { return 1.0; }\n\nvoid main() { gl_FragColor = vec4(a()); }\n", test.fragment("common.glsl", "main.frag"))
+        assertEquals(
+            "float a() { return 1.0; }\n\nvoid main() { gl_FragColor = vec4(a()); }\n",
+            test.fragment("common.glsl", "main.frag"),
+        )
     }
 
     @Test
     fun includeDirectivesAreExpandedFromTheSharedGlsl() {
-        assetFile("a", "main.frag", "#define shadowAtlasFlag\n#pragma include \"shadow_visibility.glsl\"\nvoid main() {}\n")
+        assetFile(
+            "a",
+            "main.frag",
+            "#define shadowAtlasFlag\n#pragma include \"shadow_visibility.glsl\"\nvoid main() {}\n",
+        )
         val out = bare.withAssets(FileLoader(dir)).fragment("main.frag", asset = "a")
         assertEquals(1, Regex("""(?m)^float shadowTileVisibility\(""").findAll(out).count())
         assertTrue(out.indexOf("#define shadowAtlasFlag") < out.indexOf("float shadowTileVisibility("))
@@ -54,7 +63,10 @@ class ShaderStorageTest {
         val shaders = layered
         assertEquals("host main\n", shaders.read("main.frag"))
         assertEquals("host only\n", shaders.read("host.vert"))
-        assertTrue("a file the host lacks still comes from the earlier resources", shaders.read("common.glsl").startsWith("float a()"))
+        assertTrue(
+            "a file the host lacks still comes from the earlier resources",
+            shaders.read("common.glsl").startsWith("float a()"),
+        )
         assertTrue("and then from the defaults", shaders.read("skybox.vert").isNotBlank())
     }
 
@@ -63,9 +75,16 @@ class ShaderStorageTest {
         assetFile("sky", "main.frag", "asset main")
         val shaders = layered.withAssets(FileLoader(dir))
         assertEquals("asset main", shaders.read("main.frag", asset = "sky"))
-        assertEquals("other assets and plain reads do not see it", "host main\n", shaders.read("main.frag", asset = "other"))
+        assertEquals(
+            "other assets and plain reads do not see it",
+            "host main\n",
+            shaders.read("main.frag", asset = "other"),
+        )
         assertEquals("host main\n", shaders.read("main.frag"))
-        assertTrue("an asset without the file falls back", shaders.read("common.glsl", asset = "sky").startsWith("float a()"))
+        assertTrue(
+            "an asset without the file falls back",
+            shaders.read("common.glsl", asset = "sky").startsWith("float a()"),
+        )
     }
 
     @Test
@@ -78,10 +97,18 @@ class ShaderStorageTest {
 
     @Test
     fun aMissingFileNamesEveryPlaceItLookedIn() {
-        val error = runCatching { layered.withAssets(FileLoader(dir)).read("nope.vert", asset = "sky") }.exceptionOrNull()
+        val error = runCatching {
+            layered.withAssets(FileLoader(dir)).read("nope.vert", asset = "sky")
+        }.exceptionOrNull()
         val message = error?.message.orEmpty()
         assertTrue("got $error", error is IllegalStateException)
-        assertTrue(message, "nope.vert" in message && "asset 'sky'" in message && "/shader/test_host" in message && "/shader/test" in message)
+        assertTrue(
+            message,
+            "nope.vert" in message &&
+                "asset 'sky'" in message &&
+                "/shader/test_host" in message &&
+                "/shader/test" in message,
+        )
     }
 
     @Test

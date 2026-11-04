@@ -27,15 +27,25 @@ class DeviceState(
 ) {
     fun pressed(button: Int): Boolean = button in buttons.indices && buttons[button]
 
-    fun axis(index: Int): Float = if (index in axes.indices) axes[index] else 0f
+    fun axis(index: Int): Float =
+        if (index in axes.indices) {
+            axes[index]
+        } else {
+            0f
+        }
 }
 
-/** The devices present now. Polled once per frame on the main thread; the gdx-controllers one is the only one that touches the platform. */
+/**
+ * The devices present now. Polled once per frame on the main thread; the gdx-controllers one is the only one that
+ * touches the platform.
+ */
 fun interface ControllerSource {
     fun poll(): List<DeviceState>
 }
 
 /** The devices of every source in turn; a source that cannot be read adds none. */
 class CombinedControllerSource(private val sources: List<ControllerSource>) : ControllerSource {
-    override fun poll(): List<DeviceState> = sources.flatMap { runCatchingKeepingCancellation { it.poll() }.getOrDefault(emptyList()) }
+    override fun poll(): List<DeviceState> = sources.flatMap {
+        runCatchingKeepingCancellation { it.poll() }.getOrDefault(emptyList())
+    }
 }

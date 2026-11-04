@@ -32,7 +32,14 @@ class SculptResetTest {
     private val settings = TerrainGenerationSettings()
     private val base = generator.generate(resolution, size, settings)
     private val baseBytes = encoder.encode(base)
-    private val delta = FloatArray(base.size) { if (it % 4 == 0) 1.5f else 0f }
+    private val delta =
+        FloatArray(base.size) {
+            if (it % 4 == 0) {
+                1.5f
+            } else {
+                0f
+            }
+        }
     private val deltaBytes = encoder.encode(delta)
     private val composed = encoder.encode(composeSculpt(base, delta))
     private val recipeText = recipes.encode(TerrainRecipe(settings, size, resolution, sha256Hex(baseBytes)))
@@ -43,7 +50,14 @@ class SculptResetTest {
     }
 
     private fun storedFiles(): SculptFiles {
-        val manifest = SculptManifest(SculptBaseKind.STORED, resolution, sha256Hex(deltaBytes), sha256Hex(composed), sha256Hex(baseBytes))
+        val manifest =
+            SculptManifest(
+                SculptBaseKind.STORED,
+                resolution,
+                sha256Hex(deltaBytes),
+                sha256Hex(composed),
+                sha256Hex(baseBytes),
+            )
         return SculptFiles(size, resolution, composed, null, manifests.encode(manifest), deltaBytes, baseBytes)
     }
 
@@ -70,7 +84,16 @@ class SculptResetTest {
     @Test(expected = IllegalArgumentException::class)
     fun `an unsafe terrain cannot be reset`() {
         val files = recipeFiles()
-        val edited = SculptFiles(size, resolution, composed.copyOf().also { it[0] = 7 }, files.recipeText, files.manifestText, files.deltaBytes, null)
+        val edited =
+            SculptFiles(
+                size,
+                resolution,
+                composed.copyOf().also { it[0] = 7 },
+                files.recipeText,
+                files.manifestText,
+                files.deltaBytes,
+                null,
+            )
         planner.reset(edited, reader.read(edited))
     }
 
@@ -83,7 +106,16 @@ class SculptResetTest {
     @Test
     fun `forgetting keeps the current heights and recipe and removes the sculpt files`() {
         val files = recipeFiles()
-        val edited = SculptFiles(size, resolution, composed.copyOf().also { it[0] = 7 }, files.recipeText, files.manifestText, files.deltaBytes, null)
+        val edited =
+            SculptFiles(
+                size,
+                resolution,
+                composed.copyOf().also { it[0] = 7 },
+                files.recipeText,
+                files.manifestText,
+                files.deltaBytes,
+                null,
+            )
         val state = reader.read(edited)
         assertEquals(SculptProblem.COMPOSED_MISMATCH, (state as SculptState.Unsafe).problem)
         val out = planner.forget(edited, state)

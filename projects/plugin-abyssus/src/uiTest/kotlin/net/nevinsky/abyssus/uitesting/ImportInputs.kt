@@ -15,15 +15,25 @@ class ImportInputs(val folder: Path) {
     val model: Path get() = folder.resolve("model/crate.obj")
     val brokenModel: Path get() = folder.resolve("model/broken.obj")
     val image: Path get() = folder.resolve("gameui/button.png")
+
     /** The bitmap font's `.fnt`; its page `ui-font.png` sits beside it. */
     val font: Path get() = folder.resolve("gameui/ui-font.fnt")
 
     /** A `.zip` file that is not an archive, written into [folder] on first use. */
-    val brokenArchive: Path get() = folder.resolve("broken.zip").also { if (!Files.exists(it)) Files.writeString(it, "this is not a zip archive\n") }
+    val brokenArchive: Path
+        get() = folder.resolve("broken.zip").also {
+            if (!Files.exists(it)) {
+                Files.writeString(it, "this is not a zip archive\n")
+            }
+        }
 
     /** The FlightGear archive, built into [folder] on first use. */
     val flightGearArchive: Path
-        get() = folder.resolve("fixture.zip").also { if (!Files.exists(it)) fixtureArchive(folder.toFile(), license = true) }
+        get() = folder.resolve("fixture.zip").also {
+            if (!Files.exists(it)) {
+                fixtureArchive(folder.toFile(), license = true)
+            }
+        }
 
     companion object {
         private const val RESOURCE_ROOT = "/import-inputs/"
@@ -36,8 +46,10 @@ class ImportInputs(val folder: Path) {
 
         /** The recorded inputs: path below the folder to SHA-256. */
         fun expectedHashes(): Map<String, String> =
-            ImportInputs::class.java.getResourceAsStream("${RESOURCE_ROOT}import-inputs.sha256")!!.bufferedReader().readLines()
-                .filter { it.isNotBlank() }.associate { line -> line.substringAfter("  ") to line.substringBefore("  ") }
+            ImportInputs::class.java.getResourceAsStream("${RESOURCE_ROOT}import-inputs.sha256")!!.bufferedReader()
+                .readLines()
+                .filter { it.isNotBlank() }
+                .associate { line -> line.substringAfter("  ") to line.substringBefore("  ") }
 
         /** Copies every recorded input into [folder] and returns the handle. */
         fun stage(folder: Path): ImportInputs {
@@ -49,6 +61,7 @@ class ImportInputs(val folder: Path) {
             return ImportInputs(folder)
         }
 
-        fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+        fun sha256(bytes: ByteArray): String =
+            MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     }
 }

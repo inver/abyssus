@@ -14,7 +14,10 @@ import net.nevinsky.abyssus.lib.core.util.GAME_MAX_SPOT
 
 import com.badlogic.gdx.math.Vector3
 
-/** A directional light a frame lights with: [direction] points the way the light travels, [color] already holds the intensity. */
+/**
+ * A directional light a frame lights with: [direction] points the way the light travels, [color] already holds the
+ * intensity.
+ */
 class DirectionalInput(val entityId: String, val direction: Vector3, val r: Float, val g: Float, val b: Float)
 
 class PointInput(
@@ -50,7 +53,8 @@ class RenderLights(
 val NO_RENDER_LIGHTS = RenderLights()
 
 /**
- * How many lights a host lights with, by name. The editor lights terrains with several lights of every kind; a game that
+  * How many lights a host lights with, by name. The editor lights terrains with several lights of every kind; a game
+  * that
  * lights with one sun keeps to the first directional light and ignores the rest.
  */
 enum class LightProfile(val maxDirectional: Int, val maxPoint: Int, val maxSpot: Int) {
@@ -59,7 +63,9 @@ enum class LightProfile(val maxDirectional: Int, val maxPoint: Int, val maxSpot:
 
     /** [lights] cut to this profile's budget, in their order. The same instance when nothing is cut. */
     fun select(lights: RenderLights): RenderLights {
-        if (lights.directional.size <= maxDirectional && lights.point.size <= maxPoint && lights.spot.size <= maxSpot) return lights
+        if (lights.directional.size <= maxDirectional && lights.point.size <= maxPoint && lights.spot.size <= maxSpot) {
+            return lights
+        }
         return RenderLights(
             lights.directional.take(maxDirectional),
             lights.point.take(maxPoint),

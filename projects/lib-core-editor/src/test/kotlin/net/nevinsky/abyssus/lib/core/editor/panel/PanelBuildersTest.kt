@@ -6,19 +6,19 @@
 package net.nevinsky.abyssus.lib.core.editor.panel
 
 import com.fasterxml.jackson.databind.JsonNode
+import java.io.File
+import net.nevinsky.abyssus.lib.core.dto.ProjectDto
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FAR
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor
 import net.nevinsky.abyssus.lib.core.editor.components.EnabledTarget
-import net.nevinsky.abyssus.lib.core.editor.parseScene
-import net.nevinsky.abyssus.lib.core.dto.ProjectDto
-import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import org.slf4j.helpers.NOPLogger
 import net.nevinsky.abyssus.lib.core.editor.meta.EntityAssetChoices
 import net.nevinsky.abyssus.lib.core.editor.meta.EntitySections
 import net.nevinsky.abyssus.lib.core.editor.meta.readEntitySections
+import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -26,7 +26,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
-import java.io.File
+import org.slf4j.helpers.NOPLogger
 
 /** The layouts of the Properties panel against the design board, on the Control Line fixture. */
 class PanelBuildersTest {
@@ -42,11 +42,20 @@ class PanelBuildersTest {
     /** [fieldText] with `"key": true` turned off, parsed again. */
     private fun fieldWith(key: String): SceneDto =
         parseScene(fieldText.replace(Regex("\"$key\"\\s*:\\s*true"), "\"$key\": false"))
+
     private val editor = ComponentEditor(messages)
 
-    private fun read(id: Long, kind: String? = null): EntitySections.Read = readEntitySections(
-        field, id, kind, editor, EntityAssetChoices(listOf("model_racer", "model_pilot"), emptyMap()), messages, json,
-    ) as EntitySections.Read
+    private fun read(id: Long, kind: String? = null): EntitySections.Read =
+        readEntitySections(
+            field,
+            id,
+            kind,
+            editor,
+            EntityAssetChoices(listOf("model_racer", "model_pilot"), emptyMap()),
+            messages,
+            json,
+        )
+            as EntitySections.Read
 
     private fun PanelModel.titles() = sections.map { it.title }
 
@@ -64,7 +73,8 @@ class PanelBuildersTest {
         assertEquals("Project · ControlLine.abss", panel.header.subtitle)
         assertEquals(listOf("Project", "Main camera"), panel.titles())
         assertEquals(
-            listOf("name", "activeSceneName", "physicsEnabled", "", "", "uiAssetNames"), panel.sections[0].labels(),
+            listOf("name", "activeSceneName", "physicsEnabled", "", "", "uiAssetNames"),
+            panel.sections[0].labels(),
         )
         assertEquals(listOf("position", "viewPointPosition", "near", "far", "fieldOfView"), panel.sections[1].labels())
         assertEquals("°", panel.sections[1].row<NumberRow>("fieldOfView").unit)
@@ -74,7 +84,11 @@ class PanelBuildersTest {
 
     @Test
     fun aMissingProjectValueIsDimAndAWrittenOneIsNot() {
-        val partial = json.parse("""{"format":"abyssus","formatVersion":1,"name":"P","mainCamera":{"near":0.1}}""", ProjectDto::class.java)
+        val partial =
+            json.parse(
+                """{"format":"abyssus","formatVersion":1,"name":"P","mainCamera":{"near":0.1}}""",
+                ProjectDto::class.java,
+            )
         val panel = builders.project(partial, "P.abss", emptyList())
         val camera = panel.sections[1]
         assertFalse(camera.row<NumberRow>("near").dim)
@@ -146,7 +160,8 @@ class PanelBuildersTest {
         assertEquals("Entity (3) · OBJECT", panel.header.subtitle)
         assertEquals("object", panel.header.iconKey)
         assertEquals(
-            listOf("Name", "Position", "Render", "Rigid body", "Collider", "Plane"), panel.titles(),
+            listOf("Name", "Position", "Render", "Rigid body", "Collider", "Plane"),
+            panel.titles(),
         )
         val name = panel.sections.first()
         assertEquals(listOf("Name"), name.labels())
@@ -155,7 +170,8 @@ class PanelBuildersTest {
 
     @Test
     fun positionIsVectorsWithAxes() {
-        val position = builders.entity(field, 3L, read(3L), "ControlLine.abss").sections.first { it.title == "Position" }
+        val position =
+            builders.entity(field, 3L, read(3L), "ControlLine.abss").sections.first { it.title == "Position" }
         assertNull(position.enable)
         val pos = position.row<VectorRow>("Local position")
         assertEquals(listOf("x", "y", "z"), pos.axes.map { it.name })
@@ -223,7 +239,8 @@ class PanelBuildersTest {
 
     @Test
     fun aDisabledComponentAndAnEntityDimTheirSections() {
-        val off = parseScene(fieldText).also { it.entity(3)!!.header().disabledComponents.add(RenderComponent::class.java) }
+        val off =
+            parseScene(fieldText).also { it.entity(3)!!.header().disabledComponents.add(RenderComponent::class.java) }
         val sections = builders.entity(off, 3L, readFrom(off, 3L), "ControlLine.abss").sections
         val render = sections.single { it.title == "Render" }
         assertFalse(render.enable!!.checked)
@@ -231,9 +248,17 @@ class PanelBuildersTest {
         assertFalse(sections.single { it.title == "Position" }.disabled)
     }
 
-    private fun readFrom(root: SceneDto, id: Long) = readEntitySections(
-        root, id, null, editor, EntityAssetChoices(emptyList(), emptyMap()), messages, json,
-    ) as EntitySections.Read
+    private fun readFrom(root: SceneDto, id: Long) =
+        readEntitySections(
+            root,
+            id,
+            null,
+            editor,
+            EntityAssetChoices(emptyList(), emptyMap()),
+            messages,
+            json,
+        )
+            as EntitySections.Read
 
     // ---- UI screens and assets ----
 
@@ -255,7 +280,8 @@ class PanelBuildersTest {
 
     @Test
     fun aModelHasMetaAndAdditionalSections() {
-        val panel = builders.asset("model_racer", meta("model_racer"), used = true, editable = emptySet(), "ControlLine.abss")
+        val panel =
+            builders.asset("model_racer", meta("model_racer"), used = true, editable = emptySet(), "ControlLine.abss")
         assertEquals("MODEL asset", panel.header.subtitle)
         assertEquals("model", panel.header.iconKey)
         assertEquals(listOf("meta.json", "additional"), panel.titles())
@@ -265,14 +291,28 @@ class PanelBuildersTest {
 
     @Test
     fun anUnusedAssetCarriesTheBadge() {
-        val panel = builders.asset("clouds_fair", meta("clouds_fair"), used = false, editable = setOf("technique"), "ControlLine.abss")
+        val panel =
+            builders.asset(
+                "clouds_fair",
+                meta("clouds_fair"),
+                used = false,
+                editable = setOf("technique"),
+                "ControlLine.abss",
+            )
         assertTrue(panel.header.badges.any { it.kind == BadgeKind.UNUSED })
         assertEquals("no scene uses this", panel.header.badges.single { it.kind == BadgeKind.UNUSED }.text)
     }
 
     @Test
     fun aFoliageAssetListsItsLayersAsAReadOnlyTable() {
-        val panel = builders.asset("foliage_airfield_site", meta("foliage_airfield_site"), true, setOf("maskResolution"), "ControlLine.abss")
+        val panel =
+            builders.asset(
+                "foliage_airfield_site",
+                meta("foliage_airfield_site"),
+                true,
+                setOf("maskResolution"),
+                "ControlLine.abss",
+            )
         assertEquals("foliage", panel.header.iconKey)
         val additional = panel.sections[1]
         val terrain = additional.row<AssetRow>("terrain")
@@ -284,25 +324,36 @@ class PanelBuildersTest {
 
     @Test
     fun anAssetWithEditorsDoesNotCarryTheReadOnlyBadgeAndSaysEditsAreShared() {
-        val panel = builders.asset("foliage_airfield_site", meta("foliage_airfield_site"), true, setOf("maskResolution"), "ControlLine.abss")
+        val panel =
+            builders.asset(
+                "foliage_airfield_site",
+                meta("foliage_airfield_site"),
+                true,
+                setOf("maskResolution"),
+                "ControlLine.abss",
+            )
         assertTrue(panel.header.badges.isEmpty())
         assertEquals("Edits change every instance that uses this asset.", panel.header.note)
         assertTrue(panel.footer.startsWith("The meta.json identity fields"))
     }
 
-    private fun sceneWithLight(light: String) = parseScene(
-        """{"format":"abyssus","formatVersion":1,"name":"S","ecs":{"7":{"components":{"NameComponent":{"name":"L"},"LightComponent":{"light":$light}}}}}""",
-    )
+    private fun sceneWithLight(light: String) =
+        parseScene(
+            """{"format":"abyssus","formatVersion":1,"name":"S","ecs":{"7":{"components":{"NameComponent":{"name":"L"},
+"LightComponent":{"light":$light}}}}}"""
+        )
 
     @Ignore("G10: a DTO cannot tell an absent value from an explicit default; FieldValue.isDefault is never set")
     @Test
     fun aValueTheFileLacksIsDimAndAnExplicitDefaultIsNot() {
         val missing = sceneWithLight("""{"color":{"r":1,"g":1,"b":1,"a":1}}""")
-        val absent = builders.entity(missing, 7L, readFrom(missing, 7L), "p.abss").sections.single { it.title == "Light" }
+        val absent =
+            builders.entity(missing, 7L, readFrom(missing, 7L), "p.abss").sections.single { it.title == "Light" }
         assertTrue(absent.row<NumberRow>("intensity").dim)
         assertFalse(absent.row<ColorRow>("color").dim)
         val written = sceneWithLight("""{"color":{"r":1,"g":1,"b":1,"a":1},"intensity":1}""")
-        val explicit = builders.entity(written, 7L, readFrom(written, 7L), "p.abss").sections.single { it.title == "Light" }
+        val explicit =
+            builders.entity(written, 7L, readFrom(written, 7L), "p.abss").sections.single { it.title == "Light" }
         assertEquals(absent.row<NumberRow>("intensity").value, explicit.row<NumberRow>("intensity").value)
         assertFalse(explicit.row<NumberRow>("intensity").dim)
     }
@@ -311,21 +362,38 @@ class PanelBuildersTest {
     fun everyRowKindIsBuiltFromTheFixture() {
         val kinds = mutableSetOf<Class<*>>()
         for (id in listOf(0L, 1L, 2L, 3L)) {
-            builders.entity(field, id, read(id), "p.abss").sections.forEach { s -> s.rows.forEach { kinds += it.javaClass } }
+            builders.entity(field, id, read(id), "p.abss").sections.forEach { s ->
+                s.rows.forEach { kinds += it.javaClass }
+            }
         }
-        builders.project(abss, "p.abss", listOf("Field")).sections.forEach { s -> s.rows.forEach { kinds += it.javaClass } }
+        builders.project(abss, "p.abss", listOf("Field")).sections.forEach { s ->
+            s.rows.forEach { kinds += it.javaClass }
+        }
         builders.ecs(field, "p").sections.forEach { s -> s.rows.forEach { kinds += it.javaClass } }
         builders.uiScreen("a", "b", "p").sections.forEach { s -> s.rows.forEach { kinds += it.javaClass } }
-        for (kind in listOf(
-            TextRow::class, NumberRow::class, VectorRow::class, ChoiceRow::class, CheckRow::class, ColorRow::class,
-            AssetRow::class, ReadonlyRow::class, LinkRow::class, NoteRow::class,
-        )) assertTrue(kind.simpleName, kind.java in kinds)
+        for (kind in
+            listOf(
+                TextRow::class,
+                NumberRow::class,
+                VectorRow::class,
+                ChoiceRow::class,
+                CheckRow::class,
+                ColorRow::class,
+                AssetRow::class,
+                ReadonlyRow::class,
+                LinkRow::class,
+                NoteRow::class,
+            )) assertTrue(kind.simpleName, kind.java in kinds)
     }
 
     private val untitled = File("../plugin-abyssus/src/test/testData/project/Untitled")
 
-    private fun assetPanel(name: String, root: File = project, editable: Set<String> = emptySet(), used: Boolean = true) =
-        builders.asset(name, values(File(root, "assets/$name/meta.json").readText()), used, editable, "p.abss")
+    private fun assetPanel(
+        name: String,
+        root: File = project,
+        editable: Set<String> = emptySet(),
+        used: Boolean = true,
+    ) = builders.asset(name, values(File(root, "assets/$name/meta.json").readText()), used, editable, "p.abss")
 
     @Test
     fun aModelListsItsFileFormatAndMaterials() {
@@ -354,7 +422,10 @@ class PanelBuildersTest {
         assertEquals("Layers (3)", (additional.rows[2] as SubHeadingRow).text)
         val table = additional.rows[3] as TableRow
         assertEquals(listOf("id", "kind", "model", "density"), table.columns)
-        assertEquals(listOf("1", "OBJECT", "model_airfield_tree_broadleaf", "7.5625E-4"), table.rows.first().take(3) + table.rows.first()[3])
+        assertEquals(
+            listOf("1", "OBJECT", "model_airfield_tree_broadleaf", "7.5625E-4"),
+            table.rows.first().take(3) + table.rows.first()[3],
+        )
         assertEquals(CustomRow("foliage"), additional.rows.last())
     }
 
@@ -433,14 +504,19 @@ class PanelBuildersTest {
 
     @Test
     fun theTogglableMatrixFollowsTheBoard() {
-        val withParent = parseScene(
-            fieldText.replace(
-                Regex("\"NameComponent\"\\s*:\\s*\\{\\s*\"name\"\\s*:\\s*\"Racer\"\\s*\\}"),
-                "\"NameComponent\": {\"name\": \"Racer\"},\"ParentComponent\": {\"parentEntityId\": 0}",
-            ),
+        val withParent =
+            parseScene(
+                fieldText.replace(
+                    Regex("\"NameComponent\"\\s*:\\s*\\{\\s*\"name\"\\s*:\\s*\"Racer\"\\s*\\}"),
+                    "\"NameComponent\": {\"name\": \"Racer\"},\"ParentComponent\": {\"parentEntityId\": 0}",
+                )
+            )
+        val racer =
+            builders.entity(withParent, 3L, readFrom(withParent, 3L), "p.abss").sections.associateBy { it.title }
+        for (title in listOf("Render", "Rigid body", "Collider", "Plane")) assertNotNull(
+            title,
+            racer.getValue(title).enable,
         )
-        val racer = builders.entity(withParent, 3L, readFrom(withParent, 3L), "p.abss").sections.associateBy { it.title }
-        for (title in listOf("Render", "Rigid body", "Collider", "Plane")) assertNotNull(title, racer.getValue(title).enable)
         for (title in listOf("Name", "Position", "Parent")) assertNull(title, racer.getValue(title).enable)
         assertNotNull(builders.entity(field, 2L, read(2L), "p.abss").sections.single { it.title == "Light" }.enable)
         assertNotNull(builders.entity(field, 1L, read(1L), "p.abss").sections.single { it.title == "Pilot" }.enable)
@@ -454,7 +530,8 @@ class PanelBuildersTest {
         assertEquals(listOf("ambientLightEnabled", "fogEnabled", "skyboxEnabled"), keys)
         assertTrue(panel.sections.mapNotNull { it.enable }.all { it.checked && it.target == null })
         val off = fieldWith("ambientLightEnabled")
-        val ambient = builders.scene(off, "p.abss", "scenes/Field.scene").sections.single { it.title == "Ambient light" }
+        val ambient =
+            builders.scene(off, "p.abss", "scenes/Field.scene").sections.single { it.title == "Ambient light" }
         assertFalse(ambient.enable!!.checked)
         assertTrue(ambient.disabled)
     }

@@ -33,11 +33,14 @@ import org.junit.Test
 
 /** A lit mesh in [ModelShader] and [PbrModelShader], and the cross-fade between two environments. */
 class ModelShaderGlTest {
-    @Before
-    fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
+    @Before fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
 
     private fun solid(r: Float, g: Float, b: Float): Cubemap {
-        val pixmap = Pixmap(4, 4, Pixmap.Format.RGBA8888).also { it.setColor(r, g, b, 1f); it.fill() }
+        val pixmap =
+            Pixmap(4, 4, Pixmap.Format.RGBA8888).also {
+                it.setColor(r, g, b, 1f)
+                it.fill()
+            }
         return Cubemap(pixmap, pixmap, pixmap, pixmap, pixmap, pixmap).also { pixmap.dispose() }
     }
 
@@ -45,28 +48,60 @@ class ModelShaderGlTest {
         IntMesh(true, 3, 3, VertexAttribute.Position(), VertexAttribute.Normal(), VertexAttribute.TexCoords(0)).apply {
             setVertices(
                 floatArrayOf(
-                    -0.8f, -0.8f, 0f, 0f, 0f, 1f, 0.5f, 0.5f,
-                    0.8f, -0.8f, 0f, 0f, 0f, 1f, 0.5f, 0.5f,
-                    0f, 0.8f, 0f, 0f, 0f, 1f, 0.5f, 0.5f
+                    -0.8f,
+                    -0.8f,
+                    0f,
+                    0f,
+                    0f,
+                    1f,
+                    0.5f,
+                    0.5f,
+                    0.8f,
+                    -0.8f,
+                    0f,
+                    0f,
+                    0f,
+                    1f,
+                    0.5f,
+                    0.5f,
+                    0f,
+                    0.8f,
+                    0f,
+                    0f,
+                    0f,
+                    1f,
+                    0.5f,
+                    0.5f,
                 )
             )
             setIndices(intArrayOf(0, 1, 2))
         }
 
     // lazy: building a camera needs libGDX natives, which a skipped (opt-in) GL test never loads
-    private val camera by lazy { OrthographicCamera(2f, 2f).apply {
-        position.set(0f, 0f, 2f); lookAt(0f, 0f, 0f); near = 0.1f; far = 4f; update()
-    } }
+    private val camera by lazy {
+        OrthographicCamera(2f, 2f).apply {
+            position.set(0f, 0f, 2f)
+            lookAt(0f, 0f, 0f)
+            near = 0.1f
+            far = 4f
+            update()
+        }
+    }
 
     /** The RGB at the middle of the triangle, drawn by whatever shader the provider picks for the renderable. */
     private fun draw(
-        provider: ModelShaderProvider, framebuffer: FrameBuffer, mesh: IntMesh, material: Material, environment: Environment
+        provider: ModelShaderProvider,
+        framebuffer: FrameBuffer,
+        mesh: IntMesh,
+        material: Material,
+        environment: Environment,
     ): IntArray {
-        val renderable = Renderable().apply {
-            meshPart.set("tri", mesh, 0, 3, GL20.GL_TRIANGLES)
-            this.material = material
-            this.environment = environment
-        }
+        val renderable =
+            Renderable().apply {
+                meshPart.set("tri", mesh, 0, 3, GL20.GL_TRIANGLES)
+                this.material = material
+                this.environment = environment
+            }
         val context = RenderContext(DefaultTextureBinder(DefaultTextureBinder.LRU, 1))
         framebuffer.begin()
         try {
@@ -87,7 +122,11 @@ class ModelShaderGlTest {
         }
     }
 
-    private fun lowLights() = DefaultShader.Config().apply { numPointLights = 0; numSpotLights = 0 }
+    private fun lowLights() =
+        DefaultShader.Config().apply {
+            numPointLights = 0
+            numSpotLights = 0
+        }
 
     @Test
     fun aLitMeshGetsTheShaderFlavourItsMaterialAsksFor() = TestGl.run {
@@ -97,7 +136,12 @@ class ModelShaderGlTest {
         try {
             val environment = Environment().apply { set(ColorAttribute.createAmbientLight(0.4f, 0.4f, 0.4f, 1f)) }
             val plain = Material(ColorAttribute.createDiffuse(Color.WHITE))
-            val pbr = Material(ColorAttribute.createDiffuse(Color.WHITE), PBRFloatAttribute.createMetallic(0f), PBRFloatAttribute.createRoughness(1f))
+            val pbr =
+                Material(
+                    ColorAttribute.createDiffuse(Color.WHITE),
+                    PBRFloatAttribute.createMetallic(0f),
+                    PBRFloatAttribute.createRoughness(1f),
+                )
             val plainPixel = draw(provider, framebuffer, mesh, plain, environment)
             val pbrPixel = draw(provider, framebuffer, mesh, pbr, environment)
             assertTrue("the plain shader lights the triangle: ${plainPixel.toList()}", plainPixel.all { it > 20 })
@@ -107,7 +151,9 @@ class ModelShaderGlTest {
             draw(provider, framebuffer, mesh, pbr, environment)
             assertEquals("the programs are reused", 2, provider.shaderCount)
         } finally {
-            provider.dispose(); framebuffer.dispose(); mesh.dispose()
+            provider.dispose()
+            framebuffer.dispose()
+            mesh.dispose()
         }
     }
 
@@ -115,8 +161,22 @@ class ModelShaderGlTest {
     fun weightsZeroHalfAndOneBlendBetweenTheEnvironmentsInBothShaders() = TestGl.run {
         val a = solid(0f, 0f, 0.4f)
         val b = solid(0.6f, 0f, 0f)
-        val colorsA = FloatArray(18) { if (it % 3 == 2) 0.4f else 0f }
-        val colorsB = FloatArray(18) { if (it % 3 == 0) 0.6f else 0f }
+        val colorsA =
+            FloatArray(18) {
+                if (it % 3 == 2) {
+                    0.4f
+                } else {
+                    0f
+                }
+            }
+        val colorsB =
+            FloatArray(18) {
+                if (it % 3 == 0) {
+                    0.6f
+                } else {
+                    0f
+                }
+            }
         val target = EnvironmentLightAttribute(b, b, 1, colorsB)
         val framebuffer = FrameBuffer(Pixmap.Format.RGBA8888, 32, 32, true)
         val provider = ModelShaderProvider(lowLights())
@@ -125,7 +185,9 @@ class ModelShaderGlTest {
             for (pbr in listOf(false, true)) {
                 fun draw(sky: EnvironmentLightAttribute): IntArray {
                     val material = Material(ColorAttribute.createDiffuse(Color.WHITE))
-                    if (pbr) material.set(PBRFloatAttribute.createMetallic(0f), PBRFloatAttribute.createRoughness(1f))
+                    if (pbr) {
+                        material.set(PBRFloatAttribute.createMetallic(0f), PBRFloatAttribute.createRoughness(1f))
+                    }
                     return draw(provider, framebuffer, mesh, material, Environment().apply { set(sky) })
                 }
 
@@ -136,7 +198,10 @@ class ModelShaderGlTest {
                 val half = faded(0.5f)
                 val w1 = faded(1f)
                 val again = draw(EnvironmentLightAttribute(a, a, 1, colorsA))
-                assertTrue("environments differ (pbr=$pbr): ${onlyA.toList()} / ${onlyB.toList()}", onlyA[2] > 20 && onlyB[0] > 20)
+                assertTrue(
+                    "environments differ (pbr=$pbr): ${onlyA.toList()} / ${onlyB.toList()}",
+                    onlyA[2] > 20 && onlyB[0] > 20,
+                )
                 assertArrayEquals("weight 0 is the first environment (pbr=$pbr)", onlyA, w0)
                 assertArrayEquals("weight 1 is the second environment (pbr=$pbr)", onlyB, w1)
                 assertArrayEquals("the non-fading path is unchanged after a fade (pbr=$pbr)", onlyA, again)
@@ -146,7 +211,11 @@ class ModelShaderGlTest {
                 }
             }
         } finally {
-            provider.dispose(); framebuffer.dispose(); mesh.dispose(); a.dispose(); b.dispose()
+            provider.dispose()
+            framebuffer.dispose()
+            mesh.dispose()
+            a.dispose()
+            b.dispose()
         }
     }
 }

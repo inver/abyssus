@@ -33,14 +33,18 @@ internal class FoliageCompounds {
     }
 
     fun build(placements: List<ColliderPlacement>): Built {
-        if (placements.isEmpty()) return Built.Failed("a chunk has no colliding copies")
+        if (placements.isEmpty()) {
+            return Built.Failed("a chunk has no colliding copies")
+        }
         val compound = StaticCompoundShapeSettings()
         try {
             for ((index, p) in placements.withIndex()) {
                 val sub = subShape(p)
                 val result = sub.create()
                 try {
-                    if (result.hasError()) return Built.Failed("Jolt refused copy $index's ${p.shape}: ${result.getError()}")
+                    if (result.hasError()) {
+                        return Built.Failed("Jolt refused copy $index's ${p.shape}: ${result.getError()}")
+                    }
                     val ref = result.get()
                     try {
                         compound.addShape(Vec3(p.x, p.y, p.z), Quat(p.qx, p.qy, p.qz, p.qw), ref)

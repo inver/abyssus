@@ -9,7 +9,10 @@ import com.badlogic.ashley.core.Component
 import java.math.BigDecimal
 import kotlin.math.abs
 
-/** [MESH_ID] is a choice among the meshes of the model the component names; the choices come from the model, not the kind. */
+/**
+ * [MESH_ID] is a choice among the meshes of the model the component names; the choices come from the model, not the
+ * kind.
+ */
 enum class FieldKind { FLOAT, INT, BOOLEAN, TEXT, CHOICE, ENTITY_REF, ASSET_NAME, MESH_ID }
 
 /** One editable value of a component, read and written as text. */
@@ -39,9 +42,16 @@ class ComponentField<C : Component>(
 
 /** A component decimal as the scene files spell it (`22`, not `22.0`). */
 internal fun decimalText(v: Float): String {
-    val finite = if (v.isFinite()) v else 0f
-    return if (finite == Math.rint(finite.toDouble()).toFloat() && abs(finite) < 1e9f) finite.toInt().toString()
-    else BigDecimal(finite.toString()).toString()
+    val finite = if (v.isFinite()) {
+        v
+    } else {
+        0f
+    }
+    return if (finite == Math.rint(finite.toDouble()).toFloat() && abs(finite) < 1e9f) {
+        finite.toInt().toString()
+    } else {
+        BigDecimal(finite.toString()).toString()
+    }
 }
 
 /** A modeled kind of component: its file name, its class, how a new one starts and what it holds. */

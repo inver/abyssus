@@ -26,7 +26,9 @@ const val SPLAT_TILE: Int = 16
  */
 class SplatDraft(val resolution: Int, val size: Int, val pixels: ByteArray = ByteArray(resolution * resolution * 4)) {
     init {
-        require(pixels.size == resolution * resolution * 4) { "a $resolution by $resolution map holds ${resolution * resolution * 4} bytes" }
+        require(pixels.size == resolution * resolution * 4) {
+            "a $resolution by $resolution map holds ${resolution * resolution * 4} bytes"
+        }
     }
 
     /** The weights as the brush engine reads them: four channels per texel. */
@@ -34,15 +36,20 @@ class SplatDraft(val resolution: Int, val size: Int, val pixels: ByteArray = Byt
 
     private val tracker = ChangeTracker()
 
-    val revision: Int get() = tracker.revision
+    val revision: Int
+        get() = tracker.revision
 
     private val tilesPerSide = (resolution + SPLAT_TILE - 1) / SPLAT_TILE
 
-    /** The [revision] at which each tile last changed (0: never); a view asks what changed since the revision it last saw. */
+    /**
+     * The [revision] at which each tile last changed (0: never); a view asks what changed since the revision it last
+     * saw.
+     */
     private val tileRevision = IntArray(tilesPerSide * tilesPerSide)
 
     /** Everything changed since the draft was made; a commit writes files only when the bytes differ from the file. */
-    val changed: GridRect get() = tracker.changed
+    val changed: GridRect
+        get() = tracker.changed
 
     /** Records that the texel [gx],[gz] changed. */
     fun touch(gx: Int, gz: Int) {
@@ -50,16 +57,19 @@ class SplatDraft(val resolution: Int, val size: Int, val pixels: ByteArray = Byt
     }
 
     /**
-     * The rectangle of texels in tiles that changed after [since] (a [revision] a view saw earlier); empty when none did.
-     * Unlike [changed], which only grows, it stays small while a drag moves, so a view re-sends just what is new.
+     * The rectangle of texels in tiles that changed after [since] (a [revision] a view saw earlier); empty when none
+     * did. Unlike [changed], which only grows, it stays small while a drag moves, so a view re-sends just what is new.
      */
     fun changedSince(since: Int): GridRect {
         var rect = emptyGridRect()
         for (i in tileRevision.indices) {
-            if (tileRevision[i] <= since) continue
+            if (tileRevision[i] <= since) {
+                continue
+            }
             val x = (i % tilesPerSide) * SPLAT_TILE
             val z = (i / tilesPerSide) * SPLAT_TILE
-            rect = rect.union(GridRect(x, z, minOf(x + SPLAT_TILE, resolution) - 1, minOf(z + SPLAT_TILE, resolution) - 1))
+            rect =
+                rect.union(GridRect(x, z, minOf(x + SPLAT_TILE, resolution) - 1, minOf(z + SPLAT_TILE, resolution) - 1))
         }
         return rect
     }
@@ -72,7 +82,12 @@ class SplatDraft(val resolution: Int, val size: Int, val pixels: ByteArray = Byt
         require(slot in 0 until SPLAT_SLOTS) { "slot $slot" }
         var any = false
         for (i in pixels.indices) {
-            val value: Byte = if (slot != 0 && i % 4 == slot - 1) -1 else 0
+            val value: Byte =
+                if (slot != 0 && i % 4 == slot - 1) {
+                    -1
+                } else {
+                    0
+                }
             if (pixels[i] != value) {
                 pixels[i] = value
                 any = true

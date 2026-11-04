@@ -23,26 +23,31 @@ class GraderTest {
 
     private fun Graded.describe() = "$mark ${deductions.joinToString { "${it.criterion} ${it.measured}→${it.amount}" }}"
 
-    private val figures: List<Pair<String, IdealTrack>> = listOf(
-        "reverse wingover" to ideal.reverseWingover(30f),
-        "inside loops" to ideal.loops(100f, 3),
-        "outside loops" to ideal.loops(100f, 3, inverted = true),
-        "inside squares" to ideal.squares(80f, 2),
-        "outside squares" to ideal.squares(80f, 2, inverted = true),
-        "triangles" to ideal.triangles(100f, 2),
-        "horizontal eights" to ideal.horizontalEights(60f, 2, connected = true),
-        "square eights" to ideal.squareEights(60f, 2, connected = true),
-        "vertical eights" to ideal.verticalEights(60f, 2),
-        "hourglass" to ideal.hourglass(150f),
-        "overhead eights" to ideal.overheadEights(60f, 2, connected = true),
-        "clover" to ideal.clover(270f, connected = true),
-    )
+    private val figures: List<Pair<String, IdealTrack>> =
+        listOf(
+            "reverse wingover" to ideal.reverseWingover(30f),
+            "inside loops" to ideal.loops(100f, 3),
+            "outside loops" to ideal.loops(100f, 3, inverted = true),
+            "inside squares" to ideal.squares(80f, 2),
+            "outside squares" to ideal.squares(80f, 2, inverted = true),
+            "triangles" to ideal.triangles(100f, 2),
+            "horizontal eights" to ideal.horizontalEights(60f, 2, connected = true),
+            "square eights" to ideal.squareEights(60f, 2, connected = true),
+            "vertical eights" to ideal.verticalEights(60f, 2),
+            "hourglass" to ideal.hourglass(150f),
+            "overhead eights" to ideal.overheadEights(60f, 2, connected = true),
+            "clover" to ideal.clover(270f, connected = true),
+        )
 
     @Test
     fun everyIdealTrackMarksTen() {
         val failures = figures.mapNotNull { (name, track) ->
             val graded = gradeOf(track)
-            if (graded.tenths == 100) null else "$name: ${graded.describe()}"
+            if (graded.tenths == 100) {
+                null
+            } else {
+                "$name: ${graded.describe()}"
+            }
         }
         assertTrue(failures.joinToString("\n"), failures.isEmpty())
     }
@@ -86,14 +91,18 @@ class GraderTest {
         flightWobbly.fly(track)
         // after the loops: a wobble, instead of level flight
         flightWobbly.level(to = flightWobbly.endAzimuth + 30f)
-        val wobble = (0..400).map { i -> place(2f * kotlin.math.sin(i / 12f) + 2f, flightWobbly.endAzimuth + i * 0.4f) to false }
+        val wobble =
+            (0..400).map { i -> place(2f * kotlin.math.sin(i / 12f) + 2f, flightWobbly.endAzimuth + i * 0.4f) to false }
         flightWobbly.flyPoints(wobble)
         flightWobbly.level(to = flightWobbly.endAzimuth + 40f)
         val path = PathTokens(18f)
         for (s in flightWobbly.samples) path.feed(s)
         path.flush()
         val pausesRemoved = path.tokens.filter { !(it is Level && it.azimuthSpan >= PAUSE_AZIMUTH) }
-        val cleanMark = matchers.recognise(clean.burst, clean.path.points)!!.let { grader.grade(it, clean.path.points, clean.burst) }
+        val cleanMark =
+            matchers.recognise(clean.burst, clean.path.points)!!.let {
+                grader.grade(it, clean.path.points, clean.burst)
+            }
         val loops = pausesRemoved.filter { it is Arc }
         val r = matchers.recognise(loops, path.points)!!
         val wobblyMark = grader.grade(r, path.points, loops)
@@ -122,7 +131,11 @@ class GraderTest {
         val long = SyntheticFlight().also { it.fly(ideal.takeoff(release = 20f, roll = 8f)) }
         fun mark(f: SyntheticFlight): Graded {
             val path = pointsOf(f.samples)
-            return grader.gradeTakeoff(path.points, path.points.indexOfFirst { it.height > path.points[0].height + 0.1f }, path.points.size - 1)
+            return grader.gradeTakeoff(
+                path.points,
+                path.points.indexOfFirst { it.height > path.points[0].height + 0.1f },
+                path.points.size - 1,
+            )
         }
         val tooLong = SyntheticFlight().also { it.fly(ideal.takeoff(release = 20f, roll = 40f)) }
         assertTrue(mark(tooLong).tenths < mark(long).tenths)

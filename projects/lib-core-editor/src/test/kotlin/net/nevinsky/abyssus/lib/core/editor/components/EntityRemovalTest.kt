@@ -6,8 +6,8 @@
 package net.nevinsky.abyssus.lib.core.editor.components
 
 import com.badlogic.ashley.core.Component
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.testProject
-import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
@@ -19,11 +19,11 @@ import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.core.editor.entityOf
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.editor.sceneOf
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class EntityRemovalTest {
     private val messages = ResourceEditorMessages()
@@ -65,9 +65,10 @@ class EntityRemovalTest {
 
     @Test
     fun unmodeledPayloadsAreNotInterpretedAsReferences() {
-        val raw = RawComponentsWrapper().also {
-            it.entries.add(RawComponent("Mystery", """{"target":0,"lookAtId":0}""", "not modeled", false))
-        }
+        val raw =
+            RawComponentsWrapper().also {
+                it.entries.add(RawComponent("Mystery", """{"target":0,"lookAtId":0}""", "not modeled", false))
+            }
         val scene = sceneOf(plain(0), with(1, raw))
         assertEquals(EditResult.Changed, removal.remove(scene, 0L))
         assertEquals(setOf(1L), scene.ecs.keys)
@@ -85,11 +86,20 @@ class EntityRemovalTest {
         class Link : Component {
             var other = -1
         }
-        val kind = ComponentKind(
-            "LinkComponent", Link::class.java,
-            listOf(ComponentField<Link>("other", FieldKind.ENTITY_REF, { it.other.toString() }, { c, t -> c.other = t.toInt() })),
-            { Link() },
-        )
+        val kind =
+            ComponentKind(
+                "LinkComponent",
+                Link::class.java,
+                listOf(
+                    ComponentField<Link>(
+                        "other",
+                        FieldKind.ENTITY_REF,
+                        { it.other.toString() },
+                        { c, t -> c.other = t.toInt() },
+                    )
+                ),
+                { Link() },
+            )
         val scene = sceneOf(plain(0), with(1, Link().also { it.other = 0 }))
         val reason = rejected(EntityRemoval(messages, listOf(kind)).remove(scene, 0L))
         assertTrue(reason, reason.contains("entity 1") && reason.contains("Link.other"))

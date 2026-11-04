@@ -74,7 +74,9 @@ class SplatExclusiveTest {
                 changes.fill(0f)
                 val c = random.nextInt(4)
                 changes[c] = random.nextFloat() * 90f
-                if (random.nextInt(4) == 0) changes[(c + 1) % 4] = -random.nextFloat() * 40f
+                if (random.nextInt(4) == 0) {
+                    changes[(c + 1) % 4] = -random.nextFloat() * 40f
+                }
                 target.apply(gx, gz, changes, 0)
                 for (t in 0 until 16) {
                     val sum = (0 until 4).sumOf { d.pixels[t * 4 + it].toInt() and 0xFF }

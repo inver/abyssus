@@ -5,14 +5,14 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
-import net.nevinsky.abyssus.lib.core.util.rawAt
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.tree.TreeVisitor
 import com.intellij.util.ui.tree.TreeUtil
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementOwnerOf
+import net.nevinsky.abyssus.lib.core.editor.document.*
+import net.nevinsky.abyssus.lib.core.util.rawAt
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 
@@ -23,21 +23,24 @@ private fun entityPath(entityId: Long) = listOf("ecs", entityId.toString())
 
 /**
  * What a tree visitor should do with the node at the end of [chain] (the user objects from the view root down) when
- * looking for the row of entity [entityId] of [sceneFile]. The scene is found either as a standalone `.scene` asset
- * or as an entry of its project's `scenes` list.
+ * looking for the row of entity [entityId] of [sceneFile]. The scene is found either as a standalone `.scene` asset or
+ * as an entry of its project's `scenes` list.
  */
 fun entityVisitAction(sceneFile: VirtualFile, entityId: Long, chain: List<Any?>): TreeVisitor.Action =
     rowVisitAction(sceneFile, entityPath(entityId), chain)
 
 /**
- * What a tree visitor should do with the node at the end of [chain] when looking for the row [wanted] (row names
- * below the scene's node) of [sceneFile]. Shared by entity and water rows.
+ * What a tree visitor should do with the node at the end of [chain] when looking for the row [wanted] (row names below
+ * the scene's node) of [sceneFile]. Shared by entity and water rows.
  */
 fun rowVisitAction(sceneFile: VirtualFile, wanted: List<String>, chain: List<Any?>): TreeVisitor.Action {
     val nodes = chain.filterNotNull()
     val sceneIndex = nodes.indexOfFirst { isSceneRoot(it, sceneFile) }
     if (sceneIndex >= 0) {
-        val below = nodes.drop(sceneIndex + 1).map { (it as? DtoEntryNode)?.value?.name ?: return TreeVisitor.Action.SKIP_CHILDREN }
+        val below =
+            nodes.drop(sceneIndex + 1).map {
+                (it as? DtoEntryNode)?.value?.name ?: return TreeVisitor.Action.SKIP_CHILDREN
+            }
         return when {
             below == wanted -> TreeVisitor.Action.INTERRUPT
             below.size < wanted.size && wanted.subList(0, below.size) == below -> TreeVisitor.Action.CONTINUE
@@ -46,20 +49,30 @@ fun rowVisitAction(sceneFile: VirtualFile, wanted: List<String>, chain: List<Any
     }
     // not inside the scene yet: only its project file and the `scenes` list lead there
     return when (val last = nodes.lastOrNull()) {
-        null, is AbyssusRootNode -> TreeVisitor.Action.CONTINUE
-        is AbyssusAssetNode -> if (last.virtualFile == ProjectLayout.abssFor(sceneFile)) TreeVisitor.Action.CONTINUE else TreeVisitor.Action.SKIP_CHILDREN
+        null,
+        is AbyssusRootNode -> TreeVisitor.Action.CONTINUE
+        is AbyssusAssetNode ->
+            if (last.virtualFile == ProjectLayout.abssFor(sceneFile)) {
+                TreeVisitor.Action.CONTINUE
+            } else {
+                TreeVisitor.Action.SKIP_CHILDREN
+            }
         is DtoEntryNode ->
-            if (last.value.name == "scenes" && nodes.getOrNull(nodes.size - 2) is AbyssusAssetNode) TreeVisitor.Action.CONTINUE
-            else TreeVisitor.Action.SKIP_CHILDREN
+            if (last.value.name == "scenes" && nodes.getOrNull(nodes.size - 2) is AbyssusAssetNode) {
+                TreeVisitor.Action.CONTINUE
+            } else {
+                TreeVisitor.Action.SKIP_CHILDREN
+            }
         else -> TreeVisitor.Action.CONTINUE // the platform's root of the tree
     }
 }
 
-private fun isSceneRoot(node: Any, sceneFile: VirtualFile): Boolean = when (node) {
-    is AbyssusAssetNode -> node.virtualFile == sceneFile
-    is DtoEntryNode -> sceneFileOf(node.value) == sceneFile
-    else -> false
-}
+private fun isSceneRoot(node: Any, sceneFile: VirtualFile): Boolean =
+    when (node) {
+        is AbyssusAssetNode -> node.virtualFile == sceneFile
+        is DtoEntryNode -> sceneFileOf(node.value) == sceneFile
+        else -> false
+    }
 
 /**
  * Shows the Abyssus view and selects the row of entity [entityId] of [sceneFile] in it, expanding the tree as needed.
@@ -68,9 +81,11 @@ private fun isSceneRoot(node: Any, sceneFile: VirtualFile): Boolean = when (node
 fun selectEntityInAbyssusView(project: Project, sceneFile: VirtualFile, entityId: Long) {
     try {
         // a linked copy of a path arrangement has no row of its own: its arrangement's row stands for it
-        val rowId = SceneDocumentCache.of(project).read(sceneFile)?.scene
-            ?.let { arrangementOwnerOf(it, entityId) } ?: entityId
-        val visitor = TreeVisitor { path -> entityVisitAction(sceneFile, rowId, path.path.map(TreeUtil::getUserObject)) }
+        val rowId =
+            SceneDocumentCache.of(project).read(sceneFile)?.scene?.let { arrangementOwnerOf(it, entityId) } ?: entityId
+        val visitor = TreeVisitor { path ->
+            entityVisitAction(sceneFile, rowId, path.path.map(TreeUtil::getUserObject))
+        }
         selectInAbyssusView(project, visitor)
     } catch (e: Throwable) {
         LOG.warn("Could not select entity $entityId in the Abyssus view", e)

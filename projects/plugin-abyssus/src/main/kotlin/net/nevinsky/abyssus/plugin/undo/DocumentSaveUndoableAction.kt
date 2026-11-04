@@ -23,8 +23,16 @@ internal class DocumentSaveUndoableAction(private val file: VirtualFile, private
 
     override fun getAffectedDocuments() = arrayOf(reference)
     override fun isGlobal() = false
-    override fun undo() { if (onUndo) save() }
-    override fun redo() { if (!onUndo) save() }
+    override fun undo() {
+        if (onUndo) {
+            save()
+        }
+    }
+    override fun redo() {
+        if (!onUndo) {
+            save()
+        }
+    }
 
     private fun save() {
         val manager = FileDocumentManager.getInstance()

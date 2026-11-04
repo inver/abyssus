@@ -71,25 +71,34 @@ fun sceneContentOf(scene: SceneDto): SceneContent {
 }
 
 /**
- * Reads the entity's typed components, so the view and the Properties panel show the same values, defaults included.
- * A disabled entity is present as data (its position still answers a look-at) and absent as behavior; a component
+ * Reads the entity's typed components, so the view and the Properties panel show the same values, defaults included. A
+ * disabled entity is present as data (its position still answers a look-at) and absent as behavior; a component
  * disabled on its own is skipped.
  */
 private fun decode(id: Long, entity: EntityDto): DecodedEntity {
     val name = entity.component(NameComponent::class.java)?.name?.takeIf { it.isNotBlank() } ?: id.toString()
     val position = entity.component(PositionComponent::class.java)
-    if (!entity.isActive()) return DecodedEntity(id, name, position, position != null, null, null, null, null)
+    if (!entity.isActive()) {
+        return DecodedEntity(id, name, position, position != null, null, null, null, null)
+    }
     val type = entity.component(HeaderComponent::class.java)?.type
-    val lightDisabled = type?.name?.startsWith("LIGHT") == true &&
-        LightComponent::class.java in entity.header().disabledComponents
+    val lightDisabled =
+        type?.name?.startsWith("LIGHT") == true && LightComponent::class.java in entity.header().disabledComponents
     val render = entity.activeComponent(RenderComponent::class.java)
-    val asset = render?.takeIf { it.type != null && it.assetName.isNotEmpty() }?.let { DecodedAsset(it.type!!.name, it.assetName, it.meshId?.takeIf(String::isNotEmpty)) }
+    val asset =
+        render
+            ?.takeIf { it.type != null && it.assetName.isNotEmpty() }
+            ?.let { DecodedAsset(it.type!!.name, it.assetName, it.meshId?.takeIf(String::isNotEmpty)) }
     return DecodedEntity(
         id,
         name,
         position,
         position != null,
-        if (lightDisabled) null else type,
+        if (lightDisabled) {
+            null
+        } else {
+            type
+        },
         entity.activeComponent(CameraComponent::class.java),
         entity.activeComponent(LightComponent::class.java),
         asset,
@@ -100,17 +109,21 @@ private fun decode(id: Long, entity: EntityDto): DecodedEntity {
 
 /** The libGDX forward axis (-Z) rotated by [q]. */
 fun forwardOf(q: Quaternion): Vector3 {
-    if (q.len2() < 1e-12f) return Vector3(0f, 0f, -1f)
+    if (q.len2() < 1e-12f) {
+        return Vector3(0f, 0f, -1f)
+    }
     return Quaternion(q).nor().transform(Vector3(0f, 0f, -1f))
 }
 
 /**
- * The unit direction from [from] toward [to], or null when the two are (almost) the same point. Shared by
- * look-at lights and look-at cameras so the two can't drift apart.
+ * The unit direction from [from] toward [to], or null when the two are (almost) the same point. Shared by look-at
+ * lights and look-at cameras so the two can't drift apart.
  */
 fun aimDirection(from: Vector3, to: Vector3): Vector3? {
     val direction = Vector3(to).sub(from)
     val len2 = direction.len2()
-    if (len2 < 1e-12f || !len2.isFinite()) return null
+    if (len2 < 1e-12f || !len2.isFinite()) {
+        return null
+    }
     return direction.nor()
 }

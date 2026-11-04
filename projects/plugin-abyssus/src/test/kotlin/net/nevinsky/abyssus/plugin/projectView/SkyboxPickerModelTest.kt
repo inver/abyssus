@@ -35,7 +35,8 @@ class SkyboxPickerModelTest : BasePlatformTestCase() {
     }
 
     fun testFilterStillAppliesToProceduralSkies() {
-        val m = SkyboxPickerModel(three + SkyboxChoice("skybox_physical", 0, emptyList(), 0, true, procedural = true), null)
+        val m =
+            SkyboxPickerModel(three + SkyboxChoice("skybox_physical", 0, emptyList(), 0, true, procedural = true), null)
         m.filter = "PHYS"
         assertEquals(listOf(null, "skybox_physical"), m.entries.map { it?.name })
         assertEquals("1 found", m.foundText)

@@ -9,11 +9,18 @@ import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.VertexAttribute
+import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNodePart
 import com.badlogic.gdx.graphics.g3d.model.data.ModelTexture
-import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
+import com.badlogic.gdx.utils.Array as GdxArray
 import com.badlogic.gdx.utils.JsonReader
 import com.badlogic.gdx.utils.JsonValue
+import java.awt.image.BufferedImage
+import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.file.Files
+import javax.imageio.ImageIO
 import net.nevinsky.abyssus.lib.gdx.assimp.AssimpModelDataLoader
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
@@ -26,13 +33,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import java.awt.image.BufferedImage
-import java.io.File
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.file.Files
-import javax.imageio.ImageIO
-import com.badlogic.gdx.utils.Array as GdxArray
 
 /** The JSON chunk of a GLB, after checking its header and chunk layout. */
 fun glbJson(glb: ByteArray): JsonValue {
@@ -111,7 +111,10 @@ class GltfWriterTest {
     @Test
     fun aSmallMeshIsWrittenWith16BitIndices() {
         val json = glbJson(GltfWriter().write(load(resource("/model/crate.dae")), emptyMap(), "test"))
-        assertEquals(5123, json["accessors"][json["meshes"][0]["primitives"][0].getInt("indices")].getInt("componentType"))
+        assertEquals(
+            5123,
+            json["accessors"][json["meshes"][0]["primitives"][0].getInt("indices")].getInt("componentType"),
+        )
     }
 
     @Test
@@ -139,18 +142,29 @@ class GltfWriterTest {
         assertEquals(data.nodes.map(::tree), back.nodes.map(::tree))
         assertEquals(vertexCounts(data), vertexCounts(back))
         assertEquals(data.animations.map { it.id }, back.animations.map { it.id })
-        fun keys(d: ModelData) = d.animations.flatMap { a ->
-            a.nodeAnimations.map { "${it.nodeId}:${it.translation?.size}:${it.rotation?.size}:${it.scaling?.size}" }
-        }.sorted()
+        fun keys(d: ModelData) =
+            d.animations
+                .flatMap { a ->
+                    a.nodeAnimations.map {
+                        "${it.nodeId}:${it.translation?.size}:${it.rotation?.size}:${it.scaling?.size}"
+                    }
+                }
+                .sorted()
         assertEquals(keys(data), keys(back))
-        val bones = { d: ModelData -> d.nodes.flatMap { n -> allNodes(n) }.flatMap { it.parts.orEmpty().toList() }.mapNotNull { it.bones?.keys()?.toArray()?.toList() } }
+        val bones = { d: ModelData ->
+            d.nodes
+                .flatMap { n -> allNodes(n) }
+                .flatMap { it.parts.orEmpty().toList() }
+                .mapNotNull { it.bones?.keys()?.toArray()?.toList() }
+        }
         assertEquals(bones(data), bones(back))
         val json = glbJson(glb)
         assertEquals(1, json["skins"].size)
         assertEquals(2, json["skins"][0]["joints"].size)
     }
 
-    private fun allNodes(node: ModelNode): List<ModelNode> = listOf(node) + node.children.orEmpty().flatMap { allNodes(it) }
+    private fun allNodes(node: ModelNode): List<ModelNode> =
+        listOf(node) + node.children.orEmpty().flatMap { allNodes(it) }
 
     @Test
     fun texturesAreExternalImages() {
@@ -169,34 +183,104 @@ class GltfWriterTest {
     private fun quads(): ModelData {
         val data = ModelData()
         fun quad(index: Int, y: Float) {
-            val part = ModelMeshPart().apply { id = "part_$index"; indices = intArrayOf(0, 1, 2, 0, 2, 3); primitiveType = GL20.GL_TRIANGLES }
-            data.addMesh(ModelMesh().apply {
-                id = "mesh_$index"
-                attributes = arrayOf(VertexAttribute.Position(), VertexAttribute.Normal(), VertexAttribute.TexCoords(0))
-                vertices = floatArrayOf(
-                    0f, y, 0f, 0f, 1f, 0f, 0f, 0f,
-                    1f, y, 0f, 0f, 1f, 0f, 1f, 0f,
-                    1f, y, 1f, 0f, 1f, 0f, 1f, 1f,
-                    0f, y, 1f, 0f, 1f, 0f, 0f, 1f,
-                )
-                parts = arrayOf(part)
-            })
+            val part =
+                ModelMeshPart().apply {
+                    id = "part_$index"
+                    indices = intArrayOf(0, 1, 2, 0, 2, 3)
+                    primitiveType = GL20.GL_TRIANGLES
+                }
+            data.addMesh(
+                ModelMesh().apply {
+                    id = "mesh_$index"
+                    attributes =
+                        arrayOf(VertexAttribute.Position(), VertexAttribute.Normal(), VertexAttribute.TexCoords(0))
+                    vertices =
+                        floatArrayOf(
+                            0f,
+                            y,
+                            0f,
+                            0f,
+                            1f,
+                            0f,
+                            0f,
+                            0f,
+                            1f,
+                            y,
+                            0f,
+                            0f,
+                            1f,
+                            0f,
+                            1f,
+                            0f,
+                            1f,
+                            y,
+                            1f,
+                            0f,
+                            1f,
+                            0f,
+                            1f,
+                            1f,
+                            0f,
+                            y,
+                            1f,
+                            0f,
+                            1f,
+                            0f,
+                            0f,
+                            1f,
+                        )
+                    parts = arrayOf(part)
+                }
+            )
         }
         quad(0, 0f)
         quad(1, 1f)
-        data.materials.add(PbrModelMaterial().apply {
-            id = "skin"; baseColor = Color.WHITE; metallic = 0f; roughness = 0.8f
-            textures = GdxArray<ModelTexture>().apply { add(ModelTexture().apply { usage = ModelTexture.USAGE_DIFFUSE; fileName = "textures/skin.png" }) }
-        })
-        data.materials.add(PbrModelMaterial().apply {
-            id = "glass"; baseColor = Color(0.2f, 0.3f, 0.4f, 0.5f); metallic = 0f; roughness = 0.8f
-            alphaMode = PbrModelMaterial.AlphaMode.BLEND; doubleSided = true; textures = GdxArray()
-        })
+        data.materials.add(
+            PbrModelMaterial().apply {
+                id = "skin"
+                baseColor = Color.WHITE
+                metallic = 0f
+                roughness = 0.8f
+                textures =
+                    GdxArray<ModelTexture>().apply {
+                        add(
+                            ModelTexture().apply {
+                                usage = ModelTexture.USAGE_DIFFUSE
+                                fileName = "textures/skin.png"
+                            }
+                        )
+                    }
+            }
+        )
+        data.materials.add(
+            PbrModelMaterial().apply {
+                id = "glass"
+                baseColor = Color(0.2f, 0.3f, 0.4f, 0.5f)
+                metallic = 0f
+                roughness = 0.8f
+                alphaMode = PbrModelMaterial.AlphaMode.BLEND
+                doubleSided = true
+                textures = GdxArray()
+            }
+        )
         for ((name, i) in listOf("Body" to 0, "Wing" to 1)) {
-            data.nodes.add(ModelNode().apply {
-                id = name
-                parts = arrayOf(ModelNodePart().apply { meshPartId = "part_$i"; materialId = if (i == 0) "skin" else "glass" })
-            })
+            data.nodes.add(
+                ModelNode().apply {
+                    id = name
+                    parts =
+                        arrayOf(
+                            ModelNodePart().apply {
+                                meshPartId = "part_$i"
+                                materialId =
+                                    if (i == 0) {
+                                        "skin"
+                                    } else {
+                                        "glass"
+                                    }
+                            }
+                        )
+                }
+            )
         }
         return data
     }
@@ -219,7 +303,10 @@ class GltfWriterTest {
         val folder = Files.createTempDirectory("abyssus_quads").toFile()
         File(folder, "textures").mkdirs()
         ImageIO.write(BufferedImage(4, 2, BufferedImage.TYPE_INT_RGB), "png", File(folder, "textures/skin.png"))
-        val file = File(folder, "model.glb").apply { writeBytes(GltfWriter().write(quads(), mapOf("textures/skin.png" to "textures/skin.png"), "test")) }
+        val file =
+            File(folder, "model.glb").apply {
+                writeBytes(GltfWriter().write(quads(), mapOf("textures/skin.png" to "textures/skin.png"), "test"))
+            }
         val data = AssimpModelLoader().loadData(FileHandle(file))
         assertEquals(2, data.meshes.size)
         val textures = data.materials.flatMap { it.textures?.toList().orEmpty() }.map { File(it.fileName).name }
@@ -232,8 +319,10 @@ class GltfWriterTest {
         val data = load(resource("/model/animated.gltf", "model.gltf"))
         val mesh = data.meshes.first()
         val stride = mesh.attributes.sumOf { it.numComponents }
-        val weightAt = mesh.attributes.takeWhile { it.usage != com.badlogic.gdx.graphics.VertexAttributes.Usage.BoneWeight }
-            .sumOf { it.numComponents } + 1
+        val weightAt =
+            mesh.attributes
+                .takeWhile { it.usage != com.badlogic.gdx.graphics.VertexAttributes.Usage.BoneWeight }
+                .sumOf { it.numComponents } + 1
         mesh.vertices[stride + weightAt] = mesh.vertices[stride + weightAt] + 0.5f
         try {
             GltfWriter().write(data, emptyMap(), "test")

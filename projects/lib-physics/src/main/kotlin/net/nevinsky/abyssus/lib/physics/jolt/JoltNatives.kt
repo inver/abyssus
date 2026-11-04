@@ -33,16 +33,26 @@ class JoltNatives(
             val os = osName.lowercase()
             val arm = osArch == "aarch64" || osArch == "arm64"
             return when {
-                os.contains("mac") -> if (arm) "osx/aarch64/$PACKAGE/libjoltjni.dylib" else "osx/x86-64/$PACKAGE/libjoltjni.dylib"
+                os.contains("mac") -> if (arm) {
+                    "osx/aarch64/$PACKAGE/libjoltjni.dylib"
+                } else {
+                    "osx/x86-64/$PACKAGE/libjoltjni.dylib"
+                }
                 os.contains("win") -> "windows/x86-64/$PACKAGE/joltjni.dll"
-                os.contains("linux") -> if (arm) "linux/aarch64/$PACKAGE/libjoltjni.so" else "linux/x86-64/$PACKAGE/libjoltjni.so"
+                os.contains("linux") -> if (arm) {
+                    "linux/aarch64/$PACKAGE/libjoltjni.so"
+                } else {
+                    "linux/x86-64/$PACKAGE/libjoltjni.so"
+                }
                 else -> throw UnsupportedOperationException("Jolt has no native library for $osName $osArch")
             }
         }
 
     /** Loads and sets Jolt up unless this process already has. */
     fun load() {
-        if (loaded()) return
+        if (loaded()) {
+            return
+        }
         val url = classLoader.getResource(resource)
             ?: throw IllegalStateException("Jolt native library $resource is not on the classpath")
         val target = cacheDir.resolve("abyssus-jolt-jni-$VERSION").resolve(resource.replace('/', '_'))

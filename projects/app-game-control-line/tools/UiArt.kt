@@ -31,7 +31,8 @@ private val MENU_PLANE = listOf(
 
 /**
  * Writes the screens' illustrations into `<project>/assets/screens/art`: `menu-track.png` (the control circle with its
- * lines and a plane, for the main menu). Drawn from the design's geometry with Java2D; the output depends only on this file, so running it
+  * lines and a plane, for the main menu). Drawn from the design's geometry with Java2D; the output depends only on this
+  * file, so running it
  * again gives the same bytes. Run by `./gradlew :app-game-control-line:generateUiArt`.
  */
 fun main(args: Array<String>) {
@@ -53,13 +54,19 @@ private fun canvas(size: Int, draw: Graphics2D.() -> Unit): BufferedImage {
 }
 
 private fun silhouette(points: List<Pair<Int, Int>>): Path2D.Double = Path2D.Double().apply {
-    points.forEachIndexed { i, (x, y) -> if (i == 0) moveTo(x.toDouble(), y.toDouble()) else lineTo(x.toDouble(), y.toDouble()) }
+    points.forEachIndexed { i, (x, y) -> if (i == 0) {
+        moveTo(x.toDouble(), y.toDouble())
+    } else {
+        lineTo(x.toDouble(), y.toDouble())
+    } }
     closePath()
 }
 
 private fun Graphics2D.circle(cx: Double, cy: Double, r: Double) = draw(Ellipse2D.Double(cx - r, cy - r, 2 * r, 2 * r))
 
-/** A 640 x 640 picture: three rings, axes, the dashed flight circle, the line to the handle and a plane on the circle. */
+/**
+ * A 640 x 640 picture: three rings, axes, the dashed flight circle, the line to the handle and a plane on the circle.
+ */
 private fun menuTrack(): BufferedImage = canvas(640) {
     val c = 320.0
     color = RULE

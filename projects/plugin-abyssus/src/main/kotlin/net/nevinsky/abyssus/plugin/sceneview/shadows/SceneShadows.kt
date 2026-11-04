@@ -19,15 +19,15 @@ import com.badlogic.gdx.math.Vector4
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.utils.Disposable
 import com.intellij.openapi.diagnostic.Logger
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.tan
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
 import net.nevinsky.abyssus.lib.gdx.shader.*
 import net.nevinsky.abyssus.lib.render.shadow.DepthCasters
 import net.nevinsky.abyssus.lib.render.shadow.sunShadowBias
 import net.nevinsky.abyssus.plugin.sceneview.TerrainEntity
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.tan
 
 /** One view's atlas and depth shaders. Geometry is captured once after animation/preview updates. */
 class SceneShadows : Disposable {
@@ -35,21 +35,30 @@ class SceneShadows : Disposable {
     private val resources = ShadowResources()
     private val layout = ShadowLayout()
     private val depth = DepthCasters()
-    private val pass get() = depth.pass
+    private val pass
+        get() = depth.pass
+
     private val casterBounds = ShadowCasterBounds()
     private val log = Logger.getInstance(SceneShadows::class.java)
     private var failed = false
 
     init {
-        if (!resources.available) log.warn("Shadow atlas unavailable; scene lights will render without shadows")
+        if (!resources.available) {
+            log.warn("Shadow atlas unavailable; scene lights will render without shadows")
+        }
     }
 
     fun render(
-        camera: PerspectiveCamera, lights: LightSet, environment: Environment,
-        models: Collection<ModelEntity>, terrains: Collection<TerrainEntity>,
-        foliage: FoliageCastSource?
+        camera: PerspectiveCamera,
+        lights: LightSet,
+        environment: Environment,
+        models: Collection<ModelEntity>,
+        terrains: Collection<TerrainEntity>,
+        foliage: FoliageCastSource?,
     ): ShadowAtlasAttribute? {
-        if (failed || !resources.available) return null
+        if (failed || !resources.available) {
+            return null
+        }
         depth.begin()
         val casters = shadowCasters(models, terrains, foliage, depth.renderables, depth.pool, casterBounds)
         val receiver = receiverBounds(camera, casters.map { it.bounds })
@@ -69,21 +78,26 @@ class SceneShadows : Disposable {
                     val index = lights.directional.indexOfFirst { it.entityId == allocation.entityId }
                     val source = lights.directional[index]
                     light = dirs?.get(index) ?: continue
-                    sourcePosition = source.position.cpy(); range = 1f
-                    views = receiver?.let {
-                        projection.directional(
-                            source.direction.cpy(),
-                            it,
-                            casters.map(ShadowCaster::bounds)
-                        )
-                    }?.let(::listOf) ?: continue
+                    sourcePosition = source.position.cpy()
+                    range = 1f
+                    views =
+                        receiver
+                            ?.let {
+                                projection.directional(
+                                    source.direction.cpy(),
+                                    it,
+                                    casters.map(ShadowCaster::bounds),
+                                )
+                            }
+                            ?.let(::listOf) ?: continue
                 }
 
                 ShadowLightKind.POINT -> {
                     val index = lights.point.indexOfFirst { it.entityId == allocation.entityId }
                     val source = lights.point[index]
                     light = points?.get(index) ?: continue
-                    sourcePosition = source.position.cpy(); range = source.range
+                    sourcePosition = source.position.cpy()
+                    range = source.range
                     views = projection.point(sourcePosition, range)
                 }
 
@@ -91,46 +105,68 @@ class SceneShadows : Disposable {
                     val index = lights.spot.indexOfFirst { it.entityId == allocation.entityId }
                     val source = lights.spot[index]
                     light = spots?.get(index) ?: continue
-                    sourcePosition = source.position.cpy(); range = source.range
-                    views = projection.spot(sourcePosition, source.direction.cpy(), source.cone.angle, range)
-                        ?.let(::listOf) ?: continue
+                    sourcePosition = source.position.cpy()
+                    range = source.range
+                    views =
+                        projection.spot(sourcePosition, source.direction.cpy(), source.cone.angle, range)?.let(::listOf)
+                            ?: continue
                 }
             }
-            if (views.size != allocation.tiles.size) continue
+            if (views.size != allocation.tiles.size) {
+                continue
+            }
             pass.radialDepth = allocation.kind == ShadowLightKind.POINT
-            pass.lightPosition.set(sourcePosition); pass.far = range
+            pass.lightPosition.set(sourcePosition)
+            pass.far = range
             for ((view, tile) in views.zip(allocation.tiles)) {
-                val success = resources.render(tile) {
-                    depth.submit(
-                        view.camera,
-                        casters.filter { view.camera.frustum.boundsInFrustum(it.bounds) }.map { it.renderable })
-                }
+                val success =
+                    resources.render(tile) {
+                        depth.submit(
+                            view.camera,
+                            casters.filter { view.camera.frustum.boundsInFrustum(it.bounds) }.map { it.renderable },
+                        )
+                    }
                 if (!success) {
                     failed = true
-                    log.warn("Shadow depth rendering failed; using unshadowed lighting until the view context is rebuilt")
+                    log.warn(
+                        "Shadow depth rendering failed; using unshadowed lighting until the view context is rebuilt"
+                    )
                     return null
                 }
             }
             val first = views.first()
-            val depthBias = when (val viewCamera = first.camera) {
-                is OrthographicCamera -> sunShadowBias(viewCamera, resolution)
-                else -> if (pass.radialDepth) 0.5f / resolution else 0.00005f * tan(Math.toRadians((viewCamera as PerspectiveCamera).fieldOfView.toDouble() / 2)).toFloat()
-            }
-            records += ShadowLightRecord(
-                allocation.entityId.toString(), allocation.kind, light,
-                views.zip(allocation.tiles).map { (view, tile) ->
-                    ShadowAtlasView(
-                        view.combined,
-                        Vector4(
-                            tile.x.toFloat() / tile.atlasSize,
-                            tile.y.toFloat() / tile.atlasSize,
-                            tile.size.toFloat() / tile.atlasSize,
-                            tile.size.toFloat() / tile.atlasSize
+            val depthBias =
+                when (val viewCamera = first.camera) {
+                    is OrthographicCamera -> sunShadowBias(viewCamera, resolution)
+                    else ->
+                        if (pass.radialDepth) {
+                            0.5f / resolution
+                        } else {
+                            0.00005f *
+                                tan(Math.toRadians((viewCamera as PerspectiveCamera).fieldOfView.toDouble() / 2))
+                                    .toFloat()
+                        }
+                }
+            records +=
+                ShadowLightRecord(
+                    allocation.entityId.toString(),
+                    allocation.kind,
+                    light,
+                    views.zip(allocation.tiles).map { (view, tile) ->
+                        ShadowAtlasView(
+                            view.combined,
+                            Vector4(
+                                tile.x.toFloat() / tile.atlasSize,
+                                tile.y.toFloat() / tile.atlasSize,
+                                tile.size.toFloat() / tile.atlasSize,
+                                tile.size.toFloat() / tile.atlasSize,
+                            ),
                         )
-                    )
-                },
-                sourcePosition, range, depthBias
-            )
+                    },
+                    sourcePosition,
+                    range,
+                    depthBias,
+                )
         }
         return resources.attribute(records).takeIf { records.isNotEmpty() }
     }
@@ -152,12 +188,15 @@ class SceneShadows : Disposable {
         }
         val receivers = BoundingBox().inf()
         for (box in bounds) {
-            if (!camera.frustum.boundsInFrustum(box) || !frustum.intersects(box)) continue
+            if (!camera.frustum.boundsInFrustum(box) || !frustum.intersects(box)) {
+                continue
+            }
             val lo =
                 Vector3(max(box.min.x, frustum.min.x), max(box.min.y, frustum.min.y), max(box.min.z, frustum.min.z))
             val hi =
                 Vector3(min(box.max.x, frustum.max.x), min(box.max.y, frustum.max.y), min(box.max.z, frustum.max.z))
-            receivers.ext(lo); receivers.ext(hi)
+            receivers.ext(lo)
+            receivers.ext(hi)
         }
         return receivers.takeIf { it.isValid }
     }
@@ -165,10 +204,13 @@ class SceneShadows : Disposable {
     fun abandon() {
         resources.abandon()
         ShaderProgram.clearAllShaderPrograms(owner)
-        depth.abandon(); casterBounds.clear()
+        depth.abandon()
+        casterBounds.clear()
     }
 
     override fun dispose() {
-        depth.dispose(); resources.dispose(); casterBounds.clear()
+        depth.dispose()
+        resources.dispose()
+        casterBounds.clear()
     }
 }

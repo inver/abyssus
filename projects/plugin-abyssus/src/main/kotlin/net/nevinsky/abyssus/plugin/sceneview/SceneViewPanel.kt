@@ -8,6 +8,13 @@ package net.nevinsky.abyssus.plugin.sceneview
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.diagnostic.thisLogger
+import java.awt.BorderLayout
+import java.awt.event.HierarchyEvent
+import java.awt.event.KeyEvent
+import javax.swing.JComponent
+import javax.swing.JPanel
+import javax.swing.JToggleButton
+import javax.swing.SwingConstants
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
@@ -23,19 +30,13 @@ import net.nevinsky.abyssus.plugin.sceneview.skybox.CloudViewState
 import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 import org.lwjgl.opengl.GL
-import java.awt.BorderLayout
-import java.awt.event.HierarchyEvent
-import java.awt.event.KeyEvent
-import javax.swing.JComponent
-import javax.swing.JPanel
-import javax.swing.JToggleButton
-import javax.swing.SwingConstants
 
 /**
  * Swing panel hosting a core-profile GL canvas that renders a scene with libGDX. Orbit/pan/zoom with the mouse; click
  * selects an object, whose gizmo (Move: W, Rotate: E) can be dragged; a selector looks through a camera entity.
  */
-class SceneViewPanel internal constructor(
+class SceneViewPanel
+internal constructor(
     initial: SceneRenderParams,
     private val renderer: SceneRenderer,
     /** The Add Light choices, placed at the orbit target; null: the Add Light button stays disabled. */
@@ -52,32 +53,62 @@ class SceneViewPanel internal constructor(
     /** Other plugins' overlays for this view. */
     private val overlays: SceneOverlayHost? = null,
     private val foliageActions: ((Long) -> DefaultActionGroup?)? = null,
-    private val paintSession: ((Long, () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?, (net.nevinsky.abyssus.plugin.foliage.FoliagePaintSession?) -> Unit) -> Unit)? = null,
-    /** Opens the Sculpt Terrain session of an entity (the mode and the tool are read by its stroke); null: no Sculpt Terrain button. */
-    private val sculptSession: ((Long, () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?, () -> net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptTool?, (net.nevinsky.abyssus.plugin.terrain.SculptSession?) -> Unit) -> Unit)? = null,
+    private val paintSession:
+        ((
+            Long,
+            () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?,
+            (net.nevinsky.abyssus.plugin.foliage.FoliagePaintSession?) -> Unit,
+        ) -> Unit)? =
+        null,
+    /**
+     * Opens the Sculpt Terrain session of an entity (the mode and the tool are read by its stroke); null: no Sculpt
+     * Terrain button.
+     */
+    private val sculptSession:
+        ((
+            Long,
+            () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?,
+            () -> net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptTool?,
+            (net.nevinsky.abyssus.plugin.terrain.SculptSession?) -> Unit,
+        ) -> Unit)? =
+        null,
     /** Opens the Paint Texture session of an entity (the mode is read by its stroke); null: no Paint Texture strip. */
-    private val splatSession: ((Long, () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?, (net.nevinsky.abyssus.plugin.splat.SplatSession?) -> Unit) -> Unit)? = null,
-    /** The project's models to arrange along a path; the callback starts drawing. Null: no Add Path Arrangement button. */
+    private val splatSession:
+        ((
+            Long,
+            () -> net.nevinsky.abyssus.lib.core.editor.pick.BrushMode?,
+            (net.nevinsky.abyssus.plugin.splat.SplatSession?) -> Unit,
+        ) -> Unit)? =
+        null,
+    /**
+     * The project's models to arrange along a path; the callback starts drawing. Null: no Add Path Arrangement button.
+     */
     private val pathMenu: PlacementMenu<(BaseMeta) -> Unit>? = null,
-    /** The project's `Show FPS`, read before every frame so a missed change event cannot leave the counter off; null: only [setFpsEnabled]. */
+    /**
+     * The project's `Show FPS`, read before every frame so a missed change event cannot leave the counter off; null:
+     * only [setFpsEnabled].
+     */
     private val showFps: (() -> Boolean)? = null,
     antialiasingLevel: AntialiasingLevel = AntialiasingLevel.DEFAULT,
 ) : JPanel(BorderLayout()), SceneView, RayControlProvider {
 
     internal val orbit = OrbitCamera(initial.camera)
-    private val interaction = SceneInteraction(renderer.state, renderer.queries, orbit).also {
-        it.groundHeights = { renderer.groundHeights() }
-    }
+    private val interaction =
+        SceneInteraction(renderer.state, renderer.queries, orbit).also {
+            it.groundHeights = { renderer.groundHeights() }
+        }
 
     private var lastCamera = initial.camera
 
-    override val view: JComponent get() = this
+    override val view: JComponent
+        get() = this
 
     /** Gizmo space, snapping, shading and layer toggles of this view; never saved. */
     internal val tools = SceneViewToolsModel()
 
     /** The tool, space and snap, such as `Move · Local · Snap 0.5`; the stats strip shows it. */
-    internal val toolStatusText: String get() = toolbar.statusText
+    internal val toolStatusText: String
+        get() = toolbar.statusText
 
     /** This view's frame rate: sampled only while the project shows it, reset on every lifecycle break. */
     private val fps = FpsCounter()
@@ -87,7 +118,9 @@ class SceneViewPanel internal constructor(
     internal var nanoClock: () -> Long = System::nanoTime
 
     override fun setFpsEnabled(enabled: Boolean) {
-        if (enabled == fpsEnabled) return
+        if (enabled == fpsEnabled) {
+            return
+        }
         fpsEnabled = enabled
         fps.reset()
     }
@@ -99,12 +132,16 @@ class SceneViewPanel internal constructor(
 
     /** A frame is about to be drawn. Only while enabled; the sample starts before the first frame. */
     internal fun fpsFrameStarted() {
-        if (fpsEnabled) fps.frameStarted(nanoClock())
+        if (fpsEnabled) {
+            fps.frameStarted(nanoClock())
+        }
     }
 
     /** A frame was presented (after the buffer swap). */
     internal fun fpsFrameCompleted() {
-        if (fpsEnabled) fps.frameCompleted(nanoClock())
+        if (fpsEnabled) {
+            fps.frameCompleted(nanoClock())
+        }
     }
 
     /** The surface cannot be drawn on, or the view was hidden, failed or re-created: the next sample starts fresh. */
@@ -118,17 +155,33 @@ class SceneViewPanel internal constructor(
     private val brushes = BrushKinds()
     private val paint: FoliagePaintControls =
         FoliagePaintControls(renderer, interaction, play, brushes, paintSession, ::syncControls)
-    private val sculpt: SculptTerrainControls = SculptTerrainControls(
-        renderer, interaction, play, brushes, sculptSession,
-        net.nevinsky.abyssus.plugin.terrain.SculptToolFactory(net.nevinsky.abyssus.lib.core.editor.terrain.FastNoiseSamplerFactory()),
-        ::syncControls, { onSculptEnded?.invoke() },
-        { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(reason, AbyssusBundle.message("sculptTitle")) },
-    )
-    private val paintTexture: PaintTextureControls = PaintTextureControls(
-        renderer, interaction, play, brushes, splatSession,
-        ::syncControls, { onPaintTextureEnded?.invoke() },
-        { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(reason, AbyssusBundle.message("splatTitle")) },
-    )
+    private val sculpt: SculptTerrainControls =
+        SculptTerrainControls(
+            renderer,
+            interaction,
+            play,
+            brushes,
+            sculptSession,
+            net.nevinsky.abyssus.plugin.terrain.SculptToolFactory(
+                net.nevinsky.abyssus.lib.core.editor.terrain.FastNoiseSamplerFactory()
+            ),
+            ::syncControls,
+            { onSculptEnded?.invoke() },
+            { reason ->
+                com.intellij.openapi.ui.Messages.showInfoMessage(reason, AbyssusBundle.message("sculptTitle"))
+            },
+        )
+    private val paintTexture: PaintTextureControls =
+        PaintTextureControls(
+            renderer,
+            interaction,
+            play,
+            brushes,
+            splatSession,
+            ::syncControls,
+            { onPaintTextureEnded?.invoke() },
+            { reason -> com.intellij.openapi.ui.Messages.showInfoMessage(reason, AbyssusBundle.message("splatTitle")) },
+        )
 
     init {
         // toolbar order
@@ -142,36 +195,69 @@ class SceneViewPanel internal constructor(
     private val clouds = CloudControls(renderer) { experimenting }
 
     /** This view's Clouds choice and fallbacks; a reopened view gets a new panel, so it starts at Asset again. */
-    internal val cloudState: CloudViewState get() = clouds.state
+    internal val cloudState: CloudViewState
+        get() = clouds.state
+
     private val rayBinding = RayControlBinding(renderer)
 
-    /** The only switch for Ray Tracing: the Abyssus Properties panel flips it. The Scene View toolbar has no ray control. */
-    override val rayControl: RayControl? get() = rayBinding.control
-    private val experimentButton = if (java.lang.Boolean.getBoolean("abyssus.raytracing.experiment"))
-        JToggleButton(AbyssusBundle.message("sceneViewRayExperiment")) else null
-    private val experiment = experimentButton?.let { RayFeasibilityPreview { message -> thisLogger().info(message) } }
-    private val experimenting: Boolean get() = experimentButton?.isSelected == true
-    private val input = SceneInputForwarder(
-        this,
-        renderer,
-        interaction,
-        play,
-        { experimenting },
-        { experiment?.orbit },
-        { shift -> brushes.strips.forEach { it.update(shift) } },
-        ::frameSelection,
-        ::pressOnOrientationWidget
-    )
+    /**
+     * The only switch for Ray Tracing: the Abyssus Properties panel flips it. The Scene View toolbar has no ray
+     * control.
+     */
+    override val rayControl: RayControl?
+        get() = rayBinding.control
 
-    private val toolbar: SceneViewToolbar = SceneViewToolbar(
-        this, renderer, interaction, tools, play, brushes, playStrip, clouds, experimentButton,
-        { experiment?.stop() },
-        SceneViewToolbarSources(
-            lightMenu, assetMenu, waterMenu, pathMenu, foliageActions, overlays,
-            ::lightChoices, ::assetChoices, ::waterChoices, ::pathChoices, { onRegenerate }, { unavailable },
-        ),
-        ::frameSelection,
-    )
+    private val experimentButton =
+        if (java.lang.Boolean.getBoolean("abyssus.raytracing.experiment")) {
+            JToggleButton(AbyssusBundle.message("sceneViewRayExperiment"))
+        } else {
+            null
+        }
+    private val experiment = experimentButton?.let { RayFeasibilityPreview { message -> thisLogger().info(message) } }
+    private val experimenting: Boolean
+        get() = experimentButton?.isSelected == true
+
+    private val input =
+        SceneInputForwarder(
+            this,
+            renderer,
+            interaction,
+            play,
+            { experimenting },
+            { experiment?.orbit },
+            { shift -> brushes.strips.forEach { it.update(shift) } },
+            ::frameSelection,
+            ::pressOnOrientationWidget,
+        )
+
+    private val toolbar: SceneViewToolbar =
+        SceneViewToolbar(
+            this,
+            renderer,
+            interaction,
+            tools,
+            play,
+            brushes,
+            playStrip,
+            clouds,
+            experimentButton,
+            { experiment?.stop() },
+            SceneViewToolbarSources(
+                lightMenu,
+                assetMenu,
+                waterMenu,
+                pathMenu,
+                foliageActions,
+                overlays,
+                ::lightChoices,
+                ::assetChoices,
+                ::waterChoices,
+                ::pathChoices,
+                { onRegenerate },
+                { unavailable },
+            ),
+            ::frameSelection,
+        )
 
     init {
         renderer.params = initial
@@ -180,104 +266,128 @@ class SceneViewPanel internal constructor(
         ray?.let(::installRay)
     }
 
-    /** Binds this view's Ray Tracing mode to [integration], replacing any earlier binding (see [RayControlBinding.install]). */
+    /**
+     * Binds this view's Ray Tracing mode to [integration], replacing any earlier binding (see
+     * [RayControlBinding.install]).
+     */
     internal fun installRay(integration: RayIntegration) = rayBinding.install(integration)
 
     /** The current Ray Tracing mode of this view (Off until it is switched on from Abyssus Properties). */
-    internal val rayMode: RayModeSnapshot? get() = rayBinding.mode
+    internal val rayMode: RayModeSnapshot?
+        get() = rayBinding.mode
 
     private fun refreshRay() = rayBinding.refresh()
 
     /** Called (on the AWT thread) when rendering fails, e.g. when no GL 3.2 core context can be created. */
     override var onFailure: ((Throwable) -> Unit)? = null
 
-    private val antialiasing: CanvasAntialiasing = CanvasAntialiasing(
-        antialiasingLevel,
-        ::replaceCanvas,
-        { samples, error ->
-            thisLogger().warn(
-                "Scene view refused $samples MSAA samples; trying lower sample counts",
-                error
-            )
-        },
-        { error ->
-            thisLogger().warn("Scene render failed, stopping the view", error)
-            driver.stop()
-            onFailure?.invoke(error)
-        },
-    )
+    private val antialiasing: CanvasAntialiasing =
+        CanvasAntialiasing(
+            antialiasingLevel,
+            ::replaceCanvas,
+            { samples, error ->
+                thisLogger()
+                    .warn(
+                        "Scene view refused $samples MSAA samples; trying lower sample counts",
+                        error,
+                    )
+            },
+            { error ->
+                thisLogger().warn("Scene render failed, stopping the view", error)
+                driver.stop()
+                onFailure?.invoke(error)
+            },
+        )
 
     /** Sample count requested for the current canvas, after any pixel-format fallback. */
     /** The samples per pixel the view draws with: what its context really has once made, else what it asked for. */
-    internal val effectiveSampleCount: Int get() = lifecycle.contextSamples ?: antialiasing.samples
+    internal val effectiveSampleCount: Int
+        get() = lifecycle.contextSamples ?: antialiasing.samples
 
     override fun setAntialiasing(level: AntialiasingLevel) {
         com.intellij.openapi.application.ApplicationManager.getApplication().assertIsDispatchThread()
-        if (unavailable) return
+        if (unavailable) {
+            return
+        }
         antialiasing.setLevel(level, isShowing)
     }
 
-    private val lifecycle: SceneGlLifecycle = SceneGlLifecycle(renderer, object : SceneGlHooks {
-        override fun beforeDispose() {
-            rayBinding.feed?.reset()
-        }
+    private val lifecycle: SceneGlLifecycle =
+        SceneGlLifecycle(
+            renderer,
+            object : SceneGlHooks {
+                override fun beforeDispose() {
+                    rayBinding.feed?.reset()
+                }
 
-        override fun disposeInContext() {
-            experiment?.dispose()
-        }
+                override fun disposeInContext() {
+                    experiment?.dispose()
+                }
 
-        override fun abandoned() {
-            fpsInterrupted()
-            rayBinding.feed?.reset()
-            experiment?.abandon()
-        }
+                override fun abandoned() {
+                    fpsInterrupted()
+                    rayBinding.feed?.reset()
+                    experiment?.abandon()
+                }
 
-        override fun contextLost() = antialiasing.abandoned()
+                override fun contextLost() = antialiasing.abandoned()
 
-        override fun frameStarting(canvas: GuardedGLCanvas) {
-            updateCornerSprites(canvas.width, canvas.framebufferWidth)
-            fpsFrameStarted()
-        }
+                override fun frameStarting(canvas: GuardedGLCanvas) {
+                    updateCornerSprites(canvas.width, canvas.framebufferWidth)
+                    fpsFrameStarted()
+                }
 
-        override fun paintFrame(canvas: GuardedGLCanvas, ctx: GdxContext, frame: GdxFrame) {
-            renderer.state.poses = play.poses() ?: emptyMap()
-            renderer.state.gizmosEnabled = !play.active
-            GdxRuntime.withContext(ctx) {
-                if (experimenting) experiment?.draw(frame.width, frame.height)
-                else renderer.render(frame.width, frame.height, orbit, frame.deltaSeconds)
-            }
-            if (!experimenting) {
-                interaction.frameRendered()
-                cloudFrameRendered(frame.deltaSeconds)
-            }
-            refreshRay()
-            experimentButton?.toolTipText = experiment?.failure?.let {
-                AbyssusBundle.message("sceneViewRayExperimentFailure", it.documentDisplayMessage())
-            } ?: AbyssusBundle.message("sceneViewRayExperimentTooltip")
-        }
+                override fun paintFrame(canvas: GuardedGLCanvas, ctx: GdxContext, frame: GdxFrame) {
+                    renderer.state.poses = play.poses() ?: emptyMap()
+                    renderer.state.gizmosEnabled = !play.active
+                    GdxRuntime.withContext(ctx) {
+                        if (experimenting) {
+                            experiment?.draw(frame.width, frame.height)
+                        } else {
+                            renderer.render(frame.width, frame.height, orbit, frame.deltaSeconds)
+                        }
+                    }
+                    if (!experimenting) {
+                        interaction.frameRendered()
+                        cloudFrameRendered(frame.deltaSeconds)
+                    }
+                    refreshRay()
+                    experimentButton?.toolTipText =
+                        experiment?.failure?.let {
+                            AbyssusBundle.message("sceneViewRayExperimentFailure", it.documentDisplayMessage())
+                        } ?: AbyssusBundle.message("sceneViewRayExperimentTooltip")
+                }
 
-        override fun framePresented() = fpsFrameCompleted()
-    })
+                override fun framePresented() = fpsFrameCompleted()
+            },
+        )
 
     private var canvas: GuardedGLCanvas = lifecycle.newCanvas(antialiasing.samples, antialiasing.swapControl)
-    private fun newCanvasHost() = CanvasOverlayHost(canvas) {
-        try {
-            canvas.captureFrame { lifecycle.capabilities?.let { GL.setCapabilities(it) } }
-        } catch (e: Exception) {
-            thisLogger().warn("Failed to capture the scene beneath an IDE overlay", e)
-            null
+
+    private fun newCanvasHost() =
+        CanvasOverlayHost(canvas) {
+            try {
+                canvas.captureFrame { lifecycle.capabilities?.let { GL.setCapabilities(it) } }
+            } catch (e: Exception) {
+                thisLogger().warn("Failed to capture the scene beneath an IDE overlay", e)
+                null
+            }
         }
-    }
 
     private var canvasHost = newCanvasHost()
 
-    /** Renders at the full frame rate while something moves or may change at once; an idle view (the sky still drifts) renders slowly. */
-    private val driver: SceneFrameDriver = SceneFrameDriver(
-        this, { canvas },
-        { play.active || experimenting || renderer.loading || renderer.presentedRayFrame },
-        ::fpsInterrupted,
-        { error -> antialiasing.renderFailed(error, lifecycle.contextInitialized) },
-    )
+    /**
+     * Renders at the full frame rate while something moves or may change at once; an idle view (the sky still drifts)
+     * renders slowly.
+     */
+    private val driver: SceneFrameDriver =
+        SceneFrameDriver(
+            this,
+            { canvas },
+            { play.active || experimenting || renderer.loading || renderer.presentedRayFrame },
+            ::fpsInterrupted,
+            { error -> antialiasing.renderFailed(error, lifecycle.contextInitialized) },
+        )
 
     /** True once rendering failed for good: the viewport shows a message and the toolbar is disabled. */
     private var unavailable = false
@@ -290,7 +400,7 @@ class SceneViewPanel internal constructor(
         canvasHost.stop()
         add(
             com.intellij.ui.components.JBLabel(message, SwingConstants.CENTER).apply { name = "scene-unavailable" },
-            BorderLayout.CENTER
+            BorderLayout.CENTER,
         )
         syncControls()
         revalidate()
@@ -317,19 +427,24 @@ class SceneViewPanel internal constructor(
     }
 
     /**
-     * Repaints the orientation widget and the stats strip into the sprites the renderer draws in the corners, when what they
-     * show or the display scale changed. The widget shows the camera the frame is drawn from, so it also follows a scene camera.
+     * Repaints the orientation widget and the stats strip into the sprites the renderer draws in the corners, when what
+     * they show or the display scale changed. The widget shows the camera the frame is drawn from, so it also follows a
+     * scene camera.
      */
     private fun updateCornerSprites(logicalWidth: Int, framebufferWidth: Int) {
         refreshFpsSetting()
         val scale = (framebufferWidth.toDouble() / logicalWidth.coerceAtLeast(1)).coerceAtLeast(1.0)
         val d = renderer.frameCamera.direction
-        val widgetChanged = orientation.show(
-            kotlin.math.atan2(-d.x, -d.z), kotlin.math.asin((-d.y).coerceIn(-1f, 1f)),
-        )
+        val widgetChanged =
+            orientation.show(
+                kotlin.math.atan2(-d.x, -d.z),
+                kotlin.math.asin((-d.y).coerceIn(-1f, 1f)),
+            )
         val statsChanged = statsStrip.show(statsText())
         val rescaled = scale != spriteScale
-        if (!widgetChanged && !statsChanged && !rescaled && orientationSprite != null) return
+        if (!widgetChanged && !statsChanged && !rescaled && orientationSprite != null) {
+            return
+        }
         spriteScale = scale
         val margin = Math.round(CORNER_MARGIN * scale).toInt()
         if (widgetChanged || rescaled || orientationSprite == null) {
@@ -342,35 +457,49 @@ class SceneViewPanel internal constructor(
         renderer.cornerSprites = listOfNotNull(orientationSprite, statsSprite)
     }
 
-    internal fun statsText(): String = statsLine(
-        fps = if (fpsEnabled) fps.display?.let { AbyssusBundle.message("sceneViewFps", it) }
-            ?: AbyssusBundle.message("sceneViewFps", "--") else null,
-        objectsText = AbyssusBundle.message(
-            "sceneViewObjects",
-            renderer.drawnModels.size + renderer.drawnTerrains.size
-        ),
-        status = toolStatusText,
-    )
+    internal fun statsText(): String =
+        statsLine(
+            fps =
+                if (fpsEnabled) {
+                    fps.display?.let { AbyssusBundle.message("sceneViewFps", it) }
+                        ?: AbyssusBundle.message("sceneViewFps", "--")
+                } else {
+                    null
+                },
+            objectsText =
+                AbyssusBundle.message(
+                    "sceneViewObjects",
+                    renderer.drawnModels.size + renderer.drawnTerrains.size,
+                ),
+            status = toolStatusText,
+        )
 
     /**
-     * A left press at ([x], [y]) in the canvas: true when it landed on the orientation widget's disc and so is not for the
-     * scene. On one of its axes it turns the orbit camera to look along that axis, from the axis's side.
+     * A left press at ([x], [y]) in the canvas: true when it landed on the orientation widget's disc and so is not for
+     * the scene. On one of its axes it turns the orbit camera to look along that axis, from the axis's side.
      */
     internal fun pressOnOrientationWidget(x: Int, y: Int): Boolean {
-        val rect = cornerRect(
-            Corner.UPPER_RIGHT,
-            canvas.width,
-            canvas.height,
-            OrientationWidget.SIZE,
-            OrientationWidget.SIZE,
-            CORNER_MARGIN
-        )
-        if (!rect.contains(x, y)) return false
+        val rect =
+            cornerRect(
+                Corner.UPPER_RIGHT,
+                canvas.width,
+                canvas.height,
+                OrientationWidget.SIZE,
+                OrientationWidget.SIZE,
+                CORNER_MARGIN,
+            )
+        if (!rect.contains(x, y)) {
+            return false
+        }
         val radius = OrientationWidget.SIZE / 2f
         val dx = x - rect.x - radius
         val dy = y - rect.y - radius
-        if (dx * dx + dy * dy > radius * radius) return false
-        if (play.active || experimenting || interaction.viewCamera != null) return true
+        if (dx * dx + dy * dy > radius * radius) {
+            return false
+        }
+        if (play.active || experimenting || interaction.viewCamera != null) {
+            return true
+        }
         orientation.axisAt(x - rect.x, y - rect.y)?.let { axis ->
             val direction = axis.direction
             orbit.lookAlong(Vector3(-direction.x, -direction.y, -direction.z))
@@ -383,17 +512,20 @@ class SceneViewPanel internal constructor(
      * keeping its view direction. Nothing while looking through a scene camera, playing or in the ray experiment.
      */
     internal fun frameSelection() {
-        if (play.active || experimenting || interaction.viewCamera != null) return
+        if (play.active || experimenting || interaction.viewCamera != null) {
+            return
+        }
         val box = renderer.framedBounds(interaction.selectedId) ?: return
         val camera = renderer.frameCamera
         val aspect = (camera.viewportWidth / camera.viewportHeight).takeIf { it.isFinite() && it > 0f } ?: 1f
         orbit.frame(
-            FrameSelection().frame(
-                Vector3(box.min.x, box.min.y, box.min.z),
-                Vector3(box.max.x, box.max.y, box.max.z),
-                camera.fieldOfView,
-                aspect,
-            ),
+            FrameSelection()
+                .frame(
+                    Vector3(box.min.x, box.min.y, box.min.z),
+                    Vector3(box.max.x, box.max.y, box.max.z),
+                    camera.fieldOfView,
+                    aspect,
+                )
         )
     }
 
@@ -481,21 +613,33 @@ class SceneViewPanel internal constructor(
         }
 
     override fun setPathEditing(entityId: Long?) {
-        if (interaction.pathEditing == entityId) return
+        if (interaction.pathEditing == entityId) {
+            return
+        }
         endBrushes()
         interaction.setPathEditing(entityId)
-        if (entityId != null) requestFocusInWindow()
+        if (entityId != null) {
+            requestFocusInWindow()
+        }
         syncControls()
     }
 
     override fun setSculpting(entityId: Long?) {
-        if (entityId == null) sculpt.end(notify = false) else sculpt.begin(entityId)
+        if (entityId == null) {
+            sculpt.end(notify = false)
+        } else {
+            sculpt.begin(entityId)
+        }
     }
 
     override var onSculptEnded: (() -> Unit)? = null
 
     override fun setPaintingTexture(entityId: Long?) {
-        if (entityId == null) paintTexture.end(notify = false) else paintTexture.begin(entityId)
+        if (entityId == null) {
+            paintTexture.end(notify = false)
+        } else {
+            paintTexture.begin(entityId)
+        }
     }
 
     override var onPaintTextureEnded: (() -> Unit)? = null
@@ -521,7 +665,9 @@ class SceneViewPanel internal constructor(
     override fun groundHeights(): GroundHeight? = renderer.groundHeights()
 
     override fun selectEntity(entityId: Long) {
-        if (renderer.state.selectedId != entityId) endBrushes()
+        if (renderer.state.selectedId != entityId) {
+            endBrushes()
+        }
         renderer.state.selectedId = entityId
         interaction.selectionChanged()
         syncControls()
@@ -539,7 +685,9 @@ class SceneViewPanel internal constructor(
             orbit.reset(params.camera)
         }
         interaction.paramsChanged(params)
-        if (bindingChanged) paint.refreshSession(force = true)
+        if (bindingChanged) {
+            paint.refreshSession(force = true)
+        }
         toolbar.refreshCameraChoices(params)
     }
 
@@ -552,10 +700,12 @@ class SceneViewPanel internal constructor(
 
     override fun placementPoint(): Vector3 = orbit.target
 
-    override val playing: Boolean get() = play.active
+    override val playing: Boolean
+        get() = play.active
 
     /** This view's play state; for tests. */
-    internal val playState: PlayState get() = play
+    internal val playState: PlayState
+        get() = play
 
     override fun addNotify() {
         antialiasing.shown()
@@ -592,7 +742,10 @@ class SceneViewPanel internal constructor(
 
 /** A stable name for an AWT key code, as the `VK_` constant without its prefix (`W`, `SPACE`, `LEFT`). */
 private val KEY_NAMES: Map<Int, String> by lazy {
-    KeyEvent::class.java.fields.filter { it.name.startsWith("VK_") && it.type == Int::class.javaPrimitiveType }
+    KeyEvent::class
+        .java
+        .fields
+        .filter { it.name.startsWith("VK_") && it.type == Int::class.javaPrimitiveType }
         .associate { it.getInt(null) to it.name.removePrefix("VK_") }
 }
 

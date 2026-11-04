@@ -19,16 +19,22 @@ fun numberText(value: Number, style: NumberTextStyle = NumberTextStyle.PLAIN): S
         NumberTextStyle.PLAIN -> BigDecimal(text).stripTrailingZeros().toPlainString()
         NumberTextStyle.FOLIAGE -> if ('E' in text) {
             BigDecimal(text).stripTrailingZeros().toPlainString()
-        } else text
+        } else {
+            text
+        }
 
         NumberTextStyle.DETAIL -> BigDecimal(double).round(MathContext(10)).stripTrailingZeros().toPlainString()
         NumberTextStyle.UI -> if (double == round(double)) {
             double.toLong().toString()
-        } else double.toString()
+        } else {
+            double.toString()
+        }
 
         NumberTextStyle.UI_DOCUMENT -> if (double == round(double) && abs(double) < 1e9) {
             double.toInt().toString()
-        } else double.toString()
+        } else {
+            double.toString()
+        }
     }
 }
 
@@ -39,7 +45,18 @@ const val WHOLE_NUMBER_LIMIT = 1e15
 fun isWholeNumber(value: Double): Boolean = value == Math.rint(value) && abs(value) < WHOLE_NUMBER_LIMIT
 
 /** [value] as short as it reads: `3` for 3.0, the double spelling otherwise. */
-fun shortNumberText(value: Double): String = if (isWholeNumber(value)) value.toLong().toString() else value.toString()
+fun shortNumberText(value: Double): String = if (isWholeNumber(value)) {
+    value.toLong().toString()
+} else {
+    value.toString()
+}
 
-/** A UI document number: whole values below 1e9 are `Int`, any other is `Double`, so a stored value never gains a fraction. */
-fun uiNumber(value: Double): Number = if (value == Math.rint(value) && abs(value) < 1e9) value.toInt() else value
+/**
+ * A UI document number: whole values below 1e9 are `Int`, any other is `Double`, so a stored value never gains a
+ * fraction.
+ */
+fun uiNumber(value: Double): Number = if (value == Math.rint(value) && abs(value) < 1e9) {
+    value.toInt()
+} else {
+    value
+}

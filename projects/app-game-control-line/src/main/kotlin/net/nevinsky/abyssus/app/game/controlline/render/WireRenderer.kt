@@ -41,7 +41,8 @@ class WireRenderer : Disposable {
     private val shade = Color()
 
     /**
-     * Draws [wires] seen from [camera]: each segment a quad facing the camera, as wide as the wire is or one pixel, with
+      * Draws [wires] seen from [camera]: each segment a quad facing the camera, as wide as the wire is or one pixel,
+      * with
      * the opacity of the share of that pixel it covers, and a glint where the sun (shining along [sunDirection])
      * reflects off it ([wireLook], [wireGlint]). Segments beyond the renderer's room are left out.
      */
@@ -55,17 +56,25 @@ class WireRenderer : Disposable {
         immediate.begin(camera.combined, GL20.GL_TRIANGLES)
         var room = WIRE_VERTICES
         for (wire in wires) {
-            if (room < QUAD.size) break
+            if (room < QUAD.size) {
+                break
+            }
             middle.set(wire.from).add(wire.to).scl(0.5f)
             toViewer.set(camera.position).sub(middle)
             val distance = toViewer.len()
-            if (distance < 1e-3f) continue
+            if (distance < 1e-3f) {
+                continue
+            }
             toViewer.scl(1f / distance)
             along.set(wire.to).sub(wire.from)
-            if (along.len2() < 1e-12f) continue
+            if (along.len2() < 1e-12f) {
+                continue
+            }
             along.nor()
             side.set(along).crs(toViewer)
-            if (side.len2() < 1e-8f) continue
+            if (side.len2() < 1e-8f) {
+                continue
+            }
             val look = wireLook(wire.thickness, distance, fov, height)
             side.nor().scl(look.width / 2f)
             val glint = wireGlint(along, toSun, toViewer)
@@ -76,7 +85,11 @@ class WireRenderer : Disposable {
             shade.a = min(1f, look.opacity + glint * 0.5f)
             room -= QUAD.size
             for (corner in QUAD) {
-                val end = if (corner[0] == 0) wire.from else wire.to
+                val end = if (corner[0] == 0) {
+                    wire.from
+                } else {
+                    wire.to
+                }
                 immediate.color(shade)
                 immediate.vertex(end.x + side.x * corner[1], end.y + side.y * corner[1], end.z + side.z * corner[1])
             }

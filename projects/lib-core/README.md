@@ -165,19 +165,35 @@ thread (the GL thread for rendering). Nothing is global, and the UI never pauses
 ```kotlin
 class HostSettings(var volume: Double = 0.5)
 
-fun runHost(metaTree: com.fasterxml.jackson.databind.JsonNode, settings: HostSettings, started: MutableList<String>): UiBindingSession {
+fun runHost(
+    metaTree: com.fasterxml.jackson.databind.JsonNode,
+    settings: HostSettings,
+    started: MutableList<String>,
+): UiBindingSession {
     // 1. Admit the asset: nothing runs from a refused collection.
     val admission = UiCollectionDecoder().decode(metaTree) as UiAdmission.Admitted
     val collection = admission.collection
 
     // 2. The host owns the callbacks. Writes are synchronous; schedule slow work yourself and answer now.
-    val session = UiBindingSession(collection) { write ->
-        if (write.binding == "volume" && write.value is UiValue.Num) {
-            settings.volume = write.value.value
-            UiWriteResult.Accepted(UiValue.Num(settings.volume))
-        } else UiWriteResult.Rejected("read-only")
-    }
-    val navigator = UiNavigator("menus", collection, { null }, { name -> started += name; true })
+    val session =
+        UiBindingSession(collection) { write ->
+            if (write.binding == "volume" && write.value is UiValue.Num) {
+                settings.volume = write.value.value
+                UiWriteResult.Accepted(UiValue.Num(settings.volume))
+            } else {
+                UiWriteResult.Rejected("read-only")
+            }
+        }
+    val navigator =
+        UiNavigator(
+            "menus",
+            collection,
+            { null },
+            { name ->
+                started += name
+                true
+            },
+        )
 
     // 3. Once per update, publish an immutable snapshot. Publishing never writes back.
     session.publish(UiSnapshot(mapOf("volume" to UiValue.Num(settings.volume))))
@@ -189,7 +205,9 @@ fun runHost(metaTree: com.fasterxml.jackson.databind.JsonNode, settings: HostSet
 
     // 5. Report input: a slider commits once on release, a button activates its action.
     val slider = screen.root.children[0]
-    if (commitsOn(UiWidgetType.SLIDER, UiEditGesture.RELEASE)) session.commit(slider, UiValue.Num(0.8))
+    if (commitsOn(UiWidgetType.SLIDER, UiEditGesture.RELEASE)) {
+        session.commit(slider, UiValue.Num(0.8))
+    }
     navigator.activate(screen.root.children[1].actions.getValue("click"))
     return session
 }

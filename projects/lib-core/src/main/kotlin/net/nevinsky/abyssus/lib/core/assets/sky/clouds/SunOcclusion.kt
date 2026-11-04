@@ -31,7 +31,8 @@ class SunOcclusion(private val field: CloudField = CloudField()) {
     private var started = false
 
     /**
-     * Advances by [deltaSeconds] toward the transmittance of [clouds] (null or invisible: none) for the sun toward [sun]
+      * Advances by [deltaSeconds] toward the transmittance of [clouds] (null or invisible: none) for the sun toward
+      * [sun]
      * seen from ([targetX], [targetZ]) at [timeSeconds]; [planetRadius] and [cameraHeight] place the bands as the sky
      * draws them. The first update after [reset] (or after clouds appear) jumps straight to it.
      */
@@ -69,7 +70,9 @@ class SunOcclusion(private val field: CloudField = CloudField()) {
         cameraHeight: Float,
         timeSeconds: Double,
     ): Float {
-        if (!clouds.visible) return 1f
+        if (!clouds.visible) {
+            return 1f
+        }
         var depth = 0f
         depth += getDepthFromBand(clouds.low, sun, targetX, targetZ, planetRadius, cameraHeight, timeSeconds)
         depth += getDepthFromBand(clouds.mid, sun, targetX, targetZ, planetRadius, cameraHeight, timeSeconds)
@@ -86,7 +89,9 @@ class SunOcclusion(private val field: CloudField = CloudField()) {
         cameraHeight: Float,
         timeSeconds: Double,
     ): Float {
-        if (band == null) return 0f
+        if (band == null) {
+            return 0f
+        }
         val mid = (band.base + band.top) / 2f
         val t = bandDistance(sun, mid, planetRadius, cameraHeight) ?: return 0f
         val coverage = field.coverage(
@@ -114,7 +119,13 @@ fun bandDistance(direction: Vector3, altitude: Float, planetRadius: Float, camer
     val b = oy * direction.y
     val c = oy * oy - r * r
     val h = b * b - c
-    if (h < 0.0) return null
+    if (h < 0.0) {
+        return null
+    }
     val t = -b + sqrt(h)
-    return if (t > 0.0) t.toFloat() else null
+    return if (t > 0.0) {
+        t.toFloat()
+    } else {
+        null
+    }
 }

@@ -51,8 +51,8 @@ fun readEntitySections(
     messages: EditorMessages,
     json: JsonProcessor,
 ): EntitySections {
-    val entity = scene.entity(entityId)
-        ?: return EntitySections.Gone(messages.message("propertiesEntityGone", entityId))
+    val entity =
+        scene.entity(entityId) ?: return EntitySections.Gone(messages.message("propertiesEntityGone", entityId))
     val shown = entity.components.filter { it !is HeaderComponent && it !is RawComponentsWrapper }
     val rawEntries = entity.components.filterIsInstance<RawComponentsWrapper>().flatMap { it.entries }
     val names = shown.map { it.javaClass.simpleName } + rawEntries.map { it.name.substringAfterLast('.') }
@@ -62,26 +62,52 @@ fun readEntitySections(
         val fields = editor.read(scene, entityId, name)
         when {
             name !in names ->
-                return EntitySections.Gone(messages.message("propertiesComponentGone", entityId, name.removeSuffix("Component")))
+                return EntitySections.Gone(
+                    messages.message("propertiesComponentGone", entityId, name.removeSuffix("Component"))
+                )
 
-            modeled == null || fields == null -> ComponentSection(
-                name, name.removeSuffix("Component").ifEmpty { name }, emptyList(),
-                rawEntries.firstOrNull { it.name.substringAfterLast('.') == name }?.json
-                    ?: shown.firstOrNull { it.javaClass.simpleName == name }?.let { json.componentTree(it).toString() },
-            )
+            modeled == null || fields == null ->
+                ComponentSection(
+                    name,
+                    name.removeSuffix("Component").ifEmpty { name },
+                    emptyList(),
+                    rawEntries.firstOrNull { it.name.substringAfterLast('.') == name }?.json
+                        ?: shown
+                            .firstOrNull { it.javaClass.simpleName == name }
+                            ?.let { json.componentTree(it).toString() },
+                )
 
-            else -> ComponentSection(name, modeled.label, withMeshChoices(fields, assets).map { field ->
-                when {
-                    field.kind != FieldKind.ASSET_NAME -> field
-                    field.assetType != null ->
-                        field.copy(choices = (listOf("") + assets.byType[field.assetType].orEmpty() + field.value).distinct())
-                    else -> field.copy(choices = (assets.all + field.value).filter(String::isNotEmpty).distinct())
-                }
-            }, null)
+            else ->
+                ComponentSection(
+                    name,
+                    modeled.label,
+                    withMeshChoices(fields, assets).map { field ->
+                        when {
+                            field.kind != FieldKind.ASSET_NAME -> field
+                            field.assetType != null ->
+                                field.copy(
+                                    choices =
+                                        (listOf("") + assets.byType[field.assetType].orEmpty() + field.value).distinct()
+                                )
+                            else ->
+                                field.copy(choices = (assets.all + field.value).filter(String::isNotEmpty).distinct())
+                        }
+                    },
+                    null,
+                )
         }
     }
-    val addable = if (kind == null) editor.missingKinds(scene, entityId).map { it.name } else emptyList()
-    return EntitySections.Read(entity.component(NameComponent::class.java)?.name?.takeIf { it.isNotBlank() } ?: entityId.toString(), sections, addable)
+    val addable =
+        if (kind == null) {
+            editor.missingKinds(scene, entityId).map { it.name }
+        } else {
+            emptyList()
+        }
+    return EntitySections.Read(
+        entity.component(NameComponent::class.java)?.name?.takeIf { it.isNotBlank() } ?: entityId.toString(),
+        sections,
+        addable,
+    )
 }
 
 /**
@@ -89,11 +115,22 @@ fun readEntitySections(
  * component draws a `MODEL` whose meshes are known: it has nothing to offer for a terrain or an unreadable model.
  */
 private fun withMeshChoices(fields: List<FieldValue>, assets: EntityAssetChoices): List<FieldValue> {
-    if (fields.none { it.kind == FieldKind.MESH_ID }) return fields
+    if (fields.none { it.kind == FieldKind.MESH_ID }) {
+        return fields
+    }
     val type = fields.firstOrNull { it.field == "assetType" }?.value
     val asset = fields.firstOrNull { it.field == "assetName" }?.value.orEmpty()
-    val meshes = if (type == MetaType.MODEL.name && asset.isNotEmpty()) assets.meshes(asset) else null
+    val meshes =
+        if (type == MetaType.MODEL.name && asset.isNotEmpty()) {
+            assets.meshes(asset)
+        } else {
+            null
+        }
     return fields.mapNotNull { field ->
-        if (field.kind != FieldKind.MESH_ID) field else meshes?.let { field.copy(choices = it) }
+        if (field.kind != FieldKind.MESH_ID) {
+            field
+        } else {
+            meshes?.let { field.copy(choices = it) }
+        }
     }
 }

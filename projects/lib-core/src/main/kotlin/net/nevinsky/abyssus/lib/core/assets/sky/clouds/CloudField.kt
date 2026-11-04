@@ -56,7 +56,9 @@ class CloudField {
      * heaped clouds are domes, only dense columns reaching the top; layered ones are slabs with soft edges.
      */
     fun shape(type: CloudType, coverage: Float, h: Float): Float {
-        if (h !in 0f..1f) return 0f
+        if (h !in 0f..1f) {
+            return 0f
+        }
         return when (type.profile) {
             CloudProfile.HEAPED -> saturate((coverage - h * h * 0.8f) / 0.2f) * smoothstep(0f, 0.08f, h)
             CloudProfile.LAYERED -> coverage * smoothstep(0f, 0.15f, h) * (1f - smoothstep(0.85f, 1f, h))
@@ -86,7 +88,9 @@ class CloudField {
         return sum / total
     }
 
-    /** Gradient noise at [u] / [v] in 0..1, repeating every [period] cells; one of eight gradients per lattice point. */
+    /**
+     * Gradient noise at [u] / [v] in 0..1, repeating every [period] cells; one of eight gradients per lattice point.
+     */
     fun noise(u: Float, v: Float, seed: Int, period: Float): Float {
         val iu = floor(u)
         val iv = floor(v)
@@ -131,7 +135,11 @@ class CloudField {
 
     private fun wrap(value: Double): Float {
         val p = CLOUD_NOISE_PERIOD.toDouble()
-        return (value - p * floor(value / p)).toFloat().let { if (it >= CLOUD_NOISE_PERIOD) 0f else it }
+        return (value - p * floor(value / p)).toFloat().let { if (it >= CLOUD_NOISE_PERIOD) {
+            0f
+        } else {
+            it
+        } }
     }
 }
 

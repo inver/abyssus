@@ -8,7 +8,9 @@ package net.nevinsky.abyssus.plugin.sceneview
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 
-/** The frame rate in the stats strip: when it is shown, what it samples and what resets it, with a fake clock and no GL. */
+/**
+ * The frame rate in the stats strip: when it is shown, what it samples and what resets it, with a fake clock and no GL.
+ */
 class SceneViewPanelFpsTest : BasePlatformTestCase() {
     private val second = 1_000_000_000L
 

@@ -5,10 +5,10 @@
 package net.nevinsky.abyssus.lib.physics.jolt
 
 import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
+import kotlin.math.max
 import net.nevinsky.abyssus.lib.physics.MotionType
 import net.nevinsky.abyssus.lib.physics.PHYSICS_STEP
-import kotlin.math.max
+import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 
 /** A rope is slack while its anchors are more than this closer than its maximum (m). */
 private const val SLACK = 0.001f
@@ -23,9 +23,16 @@ private const val SLACK = 0.001f
  * step also change the velocity, so the value is an estimate (see `physics/README.md`).
  */
 internal class RopeTension(private val world: PhysicsWorld) {
-    inner class Measured(val rope: PhysicsWorld.ConstraintRecord, val body: PhysicsWorld.BodyRecord, val bodyIsOther: Boolean)
+    inner class Measured(
+        val rope: PhysicsWorld.ConstraintRecord,
+        val body: PhysicsWorld.BodyRecord,
+        val bodyIsOther: Boolean,
+    )
 
-    inner class Step(private val measured: List<Measured>, private val predicted: Map<PhysicsWorld.BodyRecord, Vector3>) {
+    inner class Step(
+        private val measured: List<Measured>,
+        private val predicted: Map<PhysicsWorld.BodyRecord, Vector3>,
+    ) {
         fun after() {
             val a = Vector3()
             val b = Vector3()
@@ -35,15 +42,28 @@ internal class RopeTension(private val world: PhysicsWorld) {
                 val shares = group.map { m ->
                     world.anchorsOf(m.rope, a, b)
                     val distance = a.dst(b)
-                    if (distance < m.rope.maxDistance - SLACK || distance == 0f) 0f
-                    else {
+                    if (distance < m.rope.maxDistance - SLACK || distance == 0f) {
+                        0f
+                    } else {
                         // towards the anchor the pulled body is held by
-                        val toward = if (m.bodyIsOther) Vector3(a).sub(b) else Vector3(b).sub(a)
+                        val toward =
+                            if (m.bodyIsOther) {
+                                Vector3(a).sub(b)
+                            } else {
+                                Vector3(b).sub(a)
+                            }
                         max(0f, force.dot(toward.scl(1f / distance)))
                     }
                 }
                 val total = shares.sum()
-                group.forEachIndexed { i, m -> m.rope.tension = if (total > 0f) shares[i] * shares[i] / total else 0f }
+                group.forEachIndexed { i, m ->
+                    m.rope.tension =
+                        if (total > 0f) {
+                            shares[i] * shares[i] / total
+                        } else {
+                            0f
+                        }
+                }
             }
         }
     }
@@ -53,14 +73,17 @@ internal class RopeTension(private val world: PhysicsWorld) {
         val measured = ArrayList<Measured>()
         val predicted = HashMap<PhysicsWorld.BodyRecord, Vector3>()
         for (c in constraints) {
-            if (!c.rope) continue
+            if (!c.rope) {
+                continue
+            }
             val other = world.recordOf(c.other)
             val own = world.recordOf(c.entity)
-            val m = when {
-                other?.motionType == MotionType.DYNAMIC -> Measured(c, other, true)
-                own?.motionType == MotionType.DYNAMIC -> Measured(c, own, false)
-                else -> null
-            }
+            val m =
+                when {
+                    other?.motionType == MotionType.DYNAMIC -> Measured(c, other, true)
+                    own?.motionType == MotionType.DYNAMIC -> Measured(c, own, false)
+                    else -> null
+                }
             if (m == null) {
                 c.tension = 0f
                 continue

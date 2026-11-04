@@ -30,7 +30,12 @@ class EnvironmentLightAttribute(
     weight: Float = 0f,
 ) : Attribute(Type) {
     /** How far [fadeTo] has replaced this environment, 0 to 1; 0 without [fadeTo]. */
-    val weight: Float = if (fadeTo == null) 0f else weight.coerceIn(0f, 1f)
+    val weight: Float =
+        if (fadeTo == null) {
+            0f
+        } else {
+            weight.coerceIn(0f, 1f)
+        }
 
     init {
         require(ambient.size == 18) { "ambient needs 6 RGB colors" }
@@ -40,12 +45,24 @@ class EnvironmentLightAttribute(
     /** Writes the six axis colors this attribute lights with, [fadeTo] mixed in by [weight], to [out]. */
     fun blendAmbientInto(out: FloatArray): FloatArray {
         val to = fadeTo?.ambient
-        for (i in 0 until 18) out[i] = if (to == null) ambient[i] else ambient[i] + (to[i] - ambient[i]) * weight
+        for (i in 0 until 18) out[i] =
+            if (to == null) {
+                ambient[i]
+            } else {
+                ambient[i] + (to[i] - ambient[i]) * weight
+            }
         return out
     }
 
     override fun copy(): Attribute =
-        EnvironmentLightAttribute(specular, irradiance, levels, ambient.copyOf(), fadeTo?.copy() as EnvironmentLightAttribute?, weight)
+        EnvironmentLightAttribute(
+            specular,
+            irradiance,
+            levels,
+            ambient.copyOf(),
+            fadeTo?.copy() as EnvironmentLightAttribute?,
+            weight,
+        )
 
     override fun hashCode(): Int {
         var result = 31 * super.hashCode() + specular.textureObjectHandle
@@ -57,16 +74,27 @@ class EnvironmentLightAttribute(
     }
 
     override fun equals(other: Any?): Boolean =
-        other is EnvironmentLightAttribute && other.specular === specular && other.irradiance === irradiance &&
-            other.levels == levels && other.ambient.contentEquals(ambient) && other.fadeTo == fadeTo &&
+        other is EnvironmentLightAttribute &&
+            other.specular === specular &&
+            other.irradiance === irradiance &&
+            other.levels == levels &&
+            other.ambient.contentEquals(ambient) &&
+            other.fadeTo == fadeTo &&
             other.weight == weight
 
     override fun compareTo(other: Attribute): Int {
-        if (type != other.type) return type.compareTo(other.type)
+        if (type != other.type) {
+            return type.compareTo(other.type)
+        }
         val o = other as EnvironmentLightAttribute
         return compareValuesBy(
-            this, o, { it.specular.textureObjectHandle }, { it.irradiance.textureObjectHandle }, { it.levels },
-            { it.fadeTo?.specular?.textureObjectHandle ?: 0 }, { it.fadeTo?.irradiance?.textureObjectHandle ?: 0 },
+            this,
+            o,
+            { it.specular.textureObjectHandle },
+            { it.irradiance.textureObjectHandle },
+            { it.levels },
+            { it.fadeTo?.specular?.textureObjectHandle ?: 0 },
+            { it.fadeTo?.irradiance?.textureObjectHandle ?: 0 },
             { it.weight },
         )
     }
@@ -74,8 +102,7 @@ class EnvironmentLightAttribute(
     companion object {
         const val Alias = "environmentLight"
 
-        @JvmField
-        val Type: Long = register(Alias)
+        @JvmField val Type: Long = register(Alias)
 
         fun has(attributes: com.badlogic.gdx.graphics.g3d.Attributes?): Boolean = attributes?.has(Type) == true
 

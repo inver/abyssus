@@ -18,5 +18,9 @@ fun showActionGroup(context: DataContext, group: ActionGroup, title: String?, un
     val popup = JBPopupFactory.getInstance().createActionGroupPopup(
         title, group, context, JBPopupFactory.ActionSelectionAid.SPEEDSEARCH, true,
     )
-    if (underneath == null) popup.showInBestPositionFor(context) else popup.showUnderneathOf(underneath)
+    if (underneath == null) {
+        popup.showInBestPositionFor(context)
+    } else {
+        popup.showUnderneathOf(underneath)
+    }
 }

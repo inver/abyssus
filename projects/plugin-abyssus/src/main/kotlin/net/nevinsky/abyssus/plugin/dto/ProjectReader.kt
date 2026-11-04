@@ -1,10 +1,5 @@
 package net.nevinsky.abyssus.plugin.dto
 
-import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
-import net.nevinsky.abyssus.lib.core.editor.document.RawComponentValues
-import net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.RawComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
@@ -13,6 +8,11 @@ import net.nevinsky.abyssus.lib.core.assets.Asset
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RawComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
+import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
+import net.nevinsky.abyssus.lib.core.editor.document.RawComponentValues
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
@@ -25,21 +25,23 @@ class ProjectReader(
     private val loading: DocumentParsing,
 ) : ConfigFileReader<net.nevinsky.abyssus.plugin.dto.ProjectDto> {
     /** The platform's entry: resolves the application collaborators once. */
-    constructor(project: Project) : this(
-        project, service<AbyssusPluginCtx>().documents.json, service<SceneReader>(), service<AbyssusPluginCtx>().documents.parsing,
+    constructor(
+        project: Project
+    ) : this(
+        project,
+        service<AbyssusPluginCtx>().documents.json,
+        service<SceneReader>(),
+        service<AbyssusPluginCtx>().documents.parsing,
     )
 
     private val assetListing by lazy { ProjectAssetListing(json) }
     private val rawValues = RawComponentValues(json)
 
     override fun stamp(file: VirtualFile): Long {
-        return (ProjectLayout.sceneFiles(file)
-            .fold(documentStamp(file)) { acc, f -> acc * 31 + documentStamp(f) }
-                * 31
-                + ProjectLayout.assetFolders(file)
-            .fold(0L) { acc, dir ->
-                (acc * 31 + dir.name.hashCode()) * 31 + (dir.findChild(META_FILE)?.let(::documentStamp)
-                    ?: 0L)
+        return (ProjectLayout.sceneFiles(file).fold(documentStamp(file)) { acc, f -> acc * 31 + documentStamp(f) } *
+            31 +
+            ProjectLayout.assetFolders(file).fold(0L) { acc, dir ->
+                (acc * 31 + dir.name.hashCode()) * 31 + (dir.findChild(META_FILE)?.let(::documentStamp) ?: 0L)
             })
     }
 
@@ -47,31 +49,38 @@ class ProjectReader(
         runCatchingKeepingCancellation {
             val name = loading.projectName(file.path) { textOf(file) }
             val sceneResults = ProjectLayout.sceneFiles(file).map { it to scenes.read(it) }
-            val roots = sceneResults.flatMap { (_, result) -> result.obj?.let { sceneReferences(it, rawValues) } ?: emptySet() }
-                .toSet()
+            val roots =
+                sceneResults
+                    .flatMap { (_, result) -> result.obj?.let { sceneReferences(it, rawValues) } ?: emptySet() }
+                    .toSet()
             val assets = readAssets(file)
             val usage = usage(assets, roots, loading.uiAssetNames(file.path) { textOf(file) })
             ProjectDto(
                 name ?: file.nameWithoutExtension,
                 sceneResults.map { (f, result) ->
-                    result.obj?.let { SceneEntry(f, it) } ?: SceneError(
-                        f,
-                        result.message
-                    )
+                    result.obj?.let { SceneEntry(f, it) }
+                        ?: SceneError(
+                            f,
+                            result.message,
+                        )
                 },
                 assets.map { it.copy(unused = it.name !in usage.used) },
                 usage.uiIssues,
             )
-        }.let { AssetReadResult.of(it) }
+        }
+        .let { AssetReadResult.of(it) }
 
     private fun readAssets(abss: VirtualFile): List<Asset<Any>> = runCatchingKeepingCancellation {
         return assetListing.list(abss)
-    }.getOrElse { emptyList() }
+    }
+        .getOrElse { emptyList() }
 
     /** Folder names reachable from scene roots through UUID links and foliage's folder-name links, transitively. */
     fun usedAssets(assets: List<Asset<Any>>, roots: Set<String>): Set<String> = usage(assets, roots, emptyList()).used
 
-    /** [usedAssets] with the project's registered UI assets as further roots, and the problems found along the UI links. */
+    /**
+     * [usedAssets] with the project's registered UI assets as further roots, and the problems found along the UI links.
+     */
     fun usage(assets: List<Asset<Any>>, roots: Set<String>, uiAssetNames: List<String>): AssetUsage {
         val ui = UiAssetUsage(assets, uiAssetNames)
         val byName = assets.associateBy { it.name }
@@ -90,7 +99,8 @@ class ProjectReader(
             asset.references.forEach { visit(byUuid[it]) }
             ui.links(asset).forEach { visit(it) }
             if (asset.meta.type == MetaType.FOLIAGE) {
-                val foliage = asset.meta.additional as? net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta ?: continue
+                val foliage =
+                    asset.meta.additional as? net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta ?: continue
                 foliage.terrain.takeIf { it.isNotEmpty() }?.let { visit(byName[it]) }
                 foliage.layers.flatMap { it.models }.forEach { visit(byName[it.asset]) }
             }
@@ -100,8 +110,8 @@ class ProjectReader(
 }
 
 /**
- * What a scene names directly: the `assetName` and `shaderKey` of its render and foliage components (and of components it
- * could not bind, from their raw data), and `skyboxName`.
+ * What a scene names directly: the `assetName` and `shaderKey` of its render and foliage components (and of components
+ * it could not bind, from their raw data), and `skyboxName`.
  */
 fun sceneReferences(scene: SceneDto, raw: RawComponentValues): Set<String> {
     val names = mutableSetOf<String>()

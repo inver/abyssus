@@ -29,7 +29,11 @@ class WaterSceneEdits(private val project: Project, private val edits: WaterEdit
         var id: String? = null
         val result = run(file, "commandAddWater", global = true) { root ->
             val settings = edits.create(root, preset, x, level, z)
-            edits.add(root, settings).also { if (it == WaterEdit.Changed) id = settings.id }
+            edits.add(root, settings).also {
+                if (it == WaterEdit.Changed) {
+                    id = settings.id
+                }
+            }
         }
         return WaterAdded(id.takeIf { result == WaterEdit.Changed }, result)
     }
@@ -53,14 +57,22 @@ class WaterSceneEdits(private val project: Project, private val edits: WaterEdit
     fun remove(file: VirtualFile, id: String): WaterEdit =
         run(file, "commandRemoveWater", global = true) { edits.remove(it, id) }
 
-    /** [global]: the edit starts from the Abyssus tree, so Undo and Redo must reach it with the tree focused, not only from the scene's editor. */
-    private fun run(file: VirtualFile, command: String, global: Boolean = false, edit: DocumentEdit<WaterEdit>): WaterEdit {
+    /**
+     * [global]: the edit starts from the Abyssus tree, so Undo and Redo must reach it with the tree focused, not only
+     * from the scene's editor.
+     */
+    private fun run(file: VirtualFile, command: String, global: Boolean = false, edit: DocumentEdit<WaterEdit>):
+        WaterEdit {
         var result: WaterEdit = WaterEdit.Unchanged
         val written = editSceneDocument(project, file, AbyssusBundle.message(command), global) { root ->
             result = edit(root)
             result == WaterEdit.Changed
         }
-        return if (result == WaterEdit.Changed && !written) WaterEdit.Unchanged else result
+        return if (result == WaterEdit.Changed && !written) {
+            WaterEdit.Unchanged
+        } else {
+            result
+        }
     }
 }
 */

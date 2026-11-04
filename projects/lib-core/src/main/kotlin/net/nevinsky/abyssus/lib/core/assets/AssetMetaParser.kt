@@ -11,13 +11,18 @@ class AssetMetaParser(
     private val json: JsonProcessor,
     private val binder: AssetMetaBinder = AssetMetaBinder(json),
 ) {
-    /** Binds [text] to an [AssetMeta] named [assetName], its `additional` block bound to the class of its `type`. Throws when [text] is not a JSON object. */
+    /**
+     * Binds [text] to an [AssetMeta] named [assetName], its `additional` block bound to the class of its `type`. Throws
+     * when [text] is not a JSON object.
+     */
     fun read(assetName: String, text: String): AssetMeta<Any> = binder.bind(assetName, json.readObject(text))
 
     /** [meta] as one line of JSON, or indented with a trailing newline when [pretty]. */
     fun write(meta: AssetMeta<*>, pretty: Boolean = false): String = if (pretty) {
         json.pretty(meta)
-    } else json.toString(meta)
+    } else {
+        json.toString(meta)
+    }
 
     /** A copy of [meta] whose `additional` block is [additional]; the other fields are kept. */
     fun withAdditional(meta: AssetMeta<Any>, additional: Any): AssetMeta<Any> = AssetMeta(

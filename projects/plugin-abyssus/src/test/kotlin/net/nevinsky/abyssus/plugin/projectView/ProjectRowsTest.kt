@@ -31,7 +31,15 @@ class ProjectRowsTest {
 
     @Test
     fun assetsGroupByTypeAndSkyboxesShareAGroup() {
-        val p = project(emptyList(), "m1" to "MODEL", "m2" to "MODEL", "m3" to "MODEL", "t" to "TERRAIN", "s" to "SKYBOX_PROCEDURAL")
+        val p =
+            project(
+                emptyList(),
+                "m1" to "MODEL",
+                "m2" to "MODEL",
+                "m3" to "MODEL",
+                "t" to "TERRAIN",
+                "s" to "SKYBOX_PROCEDURAL",
+            )
         val rows = groups(p)
         assertEquals(listOf("MODEL", "TERRAIN", "SKYBOX"), rows.map { it.name })
         assertEquals(listOf(3, 1, 1), rows.map { (it.value as TypeGroup).assets.size })

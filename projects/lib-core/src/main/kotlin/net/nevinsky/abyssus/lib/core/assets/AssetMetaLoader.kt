@@ -20,11 +20,17 @@ class AssetMetaLoader(
     private val metasCache = ConcurrentHashMap<File, CachedMeta>()
 
     fun loadBaseMeta(assetName: String?): AssetMeta<Any>? {
-        if (assetName.isNullOrBlank()) return null
+        if (assetName.isNullOrBlank()) {
+            return null
+        }
         val dir = fileLoader.folder(assetName) ?: return null
 
         val file = File(dir, META_FILE)
-        val stamp = if (file.isFile) file.lastModified() to file.length() else null
+        val stamp = if (file.isFile) {
+            file.lastModified() to file.length()
+        } else {
+            null
+        }
         val cached = metasCache[dir]
         if (stamp != null && cached?.stamp == stamp) {
             return cached.meta

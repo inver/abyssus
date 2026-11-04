@@ -8,5 +8,7 @@ package net.nevinsky.abyssus.plugin.terrain
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptPlanner
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptStateReader
 
-/** The sculpting pieces of the terrain panel: reading a terrain's sculpt state and planning the files of an operation. */
+/**
+ * The sculpting pieces of the terrain panel: reading a terrain's sculpt state and planning the files of an operation.
+ */
 class SculptServices(val reader: SculptStateReader, val planner: SculptPlanner)

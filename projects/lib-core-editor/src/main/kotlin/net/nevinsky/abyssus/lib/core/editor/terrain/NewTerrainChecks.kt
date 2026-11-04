@@ -24,7 +24,10 @@ enum class GeometryError { SIZE, RESOLUTION }
 private val RESERVED = Regex("(?i)^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\\..*)?$")
 private const val INVALID_CHARACTERS = "<>:\"|?*"
 
-/** The reason [name] cannot be the folder of a new asset in [assetsDir], or null. Reads the folder; call off or on the UI thread. */
+/**
+ * The reason [name] cannot be the folder of a new asset in [assetsDir], or null. Reads the folder; call off or on the
+ * UI thread.
+ */
 fun checkFolderName(assetsDir: File, name: String): FolderNameError? {
     val n = name.trim()
     return when {
@@ -41,17 +44,24 @@ fun checkFolderName(assetsDir: File, name: String): FolderNameError? {
 }
 
 private fun escapes(assetsDir: File, name: String): Boolean {
-    if (!assetsDir.exists()) return false
+    if (!assetsDir.exists()) {
+        return false
+    }
     val root = runCatchingKeepingCancellation { assetsDir.canonicalFile }.getOrNull() ?: return true
     val parent =
         runCatchingKeepingCancellation { File(assetsDir, name).canonicalFile.parentFile }.getOrNull() ?: return true
     return parent != root
 }
 
-/** True for a folder, file or link of that name, in any letter case (a case-insensitive file system would collide with it). */
+/**
+ * True for a folder, file or link of that name, in any letter case (a case-insensitive file system would collide with
+ * it).
+ */
 private fun exists(assetsDir: File, name: String): Boolean {
     val target = File(assetsDir, name)
-    if (target.exists() || Files.isSymbolicLink(target.toPath())) return true
+    if (target.exists() || Files.isSymbolicLink(target.toPath())) {
+        return true
+    }
     return assetsDir.list()?.any { it.equals(name, ignoreCase = true) } == true
 }
 

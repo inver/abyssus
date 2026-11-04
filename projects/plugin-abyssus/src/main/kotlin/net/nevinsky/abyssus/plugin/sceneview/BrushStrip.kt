@@ -19,7 +19,8 @@ import javax.swing.SpinnerNumberModel
  * session of the selected entity (opened through [openSession] and replaced when the selection changes, with a token so
  * a late answer is dropped), the stroke it registers with the interaction, and the one brush mode the view holds.
  *
- * A strip puts its mode on the view only as its own [kind]; it takes the view's mode off only while that mode is its own;
+  * A strip puts its mode on the view only as its own [kind]; it takes the view's mode off only while that mode is its
+  * own;
  * and when another kind's mode has replaced its own (or the view is playing) its next [beforeSync] ends it. The kinds
  * add their controls, their session and the mode they build. AWT thread.
  */
@@ -65,14 +66,20 @@ internal abstract class BrushStrip<S : Any>(
     /** Whether the user asked for this brush, so a reloaded session puts it back (the toggle is on). */
     protected abstract val wanted: Boolean
 
-    /** Opens the session of [selected] (the mode is read by its stroke) and calls [ready] with it, null when there is none. */
+    /**
+     * Opens the session of [selected] (the mode is read by its stroke) and calls [ready] with it, null when there is
+     * none.
+     */
     protected abstract fun openSession(selected: Long, mode: () -> BrushMode?, ready: (S?) -> Unit)
 
     protected abstract fun disposeSession(session: S)
 
     protected abstract fun strokeOf(session: S?): BrushStroke?
 
-    /** A session just arrived and its stroke is registered; [wasWanted] says the brush was on for this entity before the reload. */
+    /**
+     * A session just arrived and its stroke is registered; [wasWanted] says the brush was on for this entity before the
+     * reload.
+     */
     protected abstract fun sessionLoaded(session: S?, wasWanted: Boolean)
 
     /** Whether [update] may put the brush on the view now. */
@@ -84,17 +91,24 @@ internal abstract class BrushStrip<S : Any>(
     /** The loaded session was dropped for a reload. */
     protected open fun sessionCleared() {}
 
-    /** Before the toolbar is synced: leaves the brush while playing or when another kind took the view, follows the selection. */
+    /**
+     * Before the toolbar is synced: leaves the brush while playing or when another kind took the view, follows the
+     * selection.
+     */
     fun beforeSync() {
         val replaced = renderer.state.brush?.let { it.kind != kind } == true
-        if (onView && (play.active || replaced)) end()
+        if (onView && (play.active || replaced)) {
+            end()
+        }
         refreshSession()
     }
 
     /** Opens the session of the selected entity, replacing the last one (always when [force]). */
     fun refreshSession(force: Boolean = false) {
         val selected = interaction.selectedId
-        if (!force && selected == entity) return
+        if (!force && selected == entity) {
+            return
+        }
         val wasWanted = wanted && selected == entity
         end(notify = false)
         loaded?.let(::disposeSession)
@@ -102,7 +116,9 @@ internal abstract class BrushStrip<S : Any>(
         sessionCleared()
         entity = selected
         val token = ++load
-        if (closed || selected == null) return
+        if (closed || selected == null) {
+            return
+        }
         openSession(selected, { ownBrush }) { session ->
             if (closed || token != load || interaction.selectedId != selected) {
                 session?.let(::disposeSession)
@@ -117,8 +133,12 @@ internal abstract class BrushStrip<S : Any>(
 
     /** Puts the brush on the view from the strip's values ([shift] flips it); leaves it while playing. */
     fun update(shift: Boolean = false) {
-        if (play.active) { end(); return }
-        if (!canBrush()) return
+        if (play.active) {
+            end(); return
+        }
+        if (!canBrush()) {
+            return
+        }
         val selected = interaction.selectedId ?: return
         val mode = modeFor(selected, shift) ?: return
         kinds.endOthers(this)
@@ -127,10 +147,15 @@ internal abstract class BrushStrip<S : Any>(
         strip.isVisible = true
     }
 
-    /** Takes the brush off the view when it is this kind's; [notify] is for kinds that tell their host (not when the session is only reloaded). */
+    /**
+     * Takes the brush off the view when it is this kind's; [notify] is for kinds that tell their host (not when the
+     * session is only reloaded).
+     */
     open fun end(notify: Boolean = true) {
         interaction.brushStroke(kind)?.cancelled()
-        if (active) renderer.state.brush = null
+        if (active) {
+            renderer.state.brush = null
+        }
         onView = false
         renderer.brushCursor = null
         strip.isVisible = false
@@ -149,7 +174,8 @@ internal abstract class BrushStrip<S : Any>(
 }
 
 /**
- * A [BrushStrip] whose brush the user asks for with a toggle: [requested] is that ask, and [onEnded] tells the host when
+  * A [BrushStrip] whose brush the user asks for with a toggle: [requested] is that ask, and [onEnded] tells the host
+  * when
  * the brush ends because the user left it (not when the session is only reloaded). AWT thread.
  */
 internal abstract class RequestedBrushStrip<S : Any>(
@@ -168,12 +194,16 @@ internal abstract class RequestedBrushStrip<S : Any>(
 
     override val wanted: Boolean get() = requested
 
-    /** Takes the brush off the view; [notify] tells the host the brush is over (not when the session is only reloaded). */
+    /**
+     * Takes the brush off the view; [notify] tells the host the brush is over (not when the session is only reloaded).
+     */
     override fun end(notify: Boolean) {
         val was = requested
         super.end(notify)
         requested = false
-        if (notify && was) onEnded()
+        if (notify && was) {
+            onEnded()
+        }
     }
 }
 
@@ -196,6 +226,8 @@ internal class BrushKinds {
 
     /** Ends every brush but [starting] that has its mode on the view. */
     fun endOthers(starting: BrushStrip<*>) {
-        for (strip in all) if (strip !== starting && strip.holdsView) strip.end()
+        for (strip in all) if (strip !== starting && strip.holdsView) {
+            strip.end()
+        }
     }
 }

@@ -73,7 +73,9 @@ class FoliageDraft(
 
     /** A brush stamp: the rectangle [rect] it changed in the mask of [layerId]; an empty rectangle is a no-op. */
     fun stamped(layerId: Int, rect: GridRect) {
-        if (rect.isEmpty) return
+        if (rect.isEmpty) {
+            return
+        }
         val touched = chunksOf(rect)
         chunks += touched
         strokeChunks += touched
@@ -96,7 +98,10 @@ class FoliageDraft(
         strokeChunks = LinkedHashSet()
     }
 
-    /** The chunks covering the brush rectangle [rect]: its texel centres in terrain-local units, chunked like the scatter. */
+    /**
+     * The chunks covering the brush rectangle [rect]: its texel centres in terrain-local units, chunked like the
+     * scatter.
+     */
     private fun chunksOf(rect: GridRect): Set<FoliageChunk> {
         val chunkSize = foliageChunkSize(terrain.size)
         val across = foliageChunksAcross(terrain.size, chunkSize)

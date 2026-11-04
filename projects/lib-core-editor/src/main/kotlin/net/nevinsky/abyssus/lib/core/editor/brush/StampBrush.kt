@@ -36,10 +36,14 @@ class StampBrush<G : BrushGrid>(private val target: BrushTarget<G>, world: Matri
         reversed: Boolean
     ): GridRect {
         val reach = tool.reach(radius)
-        if (!(strength > 0f) || !path.canStamp(reach)) return emptyGridRect()
+        if (!(strength > 0f) || !path.canStamp(reach)) {
+            return emptyGridRect()
+        }
         var rect = emptyGridRect()
         path.walk(from, to, reach) { at ->
-            if (tool.singleStamp && stamped) return@walk
+            if (tool.singleStamp && stamped) {
+                return@walk
+            }
             stamped = true
             rect = rect.union(stamp(at, reach, strength, tool, reversed))
         }
@@ -51,7 +55,9 @@ class StampBrush<G : BrushGrid>(private val target: BrushTarget<G>, world: Matri
         path.forEachInRadius(at, radius) { gx, gz, falloff ->
             val weight = if (tool.smoothFalloff) {
                 strength * smoothFalloff(falloff)
-            } else strength
+            } else {
+                strength
+            }
             if (weight > 0f) {
                 footprint.add(gx, gz, falloff, weight)
             }

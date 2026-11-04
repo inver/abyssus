@@ -23,10 +23,16 @@ class FoliageAdmission(private val copyCap: Int = FOLIAGE_COLLIDER_COPY_CAP, pri
     var bodies: Int = 0
         private set
 
-    /** Admits a layer of [layerCopies] copies in [layerBodies] bodies; null when it was admitted, else why it was not. */
+    /**
+     * Admits a layer of [layerCopies] copies in [layerBodies] bodies; null when it was admitted, else why it was not.
+     */
     fun admit(layerCopies: Long, layerBodies: Int): FoliageRefusal? {
-        if (copies + layerCopies > copyCap) return FoliageRefusal.COPY_CAP
-        if (bodies + layerBodies > bodyCapacity) return FoliageRefusal.BODY_CAPACITY
+        if (copies + layerCopies > copyCap) {
+            return FoliageRefusal.COPY_CAP
+        }
+        if (bodies + layerBodies > bodyCapacity) {
+            return FoliageRefusal.BODY_CAPACITY
+        }
         copies += layerCopies.toInt()
         bodies += layerBodies
         return null

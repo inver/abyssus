@@ -40,7 +40,11 @@ class GdxFrame {
     private var lastNanos = 0L
 
     fun tick(width: Int, height: Int, nowNanos: Long = System.nanoTime()) {
-        deltaSeconds = if (lastNanos == 0L) 0f else (nowNanos - lastNanos) / 1e9f
+        deltaSeconds = if (lastNanos == 0L) {
+            0f
+        } else {
+            (nowNanos - lastNanos) / 1e9f
+        }
         lastNanos = nowNanos
         this.width = width
         this.height = height

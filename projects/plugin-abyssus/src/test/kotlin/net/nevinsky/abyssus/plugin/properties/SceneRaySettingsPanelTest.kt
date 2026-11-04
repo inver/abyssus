@@ -15,13 +15,24 @@ import java.awt.Container
 import javax.swing.JLabel
 
 class SceneRaySettingsPanelTest:BasePlatformTestCase() {
-    private fun named(c:Component,name:String):Component?=if(c.name==name)c else (c as? Container)?.components?.firstNotNullOfOrNull { named(it,name) }
-    private fun texts(c:Component):List<String> = buildList {
-        if(c is JLabel && c.text!=null) add(c.text)
-        if(c is Container) c.components.forEach { addAll(texts(it)) }
+    private fun named(c:Component,name:String):Component?=if(c.name==name) {
+        c
+    } else {
+        (c as? Container)?.components?.firstNotNullOfOrNull { named(it,name) }
     }
-    private fun file(text:String="""{"format":"abyssus","formatVersion":1,"ecs":{}}""")=myFixture.addFileToProject("settings.scene",text).virtualFile
-    private fun view(file:com.intellij.openapi.vfs.VirtualFile)=SceneDetailsView(SceneRayControls(project) { _,_->error("Settings must not open a view") },readSceneState(file,"Settings") as PanelState.UISceneState,testRootDisposable)
+    private fun texts(c:Component):List<String> = buildList {
+        if(c is JLabel && c.text!=null) {
+            add(c.text)
+        }
+        if(c is Container) {
+            c.components.forEach { addAll(texts(it)) }
+        }
+    }
+    private fun file(text:String="""{"format":"abyssus","formatVersion":1,
+"ecs":{}}""")=myFixture.addFileToProject("settings.scene",text).virtualFile
+    private fun view(file:com.intellij.openapi.vfs.VirtualFile)=SceneDetailsView(SceneRayControls(project) {
+        _,_->error("Settings must not open a view") },readSceneState(file,"Settings") as
+        PanelState.UISceneState,testRootDisposable)
     fun testDefaultsAndValidEditsWorkWithoutAViewAndSelectionDoesNotWrite() {
         val file=file();val document=FileDocumentManager.getInstance().getDocument(file)!!;val original=document.text
         val view=view(file)
@@ -42,28 +53,35 @@ class SceneRaySettingsPanelTest:BasePlatformTestCase() {
         field.text="8";field.postActionEvent()
         assertEquals(4,SceneJson().parse(document.text)["rayTracing"]["targetSamplesPerPixel"].intValue())
         assertTrue((named(view,"ray-setting-targetSamplesPerPixel-error") as JLabel).text.contains("changed"))
-        assertTrue("a rebuilt view keeps the explanation",(named(SceneDetailsView(SceneRayControls(project) { _,_->error("no view") },
-            readSceneState(file,"Settings") as PanelState.UISceneState,testRootDisposable,conflict="targetSamplesPerPixel"),
+        assertTrue("a rebuilt view keeps the explanation",(named(SceneDetailsView(SceneRayControls(project) {
+            _,_->error("no view") },
+            readSceneState(file,"Settings") as
+                PanelState.UISceneState,testRootDisposable,conflict="targetSamplesPerPixel"),
             "ray-setting-targetSamplesPerPixel-error") as JLabel).text.contains("changed"))
     }
     fun testLabelsHelpAndRangesSeparateQualityFromWork() {
         val view=view(file())
         val shown=texts(view)
-        for(label in listOf("Target samples per pixel","Maximum rays per frame","Maximum reflection bounces","Maximum refraction bounces"))
+        for(label in listOf("Target samples per pixel","Maximum rays per frame","Maximum reflection bounces","Maximum
+            refraction bounces"))
             assertTrue(shown.toString(),label in shown)
         val samples=(named(view,"ray-setting-targetSamplesPerPixel-help") as JLabel).text
         val rays=(named(view,"ray-setting-maxRaysPerFrame-help") as JLabel).text
-        assertTrue(samples,samples.contains("accumulated") && samples.contains("1–4096") && samples.contains("default 256"))
-        assertTrue(rays,rays.contains("submitted frame") && rays.contains("shadow") && rays.contains("1–268435456") && rays.contains("default 33554432"))
+        assertTrue(samples,samples.contains("accumulated") && samples.contains("1–4096") && samples.contains("default
+            256"))
+        assertTrue(rays,rays.contains("submitted frame") && rays.contains("shadow") && rays.contains("1–268435456") &&
+            rays.contains("default 33554432"))
         for(key in listOf("maxReflectionBounces","maxRefractionBounces"))
             assertTrue((named(view,"ray-setting-$key-help") as JLabel).text.contains("0–16"))
-        assertEquals(listOf("256","33554432","1","0"),listOf("targetSamplesPerPixel","maxRaysPerFrame","maxReflectionBounces","maxRefractionBounces")
+        assertEquals(listOf("256","33554432","1","0"),listOf("targetSamplesPerPixel","maxRaysPerFrame",
+            "maxReflectionBounces","maxRefractionBounces")
             .map { (named(view,"ray-setting-$it") as JBTextField).text })
     }
     fun testOutOfRangeAndNonNumericEditsAreRejectedForEveryField() {
         val file=file();val document=FileDocumentManager.getInstance().getDocument(file)!!;val original=document.text
         val view=view(file)
-        for((key,bad) in listOf("targetSamplesPerPixel" to "0","targetSamplesPerPixel" to "4097","maxRaysPerFrame" to "268435457",
+        for((key,bad) in listOf("targetSamplesPerPixel" to "0","targetSamplesPerPixel" to "4097","maxRaysPerFrame" to
+            "268435457",
             "maxReflectionBounces" to "-1","maxRefractionBounces" to "17","maxRefractionBounces" to "two")) {
             val field=named(view,"ray-setting-$key") as JBTextField
             field.text=bad;field.postActionEvent()

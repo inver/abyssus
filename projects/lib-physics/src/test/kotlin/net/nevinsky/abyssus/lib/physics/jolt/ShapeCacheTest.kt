@@ -27,19 +27,26 @@ class ShapeCacheTest {
      * The fixture's scene with a convex hull collider on each collider entity whose model has readable points (the
      * fixture's own colliders are boxes and a height field). The component is changed in memory; no document is.
      */
-    private fun withHulls(): SceneContext = loadPhysicsScene().also { scene ->
-        for (entity in scene.engine.entities) {
-            val collider = entity.getComponent(ColliderComponent::class.java) ?: continue
-            val model = assetName(entity, MetaType.MODEL) ?: continue
-            if (assets.modelPoints(model) != null) collider.shape = ColliderShape.CONVEX_HULL
+    private fun withHulls(): SceneContext =
+        loadPhysicsScene().also { scene ->
+            for (entity in scene.engine.entities) {
+                val collider = entity.getComponent(ColliderComponent::class.java) ?: continue
+                val model = assetName(entity, MetaType.MODEL) ?: continue
+                if (assets.modelPoints(model) != null) {
+                    collider.shape = ColliderShape.CONVEX_HULL
+                }
+            }
         }
-    }
 
-    @Test fun aSecondWorldBuildsNoHull() {
+    @Test
+    fun aSecondWorldBuildsNoHull() {
         ShapeCache().use { cache ->
             val messages = mutableListOf<String>()
             PhysicsWorld(withHulls().engine, assets, warningsTo(messages), natives, cache).close()
-            assertTrue("a hull and the height field are built: $messages", cache.hullsBuilt >= 1 && cache.built > cache.hullsBuilt)
+            assertTrue(
+                "a hull and the height field are built: $messages",
+                cache.hullsBuilt >= 1 && cache.built > cache.hullsBuilt,
+            )
             val hulls = cache.hullsBuilt
             val built = cache.built
 
@@ -50,7 +57,8 @@ class ShapeCacheTest {
         }
     }
 
-    @Test fun worldsSharingAShapeSimulateAsWorldsThatDoNot() {
+    @Test
+    fun worldsSharingAShapeSimulateAsWorldsThatDoNot() {
         fun fall(cache: ShapeCache?): List<Vector3> {
             val scene = withHulls()
             val world = PhysicsWorld(scene.engine, assets, warningsTo(mutableListOf()), natives, cache)
@@ -71,7 +79,8 @@ class ShapeCacheTest {
         }
     }
 
-    @Test fun aClosedCacheRefusesToBuild() {
+    @Test
+    fun aClosedCacheRefusesToBuild() {
         val cache = ShapeCache()
         cache.close()
         cache.close()

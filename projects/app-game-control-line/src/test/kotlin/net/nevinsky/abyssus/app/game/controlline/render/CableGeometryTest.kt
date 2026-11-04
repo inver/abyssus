@@ -6,11 +6,11 @@ package net.nevinsky.abyssus.app.game.controlline.render
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
+import kotlin.math.abs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import kotlin.math.abs
 
 class CableGeometryTest {
     private val geometry = CableGeometry()
@@ -23,8 +23,11 @@ class CableGeometryTest {
         return vertices to indices
     }
 
-    private fun position(vertices: FloatArray, v: Int) = Vector3(vertices[v * 6], vertices[v * 6 + 1], vertices[v * 6 + 2])
-    private fun normal(vertices: FloatArray, v: Int) = Vector3(vertices[v * 6 + 3], vertices[v * 6 + 4], vertices[v * 6 + 5])
+    private fun position(vertices: FloatArray, v: Int) =
+        Vector3(vertices[v * 6], vertices[v * 6 + 1], vertices[v * 6 + 2])
+
+    private fun normal(vertices: FloatArray, v: Int) =
+        Vector3(vertices[v * 6 + 3], vertices[v * 6 + 4], vertices[v * 6 + 5])
 
     @Test
     fun aTwoPointCableHasTwoRingsAndTwoTrianglesASide() {
@@ -61,17 +64,20 @@ class CableGeometryTest {
 
     @Test
     fun everyTriangleFacesOutwardAndEveryIndexIsInRange() {
-        for (points in listOf(
-            listOf(Vector3(0f, 1f, 0f), Vector3(10f, 1f, 3f)),
-            listOf(Vector3(0f, 0f, 0f), Vector3(0f, 8f, 0f)), // straight up: the frame must not collapse
-            listOf(Vector3(0f, 1f, 0f), Vector3(3f, 1f, 1f), Vector3(6f, 2f, 1f), Vector3(9f, 4f, 3f)),
-        )) {
+        for (points in
+            listOf(
+                listOf(Vector3(0f, 1f, 0f), Vector3(10f, 1f, 3f)),
+                listOf(Vector3(0f, 0f, 0f), Vector3(0f, 8f, 0f)), // straight up: the frame must not collapse
+                listOf(Vector3(0f, 1f, 0f), Vector3(3f, 1f, 1f), Vector3(6f, 2f, 1f), Vector3(9f, 4f, 3f)),
+            )) {
             val (vertices, indices) = build(points)
             val count = geometry.vertexCount(points.size)
             for (t in indices.indices step 3) {
                 val ids = IntArray(3) { indices[t + it].toInt() }
                 ids.forEach { assertTrue("index $it of $count", it in 0 until count) }
-                val a = position(vertices, ids[0]); val b = position(vertices, ids[1]); val c = position(vertices, ids[2])
+                val a = position(vertices, ids[0])
+                val b = position(vertices, ids[1])
+                val c = position(vertices, ids[2])
                 val face = Vector3(b).sub(a).crs(Vector3(c).sub(a))
                 val outward = normal(vertices, ids[0]).add(normal(vertices, ids[1])).add(normal(vertices, ids[2]))
                 assertTrue("triangle $t of ${points.size} points faces inward", face.dot(outward) > 0f)
@@ -107,13 +113,18 @@ class CableGeometryTest {
         try {
             Cable(listOf(Vector3()), 0.001f, Color.WHITE)
             fail("one point was accepted")
-        } catch (expected: IllegalArgumentException) {
-        }
+        } catch (expected: IllegalArgumentException) {}
         try {
-            geometry.build(listOf(Vector3(), Vector3(1f, 0f, 0f)), FloatArray(1), FloatArray(100), 0, ShortArray(100), 0)
+            geometry.build(
+                listOf(Vector3(), Vector3(1f, 0f, 0f)),
+                FloatArray(1),
+                FloatArray(100),
+                0,
+                ShortArray(100),
+                0,
+            )
             fail("a missing radius was accepted")
-        } catch (expected: IllegalArgumentException) {
-        }
+        } catch (expected: IllegalArgumentException) {}
     }
 
     @Test
@@ -123,7 +134,10 @@ class CableGeometryTest {
         val indices = ShortArray(geometry.indexCount(2) * 2)
         val first = geometry.build(points, floatArrayOf(0.01f, 0.01f), vertices, 0, indices, 0)
         geometry.build(points, floatArrayOf(0.01f, 0.01f), vertices, geometry.vertexCount(2), indices, first)
-        assertTrue("the second cable refers to its own vertices", (first until indices.size).all { indices[it] >= geometry.vertexCount(2) })
+        assertTrue(
+            "the second cable refers to its own vertices",
+            (first until indices.size).all { indices[it] >= geometry.vertexCount(2) },
+        )
         assertEquals(0.0f, abs(position(vertices, 0).x), 1e-6f)
     }
 }

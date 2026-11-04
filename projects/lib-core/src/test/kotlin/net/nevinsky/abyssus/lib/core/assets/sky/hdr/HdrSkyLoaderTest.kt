@@ -5,35 +5,40 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.hdr
 
+import java.io.File
+import java.nio.file.Files
+import net.nevinsky.abyssus.lib.core.assets.exrFixture
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ExrLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrSkyLoader
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ToneCurve
-import net.nevinsky.abyssus.lib.core.io.FileLoader
-import net.nevinsky.abyssus.lib.core.assets.exrFixture
 import net.nevinsky.abyssus.lib.core.assets.skyShaders
 import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
+import net.nevinsky.abyssus.lib.core.io.FileLoader
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
 
 class HdrSkyLoaderTest {
     private val exr = exrFixture()
     private val dirs = mutableListOf<File>()
 
-    @After
-    fun cleanUp() = dirs.forEach(File::deleteRecursively)
+    @After fun cleanUp() = dirs.forEach(File::deleteRecursively)
 
     /** A project with one HDR sky asset `sky` whose meta names [file] (which is the real EXR when [copyExr]). */
     private fun project(file: String? = "sky.exr", copyExr: Boolean = true): File {
         val dir = Files.createTempDirectory("hdrsky").toFile().also(dirs::add)
         val folder = File(dir, "assets/sky").apply { mkdirs() }
-        if (copyExr) exr.copyTo(File(folder, "sky.exr"))
+        if (copyExr) {
+            exr.copyTo(File(folder, "sky.exr"))
+        }
         val named = file?.let { "\"file\":\"$it\"" } ?: ""
-        File(folder, "meta.json").writeText("""{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR","additional":{$named}}""")
+        File(folder, "meta.json")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":0,"type":"SKYBOX_HDR",
+"additional":{$named}}"""
+            )
         return dir
     }
 

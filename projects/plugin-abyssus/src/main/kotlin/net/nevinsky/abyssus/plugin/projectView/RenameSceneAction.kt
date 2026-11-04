@@ -26,6 +26,8 @@ open class RenameSceneAction : AbyssusTreeAction<VirtualFile>() {
             current,
             null,
         )?.trim()
-        if (!name.isNullOrEmpty() && name != current) renameScene(project, file, name)
+        if (!name.isNullOrEmpty() && name != current) {
+            renameScene(project, file, name)
+        }
     }
 }

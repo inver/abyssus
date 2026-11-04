@@ -14,11 +14,16 @@ import net.nevinsky.abyssus.lib.core.editor.scene.aimDirection
 import net.nevinsky.abyssus.lib.core.editor.scene.cameraDirectionOf
 import net.nevinsky.abyssus.lib.core.editor.scene.forwardOf
 
-
-/** The entity a gizmo acts on: where it is, and the direction it faces when it has one (a camera, a directional or spot light). */
+/**
+ * The entity a gizmo acts on: where it is, and the direction it faces when it has one (a camera, a directional or spot
+ * light).
+ */
 class Selected(val transform: PlacementTransform, val direction: Vector3?)
 
-/** Applies the transform an in-progress drag proposes over the scene's placements, and finds the selection's transform. No GL needed. */
+/**
+ * Applies the transform an in-progress drag proposes over the scene's placements, and finds the selection's transform.
+ * No GL needed.
+ */
 class ScenePreview {
     /**
      * Where a rotate drag on a handle-aimed light must put its handle: the light's position plus the turned direction
@@ -39,37 +44,92 @@ class ScenePreview {
     fun apply(content: SceneContent, entityId: Long, result: DragResult): SceneContent {
         val t = result.transform
         val light = content.light(entityId)
-        // A rotate drag keeps the light's position and turns its direction; it moves the handle. A move drag changes the
-        // position and re-aims a look-at light at its unmoved target. The two are told apart by whether the position moved.
+        // A rotate drag keeps the light's position and turns its direction; it moves the handle. A move drag changes
+        // the
+        // position and re-aims a look-at light at its unmoved target. The two are told apart by whether the position
+        // moved.
         val handleId = light?.let(content::aimHandleOf)?.takeIf { t.position == light.position }
         val handleAt = handleId?.let { aimedTarget(content, entityId, result) }
         val moved = content.entityPositions + (entityId to t.position)
-        val positions = if (handleId != null && handleAt != null) moved + (handleId to handleAt) else moved
+        val positions =
+            if (handleId != null && handleAt != null) {
+                moved + (handleId to handleAt)
+            } else {
+                moved
+            }
         return content.copy(
-            models = if (content.model(entityId) == null) content.models else content.models.map { if (it.entityId == entityId) it.copy(transform = t) else it },
-            terrains = if (content.terrain(entityId) == null) content.terrains else content.terrains.map { if (it.entityId == entityId) it.copy(transform = t) else it },
-            lights = if (light == null) content.lights else content.lights.map {
-                if (it.entityId != entityId) {
-                    it
+            models =
+                if (content.model(entityId) == null) {
+                    content.models
                 } else {
-                    // A point light has no direction, so it never re-aims.
-                    val target =
-                        it.lookAtId?.takeIf { _ -> it.kind != LightKind.POINT }?.let(content.entityPositions::get)
-                    val direction = when {
-                        // A move re-aims a look-at light at its unmoved target; a rotate uses the turned direction.
-                        target != null && t.position != it.position -> aimDirection(t.position, target)
-                            ?: forwardOf(t.rotation)
-
-                        else -> result.direction ?: forwardOf(t.rotation)
+                    content.models.map {
+                        if (it.entityId == entityId) {
+                            it.copy(transform = t)
+                        } else {
+                            it
+                        }
                     }
-                    it.copy(position = t.position, rotation = t.rotation, direction = direction)
-                }
-            },
-            cameras = if (content.camera(entityId) == null) content.cameras else content.cameras.map {
-                if (it.entityId != entityId) it
-                else it.copy(position = t.position, rotation = t.rotation, direction = result.direction ?: it.direction)
-            },
-            entityPositions = if (entityId in content.entityPositions) positions else content.entityPositions,
+                },
+            terrains =
+                if (content.terrain(entityId) == null) {
+                    content.terrains
+                } else {
+                    content.terrains.map {
+                        if (it.entityId == entityId) {
+                            it.copy(transform = t)
+                        } else {
+                            it
+                        }
+                    }
+                },
+            lights =
+                if (light == null) {
+                    content.lights
+                } else {
+                    content.lights.map {
+                        if (it.entityId != entityId) {
+                            it
+                        } else {
+                            // A point light has no direction, so it never re-aims.
+                            val target =
+                                it.lookAtId
+                                    ?.takeIf { _ -> it.kind != LightKind.POINT }
+                                    ?.let(content.entityPositions::get)
+                            val direction =
+                                when {
+                                    // A move re-aims a look-at light at its unmoved target; a rotate uses the turned
+                                    // direction.
+                                    target != null && t.position != it.position ->
+                                        aimDirection(t.position, target) ?: forwardOf(t.rotation)
+
+                                    else -> result.direction ?: forwardOf(t.rotation)
+                                }
+                            it.copy(position = t.position, rotation = t.rotation, direction = direction)
+                        }
+                    }
+                },
+            cameras =
+                if (content.camera(entityId) == null) {
+                    content.cameras
+                } else {
+                    content.cameras.map {
+                        if (it.entityId != entityId) {
+                            it
+                        } else {
+                            it.copy(
+                                position = t.position,
+                                rotation = t.rotation,
+                                direction = result.direction ?: it.direction,
+                            )
+                        }
+                    }
+                },
+            entityPositions =
+                if (entityId in content.entityPositions) {
+                    positions
+                } else {
+                    content.entityPositions
+                },
         )
     }
 
@@ -82,21 +142,29 @@ class ScenePreview {
      */
     fun withPoses(content: SceneContent, poses: Map<Long, Pose>): SceneContent =
         poses.entries.fold(content) { c, (id, pose) ->
-            val scale = c.model(id)?.transform?.scale
-                ?: c.terrain(id)?.transform?.scale ?: Vector3(1f, 1f, 1f)
+            val scale = c.model(id)?.transform?.scale ?: c.terrain(id)?.transform?.scale ?: Vector3(1f, 1f, 1f)
             apply(c, id, DragResult(PlacementTransform(pose.position, pose.rotation, scale), null))
         }
 
     /** The transform of the model, terrain, camera or light [entityId], or null when the scene has no such entity. */
     fun selected(content: SceneContent, entityId: Long): Selected? {
-        content.model(entityId)?.let { return Selected(it.transform, null) }
-        content.terrain(entityId)?.let { return Selected(it.transform, null) }
+        content.model(entityId)?.let {
+            return Selected(it.transform, null)
+        }
+        content.terrain(entityId)?.let {
+            return Selected(it.transform, null)
+        }
         content.camera(entityId)?.let {
             val direction = cameraDirectionOf(it, content.entityPositions)
             return Selected(PlacementTransform(it.position, it.rotation, Vector3(1f, 1f, 1f)), direction)
         }
         content.light(entityId)?.let {
-            val facing = if (it.kind == LightKind.POINT) null else it.direction
+            val facing =
+                if (it.kind == LightKind.POINT) {
+                    null
+                } else {
+                    it.direction
+                }
             return Selected(PlacementTransform(it.position, it.rotation, Vector3(1f, 1f, 1f)), facing)
         }
         return null

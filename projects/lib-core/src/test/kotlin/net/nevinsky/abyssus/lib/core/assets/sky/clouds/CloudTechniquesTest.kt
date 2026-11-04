@@ -25,7 +25,9 @@ class CloudTechniquesTest {
         val built = mutableListOf<CloudTechnique>()
         val techniques = CloudTechniques("sky", org.slf4j.LoggerFactory.getLogger("test")) { technique ->
             built += technique
-            if (technique == CloudTechnique.CUMULUS) error("no shader")
+            if (technique == CloudTechnique.CUMULUS) {
+                error("no shader")
+            }
             object : CloudRenderer() {
                 override fun draw(scene: CloudScene) = Unit
                 override fun dispose() = Unit

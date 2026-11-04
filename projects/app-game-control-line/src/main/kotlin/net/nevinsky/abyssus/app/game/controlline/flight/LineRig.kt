@@ -8,6 +8,8 @@ import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
+import kotlin.math.asin
+import kotlin.math.sqrt
 import net.nevinsky.abyssus.app.game.controlline.components.PilotComponent
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
@@ -15,8 +17,6 @@ import net.nevinsky.abyssus.lib.core.util.azimuthOf
 import net.nevinsky.abyssus.lib.physics.PHYSICS_STEP
 import net.nevinsky.abyssus.lib.physics.PhysicsConstraint
 import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
-import kotlin.math.asin
-import kotlin.math.sqrt
 
 /** The lines' combined tension (N) at or above which the elevator follows the handle. */
 const val CONTROL_TENSION = 1f
@@ -55,7 +55,8 @@ class LineRig(private val world: PhysicsWorld, val pilot: Entity, val plane: Ent
     val wire = Wire(planeSettings.lineDiameter)
 
     /** What both lines add to the plane's mass (kg): a third of each wire, as it swings about the handle. */
-    val wireMass: Float get() = 2f * wire.tipMass(planeSettings.lineLength)
+    val wireMass: Float
+        get() = 2f * wire.tipMass(planeSettings.lineLength)
 
     private val lineTension = FloatArray(2)
 
@@ -90,19 +91,28 @@ class LineRig(private val world: PhysicsWorld, val pilot: Entity, val plane: Ent
     }
 
     /** The handle's centre, in world space. */
-    val handle: Vector3 get() = Vector3(pilotPosition).add(0f, pilotSettings.handleHeight, 0f)
+    val handle: Vector3
+        get() = Vector3(pilotPosition).add(0f, pilotSettings.handleHeight, 0f)
 
     /** The two points the lines leave the handle from (up line first), on the pilot's vertical axis, local to it. */
-    private fun handlePoints(): List<Vector3> = listOf(
-        Vector3(0f, pilotSettings.handleHeight + pilotSettings.handleSpacing / 2, 0f),
-        Vector3(0f, pilotSettings.handleHeight - pilotSettings.handleSpacing / 2, 0f),
-    )
+    private fun handlePoints(): List<Vector3> =
+        listOf(
+            Vector3(0f, pilotSettings.handleHeight + pilotSettings.handleSpacing / 2, 0f),
+            Vector3(0f, pilotSettings.handleHeight - pilotSettings.handleSpacing / 2, 0f),
+        )
 
     /** The lines' combined tension after the last step (N). */
-    val tension: Float get() = lineTension.sum()
+    val tension: Float
+        get() = lineTension.sum()
 
     /** The elevator's deflection (rad): the handle's through taut lines, neutral through slack ones. */
-    val elevator: Float get() = if (tension >= CONTROL_TENSION) tilt * ELEVATOR_THROW else 0f
+    val elevator: Float
+        get() =
+            if (tension >= CONTROL_TENSION) {
+                tilt * ELEVATOR_THROW
+            } else {
+                0f
+            }
 
     /**
      * Puts the plane on the ground at its line length along the circle at [azimuth] degrees, at rest and pointing in
@@ -139,18 +149,25 @@ class LineRig(private val world: PhysicsWorld, val pilot: Entity, val plane: Ent
         var high = planeSettings.lineLength * 2f
         repeat(40) {
             val mid = (low + high) / 2
-            if (longest(mid) < planeSettings.lineLength + pretension) low = mid else high = mid
+            if (longest(mid) < planeSettings.lineLength + pretension) {
+                low = mid
+            } else {
+                high = mid
+            }
         }
         planeBody.setPose(position(low), rotation)
         pilotBody.setPose(pilotPosition, facing(azimuth))
-        lines = handlePoints().zip(leadouts) { from, to -> world.addRope(pilot, from, plane, to, planeSettings.lineLength * (1f + ROPE_MARGIN)) }
+        lines =
+            handlePoints().zip(leadouts) { from, to ->
+                world.addRope(pilot, from, plane, to, planeSettings.lineLength * (1f + ROPE_MARGIN))
+            }
         lineTension.fill(0f)
     }
 
     /**
      * The wire's pull on the plane for the next step: each line is a spring of stiffness `E * A / L` (with a little
-     * damping, so it does not ring) once it is longer than its rest length, applied at its leadout. The Jolt ropes are a
-     * backstop [ROPE_MARGIN] longer, which the spring never lets the plane reach.
+     * damping, so it does not ring) once it is longer than its rest length, applied at its leadout. The Jolt ropes are
+     * a backstop [ROPE_MARGIN] longer, which the spring never lets the plane reach.
      */
     private fun pull(seconds: Float) {
         val rest = planeSettings.lineLength

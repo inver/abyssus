@@ -71,7 +71,11 @@ class AssetRevisionTracker(private val json: JsonProcessor) {
                 type = tree?.text("type"),
                 metaHash = text?.let { sha256Hex(it.toByteArray()) },
                 files = tree?.let { stamps(dir, it) }.orEmpty(),
-                references = if (tree?.text("type") == MetaType.TERRAIN.name) references(tree, byUuid) else emptyMap(),
+                references = if (tree?.text("type") == MetaType.TERRAIN.name) {
+                    references(tree, byUuid)
+                } else {
+                    emptyMap()
+                },
             )
         }
         return ProjectRevisions(assets)
@@ -95,8 +99,12 @@ class AssetRevisionTracker(private val json: JsonProcessor) {
     /** The folder names of assets that must be loaded again going from [old] to [new]. */
     fun changed(old: ProjectRevisions, new: ProjectRevisions): Set<String> {
         val direct = buildSet {
-            for ((name, revision) in new.assets) if (old.assets[name] != revision) add(name)
-            for (name in old.assets.keys) if (name !in new.assets) add(name)
+            for ((name, revision) in new.assets) if (old.assets[name] != revision) {
+                add(name)
+            }
+            for (name in old.assets.keys) if (name !in new.assets) {
+                add(name)
+            }
         }
         val dependents = new.assets.values
             .filter { it.name !in direct && it.references.values.any { folder -> folder != null && folder in direct } }

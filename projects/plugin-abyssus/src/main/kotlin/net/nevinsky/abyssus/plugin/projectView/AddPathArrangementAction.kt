@@ -25,7 +25,9 @@ internal fun pathModels(file: VirtualFile): List<BaseMeta> =
     SceneComponentEdits.renderAssets(file, service<AbyssusPluginCtx>().assets.metaFiles)
         .filter { it.type == MetaType.MODEL }
 
-/** Whether a path arrangement can be added to [file] now: the scene reads as a native scene and its project has a model. */
+/**
+ * Whether a path arrangement can be added to [file] now: the scene reads as a native scene and its project has a model.
+ */
 internal fun canAddPathArrangement(file: VirtualFile, cache: SceneDocumentCache): Boolean =
     canAddAsset(file, cache) && pathModels(file).isNotEmpty()
 

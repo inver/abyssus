@@ -24,13 +24,22 @@ private val FORWARD = Vector3(0f, 0f, -1f)
  */
 fun cameraDirectionOf(placement: CameraPlacement, positions: Map<Long, Vector3>): Vector3 {
     val target = placement.lookAtId?.let(positions::get)
-    if (target != null) aimDirection(placement.position, target)?.let { return it }
+    if (target != null) {
+        aimDirection(placement.position, target)?.let { return it }
+    }
     return normalized(placement.direction) ?: FORWARD
 }
 
-/** The camera's right and up axes for the unit view direction [d]; world Y is up unless looking (almost) straight along it. */
+/**
+ * The camera's right and up axes for the unit view direction [d]; world Y is up unless looking (almost) straight along
+ * it.
+ */
 internal fun cameraSideAxes(d: Vector3): Pair<Vector3, Vector3> {
-    val up = if (kotlin.math.abs(d.y) > 0.999f) Vector3.Z else Vector3.Y
+    val up = if (kotlin.math.abs(d.y) > 0.999f) {
+        Vector3.Z
+    } else {
+        Vector3.Y
+    }
     val right = Vector3(d).crs(up).nor()
     return right to Vector3(right).crs(d).nor()
 }

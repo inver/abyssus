@@ -23,22 +23,28 @@ private const val SUN_EPSILON = 1e-6
 class SkyAmbient(val zenith: FloatArray, val horizon: FloatArray, val sunlight: FloatArray, val altitude: Float)
 
 /**
- * A CPU twin of the fixture sky shader's scattering (`skybox_physical/sky.frag`: the same sample counts and
- * constants) for [params], so cloud lighting matches the atmosphere without calling the asset's shader, and the physics
- * can be checked without a GL context. Results are linear radiance before exposure and tone mapping.
+ * A CPU twin of the fixture sky shader's scattering (`skybox_physical/sky.frag`: the same sample counts and constants)
+ * for [params], so cloud lighting matches the atmosphere without calling the asset's shader, and the physics can be
+ * checked without a GL context. Results are linear radiance before exposure and tone mapping.
  *
- * [ambient] is cached for the last sun direction, so calling it every frame costs nothing while the sun stays put.
- * Not thread-safe: one per sky, on the thread that draws it.
+ * [ambient] is cached for the last sun direction, so calling it every frame costs nothing while the sun stays put. Not
+ * thread-safe: one per sky, on the thread that draws it.
  */
 class SkyAmbientEstimate(private val params: AtmosphereParams, private val cameraHeight: Double = 100.0) {
     private var cachedSun: Vector3? = null
     private var cachedAltitude = Float.NaN
     private var cached: SkyAmbient? = null
 
-    /** The sky around clouds at [altitude] metres with the sun toward [sun] (a unit vector); cached per sun direction. */
+    /**
+     * The sky around clouds at [altitude] metres with the sun toward [sun] (a unit vector); cached per sun direction.
+     */
     fun ambient(sun: Vector3, altitude: Float = 1500f): SkyAmbient {
         val last = cachedSun
-        cached?.let { if (last != null && altitude == cachedAltitude && 1.0 - last.dot(sun) < SUN_EPSILON) return it }
+        cached?.let {
+            if (last != null && altitude == cachedAltitude && 1.0 - last.dot(sun) < SUN_EPSILON) {
+                return it
+            }
+        }
         val zenith = radiance(Vector3(0f, 1f, 0f), sun)
         val horizon = DoubleArray(3)
         for (k in 0 until 4) {
@@ -53,7 +59,9 @@ class SkyAmbientEstimate(private val params: AtmosphereParams, private val camer
         return result
     }
 
-    /** The sun's light reaching [altitude] metres above the camera's ground point: its intensity times transmittance. */
+    /**
+     * The sun's light reaching [altitude] metres above the camera's ground point: its intensity times transmittance.
+     */
     fun sunlight(sun: Vector3, altitude: Float): DoubleArray {
         val r = params.planetRadius / KM
         val ra = params.atmosphereRadius / KM
@@ -61,7 +69,9 @@ class SkyAmbientEstimate(private val params: AtmosphereParams, private val camer
         val hM = params.heightMie / KM
         val s = doubleArrayOf(sun.x.toDouble(), sun.y.toDouble(), sun.z.toDouble())
         val o = doubleArrayOf(0.0, r + altitude / KM, 0.0)
-        if (raySphere(o, s, r).let { it[0] > 0.0 && it[0] < it[1] }) return DoubleArray(3) // the sun is below the ground
+        if (raySphere(o, s, r).let { it[0] > 0.0 && it[0] < it[1] }) {
+            return DoubleArray(3) // the sun is below the ground
+        }
         val step = raySphere(o, s, ra)[1] / LIGHT
         var depthR = 0.0
         var depthM = 0.0
@@ -93,14 +103,20 @@ class SkyAmbientEstimate(private val params: AtmosphereParams, private val camer
         val planet = raySphere(o, d, r)
         val ground = planet[0] > 0.0 && planet[0] < planet[1]
         val tMin = max(atmosphere[0], 0.0)
-        val tMax = if (ground) min(atmosphere[1], planet[0]) else atmosphere[1]
+        val tMax =
+            if (ground) {
+                min(atmosphere[1], planet[0])
+            } else {
+                atmosphere[1]
+            }
         val segment = (tMax - tMin) / PRIMARY
 
         val mu = dot(d, s)
         val g = p.mieG.toDouble()
         val phaseR = 3.0 / (16.0 * PI) * (1.0 + mu * mu)
         val phaseM =
-            3.0 / (8.0 * PI) * ((1.0 - g * g) * (1.0 + mu * mu)) / ((2.0 + g * g) * (1.0 + g * g - 2.0 * g * mu).pow(1.5))
+            3.0 / (8.0 * PI) * ((1.0 - g * g) * (1.0 + mu * mu)) /
+                ((2.0 + g * g) * (1.0 + g * g - 2.0 * g * mu).pow(1.5))
 
         val sumR = DoubleArray(3)
         val sumM = DoubleArray(3)
@@ -160,7 +176,9 @@ private fun length(a: DoubleArray) = sqrt(dot(a, a))
 private fun raySphere(o: DoubleArray, d: DoubleArray, radius: Double): DoubleArray {
     val b = dot(o, d)
     var h = b * b - (dot(o, o) - radius * radius)
-    if (h < 0.0) return doubleArrayOf(1.0, -1.0)
+    if (h < 0.0) {
+        return doubleArrayOf(1.0, -1.0)
+    }
     h = sqrt(h)
     return doubleArrayOf(-b - h, -b + h)
 }

@@ -20,7 +20,9 @@ import kotlinx.coroutines.withContext
  */
 class OpenAbyssusViewActivity : ProjectActivity {
     override suspend fun execute(project: Project) {
-        if (!System.getProperty(OPEN_VIEW_PROPERTY).toBoolean()) return
+        if (!System.getProperty(OPEN_VIEW_PROPERTY).toBoolean()) {
+            return
+        }
         withContext(Dispatchers.EDT) {
             ToolWindowManager.getInstance(project).getToolWindow(ToolWindowId.PROJECT_VIEW)?.show()
             ProjectView.getInstance(project).changeView(AbyssusProjectViewPane.ID)

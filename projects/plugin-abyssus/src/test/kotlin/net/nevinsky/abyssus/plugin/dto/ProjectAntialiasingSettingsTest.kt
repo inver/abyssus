@@ -15,10 +15,19 @@ import net.nevinsky.abyssus.plugin.filetype.ProjectSettingsListener
 import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
 
 class ProjectAntialiasingSettingsTest : BasePlatformTestCase() {
-    private val settings get() = project.service<AbyssusProjectSettings>()
-    private fun file(name: String = "P", extra: String = "") = myFixture.addFileToProject("$name/$name.abss",
-        """{"format":"abyssus","formatVersion":1,"name":"$name","future":{"n":2.500}$extra}""").virtualFile
-    private fun text(file: com.intellij.openapi.vfs.VirtualFile) = FileDocumentManager.getInstance().getDocument(file)!!.text
+    private val settings
+        get() = project.service<AbyssusProjectSettings>()
+
+    private fun file(name: String = "P", extra: String = "") =
+        myFixture
+            .addFileToProject(
+                "$name/$name.abss",
+                """{"format":"abyssus","formatVersion":1,"name":"$name","future":{"n":2.500}$extra}""",
+            )
+            .virtualFile
+
+    private fun text(file: com.intellij.openapi.vfs.VirtualFile) =
+        FileDocumentManager.getInstance().getDocument(file)!!.text
 
     fun testDefaultsIgnoreOldApplicationPreferenceAndReadWithoutWriting() {
         val properties = PropertiesComponent.getInstance()
@@ -31,7 +40,13 @@ class ProjectAntialiasingSettingsTest : BasePlatformTestCase() {
             assertEquals(AntialiasingLevel.X4, settings.getSettings(f).antialiasing)
             assertEquals(before, text(f))
             assertEquals(before, String(f.contentsToByteArray(), f.charset))
-        } finally { if (old == null) properties.unsetValue(key) else properties.setValue(key, old) }
+        } finally {
+            if (old == null) {
+                properties.unsetValue(key)
+            } else {
+                properties.setValue(key, old)
+            }
+        }
     }
 
     fun testEveryChoiceReloadsFromItsOwnNativeDocumentAndInvalidValuesReportAProblem() {
@@ -68,15 +83,20 @@ class ProjectAntialiasingSettingsTest : BasePlatformTestCase() {
         val f = file()
         settings.getSettings(f)
         val seen = mutableListOf<AntialiasingLevel>()
-        project.messageBus.connect(testRootDisposable).subscribe(ProjectSettingsListener.TOPIC,
-            ProjectSettingsListener { changed, value ->
-                if (changed == f) {
-                    assertEquals(value.antialiasing, settings.getSettings(f).antialiasing)
-                    seen += value.antialiasing
-                }
-            })
+        project.messageBus
+            .connect(testRootDisposable)
+            .subscribe(
+                ProjectSettingsListener.TOPIC,
+                ProjectSettingsListener { changed, value ->
+                    if (changed == f) {
+                        assertEquals(value.antialiasing, settings.getSettings(f).antialiasing)
+                        seen += value.antialiasing
+                    }
+                },
+            )
         myFixture.openFileInEditor(f)
-        val editor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
+        val editor =
+            com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
         val original = text(f)
         settings.setAntialiasing(f, AntialiasingLevel.OFF)
         UndoManager.getInstance(project).undo(editor)
@@ -102,8 +122,16 @@ class ProjectAntialiasingSettingsTest : BasePlatformTestCase() {
         assertNull(FileDocumentManager.getInstance().getCachedDocument(f))
         assertEquals(AntialiasingLevel.X4, settings.getSettings(f).antialiasing)
         val seen = mutableListOf<AntialiasingLevel>()
-        project.messageBus.connect(testRootDisposable).subscribe(ProjectSettingsListener.TOPIC,
-            ProjectSettingsListener { changed, value -> if (changed == f) seen += value.antialiasing })
+        project.messageBus
+            .connect(testRootDisposable)
+            .subscribe(
+                ProjectSettingsListener.TOPIC,
+                ProjectSettingsListener { changed, value ->
+                    if (changed == f) {
+                        seen += value.antialiasing
+                    }
+                },
+            )
         WriteCommandAction.runWriteCommandAction(project) {
             f.setBinaryContent("""{"formatVersion":1,"sceneViewAntialiasing":"X8"}""".toByteArray())
         }
@@ -114,7 +142,8 @@ class ProjectAntialiasingSettingsTest : BasePlatformTestCase() {
 
     fun testUnsupportedNativeDocumentsCannotBeEdited() {
         for ((index, header) in listOf("", "\"formatVersion\":2,").withIndex()) {
-            val f = myFixture.addFileToProject("bad$index/P.abss", "{$header\"sceneViewAntialiasing\":\"OFF\"}").virtualFile
+            val f =
+                myFixture.addFileToProject("bad$index/P.abss", "{$header\"sceneViewAntialiasing\":\"OFF\"}").virtualFile
             val before = text(f)
             assertFalse(settings.getSettings(f).supported)
             assertFalse(settings.setAntialiasing(f, AntialiasingLevel.X8))

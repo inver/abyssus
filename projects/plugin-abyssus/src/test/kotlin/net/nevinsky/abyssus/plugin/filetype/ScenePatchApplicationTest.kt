@@ -17,7 +17,8 @@ import java.io.File
 import java.security.MessageDigest
 
 /**
- * Applies a staged edit of native documents (a scene, a project or an asset `meta.json`) through [editSceneDocument], the
+  * Applies a staged edit of native documents (a scene, a project or an asset `meta.json`) through [editSceneDocument],
+  * the
  * one writer of those files. A tool, not a check: it runs only with `ABYSSUS_SCENE_PATCH` set to a patch file, e.g.
  * `ABYSSUS_SCENE_PATCH=$PWD/games/control-line/importers/trainer.patch.json
  * ./gradlew :test --tests 'net.nevinsky.abyssus.plugin.filetype.ScenePatchApplicationTest'`.
@@ -35,7 +36,8 @@ class ScenePatchApplicationTest : BasePlatformTestCase() {
         val patch = SceneJson().parse(patchFile.readText())
         for (document in patch.get("documents")) {
             val target = File(patchFile.parentFile, document.get("target").asText()).canonicalFile
-            val actual = MessageDigest.getInstance("SHA-256").digest(target.readBytes()).joinToString("") { "%02x".format(it) }
+            val actual = MessageDigest.getInstance("SHA-256").digest(target.readBytes()).joinToString("") {
+                "%02x".format(it) }
             assertEquals("$target changed since the patch was staged", document.get("expectedSha256").asText(), actual)
             VfsRootAccess.allowRootAccess(testRootDisposable, target.parentFile.absolutePath)
             val file = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(target)!!
@@ -54,7 +56,11 @@ class ScenePatchApplicationTest : BasePlatformTestCase() {
                 var parent = root
                 for (key in path.dropLast(1)) parent = parent.get(key) ?: error("no '$key' on the way to $path")
                 val obj = parent as ObjectNode
-                if (op == "set") obj.set<JsonNode>(path.last(), operation.get("value")) else obj.remove(path.last())
+                if (op == "set") {
+                    obj.set<JsonNode>(path.last(), operation.get("value"))
+                } else {
+                    obj.remove(path.last())
+                }
             }
             "removeEntitiesWithAssets" -> {
                 val prefixes = operation.get("prefixes").map { it.asText() }

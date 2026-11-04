@@ -16,8 +16,8 @@ import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 
 /**
- * The light a procedural sky with `lightsScene` gives the scene, one per view. A [LightingRefreshPolicy] decides when to
- * rebuild (the sun moved, drifting clouds, a cloud reload or visibility change); each rebuild renders a
+ * The light a procedural sky with `lightsScene` gives the scene, one per view. A [LightingRefreshPolicy] decides when
+ * to rebuild (the sun moved, drifting clouds, a cloud reload or visibility change); each rebuild renders a
  * [ProceduralLightingCube] and turns it into an [HdrEnvironment], one step per [update]. It holds the [current]
  * environment, the [next] one while it fades in ([fade] 0 to 1) and at most one build. A failed build keeps [current]
  * (none yet: the scene stays on its ambient color) and is retried by the policy. GL thread only, with the context
@@ -57,7 +57,9 @@ class ProceduralSkyLighting(
     var fade = 0f
         private set
 
-    /** Counts the changes of [current]: 0 until the first environment is complete, then one more for every replacement. */
+    /**
+     * Counts the changes of [current]: 0 until the first environment is complete, then one more for every replacement.
+     */
     var revision = 0L
         private set
 
@@ -72,16 +74,21 @@ class ProceduralSkyLighting(
         }
         val settings = clouds?.settings
         val bands = settings?.bandsFarToNear().orEmpty()
-        val request = LightingRefreshRequest(
-            LightingSunDirection(sunDirection.x.toDouble(), sunDirection.y.toDouble(), sunDirection.z.toDouble()),
-            LightingRevision(skyName, 0, clouds?.name, cloudRevision, settings?.visible == true),
-            timeSeconds,
-            bands.any { it.windX != 0f || it.windZ != 0f },
-        )
+        val request =
+            LightingRefreshRequest(
+                LightingSunDirection(sunDirection.x.toDouble(), sunDirection.y.toDouble(), sunDirection.z.toDouble()),
+                LightingRevision(skyName, 0, clouds?.name, cloudRevision, settings?.visible == true),
+                timeSeconds,
+                bands.any { it.windX != 0f || it.windZ != 0f },
+            )
         val state = policy.update(request, visible, deltaSeconds)
         val build = state.build
-        if (active != null && active?.request?.id != build?.id) release()
-        if (build != null && state.canStepBuild) step(build, clouds, request)
+        if (active != null && active?.request?.id != build?.id) {
+            release()
+        }
+        if (build != null && state.canStepBuild) {
+            step(build, clouds, request)
+        }
         publish()
     }
 
@@ -93,19 +100,31 @@ class ProceduralSkyLighting(
                 val direction = request.request.sun
                 sun.set(direction.x.toFloat(), direction.y.toFloat(), direction.z.toFloat())
                 build.cube.render(sun, clouds, frame.cloudTimeSeconds)
-                build.environment = HdrEnvironmentBuild(
-                    CubeSource(build.cube.texture, PROCEDURAL_LIGHTING_LEVELS), shaders
-                )
+                build.environment =
+                    HdrEnvironmentBuild(
+                        CubeSource(build.cube.texture, PROCEDURAL_LIGHTING_LEVELS),
+                        shaders,
+                    )
                 return
             }
-            if (!checkNotNull(build.environment).step()) return
+            if (!checkNotNull(build.environment).step()) {
+                return
+            }
             val environment = build.environment!!.finish()
             release()
-            if (policy.completed(request)) results[request.id] = environment else environment.dispose()
+            if (policy.completed(request)) {
+                results[request.id] = environment
+            } else {
+                environment.dispose()
+            }
         } catch (failure: Exception) {
             release()
             policy.failed(request)
-            log.warn("Sky '$skyName': lighting build failed; ${if (current == null) "keeping the ambient light" else "keeping the last lighting"}", failure)
+            log.warn(
+                "Sky '$skyName': lighting build failed; ${when { current == null -> "keeping the ambient light"
+ else -> "keeping the last lighting" }}",
+                failure,
+            )
         }
     }
 
@@ -120,10 +139,17 @@ class ProceduralSkyLighting(
         val keep = setOfNotNull(state.current?.id, state.next?.id)
         results.keys.filter { it !in keep }.forEach { results.remove(it)?.dispose() }
         val published = state.current?.let { results[it.id] }
-        if (published !== current && published != null) revision++
+        if (published !== current && published != null) {
+            revision++
+        }
         current = published
         next = state.next?.let { results[it.id] }
-        fade = if (next != null) state.fadeWeight.toFloat() else 0f
+        fade =
+            if (next != null) {
+                state.fadeWeight.toFloat()
+            } else {
+                0f
+            }
     }
 
     /** Forgets everything without GL calls: the context the resources were made in is gone. */
@@ -131,7 +157,9 @@ class ProceduralSkyLighting(
         policy.resetContext()
         results.clear()
         active = null
-        if (current != null) revision++
+        if (current != null) {
+            revision++
+        }
         current = null
         next = null
         fade = 0f

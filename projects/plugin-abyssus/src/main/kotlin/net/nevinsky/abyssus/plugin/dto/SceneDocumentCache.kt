@@ -16,11 +16,14 @@ import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileDeleteEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent
+import java.util.concurrent.ConcurrentHashMap
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import java.util.concurrent.ConcurrentHashMap
 
-/** A scene's text read as the plugin needs it: the bound DTO, shared between callers: read it, never change it (an edit parses the document afresh). */
+/**
+ * A scene's text read as the plugin needs it: the bound DTO, shared between callers: read it, never change it (an edit
+ * parses the document afresh).
+ */
 class ParsedScene(val scene: SceneDto)
 
 /**
@@ -42,12 +45,20 @@ class SceneDocumentCache(project: Project, private val parse: ((String) -> Parse
 
     /** The scene in [file], or null when the file is gone or its text is not a readable scene. */
     fun read(file: VirtualFile): ParsedScene? {
-        if (!file.isValid) return null
+        if (!file.isValid) {
+            return null
+        }
         val document = FileDocumentManager.getInstance().getCachedDocument(file)
         val stamp = document?.modificationStamp ?: file.modificationStamp
-        entries[file]?.takeIf { it.stamp == stamp && it.document == (document != null) }?.let { return it.parsed }
+        entries[file]
+            ?.takeIf { it.stamp == stamp && it.document == (document != null) }
+            ?.let {
+                return it.parsed
+            }
         val text = document?.text ?: String(file.contentsToByteArray(), file.charset)
-        val parsed = runCatchingKeepingCancellation { parse?.invoke(text) ?: parsedScene(service<SceneReader>(), text) }.getOrNull()
+        val parsed = runCatchingKeepingCancellation {
+            parse?.invoke(text) ?: parsedScene(service<SceneReader>(), text)
+        }.getOrNull()
         entries[file] = Entry(stamp, document != null, parsed)
         return parsed
     }

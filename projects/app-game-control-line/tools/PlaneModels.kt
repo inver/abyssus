@@ -16,10 +16,10 @@ import java.util.UUID
 
 /**
  * Writes the bundled project's models as asset folders under `<project>/assets`: a low-poly control-line plane
- * (`model_racer`; `model_stunter` is the Classic F2B export, see `models/classic-f2b`) and the pilot (`model_pilot`), each a `model.gltf` with its
- * `model.bin` and a native `meta.json`. The output depends only on this file, so running it again gives the same
- * bytes. Run by `./gradlew :games:control-line:generatePlaneModels`. The trainer is FlightGear's Cessna 172R, imported
- * by `TrainerModel` (`importTrainer`) in the same frame.
+ * (`model_racer`; `model_stunter` is the Classic F2B export, see `models/classic-f2b`) and the pilot (`model_pilot`),
+ * each a `model.gltf` with its `model.bin` and a native `meta.json`. The output depends only on this file, so running
+ * it again gives the same bytes. Run by `./gradlew :games:control-line:generatePlaneModels`. The trainer is
+ * FlightGear's Cessna 172R, imported by `TrainerModel` (`importTrainer`) in the same frame.
  *
  * A plane's frame: the nose is +Z, up is +Y, the inboard (left) wing is +X; it stands on its wheels and tail skid with
  * the origin at its centre of gravity.
@@ -35,11 +35,24 @@ fun main(args: Array<String>) {
 data class Paint(val name: String, val r: Float, val g: Float, val b: Float)
 
 /** An axis-aligned box from ([x0], [y0], [z0]) to ([x1], [y1], [z1]) in [paint]. */
-data class Box(val x0: Float, val y0: Float, val z0: Float, val x1: Float, val y1: Float, val z1: Float, val paint: Paint)
+data class Box(
+    val x0: Float,
+    val y0: Float,
+    val z0: Float,
+    val x1: Float,
+    val y1: Float,
+    val z1: Float,
+    val paint: Paint,
+)
 
 /** A plane's proportions (metres) and colours. */
 data class PlaneShape(
-    val name: String, val span: Float, val chord: Float, val length: Float, val body: Paint, val wing: Paint,
+    val name: String,
+    val span: Float,
+    val chord: Float,
+    val length: Float,
+    val body: Paint,
+    val wing: Paint,
 ) {
     fun boxes(): List<Box> {
         val half = span / 2
@@ -70,9 +83,17 @@ data class PlaneShape(
     }
 }
 
-val PLANES = listOf(
-    PlaneShape("racer", span = 0.7f, chord = 0.13f, length = 0.6f, body = Paint("red", 0.8f, 0.1f, 0.08f), wing = Paint("white", 0.92f, 0.92f, 0.9f)),
-)
+val PLANES =
+    listOf(
+        PlaneShape(
+            "racer",
+            span = 0.7f,
+            chord = 0.13f,
+            length = 0.6f,
+            body = Paint("red", 0.8f, 0.1f, 0.08f),
+            wing = Paint("white", 0.92f, 0.92f, 0.9f),
+        )
+    )
 
 /** A standing figure about 1.8 m tall, facing +Z, its right arm forward holding the handle at 1.5 m. */
 fun pilotBoxes(): List<Box> {
@@ -111,7 +132,16 @@ fun writeModel(dir: Path, name: String, boxes: List<Box>) {
         val positions = faces.flatMap { it.corners }
         val normals = faces.flatMap { f -> List(4) { f.normal } }
         val indices = faces.indices.flatMap { f -> listOf(0, 1, 2, 0, 2, 3).map { f * 4 + it } }
-        val position = accessor(accessors, views, bin, positions, "VEC3", min = bounds(positions, true), max = bounds(positions, false))
+        val position =
+            accessor(
+                accessors,
+                views,
+                bin,
+                positions,
+                "VEC3",
+                min = bounds(positions, true),
+                max = bounds(positions, false),
+            )
         val normal = accessor(accessors, views, bin, normals, "VEC3")
         val index = indexAccessor(accessors, views, bin, indices)
         primitives.addObject().apply {
@@ -130,11 +160,17 @@ fun writeModel(dir: Path, name: String, boxes: List<Box>) {
     }
     root.putArray("buffers").addObject().put("uri", "model.bin").put("byteLength", bin.size)
     Files.write(dir.resolve("model.bin"), bin.toByteArray())
-    Files.writeString(dir.resolve("model.gltf"), json.writerWithDefaultPrettyPrinter().writeValueAsString(root).replace("\r\n", "\n") + "\n")
+    Files.writeString(
+        dir.resolve("model.gltf"),
+        json.writerWithDefaultPrettyPrinter().writeValueAsString(root).replace("\r\n", "\n") + "\n",
+    )
     val uuid = UUID.nameUUIDFromBytes("abyssus-control-line/$name".toByteArray())
-    Files.writeString(dir.resolve("meta.json"),
-        """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":$GENERATED_AT,"uuid":"$uuid","type":"MODEL",""" +
-            """"additional":{"file":"model.gltf","format":"GLTF","binary":true,"materials":[]}}""")
+    Files.writeString(
+        dir.resolve("meta.json"),
+        """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":$GENERATED_AT,"uuid":"$uuid",
+"type":"MODEL",""" +
+            """"additional":{"file":"model.gltf","format":"GLTF","binary":true,"materials":[]}}""",
+    )
 }
 
 /** The fixed `lastModified` of generated assets, so the output never changes between runs. */
@@ -161,18 +197,33 @@ private fun faces(b: Box): List<Face> {
     )
 }
 
-private fun bounds(points: List<FloatArray>, min: Boolean): FloatArray = FloatArray(3) { axis ->
-    if (min) points.minOf { it[axis] } else points.maxOf { it[axis] }
-}
+private fun bounds(points: List<FloatArray>, min: Boolean): FloatArray =
+    FloatArray(3) { axis ->
+        if (min) {
+            points.minOf { it[axis] }
+        } else {
+            points.maxOf { it[axis] }
+        }
+    }
 
 private fun accessor(
-    accessors: ArrayNode, views: ArrayNode,
-    bin: ByteArrayBuilder, values: List<FloatArray>, type: String, min: FloatArray? = null, max: FloatArray? = null,
+    accessors: ArrayNode,
+    views: ArrayNode,
+    bin: ByteArrayBuilder,
+    values: List<FloatArray>,
+    type: String,
+    min: FloatArray? = null,
+    max: FloatArray? = null,
 ): Int {
     val offset = bin.size
     for (v in values) for (f in v) bin.float(f)
     val view = views.size()
-    views.addObject().put("buffer", 0).put("byteOffset", offset).put("byteLength", bin.size - offset).put("target", 34962)
+    views
+        .addObject()
+        .put("buffer", 0)
+        .put("byteOffset", offset)
+        .put("byteLength", bin.size - offset)
+        .put("target", 34962)
     accessors.addObject().apply {
         put("bufferView", view)
         put("componentType", 5126)
@@ -185,22 +236,42 @@ private fun accessor(
 }
 
 private fun indexAccessor(
-    accessors: ArrayNode, views: ArrayNode,
-    bin: ByteArrayBuilder, indices: List<Int>,
+    accessors: ArrayNode,
+    views: ArrayNode,
+    bin: ByteArrayBuilder,
+    indices: List<Int>,
 ): Int {
     val offset = bin.size
     for (i in indices) bin.int(i)
     val view = views.size()
-    views.addObject().put("buffer", 0).put("byteOffset", offset).put("byteLength", bin.size - offset).put("target", 34963)
-    accessors.addObject().put("bufferView", view).put("componentType", 5125).put("count", indices.size).put("type", "SCALAR")
+    views
+        .addObject()
+        .put("buffer", 0)
+        .put("byteOffset", offset)
+        .put("byteLength", bin.size - offset)
+        .put("target", 34963)
+    accessors
+        .addObject()
+        .put("bufferView", view)
+        .put("componentType", 5125)
+        .put("count", indices.size)
+        .put("type", "SCALAR")
     return accessors.size() - 1
 }
 
 /** Little-endian bytes, as glTF buffers are. */
 private class ByteArrayBuilder {
     private val buffer = ByteBuffer.allocate(1 shl 20).order(ByteOrder.LITTLE_ENDIAN)
-    val size get() = buffer.position()
-    fun float(f: Float) { buffer.putFloat(f) }
-    fun int(i: Int) { buffer.putInt(i) }
+    val size
+        get() = buffer.position()
+
+    fun float(f: Float) {
+        buffer.putFloat(f)
+    }
+
+    fun int(i: Int) {
+        buffer.putInt(i)
+    }
+
     fun toByteArray(): ByteArray = buffer.array().copyOf(size)
 }

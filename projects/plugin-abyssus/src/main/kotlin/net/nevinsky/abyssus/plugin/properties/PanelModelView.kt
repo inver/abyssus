@@ -45,7 +45,9 @@ internal class PanelModelView(
     init {
         val box = JPanel(VerticalLayout(0))
         val header = HeaderPanel(model.header, panelIcon(model.header.iconKey), titleName)
-        if (headerExtra != null) header.add(headerExtra, BorderLayout.EAST)
+        if (headerExtra != null) {
+            header.add(headerExtra, BorderLayout.EAST)
+        }
         box.add(header)
         sections = model.sections.map { section ->
             val body = JPanel(VerticalLayout(0)).apply { isOpaque = false; border = JBUI.Borders.empty(2, 0) }
@@ -54,19 +56,25 @@ internal class PanelModelView(
             val frame = PropertySection(
                 section, section.iconKey?.let(::panelIcon), body, collapsed[section.key] == true,
                 { collapsed[section.key] = it },
-                if (section.enable != null) { checked -> onEnabled(section, checked) } else null,
+                if (section.enable != null) {
+                    checked -> onEnabled(section, checked)
+                } else {
+                    null
+                },
                 sectionActions(section),
             )
             box.add(frame)
             frame
         }
         after.forEach { box.add(it) }
-        if (model.footer.isNotEmpty()) box.add(
-            JBLabel("<html>${model.footer}</html>").apply {
-                name = "panel-footer"; font = JBFont.small(); foreground = DesignColors.SECONDARY
-                border = JBUI.Borders.empty(10, 16)
-            },
-        )
+        if (model.footer.isNotEmpty()) {
+            box.add(
+                JBLabel("<html>${model.footer}</html>").apply {
+                    name = "panel-footer"; font = JBFont.small(); foreground = DesignColors.SECONDARY
+                    border = JBUI.Borders.empty(10, 16)
+                },
+            )
+        }
         add(box, BorderLayout.NORTH)
     }
 }

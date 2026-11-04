@@ -9,7 +9,9 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class UiPreviewStateTest {
-    private val text = canonicalUi("""{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,
+    private val text =
+        canonicalUi(
+            """{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,
         "entryScreen":"hud",
         "bindings":[
           {"name":"volume","type":"number","access":"write","sample":0.5,"min":0,"max":1,"step":0.25},
@@ -22,14 +24,19 @@ class UiPreviewStateTest {
           {"id":"hud","kind":"overlay","root":{"id":"h","type":"panel","children":[
             {"id":"vol","type":"slider","bindings":{"value":"volume"}},
             {"id":"scoreSlider","type":"slider","bindings":{"value":"score"}},
-            {"id":"nameField","type":"textField","bindings":{"text":"name"}}]}}]}}}""")!!
+            {"id":"nameField","type":"textField","bindings":{"text":"name"}}]}}]}}}"""
+        )
 
-    private val collection: UiCollection get() = (admitUi(text) as UiAdmission.Admitted).collection
+    private val collection: UiCollection
+        get() = (admitUi(text) as UiAdmission.Admitted).collection
+
     private val factory = UiPreviewState.Factory()
 
-    private fun widget(c: UiCollection, id: String): UiWidget = c.screens.flatMap { it.root.children + it.root }.first { it.id == id }
+    private fun widget(c: UiCollection, id: String): UiWidget =
+        c.screens.flatMap { it.root.children + it.root }.first { it.id == id }
 
-    @Test fun startsFromTheAuthoredSamplesAndTheEntryScreen() {
+    @Test
+    fun startsFromTheAuthoredSamplesAndTheEntryScreen() {
         val state = factory.of(collection)
         assertEquals(UiValue.Num(0.5), state.samples["volume"])
         assertEquals(UiValue.Text("Pilot"), state.samples["name"])
@@ -40,12 +47,16 @@ class UiPreviewStateTest {
         assertEquals(0, state.generation)
     }
 
-    @Test fun interactionOnlyChangesSamplesAndNeverTheDocument() {
+    @Test
+    fun interactionOnlyChangesSamplesAndNeverTheDocument() {
         val c = collection
         val state = factory.of(c)
         val session = UiBindingSession(c, state.writer())
         session.publish(state.snapshot())
-        assertEquals(UiCommitOutcome.Applied("volume", UiValue.Num(0.75)), session.commit(widget(c, "vol"), UiValue.Num(0.76)))
+        assertEquals(
+            UiCommitOutcome.Applied("volume", UiValue.Num(0.75)),
+            session.commit(widget(c, "vol"), UiValue.Num(0.76)),
+        )
         assertEquals(UiValue.Num(0.75), state.samples["volume"])
         // the shown value follows the sample everywhere
         assertEquals(0.75, session.publish(state.snapshot()).number(widget(c, "vol"), "value", -1.0), 0.0)
@@ -60,18 +71,26 @@ class UiPreviewStateTest {
         assertEquals(0.5, (again.binding("volume")!!.sample!!.doubleValue()), 0.0)
     }
 
-    @Test fun theWriterRefusesReadOnlyUnknownAndMistypedWrites() {
+    @Test
+    fun theWriterRefusesReadOnlyUnknownAndMistypedWrites() {
         val state = factory.of(collection)
         val writer = state.writer()
         assertEquals(UiWriteResult.Rejected("read-only"), writer.write(UiWrite("score", UiValue.Num(1.0), "w")))
         assertEquals(UiWriteResult.Rejected("unknown binding"), writer.write(UiWrite("ghost", UiValue.Num(1.0), "w")))
         assertEquals(UiWriteResult.Rejected("wrong type"), writer.write(UiWrite("volume", UiValue.Text("x"), "w")))
-        assertEquals(UiWriteResult.Accepted(UiValue.Bool(true)), writer.write(UiWrite("muted", UiValue.Bool(true), "w")))
-        assertEquals(listOf(UiLogKind.REJECTED_WRITE, UiLogKind.REJECTED_WRITE, UiLogKind.REJECTED_WRITE, UiLogKind.WRITE), state.log.map { it.kind })
+        assertEquals(
+            UiWriteResult.Accepted(UiValue.Bool(true)),
+            writer.write(UiWrite("muted", UiValue.Bool(true), "w")),
+        )
+        assertEquals(
+            listOf(UiLogKind.REJECTED_WRITE, UiLogKind.REJECTED_WRITE, UiLogKind.REJECTED_WRITE, UiLogKind.WRITE),
+            state.log.map { it.kind },
+        )
         assertEquals(UiValue.Bool(true), state.samples["muted"])
     }
 
-    @Test fun theSampleEditorChecksTypeAndConstraints() {
+    @Test
+    fun theSampleEditorChecksTypeAndConstraints() {
         val state = factory.of(collection)
         assertEquals(SampleResult.Applied(UiValue.Num(0.3)), state.setSample("volume", " 0.3 "))
         assertEquals(SampleResult.Rejected(SampleProblem.ABOVE_MAXIMUM), state.setSample("volume", "1.5"))
@@ -84,10 +103,15 @@ class UiPreviewStateTest {
         assertEquals(SampleResult.Applied(UiValue.Text("Ace")), state.setSample("name", "Ace"))
         assertEquals(SampleResult.Rejected(SampleProblem.TOO_LONG), state.setSample("name", "Toolong"))
         assertEquals(SampleResult.Rejected(SampleProblem.UNKNOWN_BINDING), state.setSample("ghost", "1"))
-        assertEquals("read-only bindings can still be given sample data", SampleResult.Applied(UiValue.Num(99.0)), state.setSample("score", "99"))
+        assertEquals(
+            "read-only bindings can still be given sample data",
+            SampleResult.Applied(UiValue.Num(99.0)),
+            state.setSample("score", "99"),
+        )
     }
 
-    @Test fun actionsAreLoggedNotRunAndTheLogIsBounded() {
+    @Test
+    fun actionsAreLoggedNotRunAndTheLogIsBounded() {
         val state = UiPreviewState.Factory(maxLog = 5).of(collection)
         val sink = state.actionSink()
         assertTrue(sink.emit("startGame"))
@@ -95,13 +119,20 @@ class UiPreviewStateTest {
         val log = state.log
         assertEquals(5, log.size)
         assertEquals(listOf("a4", "a5", "a6", "a7", "a8"), log.map { it.text })
-        assertEquals("sequence numbers keep counting past the trimmed lines", listOf(6L, 7L, 8L, 9L, 10L), log.map { it.sequence })
+        assertEquals(
+            "sequence numbers keep counting past the trimmed lines",
+            listOf(6L, 7L, 8L, 9L, 10L),
+            log.map { it.sequence },
+        )
         assertTrue(log.all { it.kind == UiLogKind.ACTION })
     }
 
-    @Test fun resetRestoresAuthoredSamplesClearsTheLogAndSignalsANewStart() {
+    @Test
+    fun resetRestoresAuthoredSamplesClearsTheLogAndSignalsANewStart() {
         val state = factory.of(collection)
-        state.setSample("volume", "0.9"); state.setSample("name", "Ace"); state.actionSink().emit("startGame")
+        state.setSample("volume", "0.9")
+        state.setSample("name", "Ace")
+        state.actionSink().emit("startGame")
         assertEquals(3, state.log.size)
         state.reset()
         assertEquals(UiValue.Num(0.5), state.samples["volume"])
@@ -112,13 +143,22 @@ class UiPreviewStateTest {
         assertEquals(2, state.generation)
     }
 
-    @Test fun aChangedDefinitionIsAFreshStateWithItsOwnStartScreen() {
+    @Test
+    fun aChangedDefinitionIsAFreshStateWithItsOwnStartScreen() {
         val old = factory.of(collection)
-        old.setSample("volume", "0.9"); old.actionSink().emit("x")
-        val changed = text.replace("\"sample\": 0.5", "\"sample\": 0.25").replace("\"entryScreen\": \"hud\"", "\"entryScreen\": \"main\"")
+        old.setSample("volume", "0.9")
+        old.actionSink().emit("x")
+        val changed =
+            text
+                .replace("\"sample\": 0.5", "\"sample\": 0.25")
+                .replace("\"entryScreen\": \"hud\"", "\"entryScreen\": \"main\"")
         val c2 = (admitUi(changed) as UiAdmission.Admitted).collection
         val fresh = factory.of(c2)
-        assertEquals("edits to the previous definition are not carried over", UiValue.Num(0.25), fresh.samples["volume"])
+        assertEquals(
+            "edits to the previous definition are not carried over",
+            UiValue.Num(0.25),
+            fresh.samples["volume"],
+        )
         assertTrue(fresh.log.isEmpty())
         assertEquals("main", fresh.startScreen)
         assertEquals("a chosen start screen overrides the entry", "hud", factory.of(c2, "hud").startScreen)

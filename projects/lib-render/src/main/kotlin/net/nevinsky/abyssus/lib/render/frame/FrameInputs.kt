@@ -17,7 +17,8 @@ import net.nevinsky.abyssus.lib.core.util.quadraticFogCoefficient
  */
 class RenderFog(val r: Float, val g: Float, val b: Float, val density: Float, val gradient: Float) {
     /**
-     * Multiplier for a `dot(d, d) * k` fog term that reaches the exponential share at `1 / density` for any gradient (the
+      * Multiplier for a `dot(d, d) * k` fog term that reaches the exponential share at `1 / density` for any gradient
+      * (the
      * editor's model shaders fog with such a quadratic ramp).
      */
     val quadraticCoefficient: Float get() = quadraticFogCoefficient(density)

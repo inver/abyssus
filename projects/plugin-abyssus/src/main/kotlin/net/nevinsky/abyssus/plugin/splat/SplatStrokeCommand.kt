@@ -5,8 +5,6 @@
 
 package net.nevinsky.abyssus.plugin.splat
 
-import net.nevinsky.abyssus.plugin.assetfiles.strokeResultMessage
-import net.nevinsky.abyssus.plugin.assetfiles.assetFilesAffected
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
@@ -27,6 +25,8 @@ import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.assetfiles.AssetCommandResult
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileCommand
 import net.nevinsky.abyssus.plugin.assetfiles.AssetFileStore
+import net.nevinsky.abyssus.plugin.assetfiles.assetFilesAffected
+import net.nevinsky.abyssus.plugin.assetfiles.strokeResultMessage
 import net.nevinsky.abyssus.plugin.brush.TerrainStrokeCommand
 import net.nevinsky.abyssus.plugin.ui.documentDisplayMessage
 
@@ -56,20 +56,23 @@ class SplatStrokeCommand(
 ) : TerrainStrokeCommand<SplatStrokeCommand.Stroke>(mode) {
     class Stroke(val state: SplatState.Ready, val draft: SplatDraft, val brush: SplatBrush, var last: Vector3)
 
-    @Volatile
-    private var disposed = false
+    @Volatile private var disposed = false
 
-    @Volatile
-    private var generation = 0
+    @Volatile private var generation = 0
     private var committing = false
 
     override fun begin(terrain: TerrainTarget, at: Vector3, mode: BrushMode): Stroke? {
-        if (disposed || committing) return null
+        if (disposed || committing) {
+            return null
+        }
         val state = readState() as? SplatState.Ready ?: return null
         val splatFolder = state.folder.name
-        if (drafts.of(splatFolder) != null) return null
+        if (drafts.of(splatFolder) != null) {
+            return null
+        }
         val options = mode.splat
-        val draft = drafts.open(splatFolder) { SplatDraft(state.pixels.side, terrain.data.size, state.pixels.rgba.copyOf()) }
+        val draft =
+            drafts.open(splatFolder) { SplatDraft(state.pixels.side, terrain.data.size, state.pixels.rgba.copyOf()) }
         return Stroke(state, draft, SplatBrush(draft, options.exclusive, terrain.world), Vector3(at))
     }
 
@@ -84,18 +87,21 @@ class SplatStrokeCommand(
 
     override fun drag(stroke: Stroke, to: Vector3, reversed: Boolean) {
         val m = mode() ?: return
-        if (m.splat.mode != SplatMode.FILL) stamp(stroke, stroke.last, to, m, reversed)
+        if (m.splat.mode != SplatMode.FILL) {
+            stamp(stroke, stroke.last, to, m, reversed)
+        }
         stroke.last = Vector3(to)
     }
 
     private fun stamp(stroke: Stroke, from: Vector3, to: Vector3, mode: BrushMode, reversed: Boolean) {
         val options = mode.splat
-        val tool = when (options.mode) {
-            SplatMode.PAINT -> SplatTool.Paint(options.slot)
-            SplatMode.ERASE -> SplatTool.Erase
-            SplatMode.SMOOTH -> SplatTool.Smooth
-            SplatMode.FILL -> return
-        }
+        val tool =
+            when (options.mode) {
+                SplatMode.PAINT -> SplatTool.Paint(options.slot)
+                SplatMode.ERASE -> SplatTool.Erase
+                SplatMode.SMOOTH -> SplatTool.Smooth
+                SplatMode.FILL -> return
+            }
         stroke.brush.stroke(from, to, mode.radius, mode.strength, tool, reversed && options.mode == SplatMode.PAINT)
     }
 
@@ -119,7 +125,10 @@ class SplatStrokeCommand(
                     return@ui
                 }
                 try {
-                    encoded.fold({ commit(stroke, it) }, { report(AbyssusBundle.message("splatStrokeFailed", it.documentDisplayMessage())) })
+                    encoded.fold(
+                        { commit(stroke, it) },
+                        { report(AbyssusBundle.message("splatStrokeFailed", it.documentDisplayMessage())) },
+                    )
                 } finally {
                     committing = false
                     drafts.discard(folder)
@@ -131,7 +140,9 @@ class SplatStrokeCommand(
     override fun cancelled() {
         val stroke = active
         active = null
-        if (stroke != null) drafts.discard(stroke.state.folder.name)
+        if (stroke != null) {
+            drafts.discard(stroke.state.folder.name)
+        }
     }
 
     override fun dispose() {
@@ -144,14 +155,21 @@ class SplatStrokeCommand(
     private fun commit(stroke: Stroke, image: ByteArray) {
         val state = stroke.state
         val splatDir = "$ASSETS_DIR/${state.folder.name}"
-        val txn = transactions.stroke(
-            AbyssusBundle.message("commandPaintTexture"), state.folder.name, state.file.name, state.fileBytes, image,
-            expected = listOf("$splatDir/$META_FILE", "$ASSETS_DIR/${terrainFolder.name}/$META_FILE"),
-        ) ?: return
-        val result = AssetFileCommand(project, store).execute(
-            txn,
-            affected = { assetFilesAffected(terrainFolder, state.file) },
-        )
+        val txn =
+            transactions.stroke(
+                AbyssusBundle.message("commandPaintTexture"),
+                state.folder.name,
+                state.file.name,
+                state.fileBytes,
+                image,
+                expected = listOf("$splatDir/$META_FILE", "$ASSETS_DIR/${terrainFolder.name}/$META_FILE"),
+            ) ?: return
+        val result =
+            AssetFileCommand(project, store)
+                .execute(
+                    txn,
+                    affected = { assetFilesAffected(terrainFolder, state.file) },
+                )
         strokeResultMessage(result, "splatStrokeConflict", "splatStrokeFailed")?.let(report)
     }
 }

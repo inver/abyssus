@@ -9,11 +9,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
 
-/** The shadow atlas and directional visibility functions exist once, in `shadow_visibility.glsl`, and every lit fragment shader gets them from it. */
+/**
+ * The shadow atlas and directional visibility functions exist once, in `shadow_visibility.glsl`, and every lit fragment
+ * shader gets them from it.
+ */
 class SharedShadowSourceTest {
     private val functions = listOf("shadowCompare", "shadowBilinear", "shadowTileVisibility", "directionalVisibility")
 
-    private fun definitions(source: String, function: String) = Regex("""(?m)^float $function\(""").findAll(source).count()
+    private fun definitions(source: String, function: String) =
+        Regex("""(?m)^float $function\(""").findAll(source).count()
 
     @Test
     fun defaultAndPbrFragmentsContainEachSharedFunctionExactlyOnce() {
@@ -35,7 +39,16 @@ class SharedShadowSourceTest {
     @Test
     fun theSharedResourceDeclaresTheAtlasUniformsAndTheirGuards() {
         val shared = ShaderSources.assemble("#pragma include \"${ShaderSources.SHADOW_VISIBILITY}\"", "test")
-        for (name in listOf("u_shadowAtlas", "u_shadowTexel", "u_shadowMatrices", "u_dirVisMap", "u_dirVisIndex", "#ifdef shadowAtlasFlag", "#ifdef directionalVisibilityFlag")) {
+        for (name in
+            listOf(
+                "u_shadowAtlas",
+                "u_shadowTexel",
+                "u_shadowMatrices",
+                "u_dirVisMap",
+                "u_dirVisIndex",
+                "#ifdef shadowAtlasFlag",
+                "#ifdef directionalVisibilityFlag",
+            )) {
             assertEquals(name, true, shared.contains(name))
         }
     }

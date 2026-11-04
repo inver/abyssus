@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.lib.physics
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
+import kotlin.math.PI
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageCollider
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageColliderShape
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageCopy
@@ -16,7 +17,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.PI
 
 class FoliageColliderTransformsTest {
     private val transforms = FoliageColliderTransforms()
@@ -61,7 +61,8 @@ class FoliageColliderTransformsTest {
         val sphere = placed(FoliageCollider(FoliageColliderShape.SPHERE, radius = 0.5f), matrix(entity))
         assertEquals(1.5f, sphere.radius, 1e-4f)
         assertTrue(sphere.approximated)
-        val capsule = placed(FoliageCollider(FoliageColliderShape.CAPSULE, radius = 0.4f, halfHeight = 2f), matrix(entity))
+        val capsule =
+            placed(FoliageCollider(FoliageColliderShape.CAPSULE, radius = 0.4f, halfHeight = 2f), matrix(entity))
         assertEquals(1.2f, capsule.radius, 1e-4f)
         assertEquals(6f, capsule.halfHeight, 1e-4f)
         assertTrue(capsule.approximated)

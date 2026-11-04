@@ -24,24 +24,36 @@ import java.awt.Component
 import java.awt.Container
 
 class RayMaterialPropertiesTest : BasePlatformTestCase() {
-    /** The model's material table as the loader reports it: two PBR materials, a repeated identifier and a Phong one. */
+    /**
+     * The model's material table as the loader reports it: two PBR materials, a repeated identifier and a Phong one.
+     */
     private val table = listOf(RayMaterialIdentity("glass", true), RayMaterialIdentity("frame", true),
         RayMaterialIdentity("twin", true), RayMaterialIdentity("twin", true), RayMaterialIdentity("phong", false))
-    private val services get() = testPanelServices(project) { _, name -> if (name == "bottle") table else null }
+    private val services get() = testPanelServices(project) { _, name -> if (name == "bottle") {
+        table
+    } else {
+        null
+    } }
 
     private fun scene(overrides: String = ""): VirtualFile {
         myFixture.addFileToProject("p/p.abss", """{"format":"abyssus","formatVersion":1,"name":"p"}""")
         fun render(extra: String) = """{"shaderKey":"pbr","type":"MODEL","assetName":"bottle"$extra}"""
-        return myFixture.addFileToProject("p/scenes/s.scene", SceneJson().pretty(SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{
+        return myFixture.addFileToProject("p/scenes/s.scene",
+            SceneJson().pretty(SceneJson().parse("""{"format":"abyssus","formatVersion":1,"ecs":{
             "0":{"components":{"RenderComponent":${render(overrides)}}},
             "1":{"components":{"RenderComponent":${render("")}}}}}"""))).virtualFile
     }
 
     private fun view(file: VirtualFile, entity: String = "0") =
-        EntityDetailsView(project, readEntityState(ComponentTarget(file, entity, null), services) as PanelState.EntityDetails, testMetaFiles())
+        EntityDetailsView(project, readEntityState(ComponentTarget(file, entity, null), services) as
+            PanelState.EntityDetails, testMetaFiles())
 
     private fun named(c: Component, name: String): Component? =
-        if (c.name == name) c else (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
+        if (c.name == name) {
+            c
+        } else {
+            (c as? Container)?.components?.firstNotNullOfOrNull { named(it, name) }
+        }
     private fun field(v: Component, key: String, id: String) = named(v, "optics-$key-$id") as JBTextField
     private fun error(v: Component, id: String) = (named(v, "optics-error-$id") as JBLabel).text
     private fun type(field: JBTextField, text: String) { field.text = text; field.postActionEvent() }
@@ -78,11 +90,16 @@ class RayMaterialPropertiesTest : BasePlatformTestCase() {
         val file = scene()
         val original = text(file)
         val v = view(file)
-        for ((key, bad) in listOf("transmission" to "110", "transmission" to "-1", "transmission" to "glass", "ior" to "0", "ior" to "NaN", "ior" to "3.5")) {
+        for ((key, bad) in listOf("transmission" to "110", "transmission" to "-1", "transmission" to "glass", "ior" to
+            "0", "ior" to "NaN", "ior" to "3.5")) {
             type(field(v, key, "glass"), bad)
             assertEquals("$key=$bad", original, text(file))
             assertTrue("$key=$bad", error(v, "glass").isNotBlank())
-            assertEquals(if (key == "transmission") "0" else "1.5", field(v, key, "glass").text)
+            assertEquals(if (key == "transmission") {
+                "0"
+            } else {
+                "1.5"
+            }, field(v, key, "glass").text)
         }
     }
 
@@ -100,14 +117,16 @@ class RayMaterialPropertiesTest : BasePlatformTestCase() {
         val v = view(file)
         assertTrue((named(v, "optics-unresolved-old") as JBLabel).text.contains("kept but not applied"))
         type(field(v, "transmission", "glass"), "50")
-        assertEquals("the unresolved entry is never retargeted or dropped", 1, materials(file, "0")["old"]["transmission"].intValue())
+        assertEquals("the unresolved entry is never retargeted or dropped", 1, materials(file,
+            "0")["old"]["transmission"].intValue())
         assertEquals(.5, materials(file, "0")["glass"]["transmission"].doubleValue(), 0.0)
     }
 
     fun testAnUnreadableModelIsExplained() {
         val file = scene()
         val missing = testPanelServices(project) { _, _ -> null }
-        val v = EntityDetailsView(project, readEntityState(ComponentTarget(file, "0", null), missing) as PanelState.EntityDetails, testMetaFiles())
+        val v = EntityDetailsView(project, readEntityState(ComponentTarget(file, "0", null), missing) as
+            PanelState.EntityDetails, testMetaFiles())
         assertTrue((named(v, "optics-problem") as JBLabel).text.contains("bottle"))
         assertNull(named(v, "optics-transmission-glass"))
     }
@@ -129,7 +148,8 @@ class RayMaterialPropertiesTest : BasePlatformTestCase() {
             // a stale editor built before an external change must not overwrite the newer value
             val stale = view(file)
             val document = FileDocumentManager.getInstance().getDocument(file)!!
-            WriteCommandAction.runWriteCommandAction(project) { document.setText(edited.replace(Regex("\"transmission\"\\s*:\\s*1(\\.0)?"), "\"transmission\": 0.25")) }
+            WriteCommandAction.runWriteCommandAction(project) {
+                document.setText(edited.replace(Regex("\"transmission\"\\s*:\\s*1(\\.0)?"), "\"transmission\": 0.25")) }
             assertEquals("25", field(view(file), "transmission", "glass").text)
             type(field(stale, "transmission", "glass"), "75")
             assertEquals(.25, materials(file, "0")["glass"]["transmission"].doubleValue(), 0.0)

@@ -42,7 +42,9 @@ class DepthSubmission(private val shaders: DepthShaders) {
         for (renderable in casters) {
             val shader = shaders.shaderFor(renderable) ?: continue
             val group = groups.getOrPut(shader) { ArrayList() }
-            if (group.isEmpty()) order += shader
+            if (group.isEmpty()) {
+                order += shader
+            }
             group += renderable
         }
         lastGroups = order.size
@@ -62,7 +64,9 @@ class DepthSubmission(private val shaders: DepthShaders) {
             context.end()
             for (i in order.indices) groups.getValue(order[i]).clear()
             // a shader that drew nothing this time may be gone: keep only the groups just used
-            if (groups.size > order.size) groups.keys.retainAll(order.toSet())
+            if (groups.size > order.size) {
+                groups.keys.retainAll(order.toSet())
+            }
         }
     }
 }

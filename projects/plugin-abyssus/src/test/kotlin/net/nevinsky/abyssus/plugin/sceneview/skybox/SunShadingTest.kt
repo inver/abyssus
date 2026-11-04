@@ -5,10 +5,10 @@
 
 package net.nevinsky.abyssus.plugin.sceneview.skybox
 
-import net.nevinsky.abyssus.lib.core.editor.content.LightKind
-import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.editor.content.LightKind
+import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.lib.core.editor.scene.lightSetOf
@@ -22,11 +22,19 @@ class SunShadingTest {
     private fun directional(id: Long, intensity: Float, at: Vector3 = origin) =
         LightPlacement(id, LightKind.DIRECTIONAL, Color(1f, 1f, 1f, 1f), intensity, at, Vector3(0f, -1f, 0f))
 
-    private val spot = LightPlacement(
-        8L, LightKind.SPOT, Color(1f, 1f, 1f, 1f), 3f, origin, Vector3(0f, -1f, 0f), coneAngle = 40f,
-    )
+    private val spot =
+        LightPlacement(
+            8L,
+            LightKind.SPOT,
+            Color(1f, 1f, 1f, 1f),
+            3f,
+            origin,
+            Vector3(0f, -1f, 0f),
+            coneAngle = 40f,
+        )
 
-    private val set: LightSet = lightSetOf(listOf(directional(7L, 2f), directional(3L, 1f, Vector3(5f, 0f, 0f)), spot), origin)
+    private val set: LightSet =
+        lightSetOf(listOf(directional(7L, 2f), directional(3L, 1f, Vector3(5f, 0f, 0f)), spot), origin)
 
     @Test
     fun anActiveMapKeepsTheSunUndimmedAndCarriesTheUniformScaleForOutsideTheMap() {
@@ -42,7 +50,11 @@ class SunShadingTest {
             val shading = planSunShading(set, 7L, cloudsDrawn = drawn, mapReady = ready, scale = 0.5f)
             assertNull("clouds drawn=$drawn map=$ready", shading.mapLightIndex)
             assertEquals(1f, shading.outside, 0f)
-            assertEquals(set.directional.first { it.entityId == 7L }.color.r * 0.5f, shading.lights.directional.first { it.entityId == 7L }.color.r, 1e-6f)
+            assertEquals(
+                set.directional.first { it.entityId == 7L }.color.r * 0.5f,
+                shading.lights.directional.first { it.entityId == 7L }.color.r,
+                1e-6f,
+            )
         }
     }
 
@@ -59,10 +71,15 @@ class SunShadingTest {
 
     @Test
     fun aSunOutsideTheRenderedBudgetOrMissingShadesNoOtherLight() {
-        val crowded = lightSetOf(
-            listOf(directional(1L, 1f, Vector3(1f, 0f, 0f)), directional(2L, 1f, Vector3(2f, 0f, 0f)), directional(9L, 9f, Vector3(9f, 0f, 0f))),
-            origin,
-        )
+        val crowded =
+            lightSetOf(
+                listOf(
+                    directional(1L, 1f, Vector3(1f, 0f, 0f)),
+                    directional(2L, 1f, Vector3(2f, 0f, 0f)),
+                    directional(9L, 9f, Vector3(9f, 0f, 0f)),
+                ),
+                origin,
+            )
         for (sunId in listOf(9L, null, 99L)) {
             val shading = planSunShading(crowded, sunId, cloudsDrawn = true, mapReady = true, scale = 0.2f)
             assertNull("sun=$sunId", shading.mapLightIndex)

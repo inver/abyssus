@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.app.game.controlline
 
+import java.time.Instant
 import net.nevinsky.abyssus.app.game.controlline.controller.ControllerProfiles
 import net.nevinsky.abyssus.app.game.controlline.controller.ControllerService
 import net.nevinsky.abyssus.app.game.controlline.controller.FakeControllerSource
@@ -26,37 +27,50 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.time.Instant
 
-/** A flight flown with a fake pad through the game's own lifecycle and controller drive, as `ControlLineGame` runs them, without a window. */
+/**
+ * A flight flown with a fake pad through the game's own lifecycle and controller drive, as `ControlLineGame` runs them,
+ * without a window.
+ */
 class ControllerFlightLifecycleTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
     private val runners = ArrayList<FlightRunner>()
 
-    @After
-    fun closeRunners() = runners.forEach(FlightRunner::close)
+    @After fun closeRunners() = runners.forEach(FlightRunner::close)
 
     private inner class Game {
         val dir = temp.root.toPath()
         val pad = FakeControllerSource().plug("pad", "Logitech F310", gamepad = true)
         val free = ScoreTable(dir.resolve("scores.json"))
-        val flow = GameFlow(
-            loadField().engine.let { engine -> planeChoices(engine.ids.ids.associateWith { engine.ids[it]!! }) },
-            free, PatternScoreTable(dir.resolve("f2b-scores.json")), ScaleScoreTable(dir.resolve("scale-scores.json")),
-        ) { Instant.parse("2026-10-20T12:00:00Z") }
-        val flights = FlightRunner(flow, { FieldScene(loadField()) }, { PhysicsAssets(bundledProject().toFile()) }, failOnWarnings(), JoltNatives())
-            .also { runners += it }
+        val flow =
+            GameFlow(
+                loadField().engine.let { engine -> planeChoices(engine.ids.ids.associateWith { engine.ids[it]!! }) },
+                free,
+                PatternScoreTable(dir.resolve("f2b-scores.json")),
+                ScaleScoreTable(dir.resolve("scale-scores.json")),
+            ) {
+                Instant.parse("2026-10-20T12:00:00Z")
+            }
+        val flights =
+            FlightRunner(
+                    flow,
+                    { FieldScene(loadField()) },
+                    { PhysicsAssets(bundledProject().toFile()) },
+                    failOnWarnings(),
+                    JoltNatives(),
+                )
+                .also { runners += it }
         val controllers = ControllerService(pad, ControllerProfiles(dir.resolve("controls.json")), flights.input)
         val keys = ArrayList<Int>()
 
         /** [seconds] of 60 Hz frames, as the game renders them: the controllers, then the flow, then the flight. */
-        fun frames(seconds: Float) = repeat(Math.round(seconds * 60f)) {
-            controllers.drive(flow, 1f / 60f) { keys += it }
-            flights.follow()
-            flights.advance(1f / 60f)
-        }
+        fun frames(seconds: Float) =
+            repeat(Math.round(seconds * 60f)) {
+                controllers.drive(flow, 1f / 60f) { keys += it }
+                flights.follow()
+                flights.advance(1f / 60f)
+            }
 
         fun fly() {
             flow.freeFlight()
@@ -64,7 +78,8 @@ class ControllerFlightLifecycleTest {
             flights.follow()
         }
 
-        val elevation: Float get() = flights.session?.flight?.lastSample?.elevation ?: 0f
+        val elevation: Float
+            get() = flights.session?.flight?.lastSample?.elevation ?: 0f
     }
 
     @Test

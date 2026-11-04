@@ -67,8 +67,16 @@ class SphereTrack {
         relative.set(position).sub(handle)
         val radius = relative.len()
         val azimuth = azimuthRadiansOf(relative.x, relative.z)
-        val elevation = if (radius > 0f) asin((relative.y / radius).coerceIn(-1f, 1f)) else 0f
-        out.set(relative).scl(if (radius > 0f) 1f / radius else 0f)
+        val elevation = if (radius > 0f) {
+            asin((relative.y / radius).coerceIn(-1f, 1f))
+        } else {
+            0f
+        }
+        out.set(relative).scl(if (radius > 0f) {
+            1f / radius
+        } else {
+            0f
+        })
         east.set(-sin(azimuth), 0f, -cos(azimuth))
         up.set(out).crs(east)
         val climb = atan2(velocity.dot(up), velocity.dot(east))

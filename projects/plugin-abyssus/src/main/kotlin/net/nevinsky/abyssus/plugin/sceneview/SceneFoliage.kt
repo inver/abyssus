@@ -39,7 +39,9 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import com.badlogic.gdx.graphics.g3d.ModelBatch
 import net.nevinsky.abyssus.lib.gdx.g3d.FilteredRenderables
 
-/** One drawn foliage: the placement that named it, the asset it draws and the entity transform its copies stand under. */
+/**
+ * One drawn foliage: the placement that named it, the asset it draws and the entity transform its copies stand under.
+ */
 class DrawnFoliage(val placement: FoliagePlacement, val foliage: FoliageDrawable, val entity: Matrix4)
 
 /**
@@ -113,19 +115,29 @@ class SceneFoliage(
             val found = reasons.getOrPut(name) { ArrayList() }
             val foliage = assets.get(name)
             if (foliage == null) {
-                if (!assets.isLoading) found += missingAsset(name)
+                if (!assets.isLoading) {
+                    found += missingAsset(name)
+                }
                 continue
             }
-            if (foliage !== state.view) state.rebased(foliage)
+            if (foliage !== state.view) {
+                state.rebased(foliage)
+            }
             val staged = foliage.foliage
             val blocked = blockedReason(placement, staged)
             if (blocked != null) {
                 found += blocked
                 continue
             }
-            for ((folder, model) in foliage.layerModels) if (model == null) found += missingModel(name, folder)
-            if (foliage.bake == null) found += noBake(name)
-            if (shown.add(name)) visible += DrawnFoliage(placement, foliage, placement.transform.toMatrix())
+            for ((folder, model) in foliage.layerModels) if (model == null) {
+                found += missingModel(name, folder)
+            }
+            if (foliage.bake == null) {
+                found += noBake(name)
+            }
+            if (shown.add(name)) {
+                visible += DrawnFoliage(placement, foliage, placement.transform.toMatrix())
+            }
             generate(name, foliage, staged, state)
         }
         states.keys.retainAll(reasons.keys)
@@ -144,7 +156,11 @@ class SceneFoliage(
      */
     fun draw(batch: ModelBatch, environment: Environment, accept: ((Renderable) -> Boolean)? = null) {
         for (entry in drawn) {
-            batch.render(if (accept == null) entry.foliage else FilteredRenderables(entry.foliage, accept), environment)
+            batch.render(if (accept == null) {
+                entry.foliage
+            } else {
+                FilteredRenderables(entry.foliage, accept)
+            }, environment)
         }
     }
 
@@ -158,7 +174,11 @@ class SceneFoliage(
         var bounds: BoundingBox? = null
         for (entry in drawn) {
             val of = entry.foliage.objectBounds ?: continue
-            bounds = if (bounds == null) BoundingBox(of) else bounds.ext(of)
+            bounds = if (bounds == null) {
+                BoundingBox(of)
+            } else {
+                bounds.ext(of)
+            }
         }
         return bounds
     }
@@ -198,7 +218,9 @@ class SceneFoliage(
      * the next one, when the draft has moved again.
      */
     private fun generate(name: String, foliage: FoliageDrawable, staged: PreparedFoliage, state: Generating) {
-        if (state.inFlight) return
+        if (state.inFlight) {
+            return
+        }
         val terrain = staged.terrain ?: return
         val draft = drafts.of(name)
         if (!state.baked && staged.stale) {
@@ -208,15 +230,21 @@ class SceneFoliage(
             start(name, foliage, terrain, settingsOf(staged, draft), masksOf(staged, draft), null, state)
             return
         }
-        if (draft == null || draft === state.draft && draft.revision == state.draftRevision) return
+        if (draft == null || draft === state.draft && draft.revision == state.draftRevision) {
+            return
+        }
         state.draft = draft
         state.draftRevision = draft.revision
         // no bake to merge into, or nothing the brush touched: the stale branch above owns the whole bake
-        if (foliage.bake == null || draft.dirtyChunks.isEmpty()) return
+        if (foliage.bake == null || draft.dirtyChunks.isEmpty()) {
+            return
+        }
         start(name, foliage, terrain, settingsOf(staged, draft), masksOf(staged, draft), draft.dirtyChunks, state)
     }
 
-    /** Runs [FoliageScatter] off the GL thread; nothing of the drawable is read from there, only handed over on return. */
+    /**
+     * Runs [FoliageScatter] off the GL thread; nothing of the drawable is read from there, only handed over on return.
+     */
     private fun start(
         name: String,
         foliage: FoliageDrawable,
@@ -233,12 +261,17 @@ class SceneFoliage(
         })
     }
 
-    /** Hands every finished generation to its drawable: the merged bake for the chunks the draft touched, the lot otherwise. */
+    /**
+     * Hands every finished generation to its drawable: the merged bake for the chunks the draft touched, the lot
+     * otherwise.
+     */
     private fun applyGenerated() {
         while (true) {
             val result = pending.poll() ?: break
             val state = states[result.name] ?: continue
-            if (state.view !== result.foliage) continue // the asset was rebuilt while this ran: drop the result
+            if (state.view !== result.foliage) {
+                continue // the asset was rebuilt while this ran: drop the result
+            }
             state.inFlight = false
             val outcome = result.outcome.getOrNull()
             if (outcome == null || outcome.refusal != null) {
@@ -248,7 +281,11 @@ class SceneFoliage(
             }
             val baked = outcome.bake
             val base = result.foliage.bake
-            val merged = if (result.chunks != null && base != null) mergeFoliageChunks(base, baked, result.chunks) else baked
+            val merged = if (result.chunks != null && base != null) {
+                mergeFoliageChunks(base, baked, result.chunks)
+            } else {
+                baked
+            }
             result.foliage.setBake(merged)
         }
     }
@@ -259,11 +296,17 @@ class SceneFoliage(
 
     /** The stored masks with the draft's own overrides laid over them. */
     private fun masksOf(staged: PreparedFoliage, draft: FoliageDraft?): Map<Int, ByteArray> =
-        if (draft == null || draft.masks.isEmpty()) staged.masks else staged.masks + draft.masks
+        if (draft == null || draft.masks.isEmpty()) {
+            staged.masks
+        } else {
+            staged.masks + draft.masks
+        }
 
     /** Writes [reasons] that are new since the last frame and forgets the ones that no longer apply. */
     private fun report(state: Generating, reasons: Set<String>) {
-        for (reason in reasons) if (state.logged.add(reason)) log.warn(reason)
+        for (reason in reasons) if (state.logged.add(reason)) {
+            log.warn(reason)
+        }
         state.logged.retainAll(reasons)
     }
 

@@ -45,14 +45,24 @@ class ShadowCasterBounds {
         for (vertex in 0 until mesh.numVertices) {
             val start = vertex * stride
             val offset = start + position.offset / 4
-            point.set(vertices[offset], if (position.numComponents > 1) vertices[offset + 1] else 0f,
-                if (position.numComponents > 2) vertices[offset + 2] else 0f)
+            point.set(vertices[offset], if (position.numComponents > 1) {
+                vertices[offset + 1]
+            } else {
+                0f
+            },
+                if (position.numComponents > 2) {
+                    vertices[offset + 2]
+                } else {
+                    0f
+                })
             var skinned = false
             for (weight in weights) if (vertices[start + weight + 1] > 0f) {
                 boxes.getOrPut(vertices[start + weight].toInt()) { BoundingBox().inf() }.ext(point)
                 skinned = true
             }
-            if (!skinned) boxes.getOrPut(-1) { BoundingBox().inf() }.ext(point)
+            if (!skinned) {
+                boxes.getOrPut(-1) { BoundingBox().inf() }.ext(point)
+            }
         }
         return boxes
     }

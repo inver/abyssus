@@ -25,17 +25,25 @@ import net.nevinsky.abyssus.plugin.dto.textOf
 @Service(Service.Level.PROJECT)
 class FoliageEditing(private val project: Project, private val scope: CoroutineScope) {
     fun open(
-        scene: VirtualFile, entity: Long, mode: () -> BrushMode?, report: (String) -> Unit,
-        ready: (FoliagePaintSession?) -> Unit
+        scene: VirtualFile,
+        entity: Long,
+        mode: () -> BrushMode?,
+        report: (String) -> Unit,
+        ready: (FoliagePaintSession?) -> Unit,
     ) {
         val found = resolveTerrainEntity(project, scene, entity)
         val terrain = found?.terrain
         val abss = found?.abss
-        val name = found?.scene?.component(entity, net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent::class.java)?.assetName
+        val name =
+            found
+                ?.scene
+                ?.component(entity, net.nevinsky.abyssus.lib.core.ecs.component.FoliageComponent::class.java)
+                ?.assetName
         val folder = found?.assetFolder(name ?: "")
         val metadata = folder?.findChild(META_FILE)
         if (terrain == null || abss == null || name == null || folder == null || metadata == null) {
-            ready(null); return
+            ready(null)
+            return
         }
         val text = textOf(metadata)
         val projectText = textOf(abss)
@@ -44,35 +52,48 @@ class FoliageEditing(private val project: Project, private val scope: CoroutineS
         val json = documents.json
         val parsing = documents.parsing
         scope.launch {
-            val source = withContext(Dispatchers.IO) {
-                runCatchingKeepingCancellation {
-                    parsing.requireSupported(projectText, DocumentKind.PROJECT)
-                    if (parsing.assetFields(text).type != net.nevinsky.abyssus.lib.core.assets.MetaType.FOLIAGE) return@runCatchingKeepingCancellation null
-                    readFoliageSource(name, projectDir, json, text, parsing.foliageMeta(text)) as? FoliageSource.Ready
-                }.getOrNull()
-            }
+            val source =
+                withContext(Dispatchers.IO) {
+                    runCatchingKeepingCancellation {
+                        parsing.requireSupported(projectText, DocumentKind.PROJECT)
+                        if (parsing.assetFields(text).type != net.nevinsky.abyssus.lib.core.assets.MetaType.FOLIAGE) {
+                            return@runCatchingKeepingCancellation null
+                        }
+                        readFoliageSource(name, projectDir, json, text, parsing.foliageMeta(text))
+                            as? FoliageSource.Ready
+                    }
+                        .getOrNull()
+                }
             withContext(Dispatchers.EDT) {
                 if (project.isDisposed || !scene.isValid || !folder.isValid) {
-                    ready(null); return@withContext
+                    ready(null)
+                    return@withContext
                 }
-                if (source == null || source.settings.terrain != terrain.name || source.settings.layers.isEmpty() ||
-                    source.read.problems.isNotEmpty() || textOf(metadata) != text || textOf(abss) != projectText
+                if (
+                    source == null ||
+                        source.settings.terrain != terrain.name ||
+                        source.settings.layers.isEmpty() ||
+                        source.read.problems.isNotEmpty() ||
+                        textOf(metadata) != text ||
+                        textOf(abss) != projectText
                 ) {
-                    ready(null); return@withContext
+                    ready(null)
+                    return@withContext
                 }
-                val stroke = FoliageStrokeCommand(
-                    project,
-                    scene,
-                    folder,
-                    source,
-                    project.service<FoliageDrafts>(),
-                    documents,
-                    project.service<FoliageUndoCache>(),
-                    mode,
-                    background = { task -> scope.launch(Dispatchers.Default) { task.run() } },
-                    ui = { task -> scope.launch(Dispatchers.EDT) { task.run() } },
-                    report = report
-                )
+                val stroke =
+                    FoliageStrokeCommand(
+                        project,
+                        scene,
+                        folder,
+                        source,
+                        project.service<FoliageDrafts>(),
+                        documents,
+                        project.service<FoliageUndoCache>(),
+                        mode,
+                        background = { task -> scope.launch(Dispatchers.Default) { task.run() } },
+                        ui = { task -> scope.launch(Dispatchers.EDT) { task.run() } },
+                        report = report,
+                    )
                 ready(FoliagePaintSession(source.settings.layers.map { it.id }, stroke, stroke::dispose))
             }
         }

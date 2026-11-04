@@ -10,7 +10,8 @@ import com.intellij.openapi.Disposable
 
 /**
  * The runtime switch of one Scene view's Ray Tracing mode, for anything outside the view that needs to flip it (the
- * Abyssus Properties panel). All members belong to the AWT thread. It holds no persisted preference: the mode lives in the
+  * Abyssus Properties panel). All members belong to the AWT thread. It holds no persisted preference: the mode lives in
+  * the
  * view and ends with it.
  */
 interface RayControl {

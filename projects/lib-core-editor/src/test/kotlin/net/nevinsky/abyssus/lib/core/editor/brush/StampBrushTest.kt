@@ -19,15 +19,20 @@ class StampBrushTest {
     /** A grid whose value at a point tells where it was sampled, so the stroke start can be told from any other. */
     private class FakeGrid(override val resolution: Int, override val size: Int) : BrushGrid {
         override val cell = size.toFloat() / (resolution - 1)
+
         override fun sampleAt(x: Float, z: Float) = x * 10f + z
     }
 
     /** Counts how often each cell was applied; cells whose x is in [ignored] report no change. */
-    private class CountingTarget(res: Int, size: Int, private val ignored: (Int) -> Boolean = { false }) : BrushTarget<FakeGrid> {
+    private class CountingTarget(res: Int, size: Int, private val ignored: (Int) -> Boolean = { false }) :
+        BrushTarget<FakeGrid> {
         override val grid = FakeGrid(res, size)
         val hits = IntArray(res * res)
+
         override fun apply(gx: Int, gz: Int, changes: FloatArray, offset: Int): Boolean {
-            if (ignored(gx)) return false
+            if (ignored(gx)) {
+                return false
+            }
             hits[gz * grid.resolution + gx]++
             return true
         }
@@ -39,6 +44,7 @@ class StampBrushTest {
     ) : BrushTool<FakeGrid> {
         val starts = ArrayList<Float>()
         var lastReversed = false
+
         override fun changes(stamp: BrushStamp<FakeGrid>, out: FloatArray) {
             starts += stamp.strokeStart
             lastReversed = stamp.reversed
@@ -93,7 +99,8 @@ class StampBrushTest {
     @Test
     fun `the stroke start is sampled once, at the first stamp`() {
         val tool = RecordingTool()
-        brush(CountingTarget(resolution, size)).stroke(Vector3(10f, 0f, 30f), Vector3(50f, 0f, 30f), 6f, 1f, tool, false)
+        brush(CountingTarget(resolution, size))
+            .stroke(Vector3(10f, 0f, 30f), Vector3(50f, 0f, 30f), 6f, 1f, tool, false)
         assertTrue(tool.starts.size > 2)
         assertEquals(1, tool.starts.toSet().size)
         assertEquals(10f * 10f + 30f, tool.starts[0], 1e-4f)

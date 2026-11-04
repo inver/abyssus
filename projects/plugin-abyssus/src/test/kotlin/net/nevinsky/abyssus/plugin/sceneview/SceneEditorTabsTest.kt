@@ -10,8 +10,10 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.plugin.SceneFileEditorProvider
 
 /**
- * A scene is two editors of one tab on one document: the IDE's `Text` and `Scene View` tabs. The light test editor manager
- * only creates text editors, so the tab switching itself is checked by `SceneViewUiTest`; this pins what the provider owes it.
+  * A scene is two editors of one tab on one document: the IDE's `Text` and `Scene View` tabs. The light test editor
+  * manager
+  * only creates text editors, so the tab switching itself is checked by `SceneViewUiTest`; this pins what the provider
+  * owes it.
  */
 class SceneEditorTabsTest : BasePlatformTestCase() {
     private val minified = """{"format":"abyssus","formatVersion":1,"name":"tabs","ecs":{}}"""

@@ -5,19 +5,19 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
+import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.openapi.vfs.VfsUtilCore
-import net.nevinsky.abyssus.plugin.projectView.AbyssusAssetNode
-import net.nevinsky.abyssus.plugin.projectView.AbyssusRootNode
-import com.intellij.ide.projectView.ViewSettings
-import net.nevinsky.abyssus.plugin.testPanelServices
-import net.nevinsky.abyssus.plugin.sceneview.SceneViewSettings
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.Component
 import java.awt.Container
 import javax.swing.JCheckBox
+import net.nevinsky.abyssus.plugin.projectView.AbyssusAssetNode
+import net.nevinsky.abyssus.plugin.projectView.AbyssusRootNode
+import net.nevinsky.abyssus.plugin.sceneview.SceneViewSettings
+import net.nevinsky.abyssus.plugin.testPanelServices
 
 /** The `Show FPS` view setting in the project properties: an IDE preference that never touches the project's files. */
 class ProjectFpsSettingsTest : BasePlatformTestCase() {
@@ -34,16 +34,28 @@ class ProjectFpsSettingsTest : BasePlatformTestCase() {
     private fun addProject(abss: String = """{"format":"abyssus","formatVersion":1,"name":"P"}""") {
         myFixture.addFileToProject("p/P.abss", abss)
         myFixture.addFileToProject("p/scenes/S.scene", """{"format":"abyssus","formatVersion":1,"name":"S"}""")
-        myFixture.addFileToProject("p/assets/m/meta.json", """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"6a1b8d52-9f3e-4c71-8b0d-2e5f7a9c1d34","type":"MODEL","additional":{"file":"model.glb"}}""")
+        myFixture.addFileToProject(
+            "p/assets/m/meta.json",
+            """{"format":"abyssus","formatVersion":1,"version":1,"uuid":"6a1b8d52-9f3e-4c71-8b0d-2e5f7a9c1d34",
+"type":"MODEL","additional":{"file":"model.glb"}}""",
+        )
     }
 
-    private fun node() = AbyssusRootNode(project, ViewSettings.DEFAULT).children.map { it as com.intellij.ide.util.treeView.AbstractTreeNode<*> }
-        .single { (it as? AbyssusAssetNode)?.virtualFile?.name?.endsWith(".abss") == true }
+    private fun node() =
+        AbyssusRootNode(project, ViewSettings.DEFAULT)
+            .children
+            .map { it as com.intellij.ide.util.treeView.AbstractTreeNode<*> }
+            .single { (it as? AbyssusAssetNode)?.virtualFile?.name?.endsWith(".abss") == true }
 
-    private fun panel() = AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
+    private fun panel() =
+        AssetPropertiesPanel(project, testRootDisposable, testPanelServices(project), { it.run() }, { it.run() })
 
     private fun find(c: Component, name: String): Component? =
-        if (c.name == name) c else (c as? Container)?.components?.firstNotNullOfOrNull { find(it, name) }
+        if (c.name == name) {
+            c
+        } else {
+            (c as? Container)?.components?.firstNotNullOfOrNull { find(it, name) }
+        }
 
     private fun fps(p: AssetPropertiesPanel) = find(p, "show-fps") as JCheckBox
 

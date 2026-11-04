@@ -5,45 +5,48 @@
 
 package net.nevinsky.abyssus.lib.core.assets.terrain
 
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
+import java.io.File
+import java.nio.file.Files
 import net.nevinsky.abyssus.lib.core.assets.terrain.TERRAIN_FLOATS_PER_VERTEX
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
-import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.testProject
+import net.nevinsky.abyssus.lib.core.io.FileLoader
+import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.After
-import java.io.ByteArrayOutputStream
-import java.io.DataOutputStream
-import java.io.File
-import java.nio.file.Files
 
 class TerrainDataTest {
     private val dirs = mutableListOf<File>()
 
-    @After
-    fun cleanUp() = dirs.forEach(File::deleteRecursively)
+    @After fun cleanUp() = dirs.forEach(File::deleteRecursively)
 
     /** A one-terrain project whose `terrain.data` holds [bytes], read through the loader the way the plugin does. */
     private fun read(bytes: ByteArray, size: Int = 10, uv: Float = 1f): TerrainData {
         val dir = Files.createTempDirectory("proj").toFile().also(dirs::add)
         File(dir, "assets/t").mkdirs()
         File(dir, "assets/t/terrain.data").writeBytes(bytes)
-        File(dir, "assets/t/meta.json").writeText(
-            """{"format":"abyssus","formatVersion":1,"type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":$size,"uv":$uv}}"""
-        )
+        File(dir, "assets/t/meta.json")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"type":"TERRAIN","additional":{"terrainFile":"terrain.data",
+"size":$size,"uv":$uv}}"""
+            )
         val files = FileLoader(dir)
         val metas = testMetaLoader(dir, fileLoader = files)
         return TerrainLoader(files, metas).prepare("t")!!.staged.data
     }
 
     private fun bigEndian(vararg heights: Float): ByteArray =
-        ByteArrayOutputStream().also { bytes -> DataOutputStream(bytes).use { out -> heights.forEach(out::writeFloat) } }.toByteArray()
+        ByteArrayOutputStream()
+            .also { bytes -> DataOutputStream(bytes).use { out -> heights.forEach(out::writeFloat) } }
+            .toByteArray()
 
     @Test
     fun readsTheTestProjectsTerrain() {
@@ -100,7 +103,9 @@ class TerrainDataTest {
     fun invalidDataIsRejected() {
         assertThrows(IllegalArgumentException::class.java) { read(bigEndian(1f, 2f, 3f)) }
         assertThrows(IllegalArgumentException::class.java) { read(bigEndian()) }
-        val whole = File(testProject("Untitled"), "assets/terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b/terrain.data").readBytes()
+        val whole =
+            File(testProject("Untitled"), "assets/terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b/terrain.data")
+                .readBytes()
         assertThrows(IllegalArgumentException::class.java) { read(whole.copyOf(1000), 1600, 60f) }
         assertThrows(IllegalArgumentException::class.java) { TerrainData(256, FloatArray(256 * 256), 1, 1f) }
     }
@@ -121,7 +126,8 @@ class TerrainDataTest {
         val map = HashMap<Pair<Int, Int>, List<Float>>()
         for (z in minZ..maxZ) {
             t.vertexRow(z, minX, maxX, out, 0)
-            for (x in 0 until w) map[(minX + x) to z] = out.slice(x * TERRAIN_FLOATS_PER_VERTEX until (x + 1) * TERRAIN_FLOATS_PER_VERTEX)
+            for (x in 0 until w) map[(minX + x) to z] =
+                out.slice(x * TERRAIN_FLOATS_PER_VERTEX until (x + 1) * TERRAIN_FLOATS_PER_VERTEX)
         }
         return map
     }
@@ -140,7 +146,9 @@ class TerrainDataTest {
         val moved = HashSet<Pair<Int, Int>>()
         for (z in 0 until resolution) for (x in 0 until resolution) {
             val from = (z * resolution + x) * TERRAIN_FLOATS_PER_VERTEX
-            if (!(0 until TERRAIN_FLOATS_PER_VERTEX).all { oldVertices[from + it] == rebuilt[from + it] }) moved += x to z
+            if (!(0 until TERRAIN_FLOATS_PER_VERTEX).all { oldVertices[from + it] == rebuilt[from + it] }) {
+                moved += x to z
+            }
         }
         assertTrue(moved.isNotEmpty())
         assertTrue(moved.all { (x, z) -> x in 1..6 && z in 2..5 })

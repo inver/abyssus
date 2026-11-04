@@ -6,17 +6,17 @@
 package net.nevinsky.abyssus.plugin.filetype
 
 import com.intellij.openapi.command.CommandProcessor
-import com.intellij.openapi.components.service
-import net.nevinsky.abyssus.lib.core.dto.ProjectDto
-import net.nevinsky.abyssus.lib.core.dto.SceneDto
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneEdit
-import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.messages.Topic
+import net.nevinsky.abyssus.lib.core.dto.ProjectDto
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneEdit
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 
 /** Told after a plugin edit wrote [file] (a scene or project file), so views of it can refresh. */
 fun interface AbyssusSceneEdited {
@@ -39,8 +39,8 @@ fun editSceneDocument(project: Project, file: VirtualFile, commandName: String, 
     editSceneDocument(project, file, commandName, false, mutate)
 
 /**
- * [editSceneDocument] that, with [global], is also a project-level command: Undo and Redo reach it from any focus, such as
- * the Abyssus tree that started it, not only from the scene's editor.
+ * [editSceneDocument] that, with [global], is also a project-level command: Undo and Redo reach it from any focus, such
+ * as the Abyssus tree that started it, not only from the scene's editor.
  */
 fun editSceneDocument(
     project: Project,
@@ -57,7 +57,12 @@ fun editSceneDocument(
  * Edits the settings of the scene in [file] (name, ambient light, fog, sky): [change] returns the changed copy, or null
  * to abort. One undoable command, like [editSceneDocument].
  */
-fun editSceneSettings(project: Project, file: VirtualFile, commandName: String, change: (SceneDto) -> SceneDto?): Boolean {
+fun editSceneSettings(
+    project: Project,
+    file: VirtualFile,
+    commandName: String,
+    change: (SceneDto) -> SceneDto?,
+): Boolean {
     val scenes = service<AbyssusPluginCtx>().documents.scenes
     return editTextDocument(project, file, commandName) { scenes.replace(it, change) }
 }
@@ -74,8 +79,8 @@ fun editProjectDocument(
 }
 
 /**
- * Replaces the text of [file] by what [transform] makes of it, as one undoable command named [commandName]; nothing
- * is written when it is not [TextEditOutcome.Edited] or the text changed meanwhile. Returns whether anything was written.
+ * Replaces the text of [file] by what [transform] makes of it, as one undoable command named [commandName]; nothing is
+ * written when it is not [TextEditOutcome.Edited] or the text changed meanwhile. Returns whether anything was written.
  */
 fun editTextDocument(
     project: Project,
@@ -90,11 +95,18 @@ fun editTextDocument(
     if (document.text != original) {
         return false
     }
-    WriteCommandAction.runWriteCommandAction(project, commandName, null, {
-        document.setText(text)
-        FileDocumentManager.getInstance().saveDocument(document)
-        if (global) CommandProcessor.getInstance().markCurrentCommandAsGlobal(project)
-    })
+    WriteCommandAction.runWriteCommandAction(
+        project,
+        commandName,
+        null,
+        {
+            document.setText(text)
+            FileDocumentManager.getInstance().saveDocument(document)
+            if (global) {
+                CommandProcessor.getInstance().markCurrentCommandAsGlobal(project)
+            }
+        },
+    )
     if (!project.isDisposed) {
         project.messageBus.syncPublisher(AbyssusSceneEdited.TOPIC).sceneEdited(file)
     }

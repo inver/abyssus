@@ -16,7 +16,12 @@ import org.slf4j.helpers.NOPLogger
 /** A project file read into [ProjectDto] and printed again keeps what the editor edits. */
 class ProjectDtoFileTest {
     private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
-    private val text = """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0.6,"y":-0.25,"z":-0.75},"position":{"x":-6.0,"y":4.0,"z":10.0},"far":500.0,"near":0.1,"fieldOfView":67.0},"settings":{"export":{"jsonType":"json","compressScenes":false}},"activeSceneName":"Field","selectedCamera":-1,"physicsEnabled":true,"sceneViewAntialiasing":"MSAA_4","uiAssetNames":["screens"],"name":"P"}"""
+    private val text =
+        """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0.6,"y":-0.25,"z":-0.75},
+"position":{"x":-6.0,"y":4.0,"z":10.0},"far":500.0,"near":0.1,"fieldOfView":67.0},""" +
+                """"settings":{"export":{"jsonType":"json","compressScenes":false}},"activeSceneName":"Field",""" +
+                """"selectedCamera":-1,
+"physicsEnabled":true,"sceneViewAntialiasing":"MSAA_4","uiAssetNames":["screens"],"name":"P"}"""
 
     @Test
     fun theFileKeysBind() {

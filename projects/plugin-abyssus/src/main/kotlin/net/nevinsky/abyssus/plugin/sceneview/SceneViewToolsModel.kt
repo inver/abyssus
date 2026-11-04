@@ -58,7 +58,9 @@ class SceneViewToolsModel {
     }
 
     private fun <T> change(old: T, new: T, assign: () -> Unit) {
-        if (old == new) return
+        if (old == new) {
+            return
+        }
         assign()
         onChanged?.invoke()
     }

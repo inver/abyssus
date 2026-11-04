@@ -36,7 +36,11 @@ fun JsonValues.objectAt(vararg path: String): JsonValues? = valuesOf(at(*path))
 fun JsonValues.arrayAt(vararg path: String): List<Any?>? = listOfValues(at(*path))
 
 /** True when the object at [path] has member [key] (even a null one). */
-fun JsonValues.hasMember(key: String, vararg path: String): Boolean = (if (path.isEmpty()) this else objectAt(*path))?.containsKey(key) == true
+fun JsonValues.hasMember(key: String, vararg path: String): Boolean = (if (path.isEmpty()) {
+    this
+} else {
+    objectAt(*path)
+})?.containsKey(key) == true
 
 /** A scalar as the rows show it: text as is, a number or boolean as written, null as `null`. */
 fun scalarText(value: Any?): String = when (value) {

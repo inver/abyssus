@@ -5,14 +5,13 @@
 
 package net.nevinsky.abyssus.plugin.projectView
 
-import net.nevinsky.abyssus.plugin.entityNode
-
-import net.nevinsky.abyssus.lib.core.editor.parseScene
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.fasterxml.jackson.databind.ObjectMapper
+import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.format.EntityType
+import net.nevinsky.abyssus.plugin.entityNode
 import net.nevinsky.abyssus.plugin.filetype.AssetIcons
 import net.nevinsky.abyssus.plugin.filetype.ComponentIcons
 import net.nevinsky.abyssus.plugin.filetype.EntityIcons
@@ -34,20 +33,24 @@ class NodeIconsTest : BasePlatformTestCase() {
 
     /** [typeJson] is the JSON value of the entity's `type`; null for an entity without one. */
     private fun entityNode(typeJson: String?): DtoEntryNode {
-        val scene = parseScene("""{"formatVersion":1,"ecs":{"1":{${typeJson?.let { """"type":$it,""" } ?: ""}"components":{}}}}""")
+        val scene =
+            parseScene(
+                """{"formatVersion":1,"ecs":{"1":{${typeJson?.let { """"type":$it,""" } ?: ""}"components":{}}}}"""
+            )
         return DtoEntryNode(project, "/scene/ecs", DtoRow("1", EntityNode(scene, 1)), null, listOf("ecs"))
     }
 
     fun testEntityTypesHaveDistinctIcons() {
-        val icons = EntityType.entries.map { type ->
-            val node = entityNode(""""${type.name}"""")
-            node.update()
-            val icon = icon(node)
-            assertNotSame(type.name, PropertyIcons.ECS, icon)
-            assertEquals(16, icon!!.iconWidth)
-            assertEquals(16, icon.iconHeight)
-            icon
-        }
+        val icons =
+            EntityType.entries.map { type ->
+                val node = entityNode(""""${type.name}"""")
+                node.update()
+                val icon = icon(node)
+                assertNotSame(type.name, PropertyIcons.ECS, icon)
+                assertEquals(16, icon!!.iconWidth)
+                assertEquals(16, icon.iconHeight)
+                icon
+            }
         assertEquals(EntityType.entries.size, icons.toSet().size)
     }
 
@@ -70,10 +73,23 @@ class NodeIconsTest : BasePlatformTestCase() {
 
     fun testEveryKindOfNodeHasAnIcon() {
         listOf(
-            SceneIcons.FILE, ScenesIcons.LIST, PropertyIcons.LIGHT, PropertyIcons.FOG, PropertyIcons.SKYBOX, PropertyIcons.ECS,
-            ComponentIcons.GENERIC, ComponentIcons.TRANSFORM, ComponentIcons.PHYSICS, ComponentIcons.PARTICLES, AssetIcons.UNKNOWN,
-            AssetIcons.forType("MODEL"), AssetIcons.forType("TERRAIN"), AssetIcons.forType("SKYBOX"), AssetIcons.forType("MATERIAL"),
-        ).forEach { assertNotNull(it) }
+                SceneIcons.FILE,
+                ScenesIcons.LIST,
+                PropertyIcons.LIGHT,
+                PropertyIcons.FOG,
+                PropertyIcons.SKYBOX,
+                PropertyIcons.ECS,
+                ComponentIcons.GENERIC,
+                ComponentIcons.TRANSFORM,
+                ComponentIcons.PHYSICS,
+                ComponentIcons.PARTICLES,
+                AssetIcons.UNKNOWN,
+                AssetIcons.forType("MODEL"),
+                AssetIcons.forType("TERRAIN"),
+                AssetIcons.forType("SKYBOX"),
+                AssetIcons.forType("MATERIAL"),
+            )
+            .forEach { assertNotNull(it) }
     }
 
     fun testComponentNamesMapToKindsAndUnknownOnesAreGeneric() {
@@ -87,7 +103,11 @@ class NodeIconsTest : BasePlatformTestCase() {
         assertSame(ComponentIcons.PARTICLES, ComponentIcons.forComponent("ParticlesComponent"))
         assertSame(ComponentIcons.NAME, ComponentIcons.forComponent("NameComponent"))
         assertSame(ComponentIcons.GENERIC, ComponentIcons.forComponent("SomethingNew"))
-        assertEquals(4, setOf(ComponentIcons.TRANSFORM, ComponentIcons.PHYSICS, ComponentIcons.PARTICLES, ComponentIcons.GENERIC).size)
+        assertEquals(
+            4,
+            setOf(ComponentIcons.TRANSFORM, ComponentIcons.PHYSICS, ComponentIcons.PARTICLES, ComponentIcons.GENERIC)
+                .size,
+        )
     }
 
     fun testEntityAndComponentRowsUseTheirIcons() {
@@ -114,9 +134,11 @@ class NodeIconsTest : BasePlatformTestCase() {
         myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""")
         myFixture.addFileToProject(
             "p/assets/clouds_storm/meta.json",
-            """{"format":"abyssus","formatVersion":1,"version":1,"type":"CLOUDS","additional":{"low":{"type":"stratocumulus"},"mid":{"type":"altostratus"}}}""",
+            """{"format":"abyssus","formatVersion":1,"version":1,"type":"CLOUDS",
+"additional":{"low":{"type":"stratocumulus"},"mid":{"type":"altostratus"}}}""",
         )
-        fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+        fun label(node: AbstractTreeNode<*>): String =
+            (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
         val abss = children(AbyssusRootNode(project, ViewSettings.DEFAULT)).single { label(it).endsWith(".abss") }
         val assets = children(abss).single { label(it) == "assets" }
         val group = children(assets).single()

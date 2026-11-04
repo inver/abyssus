@@ -19,8 +19,12 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageLayerBake
  * copies.
  */
 fun mergeFoliageChunks(base: FoliageBake, patch: FoliageBake, chunks: Set<FoliageChunk>): FoliageBake {
-    if (chunks.isEmpty()) return base
-    if (base.chunkSize != patch.chunkSize) return patch // another terrain or another chunking: the patch is the bake
+    if (chunks.isEmpty()) {
+        return base
+    }
+    if (base.chunkSize != patch.chunkSize) {
+        return patch // another terrain or another chunking: the patch is the bake
+    }
     val layers = LinkedHashMap<Int, FoliageLayerBake>()
     for (layer in base.layers) layers[layer.id] = layer
     for (patched in patch.layers) {
@@ -35,10 +39,14 @@ private fun mergeLayer(
     patch: FoliageLayerBake,
     chunks: Set<FoliageChunk>,
 ): FoliageLayerBake {
-    if (base.chunksX != patch.chunksX || base.chunksZ != patch.chunksZ) return patch
+    if (base.chunksX != patch.chunksX || base.chunksZ != patch.chunksZ) {
+        return patch
+    }
     val merged = ArrayList<List<FoliageCopy>>(base.chunks)
     for (chunk in chunks) {
-        if (chunk.i !in 0 until base.chunksX || chunk.j !in 0 until base.chunksZ) continue
+        if (chunk.i !in 0 until base.chunksX || chunk.j !in 0 until base.chunksZ) {
+            continue
+        }
         merged[base.index(chunk.i, chunk.j)] = patch.chunk(chunk.i, chunk.j)
     }
     return FoliageLayerBake(base.id, base.modelCount, base.chunksX, base.chunksZ, merged)

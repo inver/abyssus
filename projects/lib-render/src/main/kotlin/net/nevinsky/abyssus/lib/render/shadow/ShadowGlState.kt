@@ -51,7 +51,11 @@ class ShadowGlState {
         )
         gl.glViewport(viewport[0], viewport[1], viewport[2], viewport[3])
         gl.glScissor(scissor[0], scissor[1], scissor[2], scissor[3])
-        enabled.forEach { (flag, wasEnabled) -> if (wasEnabled) gl.glEnable(flag) else gl.glDisable(flag) }
+        enabled.forEach { (flag, wasEnabled) -> if (wasEnabled) {
+            gl.glEnable(flag)
+        } else {
+            gl.glDisable(flag)
+        } }
         gl.glDepthFunc(depthFunc); gl.glCullFace(cullFace); gl.glFrontFace(frontFace)
         gl.glBlendFuncSeparate(blendSrc, blendDst, blendSrcAlpha, blendDstAlpha)
         gl.glColorMask(

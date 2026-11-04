@@ -30,7 +30,8 @@ class EntitySelectionTest : BasePlatformTestCase() {
 
     private fun children(node: AbstractTreeNode<*>) = node.children.map { it as AbstractTreeNode<*> }
 
-    private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+    private fun label(node: AbstractTreeNode<*>): String =
+        (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
 
     /** The node chain from the view root down to the entity row, found by name the way the tree would be walked. */
     private fun chainTo(entityId: String): List<AbstractTreeNode<*>> {
@@ -46,7 +47,11 @@ class EntitySelectionTest : BasePlatformTestCase() {
     fun testWalkingDownFindsTheEntityRow() {
         val chain = chainTo("0")
         for (end in 1 until chain.size - 1) {
-            assertEquals("at ${label(chain[end])}", TreeVisitor.Action.CONTINUE, entityVisitAction(scene, 0L, chain.subList(0, end + 1)))
+            assertEquals(
+                "at ${label(chain[end])}",
+                TreeVisitor.Action.CONTINUE,
+                entityVisitAction(scene, 0L, chain.subList(0, end + 1)),
+            )
         }
         assertEquals(TreeVisitor.Action.INTERRUPT, entityVisitAction(scene, 0L, chain))
     }

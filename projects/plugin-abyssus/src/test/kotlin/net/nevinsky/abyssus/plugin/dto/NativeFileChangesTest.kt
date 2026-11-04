@@ -30,7 +30,9 @@ class NativeFileChangesTest : BasePlatformTestCase() {
             WriteAction.runAndWait<Exception> { image.setBinaryContent("again".toByteArray()) }
             assertEquals(before, allPaths.size)
         } finally {
-            if (!Disposer.isDisposed(parent)) Disposer.dispose(parent)
+            if (!Disposer.isDisposed(parent)) {
+                Disposer.dispose(parent)
+            }
         }
     }
 }

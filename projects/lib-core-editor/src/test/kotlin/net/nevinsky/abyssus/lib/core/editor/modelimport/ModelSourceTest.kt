@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.modelimport
 
+import java.io.File
+import java.security.MessageDigest
 import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -12,8 +14,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import java.io.File
-import java.security.MessageDigest
 
 class ModelSourceTest {
     private val fixtures = importFixtures()
@@ -22,13 +22,17 @@ class ModelSourceTest {
 
     @Test
     fun fixturesArePinned() {
-        val pinned = mapOf(
-            "box.3ds" to "d7de13c27c335e78989b56ecc2adb5db9804ed883d5822c053fe86e1b6514046",
-            "rig.fbx" to "dd9224dae13cba12c55eddf8e1794022dd6d751bc6538bdd7db949c85c660642",
-            "crate.glb" to "7baeb327fce6105764ce03f5ced32bba8e3af80147bf1ea7f82b737d9760210e",
-        )
+        val pinned =
+            mapOf(
+                "box.3ds" to "d7de13c27c335e78989b56ecc2adb5db9804ed883d5822c053fe86e1b6514046",
+                "rig.fbx" to "dd9224dae13cba12c55eddf8e1794022dd6d751bc6538bdd7db949c85c660642",
+                "crate.glb" to "7baeb327fce6105764ce03f5ced32bba8e3af80147bf1ea7f82b737d9760210e",
+            )
         for ((name, sha) in pinned) {
-            val actual = MessageDigest.getInstance("SHA-256").digest(File(fixtures, name).readBytes()).joinToString("") { "%02x".format(it) }
+            val actual =
+                MessageDigest.getInstance("SHA-256").digest(File(fixtures, name).readBytes()).joinToString("") {
+                    "%02x".format(it)
+                }
             assertEquals("$name was regenerated: check it, then pin the new hash", sha, actual)
         }
     }
@@ -119,7 +123,7 @@ class ModelSourceTest {
             embedded = source.embeddedDir
             assertTrue(embedded.list()!!.isNotEmpty())
         }
-        open("crate.glb").use { }
+        open("crate.glb").use {}
         assertFalse(embedded.exists())
         assertEquals(before, fixtures.walkTopDown().map { it.relativeTo(fixtures).path }.sorted().toList())
     }

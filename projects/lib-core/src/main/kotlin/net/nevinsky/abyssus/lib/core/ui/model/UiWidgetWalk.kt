@@ -6,7 +6,8 @@ package net.nevinsky.abyssus.lib.core.ui.model
 
 /**
  * Visits [root] and everything under it, depth first, parent before children. [item] is the record a list row sees:
- * the fields of the enclosing list's `items` binding for the widgets of its template, null elsewhere (the empty state of
+  * the fields of the enclosing list's `items` binding for the widgets of its template, null elsewhere (the empty state
+  * of
  * a list is not a row and sees no item). [path] names the widget the way the decoder reports it.
  */
 fun UiCollection.walkScoped(

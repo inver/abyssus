@@ -5,29 +5,36 @@
 
 package net.nevinsky.abyssus.lib.core.editor.terrain.splat
 
+import java.io.File
+import java.util.UUID
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaParser
+import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
 import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaTextEditor
+import net.nevinsky.abyssus.lib.core.editor.util.at
+import net.nevinsky.abyssus.lib.core.editor.util.textAt
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
-import net.nevinsky.abyssus.lib.core.editor.document.AssetMetaReader
-import net.nevinsky.abyssus.lib.core.editor.util.at
-import net.nevinsky.abyssus.lib.core.editor.util.textAt
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
-import java.util.UUID
 
 class SplatBootstrapTest {
-    @get:Rule
-    val tmp = TemporaryFolder()
+    @get:Rule val tmp = TemporaryFolder()
 
     private val json = JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
-    private val writer = SplatAssetWriter(json, AssetMetaTextEditor(AssetMetaParser(json)), codec = SplatImageCodec(), clock = { 1_700_000_000_000L }, randomUuid = { UUID.fromString("00000000-0000-0000-0000-00000000abcd") })
+    private val writer =
+        SplatAssetWriter(
+            json,
+            AssetMetaTextEditor(AssetMetaParser(json)),
+            codec = SplatImageCodec(),
+            clock = { 1_700_000_000_000L },
+            randomUuid = { UUID.fromString("00000000-0000-0000-0000-00000000abcd") },
+        )
     private val codec = SplatImageCodec()
 
-    private val terrainMeta = """{
+    private val terrainMeta =
+        """{
   "format": "abyssus",
   "formatVersion": 1,
   "version": 1,
@@ -62,7 +69,10 @@ class SplatBootstrapTest {
     fun `the limits are accepted and one beyond is refused`() {
         for (ok in listOf(64, 2048)) assertTrue(writer.create(tmp.root, "t", terrainMeta, ok) is SplatPlan.Planned)
         for (bad in listOf(63, 2049, 0, -1)) {
-            assertEquals(SplatPlanProblem.RESOLUTION, (writer.create(tmp.root, "t", terrainMeta, bad) as SplatPlan.Refused).problem)
+            assertEquals(
+                SplatPlanProblem.RESOLUTION,
+                (writer.create(tmp.root, "t", terrainMeta, bad) as SplatPlan.Refused).problem,
+            )
         }
     }
 
@@ -81,7 +91,9 @@ class SplatBootstrapTest {
 
     @Test
     fun `a missing splatMap key is added`() {
-        val compact = """{"formatVersion":1,"version":1,"uuid":"00000000-0000-0000-0000-0000000000aa","type":"TERRAIN","additional":{"size":200}}"""
+        val compact =
+            """{"formatVersion":1,"version":1,"uuid":"00000000-0000-0000-0000-0000000000aa","type":"TERRAIN",
+"additional":{"size":200}}"""
         val text = planned(writer.create(tmp.root, "t", compact, 64)).terrainMetaText
         val values = AssetMetaReader(json).read(text).values
         assertEquals("00000000-0000-0000-0000-00000000abcd", values.textAt("additional", "splatMap"))
@@ -99,8 +111,16 @@ class SplatBootstrapTest {
 
     @Test
     fun `an invalid or unsupported terrain meta is refused with nothing planned`() {
-        for (text in listOf("{ not json", """{"formatVersion":1,"additional":{}}""", """{"format":"abyssus","formatVersion":2,"additional":{}}""")) {
-            assertEquals(SplatPlanProblem.TERRAIN_META, (writer.create(tmp.root, "t", text, 64) as SplatPlan.Refused).problem)
+        for (text in
+            listOf(
+                "{ not json",
+                """{"formatVersion":1,"additional":{}}""",
+                """{"format":"abyssus","formatVersion":2,"additional":{}}""",
+            )) {
+            assertEquals(
+                SplatPlanProblem.TERRAIN_META,
+                (writer.create(tmp.root, "t", text, 64) as SplatPlan.Refused).problem,
+            )
         }
     }
 
@@ -108,8 +128,18 @@ class SplatBootstrapTest {
     fun `a fresh uuid skips the ones in use`() {
         val ids = ArrayDeque(listOf(UUID(0, 1), UUID(0, 2)))
         File(tmp.root, "assets/other").mkdirs()
-        File(tmp.root, "assets/other/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"uuid":"${UUID(0, 1)}","type":"TEXTURE"}""")
-        val files = planned(SplatAssetWriter(json, AssetMetaTextEditor(AssetMetaParser(json)), codec = SplatImageCodec(), randomUuid = { ids.removeFirst() }).create(tmp.root, "t", terrainMeta, 64))
+        File(tmp.root, "assets/other/meta.json")
+            .writeText("""{"format":"abyssus","formatVersion":1,"uuid":"${UUID(0, 1)}","type":"TEXTURE"}""")
+        val files =
+            planned(
+                SplatAssetWriter(
+                        json,
+                        AssetMetaTextEditor(AssetMetaParser(json)),
+                        codec = SplatImageCodec(),
+                        randomUuid = { ids.removeFirst() },
+                    )
+                    .create(tmp.root, "t", terrainMeta, 64)
+            )
         assertEquals(UUID(0, 2).toString(), files.uuid)
     }
 }

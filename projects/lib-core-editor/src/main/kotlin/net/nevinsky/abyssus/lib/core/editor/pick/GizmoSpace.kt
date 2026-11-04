@@ -22,7 +22,9 @@ val WORLD_AXES: GizmoAxes = GizmoAxis.entries.associateWith { it.direction }
  * object. An object with no rotation has the same axes in both. No GL needed.
  */
 fun gizmoAxes(space: GizmoSpace, rotation: Quaternion): GizmoAxes {
-    if (space == GizmoSpace.WORLD) return WORLD_AXES
+    if (space == GizmoSpace.WORLD) {
+        return WORLD_AXES
+    }
     val q = Quaternion(rotation.x, rotation.y, rotation.z, rotation.w).nor()
     return GizmoAxis.entries.associateWith { axis ->
         val v = q.transform(Vector3(axis.direction.x, axis.direction.y, axis.direction.z)).nor()
@@ -47,6 +49,10 @@ data class GizmoSnap(val moveStep: Float, val rotateDegrees: Float) {
 
     private fun roundTo(value: Float, step: Float): Float {
         val rounded = Math.round(value / step) * step
-        return if (rounded == 0f) 0f else rounded
+        return if (rounded == 0f) {
+            0f
+        } else {
+            rounded
+        }
     }
 }

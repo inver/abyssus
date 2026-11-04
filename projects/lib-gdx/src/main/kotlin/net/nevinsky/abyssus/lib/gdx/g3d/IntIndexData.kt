@@ -24,7 +24,11 @@ class IntIndexData(isStatic: Boolean, maxIndices: Int) : IndexData {
     private val empty = maxIndices == 0
     private val byteBuffer: ByteBuffer = BufferUtils.newUnsafeByteBuffer(maxOf(maxIndices, 1) * BYTES)
     private val intBuffer: IntBuffer = byteBuffer.asIntBuffer()
-    private val usage = if (isStatic) GL20.GL_STATIC_DRAW else GL20.GL_DYNAMIC_DRAW
+    private val usage = if (isStatic) {
+        GL20.GL_STATIC_DRAW
+    } else {
+        GL20.GL_DYNAMIC_DRAW
+    }
     private var bufferHandle = Gdx.gl20.glGenBuffer()
     private var dirty = true
     private var bound = false
@@ -34,9 +38,17 @@ class IntIndexData(isStatic: Boolean, maxIndices: Int) : IndexData {
         byteBuffer.flip()
     }
 
-    override fun getNumIndices(): Int = if (empty) 0 else intBuffer.limit()
+    override fun getNumIndices(): Int = if (empty) {
+        0
+    } else {
+        intBuffer.limit()
+    }
 
-    override fun getNumMaxIndices(): Int = if (empty) 0 else intBuffer.capacity()
+    override fun getNumMaxIndices(): Int = if (empty) {
+        0
+    } else {
+        intBuffer.capacity()
+    }
 
     /** Replaces the indices with [count] values of [indices] from [offset]. */
     fun setIndices(indices: IntArray, offset: Int, count: Int) {

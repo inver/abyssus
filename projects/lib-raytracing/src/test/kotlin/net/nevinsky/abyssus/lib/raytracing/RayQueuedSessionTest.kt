@@ -12,7 +12,10 @@ class RayQueuedSessionTest {
     private val scene = RaySceneSnapshot(emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
     private fun request(revision: Long) = RaySceneRequest(RayFrameKey(1, 1, revision, 1), 1, 1, camera, scene)
 
-    /** Completes each submission on the next poll; [reject] makes that completion fail the way a native frame error does. */
+    /**
+     * Completes each submission on the next poll; [reject] makes that completion fail the way a native frame error
+     * does.
+     */
     private class Driver : RaySession {
         var reject = false
         var submitted = 0
@@ -23,7 +26,9 @@ class RayQueuedSessionTest {
         override fun poll(): RayFrame? {
             val request = pending ?: return null
             pending = null
-            if (reject) throw UnsupportedOperationException("Nested, intersecting or unmatched dielectric boundary")
+            if (reject) {
+                throw UnsupportedOperationException("Nested, intersecting or unmatched dielectric boundary")
+            }
             return RayFrame(request.key, 1, 1, floatArrayOf(0f, 0f, 0f, 1f), floatArrayOf(1f))
         }
         override fun dispose() {}

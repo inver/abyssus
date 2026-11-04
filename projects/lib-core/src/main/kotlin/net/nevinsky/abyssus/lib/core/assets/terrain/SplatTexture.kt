@@ -14,7 +14,8 @@ import java.nio.ByteBuffer
 private const val RGBA = 4
 
 /**
- * Copies the rectangle [x],[y] of [width] by [height] texels out of [pixels], a square map of [side] texels of RGBA bytes
+  * Copies the rectangle [x],[y] of [width] by [height] texels out of [pixels], a square map of [side] texels of RGBA
+  * bytes
  * (row after row), into [out] as one contiguous block of rows, which is what `glTexSubImage2D` reads (GLES2 has no
  * row-length unpack). [out] is cleared first and left ready to read from position 0 to the end of the block.
  */
@@ -36,12 +37,17 @@ fun packSplatRows(pixels: ByteArray, side: Int, x: Int, y: Int, width: Int, heig
 class SplatTexture {
     private var buffer: ByteBuffer = ByteBuffer.allocateDirect(0)
 
-    /** Re-sends the rectangle [x],[y] of [width] by [height] texels of [pixels] (a square map of RGBA bytes) into [texture]. */
+    /**
+     * Re-sends the rectangle [x],[y] of [width] by [height] texels of [pixels] (a square map of RGBA bytes) into
+     * [texture].
+     */
     fun updateRegion(texture: Texture, pixels: ByteArray, x: Int, y: Int, width: Int, height: Int) {
         val side = texture.width
         require(texture.height == side) { "the splat texture is ${texture.width} by ${texture.height}" }
         val needed = width * height * RGBA
-        if (buffer.capacity() < needed) buffer = ByteBuffer.allocateDirect(maxOf(needed, buffer.capacity() * 2)).order(ByteOrder.nativeOrder())
+        if (buffer.capacity() < needed) {
+            buffer = ByteBuffer.allocateDirect(maxOf(needed, buffer.capacity() * 2)).order(ByteOrder.nativeOrder())
+        }
         packSplatRows(pixels, side, x, y, width, height, buffer)
         Gdx.gl.glActiveTexture(GL20.GL_TEXTURE0)
         texture.bind()

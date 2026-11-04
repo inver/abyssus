@@ -11,7 +11,10 @@ import net.nevinsky.abyssus.lib.core.editor.document.DocumentParsing
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
-/** The standard printing of a native document, for the text editor to show: null when the text is not a supported document. */
+/**
+ * The standard printing of a native document, for the text editor to show: null when the text is not a supported
+ * document.
+ */
 class DocumentFormatter(
     private val parsing: DocumentParsing,
     private val json: JsonProcessor,

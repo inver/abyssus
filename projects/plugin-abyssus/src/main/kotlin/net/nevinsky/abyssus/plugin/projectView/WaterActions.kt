@@ -43,7 +43,9 @@ fun waterTargetOf(node: Any?): WaterTarget? {
     return WaterTarget(file, surface.id, surface.name)
 }
 
-/** Whether water can be added to [file]: a readable scene whose `abyssus` and `waterSurfaces` are objects when present. */
+/**
+ * Whether water can be added to [file]: a readable scene whose `abyssus` and `waterSurfaces` are objects when present.
+ */
 internal fun canAddWater(file: VirtualFile, cache: SceneDocumentCache): Boolean =
     cache.read(file)?.let { !WaterCodec().read(it.root.at("abyssus")).incompatible } ?: false
 
@@ -97,7 +99,8 @@ open class AddWaterAction : AbyssusTreeAction<VirtualFile>() {
         e.project?.let { canAddWater(target, SceneDocumentCache.of(it)) } ?: false
 
     override fun perform(project: Project, target: VirtualFile, e: AnActionEvent) {
-        showActionGroup(e, AddWaterGroup(project, target, { Vector3(0f, 0f, 0f) }), AbyssusBundle.message("addWaterTitle"))
+        showActionGroup(e, AddWaterGroup(project, target, { Vector3(0f, 0f, 0f) }),
+            AbyssusBundle.message("addWaterTitle"))
     }
 }
 
@@ -118,10 +121,12 @@ open class RenameWaterAction : AbyssusTreeAction<WaterTarget>() {
             target.name,
             null,
         )?.trim()
-        if (!name.isNullOrEmpty() && name != target.name) reportWaterRejection(
-            project,
-            WaterSceneEdits(project).rename(target.file, target.id, name)
-        )
+        if (!name.isNullOrEmpty() && name != target.name) {
+            reportWaterRejection(
+                project,
+                WaterSceneEdits(project).rename(target.file, target.id, name)
+            )
+        }
     }
 }
 

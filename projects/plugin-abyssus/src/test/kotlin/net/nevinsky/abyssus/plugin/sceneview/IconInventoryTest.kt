@@ -26,7 +26,8 @@ class IconInventoryTest {
     fun noSceneViewIconFileIsUnlisted() {
         val dir = File("src/main/resources/icons")
         assertTrue("icons folder not found from ${File(".").absolutePath}", dir.isDirectory)
-        val listed = SceneViewIcon.entries.flatMap { listOf(it.path, it.darkPath) }.map { it.substringAfterLast('/') }.toSet()
+        val listed =
+            SceneViewIcon.entries.flatMap { listOf(it.path, it.darkPath) }.map { it.substringAfterLast('/') }.toSet()
         val onDisk = dir.listFiles { f -> f.name.startsWith("scene_view_") }.orEmpty().map { it.name }.toSet()
         assertEquals("orphaned icon files: ${onDisk - listed}", emptySet<String>(), onDisk - listed)
     }

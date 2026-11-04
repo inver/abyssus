@@ -21,17 +21,34 @@ class F2bPilotTest {
     private val radius = 18f
 
     /** The bundled `Stunter`'s settings. */
-    private val stunter = PlaneComponent().apply { lineLength = radius; wingArea = 0.325f; liftSlope = 8f; elevatorEffect = 3f }
+    private val stunter =
+        PlaneComponent().apply {
+            lineLength = radius
+            wingArea = 0.325f
+            liftSlope = 8f
+            elevatorEffect = 3f
+        }
     private val pilot = F2bPilot(Handling(stunter, 1.1f))
 
     /**
      * A plane at [u] flying along [heading] (unit, tangent) at [speed]: its up across the lines, `u x heading`, as the
      * physics keeps it.
      */
-    private fun observation(u: Vector3, heading: Vector3, speed: Float = 22f): FlightObservation = FlightObservation(
-        10f, Vector3(u).scl(radius).add(0f, BASE_HEIGHT, 0f), Vector3(heading).scl(speed), Vector3(),
-        Vector3(heading), Vector3(u).crs(heading), 1.5f, 25f, 300f, true, radius, null,
-    )
+    private fun observation(u: Vector3, heading: Vector3, speed: Float = 22f): FlightObservation =
+        FlightObservation(
+            10f,
+            Vector3(u).scl(radius).add(0f, BASE_HEIGHT, 0f),
+            Vector3(heading).scl(speed),
+            Vector3(),
+            Vector3(heading),
+            Vector3(u).crs(heading),
+            1.5f,
+            25f,
+            300f,
+            true,
+            radius,
+            null,
+        )
 
     private fun east(azimuth: Float): Vector3 {
         val a = Math.toRadians(azimuth.toDouble()).toFloat()
@@ -47,7 +64,8 @@ class F2bPilotTest {
     @Test
     fun anInvertedPlaneBelowItsCoursePushesUp() {
         // flying clockwise its up points to the ground, so climbing is a push
-        val tilt = pilot.tilt(observation(place(0f, 30f), Vector3(east(30f)).scl(-1f)), Parallel(radius, 8f, clockwise = true))
+        val tilt =
+            pilot.tilt(observation(place(0f, 30f), Vector3(east(30f)).scl(-1f)), Parallel(radius, 8f, clockwise = true))
         assertTrue("tilt $tilt", tilt < -0.05f)
     }
 
@@ -89,7 +107,10 @@ class F2bPilotTest {
             pilot.tilt(observation(u, heading), course)
             val travelled = course.travelled
             assertTrue("progress went back at loop ${lap + 1}, point $i", travelled >= last)
-            assertTrue("loop ${lap + 1}, point $i matched at $travelled m", travelled >= lap * perLoop - 1f && travelled <= (lap + 1) * perLoop + 1f)
+            assertTrue(
+                "loop ${lap + 1}, point $i matched at $travelled m",
+                travelled >= lap * perLoop - 1f && travelled <= (lap + 1) * perLoop + 1f,
+            )
             last = travelled
         }
         assertTrue("reached the third loop", course.travelled > 2f * perLoop)
@@ -108,12 +129,44 @@ class F2bPilotTest {
 
     @Test
     fun belowControlSpeedOrWithoutAPlaceTheHandleIsNeutral() {
-        assertEquals(0f, pilot.tilt(observation(place(-4f, 0f), east(0f), CONTROL_SPEED - 1f), Parallel(radius, 0f)), 0f)
-        val nowhere = FlightObservation(0f, Vector3(0f, BASE_HEIGHT, 0f), Vector3(20f, 0f, 0f), Vector3(), Vector3.Z, Vector3.Y, 1.5f, 0f, 1f, true, radius, null)
+        assertEquals(
+            0f,
+            pilot.tilt(observation(place(-4f, 0f), east(0f), CONTROL_SPEED - 1f), Parallel(radius, 0f)),
+            0f,
+        )
+        val nowhere =
+            FlightObservation(
+                0f,
+                Vector3(0f, BASE_HEIGHT, 0f),
+                Vector3(20f, 0f, 0f),
+                Vector3(),
+                Vector3.Z,
+                Vector3.Y,
+                1.5f,
+                0f,
+                1f,
+                true,
+                radius,
+                null,
+            )
         assertEquals(0f, pilot.tilt(nowhere, Parallel(radius, 0f)), 0f)
-        val broken = observation(place(0f, 0f), east(0f)).let {
-            FlightObservation(it.time, it.offset, Vector3(Float.NaN, 0f, 0f), it.angularVelocity, it.nose, it.up, it.height, it.tension, it.fuelLeft, true, radius, null)
-        }
+        val broken =
+            observation(place(0f, 0f), east(0f)).let {
+                FlightObservation(
+                    it.time,
+                    it.offset,
+                    Vector3(Float.NaN, 0f, 0f),
+                    it.angularVelocity,
+                    it.nose,
+                    it.up,
+                    it.height,
+                    it.tension,
+                    it.fuelLeft,
+                    true,
+                    radius,
+                    null,
+                )
+            }
         assertEquals(0f, pilot.tilt(broken, Parallel(radius, 0f)), 0f)
     }
 

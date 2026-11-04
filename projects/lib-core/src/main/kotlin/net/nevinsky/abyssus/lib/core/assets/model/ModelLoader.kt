@@ -8,18 +8,18 @@ package net.nevinsky.abyssus.lib.core.assets.model
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
-import net.nevinsky.abyssus.lib.core.assets.loading.*
+import com.badlogic.gdx.graphics.g3d.Model
+import kotlin.coroutines.cancellation.CancellationException
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.decodeModelKey
-import org.slf4j.Logger
-import org.slf4j.helpers.NOPLogger
+import net.nevinsky.abyssus.lib.core.assets.loading.*
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.loader.PreloadedTextureProvider
-import com.badlogic.gdx.graphics.g3d.Model
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
-import kotlin.coroutines.cancellation.CancellationException
+import org.slf4j.Logger
+import org.slf4j.helpers.NOPLogger
 
 /**
  * Model assets through Assimp: parsed and their images decoded off the GL thread, textures uploaded one per frame. With
@@ -43,12 +43,19 @@ class ModelLoader(
         val data = assimp.loadData(handle)
         // Before the images are decoded, so only the kept materials' textures are.
         key.meshId?.let { selectMesh(data, key.name, it) }
-        val images = if (decodeTextures) assimp.decodeTextures(data, handle) else mutableMapOf()
+        val images =
+            if (decodeTextures) {
+                assimp.decodeTextures(data, handle)
+            } else {
+                mutableMapOf()
+            }
         val prepared = PreparedModel(data, handle, images)
         try {
             capture?.offer(data, images)
             if (key.meshId != null) {
-                log.atDebug().log { "Read model '${key.name}' mesh '${key.meshId}' in ${(System.nanoTime() - started) / 1_000_000} ms" }
+                log.atDebug().log {
+                    "Read model '${key.name}' mesh '${key.meshId}' in ${(System.nanoTime() - started) / 1_000_000} ms"
+                }
             }
             return prepared
         } catch (cancelled: CancellationException) {
@@ -62,7 +69,6 @@ class ModelLoader(
     override fun build(staged: PreparedModel, assets: BuiltAssets): Model =
         assimp.buildIntModel(staged.data, staged.file, staged.textures).also { staged.dispose() }
 
-
     override fun discardStaged(staged: PreparedModel) = staged.dispose()
 }
 
@@ -71,7 +77,8 @@ class PreparedModel(val data: ModelData, val file: FileHandle, pixmaps: MutableM
     private val uploads = TextureUploadQueue(pixmaps) { _, pixmap -> PreloadedTextureProvider.upload(pixmap) }
 
     /** The textures uploaded so far, by the name the model's materials use. */
-    val textures: MutableMap<String, Texture> get() = uploads.textures
+    val textures: MutableMap<String, Texture>
+        get() = uploads.textures
 
     /** Uploads one more texture; true when every texture is on the GPU. This is the slow part of building a model. */
     fun uploadNext(): Boolean = uploads.uploadNext()

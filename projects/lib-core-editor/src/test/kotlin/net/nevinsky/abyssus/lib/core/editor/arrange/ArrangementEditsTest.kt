@@ -8,10 +8,10 @@ package net.nevinsky.abyssus.lib.core.editor.arrange
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.testProject
-import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
@@ -24,11 +24,11 @@ import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.editor.pick.GroundHeights
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
 import net.nevinsky.abyssus.lib.core.editor.terrainData
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import org.junit.Assert.*
 import org.junit.Test
 import org.slf4j.helpers.NOPLogger
-import java.io.File
 
 class ArrangementEditsTest {
     private val edits = ArrangementEdits(ResourceEditorMessages())
@@ -41,23 +41,37 @@ class ArrangementEditsTest {
 
     private fun mainScene() = parseScene(File(project, "scenes/Main Scene.scene").readText())
 
-    private fun arrangement(scene: SceneDto, id: Long = 11) = scene.component(id, PathArrangementComponent::class.java)!!
+    private fun arrangement(scene: SceneDto, id: Long = 11) =
+        scene.component(id, PathArrangementComponent::class.java)!!
+
     private fun slots(scene: SceneDto, id: Long = 11) = arrangement(scene, id).slots.toList()
+
     private fun name(scene: SceneDto, id: Long) = scene.component(id, NameComponent::class.java)!!.name
+
     private fun render(scene: SceneDto, id: Long) = scene.component(id, RenderComponent::class.java)!!
+
     private fun position(scene: SceneDto, id: Long) = scene.component(id, PositionComponent::class.java)!!.localPosition
+
     private fun y(scene: SceneDto, id: Long) = position(scene, id).y
+
     private fun x(scene: SceneDto, id: Long) = position(scene, id).x
 
     /** Everything the scene holds, as text, to compare "nothing changed". */
-    private fun snapshot(scene: SceneDto): Map<Long, List<String>> = scene.ecs.mapValues { (_, e) ->
-        e.components.map {
-            when (it) {
-                is HeaderComponent -> "H ${it.id} ${it.type} ${it.entityEnabled} ${it.flags}"
-                else -> it.javaClass.simpleName + try { json.componentValues(it) } catch (e: Exception) { it.toString() }
+    private fun snapshot(scene: SceneDto): Map<Long, List<String>> =
+        scene.ecs.mapValues { (_, e) ->
+            e.components.map {
+                when (it) {
+                    is HeaderComponent -> "H ${it.id} ${it.type} ${it.entityEnabled} ${it.flags}"
+                    else ->
+                        it.javaClass.simpleName +
+                            try {
+                                json.componentValues(it)
+                            } catch (e: Exception) {
+                                it.toString()
+                            }
+                }
             }
         }
-    }
 
     private fun point(x: Float, z: Float) = Vector3(x, heights.heightAt(x, z, 0f), z)
 
@@ -79,7 +93,16 @@ class ArrangementEditsTest {
         val component = arrangement(scene, id)
         val before = arrangementAlong(component.points, component)
         change(component)
-        return edits.regenerate(scene, id, if (refillAware) before else null, heights)
+        return edits.regenerate(
+            scene,
+            id,
+            if (refillAware) {
+                before
+            } else {
+                null
+            },
+            heights,
+        )
     }
 
     private fun setPoints(component: PathArrangementComponent, vararg points: Vector3) {
@@ -246,7 +269,10 @@ class ArrangementEditsTest {
         val before = snapshot(scene)
         assertTrue(edits.regenerate(scene, 11L, null, heights) is ArrangementResult.Rejected)
         assertEquals(before, snapshot(scene))
-        arrangement(scene).also { it.spacing = 1f; setPoints(it, point(0f, 0f), point(5000f, 0f)) }
+        arrangement(scene).also {
+            it.spacing = 1f
+            setPoints(it, point(0f, 0f), point(5000f, 0f))
+        }
         val before2 = snapshot(scene)
         assertTrue(edits.regenerate(scene, 11L, null, heights) is ArrangementResult.Rejected)
         assertEquals(before2, snapshot(scene))
@@ -289,10 +315,10 @@ class ArrangementEditsTest {
         val before = snapshot(scene)
         assertTrue(edits.setPoints(scene, 11L, listOf(point(0f, 0f)), heights) is ArrangementResult.Rejected)
         assertTrue(
-            edits.setPoints(scene, 11L, listOf(point(0f, 0f), point(50000f, 0f)), heights) is ArrangementResult.Rejected,
+            edits.setPoints(scene, 11L, listOf(point(0f, 0f), point(50000f, 0f)), heights) is ArrangementResult.Rejected
         )
         assertTrue(
-            edits.setPoints(scene, 99L, listOf(point(0f, 0f), point(5f, 0f)), heights) is ArrangementResult.Rejected,
+            edits.setPoints(scene, 99L, listOf(point(0f, 0f), point(5f, 0f)), heights) is ArrangementResult.Rejected
         )
         assertEquals(before, snapshot(scene))
     }

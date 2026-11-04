@@ -10,7 +10,8 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * The most points a convex hull collider is built from (design decision D11 of `improve-control-line-performance-stability`):
+  * The most points a convex hull collider is built from (design decision D11 of
+  * `improve-control-line-performance-stability`):
  * a hull's build time then does not grow with the model's vertex count. Jolt keeps at most 256 hull vertices anyway.
  */
 const val MAX_HULL_INPUT = 1024
@@ -25,7 +26,9 @@ private const val GOLDEN_ANGLE = 2.3999632f
  */
 fun hullInput(points: List<Vector3>, max: Int = MAX_HULL_INPUT): List<Vector3> {
     require(max >= 4) { "a hull needs at least 4 points" }
-    if (points.size <= max) return points
+    if (points.size <= max) {
+        return points
+    }
     val n = points.size
     val xs = FloatArray(n)
     val ys = FloatArray(n)

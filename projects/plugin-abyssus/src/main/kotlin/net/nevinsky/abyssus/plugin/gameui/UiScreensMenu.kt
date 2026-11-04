@@ -10,30 +10,32 @@ import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.JBPopupFactory
+import javax.swing.JButton
+import javax.swing.SwingConstants
 import net.nevinsky.abyssus.lib.core.ui.model.UiNavigation
 import net.nevinsky.abyssus.lib.core.ui.model.UiScreenKind
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import javax.swing.JButton
-import javax.swing.SwingConstants
 
 /** Asks for a screen name; null when cancelled or blank. */
 typealias UiNameAsker = (prompt: String, initial: String) -> String?
 
 private fun askWithDialog(project: Project?): UiNameAsker = { prompt, initial ->
     Messages.showInputDialog(
-        project,
-        AbyssusBundle.message(prompt),
-        AbyssusBundle.message("uiScreens"),
-        null,
-        initial,
-        null
-    )?.trim()?.takeIf { it.isNotEmpty() }
+            project,
+            AbyssusBundle.message(prompt),
+            AbyssusBundle.message("uiScreens"),
+            null,
+            initial,
+            null,
+        )
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
 }
 
 /**
- * The canvas toolbar's screens control: a button showing the displayed screen that opens a menu of every screen (entry and
- * overlay marked) with Add Screen, Add Overlay, Rename, Delete and the arrow-focus switch. Every choice is a call on the
- * one [controller].
+ * The canvas toolbar's screens control: a button showing the displayed screen that opens a menu of every screen (entry
+ * and overlay marked) with Add Screen, Add Overlay, Rename, Delete and the arrow-focus switch. Every choice is a call
+ * on the one [controller].
  */
 class UiScreensMenu(
     private val controller: UiEditorController,
@@ -62,25 +64,31 @@ class UiScreensMenu(
         val c = controller.collection ?: return id
         val s = c.screen(id) ?: return id
         val entry =
-            s.id == c.entryScreen || (c.entryScreen == null && s === c.screens.firstOrNull { it.kind == UiScreenKind.SCREEN })
+            s.id == c.entryScreen ||
+                (c.entryScreen == null && s === c.screens.firstOrNull { it.kind == UiScreenKind.SCREEN })
         return buildString {
             append(s.name)
-            if (s.kind == UiScreenKind.OVERLAY) append(" (").append(AbyssusBundle.message("uiOverlayMark")).append(")")
-            if (entry) append("  [").append(AbyssusBundle.message("uiEntryScreen")).append("]")
+            if (s.kind == UiScreenKind.OVERLAY) {
+                append(" (").append(AbyssusBundle.message("uiOverlayMark")).append(")")
+            }
+            if (entry) {
+                append("  [").append(AbyssusBundle.message("uiEntryScreen")).append("]")
+            }
         }
     }
 
     /** The menu's entries in order: one per screen, then the management actions. */
-    internal fun group(): DefaultActionGroup = DefaultActionGroup().apply {
-        controller.collection?.screens?.forEach { add(ScreenChoice(it.id)) }
-        add(Separator.getInstance())
-        add(plain("uiAddScreen") { addScreen("screen") })
-        add(plain("uiAddOverlay") { addScreen("overlay") })
-        add(plain("uiRenameScreen") { rename() })
-        add(plain("uiDeleteScreen") { delete() })
-        add(Separator.getInstance())
-        add(ArrowsToggle())
-    }
+    internal fun group(): DefaultActionGroup =
+        DefaultActionGroup().apply {
+            controller.collection?.screens?.forEach { add(ScreenChoice(it.id)) }
+            add(Separator.getInstance())
+            add(plain("uiAddScreen") { addScreen("screen") })
+            add(plain("uiAddOverlay") { addScreen("overlay") })
+            add(plain("uiRenameScreen") { rename() })
+            add(plain("uiDeleteScreen") { delete() })
+            add(Separator.getInstance())
+            add(ArrowsToggle())
+        }
 
     private fun open() {
         JBPopupFactory.getInstance()
@@ -89,7 +97,7 @@ class UiScreensMenu(
                 group(),
                 DataManager.getInstance().getDataContext(this),
                 JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
-                true
+                true,
             )
             .showUnderneathOf(this)
     }
@@ -101,37 +109,47 @@ class UiScreensMenu(
     internal fun rename() {
         val id = controller.screenId ?: return
         ask(
-            "uiScreenRenamePrompt",
-            controller.collection?.screen(id)?.name.orEmpty()
-        )?.let { controller.renameScreen(id, it) }
+                "uiScreenRenamePrompt",
+                controller.collection?.screen(id)?.name.orEmpty(),
+            )
+            ?.let { controller.renameScreen(id, it) }
     }
 
     internal fun delete() {
         controller.screenId?.let(controller::deleteScreen)
     }
 
-    internal val arrows: Boolean get() = controller.collection?.screen(controller.screenId.orEmpty())?.navigation == UiNavigation.ARROWS
+    internal val arrows: Boolean
+        get() = controller.collection?.screen(controller.screenId.orEmpty())?.navigation == UiNavigation.ARROWS
 
     internal fun setArrows(on: Boolean) {
         controller.screenId?.let { controller.setNavigation(it, on) }
     }
 
-    private fun plain(key: String, run: () -> Unit): AnAction = object : AnAction(AbyssusBundle.message(key)) {
-        override fun getActionUpdateThread() = ActionUpdateThread.EDT
-        override fun actionPerformed(e: AnActionEvent) = run()
-    }
+    private fun plain(key: String, run: () -> Unit): AnAction =
+        object : AnAction(AbyssusBundle.message(key)) {
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+
+            override fun actionPerformed(e: AnActionEvent) = run()
+        }
 
     private inner class ScreenChoice(private val id: String) : ToggleAction(label(id)) {
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
+
         override fun isSelected(e: AnActionEvent) = controller.screenId == id
+
         override fun setSelected(e: AnActionEvent, state: Boolean) {
-            if (state) controller.selectScreen(id)
+            if (state) {
+                controller.selectScreen(id)
+            }
         }
     }
 
     private inner class ArrowsToggle : ToggleAction(AbyssusBundle.message("uiScreenArrows")) {
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
+
         override fun isSelected(e: AnActionEvent) = arrows
+
         override fun setSelected(e: AnActionEvent, state: Boolean) = setArrows(state)
     }
 }

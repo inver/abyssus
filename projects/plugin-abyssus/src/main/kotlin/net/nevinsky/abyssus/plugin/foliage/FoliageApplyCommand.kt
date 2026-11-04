@@ -9,9 +9,9 @@ import com.intellij.openapi.command.UndoConfirmationPolicy
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
 import net.nevinsky.abyssus.plugin.assetfiles.*
 import net.nevinsky.abyssus.plugin.dto.textOf
-import net.nevinsky.abyssus.lib.core.editor.document.TextEditOutcome
 import net.nevinsky.abyssus.plugin.filetype.editTextDocument
 import net.nevinsky.abyssus.plugin.undo.DocumentSaveUndoableAction
 
@@ -24,47 +24,80 @@ internal fun applyFoliageFiles(
     before: String,
     after: String,
 ): AssetCommandResult {
-    if (before == after) return command.execute(txn, affected = { listOf(meta) })
+    if (before == after) {
+        return command.execute(txn, affected = { listOf(meta) })
+    }
     var result: AssetCommandResult = AssetCommandResult.Cancelled
-    CommandProcessor.getInstance().executeCommand(project, {
-        if (textOf(meta) != before) {
-            result = AssetCommandResult.Conflict(meta.path)
-            return@executeCommand
-        }
-        var undo: AssetFileUndoAction? = null
-        result = command.execute(txn, affected = { listOf(meta) }, handBack = { undo = it })
-        if (result != AssetCommandResult.Done) return@executeCommand
-        val manager = UndoManager.getInstance(project)
-        // Undo runs actions in reverse: this saves the document after its native text Undo has finished.
-        manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = true))
-        val edited = editTextDocument(project, meta, txn.name) { TextEditOutcome.Edited(after) }
-        if (!edited) {
-            result = command.revert(txn).let {
-                if (it == AssetCommandResult.Done) AssetCommandResult.Conflict(meta.path) else it
-            }
-            return@executeCommand
-        }
-        manager.undoableActionPerformed(undo!!)
-        // Redo runs actions forward: this saves after the native text Redo and the binary Redo have finished.
-        manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = false))
-    }, txn.name, null, UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION)
+    CommandProcessor.getInstance()
+        .executeCommand(
+            project,
+            {
+                if (textOf(meta) != before) {
+                    result = AssetCommandResult.Conflict(meta.path)
+                    return@executeCommand
+                }
+                var undo: AssetFileUndoAction? = null
+                result = command.execute(txn, affected = { listOf(meta) }, handBack = { undo = it })
+                if (result != AssetCommandResult.Done) {
+                    return@executeCommand
+                }
+                val manager = UndoManager.getInstance(project)
+                // Undo runs actions in reverse: this saves the document after its native text Undo has finished.
+                manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = true))
+                val edited = editTextDocument(project, meta, txn.name) { TextEditOutcome.Edited(after) }
+                if (!edited) {
+                    result =
+                        command.revert(txn).let {
+                            if (it == AssetCommandResult.Done) {
+                                AssetCommandResult.Conflict(meta.path)
+                            } else {
+                                it
+                            }
+                        }
+                    return@executeCommand
+                }
+                manager.undoableActionPerformed(undo!!)
+                // Redo runs actions forward: this saves after the native text Redo and the binary Redo have finished.
+                manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = false))
+            },
+            txn.name,
+            null,
+            UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION,
+        )
     command.flush()
     return result
 }
 
 /**
  * Replaces the whole `meta.json` document by [after] as one undoable command, with the same document-save actions
- * around it as [applyFoliageFiles], so Undo and Redo leave the file saved. False when the document is not [before]
- * any more or the edit could not be made; then nothing was written.
+ * around it as [applyFoliageFiles], so Undo and Redo leave the file saved. False when the document is not [before] any
+ * more or the edit could not be made; then nothing was written.
  */
-internal fun applyFoliageMetadata(project: Project, meta: VirtualFile, name: String, before: String, after: String): Boolean {
+internal fun applyFoliageMetadata(
+    project: Project,
+    meta: VirtualFile,
+    name: String,
+    before: String,
+    after: String,
+): Boolean {
     var done = false
-    CommandProcessor.getInstance().executeCommand(project, {
-        if (textOf(meta) != before) return@executeCommand
-        val manager = UndoManager.getInstance(project)
-        manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = true))
-        done = editTextDocument(project, meta, name) { TextEditOutcome.Edited(after) }
-        if (done) manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = false))
-    }, name, null, UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION)
+    CommandProcessor.getInstance()
+        .executeCommand(
+            project,
+            {
+                if (textOf(meta) != before) {
+                    return@executeCommand
+                }
+                val manager = UndoManager.getInstance(project)
+                manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = true))
+                done = editTextDocument(project, meta, name) { TextEditOutcome.Edited(after) }
+                if (done) {
+                    manager.undoableActionPerformed(DocumentSaveUndoableAction(meta, onUndo = false))
+                }
+            },
+            name,
+            null,
+            UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION,
+        )
     return done
 }

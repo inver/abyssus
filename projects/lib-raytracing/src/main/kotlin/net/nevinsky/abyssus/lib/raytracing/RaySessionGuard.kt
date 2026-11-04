@@ -30,4 +30,8 @@ internal fun checkedGeometry(meshes: List<RaySliceMesh>, limits: RayLimits): Geo
 
 /** Checks a frame size against [limits]. */
 internal fun requireFrameWithin(width: Int, height: Int, limits: RayLimits) =
-    require(width in 1..limits.maxDimension && height in 1..limits.maxDimension && width.toLong() * height <= limits.maxPixels)
+    require(
+        width in 1..limits.maxDimension &&
+            height in 1..limits.maxDimension &&
+            width.toLong() * height <= limits.maxPixels
+    )

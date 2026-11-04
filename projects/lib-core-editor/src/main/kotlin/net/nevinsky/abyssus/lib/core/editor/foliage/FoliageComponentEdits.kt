@@ -21,7 +21,9 @@ class FoliageComponentEdits {
         val entity = scene.entity(entityId) ?: return false
         val component = entity.component(FoliageComponent::class.java)
             ?: FoliageComponent().also(entity::add)
-        if (component.assetName == foliage) return false
+        if (component.assetName == foliage) {
+            return false
+        }
         component.assetName = foliage
         return true
     }
@@ -32,9 +34,13 @@ class FoliageComponentEdits {
      */
     fun remove(scene: SceneDto, ids: Set<Long>): Removal {
         val present = ids.filter { scene.entity(it) != null }
-        if (present.isEmpty()) return Removal(false, null)
+        if (present.isEmpty()) {
+            return Removal(false, null)
+        }
         for ((id, entity) in scene.entities()) {
-            if (id in present) continue
+            if (id in present) {
+                continue
+            }
             for (component in entity.components) {
                 val reference = when (component) {
                     is ParentComponent -> "ParentComponent.parentEntityId" to component.parentEntityId

@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.lib.physics
 
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageBakeState
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageCopy
@@ -21,22 +22,21 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.slf4j.helpers.NOPLogger
-import java.io.File
 
 /** The CPU-only foliage reads of [PhysicsAssets]: no GL, no Jolt, and the same copy set a renderer prepares. */
 class PhysicsAssetsTest {
     private val project = FoliageProject()
     private val copies = listOf(FoliageCopy(0, 10f, 10f, 0f, 1f), FoliageCopy(0, 20f, 30f, 1f, 1.5f))
 
-    @After
-    fun cleanUp() = project.close()
+    @After fun cleanUp() = project.close()
 
     private fun prepared() {
         project.foliage("[${layerJson(CAPSULE)}]")
         project.bake(listOf(layer(copies)))
     }
 
-    private val assets get() = PhysicsAssets(project.dir)
+    private val assets
+        get() = PhysicsAssets(project.dir)
 
     @Test
     fun aMatchingBakeIsReadOnceAndSharedByRenderingAndPhysics() {
@@ -50,7 +50,8 @@ class PhysicsAssetsTest {
         // a game reads through the same policy, so both see the same prepared copy set
         val files = FileLoader(project.dir)
         val metas = AssetMetaLoader(JsonProcessor(NOPLogger.NOP_LOGGER), files)
-        val game = FoliageRuntimeLoad(files, metas, TerrainLoader(files, metas)).read("foliage_meadow", "terr").foliage!!
+        val game =
+            FoliageRuntimeLoad(files, metas, TerrainLoader(files, metas)).read("foliage_meadow", "terr").foliage!!
         assertEquals(game.bake.layers.map { it.chunks }, foliage.bake.layers.map { it.chunks })
         assertEquals(game.state, foliage.state)
     }

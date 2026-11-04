@@ -16,18 +16,20 @@ import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShaderSources
 
 /**
- * Metallic-roughness variant of [ModelShader]. It reads base color, normal and emissive from the same attributes as
- * the default shader (a PBR material keeps both) and adds the metallic and roughness factors, the combined
+ * Metallic-roughness variant of [ModelShader]. It reads base color, normal and emissive from the same attributes as the
+ * default shader (a PBR material keeps both) and adds the metallic and roughness factors, the combined
  * metallic-roughness and occlusion textures and the image-based light of an [EnvironmentLightAttribute].
  */
 class PbrModelShader(
     renderable: Renderable,
-    config: DefaultShader.Config
-) : ModelShader(
-    renderable, config,
-    prefix = modelPrefix(renderable, config) + pbrDefines(renderable.material?.mask ?: 0L, renderable.environment),
-    fragmentSource = config.fragmentShader ?: ShaderSources.readAssembled(ShaderSources.PBR_FRAGMENT)
-) {
+    config: DefaultShader.Config,
+) :
+    ModelShader(
+        renderable,
+        config,
+        prefix = modelPrefix(renderable, config) + pbrDefines(renderable.material?.mask ?: 0L, renderable.environment),
+        fragmentSource = config.fragmentShader ?: ShaderSources.readAssembled(ShaderSources.PBR_FRAGMENT),
+    ) {
     /** True when this program was made for an environment fading to a second one (with the second cube fetch). */
     private val fading = EnvironmentLightAttribute.isFading(renderable.environment)
 
@@ -67,11 +69,15 @@ class PbrModelShader(
         }
     }
 
-    private fun sky(attributes: Attributes) = attributes.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute
+    private fun sky(attributes: Attributes) =
+        attributes.get(EnvironmentLightAttribute.Type) as EnvironmentLightAttribute
 
     private fun registerTexture(alias: String, attribute: Long) {
         registerLocal(alias, attribute) { shader, id, _, attributes ->
-            shader.set(id, shader.context.textureBinder.bind((attributes.get(attribute) as TextureAttribute).textureDescription))
+            shader.set(
+                id,
+                shader.context.textureBinder.bind((attributes.get(attribute) as TextureAttribute).textureDescription),
+            )
         }
     }
 
@@ -88,9 +94,9 @@ class PbrModelShader(
 
     companion object {
         /**
-         * The `#define` lines this shader adds for a material of [mask] in [environment]; `environmentLightFlag`
-         * only when the environment has an [EnvironmentLightAttribute], and `environmentFadeFlag` when that fades to
-         * a second one.
+         * The `#define` lines this shader adds for a material of [mask] in [environment]; `environmentLightFlag` only
+         * when the environment has an [EnvironmentLightAttribute], and `environmentFadeFlag` when that fades to a
+         * second one.
          */
         fun pbrDefines(mask: Long, environment: Attributes?): String {
             val sb = StringBuilder()

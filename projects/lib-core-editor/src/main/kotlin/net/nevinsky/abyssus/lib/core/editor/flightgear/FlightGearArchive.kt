@@ -9,9 +9,9 @@ import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.io.File
 import java.io.IOException
-import net.nevinsky.abyssus.lib.core.util.sha256Hex
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
+import net.nevinsky.abyssus.lib.core.util.sha256Hex
 
 /** The largest archive entry read, in bytes. */
 const val MAX_ENTRY_BYTES = 64L * 1024 * 1024
@@ -42,24 +42,35 @@ data class FlightGearAircraft(
  * (`Aircraft/<dir>/...`) resolve against the folder that holds the aircraft folders, wherever that is in the archive.
  */
 class FlightGearArchive(val file: File, private val xml: FlightGearXml = FlightGearXml()) : Closeable {
-    private val zip = try {
-        ZipFile(file)
-    } catch (e: IOException) {
-        throw FlightGearArchiveException("${file.name} is not a readable zip archive: ${e.message}")
-    }
+    private val zip =
+        try {
+            ZipFile(file)
+        } catch (e: IOException) {
+            throw FlightGearArchiveException("${file.name} is not a readable zip archive: ${e.message}")
+        }
     private val entries: Map<String, ZipEntry>
 
     init {
         try {
             val all = zip.entries().toList()
-            if (all.size > MAX_ENTRIES) throw FlightGearArchiveException("${file.name} has more than $MAX_ENTRIES entries")
-            entries = all.filter { !it.isDirectory }.associateBy { entry ->
-                val name = entry.name.replace('\\', '/')
-                if (name.startsWith("/") || name.split('/').any { it == ".." } || Regex("^[A-Za-z]:").containsMatchIn(name)) {
-                    throw FlightGearArchiveException("${file.name} has an entry outside the archive: ${entry.name}")
-                }
-                name
+            if (all.size > MAX_ENTRIES) {
+                throw FlightGearArchiveException("${file.name} has more than $MAX_ENTRIES entries")
             }
+            entries =
+                all.filter { !it.isDirectory }
+                    .associateBy { entry ->
+                        val name = entry.name.replace('\\', '/')
+                        if (
+                            name.startsWith("/") ||
+                                name.split('/').any { it == ".." } ||
+                                Regex("^[A-Za-z]:").containsMatchIn(name)
+                        ) {
+                            throw FlightGearArchiveException(
+                                "${file.name} has an entry outside the archive: ${entry.name}"
+                            )
+                        }
+                        name
+                    }
         } catch (e: FlightGearArchiveException) {
             zip.close()
             throw e
@@ -67,7 +78,8 @@ class FlightGearArchive(val file: File, private val xml: FlightGearXml = FlightG
     }
 
     /** Every file path in the archive. */
-    val paths: Set<String> get() = entries.keys
+    val paths: Set<String>
+        get() = entries.keys
 
     /** The SHA-256 of the archive file, in hex. */
     fun sha256(): String {
@@ -77,16 +89,22 @@ class FlightGearArchive(val file: File, private val xml: FlightGearXml = FlightG
     /** The bytes of [path], or null when the archive has no such file. */
     fun read(path: String): ByteArray? {
         val entry = entries[path] ?: return null
-        if (entry.size > MAX_ENTRY_BYTES) throw FlightGearArchiveException("$path is larger than $MAX_ENTRY_BYTES bytes")
+        if (entry.size > MAX_ENTRY_BYTES) {
+            throw FlightGearArchiveException("$path is larger than $MAX_ENTRY_BYTES bytes")
+        }
         zip.getInputStream(entry).use { input ->
             val out = ByteArrayOutputStream()
             val buffer = ByteArray(1 shl 16)
             var total = 0L
             while (true) {
                 val n = input.read(buffer)
-                if (n < 0) break
+                if (n < 0) {
+                    break
+                }
                 total += n
-                if (total > MAX_ENTRY_BYTES) throw FlightGearArchiveException("$path is larger than $MAX_ENTRY_BYTES bytes")
+                if (total > MAX_ENTRY_BYTES) {
+                    throw FlightGearArchiveException("$path is larger than $MAX_ENTRY_BYTES bytes")
+                }
                 out.write(buffer, 0, n)
             }
             return out.toByteArray()
@@ -94,21 +112,26 @@ class FlightGearArchive(val file: File, private val xml: FlightGearXml = FlightG
     }
 
     /** The aircraft in the archive: every `*-set.xml` directly inside a folder, in path order. */
-    fun aircraft(): List<FlightGearAircraft> = entries.keys.filter { it.endsWith("-set.xml") }.sorted().mapNotNull { set ->
-        val folder = set.substringBeforeLast('/', "").takeIf { it.isNotEmpty() }?.plus("/") ?: return@mapNotNull null
-        val root = xml.parse(read(set) ?: return@mapNotNull null, set)
-        val sim = root.child("sim")
-        val model = sim?.child("model")?.text("path")
-        FlightGearAircraft(
-            id = folder.trimEnd('/').substringAfterLast('/'),
-            folder = folder,
-            setFile = set,
-            description = sim?.text("description"),
-            authors = sim?.text("author"),
-            license = sim?.text("license") ?: sim?.text("licence"),
-            modelPath = model?.let { resolve(folder, it) },
-        )
-    }
+    fun aircraft(): List<FlightGearAircraft> =
+        entries.keys
+            .filter { it.endsWith("-set.xml") }
+            .sorted()
+            .mapNotNull { set ->
+                val folder =
+                    set.substringBeforeLast('/', "").takeIf { it.isNotEmpty() }?.plus("/") ?: return@mapNotNull null
+                val root = xml.parse(read(set) ?: return@mapNotNull null, set)
+                val sim = root.child("sim")
+                val model = sim?.child("model")?.text("path")
+                FlightGearAircraft(
+                    id = folder.trimEnd('/').substringAfterLast('/'),
+                    folder = folder,
+                    setFile = set,
+                    description = sim?.text("description"),
+                    authors = sim?.text("author"),
+                    license = sim?.text("license") ?: sim?.text("licence"),
+                    modelPath = model?.let { resolve(folder, it) },
+                )
+            }
 
     /**
      * The archive path of a FlightGear [path] written in a file of [folder]: `Aircraft/<dir>/...` resolves next to the
@@ -116,44 +139,66 @@ class FlightGearArchive(val file: File, private val xml: FlightGearXml = FlightG
      */
     fun resolve(folder: String, path: String): String? {
         val clean = path.trim().replace('\\', '/')
-        if (clean.isEmpty()) return null
-        val joined = if (clean.startsWith("Aircraft/")) {
-            val rest = clean.removePrefix("Aircraft/")
-            aircraftRoot(rest.substringBefore('/')) + rest
-        } else {
-            folder + clean
+        if (clean.isEmpty()) {
+            return null
         }
+        val joined =
+            if (clean.startsWith("Aircraft/")) {
+                val rest = clean.removePrefix("Aircraft/")
+                aircraftRoot(rest.substringBefore('/')) + rest
+            } else {
+                folder + clean
+            }
         return normalise(joined)
     }
 
     /** Files in [folder] (at any depth) whose name equals [name], ignoring case, nearest first. */
-    fun findByName(folder: String, name: String): List<String> = entries.keys
-        .filter { it.startsWith(folder) && it.substringAfterLast('/').equals(name, ignoreCase = true) }
-        .sortedBy { it.count { c -> c == '/' } }
+    fun findByName(folder: String, name: String): List<String> =
+        entries.keys
+            .filter { it.startsWith(folder) && it.substringAfterLast('/').equals(name, ignoreCase = true) }
+            .sortedBy { it.count { c -> c == '/' } }
 
     /** Licence files (`COPYING*`, `LICENSE*`, `LICENCE*`) directly in [folder]. */
-    fun licenseFiles(folder: String): List<String> = entries.keys.filter {
-        it.startsWith(folder) && !it.removePrefix(folder).contains('/') &&
-            it.substringAfterLast('/').uppercase().let { n -> n.startsWith("COPYING") || n.startsWith("LICENSE") || n.startsWith("LICENCE") }
-    }.sorted()
+    fun licenseFiles(folder: String): List<String> =
+        entries.keys
+            .filter {
+                it.startsWith(folder) &&
+                    !it.removePrefix(folder).contains('/') &&
+                    it.substringAfterLast('/').uppercase().let { n ->
+                        n.startsWith("COPYING") || n.startsWith("LICENSE") || n.startsWith("LICENCE")
+                    }
+            }
+            .sorted()
 
     /**
      * What `Aircraft/` stands for in a path to aircraft [dir]: the shortest archive prefix that holds a `dir/` folder,
      * or the archive's root when none does.
      */
     private fun aircraftRoot(dir: String): String =
-        entries.keys.mapNotNull { key ->
-            var at = key.indexOf("$dir/")
-            while (at > 0 && key[at - 1] != '/') at = key.indexOf("$dir/", at + 1)
-            if (at >= 0) key.substring(0, at) else null
-        }.minByOrNull { it.length } ?: ""
+        entries.keys
+            .mapNotNull { key ->
+                var at = key.indexOf("$dir/")
+                while (at > 0 && key[at - 1] != '/') at = key.indexOf("$dir/", at + 1)
+                if (at >= 0) {
+                    key.substring(0, at)
+                } else {
+                    null
+                }
+            }
+            .minByOrNull { it.length } ?: ""
 
     private fun normalise(path: String): String? {
         val parts = ArrayDeque<String>()
         for (part in path.split('/')) {
             when (part) {
-                "", "." -> Unit
-                ".." -> if (parts.isEmpty()) return null else parts.removeLast()
+                "",
+                "." -> Unit
+                ".." ->
+                    if (parts.isEmpty()) {
+                        return null
+                    } else {
+                        parts.removeLast()
+                    }
                 else -> parts.addLast(part)
             }
         }

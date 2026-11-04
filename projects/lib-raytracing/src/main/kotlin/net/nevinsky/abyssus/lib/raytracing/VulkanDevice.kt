@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.lib.raytracing
 
+import java.nio.ByteBuffer
+import java.util.concurrent.CopyOnWriteArrayList
 import org.lwjgl.PointerBuffer
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil
@@ -24,8 +26,6 @@ import org.lwjgl.vulkan.VK11.*
 import org.lwjgl.vulkan.VK12.*
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
-import java.nio.ByteBuffer
-import java.util.concurrent.CopyOnWriteArrayList
 
 internal const val COLOR_FORMAT = VK_FORMAT_R16G16B16A16_SFLOAT
 internal const val DEPTH_FORMAT = VK_FORMAT_R32_SFLOAT
@@ -34,8 +34,12 @@ private const val VALIDATION_LAYER = "VK_LAYER_KHRONOS_validation"
 
 /** Maps a Vulkan result to an exception. `VK_ERROR_DEVICE_LOST` is the recoverable device-loss signal. */
 internal fun vkCheck(result: Int, what: String) {
-    if (result == VK_SUCCESS) return
-    if (result == VK_ERROR_DEVICE_LOST) throw RayDeviceLostException("Vulkan device lost during $what")
+    if (result == VK_SUCCESS) {
+        return
+    }
+    if (result == VK_ERROR_DEVICE_LOST) {
+        throw RayDeviceLostException("Vulkan device lost during $what")
+    }
     throw IllegalStateException("Vulkan $what failed with result $result")
 }
 
@@ -45,40 +49,49 @@ internal class VulkanBuffer(
     val allocation: Long,
     val size: Long,
     val mapped: ByteBuffer?,
-    val address: Long
+    val address: Long,
 )
 
 internal class VulkanImage(val image: Long, val allocation: Long, val view: Long)
 
 /** The physical device chosen by a probe, with everything measured from it (never inferred from names). */
 internal class VulkanCandidate(
-    val physical: VkPhysicalDevice, val name: String, val queueFamily: Int, val capabilities: RayCapabilities,
-    val scratchAlignment: Long, val portabilitySubset: Boolean, val discrete: Boolean,
+    val physical: VkPhysicalDevice,
+    val name: String,
+    val queueFamily: Int,
+    val capabilities: RayCapabilities,
+    val scratchAlignment: Long,
+    val portabilitySubset: Boolean,
+    val discrete: Boolean,
 )
 
-/** Process-global LWJGL Vulkan function loading; nothing is loaded before the first probe.
- * Works with both automatic initialization and explicit initialization
- * (`org.lwjgl.vulkan.explicitInit=true`): when nothing is loaded yet the provider's getter
- * throws `IllegalStateException`, so this calls `VK.create()` itself. A missing loader
- * surfaces as `UnsatisfiedLinkError` (`RUNTIME_NOT_FOUND`); a failed `VK.create()` as
- * `IllegalStateException` (`INITIALIZATION_FAILED`). Both propagate to the probe unchanged.
+/**
+ * Process-global LWJGL Vulkan function loading; nothing is loaded before the first probe. Works with both automatic
+ * initialization and explicit initialization (`org.lwjgl.vulkan.explicitInit=true`): when nothing is loaded yet the
+ * provider's getter throws `IllegalStateException`, so this calls `VK.create()` itself. A missing loader surfaces as
+ * `UnsatisfiedLinkError` (`RUNTIME_NOT_FOUND`); a failed `VK.create()` as `IllegalStateException`
+ * (`INITIALIZATION_FAILED`). Both propagate to the probe unchanged.
  */
-internal fun loadVulkanLibrary() = synchronized(VulkanInstance::class.java) {
-    try {
-        if (VK.getFunctionProvider() == null) {
+internal fun loadVulkanLibrary() =
+    synchronized(VulkanInstance::class.java) {
+        try {
+            if (VK.getFunctionProvider() == null) {
+                VK.create()
+            }
+        } catch (initFailed: IllegalStateException) {
+            // Explicit initialization with nothing loaded yet: create the Vulkan function table now.
             VK.create()
+        } catch (missing: LinkageError) {
+            // A failed static initializer surfaces as ExceptionInInitializerError/NoClassDefFoundError; both mean "no
+            // loader".
+            throw missing as? UnsatisfiedLinkError
+                ?: UnsatisfiedLinkError("Vulkan runtime not found: ${missing.cause?.message ?: missing.message}")
         }
-    } catch (initFailed: IllegalStateException) {
-        // Explicit initialization with nothing loaded yet: create the Vulkan function table now.
-        VK.create()
-    } catch (missing: LinkageError) {
-        // A failed static initializer surfaces as ExceptionInInitializerError/NoClassDefFoundError; both mean "no loader".
-        throw missing as? UnsatisfiedLinkError
-            ?: UnsatisfiedLinkError("Vulkan runtime not found: ${missing.cause?.message ?: missing.message}")
     }
-}
 
-/** Headless instance: no surface or window extensions. Portability enumeration is enabled only when offered (MoltenVK). */
+/**
+ * Headless instance: no surface or window extensions. Portability enumeration is enabled only when offered (MoltenVK).
+ */
 internal class VulkanInstance(validation: Boolean, private val log: Logger = NOPLogger.NOP_LOGGER) : AutoCloseable {
     val instance: VkInstance
     private val messenger: Long
@@ -95,21 +108,43 @@ internal class VulkanInstance(validation: Boolean, private val log: Logger = NOP
             portability = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME in extensions
             validationActive =
                 validation && VALIDATION_LAYER in layers && VK_EXT_DEBUG_UTILS_EXTENSION_NAME in extensions
-            if (validation && !validationActive) log.warn("Vulkan validation was requested but the $VALIDATION_LAYER layer or VK_EXT_debug_utils is not available")
+            if (validation && !validationActive) {
+                log.warn(
+                    "Vulkan validation was requested but the $VALIDATION_LAYER layer or VK_EXT_debug_utils is not " +
+                        "available"
+                )
+            }
             val enabled = mutableListOf<String>()
-            if (portability) enabled += VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
-            if (validationActive) enabled += VK_EXT_DEBUG_UTILS_EXTENSION_NAME
-            val app = VkApplicationInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_APPLICATION_INFO)
-                .pApplicationName(stack.UTF8("Abyssus")).apiVersion(VK_API_VERSION_1_2)
+            if (portability) {
+                enabled += VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME
+            }
+            if (validationActive) {
+                enabled += VK_EXT_DEBUG_UTILS_EXTENSION_NAME
+            }
+            val app =
+                VkApplicationInfo.calloc(stack)
+                    .sType(VK_STRUCTURE_TYPE_APPLICATION_INFO)
+                    .pApplicationName(stack.UTF8("Abyssus"))
+                    .apiVersion(VK_API_VERSION_1_2)
             val create =
-                VkInstanceCreateInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO).pApplicationInfo(app)
+                VkInstanceCreateInfo.calloc(stack)
+                    .sType(VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO)
+                    .pApplicationInfo(app)
                     .ppEnabledExtensionNames(names(stack, enabled))
-            if (portability) create.flags(VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR)
-            if (validationActive) create.ppEnabledLayerNames(names(stack, listOf(VALIDATION_LAYER)))
+            if (portability) {
+                create.flags(VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR)
+            }
+            if (validationActive) {
+                create.ppEnabledLayerNames(names(stack, listOf(VALIDATION_LAYER)))
+            }
             val handle = stack.mallocPointer(1)
             vkCheck(vkCreateInstance(create, null, handle), "vkCreateInstance")
             instance = VkInstance(handle[0], create)
-            log.info("Vulkan instance created (validation ${if (validationActive) "on" else "off"}, portability ${if (portability) "on" else "off"})")
+            log.info(
+                "Vulkan instance created (validation ${when { validationActive -> "on"
+ else -> "off" }}, portability ${when { portability -> "on"
+ else -> "off" }})"
+            )
             if (validationActive) {
                 callback = VkDebugUtilsMessengerCallbackEXT.create { severity, _, data, _ ->
                     val text =
@@ -117,17 +152,24 @@ internal class VulkanInstance(validation: Boolean, private val log: Logger = NOP
                     if (severity and VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT != 0) {
                         validationMessages += text
                         log.warn("Vulkan validation error: $text")
-                    } else log.warn("Vulkan validation warning: $text")
+                    } else {
+                        log.warn("Vulkan validation warning: $text")
+                    }
                     VK_FALSE
                 }
-                val info = VkDebugUtilsMessengerCreateInfoEXT.calloc(stack)
-                    .sType(VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT)
-                    .messageSeverity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT or VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-                    .messageType(
-                        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT or VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT or
+                val info =
+                    VkDebugUtilsMessengerCreateInfoEXT.calloc(stack)
+                        .sType(VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT)
+                        .messageSeverity(
+                            VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT or
+                                VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
+                        )
+                        .messageType(
+                            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT or
+                                VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT or
                                 VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT
-                    )
-                    .pfnUserCallback(callback)
+                        )
+                        .pfnUserCallback(callback)
                 val out = stack.mallocLong(1)
                 vkCheck(vkCreateDebugUtilsMessengerEXT(instance, info, null, out), "vkCreateDebugUtilsMessengerEXT")
                 messenger = out[0]
@@ -139,101 +181,137 @@ internal class VulkanInstance(validation: Boolean, private val log: Logger = NOP
     }
 
     /** Best compatible device (discrete preferred), or the reason none qualifies. */
-    fun select(): Pair<VulkanCandidate?, String?> = MemoryStack.stackPush().use { stack ->
-        val count = stack.ints(0)
-        vkCheck(vkEnumeratePhysicalDevices(instance, count, null), "vkEnumeratePhysicalDevices")
-        if (count[0] == 0) return@use null to "No Vulkan physical device"
-        val devices = stack.mallocPointer(count[0])
-        vkCheck(vkEnumeratePhysicalDevices(instance, count, devices), "vkEnumeratePhysicalDevices")
-        val candidates = mutableListOf<VulkanCandidate>()
-        var reason: String? = null
-        for (i in 0 until count[0]) {
-            val result = evaluate(stack, VkPhysicalDevice(devices[i], instance))
-            result.first?.let {
-                candidates += it
-                log.info("Vulkan device '${it.name}' qualifies (${if (it.discrete) "discrete" else "integrated or software"}, ${it.capabilities})")
-            } ?: run {
-                reason = reason ?: result.second
-                log.info("Vulkan device rejected: ${result.second}")
+    fun select(): Pair<VulkanCandidate?, String?> =
+        MemoryStack.stackPush().use { stack ->
+            val count = stack.ints(0)
+            vkCheck(vkEnumeratePhysicalDevices(instance, count, null), "vkEnumeratePhysicalDevices")
+            if (count[0] == 0) {
+                return@use null to "No Vulkan physical device"
             }
+            val devices = stack.mallocPointer(count[0])
+            vkCheck(vkEnumeratePhysicalDevices(instance, count, devices), "vkEnumeratePhysicalDevices")
+            val candidates = mutableListOf<VulkanCandidate>()
+            var reason: String? = null
+            for (i in 0 until count[0]) {
+                val result = evaluate(stack, VkPhysicalDevice(devices[i], instance))
+                result.first?.let {
+                    candidates += it
+                    log.info(
+                        "Vulkan device '${it.name}' qualifies (${when { it.discrete -> "discrete"
+ else -> "integrated or software" }}, ${it.capabilities})"
+                    )
+                }
+                    ?: run {
+                        reason = reason ?: result.second
+                        log.info("Vulkan device rejected: ${result.second}")
+                    }
+            }
+            candidates.sortedByDescending { it.discrete }.firstOrNull() to reason
         }
-        candidates.sortedByDescending { it.discrete }.firstOrNull() to reason
-    }
 
     private fun evaluate(stack: MemoryStack, physical: VkPhysicalDevice): Pair<VulkanCandidate?, String?> {
         stack.push().use {
-            val scratch = VkPhysicalDeviceAccelerationStructurePropertiesKHR.calloc(stack)
-                .sType(KHRAccelerationStructure.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR)
-            val props = VkPhysicalDeviceProperties2.calloc(stack).sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2)
-                .pNext(scratch.address())
+            val scratch =
+                VkPhysicalDeviceAccelerationStructurePropertiesKHR.calloc(stack)
+                    .sType(
+                        KHRAccelerationStructure.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR
+                    )
+            val props =
+                VkPhysicalDeviceProperties2.calloc(stack)
+                    .sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2)
+                    .pNext(scratch.address())
             vkGetPhysicalDeviceProperties2(physical, props)
             val limits = props.properties().limits()
             val name = props.properties().deviceNameString()
-            if (props.properties().apiVersion() < VK_API_VERSION_1_2) return null to "$name: Vulkan 1.2 is required"
+            if (props.properties().apiVersion() < VK_API_VERSION_1_2) {
+                return null to "$name: Vulkan 1.2 is required"
+            }
 
             val available = deviceExtensions(stack, physical)
-            val missing = listOf(
-                VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
-                VK_KHR_RAY_QUERY_EXTENSION_NAME
-            ).filter { it !in available }
+            val missing =
+                listOf(
+                        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+                        VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+                        VK_KHR_RAY_QUERY_EXTENSION_NAME,
+                    )
+                    .filter { it !in available }
             val features = queryFeatures(stack, physical)
             val reasonMissingAs =
                 missing.any { it != VK_KHR_RAY_QUERY_EXTENSION_NAME } || !features.accelerationStructure
             val reasonMissingRq = VK_KHR_RAY_QUERY_EXTENSION_NAME in missing || !features.rayQuery
             val family = computeQueueFamily(stack, physical)
-            val formats = listOf(COLOR_FORMAT, DEPTH_FORMAT).all { format ->
-                val format2 = VkFormatProperties.calloc(stack)
-                vkGetPhysicalDeviceFormatProperties(physical, format, format2)
-                val needed = VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT or VK_FORMAT_FEATURE_TRANSFER_SRC_BIT
-                format2.optimalTilingFeatures() and needed == needed
-            }
+            val formats =
+                listOf(COLOR_FORMAT, DEPTH_FORMAT).all { format ->
+                    val format2 = VkFormatProperties.calloc(stack)
+                    vkGetPhysicalDeviceFormatProperties(physical, format, format2)
+                    val needed = VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT or VK_FORMAT_FEATURE_TRANSFER_SRC_BIT
+                    format2.optimalTilingFeatures() and needed == needed
+                }
             val memory = VkPhysicalDeviceMemoryProperties.calloc(stack)
             vkGetPhysicalDeviceMemoryProperties(physical, memory)
             var heap = 0L
             for (h in 0 until memory.memoryHeapCount()) {
                 val memoryHeap = memory.memoryHeaps(h)
-                if (memoryHeap.flags() and VK_MEMORY_HEAP_DEVICE_LOCAL_BIT != 0) heap += memoryHeap.size()
+                if (memoryHeap.flags() and VK_MEMORY_HEAP_DEVICE_LOCAL_BIT != 0) {
+                    heap += memoryHeap.size()
+                }
             }
-            val capabilities = RayCapabilities(
-                accelerationStructures = !reasonMissingAs && features.bufferDeviceAddress,
-                rayQueries = !reasonMissingRq && features.timelineSemaphore && features.descriptorIndexing,
-                colorDepthReadback = family >= 0 && formats,
-                maxFrameDimension = minOf(limits.maxImageDimension2D(), 4096),
-                memoryBudgetBytes = heap / 2,
-                maxInstances = VULKAN_MAX_INSTANCES,
-                sceneOptics = true,
-            )
+            val capabilities =
+                RayCapabilities(
+                    accelerationStructures = !reasonMissingAs && features.bufferDeviceAddress,
+                    rayQueries = !reasonMissingRq && features.timelineSemaphore && features.descriptorIndexing,
+                    colorDepthReadback = family >= 0 && formats,
+                    maxFrameDimension = minOf(limits.maxImageDimension2D(), 4096),
+                    memoryBudgetBytes = heap / 2,
+                    maxInstances = VULKAN_MAX_INSTANCES,
+                    sceneOptics = true,
+                )
             val unavailable = capabilities.unavailableReason()
-            if (unavailable != null) return null to "$name: ${unavailable.name.lowercase()}"
+            if (unavailable != null) {
+                return null to "$name: ${unavailable.name.lowercase()}"
+            }
             return VulkanCandidate(
-                physical, name, family, capabilities,
+                physical,
+                name,
+                family,
+                capabilities,
                 maxOf(1L, scratch.minAccelerationStructureScratchOffsetAlignment().toLong()),
-                PORTABILITY_SUBSET in available, props.properties().deviceType() == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+                PORTABILITY_SUBSET in available,
+                props.properties().deviceType() == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU,
             ) to null
         }
     }
 
     private class Features(
-        val bufferDeviceAddress: Boolean, val timelineSemaphore: Boolean, val descriptorIndexing: Boolean,
-        val accelerationStructure: Boolean, val rayQuery: Boolean,
+        val bufferDeviceAddress: Boolean,
+        val timelineSemaphore: Boolean,
+        val descriptorIndexing: Boolean,
+        val accelerationStructure: Boolean,
+        val rayQuery: Boolean,
     )
 
     private fun queryFeatures(stack: MemoryStack, physical: VkPhysicalDevice): Features {
         val v12 =
             VkPhysicalDeviceVulkan12Features.calloc(stack).sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES)
-        val accel = VkPhysicalDeviceAccelerationStructureFeaturesKHR.calloc(stack)
-            .sType(KHRAccelerationStructure.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR)
-        val query = VkPhysicalDeviceRayQueryFeaturesKHR.calloc(stack)
-            .sType(KHRRayQuery.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR)
+        val accel =
+            VkPhysicalDeviceAccelerationStructureFeaturesKHR.calloc(stack)
+                .sType(KHRAccelerationStructure.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR)
+        val query =
+            VkPhysicalDeviceRayQueryFeaturesKHR.calloc(stack)
+                .sType(KHRRayQuery.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR)
         v12.pNext(accel.address())
         accel.pNext(query.address())
-        val features = VkPhysicalDeviceFeatures2.calloc(stack).sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2)
-            .pNext(v12.address())
+        val features =
+            VkPhysicalDeviceFeatures2.calloc(stack)
+                .sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2)
+                .pNext(v12.address())
         vkGetPhysicalDeviceFeatures2(physical, features)
         return Features(
-            v12.bufferDeviceAddress(), v12.timelineSemaphore(),
+            v12.bufferDeviceAddress(),
+            v12.timelineSemaphore(),
             v12.descriptorIndexing() && v12.runtimeDescriptorArray() && v12.shaderSampledImageArrayNonUniformIndexing(),
-            accel.accelerationStructure(), query.rayQuery(),
+            accel.accelerationStructure(),
+            query.rayQuery(),
         )
     }
 
@@ -248,7 +326,8 @@ internal class VulkanInstance(validation: Boolean, private val log: Logger = NOP
     private fun deviceExtensions(stack: MemoryStack, physical: VkPhysicalDevice): Set<String> {
         val count = stack.ints(0)
         vkEnumerateDeviceExtensionProperties(physical, null as CharSequence?, count, null)
-        // Driver-defined count: NVIDIA lists enough extensions to overflow the 64 KB thread stack, so allocate on the heap.
+        // Driver-defined count: NVIDIA lists enough extensions to overflow the 64 KB thread stack, so allocate on the
+        // heap.
         val properties = VkExtensionProperties.calloc(count[0])
         try {
             vkEnumerateDeviceExtensionProperties(physical, null as CharSequence?, count, properties)
@@ -283,7 +362,9 @@ internal class VulkanInstance(validation: Boolean, private val log: Logger = NOP
     }
 
     override fun close() {
-        if (messenger != 0L) vkDestroyDebugUtilsMessengerEXT(instance, messenger, null)
+        if (messenger != 0L) {
+            vkDestroyDebugUtilsMessengerEXT(instance, messenger, null)
+        }
         vkDestroyInstance(instance, null)
         callback?.free()
     }
@@ -305,27 +386,46 @@ internal class VulkanDeviceContext(val instance: VulkanInstance, val candidate: 
     init {
         MemoryStack.stackPush().use { stack ->
             val priority = stack.floats(1f)
-            val queueInfo = VkDeviceQueueCreateInfo.calloc(1, stack).sType(VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO)
-                .queueFamilyIndex(candidate.queueFamily).pQueuePriorities(priority)
-            val v12 = VkPhysicalDeviceVulkan12Features.calloc(stack)
-                .sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES)
-                .bufferDeviceAddress(true).timelineSemaphore(true).descriptorIndexing(true).runtimeDescriptorArray(true)
-                .shaderSampledImageArrayNonUniformIndexing(true)
-            val accel = VkPhysicalDeviceAccelerationStructureFeaturesKHR.calloc(stack)
-                .sType(KHRAccelerationStructure.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR)
-                .accelerationStructure(true)
-            val query = VkPhysicalDeviceRayQueryFeaturesKHR.calloc(stack)
-                .sType(KHRRayQuery.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR).rayQuery(true)
+            val queueInfo =
+                VkDeviceQueueCreateInfo.calloc(1, stack)
+                    .sType(VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO)
+                    .queueFamilyIndex(candidate.queueFamily)
+                    .pQueuePriorities(priority)
+            val v12 =
+                VkPhysicalDeviceVulkan12Features.calloc(stack)
+                    .sType(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES)
+                    .bufferDeviceAddress(true)
+                    .timelineSemaphore(true)
+                    .descriptorIndexing(true)
+                    .runtimeDescriptorArray(true)
+                    .shaderSampledImageArrayNonUniformIndexing(true)
+            val accel =
+                VkPhysicalDeviceAccelerationStructureFeaturesKHR.calloc(stack)
+                    .sType(
+                        KHRAccelerationStructure.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR
+                    )
+                    .accelerationStructure(true)
+            val query =
+                VkPhysicalDeviceRayQueryFeaturesKHR.calloc(stack)
+                    .sType(KHRRayQuery.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR)
+                    .rayQuery(true)
             v12.pNext(accel.address())
             accel.pNext(query.address())
-            val extensions = mutableListOf(
-                VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
-                VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME, VK_KHR_RAY_QUERY_EXTENSION_NAME
-            )
-            if (candidate.portabilitySubset) extensions += PORTABILITY_SUBSET
+            val extensions =
+                mutableListOf(
+                    VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+                    VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+                    VK_KHR_RAY_QUERY_EXTENSION_NAME,
+                )
+            if (candidate.portabilitySubset) {
+                extensions += PORTABILITY_SUBSET
+            }
             val create =
-                VkDeviceCreateInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO).pNext(v12.address())
-                    .pQueueCreateInfos(queueInfo).ppEnabledExtensionNames(names(stack, extensions))
+                VkDeviceCreateInfo.calloc(stack)
+                    .sType(VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO)
+                    .pNext(v12.address())
+                    .pQueueCreateInfos(queueInfo)
+                    .ppEnabledExtensionNames(names(stack, extensions))
             val handle = stack.mallocPointer(1)
             vkCheck(vkCreateDevice(candidate.physical, create, null, handle), "vkCreateDevice")
             device = VkDevice(handle[0], candidate.physical, create)
@@ -335,8 +435,11 @@ internal class VulkanDeviceContext(val instance: VulkanInstance, val candidate: 
 
             val functions = VmaVulkanFunctions.calloc(stack).set(instance.instance, device)
             val allocatorInfo =
-                VmaAllocatorCreateInfo.calloc(stack).flags(VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT)
-                    .instance(instance.instance).physicalDevice(candidate.physical).device(device)
+                VmaAllocatorCreateInfo.calloc(stack)
+                    .flags(VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT)
+                    .instance(instance.instance)
+                    .physicalDevice(candidate.physical)
+                    .device(device)
                     .pVulkanFunctions(functions)
                     .vulkanApiVersion(VK_API_VERSION_1_2)
             val out = stack.mallocPointer(1)
@@ -349,23 +452,32 @@ internal class VulkanDeviceContext(val instance: VulkanInstance, val candidate: 
         }
     }
 
-    fun createBuffer(size: Long, usage: Int, access: Access): VulkanBuffer = MemoryStack.stackPush().use { stack ->
-        require(size > 0)
-        val info = VkBufferCreateInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO).size(size)
-            .usage(usage or VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT).sharingMode(VK_SHARING_MODE_EXCLUSIVE)
-        val allocation = VmaAllocationCreateInfo.calloc(stack).usage(access.usage).flags(access.flags)
-        val buffer = stack.mallocLong(1)
-        val handle = stack.mallocPointer(1)
-        val details = VmaAllocationInfo.calloc(stack)
-        vkCheck(vmaCreateBuffer(allocator, info, allocation, buffer, handle, details), "vmaCreateBuffer")
-        val mapped = details.pMappedData().takeIf { it != 0L }?.let { MemoryUtil.memByteBuffer(it, size.toInt()) }
-        val address = VkBufferDeviceAddressInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO)
-            .buffer(buffer[0])
-        VulkanBuffer(buffer[0], handle[0], size, mapped, vkGetBufferDeviceAddress(device, address))
-    }
+    fun createBuffer(size: Long, usage: Int, access: Access): VulkanBuffer =
+        MemoryStack.stackPush().use { stack ->
+            require(size > 0)
+            val info =
+                VkBufferCreateInfo.calloc(stack)
+                    .sType(VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
+                    .size(size)
+                    .usage(usage or VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
+                    .sharingMode(VK_SHARING_MODE_EXCLUSIVE)
+            val allocation = VmaAllocationCreateInfo.calloc(stack).usage(access.usage).flags(access.flags)
+            val buffer = stack.mallocLong(1)
+            val handle = stack.mallocPointer(1)
+            val details = VmaAllocationInfo.calloc(stack)
+            vkCheck(vmaCreateBuffer(allocator, info, allocation, buffer, handle, details), "vmaCreateBuffer")
+            val mapped = details.pMappedData().takeIf { it != 0L }?.let { MemoryUtil.memByteBuffer(it, size.toInt()) }
+            val address =
+                VkBufferDeviceAddressInfo.calloc(stack)
+                    .sType(VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO)
+                    .buffer(buffer[0])
+            VulkanBuffer(buffer[0], handle[0], size, mapped, vkGetBufferDeviceAddress(device, address))
+        }
 
     fun destroyBuffer(buffer: VulkanBuffer?) {
-        if (buffer != null) vmaDestroyBuffer(allocator, buffer.buffer, buffer.allocation)
+        if (buffer != null) {
+            vmaDestroyBuffer(allocator, buffer.buffer, buffer.allocation)
+        }
     }
 
     fun flush(buffer: VulkanBuffer) {
@@ -376,44 +488,60 @@ internal class VulkanDeviceContext(val instance: VulkanInstance, val candidate: 
         vmaInvalidateAllocation(allocator, buffer.allocation, 0, VK_WHOLE_SIZE)
     }
 
-    fun createImage(width: Int, height: Int, format: Int): VulkanImage = MemoryStack.stackPush().use { stack ->
-        val info =
-            VkImageCreateInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO).imageType(VK_IMAGE_TYPE_2D)
-                .format(format).mipLevels(1).arrayLayers(1).samples(VK_SAMPLE_COUNT_1_BIT)
-                .tiling(VK_IMAGE_TILING_OPTIMAL)
-                .usage(VK_IMAGE_USAGE_STORAGE_BIT or VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
-                .sharingMode(VK_SHARING_MODE_EXCLUSIVE)
-                .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
-        info.extent().width(width).height(height).depth(1)
-        val allocation = VmaAllocationCreateInfo.calloc(stack).usage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
-        val image = stack.mallocLong(1)
-        val handle = stack.mallocPointer(1)
-        vkCheck(vmaCreateImage(allocator, info, allocation, image, handle, null), "vmaCreateImage")
-        val view = VkImageViewCreateInfo.calloc(stack).sType(VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO).image(image[0])
-            .viewType(VK_IMAGE_VIEW_TYPE_2D).format(format)
-        view.subresourceRange().aspectMask(VK_IMAGE_ASPECT_COLOR_BIT).levelCount(1).layerCount(1)
-        val viewOut = stack.mallocLong(1)
-        val result = vkCreateImageView(device, view, null, viewOut)
-        if (result != VK_SUCCESS) {
-            vmaDestroyImage(allocator, image[0], handle[0])
-            vkCheck(result, "vkCreateImageView")
+    fun createImage(width: Int, height: Int, format: Int): VulkanImage =
+        MemoryStack.stackPush().use { stack ->
+            val info =
+                VkImageCreateInfo.calloc(stack)
+                    .sType(VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO)
+                    .imageType(VK_IMAGE_TYPE_2D)
+                    .format(format)
+                    .mipLevels(1)
+                    .arrayLayers(1)
+                    .samples(VK_SAMPLE_COUNT_1_BIT)
+                    .tiling(VK_IMAGE_TILING_OPTIMAL)
+                    .usage(VK_IMAGE_USAGE_STORAGE_BIT or VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+                    .sharingMode(VK_SHARING_MODE_EXCLUSIVE)
+                    .initialLayout(VK_IMAGE_LAYOUT_UNDEFINED)
+            info.extent().width(width).height(height).depth(1)
+            val allocation = VmaAllocationCreateInfo.calloc(stack).usage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
+            val image = stack.mallocLong(1)
+            val handle = stack.mallocPointer(1)
+            vkCheck(vmaCreateImage(allocator, info, allocation, image, handle, null), "vmaCreateImage")
+            val view =
+                VkImageViewCreateInfo.calloc(stack)
+                    .sType(VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO)
+                    .image(image[0])
+                    .viewType(VK_IMAGE_VIEW_TYPE_2D)
+                    .format(format)
+            view.subresourceRange().aspectMask(VK_IMAGE_ASPECT_COLOR_BIT).levelCount(1).layerCount(1)
+            val viewOut = stack.mallocLong(1)
+            val result = vkCreateImageView(device, view, null, viewOut)
+            if (result != VK_SUCCESS) {
+                vmaDestroyImage(allocator, image[0], handle[0])
+                vkCheck(result, "vkCreateImageView")
+            }
+            VulkanImage(image[0], handle[0], viewOut[0])
         }
-        VulkanImage(image[0], handle[0], viewOut[0])
-    }
 
     fun destroyImage(image: VulkanImage?) {
-        if (image == null) return
+        if (image == null) {
+            return
+        }
         vkDestroyImageView(device, image.view, null)
         vmaDestroyImage(allocator, image.image, image.allocation)
     }
 
     /** Skips every wait once the device is lost: destroying a lost device must not block. */
     fun waitIdle(lost: Boolean) {
-        if (!lost) vkDeviceWaitIdle(device)
+        if (!lost) {
+            vkDeviceWaitIdle(device)
+        }
     }
 
     override fun close() {
-        if (closed) return
+        if (closed) {
+            return
+        }
         closed = true
         vmaDestroyAllocator(allocator)
         vkDestroyDevice(device, null)
@@ -423,13 +551,13 @@ internal class VulkanDeviceContext(val instance: VulkanInstance, val candidate: 
         /** Written once or per frame by the host, read by the GPU. */
         HOST_WRITE(
             VMA_MEMORY_USAGE_AUTO,
-            VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT or VMA_ALLOCATION_CREATE_MAPPED_BIT
+            VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT or VMA_ALLOCATION_CREATE_MAPPED_BIT,
         ),
 
         /** Written by the GPU and read back by the host. */
         READBACK(
             VMA_MEMORY_USAGE_AUTO,
-            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT or VMA_ALLOCATION_CREATE_MAPPED_BIT
+            VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT or VMA_ALLOCATION_CREATE_MAPPED_BIT,
         ),
         DEVICE(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, 0),
     }

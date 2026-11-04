@@ -4,28 +4,30 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
-import net.nevinsky.abyssus.plugin.uiDocJson
-
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.util.UUID
+import java.util.concurrent.Executor
+import javax.swing.JPanel
 import net.nevinsky.abyssus.lib.core.editor.ui.UiAssetTemplate
 import net.nevinsky.abyssus.lib.core.editor.ui.UiEditError
 import net.nevinsky.abyssus.lib.core.ui.model.UiIssue
 import net.nevinsky.abyssus.lib.core.ui.model.UiIssueCode
 import net.nevinsky.abyssus.plugin.AbyssusBundle
-import java.util.UUID
-import java.util.concurrent.Executor
-import javax.swing.JPanel
+import net.nevinsky.abyssus.plugin.uiDocJson
 
 class UiEditorProviderTest : BasePlatformTestCase() {
     private val provider = UiFileEditorProvider()
     private val uiMeta = UiAssetTemplate(uiDocJson).create(UUID.fromString("0b1c0f5e-7a2e-4d0b-9a0a-3a1f6d6e2b11"), 1L)
 
     private fun project(meta: String = uiMeta, assetName: String = "menus"): VirtualFile {
-        myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P","uiAssetNames":["$assetName"]}""")
+        myFixture.addFileToProject(
+            "p/P.abss",
+            """{"format":"abyssus","formatVersion":1,"name":"P","uiAssetNames":["$assetName"]}""",
+        )
         return myFixture.addFileToProject("p/assets/$assetName/meta.json", meta).virtualFile
     }
 
@@ -38,11 +40,25 @@ class UiEditorProviderTest : BasePlatformTestCase() {
     fun testItAcceptsOnlyUiAssetsOfANativeProject() {
         val ui = project()
         assertTrue(provider.accept(project, ui))
-        val model = myFixture.addFileToProject("p/assets/tree/meta.json",
-            """{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{}}""").virtualFile
+        val model =
+            myFixture
+                .addFileToProject(
+                    "p/assets/tree/meta.json",
+                    """{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{}}""",
+                )
+                .virtualFile
         assertFalse("other metadata keeps its editors", provider.accept(project, model))
-        assertFalse(provider.accept(project, myFixture.addFileToProject("p/scenes/Main.scene", """{"format":"abyssus","formatVersion":1}""").virtualFile))
-        assertFalse(provider.accept(project, myFixture.addFileToProject("p/assets/menus/other.json", uiMeta).virtualFile))
+        assertFalse(
+            provider.accept(
+                project,
+                myFixture
+                    .addFileToProject("p/scenes/Main.scene", """{"format":"abyssus","formatVersion":1}""")
+                    .virtualFile,
+            )
+        )
+        assertFalse(
+            provider.accept(project, myFixture.addFileToProject("p/assets/menus/other.json", uiMeta).virtualFile)
+        )
         assertEquals("abyssus-ui-editor", provider.editorTypeId)
     }
 
@@ -55,7 +71,10 @@ class UiEditorProviderTest : BasePlatformTestCase() {
         val direct = myFixture.addFileToProject("q/meta.json", uiMeta).virtualFile
         assertFalse(provider.accept(project, direct))
         assertNull(uiAssetOwner(loose))
-        assertEquals("Q.abss", uiAssetOwner(myFixture.addFileToProject("q/assets/ok/meta.json", uiMeta).virtualFile)!!.name)
+        assertEquals(
+            "Q.abss",
+            uiAssetOwner(myFixture.addFileToProject("q/assets/ok/meta.json", uiMeta).virtualFile)!!.name,
+        )
     }
 
     fun testASupportedAssetOpensEditableAndNothingIsRewritten() {
@@ -78,7 +97,9 @@ class UiEditorProviderTest : BasePlatformTestCase() {
         val editor = open(file)
         val state = editor.controller.state as UiEditorState.Refused
         assertEquals(UiIssueCode.UI_VERSION, state.issues.single().code)
-        assertTrue(editor.statusText!!.contains(AbyssusBundle.message("uiIssue.UI_VERSION", "additional.ui.schemaVersion")))
+        assertTrue(
+            editor.statusText!!.contains(AbyssusBundle.message("uiIssue.UI_VERSION", "additional.ui.schemaVersion"))
+        )
         assertFalse(editor.controller.addWidget("button"))
         assertEquals(future, FileDocumentManager.getInstance().getDocument(file)!!.text)
         editor.dispose()
@@ -107,7 +128,10 @@ class UiEditorProviderTest : BasePlatformTestCase() {
             assertFalse(code.name, text.startsWith("!") || text.contains("uiIssue."))
             assertTrue(code.name, text.isNotBlank())
         }
-        for (error in UiEditError.entries) assertFalse(error.name, AbyssusBundle.message("uiEditError.${error.name}").startsWith("!"))
+        for (error in UiEditError.entries) assertFalse(
+            error.name,
+            AbyssusBundle.message("uiEditError.${error.name}").startsWith("!"),
+        )
     }
 
     fun testRegisteredNamesAreReadFromTheProjectFile() {
@@ -115,7 +139,13 @@ class UiEditorProviderTest : BasePlatformTestCase() {
         assertEquals(listOf("menus"), registeredUiAssets(uiAssetOwner(file)!!))
         val bare = myFixture.addFileToProject("r/R.abss", """{"format":"abyssus","formatVersion":1}""").virtualFile
         assertTrue(registeredUiAssets(bare).isEmpty())
-        val odd = myFixture.addFileToProject("s/S.abss", """{"format":"abyssus","formatVersion":1,"uiAssetNames":["a",7,null,"b"]}""").virtualFile
+        val odd =
+            myFixture
+                .addFileToProject(
+                    "s/S.abss",
+                    """{"format":"abyssus","formatVersion":1,"uiAssetNames":["a",7,null,"b"]}""",
+                )
+                .virtualFile
         assertEquals(listOf("a", "b"), registeredUiAssets(odd))
     }
 }

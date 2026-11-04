@@ -56,7 +56,9 @@ private class AbsentLoader : AssetLoader<Unit, Unit, Disposable> {
 }
 
 private fun resolveBase(name: String, read: (String) -> AssetMeta<Any>?): AssetMeta<Any>? {
-    if (!isModelVariant(name)) return read(name)
+    if (!isModelVariant(name)) {
+        return read(name)
+    }
     return read(baseAssetName(name))?.forVariant(name)
 }
 
@@ -118,7 +120,8 @@ class AssetStorage(
     /**
      * [metas] for storage names: a name that encodes a model variant (see `ModelKey`) is read from its base asset's
      * folder, and the meta handed on carries the encoded name so the loader can tell which mesh is wanted. Every path
-     * that turns a name into a folder or a `meta.json` goes through here: the loader choice in `DependencyResolver.route`
+      * that turns a name into a folder or a `meta.json` goes through here: the loader choice in
+      * `DependencyResolver.route`
      * and the revision/reload route (`startRevision`) use this wrapper, and `MetaAssetLoader.prepare` does the same
      * decoding for the name-only path.
      */
@@ -129,7 +132,9 @@ class AssetStorage(
     private val executor: Executor
     private val ownedExecutor: ExecutorService?
 
-    /** True when off-GL work uses virtual threads. False on the platform-pool fallback or a caller-supplied executor. */
+    /**
+     * True when off-GL work uses virtual threads. False on the platform-pool fallback or a caller-supplied executor.
+     */
     val virtualThreads: Boolean
 
     init {
@@ -230,7 +235,9 @@ class AssetStorage(
      * finished and whose dependencies are already built. Returns true when at least one asset changed state.
      */
     fun update(maxSteps: Int = 1): Boolean = onGl {
-        if (disposed) return@onGl false
+        if (disposed) {
+            return@onGl false
+        }
         val before = changes
         surfaceStray()
         drain()
@@ -323,23 +330,32 @@ class AssetStorage(
         }
     }
 
-    /** [names] and every loaded model variant (see `ModelKey`) of an asset among them: a changed model changes them all. */
+    /**
+     * [names] and every loaded model variant (see `ModelKey`) of an asset among them: a changed model changes them all.
+     */
     private fun withVariants(names: Set<String>): Set<String> {
         val result = LinkedHashSet(names)
         for (loaded in lives.keys) {
-            if (isModelVariant(loaded) && baseAssetName(loaded) in names) result += loaded
+            if (isModelVariant(loaded) && baseAssetName(loaded) in names) {
+                result += loaded
+            }
         }
         return result
     }
 
-    /** Disposes every asset neither in [names] nor needed by one that is, and forgets it (a later request loads it again). */
+    /**
+     * Disposes every asset neither in [names] nor needed by one that is, and forgets it (a later request loads it
+     * again).
+     */
     fun retain(names: Set<String>) {
         onGl {
             check(!disposed) { "AssetStorage is disposed" }
             val keep = book.withDependencies(names)
             val errors = ArrayList<Throwable>()
             for (name in (lives.keys + revisions.keys).toSet()) {
-                if (name !in keep) errors += forget(name)
+                if (name !in keep) {
+                    errors += forget(name)
+                }
             }
             propagateFailures()
             throwIfAny(errors, "retain")
@@ -436,11 +452,17 @@ class AssetStorage(
             val keep = ArrayList<Inbound>()
             while (true) {
                 val message = inbound.poll() ?: break
-                if (message.id == live.id) dropped += message else keep += message
+                if (message.id == live.id) {
+                    dropped += message
+                } else {
+                    keep += message
+                }
             }
             keep.forEach { inbound.offer(it) }
             // The worker removes the id if it has not published yet. If it already did, we own the id.
-            if (dropped.isNotEmpty() || live.phase != Phase.Preparing) cancelledIds.remove(live.id)
+            if (dropped.isNotEmpty() || live.phase != Phase.Preparing) {
+                cancelledIds.remove(live.id)
+            }
         }
         val errors = ArrayList<Throwable>()
         errors += releaseLive(live, notifyDiscarded)
@@ -459,7 +481,9 @@ class AssetStorage(
     private fun discardQueued(messages: List<Inbound>): List<Throwable> {
         val errors = ArrayList<Throwable>()
         for (message in messages) {
-            if (message is Inbound.Staged) errors += discardStagedQuiet(message.registration, message.staged)
+            if (message is Inbound.Staged) {
+                errors += discardStagedQuiet(message.registration, message.staged)
+            }
         }
         return errors
     }
@@ -471,7 +495,9 @@ class AssetStorage(
         live.staged = null
         live.asset = null
         if (asset != null) {
-            if (notifyDiscarded) errors += live.registration.fireDiscarded(live.name, asset)
+            if (notifyDiscarded) {
+                errors += live.registration.fireDiscarded(live.name, asset)
+            }
             try {
                 asset.dispose()
             } catch (e: Exception) {
@@ -490,7 +516,9 @@ class AssetStorage(
     private fun requestName(dependent: String?, name: String): Throwable? {
         val existing = lives[name]
         if (existing != null) {
-            if (existing.phase != Phase.Ready || !existing.stale) return null
+            if (existing.phase != Phase.Ready || !existing.stale) {
+                return null
+            }
             existing.stale = false
             return try {
                 startRevision(existing)
@@ -562,14 +590,22 @@ class AssetStorage(
         }
         val started = System.nanoTime()
         val prepared = try {
-            if (meta != null) registration.loadMeta(meta) else registration.prepareNew(name)
+            if (meta != null) {
+                registration.loadMeta(meta)
+            } else {
+                registration.prepareNew(name)
+            }
         } catch (e: Exception) {
             publishFailure(id, name, e)
             return
         }
         log.atDebug().log {
             "Prepared asset '$name' in ${(System.nanoTime() - started) / 1_000_000} ms" +
-                    if (prepared == null) " (nothing to build)" else ""
+                    if (prepared == null) {
+                        " (nothing to build)"
+                    } else {
+                        ""
+                    }
         }
         if (prepared == null) {
             publishFailure(id, name, AssetAbsentException(name))
@@ -616,7 +652,9 @@ class AssetStorage(
         handlerErrors: List<Throwable> = emptyList(),
     ) {
         publishLock.withLock {
-            if (disposed || cancelledIds.contains(id)) return
+            if (disposed || cancelledIds.contains(id)) {
+                return
+            }
             inbound.offer(Inbound.Failed(id, name, error, handlerErrors))
         }
     }
@@ -673,9 +711,13 @@ class AssetStorage(
     /** A dependency [invalidate] marked changed after its dependent was prepared is reloaded here; nobody else asks. */
     private fun requestStaleDependencies() {
         for (live in active()) {
-            if (!book.blocksOnDependencies(live)) continue
+            if (!book.blocksOnDependencies(live)) {
+                continue
+            }
             for (dependency in live.dependencies.orEmpty()) {
-                if (lives[dependency]?.stale != true) continue
+                if (lives[dependency]?.stale != true) {
+                    continue
+                }
                 requestName(live.name, dependency)?.let { fail(live, it) }
             }
         }
@@ -687,7 +729,9 @@ class AssetStorage(
             uploadCursor = 0
             return
         }
-        if (uploadCursor >= candidates.size) uploadCursor %= candidates.size
+        if (uploadCursor >= candidates.size) {
+            uploadCursor %= candidates.size
+        }
         val live = candidates[uploadCursor]
         uploadCursor = (uploadCursor + 1) % candidates.size
         val staged = live.staged ?: return
@@ -698,7 +742,9 @@ class AssetStorage(
             return
         }
         live.phase = Phase.Uploading
-        if (!done) return
+        if (!done) {
+            return
+        }
         live.phase = Phase.UploadDone
         live.handlerErrors += live.registration.fireUploaded(live.name, staged)
     }
@@ -742,7 +788,9 @@ class AssetStorage(
         while (changed) {
             changed = false
             for (live in active()) {
-                if (!book.blocksOnDependencies(live)) continue
+                if (!book.blocksOnDependencies(live)) {
+                    continue
+                }
                 val reason = book.dependencyProblem(live) ?: continue
                 fail(live, reason)
                 changed = true
@@ -765,7 +813,9 @@ class AssetStorage(
      * which is disposed: a revision that cannot load leaves nothing, not the stale asset.
      */
     private fun fail(live: Live, error: Throwable) {
-        if (live.phase == Phase.Failed || live.phase == Phase.Ready) return
+        if (live.phase == Phase.Failed || live.phase == Phase.Ready) {
+            return
+        }
         live.phase = Phase.Failed
         live.error = error
         changes++
@@ -791,8 +841,12 @@ class AssetStorage(
     private fun active(): List<Live> = book.active()
 
     private fun Live.canUpload(): Boolean {
-        if (staged == null) return false
-        if (phase != Phase.Waiting && phase != Phase.Uploading) return false
+        if (staged == null) {
+            return false
+        }
+        if (phase != Phase.Waiting && phase != Phase.Uploading) {
+            return false
+        }
         return book.depsSatisfied(this)
     }
 
@@ -823,7 +877,9 @@ class AssetStorage(
     }
 
     private fun throwIfAny(errors: List<Throwable>, where: String) {
-        if (errors.isEmpty()) return
+        if (errors.isEmpty()) {
+            return
+        }
         val error = AssetPipelineException("$where hit ${errors.size} error(s)")
         errors.forEach { error.addSuppressed(it) }
         throw error

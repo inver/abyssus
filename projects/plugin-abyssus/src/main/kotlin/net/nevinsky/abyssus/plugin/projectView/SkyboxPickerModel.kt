@@ -25,12 +25,16 @@ class SkyboxPickerModel(val all: List<SkyboxChoice>, current: String?) {
     val entries: List<SkyboxChoice?>
         get() = listOf<SkyboxChoice?>(null) + matches
 
-    val foundCount: Int get() = matches.size
+    val foundCount: Int
+        get() = matches.size
 
-    val noMatch: Boolean get() = matches.isEmpty()
+    val noMatch: Boolean
+        get() = matches.isEmpty()
 
-    val foundText: String get() = AbyssusBundle.message("skyboxFound", foundCount)
+    val foundText: String
+        get() = AbyssusBundle.message("skyboxFound", foundCount)
 
     val footerText: String
-        get() = selected?.let { AbyssusBundle.message("skyboxSelected", it) } ?: AbyssusBundle.message("skyboxSelectedNone")
+        get() =
+            selected?.let { AbyssusBundle.message("skyboxSelected", it) } ?: AbyssusBundle.message("skyboxSelectedNone")
 }

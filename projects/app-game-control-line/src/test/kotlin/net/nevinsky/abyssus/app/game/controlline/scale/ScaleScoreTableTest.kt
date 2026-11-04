@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.scale
 
+import java.nio.file.Files
+import java.nio.file.Path
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreEntry
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
 import org.junit.Assert.assertEquals
@@ -13,23 +15,35 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.nio.file.Files
-import java.nio.file.Path
 
 class ScaleScoreTableTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
-    private val home get() = temp.root.toPath().resolve("home/.abyssus-control-line")
+    private val home
+        get() = temp.root.toPath().resolve("home/.abyssus-control-line")
 
     private fun file(): Path = home.resolve("scale-scores.json")
 
     private fun entry(name: String, score: Int, date: String = "2026-10-04T12:00:00Z") =
-        ScaleScoreEntry(name, "Mig-3", "MiG-3", score, speed = 400, level = 300, landing = 200, laps = 5, flightTime = 61.5f, date = date)
+        ScaleScoreEntry(
+            name,
+            "Mig-3",
+            "MiG-3",
+            score,
+            speed = 400,
+            level = 300,
+            landing = 200,
+            laps = 5,
+            flightTime = 61.5f,
+            date = date,
+        )
 
     @Test
     fun theDefaultFileIsInTheHomeFolder() =
-        assertEquals(Path.of("/home/pilot/.abyssus-control-line/scale-scores.json"), defaultScaleScoresFile("/home/pilot"))
+        assertEquals(
+            Path.of("/home/pilot/.abyssus-control-line/scale-scores.json"),
+            defaultScaleScoresFile("/home/pilot"),
+        )
 
     @Test
     fun anEmptyTableTakesAnyFlightAndWritesTheFile() {

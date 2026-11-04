@@ -26,7 +26,8 @@ fun defaultDisplayFile(home: String = System.getProperty("user.home")): Path =
     Path.of(home, ".abyssus-control-line", "display.json")
 
 /**
- * Whether the game runs fullscreen (design decision 8), kept in [file] (`{version: 1, fullscreen: <boolean>}`) the way the
+  * Whether the game runs fullscreen (design decision 8), kept in [file] (`{version: 1, fullscreen: <boolean>}`) the way
+  * the
  * score tables are: written through a temporary file and an atomic move, and a file that cannot be read renamed to
  * `display.json.bad` with a window used and [damaged] set. No file means a window.
  */
@@ -51,7 +52,9 @@ class DisplaySettings(private val file: Path, private val json: ObjectMapper = j
 
     /** Keeps [on] and saves the file. */
     fun setFullscreen(on: Boolean) {
-        if (fullscreen == on) return
+        if (fullscreen == on) {
+            return
+        }
         fullscreen = on
         store.save(file, "display") { temp ->
             Files.writeString(temp, json.copy().enable(SerializationFeature.INDENT_OUTPUT)

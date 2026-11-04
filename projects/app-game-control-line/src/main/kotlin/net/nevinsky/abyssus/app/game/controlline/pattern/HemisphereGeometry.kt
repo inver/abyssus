@@ -48,10 +48,16 @@ class HemisphereGeometry(val radius: Float) {
      */
     fun equatorCrossing(a: Vector3, b: Vector3): Float? {
         val normal = Vector3(a).crs(b)
-        if (normal.len2() < 1e-8f) return null
+        if (normal.len2() < 1e-8f) {
+            return null
+        }
         val d = normal.crs(Vector3(0f, 1f, 0f))
-        if (d.len2() < 1e-8f) return null
-        if (d.dot(a) < 0f) d.scl(-1f)
+        if (d.len2() < 1e-8f) {
+            return null
+        }
+        if (d.dot(a) < 0f) {
+            d.scl(-1f)
+        }
         return azimuth(d.nor())
     }
 
@@ -76,13 +82,16 @@ class HemisphereGeometry(val radius: Float) {
     /** The point [t] (0..1) of the way along the great circle from [a] to [b] (a new unit vector). */
     fun greatCircle(a: Vector3, b: Vector3, t: Float): Vector3 {
         val omega = acos(a.dot(b).coerceIn(-1f, 1f))
-        if (omega < 1e-5f) return Vector3(a)
+        if (omega < 1e-5f) {
+            return Vector3(a)
+        }
         val sinOmega = sin(omega)
         return Vector3(a).scl(sin((1f - t) * omega) / sinOmega).mulAdd(b, sin(t * omega) / sinOmega).nor()
     }
 
     /**
-     * The point at [phase] degrees on the small circle of angular radius [angularRadius] degrees about [center] (unit), a
+      * The point at [phase] degrees on the small circle of angular radius [angularRadius] degrees about [center]
+      * (unit), a
      * new unit vector. The circle passes through [from] at phase 0 and its phase grows with the azimuth at its lowest
      * point, the way an inside loop is flown.
      */
@@ -96,11 +105,18 @@ class HemisphereGeometry(val radius: Float) {
         return Vector3(center).scl(cos(rho)).mulAdd(ring, sin(rho)).nor()
     }
 
-    /** The point on the small circle about [center] of angular radius [angularRadius] degrees at [theta] degrees round it, [theta] 0 being its bottom (lowest latitude). */
+    /**
+     * The point on the small circle about [center] of angular radius [angularRadius] degrees at [theta] degrees round
+     * it, [theta] 0 being its bottom (lowest latitude).
+     */
     fun smallCircleFromBottom(center: Vector3, angularRadius: Float, theta: Float): Vector3 {
         val down = Vector3(0f, -1f, 0f)
         val axis = Vector3(down).mulAdd(center, -down.dot(center))
-        val fromBottom = if (axis.len2() < 1e-8f) Vector3(1f, 0f, 0f) else axis.nor()
+        val fromBottom = if (axis.len2() < 1e-8f) {
+            Vector3(1f, 0f, 0f)
+        } else {
+            axis.nor()
+        }
         val rho = angularRadius * MathUtils.degreesToRadians
         val start = Vector3(center).scl(cos(rho)).mulAdd(fromBottom, sin(rho)).nor()
         return smallCircle(center, angularRadius, theta, start)
@@ -109,7 +125,9 @@ class HemisphereGeometry(val radius: Float) {
     /** The distance of [u] from the great circle through [a] and [b], in degrees (unsigned). */
     fun offGreatCircle(u: Vector3, a: Vector3, b: Vector3): Float {
         val normal = Vector3(a).crs(b)
-        if (normal.len2() < 1e-10f) return angle(u, a)
+        if (normal.len2() < 1e-10f) {
+            return angle(u, a)
+        }
         normal.nor()
         return asin(kotlin.math.abs(u.dot(normal)).coerceIn(0f, 1f)) * MathUtils.radiansToDegrees
     }

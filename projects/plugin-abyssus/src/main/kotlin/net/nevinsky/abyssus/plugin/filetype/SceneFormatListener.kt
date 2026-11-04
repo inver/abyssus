@@ -5,11 +5,8 @@
 
 package net.nevinsky.abyssus.plugin.filetype
 
-import com.intellij.openapi.components.service
-import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
-
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
@@ -17,18 +14,27 @@ import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import net.nevinsky.abyssus.plugin.dto.ProjectLayout
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
+import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 
-/** Formats a scene's or project's JSON whenever it is shown in the text editor (on open, and when switching from the scene view). */
+/**
+ * Formats a scene's or project's JSON whenever it is shown in the text editor (on open, and when switching from the
+ * scene view).
+ */
 class SceneFormatListener : FileEditorManagerListener {
     override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
-        if (isAsset(file) && source.getSelectedEditor(file) is TextEditor) format(source.project, file)
+        if (isAsset(file) && source.getSelectedEditor(file) is TextEditor) {
+            format(source.project, file)
+        }
     }
 
     override fun selectionChanged(event: FileEditorManagerEvent) {
         val file = event.newFile ?: return
-        if (isAsset(file) && event.newEditor is TextEditor) format(event.manager.project, file)
+        if (isAsset(file) && event.newEditor is TextEditor) {
+            format(event.manager.project, file)
+        }
     }
 
     private fun isAsset(file: VirtualFile) = ProjectLayout.isAssetFile(file)
@@ -37,7 +43,14 @@ class SceneFormatListener : FileEditorManagerListener {
         val document = FileDocumentManager.getInstance().getDocument(file)?.takeIf { it.isWritable } ?: return
         val kind = documentKind(file) ?: return
         val pretty = service<AbyssusPluginCtx>().documents.formatter.pretty(document.text, kind) ?: return
-        if (pretty == document.text) return
-        WriteCommandAction.runWriteCommandAction(project, AbyssusBundle.message("commandFormatSceneJson"), null, { document.setText(pretty) })
+        if (pretty == document.text) {
+            return
+        }
+        WriteCommandAction.runWriteCommandAction(
+            project,
+            AbyssusBundle.message("commandFormatSceneJson"),
+            null,
+            { document.setText(pretty) },
+        )
     }
 }

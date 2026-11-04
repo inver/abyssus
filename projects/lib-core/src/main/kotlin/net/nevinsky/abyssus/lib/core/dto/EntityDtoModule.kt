@@ -16,26 +16,23 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
-import net.nevinsky.abyssus.lib.core.format.EntityType
-import net.nevinsky.abyssus.lib.core.io.JsonExtension
 import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RawComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RawComponentsWrapper
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.format.entityDisabledComponents
 import net.nevinsky.abyssus.lib.core.format.entityTypeOf
+import net.nevinsky.abyssus.lib.core.io.JsonExtension
 
 /**
  * Teaches a Jackson mapper to bind an `ecs` entry to an [Entity]: the entry's `type`, `flags` and `disabledComponents`
- * are
- * its [HeaderComponent] (with the entry's id, its key in the `ecs` map), and each member of `components` is keyed by
- * the class name of a component [registry] knows (fully qualified
- * or short) and bound into that class, with no per-component codec. A component named in `disabledComponents` is
- * recorded
- * as disabled. A name nobody registered and a value Jackson cannot bind become a [RawComponent] that keeps the payload
- * as
- * text, so the scene can be written back unchanged; an entity holds one component per class, so these share one
- * [RawComponentsWrapper]. A scene is project data, so a class name in it never loads an
- * arbitrary class. Writing is done by [EntitySerializer], which `JsonProcessor` registers on its own mapper.
+ * are its [HeaderComponent] (with the entry's id, its key in the `ecs` map), and each member of `components` is keyed
+ * by the class name of a component [registry] knows (fully qualified or short) and bound into that class, with no
+ * per-component codec. A component named in `disabledComponents` is recorded as disabled. A name nobody registered and
+ * a value Jackson cannot bind become a [RawComponent] that keeps the payload as text, so the scene can be written back
+ * unchanged; an entity holds one component per class, so these share one [RawComponentsWrapper]. A scene is project
+ * data, so a class name in it never loads an arbitrary class. Writing is done by [EntitySerializer], which
+ * `JsonProcessor` registers on its own mapper.
  */
 class EntityDtoModule(registry: ComponentRegistry) : SimpleModule("AbyssusEntity") {
     init {
@@ -43,9 +40,13 @@ class EntityDtoModule(registry: ComponentRegistry) : SimpleModule("AbyssusEntity
     }
 }
 
-/** Teaches a [net.nevinsky.abyssus.lib.core.io.JsonProcessor] to write entities, naming components with [registry]; share the one the scene is read with. */
+/**
+ * Teaches a [net.nevinsky.abyssus.lib.core.io.JsonProcessor] to write entities, naming components with [registry];
+ * share the one the scene is read with.
+ */
 fun entityWriter(registry: ComponentRegistry): JsonExtension = JsonExtension { componentTree, rawTree ->
-    SimpleModule("AbyssusEntityWriter").addSerializer(EntityDto::class.java, EntitySerializer(registry, componentTree, rawTree))
+    SimpleModule("AbyssusEntityWriter")
+        .addSerializer(EntityDto::class.java, EntitySerializer(registry, componentTree, rawTree))
 }
 
 private const val FLAGS_KEY = "flags"
@@ -56,8 +57,8 @@ const val ENTITY_DISABLED_FLAG = 1
 
 /**
  * Writes an [EntityDto] as an `ecs` entry: `type`, `flags` (the entity's disabled bit with the bits it does not own),
- * `disabledComponents` and `components`, each omitted when empty. A component is written under the name [registry] gives
- * its class, with the value [componentTree] makes; a [RawComponent] is written back as the payload it kept
+ * `disabledComponents` and `components`, each omitted when empty. A component is written under the name [registry]
+ * gives its class, with the value [componentTree] makes; a [RawComponent] is written back as the payload it kept
  * ([rawTree] reads that text without losing number spelling). The entity's id is the key of its `ecs` map entry, so it
  * is not written here.
  */
@@ -71,22 +72,36 @@ internal class EntitySerializer(
         val raw = value.components.filterIsInstance<RawComponentsWrapper>().flatMap { it.entries }
         val modeled = value.components.filter { it !is HeaderComponent && it !is RawComponentsWrapper }
 
-        val flags = (header?.flags ?: 0) or (if (header?.entityEnabled == false) ENTITY_DISABLED_FLAG else 0)
+        val flags =
+            (header?.flags ?: 0) or
+                (if (header?.entityEnabled == false) {
+                    ENTITY_DISABLED_FLAG
+                } else {
+                    0
+                })
         val disabled = LinkedHashSet<String>()
         header?.disabledComponents?.forEach { disabled.add(registry.nameOf(it)) }
         raw.filter { it.disabled }.forEach { disabled.add(it.name) }
 
         gen.writeStartObject()
         header?.type?.let { gen.writeStringField("type", it.name) }
-        if (flags != 0) gen.writeNumberField(FLAGS_KEY, flags)
+        if (flags != 0) {
+            gen.writeNumberField(FLAGS_KEY, flags)
+        }
         if (disabled.isNotEmpty()) {
             gen.writeArrayFieldStart("disabledComponents")
             disabled.forEach(gen::writeString)
             gen.writeEndArray()
         }
         gen.writeObjectFieldStart(COMPONENTS)
-        modeled.forEach { gen.writeFieldName(registry.nameOf(it.javaClass)); gen.writeTree(componentTree(it)) }
-        raw.forEach { gen.writeFieldName(it.name); gen.writeTree(rawTree(it.json)) }
+        modeled.forEach {
+            gen.writeFieldName(registry.nameOf(it.javaClass))
+            gen.writeTree(componentTree(it))
+        }
+        raw.forEach {
+            gen.writeFieldName(it.name)
+            gen.writeTree(rawTree(it.json))
+        }
         gen.writeEndObject()
         gen.writeEndObject()
     }
@@ -115,37 +130,42 @@ private class EntityDeserializer(private val registry: ComponentRegistry) :
             )
         )
 
-        node.get(COMPONENTS)?.takeIf { it.isObject }?.properties()?.forEach { (name, value) ->
-            val clazz = registry.get(name)
-            val off = name in disabledNames || clazz in disabledClasses
-            if (clazz == null) {
-                raw.entries.add(
-                    RawComponent(
-                        name,
-                        value.toString(),
-                        "component $name is not modeled and is kept unchanged",
-                        off
+        node
+            .get(COMPONENTS)
+            ?.takeIf { it.isObject }
+            ?.properties()
+            ?.forEach { (name, value) ->
+                val clazz = registry.get(name)
+                val off = name in disabledNames || clazz in disabledClasses
+                if (clazz == null) {
+                    raw.entries.add(
+                        RawComponent(
+                            name,
+                            value.toString(),
+                            "component $name is not modeled and is kept unchanged",
+                            off,
+                        )
                     )
-                )
-                return@forEach
-            }
-            val component = try {
-                ctxt.readTreeAsValue(value, clazz)
-            } catch (e: Exception) {
-                raw.entries.add(
-                    RawComponent(
-                        name,
-                        value.toString(),
-                        "component $name could not be read (${
+                    return@forEach
+                }
+                val component =
+                    try {
+                        ctxt.readTreeAsValue(value, clazz)
+                    } catch (e: Exception) {
+                        raw.entries.add(
+                            RawComponent(
+                                name,
+                                value.toString(),
+                                "component $name could not be read (${
                             e.message?.lineSequence()?.first()
                         }) and is kept unchanged",
-                        off,
-                    )
-                )
-                return@forEach
+                                off,
+                            )
+                        )
+                        return@forEach
+                    }
+                entity.add(component)
             }
-            entity.add(component)
-        }
         if (raw.entries.isNotEmpty()) {
             entity.add(raw)
         }

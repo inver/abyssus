@@ -17,8 +17,8 @@ import org.junit.Test
 import org.slf4j.helpers.NOPLogger
 
 /**
- * The foliage block is edited as a typed [FoliageMeta]: a layer or collider member the typed block does not model
- * (a `note`, a vendor key) is not kept when the meta is written back.
+ * The foliage block is edited as a typed [FoliageMeta]: a layer or collider member the typed block does not model (a
+ * `note`, a vendor key) is not kept when the meta is written back.
  */
 class FoliageMetaEditsTest {
     private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
@@ -26,16 +26,23 @@ class FoliageMetaEditsTest {
     private val edits = FoliageMetaEdits(AssetMetaTextEditor(AssetMetaParser(json)))
     private val colliders = FoliageColliderEdits(json)
 
-    private val text = """{"formatVersion":1,"type":"FOLIAGE","additional":{"terrain":"meadow","layers":[{"id":1,"density":0.05,"models":[{"asset":"tree","weight":1.0}],"drawDistance":60.0}]}}"""
-    private val before = FoliageMeta(terrain = "meadow", layers = listOf(
-        FoliageLayerMeta(id = 1, models = listOf(FoliageModelMeta("tree")), drawDistance = 60f)))
+    private val text =
+        """{"formatVersion":1,"type":"FOLIAGE","additional":{"terrain":"meadow","layers":[{"id":1,"density":0.05,
+"models":[{"asset":"tree","weight":1.0}],"drawDistance":60.0}]}}"""
+    private val before =
+        FoliageMeta(
+            terrain = "meadow",
+            layers = listOf(FoliageLayerMeta(id = 1, models = listOf(FoliageModelMeta("tree")), drawDistance = 60f)),
+        )
     private val layer = before.layers.single()
 
     private fun settings(editedText: String) = parsing.foliageMeta(editedText)
 
-    private fun edit(source: String, from: FoliageMeta, to: FoliageMeta) = (edits.edit(source, from, to) as TextEditOutcome.Edited).text
+    private fun edit(source: String, from: FoliageMeta, to: FoliageMeta) =
+        (edits.edit(source, from, to) as TextEditOutcome.Edited).text
 
-    @Test fun aDensityChangeIsWrittenAndTheRestIsRead() {
+    @Test
+    fun aDensityChangeIsWrittenAndTheRestIsRead() {
         val after = before.copy(layers = listOf(layer.copy(density = 0.2f)))
         val written = settings(edit(text, before, after))
         assertEquals(0.2f, written.layers.single().density, 0f)
@@ -44,39 +51,46 @@ class FoliageMetaEditsTest {
         assertEquals("meadow", written.terrain)
     }
 
-    @Test fun addingAppendsAndRemovingDeletesOnlyTheLayer() {
-        val added = before.copy(layers = before.layers + FoliageLayerMeta(id = 2, models = listOf(FoliageModelMeta("rock"))))
+    @Test
+    fun addingAppendsAndRemovingDeletesOnlyTheLayer() {
+        val added =
+            before.copy(layers = before.layers + FoliageLayerMeta(id = 2, models = listOf(FoliageModelMeta("rock"))))
         val withTwo = edit(text, before, added)
         assertEquals(listOf(1, 2), settings(withTwo).layers.map { it.id })
         val back = edit(withTwo, added, before)
         assertEquals(before.layers.map { it.id }, settings(back).layers.map { it.id })
     }
 
-    @Test fun equalSettingsAreUnchanged() {
+    @Test
+    fun equalSettingsAreUnchanged() {
         assertEquals(TextEditOutcome.Unchanged, edits.edit(text, before, before))
     }
 
-    @Test fun reorderingKeepsEachLayer() {
+    @Test
+    fun reorderingKeepsEachLayer() {
         val added = before.copy(layers = before.layers + FoliageLayerMeta(id = 2))
         val first = edit(text, before, added)
         val swapped = edit(first, added, added.copy(layers = added.layers.reversed()))
         assertEquals(listOf(2, 1), settings(swapped).layers.map { it.id })
     }
 
-    @Test fun nestedValuesChange() {
+    @Test
+    fun nestedValuesChange() {
         val changed = layer.copy(models = listOf(FoliageModelMeta("tree", 3f)), scale = FoliageScale(max = 2f))
         val written = settings(edit(text, before, before.copy(layers = listOf(changed)))).layers.single()
         assertEquals(3f, written.models.single().weight, 0f)
         assertEquals(2f, written.scale.max, 0f)
     }
 
-    @Test fun aTextThatIsNotAJsonObjectIsRefused() {
+    @Test
+    fun aTextThatIsNotAJsonObjectIsRefused() {
         assertTrue(edits.edit("not json", before, before.copy(terrain = "other")) is TextEditOutcome.Refused)
     }
 
     private fun colliderOf(l: FoliageLayerMeta) = FoliageColliderReader().read(l.collider)
 
-    @Test fun addingAColliderWritesIt() {
+    @Test
+    fun addingAColliderWritesIt() {
         val capsule = FoliageCollider(FoliageColliderShape.CAPSULE, radius = 0.4f, halfHeight = 3f)
         val after = before.copy(layers = listOf(colliders.patch(layer, capsule)))
         val read = settings(edit(text, before, after)).layers.single()
@@ -88,7 +102,8 @@ class FoliageMetaEditsTest {
         assertEquals(60f, read.drawDistance, 0f)
     }
 
-    @Test fun changingAColliderKeepsTheOtherSizes() {
+    @Test
+    fun changingAColliderKeepsTheOtherSizes() {
         val box = FoliageCollider(FoliageColliderShape.BOX, halfX = 1f, halfY = 2f, halfZ = 3f)
         val withBox = layer.copy(collider = colliders.patch(layer, box).collider)
         val moved = colliders.patch(withBox, box.copy(halfY = 4f))
@@ -98,14 +113,16 @@ class FoliageMetaEditsTest {
         assertEquals(3f, collider.halfZ, 0f)
     }
 
-    @Test fun noneRemovesOnlyTheCollider() {
+    @Test
+    fun noneRemovesOnlyTheCollider() {
         val sphere = colliders.patch(layer, FoliageCollider(FoliageColliderShape.SPHERE, radius = 1f))
         val removed = colliders.patch(sphere, null)
         assertNull(removed.collider)
         assertEquals(layer, removed)
     }
 
-    @Test fun anOffsetIsWrittenOnlyWhenSet() {
+    @Test
+    fun anOffsetIsWrittenOnlyWhenSet() {
         val sphere = colliders.patch(layer, FoliageCollider(FoliageColliderShape.SPHERE, radius = 2f))
         val plain = (colliderOf(sphere) as FoliageColliderRead.Valid).collider
         assertEquals(0f, plain.offsetY, 0f)
@@ -114,7 +131,8 @@ class FoliageMetaEditsTest {
         assertEquals(1.5f, (colliderOf(offset) as FoliageColliderRead.Valid).collider.offsetY, 0f)
     }
 
-    @Test fun onlyCollidersIsTrueWhenNothingElseChanged() {
+    @Test
+    fun onlyCollidersIsTrueWhenNothingElseChanged() {
         val capsule = FoliageCollider(FoliageColliderShape.CAPSULE, radius = 0.4f, halfHeight = 3f)
         val withCollider = before.copy(layers = listOf(colliders.patch(layer, capsule)))
         assertTrue(colliders.onlyColliders(before, withCollider))
@@ -122,7 +140,8 @@ class FoliageMetaEditsTest {
         assertFalse(colliders.onlyColliders(before, before))
     }
 
-    @Test fun anInvalidStoredColliderIsReadAsInvalid() {
+    @Test
+    fun anInvalidStoredColliderIsReadAsInvalid() {
         val source = text.replace("\"drawDistance\":60.0", "\"drawDistance\":60.0,\"collider\":{\"shape\":\"HULL\"}")
         val read = FoliageSettingsReader(ResourceEditorMessages()).read(settings(source), setOf("tree"))
         assertTrue(colliderOf(read.settings.layers.single()) is FoliageColliderRead.Invalid)

@@ -34,12 +34,15 @@ class ModelCulling {
     val cached: Int get() = spheres.size
 
     /**
-     * [model] is the asset the storage built under [name] as its [version]th build. When that is another model or another
+      * [model] is the asset the storage built under [name] as its [version]th build. When that is another model or
+      * another
      * build than last time, the earlier model's sphere is dropped, so the next [visible] measures the new bounds.
      */
     fun track(name: String, version: Long, model: Model) {
         val known = tracked[name]
-        if (known != null && known.model === model && known.version == version) return
+        if (known != null && known.model === model && known.version == version) {
+            return
+        }
         known?.let { spheres.remove(it.model) }
         spheres.remove(model)
         tracked[name] = Tracked(model, version)
@@ -54,7 +57,9 @@ class ModelCulling {
     /** Whether any part of [instance] may be inside [frustum]. Errs towards true: an empty model is kept. */
     fun visible(instance: ModelInstance, frustum: Frustum): Boolean {
         val sphere = spheres.getOrPut(instance.model) { sphereOf(instance.model) }
-        if (sphere.radius < 0f) return true
+        if (sphere.radius < 0f) {
+            return true
+        }
         val transform = instance.transform
         center.set(sphere.center).mul(transform)
         val scale = max(transform.getScaleX(), max(transform.getScaleY(), transform.getScaleZ()))
@@ -63,7 +68,9 @@ class ModelCulling {
 
     private fun sphereOf(model: Model): Sphere {
         model.calculateBoundingBox(box.inf())
-        if (!box.isValid) return Sphere(Vector3(), -1f)
+        if (!box.isValid) {
+            return Sphere(Vector3(), -1f)
+        }
         val middle = box.getCenter(Vector3())
         // a sliver of margin so a part on the edge of the box is not dropped by rounding
         return Sphere(middle, box.getDimensions(Vector3()).len() * 0.5f * 1.02f)

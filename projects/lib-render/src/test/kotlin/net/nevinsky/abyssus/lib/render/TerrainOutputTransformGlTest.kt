@@ -55,35 +55,57 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * The game terrain under the output transform (opt-in, `-Dabyssus.glTests=true`): a terrain and a model of equal albedo lit
- * the same way come out alike, a shadow darkens the terrain, a sky's irradiance replaces the flat ambient, and the layers
- * are decoded from sRGB.
+ * The game terrain under the output transform (opt-in, `-Dabyssus.glTests=true`): a terrain and a model of equal albedo
+ * lit the same way come out alike, a shadow darkens the terrain, a sky's irradiance replaces the flat ambient, and the
+ * layers are decoded from sRGB.
  */
 class TerrainOutputTransformGlTest {
-    @Before
-    fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
+    @Before fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
 
     private val size = 32
     private val towardSun = Vector3(0.3f, 0.8f, 0.4f).nor()
     private val stored = 0.6f
 
     private fun solid(value: Float, r: Float = value, g: Float = value, b: Float = value): Texture {
-        val pixmap = Pixmap(2, 2, Pixmap.Format.RGBA8888).also { it.setColor(r, g, b, 1f); it.fill() }
+        val pixmap =
+            Pixmap(2, 2, Pixmap.Format.RGBA8888).also {
+                it.setColor(r, g, b, 1f)
+                it.fill()
+            }
         return Texture(pixmap).also { pixmap.dispose() }
     }
 
     private fun mesh(base: Texture) =
-        TerrainMesh(PreparedTerrain(TerrainData(2, FloatArray(4), 10, 1f), mapOf("splatBase" to "base")), BuiltAssets { if (it == "base") base else null })
+        TerrainMesh(
+            PreparedTerrain(TerrainData(2, FloatArray(4), 10, 1f), mapOf("splatBase" to "base")),
+            BuiltAssets {
+                if (it == "base") {
+                    base
+                } else {
+                    null
+                }
+            },
+        )
 
-    private fun camera() = PerspectiveCamera(60f, size.toFloat(), size.toFloat()).apply {
-        position.set(5f, 8f, 5f); lookAt(5f, 0f, 5.001f); near = 0.1f; far = 50f; update()
-    }
+    private fun camera() =
+        PerspectiveCamera(60f, size.toFloat(), size.toFloat()).apply {
+            position.set(5f, 8f, 5f)
+            lookAt(5f, 0f, 5.001f)
+            near = 0.1f
+            far = 50f
+            update()
+        }
 
-    private fun frame(camera: PerspectiveCamera, output: OutputTransform?, ambient: Float = 0.2f) = FrameInputs(
-        camera.combined, camera.position, floatArrayOf(ambient, ambient, ambient), null,
-        RenderLights(listOf(DirectionalInput("sun", Vector3(towardSun).scl(-1f), 0.7f, 0.6f, 0.5f))),
-        LightProfile.GAME_SINGLE_SUN, output,
-    )
+    private fun frame(camera: PerspectiveCamera, output: OutputTransform?, ambient: Float = 0.2f) =
+        FrameInputs(
+            camera.combined,
+            camera.position,
+            floatArrayOf(ambient, ambient, ambient),
+            null,
+            RenderLights(listOf(DirectionalInput("sun", Vector3(towardSun).scl(-1f), 0.7f, 0.6f, 0.5f))),
+            LightProfile.GAME_SINGLE_SUN,
+            output,
+        )
 
     private fun centre(framebuffer: FrameBuffer, draw: () -> Unit): IntArray {
         framebuffer.begin()
@@ -102,31 +124,90 @@ class TerrainOutputTransformGlTest {
         }
     }
 
-    /** The shader the models of a game use, on a flat quad over the terrain's extent, lit by the same sun and ambient. */
-    private fun modelPixel(framebuffer: FrameBuffer, camera: PerspectiveCamera, albedo: Texture, exposure: Float): IntArray {
-        val provider = ModelShaderProvider(DefaultShader.Config().apply { numPointLights = 0; numSpotLights = 0 })
-        val quad = Mesh(true, 4, 6, VertexAttribute.Position(), VertexAttribute.Normal(), VertexAttribute.TexCoords(0)).apply {
-            setVertices(floatArrayOf(0f, 0f, 0f, 0f, 1f, 0f, 0.5f, 0.5f, 10f, 0f, 0f, 0f, 1f, 0f, 0.5f, 0.5f, 10f, 0f, 10f, 0f, 1f, 0f, 0.5f, 0.5f, 0f, 0f, 10f, 0f, 1f, 0f, 0.5f, 0.5f))
-            setIndices(shortArrayOf(0, 1, 2, 0, 2, 3))
-        }
-        try {
-            val renderable = Renderable().apply {
-                meshPart.set("quad", quad, 0, 6, GL20.GL_TRIANGLES)
-                material = Material(TextureAttribute.createDiffuse(albedo), IntAttribute.createCullFace(GL20.GL_NONE))
-                environment = Environment().apply {
-                    set(ColorAttribute(ColorAttribute.AmbientLight, 0.2f, 0.2f, 0.2f, 1f))
-                    add(DirectionalLight().set(Color(0.7f, 0.6f, 0.5f, 1f), -towardSun.x, -towardSun.y, -towardSun.z))
-                    set(OutputTransformAttribute(exposure))
+    /**
+     * The shader the models of a game use, on a flat quad over the terrain's extent, lit by the same sun and ambient.
+     */
+    private fun modelPixel(
+        framebuffer: FrameBuffer,
+        camera: PerspectiveCamera,
+        albedo: Texture,
+        exposure: Float,
+    ): IntArray {
+        val provider =
+            ModelShaderProvider(
+                DefaultShader.Config().apply {
+                    numPointLights = 0
+                    numSpotLights = 0
                 }
+            )
+        val quad =
+            Mesh(true, 4, 6, VertexAttribute.Position(), VertexAttribute.Normal(), VertexAttribute.TexCoords(0)).apply {
+                setVertices(
+                    floatArrayOf(
+                        0f,
+                        0f,
+                        0f,
+                        0f,
+                        1f,
+                        0f,
+                        0.5f,
+                        0.5f,
+                        10f,
+                        0f,
+                        0f,
+                        0f,
+                        1f,
+                        0f,
+                        0.5f,
+                        0.5f,
+                        10f,
+                        0f,
+                        10f,
+                        0f,
+                        1f,
+                        0f,
+                        0.5f,
+                        0.5f,
+                        0f,
+                        0f,
+                        10f,
+                        0f,
+                        1f,
+                        0f,
+                        0.5f,
+                        0.5f,
+                    )
+                )
+                setIndices(shortArrayOf(0, 1, 2, 0, 2, 3))
             }
+        try {
+            val renderable =
+                Renderable().apply {
+                    meshPart.set("quad", quad, 0, 6, GL20.GL_TRIANGLES)
+                    material =
+                        Material(TextureAttribute.createDiffuse(albedo), IntAttribute.createCullFace(GL20.GL_NONE))
+                    environment =
+                        Environment().apply {
+                            set(ColorAttribute(ColorAttribute.AmbientLight, 0.2f, 0.2f, 0.2f, 1f))
+                            add(
+                                DirectionalLight()
+                                    .set(Color(0.7f, 0.6f, 0.5f, 1f), -towardSun.x, -towardSun.y, -towardSun.z)
+                            )
+                            set(OutputTransformAttribute(exposure))
+                        }
+                }
             val context = RenderContext(DefaultTextureBinder(DefaultTextureBinder.LRU, 4))
             return centre(framebuffer) {
                 context.begin()
                 val shader = provider.getShader(renderable)
-                shader.begin(camera, context); shader.render(renderable); shader.end(); context.end()
+                shader.begin(camera, context)
+                shader.render(renderable)
+                shader.end()
+                context.end()
             }
         } finally {
-            quad.dispose(); provider.dispose()
+            quad.dispose()
+            provider.dispose()
         }
     }
 
@@ -139,16 +220,29 @@ class TerrainOutputTransformGlTest {
         val pass = TerrainPass(ShaderStorage(), TerrainVariant.GAME_SINGLE_SUN)
         try {
             val output = OutputTransform(1f)
-            val terrain = centre(framebuffer) {
-                pass.draw(frame(camera, output), TerrainLighting.Sun(towardSun, 0.7f, 0.6f, 0.5f), listOf(TerrainDraw(mesh, Matrix4())))
-            }
+            val terrain =
+                centre(framebuffer) {
+                    pass.draw(
+                        frame(camera, output),
+                        TerrainLighting.Sun(towardSun, 0.7f, 0.6f, 0.5f),
+                        listOf(TerrainDraw(mesh, Matrix4())),
+                    )
+                }
             val model = modelPixel(framebuffer, camera, base, 1f)
             for (c in 0..2) {
                 assertTrue("channel $c: terrain ${terrain.toList()} model ${model.toList()}", terrain[c] > 40)
-                assertEquals("channel $c: terrain ${terrain.toList()} model ${model.toList()}", model[c].toFloat(), terrain[c].toFloat(), model[c] * 0.05f + 1f)
+                assertEquals(
+                    "channel $c: terrain ${terrain.toList()} model ${model.toList()}",
+                    model[c].toFloat(),
+                    terrain[c].toFloat(),
+                    model[c] * 0.05f + 1f,
+                )
             }
         } finally {
-            pass.dispose(); framebuffer.dispose(); mesh.dispose(); base.dispose()
+            pass.dispose()
+            framebuffer.dispose()
+            mesh.dispose()
+            base.dispose()
         }
     }
 
@@ -166,10 +260,17 @@ class TerrainOutputTransformGlTest {
             // the terrain is flat, so its normal is up
             val albedo = srgbToLinear(Math.round(stored * 255f) / 255f)
             val n = towardSun.y
-            val want = OutputTransform(1f).apply(floatArrayOf(albedo * (0.2f + 0.7f * n), albedo * (0.2f + 0.6f * n), albedo * (0.2f + 0.5f * n)))
+            val want =
+                OutputTransform(1f)
+                    .apply(
+                        floatArrayOf(albedo * (0.2f + 0.7f * n), albedo * (0.2f + 0.6f * n), albedo * (0.2f + 0.5f * n))
+                    )
             for (c in 0..2) assertEquals("channel $c", want[c] * 255f, got[c].toFloat(), 3f)
         } finally {
-            pass.dispose(); framebuffer.dispose(); mesh.dispose(); base.dispose()
+            pass.dispose()
+            framebuffer.dispose()
+            mesh.dispose()
+            base.dispose()
         }
     }
 
@@ -180,21 +281,47 @@ class TerrainOutputTransformGlTest {
         val camera = camera()
         val framebuffer = FrameBuffer(Pixmap.Format.RGBA8888, size, size, true)
         val pass = TerrainPass(ShaderStorage(), TerrainVariant.GAME_SINGLE_SUN)
-        // packed depth: the alpha channel is the whole part, so 255 is "far" (the sun reaches) and 0 is "at the light" (shadowed)
-        val far = Texture(Pixmap(2, 2, Pixmap.Format.RGBA8888).also { it.setColor(0f, 0f, 0f, 1f); it.fill() })
-        val near = Texture(Pixmap(2, 2, Pixmap.Format.RGBA8888).also { it.setColor(0f, 0f, 0f, 0f); it.fill() })
+        // packed depth: the alpha channel is the whole part, so 255 is "far" (the sun reaches) and 0 is "at the light"
+        // (shadowed)
+        val far =
+            Texture(
+                Pixmap(2, 2, Pixmap.Format.RGBA8888).also {
+                    it.setColor(0f, 0f, 0f, 1f)
+                    it.fill()
+                }
+            )
+        val near =
+            Texture(
+                Pixmap(2, 2, Pixmap.Format.RGBA8888).also {
+                    it.setColor(0f, 0f, 0f, 0f)
+                    it.fill()
+                }
+            )
         try {
             val shadowMatrix = Matrix4().setToScaling(0.05f, 0.05f, 0.05f)
-            fun draw(map: Texture) = centre(framebuffer) {
-                val sun = TerrainLighting.Sun(towardSun, 0.7f, 0.6f, 0.5f, SunShadowInput(map, shadowMatrix, 0.5f, 0.001f))
-                pass.draw(frame(camera, OutputTransform(1f)), sun, listOf(TerrainDraw(mesh, Matrix4())))
-            }
+            fun draw(map: Texture) =
+                centre(framebuffer) {
+                    val sun =
+                        TerrainLighting.Sun(
+                            towardSun,
+                            0.7f,
+                            0.6f,
+                            0.5f,
+                            SunShadowInput(map, shadowMatrix, 0.5f, 0.001f),
+                        )
+                    pass.draw(frame(camera, OutputTransform(1f)), sun, listOf(TerrainDraw(mesh, Matrix4())))
+                }
             val lit = draw(far)
             val shadowed = draw(near)
             assertTrue("lit ${lit.toList()} shadowed ${shadowed.toList()}", shadowed[0] < lit[0] - 20)
             assertTrue("a shadowed terrain still shows the ambient: ${shadowed.toList()}", shadowed[0] > 20)
         } finally {
-            pass.dispose(); framebuffer.dispose(); mesh.dispose(); base.dispose(); far.dispose(); near.dispose()
+            pass.dispose()
+            framebuffer.dispose()
+            mesh.dispose()
+            base.dispose()
+            far.dispose()
+            near.dispose()
         }
     }
 
@@ -205,15 +332,23 @@ class TerrainOutputTransformGlTest {
         val camera = camera()
         val framebuffer = FrameBuffer(Pixmap.Format.RGBA8888, size, size, true)
         val pass = TerrainPass(ShaderStorage(), TerrainVariant.GAME_SINGLE_SUN)
-        val faces = Array(6) { Pixmap(2, 2, Pixmap.Format.RGBA8888).also { p -> p.setColor(0.5f, 0.5f, 0.5f, 1f); p.fill() } }
+        val faces =
+            Array(6) {
+                Pixmap(2, 2, Pixmap.Format.RGBA8888).also { p ->
+                    p.setColor(0.5f, 0.5f, 0.5f, 1f)
+                    p.fill()
+                }
+            }
         val cube = Cubemap(faces[0], faces[1], faces[2], faces[3], faces[4], faces[5])
         try {
             // no sun: only the ambient lights the terrain
             val dark = TerrainLighting.Sun(towardSun, 0f, 0f, 0f, irradiance = cube)
             val flat = TerrainLighting.Sun(towardSun, 0f, 0f, 0f)
             val draws = listOf(TerrainDraw(mesh, Matrix4()))
-            val withSky = centre(framebuffer) { pass.draw(frame(camera, OutputTransform(1f), ambient = 0.1f), dark, draws) }
-            val withoutSky = centre(framebuffer) { pass.draw(frame(camera, OutputTransform(1f), ambient = 0.1f), flat, draws) }
+            val withSky =
+                centre(framebuffer) { pass.draw(frame(camera, OutputTransform(1f), ambient = 0.1f), dark, draws) }
+            val withoutSky =
+                centre(framebuffer) { pass.draw(frame(camera, OutputTransform(1f), ambient = 0.1f), flat, draws) }
             val albedo = srgbToLinear(Math.round(stored * 255f) / 255f)
             val wantSky = OutputTransform(1f).apply(floatArrayOf(albedo * 0.5f, albedo * 0.5f, albedo * 0.5f))
             val wantFlat = OutputTransform(1f).apply(floatArrayOf(albedo * 0.1f, albedo * 0.1f, albedo * 0.1f))
@@ -221,7 +356,12 @@ class TerrainOutputTransformGlTest {
             assertEquals(wantFlat[0] * 255f, withoutSky[0].toFloat(), 4f)
             assertTrue(withSky[0] > withoutSky[0] + 20)
         } finally {
-            pass.dispose(); framebuffer.dispose(); mesh.dispose(); base.dispose(); cube.dispose(); faces.forEach(Pixmap::dispose)
+            pass.dispose()
+            framebuffer.dispose()
+            mesh.dispose()
+            base.dispose()
+            cube.dispose()
+            faces.forEach(Pixmap::dispose)
         }
     }
 }

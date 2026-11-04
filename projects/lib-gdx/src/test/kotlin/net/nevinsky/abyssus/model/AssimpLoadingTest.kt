@@ -6,14 +6,14 @@
 package net.nevinsky.abyssus.model
 
 import com.badlogic.gdx.files.FileHandle
+import java.io.File
+import java.nio.file.Files
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import java.io.File
-import java.nio.file.Files
 
 /** Parsing needs no GL context; this also proves the Assimp natives load. */
 class AssimpLoadingTest {
@@ -34,7 +34,10 @@ class AssimpLoadingTest {
 
     @Test
     fun corruptFileFailsWithAnExceptionNotACrash() {
-        val file = File(Files.createTempDirectory("abyssus_bad").toFile(), "model.gltf").also { it.writeText("{ this is not a model") }
+        val file =
+            File(Files.createTempDirectory("abyssus_bad").toFile(), "model.gltf").also {
+                it.writeText("{ this is not a model")
+            }
         try {
             AssimpModelLoader().loadData(FileHandle(file))
             fail("expected a failure")

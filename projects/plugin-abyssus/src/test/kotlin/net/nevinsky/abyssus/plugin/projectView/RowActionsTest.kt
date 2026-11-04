@@ -10,8 +10,8 @@ import java.awt.Color
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
 import javax.swing.JLabel
-import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.DefaultMutableTreeNode
+import javax.swing.tree.DefaultTreeModel
 
 class RowActionsTest : BasePlatformTestCase() {
     private val host = JLabel("x")
@@ -34,7 +34,15 @@ class RowActionsTest : BasePlatformTestCase() {
     }
 
     private fun entryOf(unused: Boolean) =
-        DtoEntry("/p/assets/0", "0", net.nevinsky.abyssus.lib.core.editor.testAsset("a", "u", "SKYBOX", emptyList(), unused), null, null, null, emptyList())
+        DtoEntry(
+            "/p/assets/0",
+            "0",
+            net.nevinsky.abyssus.lib.core.editor.testAsset("a", "u", "SKYBOX", emptyList(), unused),
+            null,
+            null,
+            null,
+            emptyList(),
+        )
 
     private fun paint(action: RowAction): BufferedImage {
         val w = action.width(host)
@@ -47,7 +55,9 @@ class RowActionsTest : BasePlatformTestCase() {
     }
 
     private fun opaquePixels(image: BufferedImage, test: (Color) -> Boolean) =
-        (0 until image.width).sumOf { x -> (0 until image.height).count { y -> Color(image.getRGB(x, y), true).let { it.alpha > 128 && test(it) } } }
+        (0 until image.width).sumOf { x ->
+            (0 until image.height).count { y -> Color(image.getRGB(x, y), true).let { it.alpha > 128 && test(it) } }
+        }
 
     fun testOnlyUnusedAssetsGetTheBadge() {
         assertTrue(unusedBadgeFor(entryOf(true)) is UnusedBadge)
@@ -60,7 +70,14 @@ class RowActionsTest : BasePlatformTestCase() {
         assertNull(badge.run)
         assertNull(badge.tooltip)
         val image = paint(badge)
-        assertTrue("text is drawn in amber", opaquePixels(image) { Math.abs(it.red - UnusedBadge.TEXT.red) < 40 && Math.abs(it.green - UnusedBadge.TEXT.green) < 40 && it.blue < 120 } > 5)
+        assertTrue(
+            "text is drawn in amber",
+            opaquePixels(image) {
+                Math.abs(it.red - UnusedBadge.TEXT.red) < 40 &&
+                    Math.abs(it.green - UnusedBadge.TEXT.green) < 40 &&
+                    it.blue < 120
+            } > 5,
+        )
         // no outline: the left-most column inside the bounds is not a full-height border line
         val column = (0 until image.height).count { Color(image.getRGB(2, it), true).alpha > 128 }
         assertTrue("no border line", column < badge.height(host))
@@ -72,7 +89,7 @@ class RowActionsTest : BasePlatformTestCase() {
     }
 
     fun testActionsSitRightToLeftWithGapsAndAreCentredOnTheRow() {
-        val eye = IconAction(net.nevinsky.abyssus.plugin.filetype.EyeIcons.ON, null) { }
+        val eye = IconAction(net.nevinsky.abyssus.plugin.filetype.EyeIcons.ON, null) {}
         val badge = UnusedBadge()
         val row = Rectangle(0, 100, 400, 28)
         val bounds = layoutActions(row, 400, listOf(eye, badge), host)
@@ -81,7 +98,9 @@ class RowActionsTest : BasePlatformTestCase() {
         assertTrue("unused is left of the eye", bounds[1].x + bounds[1].width <= bounds[0].x)
         bounds.forEachIndexed { i, b ->
             assertTrue("action $i is centred", Math.abs((row.y + row.height / 2) - (b.y + b.height / 2)) <= 1)
-            if (i > 0) assertTrue("no overlap", b.x + b.width <= bounds[i - 1].x)
+            if (i > 0) {
+                assertTrue("no overlap", b.x + b.width <= bounds[i - 1].x)
+            }
         }
     }
 }

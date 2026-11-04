@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
+import java.io.File
 import net.nevinsky.abyssus.lib.core.editor.scene.AssetRevisionBatch
 import net.nevinsky.abyssus.lib.core.editor.scene.PendingAssetRevision
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
@@ -13,11 +14,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
 
 class AssetRefreshTest {
-    @get:Rule
-    val tmp = TemporaryFolder()
+    @get:Rule val tmp = TemporaryFolder()
 
     private val backgroundQueue = ArrayDeque<Runnable>()
     private val uiQueue = ArrayDeque<Runnable>()
@@ -25,15 +24,21 @@ class AssetRefreshTest {
     private var unsaved: Map<File, String> = emptyMap()
     private var unsavedReads = 0
 
-    private val assets get() = File(tmp.root, "assets")
+    private val assets
+        get() = File(tmp.root, "assets")
 
-    private fun refresh() = AssetRefresh(
-        tmp.root, JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER),
-        unsavedMeta = { unsavedReads++; unsaved },
-        background = { backgroundQueue += it },
-        ui = { uiQueue += it },
-        deliver = { delivered += it },
-    )
+    private fun refresh() =
+        AssetRefresh(
+            tmp.root,
+            JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER),
+            unsavedMeta = {
+                unsavedReads++
+                unsaved
+            },
+            background = { backgroundQueue += it },
+            ui = { uiQueue += it },
+            deliver = { delivered += it },
+        )
 
     /** Runs the pending background reads and their UI continuations until nothing is left. */
     private fun settle() {
@@ -44,30 +49,49 @@ class AssetRefreshTest {
     }
 
     private fun write(path: String, text: String, modified: Long? = null): File =
-        File(assets, path).apply { parentFile.mkdirs(); writeText(text); modified?.let { setLastModified(it) } }
+        File(assets, path).apply {
+            parentFile.mkdirs()
+            writeText(text)
+            modified?.let { setLastModified(it) }
+        }
 
     private fun terrainMeta(size: Int) =
-        """{"format":"abyssus","formatVersion":1,"uuid":"t","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":$size,"uv":1.0,"splatBase":"u-grass"}}"""
+        """{"format":"abyssus","formatVersion":1,"uuid":"t","type":"TERRAIN",
+"additional":{"terrainFile":"terrain.data","size":$size,"uv":1.0,"splatBase":"u-grass"}}"""
 
     /** The size the `hills` terrain meta says as a load after [batch] reads it (its unsaved text over the disk). */
     private fun terrainSize(batch: AssetRevisionBatch): Int {
         val meta = File(assets, "hills/meta.json").absoluteFile
         val text = batch.unsaved[meta] ?: meta.readText()
-        return JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(text).get("additional").get("size").asInt()
+        return JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
+            .readObject(text)
+            .get("additional")
+            .get("size")
+            .asInt()
     }
 
     private fun project() {
         write("hills/terrain.data", "1234", 1000)
         write("hills/meta.json", terrainMeta(100))
         write("grass/a.png", "png", 1000)
-        write("grass/meta.json", """{"format":"abyssus","formatVersion":1,"uuid":"u-grass","type":"TEXTURE","additional":{"file":"a.png"}}""")
-        write("tree/meta.json", """{"format":"abyssus","formatVersion":1,"uuid":"m","type":"MODEL","additional":{"file":"tree.gltf"}}""")
+        write(
+            "grass/meta.json",
+            """{"format":"abyssus","formatVersion":1,"uuid":"u-grass","type":"TEXTURE",
+"additional":{"file":"a.png"}}""",
+        )
+        write(
+            "tree/meta.json",
+            """{"format":"abyssus","formatVersion":1,"uuid":"m","type":"MODEL","additional":{"file":"tree.gltf"}}""",
+        )
         write("tree/tree.gltf", "gltf", 1000)
     }
 
     private fun started(): AssetRefresh {
         project()
-        return refresh().also { it.start(); settle() }
+        return refresh().also {
+            it.start()
+            settle()
+        }
     }
 
     @Test
@@ -97,7 +121,15 @@ class AssetRefreshTest {
         settle()
         assertEquals(setOf("hills"), delivered.single().names)
         assertEquals("the snapshot reads the unsaved text", 300, terrainSize(delivered.single()))
-        assertEquals("the disk still holds the old size", 100, JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER).readObject(meta.readText()).get("additional").get("size").asInt())
+        assertEquals(
+            "the disk still holds the old size",
+            100,
+            JsonProcessor(org.slf4j.helpers.NOPLogger.NOP_LOGGER)
+                .readObject(meta.readText())
+                .get("additional")
+                .get("size")
+                .asInt(),
+        )
 
         // saved: the document is no longer unsaved and the disk holds the same text
         write("hills/meta.json", terrainMeta(300))
@@ -112,11 +144,14 @@ class AssetRefreshTest {
         val r = started()
         val meta = File(assets, "hills/meta.json").absoluteFile
         unsaved = mapOf(meta to terrainMeta(300))
-        r.changed(); settle()
+        r.changed()
+        settle()
         unsaved = emptyMap() // undo: the unsaved text is gone, the disk text is the original
-        r.changed(); settle()
+        r.changed()
+        settle()
         unsaved = mapOf(meta to terrainMeta(300)) // redo
-        r.changed(); settle()
+        r.changed()
+        settle()
         assertEquals(listOf(setOf("hills"), setOf("hills"), setOf("hills")), delivered.map { it.names })
         assertEquals(listOf(300, 100, 300), delivered.map { terrainSize(it) })
     }
@@ -133,9 +168,17 @@ class AssetRefreshTest {
     @Test
     fun `a painted splat map image reloads the splat texture and the terrain using it but not the other terrain`() {
         write("meadow/terrain.data", "1234", 1000)
-        write("meadow/meta.json", """{"format":"abyssus","formatVersion":1,"uuid":"t2","type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":100,"uv":1.0,"splatMap":"u-splat"}}""")
+        write(
+            "meadow/meta.json",
+            """{"format":"abyssus","formatVersion":1,"uuid":"t2","type":"TERRAIN",
+"additional":{"terrainFile":"terrain.data","size":100,"uv":1.0,"splatMap":"u-splat"}}""",
+        )
         write("splat/s.png", "weights-a", 1000)
-        write("splat/meta.json", """{"format":"abyssus","formatVersion":1,"uuid":"u-splat","type":"TEXTURE","additional":{"file":"s.png"}}""")
+        write(
+            "splat/meta.json",
+            """{"format":"abyssus","formatVersion":1,"uuid":"u-splat","type":"TEXTURE",
+"additional":{"file":"s.png"}}""",
+        )
         val r = started()
         // same length, only the modification time moves: what a stroke of equal size looks like
         write("splat/s.png", "weights-b", 6000)
@@ -148,10 +191,12 @@ class AssetRefreshTest {
     fun `external deletion and recreation of the heights are both changes`() {
         val r = started()
         File(assets, "hills/terrain.data").delete()
-        r.changed(); settle()
+        r.changed()
+        settle()
         assertEquals(setOf("hills"), delivered.last().names)
         write("hills/terrain.data", "1234", 9000)
-        r.changed(); settle()
+        r.changed()
+        settle()
         assertEquals(2, delivered.size)
         assertEquals(setOf("hills"), delivered.last().names)
     }
@@ -160,9 +205,11 @@ class AssetRefreshTest {
     fun `a broken then repaired asset is reported each time and others stay out`() {
         val r = started()
         write("hills/meta.json", "{ broken")
-        r.changed(); settle()
+        r.changed()
+        settle()
         write("hills/meta.json", terrainMeta(100))
-        r.changed(); settle()
+        r.changed()
+        settle()
         assertEquals(listOf(setOf("hills"), setOf("hills")), delivered.map { it.names })
     }
 
@@ -195,8 +242,12 @@ class AssetRefreshTest {
     @Test
     fun `batches merge their names and the newer snapshot wins`() {
         val r = started()
-        write("hills/meta.json", terrainMeta(150)); r.changed(); settle()
-        write("tree/tree.gltf", "gltf!", 4000); r.changed(); settle()
+        write("hills/meta.json", terrainMeta(150))
+        r.changed()
+        settle()
+        write("tree/tree.gltf", "gltf!", 4000)
+        r.changed()
+        settle()
         val merged = delivered[0] + delivered[1]
         assertEquals(setOf("hills", "tree"), merged.names)
         assertEquals(150, terrainSize(merged))
@@ -205,9 +256,14 @@ class AssetRefreshTest {
 
     @Test
     fun `a project without assets has nothing to deliver`() {
-        val r = refresh().also { it.start(); settle() }
+        val r =
+            refresh().also {
+                it.start()
+                settle()
+            }
         write("late/meta.json", """{"format":"abyssus","formatVersion":1,"type":"MODEL","additional":{}}""")
-        r.changed(); settle()
+        r.changed()
+        settle()
         assertEquals(setOf("late"), delivered.single().names)
     }
 
@@ -216,9 +272,13 @@ class AssetRefreshTest {
         val r = started()
         val pending = PendingAssetRevision()
         assertEquals(null, pending.take())
-        write("hills/meta.json", terrainMeta(150)); r.changed(); settle()
+        write("hills/meta.json", terrainMeta(150))
+        r.changed()
+        settle()
         pending.queue(delivered[0]) // the view is hidden: nothing renders, nothing is taken
-        write("tree/tree.gltf", "gltf!", 4000); r.changed(); settle()
+        write("tree/tree.gltf", "gltf!", 4000)
+        r.changed()
+        settle()
         pending.queue(delivered[1])
         val taken = pending.take()!!
         assertEquals(setOf("hills", "tree"), taken.names)

@@ -5,8 +5,6 @@
 
 package net.nevinsky.abyssus.lib.core.water
 
-import net.nevinsky.abyssus.lib.core.util.WATER_DIRECTIONAL_CAPACITY
-
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.GL20
@@ -15,9 +13,10 @@ import com.badlogic.gdx.graphics.Mesh
 import com.badlogic.gdx.graphics.VertexAttribute
 import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.utils.Disposable
-import net.nevinsky.abyssus.lib.core.util.newSolidTexture
-import net.nevinsky.abyssus.lib.core.util.newSolidCubemap
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.core.util.WATER_DIRECTIONAL_CAPACITY
+import net.nevinsky.abyssus.lib.core.util.newSolidCubemap
+import net.nevinsky.abyssus.lib.core.util.newSolidTexture
 
 /** The classpath folder of the water shaders, for [ShaderStorage.withResources]. */
 const val WATER_SHADER_ROOT = "/shader/water"
@@ -68,21 +67,27 @@ class WaterDrawable(shaders: ShaderStorage, private val planner: WaterMeshPlanne
     private val blank = newSolidTexture()
     /** Bound to the sky cube's unit when there is no sky cube, so no cube sampler is left without a cube. */
     private val blankCube = newSolidCubemap()
-    private val meshes = object : LinkedHashMap<String, Mesh>(16, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Mesh>): Boolean {
-            val drop = size > MAX_MESHES
-            if (drop) eldest.value.dispose()
-            return drop
+    private val meshes =
+        object : LinkedHashMap<String, Mesh>(16, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Mesh>): Boolean {
+                val drop = size > MAX_MESHES
+                if (drop) {
+                    eldest.value.dispose()
+                }
+                return drop
+            }
         }
-    }
     private val waveCache = HashMap<Triple<Double, Double, Double>, WaterWaves>()
 
     /** How many meshes are alive, for tests. */
-    val meshCount: Int get() = meshes.size
+    val meshCount: Int
+        get() = meshes.size
 
     /** The waves of a surface's settings, shared between frames. */
     fun wavesOf(surface: WaterSettings): WaterWaves {
-        if (waveCache.size > MAX_MESHES * 4) waveCache.clear()
+        if (waveCache.size > MAX_MESHES * 4) {
+            waveCache.clear()
+        }
         return waveCache.getOrPut(Triple(surface.waveAmplitude, surface.waveLength, surface.waveSpeed)) {
             WaterWaves(surface.waveAmplitude, surface.waveLength, surface.waveSpeed)
         }
@@ -92,12 +97,19 @@ class WaterDrawable(shaders: ShaderStorage, private val planner: WaterMeshPlanne
         val camera = frame.camera
         val waves = wavesOf(surface)
         val plan = planner.plan(surface.width, surface.length, surface.waveLength)
-        val mesh = meshes.getOrPut("${plan.cellsX}x${plan.cellsZ}:${surface.width}:${surface.length}") {
-            Mesh(true, plan.vertexCount, plan.indexCount, VertexAttribute(VertexAttributes.Usage.Position, 2, "a_position")).also {
-                it.setVertices(plan.vertices())
-                it.setIndices(plan.indices())
+        val mesh =
+            meshes.getOrPut("${plan.cellsX}x${plan.cellsZ}:${surface.width}:${surface.length}") {
+                Mesh(
+                        true,
+                        plan.vertexCount,
+                        plan.indexCount,
+                        VertexAttribute(VertexAttributes.Usage.Position, 2, "a_position"),
+                    )
+                    .also {
+                        it.setVertices(plan.vertices())
+                        it.setIndices(plan.indices())
+                    }
             }
-        }
         val hasDepth = textures.sceneColor != null && textures.sceneDepth != null && textures.terrainDepth != null
         program.bind()
         bind(0, textures.sceneColor)
@@ -111,9 +123,30 @@ class WaterDrawable(shaders: ShaderStorage, private val planner: WaterMeshPlanne
         seti("u_terrainDepth", 2)
         seti("u_reflection", 3)
         seti("u_skyCube", 4)
-        seti("u_hasSkyCube", if (textures.skyCube != null) 1 else 0)
-        seti("u_hasReflection", if (textures.reflection != null) 1 else 0)
-        seti("u_hasDepth", if (hasDepth) 1 else 0)
+        seti(
+            "u_hasSkyCube",
+            if (textures.skyCube != null) {
+                1
+            } else {
+                0
+            },
+        )
+        seti(
+            "u_hasReflection",
+            if (textures.reflection != null) {
+                1
+            } else {
+                0
+            },
+        )
+        seti(
+            "u_hasDepth",
+            if (hasDepth) {
+                1
+            } else {
+                0
+            },
+        )
         matrix("u_projViewTrans", camera.combined)
         matrix("u_invProjView", camera.invProjectionView)
         setf("u_cameraPos", camera.position.x, camera.position.y, camera.position.z)
@@ -125,7 +158,10 @@ class WaterDrawable(shaders: ShaderStorage, private val planner: WaterMeshPlanne
         val phases = waves.phases(frame.seconds)
         setf("u_phases", phases[0], phases[1], phases[2], phases[3])
         setf("u_cell", plan.cellSize.toFloat())
-        setf("u_calmRange", (surface.waveAmplitude * 2.0 + 0.02).toFloat())  // the waves die out over this much terrain depth
+        setf(
+            "u_calmRange",
+            (surface.waveAmplitude * 2.0 + 0.02).toFloat(),
+        ) // the waves die out over this much terrain depth
         setf("u_time", (frame.seconds % TIME_PERIOD).toFloat())
         setf("u_level", surface.level.toFloat())
         setf("u_amplitude", surface.waveAmplitude.toFloat())
@@ -145,7 +181,8 @@ class WaterDrawable(shaders: ShaderStorage, private val planner: WaterMeshPlanne
         Gdx.gl.glDepthMask(true)
         Gdx.gl.glDisable(GL20.GL_BLEND)
         Gdx.gl.glDisable(GL20.GL_CULL_FACE)
-        // The window depth buffer is coarse far from the camera: bias the surface toward it so the buffer does not cut the
+        // The window depth buffer is coarse far from the camera: bias the surface toward it so the buffer does not cut
+        // the
         // shoreline raggedly; the fragment shader's exact depth test then decides what the scene hides.
         Gdx.gl.glEnable(GL20.GL_POLYGON_OFFSET_FILL)
         Gdx.gl.glPolygonOffset(-1f, -4f)
@@ -158,22 +195,28 @@ class WaterDrawable(shaders: ShaderStorage, private val planner: WaterMeshPlanne
 
     private fun location(name: String): Int = program.fetchUniformLocation(name, false)
 
-    private fun seti(name: String, value: Int) = location(name).takeIf { it >= 0 }?.let { program.setUniformi(it, value) }
+    private fun seti(name: String, value: Int) =
+        location(name).takeIf { it >= 0 }?.let { program.setUniformi(it, value) }
 
     private fun setf(name: String, a: Float) = location(name).takeIf { it >= 0 }?.let { program.setUniformf(it, a) }
 
-    private fun setf(name: String, a: Float, b: Float) = location(name).takeIf { it >= 0 }?.let { program.setUniformf(it, a, b) }
+    private fun setf(name: String, a: Float, b: Float) =
+        location(name).takeIf { it >= 0 }?.let { program.setUniformf(it, a, b) }
 
-    private fun setf(name: String, a: Float, b: Float, c: Float) = location(name).takeIf { it >= 0 }?.let { program.setUniformf(it, a, b, c) }
+    private fun setf(name: String, a: Float, b: Float, c: Float) =
+        location(name).takeIf { it >= 0 }?.let { program.setUniformf(it, a, b, c) }
 
     private fun setf(name: String, a: Float, b: Float, c: Float, d: Float) =
         location(name).takeIf { it >= 0 }?.let { program.setUniformf(it, a, b, c, d) }
 
-    private fun matrix(name: String, value: com.badlogic.gdx.math.Matrix4) = location(name).takeIf { it >= 0 }?.let { program.setUniformMatrix(it, value) }
+    private fun matrix(name: String, value: com.badlogic.gdx.math.Matrix4) =
+        location(name).takeIf { it >= 0 }?.let { program.setUniformMatrix(it, value) }
 
-    private fun array3(name: String, values: FloatArray) = location(name).takeIf { it >= 0 }?.let { program.setUniform3fv(it, values, 0, values.size) }
+    private fun array3(name: String, values: FloatArray) =
+        location(name).takeIf { it >= 0 }?.let { program.setUniform3fv(it, values, 0, values.size) }
 
-    private fun array4(name: String, values: FloatArray) = location(name).takeIf { it >= 0 }?.let { program.setUniform4fv(it, values, 0, values.size) }
+    private fun array4(name: String, values: FloatArray) =
+        location(name).takeIf { it >= 0 }?.let { program.setUniform4fv(it, values, 0, values.size) }
 
     private fun bind(unit: Int, texture: GLTexture?) {
         (texture ?: blank).bind(unit)

@@ -5,28 +5,24 @@
 
 package net.nevinsky.abyssus.plugin
 
-import net.nevinsky.abyssus.lib.core.editor.parseScene
-import net.nevinsky.abyssus.lib.core.editor.testAsset
-
 import com.intellij.ide.projectView.PresentationData
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.projectView.impl.AbstractProjectViewPane
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.application.runWriteAction
+import com.intellij.openapi.components.service
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.PsiTestUtil
 import com.intellij.testFramework.TestDataPath
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.openapi.components.service
-import net.nevinsky.abyssus.plugin.dto.ProjectDto
-import net.nevinsky.abyssus.plugin.dto.SceneError
-import net.nevinsky.abyssus.plugin.projectView.childrenOf
-import net.nevinsky.abyssus.plugin.projectView.elementLabel
-import net.nevinsky.abyssus.plugin.dto.ProjectReader
-import net.nevinsky.abyssus.plugin.dto.SceneReader
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.core.editor.testAsset
+import net.nevinsky.abyssus.plugin.dto.ProjectDto
+import net.nevinsky.abyssus.plugin.dto.ProjectReader
 import net.nevinsky.abyssus.plugin.dto.SceneEntry
-import net.nevinsky.abyssus.plugin.projectView.foldToggles
+import net.nevinsky.abyssus.plugin.dto.SceneError
+import net.nevinsky.abyssus.plugin.dto.SceneReader
 import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectFileType
 import net.nevinsky.abyssus.plugin.filetype.AbyssusProjectIcons
 import net.nevinsky.abyssus.plugin.filetype.SceneFileType
@@ -35,6 +31,9 @@ import net.nevinsky.abyssus.plugin.language.GltfFileType
 import net.nevinsky.abyssus.plugin.projectView.AbyssusAssetNode
 import net.nevinsky.abyssus.plugin.projectView.AbyssusRootNode
 import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
+import net.nevinsky.abyssus.plugin.projectView.childrenOf
+import net.nevinsky.abyssus.plugin.projectView.elementLabel
+import net.nevinsky.abyssus.plugin.projectView.foldToggles
 import net.nevinsky.abyssus.plugin.projectView.toggleEnabled
 
 @TestDataPath("\$CONTENT_ROOT/src/test/testData")
@@ -46,8 +45,10 @@ class AbyssusViewTest : BasePlatformTestCase() {
     private fun fixture(): VirtualFile {
         myFixture.copyFileToProject("Tree/Untitled.abss", "Untitled/Untitled.abss")
         val sceneText = java.io.File("$testDataPath/Tree/scenes/Main Scene.scene").readText()
-        myFixture.addFileToProject("Untitled/scenes/Main Scene.scene",
-            prettyScene(sceneText))
+        myFixture.addFileToProject(
+            "Untitled/scenes/Main Scene.scene",
+            prettyScene(sceneText),
+        )
         return myFixture.findFileInTempDir("Untitled")
     }
 
@@ -81,8 +82,14 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertNotNull(AbyssusProjectIcons.FILE)
         assertNotSame(SceneIcons.FILE, AbyssusProjectIcons.FILE)
         assertEquals("gltf", GltfFileType.INSTANCE.defaultExtension)
-        assertSame(SceneFileType.INSTANCE, com.intellij.openapi.fileTypes.FileTypeManager.getInstance().getFileTypeByFileName("a.scene"))
-        assertSame(AbyssusProjectFileType.INSTANCE, com.intellij.openapi.fileTypes.FileTypeManager.getInstance().getFileTypeByFileName("a.abss"))
+        assertSame(
+            SceneFileType.INSTANCE,
+            com.intellij.openapi.fileTypes.FileTypeManager.getInstance().getFileTypeByFileName("a.scene"),
+        )
+        assertSame(
+            AbyssusProjectFileType.INSTANCE,
+            com.intellij.openapi.fileTypes.FileTypeManager.getInstance().getFileTypeByFileName("a.abss"),
+        )
     }
 
     fun testPaneRegistered() {
@@ -101,26 +108,47 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertEquals(0.001f, scene.fog!!.density!!, 0f)
         assertEquals(0.3f, scene.ambientLight!!.intensity!!, 0f)
         assertEquals("skybox_physical", scene.skyboxName)
-        assertEquals(listOf("formatVersion", "id", "name", "ambientLightEnabled", "ambientLight", "fogEnabled", "fog", "skyboxEnabled", "skyboxName", "ecs"),
-            childrenOf(scene).map { it.name })
+        assertEquals(
+            listOf(
+                "formatVersion",
+                "id",
+                "name",
+                "ambientLightEnabled",
+                "ambientLight",
+                "fogEnabled",
+                "fog",
+                "skyboxEnabled",
+                "skyboxName",
+                "ecs",
+            ),
+            childrenOf(scene).map { it.name },
+        )
         assertEquals(before.toList(), file.contentsToByteArray().toList())
     }
 
     fun testRowNamesAndOrderAreStable() {
-        assertEquals(listOf("scenes", "ui", "assets"), childrenOf(ProjectDto("n", emptyList(), emptyList())).map { it.name })
+        assertEquals(
+            listOf("scenes", "ui", "assets"),
+            childrenOf(ProjectDto("n", emptyList(), emptyList())).map { it.name },
+        )
         val asset = testAsset("a", "u", "MODEL", listOf("r"), true)
         val assetRows = childrenOf(asset).map { it.name }
         // JVM reflection may discover the derived getters before or after uuid.
         // Both retain the stored-property order and all three derived rows.
-        val assetOrders = listOf(
-            listOf("baseDir", "meta", "references", "unused", "uuid", "name", "type"),
-            listOf("baseDir", "meta", "references", "unused", "name", "type", "uuid"),
-            listOf("baseDir", "meta", "references", "unused"),
-        )
+        val assetOrders =
+            listOf(
+                listOf("baseDir", "meta", "references", "unused", "uuid", "name", "type"),
+                listOf("baseDir", "meta", "references", "unused", "name", "type", "uuid"),
+                listOf("baseDir", "meta", "references", "unused"),
+            )
         assertTrue("Unexpected asset row order: $assetRows", assetRows in assetOrders)
         assertEquals(assetRows, childrenOf(asset).map { it.name })
         assertEquals(listOf("error"), childrenOf(SceneError(add("e.scene", "x"), "boom")).map { it.name })
-        val fog = parseScene("""{"format":"abyssus","formatVersion":1,"fog":{"color":{"r":1,"g":2,"b":3,"a":4},"density":0.5}}""").fog!!
+        val fog =
+            parseScene(
+                    """{"format":"abyssus","formatVersion":1,"fog":{"color":{"r":1,"g":2,"b":3,"a":4},"density":0.5}}"""
+                )
+                .fog!!
         assertEquals(listOf("color", "density", "gradient"), childrenOf(fog).map { it.name })
         assertEquals(listOf("r", "g", "b", "a"), childrenOf(fog.color).map { it.name })
     }
@@ -143,14 +171,18 @@ class AbyssusViewTest : BasePlatformTestCase() {
         assertEquals(SceneDto(id = scene.id), scene)
         assertEquals(10, childrenOf(scene).size)
         assertTrue(childrenOf(scene).filter { it.name.endsWith("Enabled") }.all { it.value == false })
-        assertTrue(childrenOf(scene).filter { it.name in setOf("name", "ambientLight", "fog", "skyboxName", "water") }.all { it.value == null })
+        assertTrue(
+            childrenOf(scene)
+                .filter { it.name in setOf("name", "ambientLight", "fog", "skyboxName", "water") }
+                .all { it.value == null }
+        )
     }
 
     fun testProjectReaderLoadsScenesFolder() {
         val file = fixture().findChild("Untitled.abss")!!
         val root = project.service<ProjectReader>().read(file).obj!!
         assertEquals(listOf("scenes", "ui", "assets"), childrenOf(root).map { it.name })
-        val scenes = (root as ProjectDto).scenes
+        val scenes = root.scenes
         assertEquals(listOf("$fixtureSceneName (0)"), scenes.mapIndexed { i, it -> elementLabel("scenes", it, i) })
     }
 
@@ -160,20 +192,39 @@ class AbyssusViewTest : BasePlatformTestCase() {
         add("p/scenes/a.scene", """{"format":"abyssus","formatVersion":1,"id":0,"name":"A"}""")
         add("p/scenes/c.scene", """{"format":"abyssus","formatVersion":1,"id":2}""")
         add("p/scenes/d.scene", "broken")
-        val items = (project.service<ProjectReader>().read(myFixture.findFileInTempDir("p/a.abss")).obj!!).scenes.mapIndexed { i, it -> elementLabel("scenes", it, i) }
+        val items =
+            (project.service<ProjectReader>().read(myFixture.findFileInTempDir("p/a.abss")).obj!!).scenes.mapIndexed {
+                i,
+                it ->
+                elementLabel("scenes", it, i)
+            }
         assertEquals(listOf("A (0)", "B (1)", "scenes[2] (2)", "d.scene"), items)
         add("q/a.abss", """{"format":"abyssus","formatVersion":1,"name":"q"}""")
         val none = project.service<ProjectReader>().read(myFixture.findFileInTempDir("q/a.abss")).obj!!
-        assertTrue((none as ProjectDto).scenes.isEmpty())
+        assertTrue(none.scenes.isEmpty())
         assertTrue(!project.service<ProjectReader>().read(add("bad.abss", "")).success)
     }
 
     // 3. discovery
 
     fun testDiscoveryIsExactSuffixCaseSensitive() {
-        for (n in listOf("a.scene", "Forest.SCENE", "forest.scene.bak", "a.abss", "A.ABSS", "a.abss.bak", "scenes/s.scene", "x.txt")) add(n, """{"format":"abyssus","formatVersion":1}""")
+        for (n in
+            listOf(
+                "a.scene",
+                "Forest.SCENE",
+                "forest.scene.bak",
+                "a.abss",
+                "A.ABSS",
+                "a.abss.bak",
+                "scenes/s.scene",
+                "x.txt",
+            )) add(n, """{"format":"abyssus","formatVersion":1}""")
         val dir = myFixture.findFileInTempDir("")
-        runWriteAction { dir.createChildDirectory(this, "excl").createChildData(this, "e.scene").setBinaryContent("""{"format":"abyssus","formatVersion":1}""".toByteArray()) }
+        runWriteAction {
+            dir.createChildDirectory(this, "excl")
+                .createChildData(this, "e.scene")
+                .setBinaryContent("""{"format":"abyssus","formatVersion":1}""".toByteArray())
+        }
         PsiTestUtil.addExcludedRoot(module, myFixture.findFileInTempDir("excl"))
         val names = allAssets().map { text(it) }
         // projects first, then standalone scenes; "scenes/s.scene" belongs to the sibling a.abss
@@ -236,7 +287,13 @@ class AbyssusViewTest : BasePlatformTestCase() {
     }
 
     fun testFoldToggles() {
-        val props = childrenOf(parseScene("""{"format":"abyssus","formatVersion":1,"fogEnabled":false,"fog":{},"skyboxEnabled":true,"skyboxName":"s","lonelyEnabled":true}"""))
+        val props =
+            childrenOf(
+                parseScene(
+                    """{"format":"abyssus","formatVersion":1,"fogEnabled":false,"fog":{},"skyboxEnabled":true,
+"skyboxName":"s","lonelyEnabled":true}"""
+                )
+            )
         val folded = props.foldToggles()
         assertEquals(false, folded.first { it.name == "fog" }.enabled)
         assertEquals(true, folded.first { it.name == "skyboxName" }.enabled)
@@ -248,8 +305,10 @@ class AbyssusViewTest : BasePlatformTestCase() {
         val dir = fixture()
         val file = dir.findFileByRelativePath("scenes/Main Scene.scene")!!
         val original = String(file.contentsToByteArray())
-        fun fog() = children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single()
-            .let { children(it).first { n -> text(n) == "fog" } as DtoEntryNode }
+        fun fog() =
+            children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single().let {
+                children(it).first { n -> text(n) == "fog" } as DtoEntryNode
+            }
 
         assertTrue(toggleEnabled(project, fog().value))
         val flipped = String(file.contentsToByteArray())
@@ -271,11 +330,15 @@ class AbyssusViewTest : BasePlatformTestCase() {
     fun testDisabledParameterAndItsChildrenAreGray() {
         val dir = fixture()
         val file = dir.findFileByRelativePath("scenes/Main Scene.scene")!!
-        fun fog() = children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single()
-            .let { children(it).first { n -> text(n) == "fog" } as DtoEntryNode }
+        fun fog() =
+            children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single().let {
+                children(it).first { n -> text(n) == "fog" } as DtoEntryNode
+            }
         fun gray(n: AbstractTreeNode<*>): Boolean {
             n.update()
-            return n.presentation.coloredText.all { it.attributes == com.intellij.ui.SimpleTextAttributes.GRAYED_ATTRIBUTES }
+            return n.presentation.coloredText.all {
+                it.attributes == com.intellij.ui.SimpleTextAttributes.GRAYED_ATTRIBUTES
+            }
         }
         assertFalse(gray(fog()))
         assertTrue(toggleEnabled(project, fog().value))
@@ -287,11 +350,33 @@ class AbyssusViewTest : BasePlatformTestCase() {
 
     fun testEntryIdentityChangesWithToggleState() {
         fixture()
-        val fog = children(children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single()).first { text(it) == "fog" } as DtoEntryNode
+        val fog =
+            children(children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single())
+                .first { text(it) == "fog" } as DtoEntryNode
         val same = fog.value
-        val flipped = net.nevinsky.abyssus.plugin.projectView.DtoEntry(same.path, same.name, same.value, !same.enabled!!, same.toggleName, same.source, same.parentKeys)
+        val flipped =
+            net.nevinsky.abyssus.plugin.projectView.DtoEntry(
+                same.path,
+                same.name,
+                same.value,
+                !same.enabled!!,
+                same.toggleName,
+                same.source,
+                same.parentKeys,
+            )
         assertFalse(same == flipped)
-        assertEquals(same, net.nevinsky.abyssus.plugin.projectView.DtoEntry(same.path, same.name, same.value, same.enabled, same.toggleName, same.source, same.parentKeys))
+        assertEquals(
+            same,
+            net.nevinsky.abyssus.plugin.projectView.DtoEntry(
+                same.path,
+                same.name,
+                same.value,
+                same.enabled,
+                same.toggleName,
+                same.source,
+                same.parentKeys,
+            ),
+        )
     }
 
     fun testScenesListAndSceneEntriesHaveOwnIcons() {
@@ -310,10 +395,16 @@ class AbyssusViewTest : BasePlatformTestCase() {
     fun testFoliageAssetHasItsOwnIconInTheProjectTree() {
         add("foliage/P.abss", """{"format":"abyssus","formatVersion":1,"name":"Foliage"}""")
         for ((folder, type) in listOf("foliage_meadow" to "FOLIAGE", "terrain" to "TERRAIN", "tree" to "MODEL")) {
-            add("foliage/assets/$folder/meta.json", """{"format":"abyssus","formatVersion":1,"type":"$type","additional":{}}""")
+            add(
+                "foliage/assets/$folder/meta.json",
+                """{"format":"abyssus","formatVersion":1,"type":"$type","additional":{}}""",
+            )
         }
         val assets = children(asset("P.abss")).single { text(it).startsWith("Assets") }
-        val icons = children(assets).flatMap { children(it) }.associate { text(it).substringBefore("  ") to it.presentation.getIcon(false) }
+        val icons =
+            children(assets)
+                .flatMap { children(it) }
+                .associate { text(it).substringBefore("  ") to it.presentation.getIcon(false) }
         val foliage = icons.getValue("foliage_meadow")!!
         assertSame(net.nevinsky.abyssus.plugin.filetype.AssetIcons.forType("FOLIAGE"), foliage)
         assertNotSame(net.nevinsky.abyssus.plugin.filetype.AssetIcons.UNKNOWN, foliage)
@@ -326,7 +417,13 @@ class AbyssusViewTest : BasePlatformTestCase() {
     fun testWellKnownPropertiesHaveOwnIcons() {
         fixture()
         val scene = children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single()
-        fun icon(name: String) = children(scene).first { text(it).startsWith(name) }.let { it.update(); it.presentation.getIcon(false) }
+        fun icon(name: String) =
+            children(scene)
+                .first { text(it).startsWith(name) }
+                .let {
+                    it.update()
+                    it.presentation.getIcon(false)
+                }
         assertSame(net.nevinsky.abyssus.plugin.filetype.PropertyIcons.LIGHT, icon("ambientLight"))
         assertSame(net.nevinsky.abyssus.plugin.filetype.PropertyIcons.FOG, icon("fog"))
         assertSame(net.nevinsky.abyssus.plugin.filetype.PropertyIcons.SKYBOX, icon("skybox: "))
@@ -338,13 +435,17 @@ class AbyssusViewTest : BasePlatformTestCase() {
         val dir = fixture()
         val file = dir.findFileByRelativePath("scenes/Main Scene.scene")!!
         val original = String(file.contentsToByteArray())
-        fun sceneNode() = children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single() as DtoEntryNode
+        fun sceneNode() =
+            children(children(asset("Untitled.abss")).first { text(it).startsWith("Scenes") }).single() as DtoEntryNode
         assertEquals("$fixtureSceneName (0)", text(sceneNode()))
         val entry = sceneNode().value
         assertEquals(file, net.nevinsky.abyssus.plugin.projectView.sceneFileOf(entry))
         assertEquals(fixtureSceneName, net.nevinsky.abyssus.plugin.projectView.sceneNameOf(project, file))
         assertTrue(net.nevinsky.abyssus.plugin.projectView.renameScene(project, file, "Forest"))
-        assertEquals(original.replace(Regex("\"name\":(\\s*)\"$fixtureSceneName\""), "\"name\":$1\"Forest\""), String(file.contentsToByteArray()))
+        assertEquals(
+            original.replace(Regex("\"name\":(\\s*)\"$fixtureSceneName\""), "\"name\":$1\"Forest\""),
+            String(file.contentsToByteArray()),
+        )
         assertEquals("Forest (0)", text(sceneNode()))
     }
 }

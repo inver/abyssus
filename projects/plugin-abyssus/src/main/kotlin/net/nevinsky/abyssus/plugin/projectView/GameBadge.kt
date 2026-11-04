@@ -8,18 +8,19 @@ package net.nevinsky.abyssus.plugin.projectView
 import com.intellij.ui.JBColor
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.util.ui.JBUI
-import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
-import net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS
 import java.awt.Color
 import java.awt.Graphics2D
 import java.awt.RenderingHints
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
+import net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS
 
 private val builtInRegistry = ComponentRegistry()
-private val physicsNames = PHYSICS_COMPONENTS.values.flatMap { listOf(it.name, it.simpleName) }.toSet() + PHYSICS_COMPONENTS.keys
+private val physicsNames =
+    PHYSICS_COMPONENTS.values.flatMap { listOf(it.name, it.simpleName) }.toSet() + PHYSICS_COMPONENTS.keys
 
 /**
- * True for a component key (short or fully qualified class name, as the scene file writes it) that Abyssus itself does not
- * ship: the built-in components and the fixed physics kinds are not game components, anything else a scene names is
+ * True for a component key (short or fully qualified class name, as the scene file writes it) that Abyssus itself does
+ * not ship: the built-in components and the fixed physics kinds are not game components, anything else a scene names is
  * registered by the game project. Pure over the key; touches no runtime.
  */
 fun isGameComponent(key: String): Boolean = builtInRegistry.get(key) == null && key !in physicsNames

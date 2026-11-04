@@ -31,9 +31,11 @@ sealed interface DetectOutcome {
 
 /**
  * Detecting the handle axis or the pause button of one device (design decisions 2 and 7): an axis that moves at least
- * [DETECT_TRAVEL] from where it was at the start is taken, the one that moved most if several did, with its starting value as
+  * [DETECT_TRAVEL] from where it was at the start is taken, the one that moved most if several did, with its starting
+  * value as
  * the rest value; a button is the first one pressed that was not already held at the start (so the confirm that began
- * detecting is not taken). While detecting an axis the device's back button (B, or button 1) cancels; while detecting a button
+  * detecting is not taken). While detecting an axis the device's back button (B, or button 1) cancels; while detecting
+  * a button
  * it is a candidate like any other. Main thread only.
  */
 class DetectSession(val kind: DetectKind, private val start: DeviceState) {
@@ -46,8 +48,12 @@ class DetectSession(val kind: DetectKind, private val start: DeviceState) {
 
     /** Reads [device] (null when it went away) after [seconds]. */
     fun update(device: DeviceState?, seconds: Float): DetectOutcome {
-        if (finished) return DetectOutcome.Stopped
-        if (device == null) return stop()
+        if (finished) {
+            return DetectOutcome.Stopped
+        }
+        if (device == null) {
+            return stop()
+        }
         elapsed += seconds
         val outcome = when (kind) {
             DetectKind.AXIS -> axis(device)
@@ -58,7 +64,11 @@ class DetectSession(val kind: DetectKind, private val start: DeviceState) {
             finished = true
             return outcome
         }
-        return if (elapsed >= DETECT_SECONDS) stop() else DetectOutcome.Waiting
+        return if (elapsed >= DETECT_SECONDS) {
+            stop()
+        } else {
+            DetectOutcome.Waiting
+        }
     }
 
     /** Stops with no change. */
@@ -70,8 +80,14 @@ class DetectSession(val kind: DetectKind, private val start: DeviceState) {
     }
 
     private fun axis(device: DeviceState): DetectOutcome {
-        val back = if (device.gamepad) GAMEPAD_BUTTON_B else 1
-        if (device.pressed(back) && !(back in lastButtons.indices && lastButtons[back])) return stop()
+        val back = if (device.gamepad) {
+            GAMEPAD_BUTTON_B
+        } else {
+            1
+        }
+        if (device.pressed(back) && !(back in lastButtons.indices && lastButtons[back])) {
+            return stop()
+        }
         var best = -1
         var moved = 0f
         for (i in device.axes.indices) {
@@ -81,12 +97,18 @@ class DetectSession(val kind: DetectKind, private val start: DeviceState) {
                 moved = travel
             }
         }
-        return if (best >= 0) DetectOutcome.Axis(best, start.axis(best)) else DetectOutcome.Waiting
+        return if (best >= 0) {
+            DetectOutcome.Axis(best, start.axis(best))
+        } else {
+            DetectOutcome.Waiting
+        }
     }
 
     private fun button(device: DeviceState): DetectOutcome {
         for (i in device.buttons.indices) {
-            if (device.buttons[i] && !(i in lastButtons.indices && lastButtons[i])) return DetectOutcome.Button(i)
+            if (device.buttons[i] && !(i in lastButtons.indices && lastButtons[i])) {
+                return DetectOutcome.Button(i)
+            }
         }
         return DetectOutcome.Waiting
     }

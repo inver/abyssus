@@ -15,7 +15,9 @@ import net.nevinsky.abyssus.plugin.projectView.sceneNameOf
 
 class RenameSceneActionTest : BasePlatformTestCase() {
     private fun children(node: AbstractTreeNode<*>) = node.children.map { it as AbstractTreeNode<*> }
-    private fun label(node: AbstractTreeNode<*>): String = (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
+
+    private fun label(node: AbstractTreeNode<*>): String =
+        (node as? DtoEntryNode)?.value?.name ?: (node as AbyssusAssetNode).virtualFile.name
 
     private lateinit var standaloneRow: AbstractTreeNode<*>
     private lateinit var projectRow: AbstractTreeNode<*>
@@ -24,9 +26,15 @@ class RenameSceneActionTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
-        myFixture.addFileToProject("Standalone.scene", """{"format":"abyssus","formatVersion":1,"name":"Standalone","ecs":{}}""")
+        myFixture.addFileToProject(
+            "Standalone.scene",
+            """{"format":"abyssus","formatVersion":1,"name":"Standalone","ecs":{}}""",
+        )
         myFixture.addFileToProject("p/P.abss", """{"format":"abyssus","formatVersion":1,"name":"P"}""")
-        myFixture.addFileToProject("p/scenes/Main.scene", """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{}}""")
+        myFixture.addFileToProject(
+            "p/scenes/Main.scene",
+            """{"format":"abyssus","formatVersion":1,"name":"Main","ecs":{}}""",
+        )
         val root = AbyssusRootNode(project, ViewSettings.DEFAULT)
         standaloneRow = children(root).single { label(it) == "Standalone.scene" }
         projectRow = children(root).single { label(it).endsWith(".abss") }
@@ -40,7 +48,11 @@ class RenameSceneActionTest : BasePlatformTestCase() {
         return event.presentation.isEnabledAndVisible
     }
 
-    private val make = { node: Any? -> object : RenameSceneAction() { override fun selected(e: AnActionEvent) = node } }
+    private val make = { node: Any? ->
+        object : RenameSceneAction() {
+            override fun selected(e: AnActionEvent) = node
+        }
+    }
 
     fun testRenameSceneIsOfferedOnStandaloneAndProjectScenes() {
         assertTrue("standalone scene", offered(make(standaloneRow), standaloneRow))
@@ -62,6 +74,11 @@ class RenameSceneActionTest : BasePlatformTestCase() {
         assertTrue(renameScene(project, standaloneFile, "Renamed"))
         val updated = String(standaloneFile.contentsToByteArray())
         val written = net.nevinsky.abyssus.plugin.parsedScene(updated)
-        assertEquals(net.nevinsky.abyssus.plugin.printScene(net.nevinsky.abyssus.plugin.parsedScene(original).copy(name = "Renamed", id = written.id)), updated)
+        assertEquals(
+            net.nevinsky.abyssus.plugin.printScene(
+                net.nevinsky.abyssus.plugin.parsedScene(original).copy(name = "Renamed", id = written.id)
+            ),
+            updated,
+        )
     }
 }

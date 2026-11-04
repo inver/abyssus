@@ -103,9 +103,21 @@ enum class WaterIssue {
 class WaterValidation {
     fun check(field: WaterField, value: Double): WaterIssue? = when {
         !value.isFinite() -> WaterIssue.NOT_FINITE
-        field in POSITIVE -> if (value > 0.0) null else WaterIssue.NOT_POSITIVE
-        field in NON_NEGATIVE -> if (value >= 0.0) null else WaterIssue.NEGATIVE
-        field in UNIT -> if (value in 0.0..1.0) null else WaterIssue.OUT_OF_UNIT_RANGE
+        field in POSITIVE -> if (value > 0.0) {
+            null
+        } else {
+            WaterIssue.NOT_POSITIVE
+        }
+        field in NON_NEGATIVE -> if (value >= 0.0) {
+            null
+        } else {
+            WaterIssue.NEGATIVE
+        }
+        field in UNIT -> if (value in 0.0..1.0) {
+            null
+        } else {
+            WaterIssue.OUT_OF_UNIT_RANGE
+        }
         else -> null
     }
 

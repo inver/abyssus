@@ -11,7 +11,8 @@ import kotlin.math.max
 
 /**
  * How an entity's scale applies to its collider: a box takes the absolute scale per axis, a sphere or capsule takes the
- * largest axis for its radius and half height. The physics world builds shapes by these rules and the editor draws them,
+  * largest axis for its radius and half height. The physics world builds shapes by these rules and the editor draws
+  * them,
  * so both read them here.
  */
 

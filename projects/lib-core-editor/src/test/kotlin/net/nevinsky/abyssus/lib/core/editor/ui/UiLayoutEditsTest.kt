@@ -14,23 +14,33 @@ class UiLayoutEditsTest {
     private val editor = UiTextEditor(uiJson)
     private val hits = UiHitTest()
 
-    private val text: String = canonicalUi("""{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"screens":[{"id":"main","root":
+    private val text: String =
+        canonicalUi(
+            """{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"screens":[{"id":"main","root":
         {"id":"root","type":"panel","children":[
           {"id":"free","type":"button","layout":{"x":50,"y":40,"width":100,"height":40}},
           {"id":"list","type":"column","layout":{"x":400,"y":100,"width":200,"height":300,"spacing":10},"children":[
-            {"id":"a","type":"label","layout":{"height":30}},{"id":"b","type":"label","layout":{"height":30}},{"id":"c","type":"label","layout":{"height":30}}]},
+            {"id":"a","type":"label","layout":{"height":30}},{"id":"b","type":"label","layout":{"height":30}},
+{"id":"c","type":"label","layout":{"height":30}}]},
           {"id":"box","type":"panel","layout":{"x":700,"y":100,"width":300,"height":200},"children":[
             {"id":"inner","type":"button","layout":{"anchor":"center","x":5,"width":80,"height":30}}]},
           {"id":"hidden","type":"panel","layout":{"x":0,"y":600,"width":50,"height":50},"children":[
-            {"id":"clipped","type":"button","layout":{"x":40,"y":0,"width":60,"height":50}}]}]}}]}}}""")!!
+            {"id":"clipped","type":"button","layout":{"x":40,"y":0,"width":60,"height":50}}]}]}}]}}}"""
+        )
 
-    private fun collection(source: String = text): UiCollection =
-        (admitUi(source) as UiAdmission.Admitted).collection
+    private fun collection(source: String = text): UiCollection = (admitUi(source) as UiAdmission.Admitted).collection
 
     private fun layout(c: UiCollection, width: Float = 1280f, height: Float = 720f): UiLayoutResult =
         UiLayoutEngine(UiMeasurer { UiSizeF(100f, 20f) }).resolve(c.screens[0], width, height)
 
-    private fun gesture(id: String, startX: Float, startY: Float, width: Float = 1280f, height: Float = 720f, source: String = text): Pair<UiLayoutGesture, UiLayoutResult> {
+    private fun gesture(
+        id: String,
+        startX: Float,
+        startY: Float,
+        width: Float = 1280f,
+        height: Float = 720f,
+        source: String = text,
+    ): Pair<UiLayoutGesture, UiLayoutResult> {
         val c = collection(source)
         val l = layout(c, width, height)
         return UiLayoutGesture(c, l, id, startX, startY, source) to l
@@ -46,17 +56,22 @@ class UiLayoutEditsTest {
 
     private fun ids(source: String): List<String> {
         val out = mutableListOf<String>()
-        fun walk(w: UiWidgetDoc) { w.id?.let { out += it }; w.children?.forEach(::walk) }
+        fun walk(w: UiWidgetDoc) {
+            w.id?.let { out += it }
+            w.children?.forEach(::walk)
+        }
         walk(root(source))
         return out
     }
 
-    @Test fun pickingUsesScaledCoordinatesAndIgnoresTheLetterbox() {
+    @Test
+    fun pickingUsesScaledCoordinatesAndIgnoresTheLetterbox() {
         val c = collection()
         val l = layout(c, 1024f, 768f) // scale 0.8, 96 units of letterbox above and below
         val fit = l.fit!!
         assertEquals(0.8f, fit.scale, 1e-6f)
-        val px = fit.toViewportX(60f); val py = fit.toViewportY(50f)
+        val px = fit.toViewportX(60f)
+        val py = fit.toViewportY(50f)
         assertEquals("free", hits.pick(l, px, py))
         assertEquals("root", hits.pick(l, fit.toViewportX(5f), fit.toViewportY(5f)))
         assertNull("the letterbox is not part of the screen", hits.pick(l, 100f, 10f))
@@ -64,7 +79,8 @@ class UiLayoutEditsTest {
         assertEquals("a", hits.pick(l, fit.toViewportX(410f), fit.toViewportY(110f)))
     }
 
-    @Test fun clippedPartsOfAChildCannotBePicked() {
+    @Test
+    fun clippedPartsOfAChildCannotBePicked() {
         val l = layout(collection())
         val fit = l.fit!!
         // "clipped" sticks out of its 50x50 parent from x=40; only the first 10 units are visible and pickable
@@ -72,22 +88,28 @@ class UiLayoutEditsTest {
         assertEquals("root", hits.pick(l, fit.toViewportX(80f), fit.toViewportY(620f)))
     }
 
-    @Test fun draggingAPanelChildMovesItsOffsetsByTheScaledDelta() {
+    @Test
+    fun draggingAPanelChildMovesItsOffsetsByTheScaledDelta() {
         val (g, l) = gesture("free", 0f, 0f, 1024f, 768f)
         val fit = l.fit!!
-        val sx = fit.toViewportX(60f); val sy = fit.toViewportY(50f)
+        val sx = fit.toViewportX(60f)
+        val sy = fit.toViewportY(50f)
         val gesture = UiLayoutGesture(collection(), l, "free", sx, sy, text)
         gesture.update(sx + 40f, sy + 24f) // 40 / 0.8 = 50 and 24 / 0.8 = 30 logical units
-        val preview = gesture.update(sx + 80f, sy + 40f) as UiGesturePreview.Move // the last position wins: 100 and 50 units
-        assertEquals(150f, preview.x, 1e-3f); assertEquals(90f, preview.y, 1e-3f)
+        val preview =
+            gesture.update(sx + 80f, sy + 40f) as UiGesturePreview.Move // the last position wins: 100 and 50 units
+        assertEquals(150f, preview.x, 1e-3f)
+        assertEquals(90f, preview.y, 1e-3f)
         val edited = applied(gesture.commit())
         val node = root(edited.after).children!![0].layout!!
-        assertEquals(150, node.x); assertEquals(90, node.y)
+        assertEquals(150, node.x)
+        assertEquals(90, node.y)
         assertEquals("one drag is one edit with the exact text to undo to", text, edited.before)
         assertNotNull(g)
     }
 
-    @Test fun aClickWithoutMovementCommitsNothing() {
+    @Test
+    fun aClickWithoutMovementCommitsNothing() {
         val (g, _) = gesture("free", 60f, 50f)
         g.update(61f, 51f)
         g.update(60f, 50f)
@@ -96,7 +118,8 @@ class UiLayoutEditsTest {
         assertNull(untouched.commit())
     }
 
-    @Test fun draggingARowOrColumnChildReordersInsteadOfOffsetting() {
+    @Test
+    fun draggingARowOrColumnChildReordersInsteadOfOffsetting() {
         val (g, l) = gesture("a", 410f, 110f)
         val b = l.nodes.getValue("b").bounds
         // drop below c's middle: a ends up last
@@ -105,10 +128,16 @@ class UiLayoutEditsTest {
         assertEquals(UiGesturePreview.Reorder("list", 2), preview)
         assertNotNull(b)
         val edited = applied(g.commit())
-        assertEquals(listOf("root", "free", "list", "b", "c", "a", "box", "inner", "hidden", "clipped"), ids(edited.after))
+        assertEquals(
+            listOf("root", "free", "list", "b", "c", "a", "box", "inner", "hidden", "clipped"),
+            ids(edited.after),
+        )
         val moved = root(edited.after).children!![1].children!![2]
         assertEquals("a", moved.id)
-        assertEquals("""{"height":30}""", uiJson.toString(moved.layout!!)) // no numeric offsets are written for a flow child
+        assertEquals(
+            """{"height":30}""",
+            uiJson.toString(moved.layout!!),
+        ) // no numeric offsets are written for a flow child
         // dropping above everything puts it first
         val (up, ul) = gesture("c", 410f, ul(l, "c"))
         assertEquals(UiGesturePreview.Reorder("list", 0), up.update(410f, ul.nodes.getValue("a").bounds.y + 1))
@@ -116,14 +145,18 @@ class UiLayoutEditsTest {
 
     private fun ul(l: UiLayoutResult, id: String) = l.nodes.getValue(id).bounds.let { it.y + it.height / 2 }
 
-    @Test fun droppingOverAnotherContainerReparentsAndConvertsTheLayoutPolicy() {
+    @Test
+    fun droppingOverAnotherContainerReparentsAndConvertsTheLayoutPolicy() {
         // panel child "free" dropped into the column, between a and b
         val (g, l) = gesture("free", 60f, 50f)
         val a = l.nodes.getValue("a").bounds
         val preview = g.update(420f, a.bottom + 2f)
         assertEquals(UiGesturePreview.Reparent("list", 1), preview)
         val edited = applied(g.commit())
-        assertEquals(listOf("root", "list", "a", "free", "b", "c", "box", "inner", "hidden", "clipped"), ids(edited.after))
+        assertEquals(
+            listOf("root", "list", "a", "free", "b", "c", "box", "inner", "hidden", "clipped"),
+            ids(edited.after),
+        )
         val free = root(edited.after).children!![0].children!![1].layout!!
         assertEquals("""{"width":100,"height":40}""", uiJson.toString(free)) // anchor / x / y gone under a column
 
@@ -132,14 +165,19 @@ class UiLayoutEditsTest {
         val box = l2.nodes.getValue("box").bounds
         assertEquals(UiGesturePreview.Reparent("box", null), g2.update(box.x + 150f, box.y + 150f))
         val moved = applied(g2.commit())
-        assertEquals(listOf("root", "free", "list", "a", "c", "box", "inner", "b", "hidden", "clipped"), ids(moved.after))
+        assertEquals(
+            listOf("root", "free", "list", "a", "c", "box", "inner", "b", "hidden", "clipped"),
+            ids(moved.after),
+        )
     }
 
-    @Test fun anAbortedOrRepeatedlyUpdatedGestureNeverWritesAndOnlyTheFinalStateCommits() {
+    @Test
+    fun anAbortedOrRepeatedlyUpdatedGestureNeverWritesAndOnlyTheFinalStateCommits() {
         val (g, l) = gesture("free", 60f, 50f)
         repeat(20) { g.update(60f + it * 3f, 50f + it) }
         val after = g.update(100f, 90f) as UiGesturePreview.Move
-        assertEquals(90f, after.x, 1e-3f); assertEquals(80f, after.y, 1e-3f)
+        assertEquals(90f, after.x, 1e-3f)
+        assertEquals(80f, after.y, 1e-3f)
         val commit = g.commit()!!
         assertEquals(text, commit.baseText)
         val edited = applied(commit)
@@ -147,7 +185,8 @@ class UiLayoutEditsTest {
         assertNotNull(l)
     }
 
-    @Test fun aGestureWhoseDocumentChangedMeanwhileIsRefusedAsStale() {
+    @Test
+    fun aGestureWhoseDocumentChangedMeanwhileIsRefusedAsStale() {
         val (g, _) = gesture("free", 60f, 50f)
         g.update(100f, 90f)
         val commit = g.commit()!!
@@ -159,12 +198,18 @@ class UiLayoutEditsTest {
         assertNotNull(result)
     }
 
-    @Test fun selectionFollowsTheDocument() {
+    @Test
+    fun selectionFollowsTheDocument() {
         val c = collection()
         assertEquals(UiSelection("main", "inner"), UiSelection("main", "inner").reconcile(c))
-        assertEquals("a deleted widget falls back to its screen's root", UiSelection("main", "root"), UiSelection("main", "gone").reconcile(c))
+        assertEquals(
+            "a deleted widget falls back to its screen's root",
+            UiSelection("main", "root"),
+            UiSelection("main", "gone").reconcile(c),
+        )
         assertEquals(UiSelection("main", "root"), UiSelection().reconcile(c))
-        val edited = applied(UiLayoutGesture(c, layout(c), "free", 60f, 50f, text).also { it.update(400f, 150f) }.commit())
+        val edited =
+            applied(UiLayoutGesture(c, layout(c), "free", 60f, 50f, text).also { it.update(400f, 150f) }.commit())
         assertEquals(UiSelection("main", "free"), UiSelection("main", "free").reconcile(collection(edited.after)))
     }
 }

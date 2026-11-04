@@ -20,23 +20,28 @@ class WaterReflectionCameraTest {
     }
 
     private fun assertVec(expected: Vector3, actual: Vector3, eps: Float = 1e-5f) {
-        assertEquals(expected.x, actual.x, eps); assertEquals(expected.y, actual.y, eps); assertEquals(expected.z, actual.z, eps)
+        assertEquals(expected.x, actual.x, eps)
+        assertEquals(expected.y, actual.y, eps)
+        assertEquals(expected.z, actual.z, eps)
     }
 
-    @Test fun positionIsMirroredAcrossTheLevel() {
+    @Test
+    fun positionIsMirroredAcrossTheLevel() {
         assertVec(Vector3(3f, -4f, 5f), mirror.point(Vector3(3f, 8f, 5f), 2f))
         assertVec(Vector3(3f, 2f, 5f), mirror.point(Vector3(3f, 2f, 5f), 2f))
         assertVec(Vector3(1f, 2f, 3f), mirror.point(Vector3(1f, -2f, 3f), 0f))
     }
 
-    @Test fun directionAndUpOnlyFlipTheirVerticalPart() {
+    @Test
+    fun directionAndUpOnlyFlipTheirVerticalPart() {
         val pose = mirror.pose(Vector3(0f, 10f, 0f), Vector3(0.6f, -0.8f, 0f), Vector3(0.8f, 0.6f, 0f), 4f)
         assertVec(Vector3(0f, -2f, 0f), pose.position)
         assertVec(Vector3(0.6f, 0.8f, 0f), pose.direction)
         assertVec(Vector3(0.8f, -0.6f, 0f), pose.up)
     }
 
-    @Test fun theMatrixMirrorsPointsAndDirectionsLikeThePoseDoes() {
+    @Test
+    fun theMatrixMirrorsPointsAndDirectionsLikeThePoseDoes() {
         val m = mirror.matrix(2f)
         assertVec(Vector3(3f, -4f, 5f), Vector3(3f, 8f, 5f).mul(m))
         assertVec(Vector3(3f, 2f, 5f), Vector3(3f, 2f, 5f).mul(m))
@@ -44,15 +49,22 @@ class WaterReflectionCameraTest {
         assertVec(Vector3(7f, 1f, -3f), Vector3(7f, 1f, -3f).mul(twice))
     }
 
-    @Test fun theMirrorFlipsWinding() {
+    @Test
+    fun theMirrorFlipsWinding() {
         assertTrue(mirror.flipsWinding)
         assertTrue("determinant of the mirror is negative", mirror.matrix(3f).det() < 0f)
     }
 
-    @Test fun aTriangleKeepsItsWindingInTheMainViewAndLosesItThroughTheMirror() {
-        val camera = PerspectiveCamera(60f, 800f, 600f).also {
-            it.position.set(0f, 10f, 20f); it.lookAt(0f, 0f, 0f); it.near = 0.1f; it.far = 200f; it.update()
-        }
+    @Test
+    fun aTriangleKeepsItsWindingInTheMainViewAndLosesItThroughTheMirror() {
+        val camera =
+            PerspectiveCamera(60f, 800f, 600f).also {
+                it.position.set(0f, 10f, 20f)
+                it.lookAt(0f, 0f, 0f)
+                it.near = 0.1f
+                it.far = 200f
+                it.update()
+            }
         val a = Vector3(-1f, 5f, 0f)
         val b = Vector3(1f, 5f, 0f)
         val c = Vector3(0f, 7f, 0f)
@@ -66,17 +78,24 @@ class WaterReflectionCameraTest {
         assertTrue("winding flips through the mirror", reflected < 0f)
     }
 
-    @Test fun aPointOnThePlaneProjectsToTheSamePixelWithAndWithoutTheMirror() {
-        val camera = PerspectiveCamera(60f, 800f, 600f).also {
-            it.position.set(5f, 12f, 25f); it.lookAt(0f, 0f, 0f); it.near = 0.1f; it.far = 200f; it.update()
-        }
+    @Test
+    fun aPointOnThePlaneProjectsToTheSamePixelWithAndWithoutTheMirror() {
+        val camera =
+            PerspectiveCamera(60f, 800f, 600f).also {
+                it.position.set(5f, 12f, 25f)
+                it.lookAt(0f, 0f, 0f)
+                it.near = 0.1f
+                it.far = 200f
+                it.update()
+            }
         val onPlane = Vector3(4f, 2f, -3f)
         val direct = Vector3(onPlane).prj(camera.combined)
         val viaMirror = Vector3(onPlane).prj(Matrix4(camera.combined).mul(mirror.matrix(2f)))
         assertVec(direct, viaMirror, 1e-4f)
     }
 
-    @Test fun theClipPlaneKeepsTheSurfaceSideAndTheBiasLowersIt() {
+    @Test
+    fun theClipPlaneKeepsTheSurfaceSideAndTheBiasLowersIt() {
         val plane = mirror.clipPlane(2f, 0.5f)
         fun keeps(y: Float) = plane[0] * 0f + plane[1] * y + plane[3] >= 0f
         assertTrue(keeps(5f))
@@ -85,7 +104,8 @@ class WaterReflectionCameraTest {
         assertTrue(!keeps(1.4f))
     }
 
-    @Test fun theBiasGrowsWithWavesAndDistanceButStaysBounded() {
+    @Test
+    fun theBiasGrowsWithWavesAndDistanceButStaysBounded() {
         val small = mirror.bias(0.0, 0f)
         assertEquals(0.02f, small, 1e-6f)
         assertTrue(mirror.bias(0.6, 100f) > mirror.bias(0.08, 10f))

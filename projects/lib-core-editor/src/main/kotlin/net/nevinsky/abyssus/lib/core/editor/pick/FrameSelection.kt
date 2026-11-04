@@ -23,12 +23,14 @@ private const val MARGIN = 1.15f
 data class Framing(val target: Vector3, val distance: Float)
 
 /**
- * Works out how an orbit camera frames a world box: it looks at the box's center from far enough that the box's bounding
+  * Works out how an orbit camera frames a world box: it looks at the box's center from far enough that the box's
+  * bounding
  * sphere fits the narrower side of the view with some margin. The view direction is not part of it. No GL needed.
  */
 class FrameSelection {
     /**
-     * [min] and [max] are the box corners; [fovDegrees] is the camera's vertical field of view and [aspect] its width over
+      * [min] and [max] are the box corners; [fovDegrees] is the camera's vertical field of view and [aspect] its width
+      * over
      * height. A point-sized box is framed as a one-unit-radius sphere.
      */
     fun frame(min: Vector3, max: Vector3, fovDegrees: Float, aspect: Float): Framing {

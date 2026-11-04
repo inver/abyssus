@@ -8,7 +8,8 @@ package net.nevinsky.abyssus.plugin.sceneview
 /**
  * Frames per second of one viewport, measured over windows of at least a second from explicit monotonic timestamps (no
  * clock, no GL, no Swing). A window begins immediately before its first eligible frame; every frame that completed
- * (was swapped to the screen) counts. [display] is the last published whole number, or null before the first window ends
+  * (was swapped to the screen) counts. [display] is the last published whole number, or null before the first window
+  * ends
  * and after [reset]. A zero or backward timestamp never publishes: it restarts the window.
  */
 class FpsCounter {
@@ -19,7 +20,10 @@ class FpsCounter {
     private var windowStart = NONE
     private var frames = 0L
 
-    /** Forgets the window and the published value (the view was disabled, hidden, resized to nothing, failed or re-created). */
+    /**
+     * Forgets the window and the published value (the view was disabled, hidden, resized to nothing, failed or
+     * re-created).
+     */
     fun reset() {
         windowStart = NONE
         frames = 0
@@ -36,7 +40,9 @@ class FpsCounter {
 
     /** A frame finished and was presented at [nowNanos]; publishes when the window is at least a second long. */
     fun frameCompleted(nowNanos: Long) {
-        if (windowStart == NONE) return
+        if (windowStart == NONE) {
+            return
+        }
         val elapsed = nowNanos - windowStart
         if (elapsed <= 0) {
             // a clock that stood still or went back: start over from here
@@ -45,7 +51,9 @@ class FpsCounter {
             return
         }
         frames++
-        if (elapsed < WINDOW_NANOS) return
+        if (elapsed < WINDOW_NANOS) {
+            return
+        }
         display = Math.round(frames * NANOS_PER_SECOND / elapsed.toDouble()).toInt().coerceAtLeast(0)
         windowStart = nowNanos
         frames = 0

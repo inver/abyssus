@@ -4,7 +4,6 @@
  */
 package net.nevinsky.abyssus.plugin.foliage
 
-import net.nevinsky.abyssus.lib.core.editor.document.*
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.command.undo.UndoManager
@@ -15,13 +14,14 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.io.File
+import net.nevinsky.abyssus.lib.core.editor.document.*
 import net.nevinsky.abyssus.lib.core.editor.pick.BrushMode
 import net.nevinsky.abyssus.lib.core.editor.pick.FOLIAGE_BRUSH
-import net.nevinsky.abyssus.plugin.foliage.FoliageBrushOptions
 import net.nevinsky.abyssus.lib.core.editor.pick.TerrainTarget
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.plugin.foliage.FoliageBrushOptions
 import org.slf4j.helpers.NOPLogger
-import java.io.File
 
 class FoliageStrokeCommandTest : BasePlatformTestCase() {
     private var previousDialog: com.intellij.openapi.ui.TestDialog? = null
@@ -30,16 +30,20 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
     private lateinit var folder: VirtualFile
     private lateinit var scene: VirtualFile
     private val json = JsonProcessor(NOPLogger.NOP_LOGGER)
-    private val drafts get() = project.service<FoliageDrafts>()
+    private val drafts
+        get() = project.service<FoliageDrafts>()
+
     private val reports = mutableListOf<String>()
     private var mode = BrushMode(FOLIAGE_BRUSH, 1L, 100f, 1f, true, FoliageBrushOptions(1))
+
     override fun setUp() {
         super.setUp()
         drafts.discardAll()
-        previousDialog = com.intellij.openapi.ui.TestDialogManager.setTestDialog { message ->
-            dialogs += message
-            com.intellij.openapi.ui.Messages.YES
-        }
+        previousDialog =
+            com.intellij.openapi.ui.TestDialogManager.setTestDialog { message ->
+                dialogs += message
+                com.intellij.openapi.ui.Messages.YES
+            }
         disk = FileUtil.createTempDirectory("abyssus-foliage-stroke", null)
         FileUtil.copyDir(File("src/test/testData/project/Foliage"), disk)
         val root = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(disk)!!
@@ -47,22 +51,47 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
         folder = root.findFileByRelativePath("assets/foliage_meadow")!!
         scene = root.findFileByRelativePath("scenes/Main Scene.scene")!!
     }
+
     override fun tearDown() {
         try {
             drafts.discardAll()
             previousDialog?.let { com.intellij.openapi.ui.TestDialogManager.setTestDialog(it) }
+        } finally {
+            super.tearDown()
         }
-        finally { super.tearDown() }
     }
+
     private fun source(): FoliageSource.Ready {
         val text = File(folder.path, "meta.json").readText()
-        return readFoliageSource(folder.name, disk, json, text, service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing.foliageMeta(text)) as FoliageSource.Ready
+        return readFoliageSource(
+            folder.name,
+            disk,
+            json,
+            text,
+            service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().documents.parsing.foliageMeta(text),
+        )
+            as FoliageSource.Ready
     }
-    private fun command(background: (Runnable) -> Unit = { it.run() }, ui: (Runnable) -> Unit = { it.run() }) = FoliageStrokeCommand(
-        project, scene, folder, source(), drafts, net.nevinsky.abyssus.plugin.testCore.documents, project.service<FoliageUndoCache>(), { mode }, background, ui, reports::add,
-    )
+
+    private fun command(background: (Runnable) -> Unit = { it.run() }, ui: (Runnable) -> Unit = { it.run() }) =
+        FoliageStrokeCommand(
+            project,
+            scene,
+            folder,
+            source(),
+            drafts,
+            net.nevinsky.abyssus.plugin.testCore.documents,
+            project.service<FoliageUndoCache>(),
+            { mode },
+            background,
+            ui,
+            reports::add,
+        )
+
     private fun target() = TerrainTarget(1L, source().terrain, Matrix4())
+
     private fun bytes(name: String) = File(folder.path, name).readBytes().toList()
+
     private fun press(c: FoliageStrokeCommand) = c.pressed(target(), Vector3(800f, 0f, 800f))
 
     fun testStrokeLiveDraftReleaseUndoAndRedoFromSceneContext() {
@@ -88,8 +117,11 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
             assertEquals(afterMask, bytes("layer-1.mask"))
             assertEquals(afterBake, bytes("foliage.data"))
             assertTrue(reports.isEmpty())
-        } finally { Disposer.dispose(editor) }
+        } finally {
+            Disposer.dispose(editor)
+        }
     }
+
     fun testEscapeAndNoopWriteNothing() {
         val beforeMask = bytes("layer-1.mask")
         val beforeBake = bytes("foliage.data")
@@ -104,6 +136,7 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
         assertEquals(beforeMask, bytes("layer-1.mask"))
         assertEquals(beforeBake, bytes("foliage.data"))
     }
+
     fun testPendingSettingsAreKeptAndPaintingIsRefused() {
         val s = source()
         val draft = drafts.open(folder.name, s.terrain, s.settings.maskResolution)
@@ -113,6 +146,7 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
         assertEquals(pending, drafts.of(folder.name)!!.settings)
         assertFalse(reports.isEmpty())
     }
+
     fun testNewerPanelDraftIsNotClearedByQueuedRelease() {
         val tasks = mutableListOf<Runnable>()
         val before = bytes("layer-1.mask")
@@ -125,6 +159,7 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
         assertEquals(before, bytes("layer-1.mask"))
         assertEquals(pending, drafts.of(folder.name)!!.settings)
     }
+
     fun testQueuedReleaseIsCancelledBeforeItWrites() {
         val tasks = mutableListOf<Runnable>()
         val before = bytes("layer-1.mask")
@@ -135,6 +170,7 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
         tasks.forEach(Runnable::run)
         assertEquals(before, bytes("layer-1.mask"))
     }
+
     fun testUndoRefusesAnExternallyReplacedMask() {
         val editor = TextEditorProvider.getInstance().createEditor(project, scene)
         try {
@@ -144,14 +180,18 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
             val changed = ByteArray(64 * 64) { 19 }
             File(folder.path, "layer-1.mask").writeBytes(changed)
             val bake = bytes("foliage.data")
-            val refusal = com.intellij.testFramework.LoggedErrorProcessor.executeAndReturnLoggedError {
-                UndoManager.getInstance(project).undo(editor)
-            }
+            val refusal =
+                com.intellij.testFramework.LoggedErrorProcessor.executeAndReturnLoggedError {
+                    UndoManager.getInstance(project).undo(editor)
+                }
             assertTrue(refusal.message!!.contains("layer-1.mask"))
             assertEquals(changed.toList(), bytes("layer-1.mask"))
             assertEquals(bake, bytes("foliage.data"))
-        } finally { Disposer.dispose(editor) }
+        } finally {
+            Disposer.dispose(editor)
+        }
     }
+
     fun testMaskChangedDuringGenerationIsNotOverwritten() {
         val tasks = mutableListOf<Runnable>()
         val c = command(tasks::add)
@@ -163,6 +203,7 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
         assertEquals(changed.toList(), bytes("layer-1.mask"))
         assertFalse(reports.isEmpty())
     }
+
     fun testOverLimitStrokeIsDiscardedAndWritesNothing() {
         val meta = File(folder.path, "meta.json")
         meta.writeText(meta.readText().replace("0.001", "100.0"))
@@ -176,10 +217,12 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
         assertNull(drafts.of(folder.name))
         assertFalse(reports.isEmpty())
     }
+
     fun testDisposalReleasesStagedBackupWhenUiNeverRuns() {
-        fun backups(): Set<java.nio.file.Path> = java.nio.file.Files.list(java.nio.file.Path.of(System.getProperty("java.io.tmpdir"))).use { paths ->
-            paths.filter { it.fileName.toString().startsWith("abyssus-foliage-undo-") }.toList().toSet()
-        }
+        fun backups(): Set<java.nio.file.Path> =
+            java.nio.file.Files.list(java.nio.file.Path.of(System.getProperty("java.io.tmpdir"))).use { paths ->
+                paths.filter { it.fileName.toString().startsWith("abyssus-foliage-undo-") }.toList().toSet()
+            }
         val before = backups()
         File(folder.path, "foliage.data").writeBytes(byteArrayOf(9, 8, 7))
         val pendingUi = mutableListOf<Runnable>()
@@ -191,6 +234,7 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
         c.dispose()
         assertTrue(created.none { java.nio.file.Files.exists(it) })
     }
+
     fun testStaleBakeUndoPreservesItsExactBytes() {
         File(folder.path, "foliage.data").writeBytes(byteArrayOf(9, 8, 7))
         val editor = TextEditorProvider.getInstance().createEditor(project, scene)
@@ -200,6 +244,8 @@ class FoliageStrokeCommandTest : BasePlatformTestCase() {
             c.released()
             UndoManager.getInstance(project).undo(editor)
             assertEquals(listOf<Byte>(9, 8, 7), bytes("foliage.data"))
-        } finally { Disposer.dispose(editor) }
+        } finally {
+            Disposer.dispose(editor)
+        }
     }
 }

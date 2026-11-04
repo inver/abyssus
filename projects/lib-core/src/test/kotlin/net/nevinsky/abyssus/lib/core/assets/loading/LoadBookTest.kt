@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.lib.core.assets.loading
 
 import com.badlogic.gdx.utils.Disposable
+import java.util.concurrent.Executor
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.loading.exception.DependencyFailedException
 import net.nevinsky.abyssus.lib.core.assets.loading.exception.MissingDependencyException
@@ -16,7 +17,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.concurrent.Executor
 
 /** The revision and dependency bookkeeping with fake loads: no GL, no loader, no executor. */
 class LoadBookTest {
@@ -111,7 +111,10 @@ class LoadBookTest {
     fun phasesDecideWhetherALoadIsLoadingOrBlocked() {
         assertFalse(book.loading(Fake(1, "f", Phase.Failed)))
         assertFalse(book.loading(Fake(2, "r", Phase.Ready)))
-        assertTrue("a ready asset marked changed is about to reload", book.loading(Fake(3, "s", Phase.Ready, stale = true)))
+        assertTrue(
+            "a ready asset marked changed is about to reload",
+            book.loading(Fake(3, "s", Phase.Ready, stale = true)),
+        )
         assertTrue(book.loading(Fake(4, "p", Phase.Preparing)))
         assertTrue(book.blocksOnDependencies(Fake(5, "w", Phase.UploadDone)))
         assertFalse(book.blocksOnDependencies(Fake(6, "p", Phase.Preparing)))
@@ -129,14 +132,30 @@ class AssetStorageRevisionLoggingTest {
     private val recorder = RecordingLogger()
     private var fail = true
 
-    private val loader = object : AssetLoader<Unit, String, Res> {
-        override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, String>? = null
-        override fun prepare(name: String): Prepared<Unit, String>? =
-            if (name == "needs-bad") Prepared("needs-bad") else if (fail) null else Prepared(name)
-        override fun dependencies(staged: String): Set<String> = if (staged == "needs-bad") setOf("bad") else emptySet()
-        override fun build(staged: String, assets: BuiltAssets): Res = Res()
-        override fun discard(model: Unit) = Unit
-    }
+    private val loader =
+        object : AssetLoader<Unit, String, Res> {
+            override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, String>? = null
+
+            override fun prepare(name: String): Prepared<Unit, String>? =
+                if (name == "needs-bad") {
+                    Prepared("needs-bad")
+                } else if (fail) {
+                    null
+                } else {
+                    Prepared(name)
+                }
+
+            override fun dependencies(staged: String): Set<String> =
+                if (staged == "needs-bad") {
+                    setOf("bad")
+                } else {
+                    emptySet()
+                }
+
+            override fun build(staged: String, assets: BuiltAssets): Res = Res()
+
+            override fun discard(model: Unit) = Unit
+        }
 
     private fun pump(storage: AssetStorage) {
         repeat(5) {

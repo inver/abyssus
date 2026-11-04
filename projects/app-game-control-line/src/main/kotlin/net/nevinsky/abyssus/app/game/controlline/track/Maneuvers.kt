@@ -53,8 +53,8 @@ private fun snapped(climb: Float) = Math.round(climb / 180f) * 180f
 /**
  * Detects maneuvers from a flight's [TrackSample]s, one sample per physics step, with no shape judge. Each detector is
  * a small state machine:
- * - loops follow the unwrapped climb angle from the last level flight below [LOOP_LEVEL_ELEVATION] to the next;
- *   a full turn up within [LOOP_TIME] is an inside loop, down an outside loop;
+ * - loops follow the unwrapped climb angle from the last level flight below [LOOP_LEVEL_ELEVATION] to the next; a full
+ *   turn up within [LOOP_TIME] is an inside loop, down an outside loop;
  * - an inside loop is held for [FIGURE_EIGHT_GAP] seconds: an outside loop starting in that time makes the pair one
  *   figure 8, and neither loop scores on its own;
  * - an inverted lap follows the azimuth while the plane is upside down below [INVERTED_LAP_ELEVATION];
@@ -107,7 +107,9 @@ class Maneuvers {
     private fun loops(last: TrackSample, s: TrackSample, found: MutableList<ManeuverEvent>) {
         climb += wrapDegrees(s.climb - last.climb)
         // near the zenith the sphere's frame turns over and the climb angle means nothing: no loop goes up there
-        if (s.elevation > WINGOVER_TOP) loopValid = false
+        if (s.elevation > WINGOVER_TOP) {
+            loopValid = false
+        }
         if (s.elevation < LOOP_LEVEL_ELEVATION && level(s.climb)) {
             // both ends are level: count the turn between the level directions they are nearest to
             val turned = snapped(climb) - snapped(loopFrom)
@@ -131,7 +133,11 @@ class Maneuvers {
             restartLoop(s)
         }
         // level flight went on past the gap: no figure 8 can start in time any more
-        held?.let { if (loopStart - it.time > FIGURE_EIGHT_GAP) found += it.also { held = null } }
+        held?.let {
+            if (loopStart - it.time > FIGURE_EIGHT_GAP) {
+                found += it.also { held = null }
+            }
+        }
     }
 
     private fun invertedLap(last: TrackSample, s: TrackSample, found: MutableList<ManeuverEvent>) {
@@ -154,8 +160,14 @@ class Maneuvers {
 
     private fun wingover(s: TrackSample, found: MutableList<ManeuverEvent>) {
         highest = max(highest, s.elevation)
-        if (s.elevation >= WINGOVER_LEVEL_ELEVATION || !level(s.climb)) return
-        if (highest > WINGOVER_TOP && s.time - wingoverStart <= WINGOVER_TIME && abs(wrapDegrees(s.azimuth - wingoverAzimuth)) > WINGOVER_TURN) {
+        if (s.elevation >= WINGOVER_LEVEL_ELEVATION || !level(s.climb)) {
+            return
+        }
+        if (
+            highest > WINGOVER_TOP &&
+                s.time - wingoverStart <= WINGOVER_TIME &&
+                abs(wrapDegrees(s.azimuth - wingoverAzimuth)) > WINGOVER_TURN
+        ) {
             found += ManeuverEvent(Maneuver.WINGOVER, s.time)
         }
         restartWingover(s)
@@ -174,9 +186,13 @@ class Laps {
     fun sample(sample: TrackSample): Int {
         val last = previous
         previous = sample.azimuth
-        if (last == null || !sample.airborne) return 0
+        if (last == null || !sample.airborne) {
+            return 0
+        }
         progress += wrapDegrees(sample.azimuth - last)
-        if (progress < 360f) return 0
+        if (progress < 360f) {
+            return 0
+        }
         progress -= 360f
         count++
         return 1

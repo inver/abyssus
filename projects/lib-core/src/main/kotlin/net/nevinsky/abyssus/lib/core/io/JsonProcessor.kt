@@ -22,14 +22,14 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.TreeTraversingParser
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import org.slf4j.Logger
 import java.math.BigDecimal
 import kotlin.math.abs
 import kotlin.math.round
+import org.slf4j.Logger
 
 /**
- * Mixed into libGDX's `Vector3`, `Quaternion` and `Color`, whose many overloaded `set...` methods Jackson would otherwise
- * read as conflicting setters: only their public `x`, `y`, `z`, `w` / `r`, `g`, `b`, `a` fields bind.
+ * Mixed into libGDX's `Vector3`, `Quaternion` and `Color`, whose many overloaded `set...` methods Jackson would
+ * otherwise read as conflicting setters: only their public `x`, `y`, `z`, `w` / `r`, `g`, `b`, `a` fields bind.
  */
 @JsonAutoDetect(
     fieldVisibility = JsonAutoDetect.Visibility.PUBLIC_ONLY,
@@ -40,20 +40,27 @@ import kotlin.math.round
 )
 private interface PublicFieldsOnly
 
-@JsonInclude(JsonInclude.Include.NON_DEFAULT)
-private interface OmitComponentDefaults
+@JsonInclude(JsonInclude.Include.NON_DEFAULT) private interface OmitComponentDefaults
 
 private class ComponentFloatSerializer : StdSerializer<Any>(Any::class.java) {
     override fun serialize(value: Any, gen: JsonGenerator, provider: SerializerProvider) {
-        val v = (value as Number).toFloat().let { if (it.isFinite()) it else 0f }
+        val v =
+            (value as Number).toFloat().let {
+                if (it.isFinite()) {
+                    it
+                } else {
+                    0f
+                }
+            }
         gen.writeTree(
             if (v == round(v.toDouble()).toFloat() && abs(v) < 1e9f) {
                 IntNode.valueOf(v.toInt())
-            } else DecimalNode(BigDecimal(v.toString()))
+            } else {
+                DecimalNode(BigDecimal(v.toString()))
+            }
         )
     }
 }
-
 
 /** Binds parsed nodes with the rules of one [JsonProcessor.binderWith] call. */
 class NodeBinder internal constructor(private val reader: ObjectReader, private val codec: ObjectMapper) {
@@ -63,8 +70,8 @@ class NodeBinder internal constructor(private val reader: ObjectReader, private 
 
 /**
  * Adds to a [JsonProcessor] the serializers of types it does not know: [module] gets the processor's own writers for a
- * component's value ([componentTree]) and for a payload kept as text ([rawTree]), both keeping decimal text. This is how
- * `dto` teaches the processor to write entities, so `io` imports neither `dto` nor `ecs`.
+ * component's value ([componentTree]) and for a payload kept as text ([rawTree]), both keeping decimal text. This is
+ * how `dto` teaches the processor to write entities, so `io` imports neither `dto` nor `ecs`.
  */
 fun interface JsonExtension {
     fun module(componentTree: (Component) -> JsonNode, rawTree: (String) -> JsonNode): Module
@@ -76,47 +83,60 @@ fun interface JsonExtension {
  */
 class JsonProcessor(
     internal val log: Logger,
-    /** What else the processor can write, such as entities (`dto`'s `entityWriter`); each gets this processor's component writers. */
+    /**
+     * What else the processor can write, such as entities (`dto`'s `entityWriter`); each gets this processor's
+     * component writers.
+     */
     extensions: List<JsonExtension> = emptyList(),
 ) {
     private val format = JsonFormat()
     private val prettyPrinter: DefaultPrettyPrinter = format.prettyPrinter
 
     /** The configured mapper, for code that binds JSON itself (`readValue`, readers with injected values). */
-    private val mapper: JsonMapper = format.mapperBuilder()
-        .addModule(KotlinModule.Builder().build())
-        .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)
-        .defaultPropertyInclusion(JsonInclude.Value.ALL_NON_NULL)
-        .addMixIn(Vector3::class.java, PublicFieldsOnly::class.java)
-        .addMixIn(Quaternion::class.java, PublicFieldsOnly::class.java)
-        .addMixIn(Color::class.java, PublicFieldsOnly::class.java)
-        .build()
-        .also { m ->
-            // separate modules from the readers (EntityDtoModule), so a reader's own registry is not shadowed
-            extensions.forEach { m.registerModule(it.module({ c -> componentTree(c) }, { text -> componentWriter.readTree(text) })) }
-        }
+    private val mapper: JsonMapper =
+        format
+            .mapperBuilder()
+            .addModule(KotlinModule.Builder().build())
+            .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)
+            .defaultPropertyInclusion(JsonInclude.Value.ALL_NON_NULL)
+            .addMixIn(Vector3::class.java, PublicFieldsOnly::class.java)
+            .addMixIn(Quaternion::class.java, PublicFieldsOnly::class.java)
+            .addMixIn(Color::class.java, PublicFieldsOnly::class.java)
+            .build()
+            .also { m ->
+                // separate modules from the readers (EntityDtoModule), so a reader's own registry is not shadowed
+                extensions.forEach {
+                    m.registerModule(it.module({ c -> componentTree(c) }, { text -> componentWriter.readTree(text) }))
+                }
+            }
 
-    private val componentReader = mapper.copy()
-        .setNodeFactory(JsonNodeFactory.withExactBigDecimals(true))
-        .setDefaultMergeable(true)
-        .reader(InjectableValues.Std().addValue(EcsReadWarnings::class.java.name, EcsReadWarnings(log)))
+    private val componentReader =
+        mapper
+            .copy()
+            .setNodeFactory(JsonNodeFactory.withExactBigDecimals(true))
+            .setDefaultMergeable(true)
+            .reader(InjectableValues.Std().addValue(EcsReadWarnings::class.java.name, EcsReadWarnings(log)))
 
-    private val componentValues = mapper.copy()
-        .setNodeFactory(JsonNodeFactory.withExactBigDecimals(true))
-        .registerModule(
-            SimpleModule()
-                .addSerializer(java.lang.Float::class.java, ComponentFloatSerializer())
-                .addSerializer(java.lang.Float.TYPE, ComponentFloatSerializer())
-        )
+    private val componentValues =
+        mapper
+            .copy()
+            .setNodeFactory(JsonNodeFactory.withExactBigDecimals(true))
+            .registerModule(
+                SimpleModule()
+                    .addSerializer(java.lang.Float::class.java, ComponentFloatSerializer())
+                    .addSerializer(java.lang.Float.TYPE, ComponentFloatSerializer())
+            )
 
-    private val componentWriter = mapper.copy()
-        .setNodeFactory(JsonNodeFactory.withExactBigDecimals(true))
-        .addMixIn(Component::class.java, OmitComponentDefaults::class.java)
-        .registerModule(
-            SimpleModule()
-                .addSerializer(java.lang.Float::class.java, ComponentFloatSerializer())
-                .addSerializer(java.lang.Float.TYPE, ComponentFloatSerializer())
-        )
+    private val componentWriter =
+        mapper
+            .copy()
+            .setNodeFactory(JsonNodeFactory.withExactBigDecimals(true))
+            .addMixIn(Component::class.java, OmitComponentDefaults::class.java)
+            .registerModule(
+                SimpleModule()
+                    .addSerializer(java.lang.Float::class.java, ComponentFloatSerializer())
+                    .addSerializer(java.lang.Float.TYPE, ComponentFloatSerializer())
+            )
 
     /** Default-aware component binding without exposing the processor's mapper. */
     fun <C : Component> bindComponent(node: JsonNode, type: Class<C>): C =
@@ -128,7 +148,10 @@ class JsonProcessor(
     /** Native component data with defaults omitted and decimal text matching scene writing. */
     fun componentTree(component: Component): JsonNode = componentWriter.valueToTree(component)
 
-    /** [text] as a JSON tree; throws when it is not a JSON object. Numbers lose their spelling: use [NativeJsonTree] to keep it. */
+    /**
+     * [text] as a JSON tree; throws when it is not a JSON object. Numbers lose their spelling: use [NativeJsonTree] to
+     * keep it.
+     */
     fun readObject(text: String): JsonNode =
         mapper.readTree(text)?.takeIf { it.isObject } ?: throw IllegalArgumentException("expected a JSON object")
 
@@ -137,18 +160,15 @@ class JsonProcessor(
      * [module], for a document whose members need more than a class.
      */
     fun binderWith(module: Module): NodeBinder {
-        val objMapper = mapper.copy()
-            .setNodeFactory(JsonNodeFactory.withExactBigDecimals(true))
-            .registerModule(module)
+        val objMapper = mapper.copy().setNodeFactory(JsonNodeFactory.withExactBigDecimals(true)).registerModule(module)
 
         return NodeBinder(
-            objMapper.reader(
-                InjectableValues.Std().addValue(EcsReadWarnings::class.java.name, EcsReadWarnings(log))
-            ), objMapper
+            objMapper.reader(InjectableValues.Std().addValue(EcsReadWarnings::class.java.name, EcsReadWarnings(log))),
+            objMapper,
         )
     }
 
-    //todo add validation on parsing for formats
+    // todo add validation on parsing for formats
     fun <T> parse(text: String, clazz: Class<T>): T {
         return mapper.readValue(text, clazz)
     }

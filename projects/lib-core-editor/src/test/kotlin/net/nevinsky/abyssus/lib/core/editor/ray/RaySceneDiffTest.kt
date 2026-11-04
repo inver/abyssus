@@ -4,6 +4,14 @@
  */
 package net.nevinsky.abyssus.lib.core.editor.ray
 
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.PerspectiveCamera
+import com.badlogic.gdx.math.Quaternion
+import com.badlogic.gdx.math.Vector3
+import java.io.File
+import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
+import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.core.editor.pick.DragResult
 import net.nevinsky.abyssus.lib.core.editor.ray.RayModelPose
 import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneAssetState
 import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneChange
@@ -11,25 +19,16 @@ import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneConversion
 import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneFrame
 import net.nevinsky.abyssus.lib.core.editor.ray.RaySceneSnapshots
 import net.nevinsky.abyssus.lib.core.editor.ray.raySceneDiff
+import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
 import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
-import net.nevinsky.abyssus.lib.core.editor.scene.FogParams
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import com.badlogic.gdx.math.Vector3
-import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.math.Quaternion
-import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
-import net.nevinsky.abyssus.lib.core.editor.content.AssetPlacement
-
-import com.badlogic.gdx.graphics.PerspectiveCamera
 import net.nevinsky.abyssus.lib.raytracing.RayColor
 import net.nevinsky.abyssus.lib.raytracing.RayEnvironment
 import net.nevinsky.abyssus.lib.raytracing.RayFog
-import net.nevinsky.abyssus.lib.core.editor.pick.DragResult
 import org.junit.Assert.*
 import org.junit.Test
-import java.io.File
 
 class RaySceneDiffTest {
     init {
@@ -39,35 +38,62 @@ class RaySceneDiffTest {
     private val placement = AssetPlacement(1L, "model", PlacementTransform.IDENTITY)
     private val model = rayTestModel()
     private val assets = RaySceneAssetState.Ready(mapOf("model" to model), emptyMap())
-    private val camera = PerspectiveCamera(61f, 800f, 600f).apply {
-        position.set(4f, 5f, 6f); direction.set(-1f, -1f, -1f).nor(); near = .2f; far = 500f; update()
-    }
+    private val camera =
+        PerspectiveCamera(61f, 800f, 600f).apply {
+            position.set(4f, 5f, 6f)
+            direction.set(-1f, -1f, -1f).nor()
+            near = .2f
+            far = 500f
+            update()
+        }
     private val converter = RaySceneSnapshots()
 
     private fun frame(
-        content: SceneContent = SceneContent(models = listOf(placement)), project: String = "project", preview: Map<Long, DragResult> = emptyMap(),
-        lights: LightSet = NO_LIGHTS, environment: RayEnvironment? = null, view: PerspectiveCamera = camera,
-        state: RaySceneAssetState = assets, fog: FogParams? = null, poses: Map<Long, RayModelPose> = emptyMap(),
-        snapshots: RaySceneSnapshots = converter, environmentRevision: Long = 0,
-    ): RaySceneFrame = (snapshots.capture(SceneRenderParams.DEFAULT.copy(content = content, projectDir = File(project), fog = fog), view, lights,
-        state, preview, environment = environment, poses = poses, environmentRevision = environmentRevision) as RaySceneConversion.Ready).frame
+        content: SceneContent = SceneContent(models = listOf(placement)),
+        project: String = "project",
+        preview: Map<Long, DragResult> = emptyMap(),
+        lights: LightSet = NO_LIGHTS,
+        environment: RayEnvironment? = null,
+        view: PerspectiveCamera = camera,
+        state: RaySceneAssetState = assets,
+        fog: FogParams? = null,
+        poses: Map<Long, RayModelPose> = emptyMap(),
+        snapshots: RaySceneSnapshots = converter,
+        environmentRevision: Long = 0,
+    ): RaySceneFrame =
+        (snapshots.capture(
+                SceneRenderParams.DEFAULT.copy(content = content, projectDir = File(project), fog = fog),
+                view,
+                lights,
+                state,
+                preview,
+                environment = environment,
+                poses = poses,
+                environmentRevision = environmentRevision,
+            ) as RaySceneConversion.Ready)
+            .frame
 
-    private fun moved(x: Float) = mapOf(1L to DragResult(PlacementTransform(Vector3(x, 0f, 0f), Quaternion(), Vector3(1f, 1f, 1f)), null))
+    private fun moved(x: Float) =
+        mapOf(1L to DragResult(PlacementTransform(Vector3(x, 0f, 0f), Quaternion(), Vector3(1f, 1f, 1f)), null))
 
-    @Test fun theFirstFrameIsAStructuralRebuild() {
+    @Test
+    fun theFirstFrameIsAStructuralRebuild() {
         val diff = raySceneDiff(null, frame())
         assertTrue(diff.rebuild)
         assertEquals(setOf(RaySceneChange.STRUCTURE), diff.changes)
     }
 
-    @Test fun anUnchangedSceneChangesNothing() {
+    @Test
+    fun anUnchangedSceneChangesNothing() {
         val first = frame()
         val diff = raySceneDiff(first, frame())
         assertEquals(emptySet<RaySceneChange>(), diff.changes)
-        assertFalse(diff.rebuild); assertFalse(diff.resetsHistory)
+        assertFalse(diff.rebuild)
+        assertFalse(diff.resetsHistory)
     }
 
-    @Test fun movingAnInstanceIsATransformUpdateNotARebuild() {
+    @Test
+    fun movingAnInstanceIsATransformUpdateNotARebuild() {
         val before = frame()
         val after = frame(preview = moved(3f))
         val diff = raySceneDiff(before, after)
@@ -79,30 +105,44 @@ class RaySceneDiffTest {
         assertSame(before.scene.textures, before.scene.textures)
     }
 
-    @Test fun anIdenticalAssetKeepsMeshAndTextureIdentityAcrossCaptures() {
-        val first = frame(); val second = frame()
+    @Test
+    fun anIdenticalAssetKeepsMeshAndTextureIdentityAcrossCaptures() {
+        val first = frame()
+        val second = frame()
         assertEquals(first.scene.meshes.size, second.scene.meshes.size)
         assertTrue(first.scene.meshes.indices.all { first.scene.meshes[it] === second.scene.meshes[it] })
         assertTrue(first.scene.textures.indices.all { first.scene.textures[it] === second.scene.textures[it] })
     }
 
-    @Test fun aReplacedAssetOrProjectRebuilds() {
+    @Test
+    fun aReplacedAssetOrProjectRebuilds() {
         val before = frame()
         assertTrue(raySceneDiff(before, frame(project = "other")).rebuild)
         val replaced = RaySceneAssetState.Ready(mapOf("model" to rayTestModel(4)), emptyMap())
         val diff = raySceneDiff(before, frame(state = replaced))
         assertTrue(diff.rebuild)
         assertTrue(RaySceneChange.MATERIAL in diff.changes)
-        assertFalse("a replaced asset must not reuse the old mesh", before.scene.meshes[0] === frame(state = replaced).scene.meshes[0])
+        assertFalse(
+            "a replaced asset must not reuse the old mesh",
+            before.scene.meshes[0] === frame(state = replaced).scene.meshes[0],
+        )
         val removed = frame(content = SceneContent(models = listOf(placement, placement.copy(entityId = 3L))))
         assertTrue(raySceneDiff(before, removed).rebuild)
     }
 
-    @Test fun poseCameraLightAndEnvironmentChangesAreClassifiedWithoutARebuild() {
+    @Test
+    fun poseCameraLightAndEnvironmentChangesAreClassifiedWithoutARebuild() {
         val before = frame()
         val pose = RayModelPose(1, emptyMap(), emptyMap())
         assertEquals(setOf(RaySceneChange.POSE), raySceneDiff(before, frame(poses = mapOf(1L to pose))).changes)
-        val orbit = PerspectiveCamera(61f, 800f, 600f).apply { position.set(5f, 5f, 6f); direction.set(-1f, -1f, -1f).nor(); near = .2f; far = 500f; update() }
+        val orbit =
+            PerspectiveCamera(61f, 800f, 600f).apply {
+                position.set(5f, 5f, 6f)
+                direction.set(-1f, -1f, -1f).nor()
+                near = .2f
+                far = 500f
+                update()
+            }
         assertEquals(setOf(RaySceneChange.CAMERA), raySceneDiff(before, frame(view = orbit)).changes)
         val env = RayEnvironment(ambient = RayColor(.3f, .3f, .3f))
         assertEquals(setOf(RaySceneChange.ENVIRONMENT), raySceneDiff(before, frame(environment = env)).changes)
@@ -111,15 +151,24 @@ class RaySceneDiffTest {
         assertFalse(fogged.rebuild)
     }
 
-    @Test fun aChangedSkyLightOrANewSkyBakeInvalidatesTheEnvironmentButAnUnchangedOneDoesNot() {
+    @Test
+    fun aChangedSkyLightOrANewSkyBakeInvalidatesTheEnvironmentButAnUnchangedOneDoesNot() {
         fun cube(blue: Float) = List(6) { RayColor(.1f, .1f, blue) }
         val lit = frame(environment = RayEnvironment(ambientCube = cube(.4f)), environmentRevision = 5)
         val same = frame(environment = RayEnvironment(ambientCube = cube(.4f)), environmentRevision = 5)
         assertTrue("an unchanged sky light changes nothing", raySceneDiff(lit, same).changes.isEmpty())
         val faded = frame(environment = RayEnvironment(ambientCube = cube(.5f)), environmentRevision = 5)
-        assertEquals("a diffuse sky light that fades", setOf(RaySceneChange.ENVIRONMENT), raySceneDiff(lit, faded).changes)
+        assertEquals(
+            "a diffuse sky light that fades",
+            setOf(RaySceneChange.ENVIRONMENT),
+            raySceneDiff(lit, faded).changes,
+        )
         val rebaked = frame(environment = RayEnvironment(ambientCube = cube(.4f)), environmentRevision = 6)
-        assertEquals("a new sky bake with the same light", setOf(RaySceneChange.ENVIRONMENT), raySceneDiff(lit, rebaked).changes)
+        assertEquals(
+            "a new sky bake with the same light",
+            setOf(RaySceneChange.ENVIRONMENT),
+            raySceneDiff(lit, rebaked).changes,
+        )
         assertFalse(raySceneDiff(lit, rebaked).rebuild)
     }
 }

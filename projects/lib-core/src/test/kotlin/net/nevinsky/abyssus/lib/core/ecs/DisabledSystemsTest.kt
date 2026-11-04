@@ -23,7 +23,11 @@ class DisabledSystemsTest {
 
     @Test
     fun aDisabledRenderableIsNotRenderedButTheEntityIsPositioned() {
-        val engine = load(""""1":{"disabledComponents":["RenderComponent"],"components":{"PositionComponent":{"position":{"x":1,"y":2,"z":3}},"RenderComponent":{"type":"MODEL","assetName":"tree"}}}""")
+        val engine =
+            load(
+                """"1":{"disabledComponents":["RenderComponent"],"components":{"PositionComponent":{"position":{"x":1,
+"y":2,"z":3}},"RenderComponent":{"type":"MODEL","assetName":"tree"}}}"""
+            )
         val entity = engine.ids[1]!!
         assertNull(assetName(entity, MetaType.MODEL))
         assertNotNull(entity.activeComponent(PositionComponent::class.java))
@@ -49,14 +53,24 @@ class DisabledSystemsTest {
 
     @Test
     fun aDisabledLightIsNotActive() {
-        val engine = load(""""1":{"disabledComponents":["LightComponent"],"components":{"LightComponent":{"light":{"intensity":2}}}},"2":{"components":{"LightComponent":{"light":{"intensity":2}}}}""")
+        val engine =
+            load(
+                """"1":{"disabledComponents":["LightComponent"],
+"components":{"LightComponent":{"light":{"intensity":2}}}},""" +
+                        """"2":{"components":{"LightComponent":{"light":{"intensity":2}}}}"""
+            )
         assertTrue(!engine.ids[1]!!.isActive(LightComponent::class.java))
         assertTrue(engine.ids[2]!!.isActive(LightComponent::class.java))
     }
 
     @Test
     fun aDisabledFoliageIsNotListed() {
-        val engine = load(""""1":{"disabledComponents":["FoliageComponent"],"components":{"RenderComponent":{"type":"TERRAIN","assetName":"t"},"FoliageComponent":{"assetName":"f"}}},"2":{"components":{"RenderComponent":{"type":"TERRAIN","assetName":"u"},"FoliageComponent":{"assetName":"g"}}}""")
+        val engine =
+            load(
+                """"1":{"disabledComponents":["FoliageComponent"],"components":{"RenderComponent":{"type":"TERRAIN",
+"assetName":"t"},"FoliageComponent":{"assetName":"f"}}},"2":{"components":{"RenderComponent":{"type":"TERRAIN",""" +
+                        """"assetName":"u"},"FoliageComponent":{"assetName":"g"}}}"""
+            )
         assertEquals(listOf("g"), SceneFoliageListing {}.list(engine).map { it.foliage })
         engine.ids[1]!!.getComponent(HeaderComponent::class.java).disabledComponents.clear()
         assertEquals(listOf("f", "g"), SceneFoliageListing {}.list(engine).map { it.foliage })

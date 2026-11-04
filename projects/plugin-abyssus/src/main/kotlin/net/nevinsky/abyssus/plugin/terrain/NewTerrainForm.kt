@@ -32,13 +32,16 @@ import javax.swing.JPanel
 import javax.swing.event.DocumentEvent
 import kotlin.random.Random
 
-/** What the New terrain form hands over: a valid folder [name] and the finished [preview] of exactly the chosen inputs. */
+/**
+ * What the New terrain form hands over: a valid folder [name] and the finished [preview] of exactly the chosen inputs.
+ */
 class NewTerrainRequest(val name: String, val preview: TerrainPreview)
 
 /**
  * The inputs of a new terrain: folder name, world size, resolution and the generation settings, with a grayscale
  * preview. The name, size and resolution editors are named `new-terrain-name`, `new-terrain-size` and
- * `new-terrain-resolution`, the settings `terrain-gen-<setting>`, the buttons `terrain-preview` and `terrain-randomize`,
+  * `new-terrain-resolution`, the settings `terrain-gen-<setting>`, the buttons `terrain-preview` and
+  * `terrain-randomize`,
  * the picture `terrain-heightmap`, the name/geometry reason `new-terrain-error` and the status `terrain-message`.
  * [request] is non-null only when everything is valid and a preview of exactly these inputs has finished; closing or
  * cancelling the dialog calls [dispose], which discards any draft without writing. [onValidityChanged] runs on the UI
@@ -134,7 +137,9 @@ class NewTerrainForm(
 
     private fun settingChanged(field: TerrainSettingField) {
         val editor = settingFields.getValue(field)
-        if (editor.text == field.textOf(draft.settings)) return
+        if (editor.text == field.textOf(draft.settings)) {
+            return
+        }
         when (val parsed = field.parse(draft.settings, editor.text)) {
             is SettingParse.Failed -> {
                 settingErrors.getValue(field).text = parsed.message
@@ -155,7 +160,9 @@ class NewTerrainForm(
         val size = sizeField.text.trim().toIntOrNull()
         val resolution = resolutionField.text.trim().toIntOrNull()
         val geometry = checkGeometry(size, resolution)
-        if (geometry == null) draft.updateGeometry(size!!, resolution!!) else {
+        if (geometry == null) {
+            draft.updateGeometry(size!!, resolution!!)
+        } else {
             draft.cancel()
             runner.invalidate()
         }
@@ -163,7 +170,9 @@ class NewTerrainForm(
     }
 
     private fun startPreview() {
-        if (!canPreview()) return
+        if (!canPreview()) {
+            return
+        }
         val started = runner.start(draft) { outcome ->
             refresh(
                 when (outcome) {
@@ -172,7 +181,9 @@ class NewTerrainForm(
                 },
             )
         }
-        if (started) refresh(AbyssusBundle.message("terrainGenerating"))
+        if (started) {
+            refresh(AbyssusBundle.message("terrainGenerating"))
+        }
     }
 
     private fun geometryError(): GeometryError? =
@@ -183,9 +194,14 @@ class NewTerrainForm(
     /** The name's problem for the current text, or null. Reads the assets folder. */
     fun nameError(): FolderNameError? = checkFolderName(assetsDir, nameField.text)
 
-    /** The inputs to create a terrain from, or null until the name, geometry and settings are valid and a matching preview exists. */
+    /**
+     * The inputs to create a terrain from, or null until the name, geometry and settings are valid and a matching
+     * preview exists.
+     */
     fun request(): NewTerrainRequest? {
-        if (disposed || nameError() != null || geometryError() != null) return null
+        if (disposed || nameError() != null || geometryError() != null) {
+            return null
+        }
         val preview = draft.applicable(NO_SOURCE) ?: return null
         return NewTerrainRequest(nameField.text.trim(), preview)
     }

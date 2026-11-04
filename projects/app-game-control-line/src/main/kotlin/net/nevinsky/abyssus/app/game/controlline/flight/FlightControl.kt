@@ -13,7 +13,8 @@ import net.nevinsky.abyssus.lib.physics.PHYSICS_STEP
  * the plane is drawn at. Every vector is a new copy the source may keep. Before the first step it is the plane at rest
  * at takeoff, at [time] 0 with no [tension].
  *
- * - [offset]: the plane's position minus the pilot's ground point (m), as [net.nevinsky.abyssus.app.game.controlline.track.TrackSample.offset];
+  * - [offset]: the plane's position minus the pilot's ground point (m), as
+  *   [net.nevinsky.abyssus.app.game.controlline.track.TrackSample.offset];
  * - [velocity] and [angularVelocity]: world space (m/s, rad/s);
  * - [nose] and [up]: the plane's +Z and +Y (unit, world);
  * - [height]: above the ground (m);
@@ -38,7 +39,8 @@ class FlightObservation(
 
 /**
  * Who holds the handle (design decision 1 of `add-f2b-ai-demonstration`): [FlightSession] asks it once per fixed step,
- * before the step's forces, for the tilt from the last [FlightObservation]. A tilt outside -1..1 is clamped and one that
+  * before the step's forces, for the tilt from the last [FlightObservation]. A tilt outside -1..1 is clamped and one
+  * that
  * is not finite is neutral. It is called on the game's main thread only, and not while the session is not advanced
  * (pause), so its state stays where the flight is.
  */

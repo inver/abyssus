@@ -26,7 +26,8 @@ interface SceneView : Disposable {
     var onPick: ((Long) -> Unit)?
 
     /**
-     * Called on the AWT thread when a drag of a gizmo handle ends with the entity moved or rotated, with the entity's id
+      * Called on the AWT thread when a drag of a gizmo handle ends with the entity moved or rotated, with the entity's
+      * id
      * (key under `ecs/entities`) and the change. Returns whether it was written to the scene.
      */
     var onTransform: ((Long, TransformEdit) -> Boolean)?
@@ -44,17 +45,26 @@ interface SceneView : Disposable {
         get() = null
         set(_) {}
 
-    /** Called with the point under the cursor when the user presses Paste in the view. Returns whether an entity was added. */
+    /**
+     * Called with the point under the cursor when the user presses Paste in the view. Returns whether an entity was
+     * added.
+     */
     var onPaste: ((Vector3) -> Boolean)?
         get() = null
         set(_) {}
 
-    /** Called with the id of the selected entity when the user presses Delete in the view. Returns whether it was removed. */
+    /**
+     * Called with the id of the selected entity when the user presses Delete in the view. Returns whether it was
+     * removed.
+     */
     var onDelete: ((Long) -> Boolean)?
         get() = null
         set(_) {}
 
-    /** Called when a path point was dragged, inserted or removed, with the arrangement's id and its new points. Returns whether it was written. */
+    /**
+     * Called when a path point was dragged, inserted or removed, with the arrangement's id and its new points. Returns
+     * whether it was written.
+     */
     var onArrangementEdit: ((Long, List<Vector3>) -> Boolean)?
         get() = null
         set(_) {}
@@ -70,7 +80,10 @@ interface SceneView : Disposable {
     /** Puts the Sculpt Terrain brush on the terrain with this id, or takes it off for null. */
     fun setSculpting(entityId: Long?) {}
 
-    /** Called when the view ended the sculpting itself (the selection moved on, play started, or the terrain cannot be sculpted). */
+    /**
+     * Called when the view ended the sculpting itself (the selection moved on, play started, or the terrain cannot be
+     * sculpted).
+     */
     var onSculptEnded: (() -> Unit)?
         get() = null
         set(_) {}
@@ -78,12 +91,18 @@ interface SceneView : Disposable {
     /** Puts the Paint Texture brush on the terrain with this id, or takes it off for null. */
     fun setPaintingTexture(entityId: Long?) {}
 
-    /** Called when the view ended the texture painting itself (the selection moved on, play started, or the terrain cannot be painted). */
+    /**
+     * Called when the view ended the texture painting itself (the selection moved on, play started, or the terrain
+     * cannot be painted).
+     */
     var onPaintTextureEnded: (() -> Unit)?
         get() = null
         set(_) {}
 
-    /** Writes the control point changes made since Edit (Apply); false when there was nothing to write or the write failed. */
+    /**
+     * Writes the control point changes made since Edit (Apply); false when there was nothing to write or the write
+     * failed.
+     */
     fun applyPathEdit(): Boolean = false
 
     /** Drops every control point of the arrangement being edited onto the terrain, as an unapplied change. */
@@ -115,12 +134,17 @@ interface SceneView : Disposable {
     fun placementPoint(): Vector3? = null
 
     /**
-     * Rendering cannot continue: shows [message] in place of the viewport and keeps whatever else the view has (its toolbar,
-     * disabled). True when the view did that; false (the default) leaves the editor to show the message in place of the view.
+      * Rendering cannot continue: shows [message] in place of the viewport and keeps whatever else the view has (its
+      * toolbar,
+      * disabled). True when the view did that; false (the default) leaves the editor to show the message in place of
+      * the view.
      */
     fun showUnavailable(message: String): Boolean = false
 
-    /** Turns the frame rate in the view's stats strip on or off (the project's `Show FPS`); a view without one ignores it. */
+    /**
+     * Turns the frame rate in the view's stats strip on or off (the project's `Show FPS`); a view without one ignores
+     * it.
+     */
     fun setFpsEnabled(enabled: Boolean) {}
 
     /** Changes the canvas pixel format on EDT, retaining this view's editing and simulation state. */

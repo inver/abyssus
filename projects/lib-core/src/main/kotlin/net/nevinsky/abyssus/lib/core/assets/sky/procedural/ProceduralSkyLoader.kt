@@ -8,20 +8,20 @@ package net.nevinsky.abyssus.lib.core.assets.sky.procedural
 import net.nevinsky.abyssus.lib.core.assets.AssetIndex
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
-import net.nevinsky.abyssus.lib.core.assets.loading.StagedMetaAssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
 import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
+import net.nevinsky.abyssus.lib.core.assets.loading.StagedMetaAssetLoader
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import org.slf4j.Logger
 import org.slf4j.helpers.NOPLogger
 
 /**
  * Loads `SKYBOX_PROCEDURAL` skies. Its clouds are another asset: `additional.clouds` names a `CLOUDS` asset by `uuid`,
- * which [prepare] resolves to a folder through [index] (an unknown one is logged to [log] and the sky has no clouds) and
- * names in [dependencies], so the storage loads it first; the sky reads the built clouds from the storage on every draw,
- * as a terrain reads its splat textures. [build] compiles the asset's shaders and gives the sky the cloud shaders of
- * [shaders].
+ * which [prepare] resolves to a folder through [index] (an unknown one is logged to [log] and the sky has no clouds)
+ * and names in [dependencies], so the storage loads it first; the sky reads the built clouds from the storage on every
+ * draw, as a terrain reads its splat textures. [build] compiles the asset's shaders and gives the sky the cloud shaders
+ * of [shaders].
  */
 class ProceduralSkyLoader(
     private val fileLoader: FileLoader,
@@ -42,7 +42,14 @@ class ProceduralSkyLoader(
         if (reference != null && clouds == null) {
             log.warn("Sky '${meta.name}': no asset has the clouds uuid '$reference'; drawing it without clouds")
         }
-        return PreparedProceduralSky(additional.params, vertex, fragment, meta.name, clouds, additional.lightsSceneEnabled)
+        return PreparedProceduralSky(
+            additional.params,
+            vertex,
+            fragment,
+            meta.name,
+            clouds,
+            additional.lightsSceneEnabled,
+        )
     }
 
     private fun shader(asset: String, file: String?): String {
@@ -53,7 +60,6 @@ class ProceduralSkyLoader(
     override fun dependencies(staged: PreparedProceduralSky): Set<String> = setOfNotNull(staged.clouds)
 
     override fun build(staged: PreparedProceduralSky, assets: BuiltAssets) = ProceduralSky(staged, assets, shaders, log)
-
 }
 
 /**
@@ -69,6 +75,10 @@ class PreparedProceduralSky(
     val clouds: String? = null,
     val lightsScene: Boolean = false,
 ) {
-    /** Whether [fragment] declares `#define SKY_CACHEABLE`: its atmosphere is then cached in a cube map ([AtmosphereCache]). */
-    val cacheable: Boolean get() = declaresCacheable(fragment)
+    /**
+     * Whether [fragment] declares `#define SKY_CACHEABLE`: its atmosphere is then cached in a cube map
+     * ([AtmosphereCache]).
+     */
+    val cacheable: Boolean
+        get() = declaresCacheable(fragment)
 }

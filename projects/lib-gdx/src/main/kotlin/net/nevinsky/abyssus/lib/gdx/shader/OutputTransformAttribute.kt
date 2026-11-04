@@ -22,7 +22,9 @@ class OutputTransformAttribute(val transform: OutputTransform) : Attribute(Type)
     override fun equals(other: Any?): Boolean = other is OutputTransformAttribute && other.transform == transform
 
     override fun compareTo(other: Attribute): Int {
-        if (type != other.type) return type.compareTo(other.type)
+        if (type != other.type) {
+            return type.compareTo(other.type)
+        }
         return transform.exposure.compareTo((other as OutputTransformAttribute).transform.exposure)
     }
 

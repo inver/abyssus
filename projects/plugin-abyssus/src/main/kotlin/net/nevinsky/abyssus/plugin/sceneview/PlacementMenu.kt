@@ -13,5 +13,9 @@ import com.intellij.openapi.actionSystem.DefaultActionGroup
  */
 class PlacementMenu<T>(val available: () -> Boolean, val choices: (T) -> DefaultActionGroup) {
     /** The choices placing at [where], or null while the menu cannot be offered. */
-    fun choicesAt(where: T): DefaultActionGroup? = if (available()) choices(where) else null
+    fun choicesAt(where: T): DefaultActionGroup? = if (available()) {
+        choices(where)
+    } else {
+        null
+    }
 }

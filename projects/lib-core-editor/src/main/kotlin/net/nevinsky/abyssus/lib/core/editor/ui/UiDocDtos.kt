@@ -11,23 +11,23 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 /**
  * The editing model of a UI asset's `meta.json`: plain mutable DTOs bound and printed by `JsonProcessor`, so the editor
  * holds no JSON tree. Members are declared in the order they are written. A member the model does not name is kept in
- * [extras] and written back after the named ones; numbers read as `Int` / `Double` and are written as that (spelling such
- * as `1.00` is not kept).
+ * [extras] and written back after the named ones; numbers read as `Int` / `Double` and are written as that (spelling
+ * such as `1.00` is not kept).
  */
 abstract class UiDocBase {
     private val unmodeled = LinkedHashMap<String, Any?>()
 
     /** Members this model does not name, in file order. */
     @get:JsonAnyGetter
-    val extras: Map<String, Any?> get() = unmodeled
+    val extras: Map<String, Any?>
+        get() = unmodeled
 
     @JsonAnySetter
     fun putExtra(key: String, value: Any?) {
         unmodeled[key] = value
     }
 
-    @JsonIgnore
-    fun hasExtras(): Boolean = unmodeled.isNotEmpty()
+    @JsonIgnore fun hasExtras(): Boolean = unmodeled.isNotEmpty()
 }
 
 /** A whole `meta.json` of a UI asset. */
@@ -77,8 +77,7 @@ class UiWidgetDoc : UiDocBase() {
     var empty: UiWidgetDoc? = null
 
     /** Every widget directly inside this one: its children, then a list's template and empty state. */
-    @JsonIgnore
-    fun inside(): List<UiWidgetDoc> = children.orEmpty() + listOfNotNull(template, empty)
+    @JsonIgnore fun inside(): List<UiWidgetDoc> = children.orEmpty() + listOfNotNull(template, empty)
 }
 
 class UiLayoutDoc : UiDocBase() {
@@ -94,7 +93,9 @@ class UiLayoutDoc : UiDocBase() {
     var align: String? = null
 
     @JsonIgnore
-    fun isBlank(): Boolean = hasExtras().not() && listOf(anchor, pivot, x, y, width, height, grow, padding, spacing, align).all { it == null }
+    fun isBlank(): Boolean =
+        hasExtras().not() &&
+            listOf(anchor, pivot, x, y, width, height, grow, padding, spacing, align).all { it == null }
 }
 
 class UiActionDoc : UiDocBase() {

@@ -17,7 +17,10 @@ class UiResourceChooserTest : BasePlatformTestCase() {
     fun testTheImageChooserOffersPngAndJpegFiles() {
         val descriptor = resourceChooserDescriptor(font = false)
         for (name in listOf("a.png", "b.jpg", "c.jpeg")) {
-            assertTrue("$name is offered", descriptor.isFileSelectable(myFixture.addFileToProject("i/$name", "x").virtualFile))
+            assertTrue(
+                "$name is offered",
+                descriptor.isFileSelectable(myFixture.addFileToProject("i/$name", "x").virtualFile),
+            )
         }
         assertFalse(descriptor.isFileSelectable(myFixture.addFileToProject("i/d.fnt", "x").virtualFile))
     }

@@ -24,7 +24,9 @@ import org.junit.Test
 private const val W = 800
 private const val H = 600
 
-/** Drawing and editing a path arrangement over a hand-built frame: a flat terrain, real queries, no renderer and no GL. */
+/**
+ * Drawing and editing a path arrangement over a hand-built frame: a flat terrain, real queries, no renderer and no GL.
+ */
 class SceneInteractionPathTest {
     init {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
@@ -77,9 +79,15 @@ class SceneInteractionPathTest {
                 listOf(
                     ArrangementPlacement(
                         5L,
-                        arrangementAlong(points, closed = closed).also { if (copy) it.slots = mutableListOf(12) })
+                        arrangementAlong(points, closed = closed).also {
+                            if (copy) {
+                                it.slots = mutableListOf(12)
+                            }
+                        })
                 )
-            } else emptyList(),
+            } else {
+                emptyList()
+            },
         )
         val boxes = if (copy) {
             listOf(
@@ -89,7 +97,9 @@ class SceneInteractionPathTest {
                     Matrix4().setToTranslation(50f, 0f, 50f)
                 )
             )
-        } else emptyList()
+        } else {
+            emptyList()
+        }
         val terrain = TerrainTarget(1L, TerrainData(3, FloatArray(9), 100, 1f), Matrix4())
         val frame = FrameSnapshot(camera(), boxes, listOf(snapshotTerrainOf(terrain)), 7L)
         val queries = SnapshotSceneQueries({ frame }, state) { content }

@@ -5,31 +5,27 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.plugin.entityNode
-import net.nevinsky.abyssus.plugin.prettyScene
-import net.nevinsky.abyssus.plugin.parsedScene
-import net.nevinsky.abyssus.plugin.printScene
-
-import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
-
-import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
-import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
-
-import net.nevinsky.abyssus.plugin.SceneFileEditorProvider
-
-import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.Quaternion
-
+import com.badlogic.gdx.math.Vector3
 import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
+import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
+import net.nevinsky.abyssus.plugin.SceneFileEditorProvider
+import net.nevinsky.abyssus.plugin.entityNode
+import net.nevinsky.abyssus.plugin.parsedScene
+import net.nevinsky.abyssus.plugin.prettyScene
+import net.nevinsky.abyssus.plugin.printScene
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
-import net.nevinsky.abyssus.plugin.testPanelServices
+import net.nevinsky.abyssus.plugin.settings.AntialiasingLevel
 import net.nevinsky.abyssus.plugin.testMetaFiles
+import net.nevinsky.abyssus.plugin.testPanelServices
 
 class SceneFileEditorTest : BasePlatformTestCase() {
     private val provider = SceneFileEditorProvider()
 
-    private fun file(path: String, text: String = """{"format":"abyssus","formatVersion":1}""") = myFixture.addFileToProject(path, text).virtualFile
+    private fun file(path: String, text: String = """{"format":"abyssus","formatVersion":1}""") =
+        myFixture.addFileToProject(path, text).virtualFile
 
     fun testAcceptsOnlyExactSceneExtension() {
         assertTrue(provider.accept(project, file("a/Main.scene")))
@@ -59,13 +55,21 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
     fun testValidSceneEditorCreatesAndDisposesWithoutThrowing() {
         // In a headless/GL-less environment the tab shows the glUnavailable message; either way no exception.
-        val editor = provider.createEditor(project, file("ok/Main.scene", """{"format":"abyssus","formatVersion":1,"name":"x"}""")) as SceneFileEditor
+        val editor =
+            provider.createEditor(
+                project,
+                file("ok/Main.scene", """{"format":"abyssus","formatVersion":1,"name":"x"}"""),
+            ) as SceneFileEditor
         assertNotNull(editor.component)
         editor.dispose()
     }
 
     fun testLateGlFailureReplacesTabWithGlUnavailableMessage() {
-        val editor = provider.createEditor(project, file("late/Main.scene", """{"format":"abyssus","formatVersion":1,"name":"x"}""")) as SceneFileEditor
+        val editor =
+            provider.createEditor(
+                project,
+                file("late/Main.scene", """{"format":"abyssus","formatVersion":1,"name":"x"}"""),
+            ) as SceneFileEditor
         try {
             editor.showGlFailure(RuntimeException("no GL 3.2"))
             val status = editor.statusText
@@ -73,8 +77,14 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             assertTrue(status!!, status.startsWith("OpenGL scene is unavailable") && status.contains("no GL 3.2"))
             // a real view keeps its toolbar above the message
             fun find(c: java.awt.Component, name: String): java.awt.Component? =
-                if (c.name == name) c else (c as? java.awt.Container)?.components?.firstNotNullOfOrNull { find(it, name) }
-            if (editor.sceneView != null) assertNotNull(find(editor.component, "scene-toolbar"))
+                if (c.name == name) {
+                    c
+                } else {
+                    (c as? java.awt.Container)?.components?.firstNotNullOfOrNull { find(it, name) }
+                }
+            if (editor.sceneView != null) {
+                assertNotNull(find(editor.component, "scene-toolbar"))
+            }
         } finally {
             editor.dispose()
         }
@@ -84,22 +94,41 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         val component = javax.swing.JPanel()
         var disposed = false
         var stops = 0
-        override fun stopPlay() { stops++ }
+
+        override fun stopPlay() {
+            stops++
+        }
+
         val antialiasingCalls = mutableListOf<AntialiasingLevel>()
-        override fun setAntialiasing(level: AntialiasingLevel) { antialiasingCalls += level }
+
+        override fun setAntialiasing(level: AntialiasingLevel) {
+            antialiasingCalls += level
+        }
+
         val fpsCalls = mutableListOf<Boolean>()
-        override fun setFpsEnabled(enabled: Boolean) { fpsCalls += enabled }
+
+        override fun setFpsEnabled(enabled: Boolean) {
+            fpsCalls += enabled
+        }
+
         var updates = 0
         var selected: Long? = null
-        override fun selectEntity(entityId: Long) { selected = entityId }
+
+        override fun selectEntity(entityId: Long) {
+            selected = entityId
+        }
+
         override var onFailure: ((Throwable) -> Unit)? = null
         override var onPick: ((Long) -> Unit)? = null
         override var onTransform: ((Long, TransformEdit) -> Boolean)? = null
-        override val view: javax.swing.JComponent get() = component
+        override val view: javax.swing.JComponent
+            get() = component
+
         override fun setParams(params: SceneRenderParams) {
             current = params
             updates++
         }
+
         override fun dispose() {
             disposed = true
         }
@@ -109,14 +138,30 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         val scene = file("host/Main.scene")
         var treeSelection: ((Long) -> Unit)? = null
         var picked: Long? = null
-        val host = object : SceneViewHost {
-            override fun listen(file: com.intellij.openapi.vfs.VirtualFile, parent: com.intellij.openapi.Disposable, selected: (Long) -> Unit) { treeSelection = selected }
-            override fun select(file: com.intellij.openapi.vfs.VirtualFile, entityId: Long) { picked = entityId }
-            override fun lightActions(file: com.intellij.openapi.vfs.VirtualFile, position: () -> Vector3) = com.intellij.openapi.actionSystem.DefaultActionGroup()
-            override fun assetActions(file: com.intellij.openapi.vfs.VirtualFile, position: () -> Vector3) = com.intellij.openapi.actionSystem.DefaultActionGroup()
-            override fun canAddLight(file: com.intellij.openapi.vfs.VirtualFile) = false
-            override fun canAddAsset(file: com.intellij.openapi.vfs.VirtualFile) = false
-        }
+        val host =
+            object : SceneViewHost {
+                override fun listen(
+                    file: com.intellij.openapi.vfs.VirtualFile,
+                    parent: com.intellij.openapi.Disposable,
+                    selected: (Long) -> Unit,
+                ) {
+                    treeSelection = selected
+                }
+
+                override fun select(file: com.intellij.openapi.vfs.VirtualFile, entityId: Long) {
+                    picked = entityId
+                }
+
+                override fun lightActions(file: com.intellij.openapi.vfs.VirtualFile, position: () -> Vector3) =
+                    com.intellij.openapi.actionSystem.DefaultActionGroup()
+
+                override fun assetActions(file: com.intellij.openapi.vfs.VirtualFile, position: () -> Vector3) =
+                    com.intellij.openapi.actionSystem.DefaultActionGroup()
+
+                override fun canAddLight(file: com.intellij.openapi.vfs.VirtualFile) = false
+
+                override fun canAddAsset(file: com.intellij.openapi.vfs.VirtualFile) = false
+            }
         lateinit var view: FakeView
         val editor = newSceneEditor(project, scene, host = host) { params -> FakeView(params).also { view = it } }
         try {
@@ -124,7 +169,8 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             assertEquals(12L, view.selected)
             view.onPick!!(7)
             assertEquals(7L, picked)
-            val facts: net.nevinsky.abyssus.plugin.facts.SceneFacts<*> = project.getService(net.nevinsky.abyssus.plugin.SceneRayControls::class.java)
+            val facts: net.nevinsky.abyssus.plugin.facts.SceneFacts<*> =
+                project.getService(net.nevinsky.abyssus.plugin.SceneRayControls::class.java)
             assertEquals(view.current.content, facts.content(scene.path))
             assertEquals("7", facts.selection(scene.path))
         } finally {
@@ -133,7 +179,11 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         assertNull(project.getService(net.nevinsky.abyssus.plugin.SceneRayControls::class.java).content(scene.path))
     }
 
-    private fun fakeEditor(path: String, text: String, views: MutableList<FakeView>): Pair<SceneFileEditor, com.intellij.openapi.vfs.VirtualFile> {
+    private fun fakeEditor(
+        path: String,
+        text: String,
+        views: MutableList<FakeView>,
+    ): Pair<SceneFileEditor, com.intellij.openapi.vfs.VirtualFile> {
         val f = file(path, text)
         return newSceneEditor(project, f) { p -> FakeView(p).also { views += it } } to f
     }
@@ -148,7 +198,9 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
     fun testSceneContentFollowsEdits() {
         val views = mutableListOf<FakeView>()
-        val entity = """{"format":"abyssus","formatVersion":1,"ecs":{"1":{"components":{"RenderComponent":{"type":"MODEL","assetName":"m"}}}}}"""
+        val entity =
+            """{"format":"abyssus","formatVersion":1,"ecs":{"1":{"components":{"RenderComponent":{"type":"MODEL",
+"assetName":"m"}}}}}"""
         val (editor, f) = fakeEditor("content/a.scene", """{"format":"abyssus","formatVersion":1}""", views)
         try {
             assertTrue(views[0].current.content.models.isEmpty())
@@ -165,13 +217,24 @@ class SceneFileEditorTest : BasePlatformTestCase() {
 
     fun testAddedLightSelectsInViewEvenWithoutATreeRow() {
         val views = mutableListOf<FakeView>()
-        val (editor, file) = fakeEditor("selection/new-light.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""", views)
+        val (editor, file) =
+            fakeEditor("selection/new-light.scene", """{"format":"abyssus","formatVersion":1,"ecs":{}}""", views)
         try {
-            val actions = net.nevinsky.abyssus.plugin.projectView.AddLightGroup(project, file, { Vector3(0f, 0f, 0f) }).getChildren(null)
+            val actions =
+                net.nevinsky.abyssus.plugin.projectView
+                    .AddLightGroup(project, file, { Vector3(0f, 0f, 0f) })
+                    .getChildren(null)
             actions[0].actionPerformed(com.intellij.testFramework.TestActionEvent.createTestEvent(actions[0]))
             assertEquals(1L, views.single().selected)
-            assertEquals(1L, net.nevinsky.abyssus.plugin.projectView.componentTargetOf(net.nevinsky.abyssus.plugin.projectView.AbyssusSelection.of(project).current)?.entityId)
-        } finally { editor.dispose() }
+            assertEquals(
+                1L,
+                net.nevinsky.abyssus.plugin.projectView
+                    .componentTargetOf(net.nevinsky.abyssus.plugin.projectView.AbyssusSelection.of(project).current)
+                    ?.entityId,
+            )
+        } finally {
+            editor.dispose()
+        }
     }
 
     fun testTreeSelectionReachesSceneView() {
@@ -182,7 +245,9 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             val node = entityNode(project, file, text, 7)
             net.nevinsky.abyssus.plugin.projectView.AbyssusSelection.of(project).select(node)
             assertEquals(7L, views.single().selected)
-        } finally { editor.dispose() }
+        } finally {
+            editor.dispose()
+        }
     }
 
     fun testRendersAndUpdatesInPlaceOnUnsavedEdits() {
@@ -191,7 +256,11 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         try {
             assertEquals(1, views.size)
             assertNull(editor.statusText)
-            setText(f, """{"format":"abyssus","formatVersion":1,"name":"a","fogEnabled":true,"fog":{"color":{"r":1,"g":0,"b":0,"a":1},"density":0.5}}""")
+            setText(
+                f,
+                """{"format":"abyssus","formatVersion":1,"name":"a","fogEnabled":true,"fog":{"color":{"r":1,"g":0,
+"b":0,"a":1},"density":0.5}}""",
+            )
             editor.afterThePause()
             assertEquals(1, views.size)
             assertEquals(1, views[0].updates)
@@ -240,7 +309,8 @@ class SceneFileEditorTest : BasePlatformTestCase() {
     }
 
     fun testPhysicsOnlyProjectEditsDoNotStopOrReloadUnrelatedSimulation() {
-        val abss = myFixture.addFileToProject("Gate/Gate.abss", """{"format":"abyssus","formatVersion":1}""").virtualFile
+        val abss =
+            myFixture.addFileToProject("Gate/Gate.abss", """{"format":"abyssus","formatVersion":1}""").virtualFile
         val scene = file("Gate/scenes/a.scene", """{"format":"abyssus","formatVersion":1,"name":"a"}""")
         lateinit var view: FakeView
         val editor = newSceneEditor(project, scene) { p -> FakeView(p).also { view = it } }
@@ -255,17 +325,30 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             editor.afterThePause()
             assertTrue(view.stops > 0)
             assertTrue(view.updates > 0)
-        } finally { com.intellij.openapi.util.Disposer.dispose(editor) }
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
     }
 
     fun testAbssEditRefreshesCamera() {
         val views = mutableListOf<FakeView>()
-        val abss = myFixture.addFileToProject("Q/Q.abss", """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":1,"y":2,"z":3}}}""").virtualFile
+        val abss =
+            myFixture
+                .addFileToProject(
+                    "Q/Q.abss",
+                    """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},
+"position":{"x":1,"y":2,"z":3}}}""",
+                )
+                .virtualFile
         val scene = file("Q/scenes/a.scene", """{"format":"abyssus","formatVersion":1,"name":"a"}""")
         val editor = newSceneEditor(project, scene) { p -> FakeView(p).also { views += it } }
         try {
             assertEquals(1f, views[0].current.camera.position.x, 0f)
-            setText(abss, """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},"position":{"x":5,"y":2,"z":3}}}""")
+            setText(
+                abss,
+                """{"format":"abyssus","formatVersion":1,"mainCamera":{"viewPointPosition":{"x":0,"y":0,"z":-1},
+"position":{"x":5,"y":2,"z":3}}}""",
+            )
             editor.afterThePause()
             assertEquals(5f, views[0].current.camera.position.x, 0f)
         } finally {
@@ -274,7 +357,8 @@ class SceneFileEditorTest : BasePlatformTestCase() {
     }
 
     // Pin the test copy to the native writer's indentation before checking one-line edits and exact Undo.
-    private val mainScene get() = prettyScene(java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
+    private val mainScene
+        get() = prettyScene(java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
 
     private fun textOf(f: com.intellij.openapi.vfs.VirtualFile) =
         com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(f)!!.text
@@ -284,10 +368,22 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         val (editor, f) = fakeEditor("edit/Main Scene.scene", mainScene, views)
         try {
             val old = views[0].current.content.models.first { it.entityId == 0L }.transform.position
-            val result = SceneComponentEdits
-                .update(project, f, 0L, "PositionComponent", "localPosition.x", (old.x + 3f).toString(), testMetaFiles())
+            val result =
+                SceneComponentEdits.update(
+                    project,
+                    f,
+                    0L,
+                    "PositionComponent",
+                    "localPosition.x",
+                    (old.x + 3f).toString(),
+                    testMetaFiles(),
+                )
             assertEquals(net.nevinsky.abyssus.lib.core.editor.components.EditResult.Changed, result)
-            assertEquals(old.x + 3f, views[0].current.content.models.first { it.entityId == 0L }.transform.position.x, 1e-4f)
+            assertEquals(
+                old.x + 3f,
+                views[0].current.content.models.first { it.entityId == 0L }.transform.position.x,
+                1e-4f,
+            )
         } finally {
             com.intellij.openapi.util.Disposer.dispose(editor)
         }
@@ -304,7 +400,11 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             val after = textOf(f)
             val changed = before.lines().indices.filter { before.lines()[it] != after.lines()[it] }
             assertEquals(1, changed.size)
-            assertEquals(moved.x, views[0].current.content.models.first { it.entityId == 0L }.transform.position.x, 1e-5f)
+            assertEquals(
+                moved.x,
+                views[0].current.content.models.first { it.entityId == 0L }.transform.position.x,
+                1e-5f,
+            )
             // the scene view tab's own Undo reaches the edit
             val undo = com.intellij.openapi.command.undo.UndoManager.getInstance(project)
             assertTrue(undo.isUndoAvailable(editor))
@@ -321,11 +421,16 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         val (editor, f) = fakeEditor("drop/Main Scene.scene", mainScene, views)
         val connection = project.messageBus.connect()
         val commands = mutableListOf<String?>()
-        connection.subscribe(com.intellij.openapi.command.CommandListener.TOPIC, object : com.intellij.openapi.command.CommandListener {
-            override fun commandFinished(event: com.intellij.openapi.command.CommandEvent) {
-                if (event.project == project) commands += event.commandName
-            }
-        })
+        connection.subscribe(
+            com.intellij.openapi.command.CommandListener.TOPIC,
+            object : com.intellij.openapi.command.CommandListener {
+                override fun commandFinished(event: com.intellij.openapi.command.CommandEvent) {
+                    if (event.project == project) {
+                        commands += event.commandName
+                    }
+                }
+            },
+        )
         try {
             val before = textOf(f)
             val old = views[0].current.content.models.first { it.entityId == 0L }.transform.position
@@ -364,7 +469,9 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         val (editor, f) = fakeEditor("rot/Main Scene.scene", mainScene, views)
         try {
             val before = textOf(f)
-            assertTrue(views[0].onTransform!!.invoke(0L, TransformEdit(rotation = Quaternion(0f, 0.7071f, 0f, 0.7071f))))
+            assertTrue(
+                views[0].onTransform!!.invoke(0L, TransformEdit(rotation = Quaternion(0f, 0.7071f, 0f, 0.7071f)))
+            )
             assertTrue(textOf(f).contains("localRotation"))
             val undo = com.intellij.openapi.command.undo.UndoManager.getInstance(project)
             undo.undo(editor)
@@ -374,15 +481,28 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         }
     }
 
-    /** A copy of Untitled's `Main Scene` (the shared fixture is not touched) with a LightComponent on 7 and a spotlight 8. */
+    /**
+     * A copy of Untitled's `Main Scene` (the shared fixture is not touched) with a LightComponent on 7 and a
+     * spotlight 8.
+     */
     private fun sceneWithOmittedLightValues(): String {
         val scene = parsedScene(java.io.File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText())
-        scene.entity(7)!!.add(net.nevinsky.abyssus.lib.core.ecs.component.LightComponent(net.nevinsky.abyssus.lib.core.ecs.component.LightDto(intensity = 1.2f)))
-        scene.ecs[8] = net.nevinsky.abyssus.lib.core.editor.entityOf(
-            8, net.nevinsky.abyssus.lib.core.format.EntityType.LIGHT_SPOT,
-            net.nevinsky.abyssus.lib.core.ecs.component.NameComponent("Spot Light 8"),
-            net.nevinsky.abyssus.lib.core.ecs.component.LightComponent(net.nevinsky.abyssus.lib.core.ecs.component.LightDto()),
-        )
+        scene
+            .entity(7)!!
+            .add(
+                net.nevinsky.abyssus.lib.core.ecs.component.LightComponent(
+                    net.nevinsky.abyssus.lib.core.ecs.component.LightDto(intensity = 1.2f)
+                )
+            )
+        scene.ecs[8] =
+            net.nevinsky.abyssus.lib.core.editor.entityOf(
+                8,
+                net.nevinsky.abyssus.lib.core.format.EntityType.LIGHT_SPOT,
+                net.nevinsky.abyssus.lib.core.ecs.component.NameComponent("Spot Light 8"),
+                net.nevinsky.abyssus.lib.core.ecs.component.LightComponent(
+                    net.nevinsky.abyssus.lib.core.ecs.component.LightDto()
+                ),
+            )
         return printScene(scene)
     }
 
@@ -401,7 +521,10 @@ class SceneFileEditorTest : BasePlatformTestCase() {
                 net.nevinsky.abyssus.plugin.projectView.AbyssusSelection.of(project).select(node)
                 assertEquals(id, views.single().selected)
                 // the Properties panel reads the same entity: opening it must not write either
-                net.nevinsky.abyssus.plugin.properties.readEntityState(net.nevinsky.abyssus.plugin.projectView.ComponentTarget(f, id, null), testPanelServices(project))
+                net.nevinsky.abyssus.plugin.properties.readEntityState(
+                    net.nevinsky.abyssus.plugin.projectView.ComponentTarget(f, id, null),
+                    testPanelServices(project),
+                )
             }
             assertEquals(prepared, textOf(f))
             assertFalse(com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().isFileModified(f))
@@ -415,7 +538,10 @@ class SceneFileEditorTest : BasePlatformTestCase() {
         val (editor, f) = fakeEditor("burst/a.scene", """{"format":"abyssus","formatVersion":1,"name":"a"}""", views)
         try {
             val before = views[0].updates
-            for (i in 1..10) setText(f, """{"format":"abyssus","formatVersion":1,"skyboxEnabled":true,"skyboxName":"s$i"}""")
+            for (i in 1..10) setText(
+                f,
+                """{"format":"abyssus","formatVersion":1,"skyboxEnabled":true,"skyboxName":"s$i"}""",
+            )
             assertEquals("nothing is re-read while typing", before, views[0].updates)
             editor.afterThePause()
             assertEquals(before + 1, views[0].updates)
@@ -459,63 +585,70 @@ class SceneFileEditorTest : BasePlatformTestCase() {
     private fun withFpsSetting(value: Boolean?, body: () -> Unit) {
         val properties = com.intellij.ide.util.PropertiesComponent.getInstance(project)
         try {
-            if (value != null) properties.setValue(fpsKey, value, false)
+            if (value != null) {
+                properties.setValue(fpsKey, value, false)
+            }
             body()
         } finally {
             properties.unsetValue(fpsKey)
         }
     }
 
-    fun testANewViewGetsTheSavedFpsPreference() = withFpsSetting(true) {
-        val views = mutableListOf<FakeView>()
-        val (editor, _) = fakeEditor("fps/a.scene", """{"format":"abyssus","formatVersion":1,"name":"a"}""", views)
-        try {
-            assertEquals(listOf(true), views.single().fpsCalls)
-        } finally {
+    fun testANewViewGetsTheSavedFpsPreference() =
+        withFpsSetting(true) {
+            val views = mutableListOf<FakeView>()
+            val (editor, _) = fakeEditor("fps/a.scene", """{"format":"abyssus","formatVersion":1,"name":"a"}""", views)
+            try {
+                assertEquals(listOf(true), views.single().fpsCalls)
+            } finally {
+                com.intellij.openapi.util.Disposer.dispose(editor)
+            }
+        }
+
+    fun testAChangedPreferenceReachesEveryOpenEditor() =
+        withFpsSetting(null) {
+            val views = mutableListOf<FakeView>()
+            val (one, _) = fakeEditor("fps/b.scene", """{"format":"abyssus","formatVersion":1,"name":"b"}""", views)
+            val (two, _) = fakeEditor("fps/c.scene", """{"format":"abyssus","formatVersion":1,"name":"c"}""", views)
+            try {
+                val settings = project.getService(SceneViewSettings::class.java)
+                settings.showFps = true
+                assertEquals(listOf(false, true), views[0].fpsCalls)
+                assertEquals(listOf(false, true), views[1].fpsCalls)
+                settings.showFps = false
+                assertEquals(false, views[1].fpsCalls.last())
+            } finally {
+                com.intellij.openapi.util.Disposer.dispose(one)
+                com.intellij.openapi.util.Disposer.dispose(two)
+            }
+        }
+
+    fun testADisposedEditorIsNotToldAboutTheChange() =
+        withFpsSetting(null) {
+            val views = mutableListOf<FakeView>()
+            val (editor, _) = fakeEditor("fps/d.scene", """{"format":"abyssus","formatVersion":1,"name":"d"}""", views)
             com.intellij.openapi.util.Disposer.dispose(editor)
+            val before = views.single().fpsCalls.toList()
+            project.getService(SceneViewSettings::class.java).showFps = true
+            assertEquals(before, views.single().fpsCalls)
         }
-    }
 
-    fun testAChangedPreferenceReachesEveryOpenEditor() = withFpsSetting(null) {
-        val views = mutableListOf<FakeView>()
-        val (one, _) = fakeEditor("fps/b.scene", """{"format":"abyssus","formatVersion":1,"name":"b"}""", views)
-        val (two, _) = fakeEditor("fps/c.scene", """{"format":"abyssus","formatVersion":1,"name":"c"}""", views)
-        try {
-            val settings = project.getService(SceneViewSettings::class.java)
-            settings.showFps = true
-            assertEquals(listOf(false, true), views[0].fpsCalls)
-            assertEquals(listOf(false, true), views[1].fpsCalls)
-            settings.showFps = false
-            assertEquals(false, views[1].fpsCalls.last())
-        } finally {
-            com.intellij.openapi.util.Disposer.dispose(one)
-            com.intellij.openapi.util.Disposer.dispose(two)
+    fun testAReplacedViewGetsThePreferenceToo() =
+        withFpsSetting(true) {
+            val views = mutableListOf<FakeView>()
+            val (editor, f) = fakeEditor("fps/e.scene", """{"format":"abyssus","formatVersion":1,"name":"e"}""", views)
+            try {
+                setText(f, "not json")
+                editor.afterThePause()
+                setText(f, """{"format":"abyssus","formatVersion":1,"name":"e2"}""")
+                editor.afterThePause()
+                assertEquals(2, views.size)
+                assertEquals(listOf(true), views[1].fpsCalls)
+            } finally {
+                com.intellij.openapi.util.Disposer.dispose(editor)
+            }
         }
-    }
 
-    fun testADisposedEditorIsNotToldAboutTheChange() = withFpsSetting(null) {
-        val views = mutableListOf<FakeView>()
-        val (editor, _) = fakeEditor("fps/d.scene", """{"format":"abyssus","formatVersion":1,"name":"d"}""", views)
-        com.intellij.openapi.util.Disposer.dispose(editor)
-        val before = views.single().fpsCalls.toList()
-        project.getService(SceneViewSettings::class.java).showFps = true
-        assertEquals(before, views.single().fpsCalls)
-    }
-
-    fun testAReplacedViewGetsThePreferenceToo() = withFpsSetting(true) {
-        val views = mutableListOf<FakeView>()
-        val (editor, f) = fakeEditor("fps/e.scene", """{"format":"abyssus","formatVersion":1,"name":"e"}""", views)
-        try {
-            setText(f, "not json")
-            editor.afterThePause()
-            setText(f, """{"format":"abyssus","formatVersion":1,"name":"e2"}""")
-            editor.afterThePause()
-            assertEquals(2, views.size)
-            assertEquals(listOf(true), views[1].fpsCalls)
-        } finally {
-            com.intellij.openapi.util.Disposer.dispose(editor)
-        }
-    }
     fun testProjectAntialiasingFollowsOwningDocumentAndDoesNotStopPlay() {
         val abss = file("aa/P.abss", """{"format":"abyssus","formatVersion":1,"sceneViewAntialiasing":"X8"}""")
         val other = file("other/Q.abss", """{"format":"abyssus","formatVersion":1,"sceneViewAntialiasing":"X2"}""")
@@ -552,7 +685,9 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             assertEquals(AntialiasingLevel.X4, views[3].antialiasingCalls.last())
         } finally {
             com.intellij.openapi.util.Disposer.dispose(one)
-            if (!twoDisposed) com.intellij.openapi.util.Disposer.dispose(two)
+            if (!twoDisposed) {
+                com.intellij.openapi.util.Disposer.dispose(two)
+            }
             com.intellij.openapi.util.Disposer.dispose(three)
         }
     }
@@ -560,14 +695,18 @@ class SceneFileEditorTest : BasePlatformTestCase() {
     fun testStandaloneAntialiasingDefaultsToFourSamples() {
         val views = mutableListOf<FakeView>()
         val (editor, _) = fakeEditor("standalone.scene", """{"format":"abyssus","formatVersion":1}""", views)
-        try { assertEquals(listOf(AntialiasingLevel.X4), views.single().antialiasingCalls) }
-        finally { com.intellij.openapi.util.Disposer.dispose(editor) }
+        try {
+            assertEquals(listOf(AntialiasingLevel.X4), views.single().antialiasingCalls)
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
     }
 
     fun testProjectAntialiasingUndoRedoAndUnsavedTextReachAnOpenView() {
         val abss = file("undo/P.abss")
         myFixture.openFileInEditor(abss)
-        val textEditor = com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
+        val textEditor =
+            com.intellij.openapi.fileEditor.impl.text.TextEditorProvider.getInstance().getTextEditor(myFixture.editor)
         val views = mutableListOf<FakeView>()
         val (editor, _) = fakeEditor("undo/scenes/a.scene", """{"format":"abyssus","formatVersion":1}""", views)
         val settings = project.getService(net.nevinsky.abyssus.plugin.filetype.AbyssusProjectSettings::class.java)
@@ -575,11 +714,16 @@ class SceneFileEditorTest : BasePlatformTestCase() {
             settings.setAntialiasing(abss, AntialiasingLevel.OFF)
             com.intellij.openapi.command.undo.UndoManager.getInstance(project).undo(textEditor)
             com.intellij.openapi.command.undo.UndoManager.getInstance(project).redo(textEditor)
-            assertEquals(listOf(AntialiasingLevel.X4, AntialiasingLevel.OFF, AntialiasingLevel.X4, AntialiasingLevel.OFF), views.single().antialiasingCalls)
+            assertEquals(
+                listOf(AntialiasingLevel.X4, AntialiasingLevel.OFF, AntialiasingLevel.X4, AntialiasingLevel.OFF),
+                views.single().antialiasingCalls,
+            )
             val doc = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(abss)!!
             setText(abss, doc.text.replace("\"OFF\"", "\"X8\""))
             assertEquals(AntialiasingLevel.X8, views.single().antialiasingCalls.last())
             assertEquals(0, views.single().stops)
-        } finally { com.intellij.openapi.util.Disposer.dispose(editor) }
+        } finally {
+            com.intellij.openapi.util.Disposer.dispose(editor)
+        }
     }
 }

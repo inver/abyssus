@@ -7,7 +7,9 @@ package net.nevinsky.abyssus.lib.core.editor.scene
 
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 
-/** The scene `skybox` row of the properties panel: the saved `skyboxName` and whether the field offers a Browse button. */
+/**
+ * The scene `skybox` row of the properties panel: the saved `skyboxName` and whether the field offers a Browse button.
+ */
 data class SkyboxRow(val value: String?, val browsable: Boolean)
 
 /** What the properties panel shows for a scene that the view layer turns into controls. */

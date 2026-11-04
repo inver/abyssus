@@ -57,7 +57,11 @@ class LightingRefreshPolicy(private val maxRetries: Int = 2, private val retryDe
     private var attemptRevision: LightingRevision? = null
 
     val state: LightingRefreshState
-        get() = LightingRefreshState(current, next, build, if (next != null) fade else 0.0, build != null && visible)
+        get() = LightingRefreshState(current, next, build, if (next != null) {
+            fade
+        } else {
+            0.0
+        }, build != null && visible)
 
     fun update(request: LightingRefreshRequest, visible: Boolean, deltaSeconds: Double): LightingRefreshState {
         this.visible = visible
@@ -66,7 +70,9 @@ class LightingRefreshPolicy(private val maxRetries: Int = 2, private val retryDe
             next = null
             fade = 0.0
         }
-        if (build?.request?.revision.let { it != null && it != revision }) build = null
+        if (build?.request?.revision.let { it != null && it != revision }) {
+            build = null
+        }
         if (attemptRevision != revision) {
             failures = 0
             backoff = 0.0
@@ -80,7 +86,9 @@ class LightingRefreshPolicy(private val maxRetries: Int = 2, private val retryDe
                     fade = 0.0
                 }
             }
-            if (failures > 0 && build == null) backoff += deltaSeconds
+            if (failures > 0 && build == null) {
+                backoff += deltaSeconds
+            }
             if (build == null && next == null && failures <= maxRetries &&
                 (failures == 0 || backoff >= retryDelaySeconds - EPSILON) && needsBuild(request)
             ) {
@@ -94,7 +102,9 @@ class LightingRefreshPolicy(private val maxRetries: Int = 2, private val retryDe
 
     /** Publishes [build] if it is still the active one; returns false for an obsolete build. */
     fun completed(build: LightingBuildRequest): Boolean {
-        if (this.build != build) return false
+        if (this.build != build) {
+            return false
+        }
         this.build = null
         failures = 0
         backoff = 0.0
@@ -109,7 +119,9 @@ class LightingRefreshPolicy(private val maxRetries: Int = 2, private val retryDe
 
     /** Records a failure of [build] if it is still the active one; returns false for an obsolete build. */
     fun failed(build: LightingBuildRequest): Boolean {
-        if (this.build != build) return false
+        if (this.build != build) {
+            return false
+        }
         this.build = null
         failures++
         backoff = 0.0
@@ -129,15 +141,21 @@ class LightingRefreshPolicy(private val maxRetries: Int = 2, private val retryDe
 
     private fun needsBuild(request: LightingRefreshRequest): Boolean {
         val basis = current?.request ?: return true
-        if (basis.revision != request.revision) return true
-        if (angleDegrees(basis.sun, request.sun) >= SUN_THRESHOLD_DEGREES - EPSILON) return true
+        if (basis.revision != request.revision) {
+            return true
+        }
+        if (angleDegrees(basis.sun, request.sun) >= SUN_THRESHOLD_DEGREES - EPSILON) {
+            return true
+        }
         return request.cloudsDrift && request.revision.cloudsVisible &&
             Math.abs(request.cloudTimeSeconds - basis.cloudTimeSeconds) >= CLOUD_DRIFT_REFRESH_SECONDS - EPSILON
     }
 
     private fun angleDegrees(a: LightingSunDirection, b: LightingSunDirection): Double {
         val length = Math.sqrt((a.x * a.x + a.y * a.y + a.z * a.z) * (b.x * b.x + b.y * b.y + b.z * b.z))
-        if (length == 0.0) return 0.0
+        if (length == 0.0) {
+            return 0.0
+        }
         val cos = ((a.x * b.x + a.y * b.y + a.z * b.z) / length).coerceIn(-1.0, 1.0)
         return Math.toDegrees(Math.acos(cos))
     }

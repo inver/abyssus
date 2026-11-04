@@ -4,27 +4,30 @@
  */
 package net.nevinsky.abyssus.plugin.gameui
 
-import net.nevinsky.abyssus.plugin.canonicalUi
-import net.nevinsky.abyssus.plugin.admitUi
-import net.nevinsky.abyssus.plugin.uiWidgetIds
-
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import net.nevinsky.abyssus.lib.core.editor.ui.UiEditError
-import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
-import net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder
 import java.util.concurrent.Executor
 import javax.swing.JPanel
 import javax.swing.tree.DefaultMutableTreeNode
+import net.nevinsky.abyssus.lib.core.editor.ui.UiEditError
+import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
+import net.nevinsky.abyssus.lib.core.ui.validation.UiCollectionDecoder
+import net.nevinsky.abyssus.plugin.admitUi
+import net.nevinsky.abyssus.plugin.canonicalUi
+import net.nevinsky.abyssus.plugin.uiWidgetIds
 
 class UiEditorViewsTest : BasePlatformTestCase() {
-    private val source = canonicalUi("""{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main","screens":[
+    private val source =
+        canonicalUi(
+            """{"formatVersion":1,"type":"UI","additional":{"ui":{"schemaVersion":1,"entryScreen":"main","screens":[
         {"id":"main","name":"Main","root":{"id":"root","type":"panel","children":[
           {"id":"free","type":"button","layout":{"x":50,"y":40,"width":100,"height":40},"properties":{"text":"Go"}},
-          {"id":"list","type":"column","children":[{"id":"a","type":"label"},{"id":"b","type":"label"},{"id":"c","type":"label"}]},
+          {"id":"list","type":"column","children":[{"id":"a","type":"label"},{"id":"b","type":"label"},{"id":"c",
+"type":"label"}]},
           {"id":"odd","type":"hologram"}]}},
-        {"id":"pause","name":"Pause","kind":"overlay","root":{"id":"p-root","type":"panel"}}]}}}""")!!
+        {"id":"pause","name":"Pause","kind":"overlay","root":{"id":"p-root","type":"panel"}}]}}}"""
+        )
 
     private lateinit var file: VirtualFile
 
@@ -41,7 +44,8 @@ class UiEditorViewsTest : BasePlatformTestCase() {
         return uiWidgetIds(FileDocumentManager.getInstance().getDocument(file)!!.text)
     }
 
-    private val collection get() = (admitUi(source) as UiAdmission.Admitted).collection
+    private val collection
+        get() = (admitUi(source) as UiAdmission.Admitted).collection
 
     // ---- tree drop rules ----
 
@@ -49,7 +53,11 @@ class UiEditorViewsTest : BasePlatformTestCase() {
         val c = collection
         assertEquals(TreeDrop("list", 0), treeDrop(c, "free", "a", DropPosition.BEFORE))
         assertEquals(TreeDrop("list", 3), treeDrop(c, "free", "c", DropPosition.AFTER))
-        assertEquals("counted without the dragged widget itself", TreeDrop("list", 1), treeDrop(c, "a", "c", DropPosition.BEFORE))
+        assertEquals(
+            "counted without the dragged widget itself",
+            TreeDrop("list", 1),
+            treeDrop(c, "a", "c", DropPosition.BEFORE),
+        )
         assertEquals(TreeDrop("list", 2), treeDrop(c, "a", "c", DropPosition.AFTER))
         assertEquals(TreeDrop("root", 0), treeDrop(c, "a", "free", DropPosition.BEFORE))
         assertEquals(TreeDrop("list", null), treeDrop(c, "free", "list", DropPosition.INTO))
@@ -71,27 +79,49 @@ class UiEditorViewsTest : BasePlatformTestCase() {
         val c = controller()
         val panel = UiWidgetTreePanel(c)
         val root = panel.tree.model.root as DefaultMutableTreeNode
-        val items = root.depthFirstEnumeration().toList().filterIsInstance<DefaultMutableTreeNode>().mapNotNull { (it.userObject as? UiTreeItem)?.id }
+        val items =
+            root.depthFirstEnumeration().toList().filterIsInstance<DefaultMutableTreeNode>().mapNotNull {
+                (it.userObject as? UiTreeItem)?.id
+            }
         assertEquals(setOf("root", "free", "list", "a", "b", "c", "odd"), items.toSet())
-        val labels = root.depthFirstEnumeration().toList().filterIsInstance<DefaultMutableTreeNode>().mapNotNull { (it.userObject as? UiTreeItem)?.label }
+        val labels =
+            root.depthFirstEnumeration().toList().filterIsInstance<DefaultMutableTreeNode>().mapNotNull {
+                (it.userObject as? UiTreeItem)?.label
+            }
         assertTrue(labels.any { it.contains("\"Go\"") })
         assertTrue("an unknown widget kind is flagged", labels.any { it.startsWith("? hologram") })
         // controller -> tree
         c.select("b")
-        assertEquals("b", ((panel.tree.lastSelectedPathComponent as DefaultMutableTreeNode).userObject as UiTreeItem).id)
+        assertEquals(
+            "b",
+            ((panel.tree.lastSelectedPathComponent as DefaultMutableTreeNode).userObject as UiTreeItem).id,
+        )
         // tree -> controller
-        val node = root.depthFirstEnumeration().toList().filterIsInstance<DefaultMutableTreeNode>().first { (it.userObject as? UiTreeItem)?.id == "free" }
+        val node =
+            root.depthFirstEnumeration().toList().filterIsInstance<DefaultMutableTreeNode>().first {
+                (it.userObject as? UiTreeItem)?.id == "free"
+            }
         panel.tree.selectionPath = javax.swing.tree.TreePath(node.path)
         assertEquals("free", c.selection.widgetId)
         // another screen
         c.selectScreen("pause")
-        val rows = (panel.tree.model.root as DefaultMutableTreeNode).depthFirstEnumeration().toList().filterIsInstance<DefaultMutableTreeNode>().mapNotNull { (it.userObject as? UiTreeItem)?.id }
+        val rows =
+            (panel.tree.model.root as DefaultMutableTreeNode)
+                .depthFirstEnumeration()
+                .toList()
+                .filterIsInstance<DefaultMutableTreeNode>()
+                .mapNotNull { (it.userObject as? UiTreeItem)?.id }
         assertEquals(listOf("p-root"), rows)
     }
 
     private fun menu(c: UiEditorController, answer: String? = null) = UiScreensMenu(c, null) { _, _ -> answer }
 
-    private fun texts(menu: UiScreensMenu) = menu.group().getChildren(null).filter { it !is com.intellij.openapi.actionSystem.Separator }.map { it.templateText }
+    private fun texts(menu: UiScreensMenu) =
+        menu
+            .group()
+            .getChildren(null)
+            .filter { it !is com.intellij.openapi.actionSystem.Separator }
+            .map { it.templateText }
 
     fun testTheScreensMenuMarksTheEntryAndSwitchesScreens() {
         val c = controller()
@@ -151,15 +181,24 @@ class UiEditorViewsTest : BasePlatformTestCase() {
         assertEquals(listOf("root", "free", "list", "a", "b", "c", "slider", "odd"), ids())
         c.select("a")
         tree.add("label")
-        assertEquals("a leaf selection adds into its parent", 5, c.collection!!.screen("main")!!.root.children[1].children.size)
+        assertEquals(
+            "a leaf selection adds into its parent",
+            5,
+            c.collection!!.screen("main")!!.root.children[1].children.size,
+        )
     }
 
     private val UiWidgetKinds = net.nevinsky.abyssus.lib.core.ui.model.UiWidgetType.entries.map { it.json }.toSet()
 
     private fun findButton(panel: java.awt.Container, name: String): javax.swing.JButton {
-        fun walk(c: java.awt.Container): javax.swing.JButton? = c.components.firstNotNullOfOrNull { child ->
-            if (child is javax.swing.JButton && child.name == name) child else (child as? java.awt.Container)?.let(::walk)
-        }
+        fun walk(c: java.awt.Container): javax.swing.JButton? =
+            c.components.firstNotNullOfOrNull { child ->
+                if (child is javax.swing.JButton && child.name == name) {
+                    child
+                } else {
+                    (child as? java.awt.Container)?.let(::walk)
+                }
+            }
         return checkNotNull(walk(panel)) { name }
     }
 
@@ -178,16 +217,24 @@ class UiEditorViewsTest : BasePlatformTestCase() {
         assertTrue(statusText.any { it.contains("screen's root", ignoreCase = true) })
     }
 
-    private fun collectLabels(c: java.awt.Container): List<String> = c.components.flatMap { child ->
-        (if (child is javax.swing.JLabel) listOf(child.text.orEmpty()) else emptyList()) + ((child as? java.awt.Container)?.let(::collectLabels) ?: emptyList())
-    }
+    private fun collectLabels(c: java.awt.Container): List<String> =
+        c.components.flatMap { child ->
+            (if (child is javax.swing.JLabel) {
+                listOf(child.text.orEmpty())
+            } else {
+                emptyList()
+            }) + ((child as? java.awt.Container)?.let(::collectLabels) ?: emptyList())
+        }
 
     fun testAllThreePartsAreVisibleAndTheCanvasIsWidestAt1190By880() {
         val c = controller()
         val canvas = JPanel()
         val editor = UiEditorPanel(null, c, canvas)
         editor.setSize(1190, 880)
-        fun layoutAll(x: java.awt.Container) { x.doLayout(); x.components.forEach { (it as? java.awt.Container)?.let(::layoutAll) } }
+        fun layoutAll(x: java.awt.Container) {
+            x.doLayout()
+            x.components.forEach { (it as? java.awt.Container)?.let(::layoutAll) }
+        }
         layoutAll(editor)
         fun widthOf(x: java.awt.Component) = x.width
         val widgets = widthOf(editor.widgets)
@@ -212,6 +259,8 @@ class UiEditorViewsTest : BasePlatformTestCase() {
         editor.previewButton.doClick()
         assertTrue(collectLabels(editor).contains(net.nevinsky.abyssus.plugin.AbyssusBundle.message("uiKeysPreview")))
         c.reportZoom(0.5f)
-        assertTrue(collectLabels(editor).contains(net.nevinsky.abyssus.plugin.AbyssusBundle.message("uiCanvasZoom", 50)))
+        assertTrue(
+            collectLabels(editor).contains(net.nevinsky.abyssus.plugin.AbyssusBundle.message("uiCanvasZoom", 50))
+        )
     }
 }

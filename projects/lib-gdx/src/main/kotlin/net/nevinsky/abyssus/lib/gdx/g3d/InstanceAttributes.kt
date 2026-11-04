@@ -26,9 +26,17 @@ object InstanceAttributes {
     const val FLOATS: Int = 16
 
     /** The attributes to hand to `Mesh.enableInstancedRendering`: four columns, units 0 to 3. */
-    fun of(): Array<VertexAttribute> = Array(COLUMNS) { column ->
-        VertexAttribute(VertexAttributes.Usage.Generic, 4, com.badlogic.gdx.graphics.GL20.GL_FLOAT, false, ALIAS, column)
-    }
+    fun of(): Array<VertexAttribute> =
+        Array(COLUMNS) { column ->
+            VertexAttribute(
+                VertexAttributes.Usage.Generic,
+                4,
+                com.badlogic.gdx.graphics.GL20.GL_FLOAT,
+                false,
+                ALIAS,
+                column,
+            )
+        }
 
     /** Copies [matrix] into [target] at [offset]; `Matrix4.val` is already the column-major layout `mat4` reads. */
     fun write(matrix: Matrix4, target: FloatArray, offset: Int) {

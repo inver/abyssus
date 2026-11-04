@@ -30,7 +30,9 @@ class Ground(val field: Entity?, private val terrain: TerrainData?) {
     }
 }
 
-/** The ground of [engine]'s scene: its first entity with a height-field collider and its terrain, read through [assets]. */
+/**
+ * The ground of [engine]'s scene: its first entity with a height-field collider and its terrain, read through [assets].
+ */
 fun groundOf(engine: SceneEngine, assets: PhysicsAssets): Ground {
     val field = engine.ids.ids.sorted().mapNotNull { engine.ids[it] }.firstOrNull {
         it.getComponent(ColliderComponent::class.java)?.shape == ColliderShape.HEIGHT_FIELD

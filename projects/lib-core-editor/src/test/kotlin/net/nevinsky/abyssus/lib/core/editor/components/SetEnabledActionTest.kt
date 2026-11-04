@@ -5,20 +5,22 @@
 
 package net.nevinsky.abyssus.lib.core.editor.components
 
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.testProject
-import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.RawComponentsWrapper
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.entityOf
 import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
-/** Text-level cases (undo restores the text, number spelling, key order) are deferred to Phase 6 with the serializer. */
+/**
+ * Text-level cases (undo restores the text, number spelling, key order) are deferred to Phase 6 with the serializer.
+ */
 class SetEnabledActionTest {
     private val sceneText = File(testProject("Untitled"), "scenes/Main Scene.scene").readText()
     private val action = SetEnabledAction()
@@ -72,8 +74,10 @@ class SetEnabledActionTest {
     @Test
     fun fixedComponentsAndMissingTargetsAreNotSwitched() {
         val scene = scene()
-        for (kind in listOf("NameComponent", "PositionComponent", "ParentComponent"))
-            assertFalse(kind, action.apply(scene, EnabledTarget.Component(0L, kind), false))
+        for (kind in listOf("NameComponent", "PositionComponent", "ParentComponent")) assertFalse(
+            kind,
+            action.apply(scene, EnabledTarget.Component(0L, kind), false),
+        )
         assertFalse(action.apply(scene, EnabledTarget.Component(0L, "NoSuchComponent"), false))
         assertFalse(action.apply(scene, EnabledTarget.Entity(999L), false))
         assertTrue(action.isTogglable("RenderComponent"))
@@ -89,7 +93,9 @@ class SetEnabledActionTest {
 
     @Test
     fun anUnmodeledComponentIsSwitchedInPlaceAndKeepsItsPayload() {
-        val text = """{"format":"abyssus","formatVersion":1,"ecs":{"0":{"type":"OBJECT","components":{"WindComponent":{"speed":1.50,"extra":{"a":1}}}}}}"""
+        val text =
+            """{"format":"abyssus","formatVersion":1,"ecs":{"0":{"type":"OBJECT",
+"components":{"WindComponent":{"speed":1.50,"extra":{"a":1}}}}}}"""
         val scene = parseScene(text)
         val target = EnabledTarget.Component(0L, "WindComponent")
         val raw = { scene.entity(0)!!.component(RawComponentsWrapper::class.java)!!.entries.single() }

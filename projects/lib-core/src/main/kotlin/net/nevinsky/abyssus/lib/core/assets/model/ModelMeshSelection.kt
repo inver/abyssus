@@ -27,7 +27,9 @@ fun selectMesh(data: ModelData, assetName: String, meshId: String) {
     data.meshes.clear()
     data.meshes.add(mesh)
     val kept = Array<com.badlogic.gdx.graphics.g3d.model.data.ModelMaterial>()
-    for (material in data.materials) if (material.id in usedMaterials) kept.add(material)
+    for (material in data.materials) if (material.id in usedMaterials) {
+        kept.add(material)
+    }
     data.materials.clear()
     data.materials.addAll(kept)
 }

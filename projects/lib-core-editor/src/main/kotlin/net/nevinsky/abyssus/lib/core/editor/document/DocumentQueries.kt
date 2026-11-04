@@ -20,7 +20,8 @@ class DocumentQueries(
 ) {
     /**
      * The asset and sky names the scene [text] names (a render component's `assetName` and `shaderKey`, a foliage
-     * component's `assetName`, a path arrangement's `asset.name`, the scene's `skyboxName`), not counting the entity [ignoring]; null when [text] is not a
+      * component's `assetName`, a path arrangement's `asset.name`, the scene's `skyboxName`), not counting the entity
+      * [ignoring]; null when [text] is not a
      * readable scene.
      */
     fun sceneNamedAssets(text: String, ignoring: String? = null): Set<String>? = runCatchingKeepingCancellation {
@@ -42,7 +43,10 @@ class DocumentQueries(
         }
     }.getOrNull()
 
-    /** Whether the `additional` block of the asset `meta.json` [text] holds the string [uuid]; null when [text] is not a JSON object. */
+    /**
+     * Whether the `additional` block of the asset `meta.json` [text] holds the string [uuid]; null when [text] is not a
+     * JSON object.
+     */
     fun metaReferencesUuid(text: String, uuid: String): Boolean? = runCatchingKeepingCancellation {
         json.readObject(text).get("additional")?.containsText(uuid) ?: false
     }.getOrNull()

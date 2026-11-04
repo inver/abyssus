@@ -16,7 +16,11 @@ import java.io.File
 const val PERF_REPORT_SCHEMA = 1
 
 /** Whether a workload was measured; a skipped or unavailable one never counts as a pass. */
-enum class PerfStatus { MEASURED, SKIPPED, UNAVAILABLE }
+enum class PerfStatus {
+    MEASURED,
+    SKIPPED,
+    UNAVAILABLE,
+}
 
 /**
  * Where a report was made. Two reports compare only when these match ([PerfEnvironment.sameMachineAs]); [commit] and
@@ -39,23 +43,40 @@ data class PerfEnvironment(
 
     companion object {
         /** The machine running now; [gpu] and [driver] come from the GL context, when there is one. */
-        fun current(gpu: String = "unavailable", driver: String = "unavailable", backend: String = "OpenGL", repo: File? = null) =
+        fun current(
+            gpu: String = "unavailable",
+            driver: String = "unavailable",
+            backend: String = "OpenGL",
+            repo: File? = null,
+        ) =
             PerfEnvironment(
                 commit = git(repo, "rev-parse", "HEAD") ?: "unknown",
                 dirty = git(repo, "status", "--porcelain")?.isNotBlank() ?: true,
-                os = "${System.getProperty("os.name")} ${System.getProperty("os.version")} ${System.getProperty("os.arch")}",
+                os =
+                    "${System.getProperty("os.name")} ${System.getProperty("os.version")} " +
+                        "${System.getProperty("os.arch")}",
                 jdk = "${System.getProperty("java.vendor")} ${System.getProperty("java.version")}",
-                gpu = gpu, driver = driver, backend = backend,
+                gpu = gpu,
+                driver = driver,
+                backend = backend,
             )
 
-        private fun git(repo: File?, vararg args: String): String? = try {
-            val process = ProcessBuilder(listOf("git") + args).apply { repo?.let(::directory) }
-                .redirectErrorStream(true).start()
-            val out = process.inputStream.bufferedReader().readText().trim()
-            if (process.waitFor() == 0) out else null
-        } catch (_: Exception) {
-            null
-        }
+        private fun git(repo: File?, vararg args: String): String? =
+            try {
+                val process =
+                    ProcessBuilder(listOf("git") + args)
+                        .apply { repo?.let(::directory) }
+                        .redirectErrorStream(true)
+                        .start()
+                val out = process.inputStream.bufferedReader().readText().trim()
+                if (process.waitFor() == 0) {
+                    out
+                } else {
+                    null
+                }
+            } catch (_: Exception) {
+                null
+            }
     }
 }
 
@@ -96,7 +117,9 @@ data class PerfGpu(
     val unavailable: String? = null,
 ) {
     init {
-        require(passes.isNotEmpty() != (unavailable != null)) { "GPU times are either measured or unavailable with a reason" }
+        require(passes.isNotEmpty() != (unavailable != null)) {
+            "GPU times are either measured or unavailable with a reason"
+        }
     }
 }
 
@@ -148,7 +171,10 @@ data class PerfWorkload(
      * throttled), or null. GPU times, counters, allocation and hitches stay valid.
      */
     val cpuNotComparable: String? = null,
-    /** The coverage or profiling agents attached to the measuring JVM; a run with agents never compares with one without. */
+    /**
+     * The coverage or profiling agents attached to the measuring JVM; a run with agents never compares with one
+     * without.
+     */
     val agents: List<String> = emptyList(),
 ) {
     init {

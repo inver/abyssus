@@ -42,14 +42,20 @@ internal class SceneFrameDriver(
     }
 
     private val timer = Timer(FRAME_MILLIS) {
-        if (!canvas().glSafe()) { interrupted(); return@Timer }
+        if (!canvas().glSafe()) {
+            interrupted(); return@Timer
+        }
         val now = System.nanoTime()
-        if (!isBusy(now) && now - lastRenderNanos < IDLE_FRAME_MILLIS * 1_000_000L) return@Timer
+        if (!isBusy(now) && now - lastRenderNanos < IDLE_FRAME_MILLIS * 1_000_000L) {
+            return@Timer
+        }
         lastRenderNanos = now
         try {
             canvas().render()
         } catch (e: Throwable) {
-            if (e is ProcessCanceledException || e is CancellationException) throw e
+            if (e is ProcessCanceledException || e is CancellationException) {
+                throw e
+            }
             interrupted()
             renderFailed(e)
         }

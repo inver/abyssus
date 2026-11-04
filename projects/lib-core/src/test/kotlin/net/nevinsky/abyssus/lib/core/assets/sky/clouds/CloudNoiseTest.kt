@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
+import kotlin.math.abs
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CLOUD_BASE_NOISE_SIZE
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CLOUD_DETAIL_NOISE_SIZE
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudNoiseGenerator
@@ -12,12 +13,12 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.abs
 
 class CloudNoiseTest {
     private val noise = CloudNoiseGenerator().generate()
 
-    private fun at(volume: ByteArray, size: Int, x: Int, y: Int, z: Int) = volume[(z * size + y) * size + x].toInt() and 255
+    private fun at(volume: ByteArray, size: Int, x: Int, y: Int, z: Int) =
+        volume[(z * size + y) * size + x].toInt() and 255
 
     @Test
     fun sizesAndFullRange() {
@@ -39,9 +40,10 @@ class CloudNoiseTest {
             var n = 0
             for (a in 0 until size step 3) for (b in 0 until size step 3) {
                 inside += abs(at(volume, size, size / 2, a, b) - at(volume, size, size / 2 + 1, a, b))
-                across += abs(at(volume, size, size - 1, a, b) - at(volume, size, 0, a, b)) +
-                    abs(at(volume, size, a, size - 1, b) - at(volume, size, a, 0, b)) +
-                    abs(at(volume, size, a, b, size - 1) - at(volume, size, a, b, 0))
+                across +=
+                    abs(at(volume, size, size - 1, a, b) - at(volume, size, 0, a, b)) +
+                        abs(at(volume, size, a, size - 1, b) - at(volume, size, a, 0, b)) +
+                        abs(at(volume, size, a, b, size - 1) - at(volume, size, a, b, 0))
                 n++
             }
             assertTrue("seams ${across / (3 * n)} vs inside ${inside / n}", across / (3 * n) <= inside / n * 1.5 + 1)

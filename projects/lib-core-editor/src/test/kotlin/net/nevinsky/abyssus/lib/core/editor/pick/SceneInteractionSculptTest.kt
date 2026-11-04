@@ -30,34 +30,54 @@ class SceneInteractionSculptTest {
         com.badlogic.gdx.utils.GdxNativesLoader.load()
     }
 
-    private val camera = PerspectiveCamera(67f, W.toFloat(), H.toFloat()).also {
-        it.position.set(50f, 60f, 110f)
-        it.lookAt(50f, 0f, 40f)
-        it.near = 0.1f
-        it.far = 200f
-        it.update()
-    }
+    private val camera =
+        PerspectiveCamera(67f, W.toFloat(), H.toFloat()).also {
+            it.position.set(50f, 60f, 110f)
+            it.lookAt(50f, 0f, 40f)
+            it.near = 0.1f
+            it.far = 200f
+            it.update()
+        }
 
     private class RecordingSculpt(var accept: Boolean = true) : BrushStroke {
         val pressed = mutableListOf<Vector3>()
         val dragged = mutableListOf<Pair<Vector3, Boolean>>()
         var released = 0
         var cancelled = 0
-        override fun pressed(terrain: TerrainTarget, at: Vector3): Boolean = accept.also { if (it) pressed += Vector3(at) }
-        override fun dragged(to: Vector3, reversed: Boolean) { dragged += Vector3(to) to reversed }
-        override fun released() { released++ }
-        override fun cancelled() { cancelled++ }
+
+        override fun pressed(terrain: TerrainTarget, at: Vector3): Boolean = accept.also {
+            if (it) {
+                pressed += Vector3(at)
+            }
+        }
+
+        override fun dragged(to: Vector3, reversed: Boolean) {
+            dragged += Vector3(to) to reversed
+        }
+
+        override fun released() {
+            released++
+        }
+
+        override fun cancelled() {
+            cancelled++
+        }
     }
 
     private val state = SceneViewState()
     private val sculpt = RecordingSculpt()
     private val paint = RecordingSculpt()
-    private val content = SceneContent(
-        terrains = listOf(AssetPlacement(1L, "terrain_meadow", PlacementTransform.IDENTITY)),
-    )
+    private val content =
+        SceneContent(terrains = listOf(AssetPlacement(1L, "terrain_meadow", PlacementTransform.IDENTITY)))
     private val orbit = OrbitCamera(Vector3(50f, 0f, 50f), 60f, 0f, 0.6f)
     private val interaction: SceneInteraction = run {
-        val frame = FrameSnapshot(camera, emptyList(), listOf(snapshotTerrainOf(TerrainTarget(1L, TerrainData(3, FloatArray(9), 100, 1f), Matrix4()))), 7L)
+        val frame =
+            FrameSnapshot(
+                camera,
+                emptyList(),
+                listOf(snapshotTerrainOf(TerrainTarget(1L, TerrainData(3, FloatArray(9), 100, 1f), Matrix4()))),
+                7L,
+            )
         val queries = SnapshotSceneQueries({ frame }, state) { content }
         SceneInteraction(state, queries, orbit).also {
             it.size = ViewSize(W, H, W, H)
@@ -149,7 +169,9 @@ class SceneInteractionSculptTest {
         sculptOn()
         val (x, y) = pixelOf(50f, 50f)
         interaction.pressed(x, y, true)
-        interaction.paramsChanged(SceneRenderParams(Color(0f, 0f, 0f, 1f), null, null, CameraParams.DEFAULT, SceneContent()))
+        interaction.paramsChanged(
+            SceneRenderParams(Color(0f, 0f, 0f, 1f), null, null, CameraParams.DEFAULT, SceneContent())
+        )
         assertNull(state.brush)
         assertEquals(1, sculpt.cancelled)
     }

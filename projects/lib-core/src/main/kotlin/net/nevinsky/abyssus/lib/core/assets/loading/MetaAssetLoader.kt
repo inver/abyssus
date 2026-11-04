@@ -18,11 +18,18 @@ abstract class MetaAssetLoader<P : Any, U : Any, T : Disposable> internal constr
 ) : AssetLoader<P, U, T> {
     final override fun prepare(name: String): Prepared<P, U>? =
         metaLoader.loadBaseMeta(baseAssetName(name))?.let { base ->
-            loadPrepared(if (isModelVariant(name)) base.forVariant(name) else base)
+            loadPrepared(if (isModelVariant(name)) {
+                base.forVariant(name)
+            } else {
+                base
+            })
         }
 }
 
-/** A [MetaAssetLoader] with no prepare-time parameter: [read] builds the staged value from the validated metadata. No GL. */
+/**
+ * A [MetaAssetLoader] with no prepare-time parameter: [read] builds the staged value from the validated metadata. No
+ * GL.
+ */
 abstract class StagedMetaAssetLoader<U : Any, T : Disposable> internal constructor(
     metaLoader: AssetMetaLoader,
 ) : MetaAssetLoader<Unit, U, T>(metaLoader) {

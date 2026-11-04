@@ -27,12 +27,23 @@ class PathCurve {
             0
         } else if (closed && pointCount > 2) {
             pointCount
-        } else pointCount - 1
+        } else {
+            pointCount - 1
+        }
 
-    /** The control points with the smooth line between them as a polyline, ending on the last point (or the first when closed). */
+    /**
+     * The control points with the smooth line between them as a polyline, ending on the last point (or the first when
+     * closed).
+     */
     fun sample(points: List<Vector3>, closed: Boolean, steps: Int = PATH_CURVE_STEPS): List<Vector3> {
         val spans = spanCount(points.size, closed)
-        if (spans == 0 || points.size < 3) return if (spans == 0) points else points.take(spans + 1)
+        if (spans == 0 || points.size < 3) {
+            return if (spans == 0) {
+                points
+            } else {
+                points.take(spans + 1)
+            }
+        }
         val out = ArrayList<Vector3>(spans * steps + 1)
         for (span in 0 until spans) for (s in 0 until steps) out += at(points, closed, span, s.toFloat() / steps)
         out += points[(spans) % points.size]

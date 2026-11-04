@@ -23,8 +23,7 @@ class PBRColorAttribute(type: Long, color: Color) : ColorAttribute(type, color) 
     override fun copy(): Attribute = PBRColorAttribute(type, color)
 
     companion object {
-        @JvmField
-        val BaseColorFactor: Long = register("BaseColorFactor")
+        @JvmField val BaseColorFactor: Long = register("BaseColorFactor")
 
         init {
             Mask = Mask or BaseColorFactor
@@ -38,11 +37,9 @@ class PBRFloatAttribute(type: Long, value: Float) : FloatAttribute(type, value) 
     override fun copy(): Attribute = PBRFloatAttribute(type, value)
 
     companion object {
-        @JvmField
-        val Metallic: Long = register("Metallic")
+        @JvmField val Metallic: Long = register("Metallic")
 
-        @JvmField
-        val Roughness: Long = register("Roughness")
+        @JvmField val Roughness: Long = register("Roughness")
 
         fun createMetallic(value: Float) = PBRFloatAttribute(Metallic, value)
 
@@ -52,28 +49,30 @@ class PBRFloatAttribute(type: Long, value: Float) : FloatAttribute(type, value) 
 
 class PBRTextureAttribute : TextureAttribute {
     constructor(type: Long, descriptor: TextureDescriptor<Texture>) : super(type, descriptor)
+
     constructor(other: PBRTextureAttribute) : super(other)
 
     override fun copy(): Attribute = PBRTextureAttribute(this)
 
     companion object {
-        @JvmField
-        val BaseColorTexture: Long = register("diffuseTexture")
+        @JvmField val BaseColorTexture: Long = register("diffuseTexture")
 
-        @JvmField
-        val EmissiveTexture: Long = register("emissiveTexture")
+        @JvmField val EmissiveTexture: Long = register("emissiveTexture")
 
-        @JvmField
-        val NormalTexture: Long = register("normalTexture")
+        @JvmField val NormalTexture: Long = register("normalTexture")
 
-        @JvmField
-        val MetallicRoughnessTexture: Long = register("MetallicRoughnessSampler")
+        @JvmField val MetallicRoughnessTexture: Long = register("MetallicRoughnessSampler")
 
-        @JvmField
-        val OcclusionTexture: Long = register("OcclusionSampler")
+        @JvmField val OcclusionTexture: Long = register("OcclusionSampler")
 
         init {
-            Mask = Mask or MetallicRoughnessTexture or OcclusionTexture or BaseColorTexture or NormalTexture or EmissiveTexture
+            Mask =
+                Mask or
+                    MetallicRoughnessTexture or
+                    OcclusionTexture or
+                    BaseColorTexture or
+                    NormalTexture or
+                    EmissiveTexture
         }
     }
 }

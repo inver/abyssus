@@ -30,8 +30,7 @@ import org.junit.Test
 
 /** [ModelDepthShader] writes depth for plain, instanced, skinned and alpha-cutout meshes. Opt-in GL test. */
 class ModelDepthGlTest {
-    @Before
-    fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
+    @Before fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
 
     private val corners = floatArrayOf(-0.4f, -0.4f, 0f, 0.4f, -0.4f, 0f, 0f, 0.4f, 0f)
 
@@ -50,21 +49,33 @@ class ModelDepthGlTest {
 
     /** True when the depth pass wrote something at the middle of the image offset by ([dx], [dy]) world units. */
     private fun covered(
-        mesh: IntMesh, material: Material = Material(), bones: Array<Matrix4>? = null, dx: Float = 0f, dy: Float = 0f
+        mesh: IntMesh,
+        material: Material = Material(),
+        bones: Array<Matrix4>? = null,
+        dx: Float = 0f,
+        dy: Float = 0f,
     ): Boolean {
         val framebuffer = FrameBuffer(Pixmap.Format.RGBA8888, 32, 32, true)
         val provider = ModelDepthShaderProvider(ShadowDepthPass())
-        val renderable = Renderable().apply {
-            meshPart.set("caster", mesh, 0, 3, GL20.GL_TRIANGLES)
-            this.material = material
-            this.bones = bones
-        }
+        val renderable =
+            Renderable().apply {
+                meshPart.set("caster", mesh, 0, 3, GL20.GL_TRIANGLES)
+                this.material = material
+                this.bones = bones
+            }
         val context = RenderContext(DefaultTextureBinder(DefaultTextureBinder.LRU, 1))
         framebuffer.begin()
         try {
             Gdx.gl.glClearColor(1f, 1f, 1f, 1f)
             Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
-            val camera = OrthographicCamera(2f, 2f).apply { position.set(0f, 0f, 2f); lookAt(0f, 0f, 0f); near = 0.1f; far = 4f; update() }
+            val camera =
+                OrthographicCamera(2f, 2f).apply {
+                    position.set(0f, 0f, 2f)
+                    lookAt(0f, 0f, 0f)
+                    near = 0.1f
+                    far = 4f
+                    update()
+                }
             context.begin()
             val shader = provider.get(renderable)
             shader.begin(camera, context)
@@ -78,11 +89,14 @@ class ModelDepthGlTest {
             assertEquals(GL20.GL_NO_ERROR, Gdx.gl.glGetError())
             return !(0..3).all { pixel[it].toInt() and 255 == 255 }
         } finally {
-            framebuffer.end(); provider.dispose(); framebuffer.dispose()
+            framebuffer.end()
+            provider.dispose()
+            framebuffer.dispose()
         }
     }
 
-    @Test fun aPlainMeshWritesDepth() = TestGl.run {
+    @Test
+    fun aPlainMeshWritesDepth() = TestGl.run {
         val mesh = triangle()
         try {
             assertTrue(covered(mesh))
@@ -92,14 +106,16 @@ class ModelDepthGlTest {
         }
     }
 
-    @Test fun anInstancedMeshWritesDepthAtEachInstanceTransform() = TestGl.run {
-        val mesh = triangle().apply {
-            enableInstancedRendering(true, 2, *InstanceAttributes.of())
-            val data = FloatArray(2 * InstanceAttributes.FLOATS)
-            InstanceAttributes.write(Matrix4().setToTranslation(-0.5f, 0f, 0f), data, 0)
-            InstanceAttributes.write(Matrix4().setToTranslation(0.5f, 0f, 0f), data, InstanceAttributes.FLOATS)
-            setInstanceData(data)
-        }
+    @Test
+    fun anInstancedMeshWritesDepthAtEachInstanceTransform() = TestGl.run {
+        val mesh =
+            triangle().apply {
+                enableInstancedRendering(true, 2, *InstanceAttributes.of())
+                val data = FloatArray(2 * InstanceAttributes.FLOATS)
+                InstanceAttributes.write(Matrix4().setToTranslation(-0.5f, 0f, 0f), data, 0)
+                InstanceAttributes.write(Matrix4().setToTranslation(0.5f, 0f, 0f), data, InstanceAttributes.FLOATS)
+                setInstanceData(data)
+            }
         try {
             assertTrue("the left copy", covered(mesh, dx = -0.5f))
             assertTrue("the right copy", covered(mesh, dx = 0.5f))
@@ -109,28 +125,54 @@ class ModelDepthGlTest {
         }
     }
 
-    @Test fun aSkinnedMeshWritesDepthWhereItsBonesPutIt() = TestGl.run {
+    @Test
+    fun aSkinnedMeshWritesDepthWhereItsBonesPutIt() = TestGl.run {
         val mesh = triangle(VertexAttribute.BoneWeight(0), perVertex = floatArrayOf(0f, 1f))
         try {
             assertTrue(covered(mesh, bones = arrayOf(Matrix4())))
-            assertTrue("moved away by the bone", !covered(mesh, bones = arrayOf(Matrix4().setToTranslation(3f, 0f, 0f))))
-            assertTrue("moved to the right", covered(mesh, bones = arrayOf(Matrix4().setToTranslation(0.5f, 0f, 0f)), dx = 0.5f))
+            assertTrue(
+                "moved away by the bone",
+                !covered(mesh, bones = arrayOf(Matrix4().setToTranslation(3f, 0f, 0f))),
+            )
+            assertTrue(
+                "moved to the right",
+                covered(mesh, bones = arrayOf(Matrix4().setToTranslation(0.5f, 0f, 0f)), dx = 0.5f),
+            )
         } finally {
             mesh.dispose()
         }
     }
 
-    @Test fun anAlphaCutoutWritesNothingWhereTheTextureHasHoles() = TestGl.run {
+    @Test
+    fun anAlphaCutoutWritesNothingWhereTheTextureHasHoles() = TestGl.run {
         val mesh = triangle(VertexAttribute.TexCoords(0), perVertex = floatArrayOf(0.5f, 0.5f))
-        val hole = Pixmap(1, 1, Pixmap.Format.RGBA8888).also { it.setColor(1f, 1f, 1f, 0f); it.fill() }
-        val solid = Pixmap(1, 1, Pixmap.Format.RGBA8888).also { it.setColor(1f, 1f, 1f, 1f); it.fill() }
+        val hole =
+            Pixmap(1, 1, Pixmap.Format.RGBA8888).also {
+                it.setColor(1f, 1f, 1f, 0f)
+                it.fill()
+            }
+        val solid =
+            Pixmap(1, 1, Pixmap.Format.RGBA8888).also {
+                it.setColor(1f, 1f, 1f, 1f)
+                it.fill()
+            }
         val holes = Texture(hole)
         val full = Texture(solid)
         try {
-            assertTrue("a hole is discarded", !covered(mesh, Material(TextureAttribute.createDiffuse(holes), FloatAttribute.createAlphaTest(0.5f))))
-            assertTrue("an opaque texel stays", covered(mesh, Material(TextureAttribute.createDiffuse(full), FloatAttribute.createAlphaTest(0.5f))))
+            assertTrue(
+                "a hole is discarded",
+                !covered(mesh, Material(TextureAttribute.createDiffuse(holes), FloatAttribute.createAlphaTest(0.5f))),
+            )
+            assertTrue(
+                "an opaque texel stays",
+                covered(mesh, Material(TextureAttribute.createDiffuse(full), FloatAttribute.createAlphaTest(0.5f))),
+            )
         } finally {
-            holes.dispose(); full.dispose(); hole.dispose(); solid.dispose(); mesh.dispose()
+            holes.dispose()
+            full.dispose()
+            hole.dispose()
+            solid.dispose()
+            mesh.dispose()
         }
     }
 }

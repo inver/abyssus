@@ -4,8 +4,7 @@ import net.nevinsky.abyssus.lib.core.assets.loading.AssetState
 
 open class AssetPipelineException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
 
-class AssetAbsentException(val asset: String) :
-    AssetPipelineException("Asset '$asset' has no usable files")
+class AssetAbsentException(val asset: String) : AssetPipelineException("Asset '$asset' has no usable files")
 
 class MissingDependencyException(val asset: String, val dependency: String) :
     AssetPipelineException("Asset '$asset' depends on '$dependency', which is not loaded")
@@ -22,8 +21,9 @@ class AmbiguousLoaderException(val asset: String) :
 class AssetNotReadyException(val asset: String, val state: AssetState?) :
     AssetPipelineException("Asset '$asset' is not built (state=$state)")
 
-class MissingBuiltAssetException(val asset: String) :
-    AssetPipelineException("Built asset '$asset' is not available")
+class MissingBuiltAssetException(val asset: String) : AssetPipelineException("Built asset '$asset' is not available")
 
 class UnknownMeshException(val asset: String, val meshId: String, val available: List<String>) :
-    AssetPipelineException("Model '$asset' has no mesh '$meshId'; its meshes are ${available.joinToString(", ") { "'$it'" }}")
+    AssetPipelineException(
+        "Model '$asset' has no mesh '$meshId'; its meshes are ${available.joinToString(", ") { "'$it'" }}"
+    )

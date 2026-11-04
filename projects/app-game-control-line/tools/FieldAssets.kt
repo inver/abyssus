@@ -6,9 +6,6 @@
 
 package net.nevinsky.abyssus.app.game.controlline.tools
 
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerationSettings
-import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerator
-import net.nevinsky.abyssus.assets.terrain.noise.FastNoiseSamplerFactory
 import java.awt.image.BufferedImage
 import java.nio.file.Files
 import java.nio.file.Path
@@ -16,12 +13,18 @@ import java.util.*
 import javax.imageio.ImageIO
 import kotlin.math.hypot
 import kotlin.math.roundToInt
+import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerationSettings
+import net.nevinsky.abyssus.assets.terrain.generation.TerrainGenerator
+import net.nevinsky.abyssus.assets.terrain.noise.FastNoiseSamplerFactory
 
 /** The field is [FIELD_SIZE] metres square, one height per metre. */
 const val FIELD_SIZE = 200
 const val FIELD_RESOLUTION = 201
 
-/** Inside this radius around the field's centre the ground is flat at [FLAT_HEIGHT]; it blends into the hills by [BLEND_RADIUS]. */
+/**
+ * Inside this radius around the field's centre the ground is flat at [FLAT_HEIGHT]; it blends into the hills by
+ * [BLEND_RADIUS].
+ */
 const val FLAT_RADIUS = 26f
 const val BLEND_RADIUS = 40f
 const val FLAT_HEIGHT = 1f
@@ -39,33 +42,40 @@ fun main(args: Array<String>) {
     val mown = texture(assets, "texture_mown", "mown.png", noiseImage(256, 11, intArrayOf(98, 148, 62), 14))
     val splat = texture(assets, "texture_field_splat", "splat.png", splatImage(256))
 
-    val heights = TerrainGenerator(FastNoiseSamplerFactory()).generate(
-        FIELD_RESOLUTION, FIELD_SIZE,
-        TerrainGenerationSettings(seed = 2026, featureSize = 70f, minHeight = 0f, maxHeight = 5f, octaves = 4),
-    )
+    val heights =
+        TerrainGenerator(FastNoiseSamplerFactory())
+            .generate(
+                FIELD_RESOLUTION,
+                FIELD_SIZE,
+                TerrainGenerationSettings(seed = 2026, featureSize = 70f, minHeight = 0f, maxHeight = 5f, octaves = 4),
+            )
     val centre = FIELD_SIZE / 2f
     val cell = FIELD_SIZE.toFloat() / (FIELD_RESOLUTION - 1)
     for (z in 0 until FIELD_RESOLUTION) for (x in 0 until FIELD_RESOLUTION) {
         val r = hypot(x * cell - centre, z * cell - centre)
         val i = z * FIELD_RESOLUTION + x
-        heights[i] = when {
-            r <= FLAT_RADIUS -> FLAT_HEIGHT
-            r >= BLEND_RADIUS -> heights[i]
-            else -> {
-                val t = (r - FLAT_RADIUS) / (BLEND_RADIUS - FLAT_RADIUS)
-                val s = t * t * (3 - 2 * t)
-                FLAT_HEIGHT + (heights[i] - FLAT_HEIGHT) * s
+        heights[i] =
+            when {
+                r <= FLAT_RADIUS -> FLAT_HEIGHT
+                r >= BLEND_RADIUS -> heights[i]
+                else -> {
+                    val t = (r - FLAT_RADIUS) / (BLEND_RADIUS - FLAT_RADIUS)
+                    val s = t * t * (3 - 2 * t)
+                    FLAT_HEIGHT + (heights[i] - FLAT_HEIGHT) * s
+                }
             }
-        }
     }
     val dir = assets.resolve("terrain_field")
     Files.createDirectories(dir)
     throw IllegalStateException("!!!!!!!!!!!!!!!!!!!!!")
-//    Files.write(dir.resolve("terrain.data"), TerrainHeightEncoder().encode(heights))
-//    Files.writeString(dir.resolve("meta.json"),
-//        """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":$GENERATED_AT,"uuid":"${uuid("terrain_field")}",""" +
-//            """"type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":$FIELD_SIZE,"uv":40.0,"splatMap":"$splat",""" +
-//            """"splatBase":"$grass","splatR":"$mown","splatG":null,"splatB":null,"splatA":null}}""")
+    //    Files.write(dir.resolve("terrain.data"), TerrainHeightEncoder().encode(heights))
+    //    Files.writeString(dir.resolve("meta.json"),
+    // """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":$GENERATED_AT,
+    // "uuid":"${uuid("terrain_field")}","""
+    // +
+    // """"type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":$FIELD_SIZE,"uv":40.0,
+    // "splatMap":"$splat",""" +
+    //            """"splatBase":"$grass","splatR":"$mown","splatG":null,"splatB":null,"splatA":null}}""")
 }
 
 private fun uuid(name: String) = UUID.nameUUIDFromBytes("abyssus-control-line/$name".toByteArray()).toString()
@@ -78,8 +88,9 @@ private fun texture(assets: Path, name: String, file: String, image: BufferedIma
     val id = uuid(name)
     Files.writeString(
         dir.resolve("meta.json"),
-        """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":$GENERATED_AT,"uuid":"$id","type":"TEXTURE",""" +
-                """"additional":{"file":"$file"}}"""
+        """{"format":"abyssus","formatVersion":1,"version":1,"lastModified":$GENERATED_AT,"uuid":"$id",
+"type":"TEXTURE",""" +
+            """"additional":{"file":"$file"}}""",
     )
     return id
 }

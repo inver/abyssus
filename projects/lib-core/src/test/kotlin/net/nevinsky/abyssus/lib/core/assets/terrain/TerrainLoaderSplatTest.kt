@@ -4,20 +4,22 @@ import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.PixmapIO
 import com.badlogic.gdx.utils.GdxNativesLoader
+import java.awt.image.BufferedImage
+import java.io.DataOutputStream
+import java.io.File
+import java.nio.file.Files
+import javax.imageio.ImageIO
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainLoader
-import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.assets.testMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.texture.TextureLoader
+import net.nevinsky.abyssus.lib.core.io.FileLoader
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import javax.imageio.ImageIO
-import java.io.DataOutputStream
-import java.awt.image.BufferedImage
-import java.io.File
-import java.nio.file.Files
 
-/** Splat fields name texture assets by `uuid`; the loader resolves them through the project's `AssetIndex`, to folders. */
+/**
+ * Splat fields name texture assets by `uuid`; the loader resolves them through the project's `AssetIndex`, to folders.
+ */
 class TerrainLoaderSplatTest {
     private val dir: File = Files.createTempDirectory("splat").toFile()
     private val files = FileLoader(dir)
@@ -27,10 +29,14 @@ class TerrainLoaderSplatTest {
     init {
         GdxNativesLoader.load()
         File(dir, "assets/terr").mkdirs()
-        DataOutputStream(File(dir, "assets/terr/terrain.data").outputStream()).use { out -> repeat(4) { out.writeFloat(it.toFloat()) } }
-        File(dir, "assets/terr/meta.json").writeText(
-            """{"format":"abyssus","formatVersion":1,"type":"TERRAIN","additional":{"terrainFile":"terrain.data","size":10,"uv":2.0,"splatBase":"$BASE","splatR":"$MISSING"}}"""
-        )
+        DataOutputStream(File(dir, "assets/terr/terrain.data").outputStream()).use { out ->
+            repeat(4) { out.writeFloat(it.toFloat()) }
+        }
+        File(dir, "assets/terr/meta.json")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"type":"TERRAIN","additional":{"terrainFile":"terrain.data",
+"size":10,"uv":2.0,"splatBase":"$BASE","splatR":"$MISSING"}}"""
+            )
     }
 
     @After
@@ -38,12 +44,23 @@ class TerrainLoaderSplatTest {
         dir.deleteRecursively()
     }
 
-    private fun texture(folder: String, uuid: String, image: String = "a.png", file: String? = image, type: String = "TEXTURE") {
+    private fun texture(
+        folder: String,
+        uuid: String,
+        image: String = "a.png",
+        file: String? = image,
+        type: String = "TEXTURE",
+    ) {
         File(dir, "assets/$folder").mkdirs()
         val pixmap = Pixmap(1, 1, Pixmap.Format.RGBA8888)
-        try { PixmapIO.writePNG(FileHandle(File(dir, "assets/$folder/$image")), pixmap) } finally { pixmap.dispose() }
+        try {
+            PixmapIO.writePNG(FileHandle(File(dir, "assets/$folder/$image")), pixmap)
+        } finally {
+            pixmap.dispose()
+        }
         val named = file?.let { "\"file\":\"$it\"" } ?: ""
-        File(dir, "assets/$folder/meta.json").writeText("""{"format":"abyssus","formatVersion":1,"uuid":"$uuid","type":"$type","additional":{$named}}""")
+        File(dir, "assets/$folder/meta.json")
+            .writeText("""{"format":"abyssus","formatVersion":1,"uuid":"$uuid","type":"$type","additional":{$named}}""")
     }
 
     /** The splat fields of the terrain `terr` that resolved to a texture folder. */
@@ -90,14 +107,16 @@ class TerrainLoaderSplatTest {
     }
 
     /**
-     * The splat map an editor stroke writes is an 8-bit RGBA PNG (written through `ImageIO` from an ARGB image, as the editor's
-     * codec does). The game decodes it through [TextureLoader]; every channel, including colour under a zero alpha, must arrive intact.
+     * The splat map an editor stroke writes is an 8-bit RGBA PNG (written through `ImageIO` from an ARGB image, as the
+     * editor's codec does). The game decodes it through [TextureLoader]; every channel, including colour under a zero
+     * alpha, must arrive intact.
      */
     @Test
     fun aStrokeWrittenSplatImageDecodesToTheSamePixels() {
         val side = 64
         val rgba = ByteArray(side * side * 4) { ((it * 37 + it / 7) and 0xFF).toByte() }
-        for (t in 0 until side * side step 5) rgba[t * 4 + 3] = 0 // weights for the A layer at zero beside non-zero R, G, B
+        for (t in 0 until side * side step 5) rgba[t * 4 + 3] =
+            0 // weights for the A layer at zero beside non-zero R, G, B
         val image = BufferedImage(side, side, BufferedImage.TYPE_INT_ARGB)
         for (t in 0 until side * side) {
             val r = rgba[t * 4].toInt() and 0xFF
@@ -108,15 +127,20 @@ class TerrainLoaderSplatTest {
         }
         File(dir, "assets/splat").mkdirs()
         ImageIO.write(image, "png", File(dir, "assets/splat/splat.png"))
-        File(dir, "assets/splat/meta.json").writeText(
-            """{"format":"abyssus","formatVersion":1,"uuid":"$BASE","type":"TEXTURE","additional":{"file":"splat.png"}}"""
-        )
+        File(dir, "assets/splat/meta.json")
+            .writeText(
+                """{"format":"abyssus","formatVersion":1,"uuid":"$BASE","type":"TEXTURE",
+"additional":{"file":"splat.png"}}"""
+            )
         val pixmap = TextureLoader(files, metas).prepare("splat")!!.staged.release()
         try {
             assertEquals(side, pixmap.width)
             assertEquals(side, pixmap.height)
             val bytes = ByteArray(side * side * 4)
-            pixmap.pixels.apply { rewind(); get(bytes) }
+            pixmap.pixels.apply {
+                rewind()
+                get(bytes)
+            }
             assertEquals(rgba.toList(), bytes.toList())
         } finally {
             pixmap.dispose()

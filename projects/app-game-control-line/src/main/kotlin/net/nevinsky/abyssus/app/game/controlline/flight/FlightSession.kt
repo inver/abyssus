@@ -35,14 +35,17 @@ private val ONE = Vector3(1f, 1f, 1f)
 /**
  * One flight in the game: a physics world over its own load of the field scene, [plane] on its lines and the fixed-step
  * loop. Each step asks [control] for the handle's tilt from the state the last step left, updates the [flight] and
- * steps the world. After the flight ends the world goes on, so a crashed plane comes to rest, and [control] is no longer
+  * steps the world. After the flight ends the world goes on, so a crashed plane comes to rest, and [control] is no
+  * longer
  * asked. Lives on the game's main thread; [close] releases the world.
  */
 class FlightSession(
     engine: SceneEngine, pilot: Entity, val plane: Entity, assets: PhysicsAssets, log: Logger, natives: JoltNatives,
     judge: FlightJudge? = null,
     private val control: FlightControlSource = FlightControlSource { 0f },
-    /** The collider shapes kept for the game run, so a flight builds no hull another flight built (design decision D11). */
+    /**
+     * The collider shapes kept for the game run, so a flight builds no hull another flight built (design decision D11).
+     */
     shapes: ShapeCache? = null,
 ) : AutoCloseable {
     private val world = PhysicsWorld(engine, assets, log, natives, shapes)
@@ -53,7 +56,8 @@ class FlightSession(
     private var carried = 0f
 
     // The plane is drawn between its last two simulated poses: a frame holds a whole number of 1/120 s steps plus a
-    // remainder, so showing the latest pose alone makes the plane (and the camera that follows it) move in uneven jumps.
+    // remainder, so showing the latest pose alone makes the plane (and the camera that follows it) move in uneven
+    // jumps.
     // The drawn pose is kept here (design decision D3): the plane's PositionComponent always holds the simulated pose,
     // which flight control, judging, recording and physics read.
     private val body = plane.getComponent(PositionComponent::class.java)
@@ -85,13 +89,17 @@ class FlightSession(
         var steps = 0
         while (carried >= PHYSICS_STEP && steps < MAX_STEPS_PER_ADVANCE) {
             body?.let { before.set(it.localPosition); beforeTurn.set(it.localRotation) }
-            if (!flight.finished) rig.tilt = control.tilt(observe()).takeIf { it.isFinite() } ?: 0f
+            if (!flight.finished) {
+                rig.tilt = control.tilt(observe()).takeIf { it.isFinite() } ?: 0f
+            }
             flight.update(PHYSICS_STEP)
             world.step()
             carried -= PHYSICS_STEP
             steps++
         }
-        if (steps == MAX_STEPS_PER_ADVANCE) carried = 0f
+        if (steps == MAX_STEPS_PER_ADVANCE) {
+            carried = 0f
+        }
         show()
     }
 
@@ -157,18 +165,34 @@ class FlightSession(
     fun wires(seconds: Float = PHYSICS_STEP): List<List<Vector3>> {
         planeBody.velocity(velocity)
         val speed = velocity.len()
-        heading.set(velocity).also { if (speed > 1e-3f) it.scl(1f / speed) }
+        heading.set(velocity).also {
+            if (speed > 1e-3f) {
+                it.scl(1f / speed)
+            }
+        }
         val blend = 1f - exp(-seconds / WIRE_TENSION_SMOOTHING)
         for (i in smoothTension.indices) {
-            smoothTension[i] = if (smoothed) smoothTension[i] + (rig.tensionOf(i) - smoothTension[i]) * blend else rig.tensionOf(i)
+            smoothTension[i] = if (smoothed) {
+                smoothTension[i] + (rig.tensionOf(i) - smoothTension[i]) * blend
+            } else {
+                rig.tensionOf(i)
+            }
         }
         smoothed = true
         val pulled = rig.tension >= CONTROL_TENSION
         return lines().mapIndexed { i, (from, to) ->
             // while the lines pull, both are held taut by the handle: the plane's pitch makes one carry less, and the
             // model's equal rest lengths would leave it with a few centimetres to spare and hang it like thread
-            val tension = if (pulled) max(max(smoothTension[i], WIRE_SHARE * smoothTension.sum()), TAKEOFF_PULL) else smoothTension[i]
-            val rest = if (pulled) min(rig.planeSettings.lineLength, from.dst(to)) else rig.planeSettings.lineLength
+            val tension = if (pulled) {
+                max(max(smoothTension[i], WIRE_SHARE * smoothTension.sum()), TAKEOFF_PULL)
+            } else {
+                smoothTension[i]
+            }
+            val rest = if (pulled) {
+                min(rig.planeSettings.lineLength, from.dst(to))
+            } else {
+                rig.planeSettings.lineLength
+            }
             wireShape.points(from, to, rest, tension, speed, heading, shapes[i])
             shapes[i]
         }

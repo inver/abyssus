@@ -30,7 +30,11 @@ class TextEditorCommitTest : BasePlatformTestCase() {
     fun testARefusedValueGoesBackToTheLastSavedValue() {
         val commits = ArrayList<String>()
         val error = JBLabel()
-        val field = textEditor("1600", error) { commits += it; if (it == "abc") CommitOutcome.Refused("no") else CommitOutcome.Saved }
+        val field = textEditor("1600", error) { commits += it; if (it == "abc") {
+            CommitOutcome.Refused("no")
+        } else {
+            CommitOutcome.Saved
+        } }
         field.text = "800"
         field.postActionEvent()
         field.text = "abc"

@@ -24,7 +24,12 @@ internal fun dropStart(points: List<Vector3>, length: Float): List<Vector3> {
     for (i in 1 until points.size) {
         val step = arcAngle(points[i - 1], points[i])
         if (travelled + step >= length) {
-            val t = if (step > 0f) (length - travelled) / step else 0f
+            val t =
+                if (step > 0f) {
+                    (length - travelled) / step
+                } else {
+                    0f
+                }
             return listOf(Vector3(points[i - 1]).lerp(points[i], t).nor()) + points.subList(i, points.size)
         }
         travelled += step
@@ -33,4 +38,5 @@ internal fun dropStart(points: List<Vector3>, length: Float): List<Vector3> {
 }
 
 /** [points] without their last [length] radians of arc, the cut put in as the last point. */
-internal fun dropEnd(points: List<Vector3>, length: Float): List<Vector3> = dropStart(points.asReversed(), length).asReversed()
+internal fun dropEnd(points: List<Vector3>, length: Float): List<Vector3> =
+    dropStart(points.asReversed(), length).asReversed()

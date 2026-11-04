@@ -4,13 +4,6 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.play
 
-import net.nevinsky.abyssus.app.game.controlline.bundledProject
-import net.nevinsky.abyssus.lib.gamelink.play.PlayFrame
-import net.nevinsky.abyssus.lib.gamelink.play.PlayInput
-import net.nevinsky.abyssus.lib.gamelink.play.PlayProtocol
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
 import java.io.BufferedInputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -19,6 +12,13 @@ import java.net.InetAddress
 import java.net.ServerSocket
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
+import net.nevinsky.abyssus.app.game.controlline.bundledProject
+import net.nevinsky.abyssus.lib.gamelink.play.PlayFrame
+import net.nevinsky.abyssus.lib.gamelink.play.PlayInput
+import net.nevinsky.abyssus.lib.gamelink.play.PlayProtocol
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
 /** Play in Abyssus as the IDE drives it: `PlayHostMain` in its own process with [ControlLinePlay], over a socket. */
 class ControlLinePlayTest {
@@ -42,37 +42,77 @@ class ControlLinePlayTest {
                 is PlayFrame.Error -> throw AssertionError(frame.message)
                 else -> Unit
             }
-            if (done()) return true
+            if (done()) {
+                return true
+            }
         }
         return false
     }
 
     private fun Session.key(name: String, down: Boolean) =
-        protocol.write(output, PlayFrame.Input(PlayInput(if (down) PlayInput.Kind.KEY_DOWN else PlayInput.Kind.KEY_UP, name)))
+        protocol.write(
+            output,
+            PlayFrame.Input(
+                PlayInput(
+                    if (down) {
+                        PlayInput.Kind.KEY_DOWN
+                    } else {
+                        PlayInput.Kind.KEY_UP
+                    },
+                    name,
+                )
+            ),
+        )
 
-    private fun Session.number(key: String) = telemetry[key]?.substringBefore(' ')?.removeSuffix("°")?.toFloatOrNull() ?: Float.NaN
+    private fun Session.number(key: String) =
+        telemetry[key]?.substringBefore(' ')?.removeSuffix("°")?.toFloatOrNull() ?: Float.NaN
 
     @Test
     fun playFliesTheSelectedTrainer() {
         ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
             server.soTimeout = 30_000
             val java = File(System.getProperty("java.home"), "bin/java").path
-            val process = ProcessBuilder(
-                java, "-cp", System.getProperty("java.class.path"), "net.nevinsky.abyssus.lib.gamelink.play.PlayHostMain",
-                "--port", server.localPort.toString(), "--token", "secret", ControlLinePlay::class.java.name,
-            ).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start()
+            val process =
+                ProcessBuilder(
+                        java,
+                        "-cp",
+                        System.getProperty("java.class.path"),
+                        "net.nevinsky.abyssus.lib.gamelink.play.PlayHostMain",
+                        "--port",
+                        server.localPort.toString(),
+                        "--token",
+                        "secret",
+                        ControlLinePlay::class.java.name,
+                    )
+                    .redirectErrorStream(true)
+                    .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                    .start()
             try {
                 server.accept().use { socket ->
                     socket.soTimeout = 30_000
-                    val s = Session(DataInputStream(BufferedInputStream(socket.getInputStream())), DataOutputStream(socket.getOutputStream()))
+                    val s =
+                        Session(
+                            DataInputStream(BufferedInputStream(socket.getInputStream())),
+                            DataOutputStream(socket.getOutputStream()),
+                        )
                     assertEquals(ControlLinePlay::class.java.name, protocol.accept(s.input, s.output, "secret")?.module)
                     val project = bundledProject()
-                    protocol.write(s.output, PlayFrame.Load(Files.readString(project.resolve("scenes/Field.scene")), project.toString(), trainer))
+                    protocol.write(
+                        s.output,
+                        PlayFrame.Load(
+                            Files.readString(project.resolve("scenes/Field.scene")),
+                            project.toString(),
+                            trainer,
+                        ),
+                    )
                     assertEquals(PlayFrame.Ready, protocol.read(s.input))
                     protocol.write(s.output, PlayFrame.Play)
 
                     // it takes off on its lines
-                    assertTrue("Trainer did not take off: ${s.telemetry}", s.until(20) { telemetry["Plane"] == "Trainer" && trainerY > 1.5f })
+                    assertTrue(
+                        "Trainer did not take off: ${s.telemetry}",
+                        s.until(20) { telemetry["Plane"] == "Trainer" && trainerY > 1.5f },
+                    )
                     assertTrue(s.number("Tension") >= 1f)
                     assertEquals("1", s.telemetry["Flight"])
 
@@ -84,7 +124,10 @@ class ControlLinePlayTest {
 
                     // full down crashes it; the next flight starts from takeoff about a second later
                     s.key("S", true)
-                    assertTrue("no crash: ${s.telemetry}", s.until(10) { telemetry["Last flight"]?.startsWith("Crashed") == true })
+                    assertTrue(
+                        "no crash: ${s.telemetry}",
+                        s.until(10) { telemetry["Last flight"]?.startsWith("Crashed") == true },
+                    )
                     s.key("S", false)
                     val crashed = System.nanoTime()
                     assertTrue("no restart: ${s.telemetry}", s.until(10) { telemetry["Flight"] == "2" })

@@ -10,7 +10,10 @@ class ComponentRegistry {
     /** Every registered class by its short name, which the scene files use for the built-in components. */
     private val shortNames = HashMap<String, Class<out Component>>()
 
-    /** The name each registered class is written under in a scene file: the short class name unless registered otherwise. */
+    /**
+     * The name each registered class is written under in a scene file: the short class name unless registered
+     * otherwise.
+     */
     private val writtenNames = LinkedHashMap<Class<out Component>, String>()
 
     init {

@@ -19,19 +19,27 @@ import org.junit.Test
  */
 class F2bAiFailureTest {
     @Test
-    fun aStunterOnShorterLinesCrashesAndKeepsWhatItFlew() = AiFlight(change = { lineLength = 15f }).use { f ->
-        f.fly()
-        val report = f.describe()
-        assertEquals(report, FlightEnd.CRASHED, f.result)
-        val crashedFrom = SCHEDULE.indexOfFirst { f.entry(it)?.reason == ZeroReason.CRASHED }
-        assertTrue(report, crashedFrom > 1)
-        for (figure in SCHEDULE.take(crashedFrom)) assertTrue("${figure.label}\n$report", (f.entry(figure)?.tenths ?: 0) >= 10)
-        for (figure in SCHEDULE.drop(crashedFrom)) assertEquals("${figure.label}\n$report", ZeroReason.CRASHED, f.entry(figure)?.reason)
-        assertTrue(report, f.entry(Figure.LANDING)?.tenths == 0)
-        // the flight stays over: more frames neither restart nor move it on
-        val time = f.time
-        repeat(120) { f.session.advance(1f / 60f) }
-        assertEquals(FlightEnd.CRASHED, f.result)
-        assertEquals(time, f.time, 0f)
-    }
+    fun aStunterOnShorterLinesCrashesAndKeepsWhatItFlew() =
+        AiFlight(change = { lineLength = 15f }).use { f ->
+            f.fly()
+            val report = f.describe()
+            assertEquals(report, FlightEnd.CRASHED, f.result)
+            val crashedFrom = SCHEDULE.indexOfFirst { f.entry(it)?.reason == ZeroReason.CRASHED }
+            assertTrue(report, crashedFrom > 1)
+            for (figure in SCHEDULE.take(crashedFrom)) assertTrue(
+                "${figure.label}\n$report",
+                (f.entry(figure)?.tenths ?: 0) >= 10,
+            )
+            for (figure in SCHEDULE.drop(crashedFrom)) assertEquals(
+                "${figure.label}\n$report",
+                ZeroReason.CRASHED,
+                f.entry(figure)?.reason,
+            )
+            assertTrue(report, f.entry(Figure.LANDING)?.tenths == 0)
+            // the flight stays over: more frames neither restart nor move it on
+            val time = f.time
+            repeat(120) { f.session.advance(1f / 60f) }
+            assertEquals(FlightEnd.CRASHED, f.result)
+            assertEquals(time, f.time, 0f)
+        }
 }

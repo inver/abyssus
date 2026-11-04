@@ -23,7 +23,10 @@ class RenderLoopTest {
         assertFalse(canRender(showing = true, width = 800, height = 600, minimized = true))
     }
 
-    /** A zero-sized surface makes macOS Metal reject the backing texture and abort the JVM (seen on switching to the Text tab). */
+    /**
+     * A zero-sized surface makes macOS Metal reject the backing texture and abort the JVM (seen on switching to the
+     * Text tab).
+     */
     @Test
     fun neverRendersIntoAnEmptySurface() {
         assertFalse(canRender(showing = true, width = 0, height = 600, minimized = false))

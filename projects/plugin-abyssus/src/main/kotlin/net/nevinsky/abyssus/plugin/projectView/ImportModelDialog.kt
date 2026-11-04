@@ -22,15 +22,6 @@ import com.intellij.ui.components.JBTextField
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
-import net.nevinsky.abyssus.lib.core.assets.displayMessage
-import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
-import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
-import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
-import net.nevinsky.abyssus.lib.core.editor.modelimport.LengthUnit
-import net.nevinsky.abyssus.plugin.AbyssusBundle
-import net.nevinsky.abyssus.plugin.ui.documentChanges
-import net.nevinsky.abyssus.plugin.projectView.preview.ModelPreviewCanvas
-import net.nevinsky.abyssus.plugin.projectView.preview.PreviewModel
 import java.awt.BorderLayout
 import java.awt.FlowLayout
 import javax.swing.ButtonGroup
@@ -38,27 +29,44 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
+import net.nevinsky.abyssus.lib.core.assets.displayMessage
+import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.editor.modelimport.LengthUnit
+import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
+import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
+import net.nevinsky.abyssus.plugin.AbyssusBundle
+import net.nevinsky.abyssus.plugin.projectView.preview.ModelPreviewCanvas
+import net.nevinsky.abyssus.plugin.projectView.preview.PreviewModel
+import net.nevinsky.abyssus.plugin.ui.documentChanges
 
 /**
  * The Import Model dialog over [ModelImportForm]: folder name, unit and up axis (marked when read from the file or
  * defined by its format), size, Add to scene (naming the scene, or disabled with the reason), what is left out or
- * approximated, the status line, the animation to play and the live preview. The source is already open; each
- * settings change recomputes only the transform, on a pooled thread, and hands the result to the preview. The
- * preview's GL is released before the window closes, whichever way it closes.
+ * approximated, the status line, the animation to play and the live preview. The source is already open; each settings
+ * change recomputes only the transform, on a pooled thread, and hands the result to the preview. The preview's GL is
+ * released before the window closes, whichever way it closes.
  */
 internal class ImportModelDialog(project: Project, private val form: ModelImportForm) : DialogWrapper(project) {
     private val name = JBTextField(form.folderName).apply { this.name = "import-model-name" }
-    private val problems = JBLabel().apply { foreground = JBColor.RED; name = "import-model-problems" }
-    private val unit = ComboBox(LengthUnit.entries.toTypedArray()).apply {
-        renderer = SimpleListCellRenderer.create("") { it.id }
-        name = "import-model-unit"
-    }
+    private val problems =
+        JBLabel().apply {
+            foreground = JBColor.RED
+            name = "import-model-problems"
+        }
+    private val unit =
+        ComboBox(LengthUnit.entries.toTypedArray()).apply {
+            renderer = SimpleListCellRenderer.create("") { it.id }
+            name = "import-model-unit"
+        }
     private val unitMark = JBLabel().apply { foreground = JBColor.GRAY }
     private val upAxis = ComboBox(arrayOf(UpAxis.Y, UpAxis.Z)).apply { name = "import-model-up-axis" }
     private val upMark = JBLabel().apply { foreground = JBColor.GRAY }
-    private val original = JBRadioButton(AbyssusBundle.message("importModelSizeOriginal")).apply { name = "import-model-fit-original" }
-    private val largest = JBRadioButton(AbyssusBundle.message("importModelSizeLargest")).apply { name = "import-model-fit-largest" }
-    private val height = JBRadioButton(AbyssusBundle.message("importModelSizeHeight")).apply { name = "import-model-fit-height" }
+    private val original =
+        JBRadioButton(AbyssusBundle.message("importModelSizeOriginal")).apply { name = "import-model-fit-original" }
+    private val largest =
+        JBRadioButton(AbyssusBundle.message("importModelSizeLargest")).apply { name = "import-model-fit-largest" }
+    private val height =
+        JBRadioButton(AbyssusBundle.message("importModelSizeHeight")).apply { name = "import-model-fit-height" }
     private val size = JBTextField(form.sizeText, 6).apply { name = "import-model-size" }
     private val addToScene = JBCheckBox().apply { name = "import-model-add-to-scene" }
     private val animation = ComboBox<String>()
@@ -72,7 +80,11 @@ internal class ImportModelDialog(project: Project, private val form: ModelImport
     init {
         title = AbyssusBundle.message("importModelTitle")
         setOKButtonText(AbyssusBundle.message("importModelCreate"))
-        ButtonGroup().apply { add(original); add(largest); add(height) }
+        ButtonGroup().apply {
+            add(original)
+            add(largest)
+            add(height)
+        }
         unit.selectedItem = form.unit
         upAxis.selectedItem = form.upAxis
         when (form.fitMode) {
@@ -95,13 +107,38 @@ internal class ImportModelDialog(project: Project, private val form: ModelImport
         form.animation?.let { animation.selectedItem = it }
         notes.text = notesText()
 
-        name.document.addDocumentListener(documentChanges { form.folderName = name.text; refresh(previewChanged = false) })
-        size.document.addDocumentListener(documentChanges { form.sizeText = size.text; refresh() })
-        unit.addActionListener { (unit.selectedItem as? LengthUnit)?.let { form.unit = it }; refresh() }
-        upAxis.addActionListener { (upAxis.selectedItem as? UpAxis)?.let { form.upAxis = it }; refresh() }
-        original.addActionListener { form.fitMode = FitMode.ORIGINAL; refresh() }
-        largest.addActionListener { form.fitMode = FitMode.LARGEST_EXTENT; refresh() }
-        height.addActionListener { form.fitMode = FitMode.HEIGHT; refresh() }
+        name.document.addDocumentListener(
+            documentChanges {
+                form.folderName = name.text
+                refresh(previewChanged = false)
+            }
+        )
+        size.document.addDocumentListener(
+            documentChanges {
+                form.sizeText = size.text
+                refresh()
+            }
+        )
+        unit.addActionListener {
+            (unit.selectedItem as? LengthUnit)?.let { form.unit = it }
+            refresh()
+        }
+        upAxis.addActionListener {
+            (upAxis.selectedItem as? UpAxis)?.let { form.upAxis = it }
+            refresh()
+        }
+        original.addActionListener {
+            form.fitMode = FitMode.ORIGINAL
+            refresh()
+        }
+        largest.addActionListener {
+            form.fitMode = FitMode.LARGEST_EXTENT
+            refresh()
+        }
+        height.addActionListener {
+            form.fitMode = FitMode.HEIGHT
+            refresh()
+        }
         addToScene.addActionListener { form.addToScene = addToScene.isSelected }
         animation.addActionListener {
             form.animation = animation.selectedItem as? String
@@ -114,33 +151,51 @@ internal class ImportModelDialog(project: Project, private val form: ModelImport
 
     /** Shows the form's state; with [previewChanged], recomputes the transform for the preview. */
     private fun refresh(previewChanged: Boolean = true) {
-        if (binding) return
+        if (binding) {
+            return
+        }
         binding = true
         try {
             unitMark.text = mark(form.unitSource)
-            upMark.text = mark(form.upSource) +
-                if (form.statesXUp) " " + AbyssusBundle.message("importModelXUp") else ""
+            upMark.text =
+                mark(form.upSource) +
+                    if (form.statesXUp) {
+                        " " + AbyssusBundle.message("importModelXUp")
+                    } else {
+                        ""
+                    }
             size.isEnabled = form.fitMode != FitMode.ORIGINAL
-            problems.text = form.problems().joinToString("<br>", "<html>", "</html>") { it.message(form) }
-                .takeIf { form.problems().isNotEmpty() } ?: ""
+            problems.text =
+                form
+                    .problems()
+                    .joinToString("<br>", "<html>", "</html>") { it.message(form) }
+                    .takeIf { form.problems().isNotEmpty() } ?: ""
             isOKActionEnabled = form.createEnabled
         } finally {
             binding = false
         }
-        if (previewChanged) updatePreview()
+        if (previewChanged) {
+            updatePreview()
+        }
     }
 
-    private fun mark(source: ValueSource): String = when (source) {
-        ValueSource.FILE -> AbyssusBundle.message("importModelFromFile")
-        ValueSource.FORMAT -> AbyssusBundle.message("importModelFromFormat")
-        ValueSource.DEFAULT -> AbyssusBundle.message("importModelDefault")
-        ValueSource.CHOSEN -> ""
-    }
+    private fun mark(source: ValueSource): String =
+        when (source) {
+            ValueSource.FILE -> AbyssusBundle.message("importModelFromFile")
+            ValueSource.FORMAT -> AbyssusBundle.message("importModelFromFormat")
+            ValueSource.DEFAULT -> AbyssusBundle.message("importModelDefault")
+            ValueSource.CHOSEN -> ""
+        }
 
     private fun notesText(): String {
-        val lines = form.leftOut.map { AbyssusBundle.message("importModelLeftOut", it.item, it.reason.id) } +
-            form.approximated.map { AbyssusBundle.message("importModelApproximated", it.item, it.reason) }
-        return if (lines.isEmpty()) "" else lines.joinToString("<br>", "<html>${AbyssusBundle.message("importModelNotes")}<br>", "</html>")
+        val lines =
+            form.leftOut.map { AbyssusBundle.message("importModelLeftOut", it.item, it.reason.id) } +
+                form.approximated.map { AbyssusBundle.message("importModelApproximated", it.item, it.reason) }
+        return if (lines.isEmpty()) {
+            ""
+        } else {
+            lines.joinToString("<br>", "<html>${AbyssusBundle.message("importModelNotes")}<br>", "</html>")
+        }
     }
 
     /** Converts on a pooled thread from the open source; only the newest result reaches the preview. */
@@ -158,20 +213,29 @@ internal class ImportModelDialog(project: Project, private val form: ModelImport
             val result = runCatchingKeepingCancellation {
                 val transformed = form.preview(settings) ?: return@runCatchingKeepingCancellation null
                 GdxNativesLoader.load()
-                PreviewModel(transformed.data, AssimpModelLoader().decodeTextures(transformed.data, file), file, transformed.size)
+                PreviewModel(
+                    transformed.data,
+                    AssimpModelLoader().decodeTextures(transformed.data, file),
+                    file,
+                    transformed.size,
+                )
             }
-            ApplicationManager.getApplication().invokeLater({
-                val model = result.getOrNull()
-                if (closed || ticket != generation) {
-                    model?.pixmaps?.values?.forEach(Pixmap::dispose)
-                    return@invokeLater
-                }
-                result.exceptionOrNull()?.let { preview.showMessage(it.displayMessage()) }
-                if (model != null) {
-                    status.text = form.status(model.size)
-                    preview.show(model)
-                }
-            }, ModalityState.any())
+            ApplicationManager.getApplication()
+                .invokeLater(
+                    {
+                        val model = result.getOrNull()
+                        if (closed || ticket != generation) {
+                            model?.pixmaps?.values?.forEach(Pixmap::dispose)
+                            return@invokeLater
+                        }
+                        result.exceptionOrNull()?.let { preview.showMessage(it.displayMessage()) }
+                        if (model != null) {
+                            status.text = form.status(model.size)
+                            preview.show(model)
+                        }
+                    },
+                    ModalityState.any(),
+                )
         }
     }
 
@@ -198,22 +262,25 @@ internal class ImportModelDialog(project: Project, private val form: ModelImport
     override fun getPreferredFocusedComponent(): JComponent = name
 
     override fun createCenterPanel(): JComponent {
-        fun row(vararg parts: JComponent) = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0)).apply { parts.forEach(::add) }
-        val settings = FormBuilder.createFormBuilder()
-            .addLabeledComponent(AbyssusBundle.message("importModelSource"), JBLabel(form.sourceFile.name))
-            .addLabeledComponent(AbyssusBundle.message("newTerrainName"), name)
-            .addLabeledComponent(AbyssusBundle.message("importModelUnit"), row(unit, unitMark))
-            .addLabeledComponent(AbyssusBundle.message("importModelUpAxis"), row(upAxis, upMark))
-            .addLabeledComponent(AbyssusBundle.message("importModelSize"), row(original, largest, height, size))
-            .addComponent(addToScene)
-            .addLabeledComponent(AbyssusBundle.message("importModelAnimation"), animation)
-            .addComponent(problems)
-            .addComponent(notes)
-            .panel
-        val right = JPanel(BorderLayout(0, JBUI.scale(4))).apply {
-            add(preview, BorderLayout.CENTER)
-            add(status, BorderLayout.SOUTH)
-        }
+        fun row(vararg parts: JComponent) =
+            JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0)).apply { parts.forEach(::add) }
+        val settings =
+            FormBuilder.createFormBuilder()
+                .addLabeledComponent(AbyssusBundle.message("importModelSource"), JBLabel(form.sourceFile.name))
+                .addLabeledComponent(AbyssusBundle.message("newTerrainName"), name)
+                .addLabeledComponent(AbyssusBundle.message("importModelUnit"), row(unit, unitMark))
+                .addLabeledComponent(AbyssusBundle.message("importModelUpAxis"), row(upAxis, upMark))
+                .addLabeledComponent(AbyssusBundle.message("importModelSize"), row(original, largest, height, size))
+                .addComponent(addToScene)
+                .addLabeledComponent(AbyssusBundle.message("importModelAnimation"), animation)
+                .addComponent(problems)
+                .addComponent(notes)
+                .panel
+        val right =
+            JPanel(BorderLayout(0, JBUI.scale(4))).apply {
+                add(preview, BorderLayout.CENTER)
+                add(status, BorderLayout.SOUTH)
+            }
         return JPanel(BorderLayout(JBUI.scale(12), 0)).apply {
             add(settings, BorderLayout.WEST)
             add(right, BorderLayout.CENTER)

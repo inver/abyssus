@@ -27,7 +27,9 @@ class ScenePreviewLayers(
     /** [base] with the simulated poses applied: [base] itself while nothing plays. */
     fun posed(base: SceneContent): SceneContent {
         val poses = state.poses
-        if (poses.isEmpty()) return base
+        if (poses.isEmpty()) {
+            return base
+        }
         posedOf?.takeIf { base === posedBase && poses === posedPoses }?.let { return it }
         return ScenePreview().withPoses(base, poses).also {
             posedOf = it
@@ -45,11 +47,21 @@ class ScenePreviewLayers(
     fun apply(base: SceneContent): SceneContent {
         val drag = state.preview
         val draft = state.pathDraft
-        if (drag.isEmpty() && draft == null) return base
+        if (drag.isEmpty() && draft == null) {
+            return base
+        }
         shownOf?.takeIf { base === shownBase && drag === shownDrag && draft === shownDraft }
             ?.let { return it }
-        val moved = if (drag.isEmpty()) base else ScenePreview().apply(base, drag)
-        val shown = if (draft == null) moved else ArrangementPreview().apply(moved, draft, heights)
+        val moved = if (drag.isEmpty()) {
+            base
+        } else {
+            ScenePreview().apply(base, drag)
+        }
+        val shown = if (draft == null) {
+            moved
+        } else {
+            ArrangementPreview().apply(moved, draft, heights)
+        }
         return shown.also {
             shownOf = it
             shownBase = base

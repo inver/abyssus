@@ -8,8 +8,8 @@ import net.nevinsky.abyssus.app.game.controlline.ai.DangerGauge
 import net.nevinsky.abyssus.app.game.controlline.ai.F2bBot
 import net.nevinsky.abyssus.app.game.controlline.ai.Handling
 import net.nevinsky.abyssus.app.game.controlline.ai.InstructorControl
-import net.nevinsky.abyssus.app.game.controlline.ai.rescuePilot
 import net.nevinsky.abyssus.app.game.controlline.ai.f2bBot
+import net.nevinsky.abyssus.app.game.controlline.ai.rescuePilot
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightControlSource
 import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
@@ -32,10 +32,10 @@ import org.slf4j.Logger
 
 /**
  * The flight half of the game, without GL (design decision 4 of `add-f2b-ai-demonstration`): it starts a
- * [FlightSession] on its own load of the field ([newScene]) when the [flow] flies a plane, with the player's [input] or a
- * fresh Watch AI bot holding the handle, advances it while flying, reports its end to the flow, and closes it when the
- * flow leaves the flight's screens. A paused flight is not advanced, so neither the plane nor the bot moves. During an AI
- * demonstration the player's keys and mouse do not reach the handle. Main thread only.
+ * [FlightSession] on its own load of the field ([newScene]) when the [flow] flies a plane, with the player's [input] or
+ * a fresh Watch AI bot holding the handle, advances it while flying, reports its end to the flow, and closes it when
+ * the flow leaves the flight's screens. A paused flight is not advanced, so neither the plane nor the bot moves. During
+ * an AI demonstration the player's keys and mouse do not reach the handle. Main thread only.
  */
 class FlightRunner(
     private val flow: GameFlow,
@@ -51,6 +51,7 @@ class FlightRunner(
 
     var session: FlightSession? = null
         private set
+
     var judge: PatternJudge? = null
         private set
 
@@ -81,42 +82,72 @@ class FlightRunner(
     /** Starts a flight when the flow flies a plane (again), and ends it when the flow leaves the flight's screens. */
     fun follow() {
         when (val screen = flow.screen) {
-            is Screen.Flying -> if (screen != flying) start(screen)
-            is Screen.Paused, is Screen.NameEntry, is Screen.GameOver, is Screen.Debrief -> Unit
-            is Screen.Scores -> if (screen.from !is Screen.GameOver) end()
+            is Screen.Flying ->
+                if (screen != flying) {
+                    start(screen)
+                }
+            is Screen.Paused,
+            is Screen.NameEntry,
+            is Screen.GameOver,
+            is Screen.Debrief -> Unit
+            is Screen.Scores ->
+                if (screen.from !is Screen.GameOver) {
+                    end()
+                }
             else -> end()
         }
     }
 
-    /** Runs [seconds] of frame time: the flight while flying (then its end goes to the flow), the plane coming to rest after it. */
+    /**
+     * Runs [seconds] of frame time: the flight while flying (then its end goes to the flow), the plane coming to rest
+     * after it.
+     */
     fun advance(seconds: Float) {
         val s = session ?: return
         when (val screen = flow.screen) {
             is Screen.Flying -> {
                 s.advance(seconds)
                 judge?.let { guide?.update(it) }
-                flying?.let { f -> reportOf(s, f.mode, judge, f.plane.name, scaleJudge, instructor)?.let(flow::flightEnded) }
+                flying?.let { f ->
+                    reportOf(s, f.mode, judge, f.plane.name, scaleJudge, instructor)?.let(flow::flightEnded)
+                }
             }
             // the plane comes to rest; the flight itself is over
-            is Screen.GameOver, is Screen.NameEntry -> s.advance(seconds)
+            is Screen.GameOver,
+            is Screen.NameEntry -> s.advance(seconds)
             else -> Unit
         }
     }
 
     /** Whether the flight in progress is flown by the bot. */
-    val demonstration: Boolean get() = flying?.control == Control.AI
+    val demonstration: Boolean
+        get() = flying?.control == Control.AI
 
-    /** A key went down or up while flying; true when it is one of the handle's (which the bot ignores in a demonstration). */
+    /**
+     * A key went down or up while flying; true when it is one of the handle's (which the bot ignores in a
+     * demonstration).
+     */
     fun key(name: String, pressed: Boolean): Boolean {
-        if (flow.screen !is Screen.Flying) return false
-        if (demonstration) return HandleInput.isHandleKey(name)
+        if (flow.screen !is Screen.Flying) {
+            return false
+        }
+        if (demonstration) {
+            return HandleInput.isHandleKey(name)
+        }
         return input.key(name, pressed)
     }
 
-    /** The mouse moved to [y] of a window [height] high while flying; it sets the handle only in the player's own flight. */
+    /**
+     * The mouse moved to [y] of a window [height] high while flying; it sets the handle only in the player's own
+     * flight.
+     */
     fun mouseMoved(y: Float, height: Float): Boolean {
-        if (flow.screen !is Screen.Flying) return false
-        if (!demonstration) input.mouseMoved(y, height)
+        if (flow.screen !is Screen.Flying) {
+            return false
+        }
+        if (!demonstration) {
+            input.mouseMoved(y, height)
+        }
         return true
     }
 
@@ -129,27 +160,40 @@ class FlightRunner(
         val pattern = screen.mode as? Mode.Pattern
         val judge = pattern?.let { PatternJudge(screen.plane.lineLength) }
         this.judge = judge
-        val scaleJudge = if (screen.mode == Mode.Scale) ScaleJudge() else null
+        val scaleJudge =
+            if (screen.mode == Mode.Scale) {
+                ScaleJudge()
+            } else {
+                null
+            }
         this.scaleJudge = scaleJudge
         guide = pattern?.takeIf { it.level.guided }?.let { GuidePlanner(screen.plane.lineLength) }
         input.reset()
-        val control: FlightControlSource = when (screen.control) {
-            Control.HUMAN -> HumanControl(input).let { human ->
-                if (!screen.instructor) human else {
+        val control: FlightControlSource =
+            when (screen.control) {
+                Control.HUMAN ->
+                    HumanControl(input).let { human ->
+                        if (!screen.instructor) {
+                            human
+                        } else {
+                            val settings = plane.getComponent(PlaneComponent::class.java)
+                            val mass = plane.getComponent(RigidBodyComponent::class.java)?.mass ?: screen.plane.mass
+                            val handling = Handling(settings, mass)
+                            InstructorControl(human, DangerGauge(handling), rescuePilot(settings.lineLength, handling))
+                                .also { instructor = it }
+                        }
+                    }
+                Control.AI -> {
+                    // the bot flies the plane's own settings, and only reads the judge
                     val settings = plane.getComponent(PlaneComponent::class.java)
                     val mass = plane.getComponent(RigidBodyComponent::class.java)?.mass ?: screen.plane.mass
-                    val handling = Handling(settings, mass)
-                    InstructorControl(human, DangerGauge(handling), rescuePilot(settings.lineLength, handling)).also { instructor = it }
+                    f2bBot(settings, mass, checkNotNull(judge) { "Watch AI flies an F2B pattern" }::guideInput).also {
+                        bot = it
+                    }
                 }
             }
-            Control.AI -> {
-                // the bot flies the plane's own settings, and only reads the judge
-                val settings = plane.getComponent(PlaneComponent::class.java)
-                val mass = plane.getComponent(RigidBodyComponent::class.java)?.mass ?: screen.plane.mass
-                f2bBot(settings, mass, checkNotNull(judge) { "Watch AI flies an F2B pattern" }::guideInput).also { bot = it }
-            }
-        }
-        session = FlightSession(loaded.engine, pilot, plane, assets(), log, natives, judge ?: scaleJudge, control, shapes)
+        session =
+            FlightSession(loaded.engine, pilot, plane, assets(), log, natives, judge ?: scaleJudge, control, shapes)
         scene = loaded
         flying = screen
     }

@@ -43,7 +43,8 @@ class SceneWaterResourcesGlTest {
     private val planner = WaterPassPlanner()
 
     private fun plan(width: Int, height: Int, levels: Int = 2): WaterPassPlan {
-        val surfaces = (0 until levels).map { presets.defaults(WaterPreset.LAKE, "s$it", "s$it", 0.0, it.toDouble(), 0.0) }
+        val surfaces = (0 until levels).map { presets.defaults(WaterPreset.LAKE, "s$it", "s$it", 0.0, it.toDouble(),
+            0.0) }
         return planner.plan(surfaces, 100.0, width, height, { 1.0 + it.level })
     }
 
@@ -51,8 +52,11 @@ class SceneWaterResourcesGlTest {
     private fun inGl(block: () -> Unit) {
         val params = net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams.DEFAULT
         var failure: Throwable? = null
-        val result = GlHarness.render(params, 4, OrbitCamera(Vector3(0f, 0f, 0f), 10f, 0f, 0.5f), framebufferSize = 64 to 48) { _, index ->
-            if (index == 2) try { block() } catch (e: Throwable) { failure = e }
+        val result = GlHarness.render(params, 4, OrbitCamera(Vector3(0f, 0f, 0f), 10f, 0f, 0.5f), framebufferSize = 64
+            to 48) { _, index ->
+            if (index == 2) {
+                try { block() } catch (e: Throwable) { failure = e }
+            }
         }
         result.error?.let { throw it }
         failure?.let { throw it }

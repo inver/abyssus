@@ -61,8 +61,15 @@ internal class UiText(private val context: () -> UiPaintContext) {
         return style.resource("font")?.let(resources::font) ?: resources.defaultFont
     }
 
-    /** What is drawn and measured for [value]: upper case under the `uppercase` style key; the widget's own text is not changed. */
-    fun shown(style: UiResolvedStyle, value: String): String = if (style.flag("uppercase")) value.uppercase(java.util.Locale.ROOT) else value
+    /**
+     * What is drawn and measured for [value]: upper case under the `uppercase` style key; the widget's own text is not
+     * changed.
+     */
+    fun shown(style: UiResolvedStyle, value: String): String = if (style.flag("uppercase")) {
+        value.uppercase(java.util.Locale.ROOT)
+    } else {
+        value
+    }
 
     /** Lays [text] out in [style]'s font at its size; the font scale is set for this call only. */
     fun layout(style: UiResolvedStyle, text: String): GlyphLayout {
@@ -112,7 +119,9 @@ internal class UiPainter(private val context: () -> UiPaintContext, private val 
     }
 
     private fun fill(batch: Batch, rgba: Int, x: Float, y: Float, w: Float, h: Float, alpha: Float) {
-        if (w <= 0f || h <= 0f) return
+        if (w <= 0f || h <= 0f) {
+            return
+        }
         rgba(batch, rgba, alpha)
         batch.draw(context().pixel, x, y, w, h)
     }
@@ -137,7 +146,11 @@ internal class UiPainter(private val context: () -> UiPaintContext, private val 
         val font = text.fontOf(style)
         rgba(batch, rgba, alpha)
         font.color = batch.color
-        font.draw(batch, text.shown(style, value), if (center) x + (width - layout.width) / 2f else x, centerY + layout.height / 2f)
+        font.draw(batch, text.shown(style, value), if (center) {
+            x + (width - layout.width) / 2f
+        } else {
+            x
+        }, centerY + layout.height / 2f)
         font.data.setScale(1f)
     }
 
@@ -159,7 +172,9 @@ internal class UiPainter(private val context: () -> UiPaintContext, private val 
                 if (texture != null) {
                     rgba(batch, style.color("tint") ?: 0xffffffff.toInt(), alpha)
                     batch.draw(texture, x, y, w, h)
-                } else placeholder(batch, x, y, w, h, alpha)
+                } else {
+                    placeholder(batch, x, y, w, h, alpha)
+                }
             }
 
             UiWidgetType.PROGRESS_BAR -> {
@@ -191,8 +206,10 @@ internal class UiPainter(private val context: () -> UiPaintContext, private val 
                 val box = minOf(CHECK_BOX, h)
                 val checked = c.view.flag(widget, "checked", false)
                 style.color("background")?.let { fill(batch, it, x, y + (h - box) / 2f, box, box, alpha) }
-                if (checked) style.color("fill")
-                    ?.let { fill(batch, it, x + 4f, y + (h - box) / 2f + 4f, box - 8f, box - 8f, alpha) }
+                if (checked) {
+                    style.color("fill")
+                        ?.let { fill(batch, it, x + 4f, y + (h - box) / 2f + 4f, box - 8f, box - 8f, alpha) }
+                }
                 write(
                     batch,
                     style,
@@ -210,10 +227,14 @@ internal class UiPainter(private val context: () -> UiPaintContext, private val 
                 val value = c.fieldText(widget)
                 write(batch, style, value, textColor, x + padding, y + h / 2f, w - 2 * padding, false, alpha)
                 if (UiVisualState.FOCUSED in c.states(widget)) {
-                    val caretX = x + padding + (if (value.isEmpty()) 0f else text.layout(
-                        style,
-                        value
-                    ).width + 1f).also { text.fontOf(style).data.setScale(1f) }
+                    val caretX = x + padding + (if (value.isEmpty()) {
+                        0f
+                    } else {
+                        text.layout(
+                            style,
+                            value
+                        ).width + 1f
+                    }).also { text.fontOf(style).data.setScale(1f) }
                     fill(batch, textColor, caretX, y + padding, 1.5f, h - 2 * padding, alpha)
                 }
             }
@@ -222,9 +243,13 @@ internal class UiPainter(private val context: () -> UiPaintContext, private val 
             else -> Unit
         }
         val borderWidth = (style.number("borderWidth") ?: 0.0).toFloat()
-        if (borderWidth > 0f) style.color("borderColor")
-            ?.let { border(batch, it, borderWidth, x, y, w, h, alpha) }
-        if (c.rejected(widget)) border(batch, 0xff5555ff.toInt(), 2f, x, y, w, h, alpha)
+        if (borderWidth > 0f) {
+            style.color("borderColor")
+                ?.let { border(batch, it, borderWidth, x, y, w, h, alpha) }
+        }
+        if (c.rejected(widget)) {
+            border(batch, 0xff5555ff.toInt(), 2f, x, y, w, h, alpha)
+        }
         batch.color = Color.WHITE
     }
 
@@ -250,10 +275,14 @@ internal class UiWidgetActor(
     }
 
     override fun draw(batch: Batch, parentAlpha: Float) {
-        if (clip.width <= 0f || clip.height <= 0f || !context().shown(widget)) return
+        if (clip.width <= 0f || clip.height <= 0f || !context().shown(widget)) {
+            return
+        }
         stage.calculateScissors(clip, scissor)
         batch.flush()
-        if (!ScissorStack.pushScissors(scissor)) return
+        if (!ScissorStack.pushScissors(scissor)) {
+            return
+        }
         painter.draw(batch, widget, x, y, width, height, parentAlpha)
         batch.flush()
         ScissorStack.popScissors()

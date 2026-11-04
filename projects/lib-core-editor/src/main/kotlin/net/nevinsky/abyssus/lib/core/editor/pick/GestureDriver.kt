@@ -9,7 +9,9 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 
-/** The Swing-pixel ray through ([x], [y]) in the view [size], or null while the view is empty or the camera has no ray. */
+/**
+ * The Swing-pixel ray through ([x], [y]) in the view [size], or null while the view is empty or the camera has no ray.
+ */
 internal fun SceneQueries.rayFrom(size: ViewSize, x: Int, y: Int): Ray? {
     val at = size.toFramebuffer(x, y)
     return rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
@@ -30,6 +32,7 @@ internal interface GestureHost {
 
     /** The transform write for the end of a gizmo drag of [entityId]. */
     fun editOf(entityId: Long, result: DragResult): TransformEdit
+
     fun stateChanged()
 }
 
@@ -43,22 +46,32 @@ internal sealed interface Gesture {
         var result: DragResult? = null
     }
 
-    /** Set by Esc (or by the dragged entity leaving the scene): the rest of the gesture, up to the release, does nothing. */
+    /**
+     * Set by Esc (or by the dragged entity leaving the scene): the rest of the gesture, up to the release, does
+     * nothing.
+     */
     data object Cancelled : Gesture
 
-    /** A move handle of control point [index] of the arrangement [entityId] is dragged; [original] are its points before, [points] now. */
-    class DraggingPathPoint(val drag: GizmoDrag, val entityId: Long, val index: Int, val original: List<Vector3>) : Gesture {
+    /**
+     * A move handle of control point [index] of the arrangement [entityId] is dragged; [original] are its points
+     * before, [points] now.
+     */
+    class DraggingPathPoint(val drag: GizmoDrag, val entityId: Long, val index: Int, val original: List<Vector3>) :
+        Gesture {
         var points: List<Vector3> = original
         var moved = false
     }
 
-    /** A terrain brush stroke of [kind] on the terrain of [entityId]; the caller's [BrushStroke] of that kind does the work. */
+    /**
+     * A terrain brush stroke of [kind] on the terrain of [entityId]; the caller's [BrushStroke] of that kind does the
+     * work.
+     */
     class Brushing(val entityId: Long, val kind: BrushKind) : Gesture
 }
 
 /**
- * The press-drag-release state of the scene view: starting a gizmo, path point or paint-stroke gesture, updating
- * it while the mouse moves, and writing or discarding its result on release or Esc. Orbiting and clicking stay with
+ * The press-drag-release state of the scene view: starting a gizmo, path point or paint-stroke gesture, updating it
+ * while the mouse moves, and writing or discarding its result on release or Esc. Orbiting and clicking stay with
  * [SceneInteraction], which falls back to them while the gesture is [Gesture.Idle].
  */
 internal class GestureDriver(
@@ -69,10 +82,17 @@ internal class GestureDriver(
     var current: Gesture = Gesture.Idle
         private set
 
-    val isIdle: Boolean get() = current == Gesture.Idle
-    val isDragging: Boolean get() = current is Gesture.Dragging
-    val isBrushing: Boolean get() = current is Gesture.Brushing
-    val isDraggingPathPoint: Boolean get() = current is Gesture.DraggingPathPoint
+    val isIdle: Boolean
+        get() = current == Gesture.Idle
+
+    val isDragging: Boolean
+        get() = current is Gesture.Dragging
+
+    val isBrushing: Boolean
+        get() = current is Gesture.Brushing
+
+    val isDraggingPathPoint: Boolean
+        get() = current is Gesture.DraggingPathPoint
 
     /** Ends whatever gesture is under way without writing; the rest of the press does nothing. */
     fun cancel() {
@@ -84,14 +104,22 @@ internal class GestureDriver(
         current = Gesture.Idle
     }
 
-    /** The left press at ([x], [y]) with the selection [id]: starts the gesture that fits what is under the cursor, if any. */
+    /**
+     * The left press at ([x], [y]) with the selection [id]: starts the gesture that fits what is under the cursor, if
+     * any.
+     */
     fun press(id: Long?, x: Int, y: Int) {
         val size = host.size
-        if (id == null) return
+        if (id == null) {
+            return
+        }
         val at = size.toFramebuffer(x, y)
         if (state.pathEditing == id) {
-            // while the control points are edited the selection is the line: only its handles and the point's gizmo react
-            if (!startPathGizmoDrag(id, at)) pressPathHandle(id, at)
+            // while the control points are edited the selection is the line: only its handles and the point's gizmo
+            // react
+            if (!startPathGizmoDrag(id, at)) {
+                pressPathHandle(id, at)
+            }
             return
         }
         val brush = state.brush
@@ -109,12 +137,14 @@ internal class GestureDriver(
         val size = host.size
         val axis = queries.gizmoHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
         if (axis != null) {
-            val started = queries.beginDrag(axis, at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return null
+            val started =
+                queries.beginDrag(axis, at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return null
             state.hoveredAxis = axis
             return started
         }
         val plane = queries.gizmoPlaneHit(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return null
-        val started = queries.beginPlaneDrag(plane, at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return null
+        val started =
+            queries.beginPlaneDrag(plane, at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return null
         state.hoveredPlane = plane
         return started
     }
@@ -143,7 +173,9 @@ internal class GestureDriver(
             is PathHit.Line -> {
                 val points = queries.pathPoints(id) ?: return false
                 val inserted = points.toMutableList().also { it.add(hit.span + 1, hit.at) }
-                if (host.onArrangementEdit?.invoke(id, inserted) == true) state.selectedPathPoint = hit.span + 1
+                if (host.onArrangementEdit?.invoke(id, inserted) == true) {
+                    state.selectedPathPoint = hit.span + 1
+                }
             }
         }
         current = Gesture.Cancelled
@@ -154,11 +186,15 @@ internal class GestureDriver(
     /** The left press of a brush mode: a stroke starts only where the ray hits the brushed terrain. */
     private fun startBrush(brush: BrushMode, at: FramebufferPoint) {
         val size = host.size
-        if (brush.entityId != host.selectedId) return
+        if (brush.entityId != host.selectedId) {
+            return
+        }
         val ray = queries.rayAt(at.x, at.y, size.framebufferWidth, size.framebufferHeight) ?: return
         val terrain = queries.terrainOf(brush.entityId) ?: return
         val hit = queries.terrainHit(brush.entityId, ray) ?: return
-        if (host.brushStroke(brush.kind)?.pressed(terrain, hit) != true) return
+        if (host.brushStroke(brush.kind)?.pressed(terrain, hit) != true) {
+            return
+        }
         current = Gesture.Brushing(brush.entityId, brush.kind)
         host.stateChanged()
     }
@@ -196,7 +232,10 @@ internal class GestureDriver(
         return true
     }
 
-    /** The button was released: writes or discards the gesture's result and returns to [Gesture.Idle]. True unless it already was idle. */
+    /**
+     * The button was released: writes or discards the gesture's result and returns to [Gesture.Idle]. True unless it
+     * already was idle.
+     */
     fun release(): Boolean {
         val ended = current
         current = Gesture.Idle
@@ -208,7 +247,9 @@ internal class GestureDriver(
             is Gesture.DraggingPathPoint -> {
                 if (ended.moved && ended.points != ended.original) {
                     val written = host.onArrangementEdit?.invoke(ended.entityId, ended.points) ?: false
-                    if (!written) state.pathEdit = null
+                    if (!written) {
+                        state.pathEdit = null
+                    }
                 } else {
                     state.pathEdit = null
                 }
@@ -218,7 +259,9 @@ internal class GestureDriver(
                 val result = ended.result
                 if (result != null && result.transform != ended.drag.start) {
                     val written = host.onTransform?.invoke(ended.entityId, host.editOf(ended.entityId, result)) ?: false
-                    if (!written) state.preview = emptyMap()
+                    if (!written) {
+                        state.preview = emptyMap()
+                    }
                 } else {
                     state.preview = emptyMap()
                 }
@@ -228,7 +271,10 @@ internal class GestureDriver(
         return true
     }
 
-    /** Esc: puts the dragged object back, or discards the brush stroke; neither writes anything. True when a gesture was cancelled. */
+    /**
+     * Esc: puts the dragged object back, or discards the brush stroke; neither writes anything. True when a gesture was
+     * cancelled.
+     */
     fun escape(): Boolean {
         when (current) {
             is Gesture.DraggingPathPoint -> {
@@ -254,7 +300,11 @@ internal class GestureDriver(
 
     /** New scene content arrived: cancels a drag whose entity or arrangement the scene no longer has. */
     fun contentChanged(content: SceneContent, contains: (Long) -> Boolean) {
-        (current as? Gesture.Dragging)?.let { if (!contains(it.entityId)) current = Gesture.Cancelled }
+        (current as? Gesture.Dragging)?.let {
+            if (!contains(it.entityId)) {
+                current = Gesture.Cancelled
+            }
+        }
         (current as? Gesture.DraggingPathPoint)?.let {
             if (!contains(it.entityId)) {
                 current = Gesture.Cancelled

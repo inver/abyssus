@@ -5,22 +5,22 @@
 package net.nevinsky.abyssus.app.game.controlline.flow
 
 import com.badlogic.ashley.core.Entity
+import java.time.Instant
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneClass
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
 import net.nevinsky.abyssus.app.game.controlline.components.ScaleComponent
 import net.nevinsky.abyssus.app.game.controlline.pattern.AssistLevel
 import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefModel
-import net.nevinsky.abyssus.app.game.controlline.pattern.debriefOf
-import net.nevinsky.abyssus.app.game.controlline.pattern.sheetOnlyDebrief
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreEntry
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternScoreTable
+import net.nevinsky.abyssus.app.game.controlline.pattern.debriefOf
+import net.nevinsky.abyssus.app.game.controlline.pattern.sheetOnlyDebrief
 import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreEntry
 import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreEntry
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
-import net.nevinsky.abyssus.lib.physics.RigidBodyComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
-import java.time.Instant
+import net.nevinsky.abyssus.lib.physics.RigidBodyComponent
 
 /** The longest pilot name the score table keeps. */
 const val NAME_LENGTH = 12
@@ -47,11 +47,12 @@ enum class ScoreTab(val label: String, val level: AssistLevel?) {
 }
 
 /** The score table tab of the flights of [mode]. */
-fun tabOf(mode: Mode): ScoreTab = when (mode) {
-    Mode.Free -> ScoreTab.FREE
-    is Mode.Pattern -> ScoreTab.entries.first { it.level == mode.level }
-    Mode.Scale -> ScoreTab.SCALE
-}
+fun tabOf(mode: Mode): ScoreTab =
+    when (mode) {
+        Mode.Free -> ScoreTab.FREE
+        is Mode.Pattern -> ScoreTab.entries.first { it.level == mode.level }
+        Mode.Scale -> ScoreTab.SCALE
+    }
 
 /** What plane select's card says of a replica's prototype; a field the scene left unset is blank or 0. */
 data class ScaleFacts(val prototype: String, val firstFlight: Int, val wingspan: Float, val scale: Int)
@@ -68,17 +69,29 @@ data class PlaneChoice(
 )
 
 /** Every entity of a scene with a [PlaneComponent], in the order of their names. */
-fun planeChoices(entities: Map<Int, Entity>): List<PlaneChoice> = entities.mapNotNull { (id, entity) ->
-    val plane = entity.getComponent(PlaneComponent::class.java) ?: return@mapNotNull null
-    PlaneChoice(
-        id, entity.getComponent(NameComponent::class.java)?.name ?: "Plane $id", plane.planeClass, plane.lineLength,
-        entity.getComponent(RigidBodyComponent::class.java)?.mass ?: 0f, plane.fuelTime,
-        entity.getComponent(ScaleComponent::class.java)?.let { ScaleFacts(it.prototype, it.firstFlight, it.wingspan, it.scale) },
-    )
-}.sortedWith(compareBy<PlaneChoice> { it.name }.thenBy { it.entityId })
+fun planeChoices(entities: Map<Int, Entity>): List<PlaneChoice> =
+    entities
+        .mapNotNull { (id, entity) ->
+            val plane = entity.getComponent(PlaneComponent::class.java) ?: return@mapNotNull null
+            PlaneChoice(
+                id,
+                entity.getComponent(NameComponent::class.java)?.name ?: "Plane $id",
+                plane.planeClass,
+                plane.lineLength,
+                entity.getComponent(RigidBodyComponent::class.java)?.mass ?: 0f,
+                plane.fuelTime,
+                entity.getComponent(ScaleComponent::class.java)?.let {
+                    ScaleFacts(it.prototype, it.firstFlight, it.wingspan, it.scale)
+                },
+            )
+        }
+        .sortedWith(compareBy<PlaneChoice> { it.name }.thenBy { it.entityId })
 
 /** Who holds the handle in a flight: the player, or the Watch AI bot (an F2B demonstration). */
-enum class Control { HUMAN, AI }
+enum class Control {
+    HUMAN,
+    AI,
+}
 
 /** The screens of the game and what each one holds. */
 sealed interface Screen {
@@ -94,10 +107,14 @@ sealed interface Screen {
     data class PlaneSelect(val index: Int, val mode: Mode = Mode.Free) : Screen
 
     /**
-     * Flying [plane] in [mode] with the handle held by [control]; [attempt] counts from 1 and grows with each retry, so a
-     * retry is a new flight.
+     * Flying [plane] in [mode] with the handle held by [control]; [attempt] counts from 1 and grows with each retry, so
+     * a retry is a new flight.
      */
-    data class Flying(val plane: PlaneChoice, val attempt: Int = 1, val mode: Mode = Mode.Free, val control: Control = Control.HUMAN,
+    data class Flying(
+        val plane: PlaneChoice,
+        val attempt: Int = 1,
+        val mode: Mode = Mode.Free,
+        val control: Control = Control.HUMAN,
         val instructor: Boolean = false,
     ) : Screen
 
@@ -110,12 +127,14 @@ sealed interface Screen {
     data class GameOver(val flying: Flying, val report: FlightReport, val rank: Int?) : Screen
 
     /**
-     * The score table on [tab], opened from [from], with the row at [highlight] (from 1) marked on the tab of the flight
-     * that was just saved.
+     * The score table on [tab], opened from [from], with the row at [highlight] (from 1) marked on the tab of the
+     * flight that was just saved.
      */
-    data class Scores(val from: Screen, val highlight: Int?, val tab: ScoreTab = ScoreTab.FREE, val selected: Int = 0) : Screen {
+    data class Scores(val from: Screen, val highlight: Int?, val tab: ScoreTab = ScoreTab.FREE, val selected: Int = 0) :
+        Screen {
         /** The tab the [highlight] belongs to: that of the flight shown on GAME OVER. */
-        val highlightTab: ScoreTab? get() = (from as? GameOver)?.let { tabOf(it.flying.mode) }
+        val highlightTab: ScoreTab?
+            get() = (from as? GameOver)?.let { tabOf(it.flying.mode) }
     }
 
     /** The debrief of an F2B flight, opened from [from] (GAME OVER or the score table); [model] holds what it shows. */
@@ -127,7 +146,10 @@ sealed interface Screen {
  * show [screen] and send events here; nothing here touches GL or input devices.
  */
 class GameFlow(
-    val planes: List<PlaneChoice>, val table: ScoreTable, val patternTable: PatternScoreTable, val scaleTable: ScaleScoreTable,
+    val planes: List<PlaneChoice>,
+    val table: ScoreTable,
+    val patternTable: PatternScoreTable,
+    val scaleTable: ScaleScoreTable,
     private val now: () -> Instant = Instant::now,
 ) {
     var screen: Screen = Screen.MainMenu
@@ -146,63 +168,89 @@ class GameFlow(
         private set
 
     /** Whether plane select offers the Instructor toggle: on any plane select. */
-    val instructorOffered: Boolean get() = screen is Screen.PlaneSelect
+    val instructorOffered: Boolean
+        get() = screen is Screen.PlaneSelect
 
     /** Turns the Instructor on or off, on plane select. */
     fun toggleInstructor() {
-        if (instructorOffered) instructor = !instructor
+        if (instructorOffered) {
+            instructor = !instructor
+        }
     }
 
     /** Whether Free flight can be chosen: there is a plane. */
-    val freeEnabled: Boolean get() = planes.isNotEmpty()
+    val freeEnabled: Boolean
+        get() = planes.isNotEmpty()
 
     /** Whether the F2B pattern can be chosen: there is a plane of class `STUNT`. */
-    val patternEnabled: Boolean get() = planes.any { it.planeClass == PlaneClass.STUNT }
+    val patternEnabled: Boolean
+        get() = planes.any { it.planeClass == PlaneClass.STUNT }
 
     /** Whether Scale can be chosen: there is a plane of class `SCALE`. */
-    val scaleEnabled: Boolean get() = planes.any { it.planeClass == PlaneClass.SCALE }
+    val scaleEnabled: Boolean
+        get() = planes.any { it.planeClass == PlaneClass.SCALE }
 
     /** The main menu's message: why Free flight, the F2B pattern or Scale is disabled (the first reason), or null. */
-    val message: String? get() = when {
-        !freeEnabled -> NO_PLANE_MESSAGE
-        !patternEnabled -> NO_STUNT_MESSAGE
-        !scaleEnabled -> NO_SCALE_MESSAGE
-        else -> null
-    }
+    val message: String?
+        get() =
+            when {
+                !freeEnabled -> NO_PLANE_MESSAGE
+                !patternEnabled -> NO_STUNT_MESSAGE
+                !scaleEnabled -> NO_SCALE_MESSAGE
+                else -> null
+            }
 
-    /** The planes plane select offers for [mode]: all of them in Free flight, the stunt planes in an F2B pattern, the replicas in Scale. */
-    fun choices(mode: Mode): List<PlaneChoice> = when (mode) {
-        Mode.Free -> planes
-        is Mode.Pattern -> planes.filter { it.planeClass == PlaneClass.STUNT }
-        Mode.Scale -> planes.filter { it.planeClass == PlaneClass.SCALE }
-    }
+    /**
+     * The planes plane select offers for [mode]: all of them in Free flight, the stunt planes in an F2B pattern, the
+     * replicas in Scale.
+     */
+    fun choices(mode: Mode): List<PlaneChoice> =
+        when (mode) {
+            Mode.Free -> planes
+            is Mode.Pattern -> planes.filter { it.planeClass == PlaneClass.STUNT }
+            Mode.Scale -> planes.filter { it.planeClass == PlaneClass.SCALE }
+        }
 
     // main menu
 
     fun freeFlight() {
-        if (screen == Screen.MainMenu && freeEnabled) screen = Screen.PlaneSelect(0, Mode.Free)
+        if (screen == Screen.MainMenu && freeEnabled) {
+            screen = Screen.PlaneSelect(0, Mode.Free)
+        }
     }
 
     fun f2bPattern() {
-        if (screen == Screen.MainMenu && patternEnabled) screen = Screen.AssistSelect
+        if (screen == Screen.MainMenu && patternEnabled) {
+            screen = Screen.AssistSelect
+        }
     }
 
     fun scale() {
-        if (screen == Screen.MainMenu && scaleEnabled) screen = Screen.PlaneSelect(0, Mode.Scale)
+        if (screen == Screen.MainMenu && scaleEnabled) {
+            screen = Screen.PlaneSelect(0, Mode.Scale)
+        }
     }
 
     fun settings() {
-        if (screen == Screen.MainMenu) screen = Screen.Settings
+        if (screen == Screen.MainMenu) {
+            screen = Screen.Settings
+        }
     }
 
     fun scores() {
         val from = screen
-        if (from == Screen.MainMenu) screen = Screen.Scores(from, null, ScoreTab.FREE)
-        if (from is Screen.GameOver) screen = Screen.Scores(from, from.rank, tabOf(from.flying.mode))
+        if (from == Screen.MainMenu) {
+            screen = Screen.Scores(from, null, ScoreTab.FREE)
+        }
+        if (from is Screen.GameOver) {
+            screen = Screen.Scores(from, from.rank, tabOf(from.flying.mode))
+        }
     }
 
     fun quitGame() {
-        if (screen == Screen.MainMenu) quit = true
+        if (screen == Screen.MainMenu) {
+            quit = true
+        }
     }
 
     // the score table's tabs
@@ -222,10 +270,15 @@ class GameFlow(
         val s = screen as? Screen.Scores ?: return
         val level = s.tab.level ?: return
         val last = patternTable.board(level).size - 1
-        if (last >= 0) screen = s.copy(selected = (s.selected + by).coerceIn(0, last))
+        if (last >= 0) {
+            screen = s.copy(selected = (s.selected + by).coerceIn(0, last))
+        }
     }
 
-    /** Enter or a click on a row of an F2B tab (default the selected one): the flight's debrief, from its recording when it has one. */
+    /**
+     * Enter or a click on a row of an F2B tab (default the selected one): the flight's debrief, from its recording when
+     * it has one.
+     */
     fun openRow(index: Int? = null) {
         val s = screen as? Screen.Scores ?: return
         val level = s.tab.level ?: return
@@ -239,8 +292,9 @@ class GameFlow(
     fun debrief() {
         val s = screen as? Screen.GameOver ?: return
         val result = s.report.result as? FlightResult.Pattern ?: return
-        val model = result.recording?.let { debriefOf(it, s.report.takeovers) }
-            ?: sheetOnlyDebrief(result.sheet, s.report.plane, result.level)
+        val model =
+            result.recording?.let { debriefOf(it, s.report.takeovers) }
+                ?: sheetOnlyDebrief(result.sheet, s.report.plane, result.level)
         screen = Screen.Debrief(s, model)
     }
 
@@ -248,7 +302,9 @@ class GameFlow(
 
     /** The assist level was chosen: plane select, among the stunt planes. */
     fun chooseAssist(level: AssistLevel) {
-        if (screen == Screen.AssistSelect && level in OFFERED_LEVELS) screen = Screen.PlaneSelect(0, Mode.Pattern(level))
+        if (screen == Screen.AssistSelect && level in OFFERED_LEVELS) {
+            screen = Screen.PlaneSelect(0, Mode.Pattern(level))
+        }
     }
 
     // plane select
@@ -270,12 +326,20 @@ class GameFlow(
 
     /** Whether plane select offers Watch AI: an F2B pattern with a stunt plane shown. */
     val watchAiOffered: Boolean
-        get() = (screen as? Screen.PlaneSelect)?.let { it.mode is Mode.Pattern && choices(it.mode).getOrNull(it.index) != null } == true
+        get() =
+            (screen as? Screen.PlaneSelect)?.let {
+                it.mode is Mode.Pattern && choices(it.mode).getOrNull(it.index) != null
+            } == true
 
-    /** Watch AI on F2B plane select: the bot flies the shown plane at the chosen assist level. Not offered in Free flight. */
+    /**
+     * Watch AI on F2B plane select: the bot flies the shown plane at the chosen assist level. Not offered in Free
+     * flight.
+     */
     fun watchAi() {
         val s = screen as? Screen.PlaneSelect ?: return
-        if (s.mode !is Mode.Pattern) return
+        if (s.mode !is Mode.Pattern) {
+            return
+        }
         val plane = choices(s.mode).getOrNull(s.index) ?: return
         screen = Screen.Flying(plane, 1, s.mode, Control.AI)
     }
@@ -303,12 +367,18 @@ class GameFlow(
             screen = Screen.GameOver(flying, report, null)
             return
         }
-        val enters = when (val r = report.result) {
-            is FlightResult.Free -> table.qualifies(r.score)
-            is FlightResult.Pattern -> patternTable.qualifies(r.level, r.sheet.tenths / 10.0)
-            is FlightResult.Scale -> scaleTable.qualifies(r.score)
-        }
-        screen = if (enters) Screen.NameEntry(flying, report, lastName) else Screen.GameOver(flying, report, null)
+        val enters =
+            when (val r = report.result) {
+                is FlightResult.Free -> table.qualifies(r.score)
+                is FlightResult.Pattern -> patternTable.qualifies(r.level, r.sheet.tenths / 10.0)
+                is FlightResult.Scale -> scaleTable.qualifies(r.score)
+            }
+        screen =
+            if (enters) {
+                Screen.NameEntry(flying, report, lastName)
+            } else {
+                Screen.GameOver(flying, report, null)
+            }
     }
 
     /** The name was entered: the flight is saved under it (at most [NAME_LENGTH] characters, "Pilot" when blank). */
@@ -317,40 +387,78 @@ class GameFlow(
         val clean = name.trim().take(NAME_LENGTH).trim().ifEmpty { "Pilot" }
         lastName = clean
         val r = s.report
-        val rank = when (val result = r.result) {
-            is FlightResult.Free ->
-                table.add(ScoreEntry(clean, r.plane, result.score, result.laps, result.bestCombo, r.flightTime, now().toString()))
-            is FlightResult.Pattern -> patternTable.add(
-                result.level,
-                PatternScoreEntry(clean, r.plane, result.sheet.tenths / 10.0, r.flightTime, now().toString(), result.sheet.marks.map { it.toDouble() }),
-                result.recording,
-            )
-            is FlightResult.Scale -> scaleTable.add(
-                ScaleScoreEntry(
-                    clean, r.plane, s.flying.plane.scale?.prototype.orEmpty(), result.score, result.marks.speed,
-                    result.marks.level, result.marks.landing, result.laps, r.flightTime, now().toString(),
-                ),
-            )
-        }
+        val rank =
+            when (val result = r.result) {
+                is FlightResult.Free ->
+                    table.add(
+                        ScoreEntry(
+                            clean,
+                            r.plane,
+                            result.score,
+                            result.laps,
+                            result.bestCombo,
+                            r.flightTime,
+                            now().toString(),
+                        )
+                    )
+                is FlightResult.Pattern ->
+                    patternTable.add(
+                        result.level,
+                        PatternScoreEntry(
+                            clean,
+                            r.plane,
+                            result.sheet.tenths / 10.0,
+                            r.flightTime,
+                            now().toString(),
+                            result.sheet.marks.map { it.toDouble() },
+                        ),
+                        result.recording,
+                    )
+                is FlightResult.Scale ->
+                    scaleTable.add(
+                        ScaleScoreEntry(
+                            clean,
+                            r.plane,
+                            s.flying.plane.scale?.prototype.orEmpty(),
+                            result.score,
+                            result.marks.speed,
+                            result.marks.level,
+                            result.marks.landing,
+                            result.laps,
+                            r.flightTime,
+                            now().toString(),
+                        )
+                    )
+            }
         screen = Screen.GameOver(s.flying, r, rank)
     }
 
     /** Retry on GAME OVER: the same plane again, in the same mode and level and by the same pilot, from takeoff. */
     fun retry() {
         val s = screen as? Screen.GameOver ?: return
-        screen = Screen.Flying(s.flying.plane, s.flying.attempt + 1, s.flying.mode, s.flying.control, s.flying.instructor)
+        screen =
+            Screen.Flying(s.flying.plane, s.flying.attempt + 1, s.flying.mode, s.flying.control, s.flying.instructor)
     }
 
     /** Main menu, from GAME OVER or the pause menu. */
     fun mainMenu() {
-        if (screen is Screen.GameOver || screen is Screen.Paused) screen = Screen.MainMenu
+        if (screen is Screen.GameOver || screen is Screen.Paused) {
+            screen = Screen.MainMenu
+        }
     }
 
     /** Escape or Back: one screen back, or pause while flying. */
     fun back() {
         when (val s = screen) {
-            Screen.AssistSelect, Screen.Settings -> screen = Screen.MainMenu
-            is Screen.PlaneSelect -> screen = if (s.mode is Mode.Pattern) Screen.AssistSelect else Screen.MainMenu
+            Screen.AssistSelect,
+            Screen.Settings -> screen = Screen.MainMenu
+            is Screen.PlaneSelect ->
+                screen =
+                    if (s.mode is Mode.Pattern) {
+                        Screen.AssistSelect
+                    } else {
+                        Screen.MainMenu
+                    }
             is Screen.Flying -> pause()
             is Screen.Paused -> resume()
             is Screen.Scores -> screen = s.from

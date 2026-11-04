@@ -5,13 +5,14 @@
 
 package net.nevinsky.abyssus.plugin.properties
 
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ide.util.treeView.AbstractTreeNode
-import net.nevinsky.abyssus.lib.core.assets.MetaType
-import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
-import net.nevinsky.abyssus.lib.core.editor.panel.SceneSetting
+import com.intellij.openapi.vfs.VirtualFile
 import net.nevinsky.abyssus.lib.core.assets.Asset
+import net.nevinsky.abyssus.lib.core.assets.MetaType
+import net.nevinsky.abyssus.lib.core.editor.panel.FolderKind as PanelFolderKind
+import net.nevinsky.abyssus.lib.core.editor.panel.SceneSetting
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
+import net.nevinsky.abyssus.lib.core.ui.model.UiScreen
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
 import net.nevinsky.abyssus.plugin.projectView.DtoEntryNode
 import net.nevinsky.abyssus.plugin.projectView.FolderRow
@@ -19,7 +20,6 @@ import net.nevinsky.abyssus.plugin.projectView.TypeGroup
 import net.nevinsky.abyssus.plugin.projectView.UiScreenEntry
 import net.nevinsky.abyssus.plugin.projectView.isEcsEntry
 import net.nevinsky.abyssus.plugin.projectView.rowText
-import net.nevinsky.abyssus.lib.core.editor.panel.FolderKind as PanelFolderKind
 
 /**
  * A selected tree row that stands for no single document of its own: a folder, the `ecs` row, a scene setting row or a
@@ -34,8 +34,13 @@ sealed interface Structural {
     data class Ecs(val file: VirtualFile) : Structural
 
     /** A screen row; [meta] is the UI asset's `meta.json` and [screenId] the screen to open in the Screen Editor. */
-    data class Screen(val name: String, val asset: String, val screenId: String, val meta: VirtualFile?, val abss: VirtualFile?) :
-        Structural
+    data class Screen(
+        val name: String,
+        val asset: String,
+        val screenId: String,
+        val meta: VirtualFile?,
+        val abss: VirtualFile?,
+    ) : Structural
 }
 
 private val SETTINGS = SceneSetting.entries.associateBy { it.key }
@@ -48,30 +53,55 @@ internal fun structuralOf(node: Any?): Structural? {
     val source = entry.source?.takeIf { it.isValid }
     val abss = source?.takeIf { it.extension == ProjectLayout.PROJECT_EXTENSION }
     return when {
-        value is FolderRow -> Structural.Folder(
-            if (value.kind == net.nevinsky.abyssus.plugin.projectView.FolderKind.UI) PanelFolderKind.UI else PanelFolderKind.ASSETS,
-            tree.label ?: rowText(entry).label, value.assets.size, abss,
-        )
+        value is FolderRow ->
+            Structural.Folder(
+                if (value.kind == net.nevinsky.abyssus.plugin.projectView.FolderKind.UI) {
+                    PanelFolderKind.UI
+                } else {
+                    PanelFolderKind.ASSETS
+                },
+                tree.label ?: rowText(entry).label,
+                value.assets.size,
+                abss,
+            )
 
-        value is TypeGroup -> Structural.Folder(PanelFolderKind.GROUP, tree.label ?: rowText(entry).label, value.assets.size, abss)
+        value is TypeGroup ->
+            Structural.Folder(PanelFolderKind.GROUP, tree.label ?: rowText(entry).label, value.assets.size, abss)
         value is List<*> && entry.name == "scenes" && abss != null ->
             Structural.Folder(PanelFolderKind.SCENES, tree.label ?: rowText(entry).label, value.size, abss)
 
-        value is UiScreenEntry -> value.asset.let { asset ->
-            Structural.Screen(value.screen.name, asset.name, value.screen.id, java.io.File(asset.baseDir, META_FILE).let {
-                com.intellij.openapi.vfs.LocalFileSystem.getInstance().findFileByIoFile(it)
-            }, abss)
-        }
+        value is UiScreenEntry ->
+            value.asset.let { asset ->
+                Structural.Screen(
+                    value.screen.name,
+                    asset.name,
+                    value.screen.id,
+                    java.io.File(asset.baseDir, META_FILE).let {
+                        com.intellij.openapi.vfs.LocalFileSystem.getInstance().findFileByIoFile(it)
+                    },
+                    abss,
+                )
+            }
 
-        value is UiScreen -> uiAsset(tree)?.let { asset ->
-            Structural.Screen(value.name, asset.name, value.id, java.io.File(asset.baseDir, META_FILE).let {
-                com.intellij.openapi.vfs.LocalFileSystem.getInstance().findFileByIoFile(it)
-            }, abss)
-        }
+        value is UiScreen ->
+            uiAsset(tree)?.let { asset ->
+                Structural.Screen(
+                    value.name,
+                    asset.name,
+                    value.id,
+                    java.io.File(asset.baseDir, META_FILE).let {
+                        com.intellij.openapi.vfs.LocalFileSystem.getInstance().findFileByIoFile(it)
+                    },
+                    abss,
+                )
+            }
 
         source != null && ProjectLayout.isScene(source) && entry.parentKeys.isEmpty() ->
-            if (isEcsEntry(entry)) Structural.Ecs(source)
-            else SETTINGS[entry.name]?.let { Structural.Setting(source, it) }
+            if (isEcsEntry(entry)) {
+                Structural.Ecs(source)
+            } else {
+                SETTINGS[entry.name]?.let { Structural.Setting(source, it) }
+            }
 
         else -> null
     }
@@ -81,7 +111,9 @@ private fun uiAsset(node: DtoEntryNode): Asset<*>? {
     var parent: AbstractTreeNode<*>? = node.parent
     while (parent != null) {
         val asset = (parent as? DtoEntryNode)?.value?.value as? Asset<*>
-        if (asset != null && asset.type == MetaType.UI) return asset
+        if (asset != null && asset.type == MetaType.UI) {
+            return asset
+        }
         parent = parent.parent
     }
     return null

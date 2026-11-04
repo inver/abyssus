@@ -30,7 +30,9 @@ internal class MirroredCamera(
     var level: Float = level
         set(value) {
             field = value
-            if (ready) mirror = reflection.matrix(value)
+            if (ready) {
+                mirror = reflection.matrix(value)
+            }
         }
 
     init {
@@ -42,7 +44,9 @@ internal class MirroredCamera(
     override fun update() = update(true)
 
     override fun update(updateFrustum: Boolean) {
-        if (!ready) return super.update(updateFrustum)
+        if (!ready) {
+            return super.update(updateFrustum)
+        }
         fieldOfView = source.fieldOfView
         viewportWidth = source.viewportWidth
         viewportHeight = source.viewportHeight
@@ -58,8 +62,10 @@ internal class MirroredCamera(
         if (updateFrustum) {
             invProjectionView.set(combined)
             Matrix4.inv(invProjectionView.`val`)
-            // a point is seen when its mirror image is in the main frustum: mirror the main frustum's planes (rebuilding them from
-            // the mirrored matrix would turn every normal inside out, since the mirror reverses the winding of the corners)
+            // a point is seen when its mirror image is in the main frustum: mirror the main frustum's planes
+            // (rebuilding them from
+            // the mirrored matrix would turn every normal inside out, since the mirror reverses the winding of the
+            // corners)
             frustum.update(source.invProjectionView)
             for (plane in frustum.planes) {
                 val n = plane.normal

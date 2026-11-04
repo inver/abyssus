@@ -11,15 +11,23 @@ import net.nevinsky.abyssus.plugin.parsedScene
 import net.nevinsky.abyssus.plugin.prettyScene
 import net.nevinsky.abyssus.plugin.printScene
 
-/** Scene edits write the scene pretty-printed by `JsonProcessor` (the file's own layout and number text are not kept). */
+/**
+ * Scene edits write the scene pretty-printed by `JsonProcessor` (the file's own layout and number text are not kept).
+ */
 class SceneEditFormattingTest : BasePlatformTestCase() {
     private val compact = """{"formatVersion":1,"id":"0","name":"Main","fogEnabled":true,"fog":{"density":0.001}}"""
 
     private fun toggleFog(file: VirtualFile): Boolean {
-        val entry = DtoEntry(
-            path = "x/fog", name = "fog", value = null,
-            enabled = true, toggleName = "fogEnabled", source = file, parentKeys = emptyList(),
-        )
+        val entry =
+            DtoEntry(
+                path = "x/fog",
+                name = "fog",
+                value = null,
+                enabled = true,
+                toggleName = "fogEnabled",
+                source = file,
+                parentKeys = emptyList(),
+            )
         return toggleEnabled(project, entry)
     }
 
@@ -43,7 +51,11 @@ class SceneEditFormattingTest : BasePlatformTestCase() {
     }
 
     fun testTogglingTwiceRestoresThePrintedBytes() {
-        val original = prettyScene("""{"formatVersion":1,"id":"0","name":"Ololo","fogEnabled":true,"fog":{"density":0.001,"gradient":1.5}}""")
+        val original =
+            prettyScene(
+                """{"formatVersion":1,"id":"0","name":"Ololo","fogEnabled":true,"fog":{"density":0.001,
+"gradient":1.5}}"""
+            )
         val file = myFixture.addFileToProject("p/Main Scene.scene", original).virtualFile
         val toggle = { enabled: Boolean ->
             toggleEnabled(project, DtoEntry("x/fog", "fog", null, enabled, "fogEnabled", file, emptyList()))
@@ -65,7 +77,9 @@ class SceneEditFormattingTest : BasePlatformTestCase() {
     }
 
     fun testSettingASkyboxKeepsFormattingAndTheEnabledFlag() {
-        val source = """{"formatVersion":1,"id":"0","name":"Main","skyboxEnabled":false,"fogEnabled":true,"fog":{"density":0.001}}"""
+        val source =
+            """{"formatVersion":1,"id":"0","name":"Main","skyboxEnabled":false,"fogEnabled":true,
+"fog":{"density":0.001}}"""
         val file = myFixture.addFileToProject("p/SetSky.scene", prettyScene(source)).virtualFile
         assertTrue(setSkybox(project, file, "skybox_default"))
         val after = text(file)
@@ -75,7 +89,13 @@ class SceneEditFormattingTest : BasePlatformTestCase() {
     }
 
     fun testClearingTheSkyboxDropsTheName() {
-        val file = myFixture.addFileToProject("p/Clear.scene", """{"formatVersion":1,"skyboxEnabled":true,"skyboxName":"skybox_default"}""").virtualFile
+        val file =
+            myFixture
+                .addFileToProject(
+                    "p/Clear.scene",
+                    """{"formatVersion":1,"skyboxEnabled":true,"skyboxName":"skybox_default"}""",
+                )
+                .virtualFile
         assertTrue(setSkybox(project, file, null))
         val after = parsedScene(text(file))
         assertNull(after.skyboxName)

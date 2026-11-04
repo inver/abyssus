@@ -20,6 +20,7 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
+import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.displayMessage
@@ -37,7 +38,6 @@ import net.nevinsky.abyssus.plugin.projectView.action.asset.selectAssetInAbyssus
 import net.nevinsky.abyssus.plugin.projectView.scene.SceneComponentEdits
 import net.nevinsky.abyssus.plugin.sceneview.SceneFileEditor
 import net.nevinsky.abyssus.plugin.ui.chooseFileOrOverride
-import java.io.File
 
 /**
  * Right-click Import Model... on the Assets node of a recognized project: choose an OBJ, FBX, 3DS, DAE, glTF or GLB
@@ -52,28 +52,47 @@ open class ImportModelAction : AbyssusTreeAction<VirtualFile>() {
         val abss = target
         val title = AbyssusBundle.message("importModelTitle")
         val report = { message: String -> Messages.showErrorDialog(project, message, title) }
-        projectRefusal(abss)?.let { report(AbyssusBundle.message("importModelFailed", it)); return }
+        projectRefusal(abss)?.let {
+            report(AbyssusBundle.message("importModelFailed", it))
+            return
+        }
         val extensions = SourceFormat.entries.map { it.extension }.toTypedArray()
-        val descriptor = FileChooserDescriptor(true, false, false, false, false, false).withTitle(title)
-            .withExtensionFilter(AbyssusBundle.message("importModelFilter"), *extensions)
+        val descriptor =
+            FileChooserDescriptor(true, false, false, false, false, false)
+                .withTitle(title)
+                .withExtensionFilter(AbyssusBundle.message("importModelFilter"), *extensions)
         val chosen = chooseFileOrOverride(descriptor, project) ?: return
-        sourceRefusal(chosen.name)?.let { report(it); return }
+        sourceRefusal(chosen.name)?.let {
+            report(it)
+            return
+        }
 
         val placement = selectedScenePlacement(project)
         val form = ModelImportForm(File(chosen.path), assetFolderNames(abss), placementOption(project, placement))
         try {
             // read once, off the EDT and cancellable; a failure is shown in the dialog, which then cannot Create
-            val opened = try {
-                runCatchingKeepingCancellation {
-                    ProgressManager.getInstance().runProcessWithProgressSynchronously<ModelSource, Exception>({
-                        service<AbyssusPluginCtx>().modelSources.open(form.sourceFile) { ProgressManager.checkCanceled() }
-                    }, AbyssusBundle.message("importModelReading"), true, project)
+            val opened =
+                try {
+                    runCatchingKeepingCancellation {
+                        ProgressManager.getInstance()
+                            .runProcessWithProgressSynchronously<ModelSource, Exception>(
+                                {
+                                    service<AbyssusPluginCtx>().modelSources.open(form.sourceFile) {
+                                        ProgressManager.checkCanceled()
+                                    }
+                                },
+                                AbyssusBundle.message("importModelReading"),
+                                true,
+                                project,
+                            )
+                    }
+                } catch (e: ProcessCanceledException) {
+                    return
                 }
-            } catch (e: ProcessCanceledException) {
+            form.accept(opened)
+            if (!ImportModelDialog(project, form).showAndGet()) {
                 return
             }
-            form.accept(opened)
-            if (!ImportModelDialog(project, form).showAndGet()) return
             val source = form.source ?: return
             val settings = form.settings() ?: return
             importModel(project, abss, source, settings, placement.takeIf { form.addToScene }, report)
@@ -83,18 +102,24 @@ open class ImportModelAction : AbyssusTreeAction<VirtualFile>() {
     }
 }
 
-/** Why a chosen file cannot be imported, or null: a Blender file gets the export hint, any other unknown file a refusal. */
-fun sourceRefusal(fileName: String): String? = when {
-    isBlenderFile(fileName) -> AbyssusBundle.message("importModelBlender")
-    sourceFormatOf(fileName) == null -> AbyssusBundle.message("importModelUnsupported", fileName)
-    else -> null
-}
+/**
+ * Why a chosen file cannot be imported, or null: a Blender file gets the export hint, any other unknown file a refusal.
+ */
+fun sourceRefusal(fileName: String): String? =
+    when {
+        isBlenderFile(fileName) -> AbyssusBundle.message("importModelBlender")
+        sourceFormatOf(fileName) == null -> AbyssusBundle.message("importModelUnsupported", fileName)
+        else -> null
+    }
 
 /** The names under the project's `assets` folder; a new asset folder must differ from each. */
 internal fun assetFolderNames(abss: VirtualFile): Set<String> =
     File(abss.parent.path, ASSETS_DIR).list()?.toSet().orEmpty()
 
-/** Where Create may place the model: [sceneFile] of a scene view, the view's orbit target and whether it plays, read when asked. */
+/**
+ * Where Create may place the model: [sceneFile] of a scene view, the view's orbit target and whether it plays, read
+ * when asked.
+ */
 class ScenePlacement(val sceneFile: VirtualFile, val point: () -> Vector3?, val playing: () -> Boolean)
 
 /** The scene of the selected scene view (the first Abyssus scene tab among the selected editors), or null. */
@@ -105,30 +130,32 @@ fun selectedScenePlacement(project: Project): ScenePlacement? {
     return ScenePlacement(
         editor.sceneFile,
         { editor.sceneView?.placementPoint() },
-        { editor.sceneView?.playing == true })
+        { editor.sceneView?.playing == true },
+    )
 }
 
 /** Whether [placement]'s scene can take the model now, by name, or why not. */
-fun placementOption(project: Project, placement: ScenePlacement?): PlacementOption = when {
-    placement == null -> PlacementOption.Disabled(PlacementBlock.NO_SCENE_VIEW)
-    placement.playing() -> PlacementOption.Disabled(PlacementBlock.PLAYING)
-    !canAddAsset(
-        placement.sceneFile,
-        SceneDocumentCache.of(project)
-    ) -> PlacementOption.Disabled(PlacementBlock.UNREADABLE)
+fun placementOption(project: Project, placement: ScenePlacement?): PlacementOption =
+    when {
+        placement == null -> PlacementOption.Disabled(PlacementBlock.NO_SCENE_VIEW)
+        placement.playing() -> PlacementOption.Disabled(PlacementBlock.PLAYING)
+        !canAddAsset(
+            placement.sceneFile,
+            SceneDocumentCache.of(project),
+        ) -> PlacementOption.Disabled(PlacementBlock.UNREADABLE)
 
-    else -> PlacementOption.Available(placement.sceneFile.name)
-}
+        else -> PlacementOption.Available(placement.sceneFile.name)
+    }
 
 /** What an import did: how the folder write ended, and the entity it placed, if any. */
 class ModelImportOutcome(val result: AssetCommandResult, val entityId: Long?)
 
 /**
  * Stages [source] with [settings] (under a modal progress on the EDT) and writes it under [abss]'s project. With
- * [placement], the same command adds the model to that scene at the view's orbit target, as Add Asset does: the
- * folder is written first, then the entity; the undo action is registered only when both succeeded, otherwise the
- * folder is taken back and no undo step is recorded. Afterwards the new entity, or else the new asset, is selected.
- * [report] receives a reason when the project, the scene, the staging or the write fails; nothing is then left behind.
+ * [placement], the same command adds the model to that scene at the view's orbit target, as Add Asset does: the folder
+ * is written first, then the entity; the undo action is registered only when both succeeded, otherwise the folder is
+ * taken back and no undo step is recorded. Afterwards the new entity, or else the new asset, is selected. [report]
+ * receives a reason when the project, the scene, the staging or the write fails; nothing is then left behind.
  */
 fun importModel(
     project: Project,
@@ -140,73 +167,127 @@ fun importModel(
 ): ModelImportOutcome? {
     val core = service<AbyssusPluginCtx>()
     val fail = { reason: String -> report(AbyssusBundle.message("importModelFailed", reason)) }
-    projectRefusal(abss)?.let { fail(it); return null }
+    projectRefusal(abss)?.let {
+        fail(it)
+        return null
+    }
     val cache = SceneDocumentCache.of(project)
     if (placement != null) {
         placementOption(project, placement).let {
             if (it is PlacementOption.Disabled) {
-                fail(it.reason.message()); return null
+                fail(it.reason.message())
+                return null
             }
         }
     }
     val projectDir = File(abss.parent.path)
     val stage = {
         core.modelImport.stage(
-            source, settings, projectDir, uniqueAssetUuid(core.json, File(projectDir, ASSETS_DIR)),
-            System.currentTimeMillis()
-        ) { ProgressManager.checkCanceled() }
+            source,
+            settings,
+            projectDir,
+            uniqueAssetUuid(core.json, File(projectDir, ASSETS_DIR)),
+            System.currentTimeMillis(),
+        ) {
+            ProgressManager.checkCanceled()
+        }
     }
     val staged = runCatchingKeepingCancellation {
-        if (ApplicationManager.getApplication().isDispatchThread && !ApplicationManager.getApplication().isUnitTestMode) {
-            ProgressManager.getInstance().runProcessWithProgressSynchronously<StagedModelImport, Exception>(
-                stage, AbyssusBundle.message("importModelConverting"), true, project
-            )
-        } else stage()
-    }.getOrElse { fail(it.displayMessage()); return null }
+        if (
+            ApplicationManager.getApplication().isDispatchThread && !ApplicationManager.getApplication().isUnitTestMode
+        ) {
+            ProgressManager.getInstance()
+                .runProcessWithProgressSynchronously<StagedModelImport, Exception>(
+                    stage,
+                    AbyssusBundle.message("importModelConverting"),
+                    true,
+                    project,
+                )
+        } else {
+            stage()
+        }
+    }
+        .getOrElse {
+            fail(it.displayMessage())
+            return null
+        }
 
     val command = AssetFileCommand(project, LocalAssetFileStore(projectDir))
     var placed: PlacedEntity? = null
-    val txn = assetFolderTransaction(
-        projectDir, AbyssusBundle.message("commandImportModel"), staged.folder,
-        staged.uuid.toString(), staged.files
-    ) { placed }
+    val txn =
+        assetFolderTransaction(
+            projectDir,
+            AbyssusBundle.message("commandImportModel"),
+            staged.folder,
+            staged.uuid.toString(),
+            staged.files,
+        ) {
+            placed
+        }
     var result: AssetCommandResult = AssetCommandResult.Cancelled
     var rejection: String? = null
-    CommandProcessor.getInstance().executeCommand(project, {
-        var undo: AssetFileUndoAction? = null
-        result = command.execute(txn, handBack = { undo = it })
-        if (result != AssetCommandResult.Done) return@executeCommand
-        if (placement != null) {
-            val point = placement.point() ?: Vector3(0f, 0f, 0f)
-            val added = SceneComponentEdits.addAsset(
-                project, placement.sceneFile, BaseMeta(MetaType.MODEL, staged.folder),
-                point, cache, core.assets.metaFiles
-            )
-            val id = added.entityId
-            if (added.result != EditResult.Changed || id == null) {
-                rejection = (added.result as? EditResult.Rejected)?.reason
-                    ?: AbyssusBundle.message("importModelPlacement.UNREADABLE")
-                val reverted = command.revert(txn)
-                if (reverted != AssetCommandResult.Done) rejection += " ($reverted)"
-                return@executeCommand
-            }
-            placed = PlacedEntity(File(placement.sceneFile.path), id)
-        }
-        UndoManager.getInstance(project).undoableActionPerformed(undo!!)
-    }, AbyssusBundle.message("commandImportModel"), null, UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION)
+    CommandProcessor.getInstance()
+        .executeCommand(
+            project,
+            {
+                var undo: AssetFileUndoAction? = null
+                result = command.execute(txn, handBack = { undo = it })
+                if (result != AssetCommandResult.Done) {
+                    return@executeCommand
+                }
+                if (placement != null) {
+                    val point = placement.point() ?: Vector3(0f, 0f, 0f)
+                    val added =
+                        SceneComponentEdits.addAsset(
+                            project,
+                            placement.sceneFile,
+                            BaseMeta(MetaType.MODEL, staged.folder),
+                            point,
+                            cache,
+                            core.assets.metaFiles,
+                        )
+                    val id = added.entityId
+                    if (added.result != EditResult.Changed || id == null) {
+                        rejection =
+                            (added.result as? EditResult.Rejected)?.reason
+                                ?: AbyssusBundle.message("importModelPlacement.UNREADABLE")
+                        val reverted = command.revert(txn)
+                        if (reverted != AssetCommandResult.Done) {
+                            rejection += " ($reverted)"
+                        }
+                        return@executeCommand
+                    }
+                    placed = PlacedEntity(File(placement.sceneFile.path), id)
+                }
+                UndoManager.getInstance(project).undoableActionPerformed(undo!!)
+            },
+            AbyssusBundle.message("commandImportModel"),
+            null,
+            UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION,
+        )
     // the VFS learns of the files after the command, so the platform records nothing for them itself
     command.flush()
 
-    rejection?.let { fail(it); return ModelImportOutcome(AssetCommandResult.Cancelled, null) }
+    rejection?.let {
+        fail(it)
+        return ModelImportOutcome(AssetCommandResult.Cancelled, null)
+    }
     val problem = assetResultMessage(result, "importModelCancelled", failure = { it.displayMessage() })
     if (problem != null) {
         fail(problem)
         return ModelImportOutcome(result, null)
     }
     val entity = placed
-    ApplicationManager.getApplication().invokeLater({
-        if (entity != null) selectCreatedEntity(project, placement!!.sceneFile, entity.entityId)
-        else selectAssetInAbyssusView(project, abss, staged.folder)
-    }, ModalityState.nonModal())
+    ApplicationManager.getApplication()
+        .invokeLater(
+            {
+                if (entity != null) {
+                    selectCreatedEntity(project, placement!!.sceneFile, entity.entityId)
+                } else {
+                    selectAssetInAbyssusView(project, abss, staged.folder)
+                }
+            },
+            ModalityState.nonModal(),
+        )
     return ModelImportOutcome(result, entity?.entityId)
 }

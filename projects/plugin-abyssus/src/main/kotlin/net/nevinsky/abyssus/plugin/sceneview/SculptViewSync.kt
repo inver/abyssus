@@ -10,7 +10,9 @@ import net.nevinsky.abyssus.lib.core.editor.brush.GridRect
 import net.nevinsky.abyssus.lib.core.editor.terrain.sculpt.SculptDraft
 import net.nevinsky.abyssus.plugin.terrain.SculptDrafts
 
-/** One terrain a Scene view shows, as the sculpt sync sees it: [key] tells instances apart, [refresh] re-sends [rect]. */
+/**
+ * One terrain a Scene view shows, as the sculpt sync sees it: [key] tells instances apart, [refresh] re-sends [rect].
+ */
 internal interface SculptTarget {
     val key: Any
     val assetName: String
@@ -34,7 +36,9 @@ internal class SculptViewSync(private val drafts: SculptDrafts, reload: (Set<Str
     override fun assetOf(state: Seen) = state.asset
 
     override fun follow(target: SculptTarget, asset: String, draft: SculptDraft, prior: Seen?): Seen? {
-        if (prior != null && prior.draft === draft && prior.revision == draft.revision) return null
+        if (prior != null && prior.draft === draft && prior.revision == draft.revision) {
+            return null
+        }
         val rect = draft.changed
         if (!rect.isEmpty && target.data.resolution == draft.resolution) {
             target.data.copyHeights(draft.composed, rect.minX, rect.minZ, rect.maxX, rect.maxZ)

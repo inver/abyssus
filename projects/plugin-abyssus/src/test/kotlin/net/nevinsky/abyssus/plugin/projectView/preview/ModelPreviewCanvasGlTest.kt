@@ -10,12 +10,17 @@ import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNodePart
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.GdxNativesLoader
-import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
+import java.awt.BorderLayout
+import java.io.File
+import java.nio.file.Files
+import javax.swing.JFrame
+import javax.swing.SwingUtilities
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ImportSettings
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ImportTransform
 import net.nevinsky.abyssus.lib.core.editor.modelimport.LengthUnit
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelSource
 import net.nevinsky.abyssus.lib.core.editor.modelimport.ModelSourceOpener
+import net.nevinsky.abyssus.lib.gdx.assimp.UpAxis
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
 import net.nevinsky.abyssus.plugin.sceneview.GlHarness
@@ -28,11 +33,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
-import java.awt.BorderLayout
-import java.io.File
-import java.nio.file.Files
-import javax.swing.JFrame
-import javax.swing.SwingUtilities
 
 /**
  * The Import Model preview in a real GL 3.2 core canvas: it builds and draws the converted model (textures uploaded one
@@ -40,9 +40,10 @@ import javax.swing.SwingUtilities
  * text, and frees its GL while still showing. Opens a window: runs only with `-Dabyssus.glTests=true`.
  */
 class ModelPreviewCanvasGlTest {
-    private val fixtures = Files.createTempDirectory("abyssus_preview").toFile().also {
-        File("../lib-core-editor/src/test/resources/modelimport").copyRecursively(it)
-    }
+    private val fixtures =
+        Files.createTempDirectory("abyssus_preview").toFile().also {
+            File("../lib-core-editor/src/test/resources/modelimport").copyRecursively(it)
+        }
     private val sources = ArrayList<ModelSource>()
     private val windows = ArrayList<JFrame>()
 
@@ -63,17 +64,23 @@ class ModelPreviewCanvasGlTest {
         val source = ModelSourceOpener().open(File(fixtures, name)).also(sources::add)
         val transformed = ImportTransform().apply(source.data, settings)
         val file = FileHandle(source.file)
-        return PreviewModel(transformed.data, AssimpModelLoader().decodeTextures(transformed.data, file), file, transformed.size)
+        return PreviewModel(
+            transformed.data,
+            AssimpModelLoader().decodeTextures(transformed.data, file),
+            file,
+            transformed.size,
+        )
     }
 
     private fun shown(canvas: ModelPreviewCanvas): ModelPreviewCanvas {
         SwingUtilities.invokeAndWait {
-            windows += JFrame("abyssus preview GL test").apply {
-                layout = BorderLayout()
-                add(canvas, BorderLayout.CENTER)
-                setSize(480, 360)
-                isVisible = true
-            }
+            windows +=
+                JFrame("abyssus preview GL test").apply {
+                    layout = BorderLayout()
+                    add(canvas, BorderLayout.CENTER)
+                    setSize(480, 360)
+                    isVisible = true
+                }
         }
         return canvas
     }
@@ -91,12 +98,21 @@ class ModelPreviewCanvasGlTest {
     }
 
     /** Waits (off the AWT thread, so frames keep coming) until [done] holds; fails after [millis]. */
-    private fun await(canvas: ModelPreviewCanvas, what: String, millis: Long = 15_000, done: (ModelPreviewCanvas.State) -> Boolean): ModelPreviewCanvas.State {
+    private fun await(
+        canvas: ModelPreviewCanvas,
+        what: String,
+        millis: Long = 15_000,
+        done: (ModelPreviewCanvas.State) -> Boolean,
+    ): ModelPreviewCanvas.State {
         val end = System.currentTimeMillis() + millis
         while (true) {
             val s = state(canvas)
-            if (done(s)) return s
-            check(System.currentTimeMillis() < end) { "timed out waiting for $what; message: ${s.message}, frames: ${s.frames}" }
+            if (done(s)) {
+                return s
+            }
+            check(System.currentTimeMillis() < end) {
+                "timed out waiting for $what; message: ${s.message}, frames: ${s.frames}"
+            }
             Thread.sleep(30)
         }
     }
@@ -154,13 +170,24 @@ class ModelPreviewCanvasGlTest {
     fun aFrameThatFailsIsShownAsTextAndStopsDrawing() {
         val canvas = shown(canvas())
         await(canvas, "a first frame") { it.frames > 0 }
-        val broken = ModelData().apply {
-            nodes.add(ModelNode().apply {
-                id = "broken"
-                parts = arrayOf(ModelNodePart().apply { meshPartId = "missing"; materialId = "missing" })
-            })
+        val broken =
+            ModelData().apply {
+                nodes.add(
+                    ModelNode().apply {
+                        id = "broken"
+                        parts =
+                            arrayOf(
+                                ModelNodePart().apply {
+                                    meshPartId = "missing"
+                                    materialId = "missing"
+                                }
+                            )
+                    }
+                )
+            }
+        onAwt {
+            canvas.show(PreviewModel(broken, HashMap(), FileHandle(File(fixtures, "crate.obj")), Vector3(1f, 1f, 1f)))
         }
-        onAwt { canvas.show(PreviewModel(broken, HashMap(), FileHandle(File(fixtures, "crate.obj")), Vector3(1f, 1f, 1f))) }
         val failed = await(canvas, "the failure text") { it.message != null }
         assertTrue(failed.message, failed.message!!.contains("Create still writes"))
         Thread.sleep(200)

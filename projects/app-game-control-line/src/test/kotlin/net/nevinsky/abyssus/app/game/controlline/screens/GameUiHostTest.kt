@@ -22,50 +22,81 @@ import org.junit.rules.TemporaryFolder
 
 /** What the game publishes to, and accepts from, the authored screens, without graphics. */
 class GameUiHostTest {
-    @get:Rule
-    val temp = TemporaryFolder()
+    @get:Rule val temp = TemporaryFolder()
 
     private var quit = 0
-    private fun flow() = GameFlow(emptyList(), ScoreTable(temp.root.toPath().resolve("s.json")), PatternScoreTable(temp.root.toPath().resolve("p.json")), ScaleScoreTable(temp.root.toPath().resolve("sc.json")))
+
+    private fun flow() =
+        GameFlow(
+            emptyList(),
+            ScoreTable(temp.root.toPath().resolve("s.json")),
+            PatternScoreTable(temp.root.toPath().resolve("p.json")),
+            ScaleScoreTable(temp.root.toPath().resolve("sc.json")),
+        )
+
     private fun model(flow: GameFlow = flow()) = GameUiModel(flow) { quit++ }
 
-    @Test fun everySnapshotPublishesExactlyTheContract() {
+    @Test
+    fun everySnapshotPublishesExactlyTheContract() {
         val snapshot = model().snapshot(null, null, 0f)
-        val published = snapshot.toMap().mapValues { (_, v) ->
-            when (v) {
-                is UiValue.Rows -> "list:" + (v.items.firstOrNull()?.keys?.joinToString(",").orEmpty())
-                else -> v.type.json
+        val published =
+            snapshot.toMap().mapValues { (_, v) ->
+                when (v) {
+                    is UiValue.Rows -> "list:" + (v.items.firstOrNull()?.keys?.joinToString(",").orEmpty())
+                    else -> v.type.json
+                }
             }
-        }
         // a list with no rows names no fields; compare names and kinds
         assertEquals(PUBLISHED_BINDINGS.keys, published.keys)
-        for ((name, expected) in PUBLISHED_BINDINGS) assertEquals(name, expected.substringBefore(':'), published.getValue(name).substringBefore(':'))
+        for ((name, expected) in PUBLISHED_BINDINGS) assertEquals(
+            name,
+            expected.substringBefore(':'),
+            published.getValue(name).substringBefore(':'),
+        )
     }
 
-    @Test fun everyActionOfTheAssetIsHandledAndAnUnknownOneIsNot() {
+    @Test
+    fun everyActionOfTheAssetIsHandledAndAnUnknownOneIsNot() {
         val model = model()
-        for (action in ACTIONS) assertTrue(action, model.emit(if (action == "openRow") "openRow#0" else action))
+        for (action in ACTIONS) assertTrue(
+            action,
+            model.emit(
+                if (action == "openRow") {
+                    "openRow#0"
+                } else {
+                    action
+                }
+            ),
+        )
         assertFalse(model.emit("nothing"))
         assertFalse(model.emit("openRow#x"))
         assertEquals("quit closes the game", 1, quit)
     }
 
-    @Test fun onlyAShortPlayerNameCanBeWritten() {
+    @Test
+    fun onlyAShortPlayerNameCanBeWritten() {
         val model = model()
-        assertEquals(UiWriteResult.Accepted(UiValue.Text("Ann")), model.write(UiWrite("playerName", UiValue.Text("Ann"), "ne-field")))
+        assertEquals(
+            UiWriteResult.Accepted(UiValue.Text("Ann")),
+            model.write(UiWrite("playerName", UiValue.Text("Ann"), "ne-field")),
+        )
         assertEquals("Ann", model.playerName)
-        assertTrue(model.write(UiWrite("playerName", UiValue.Text("A".repeat(13)), "ne-field")) is UiWriteResult.Rejected)
+        assertTrue(
+            model.write(UiWrite("playerName", UiValue.Text("A".repeat(13)), "ne-field")) is UiWriteResult.Rejected
+        )
         assertTrue(model.write(UiWrite("score", UiValue.Text("1"), "x")) is UiWriteResult.Rejected)
         assertEquals("Ann", model.playerName)
     }
 
-    @Test fun layersFollowTheScreen() {
+    @Test
+    fun layersFollowTheScreen() {
         val model = model()
         assertEquals(GameLayers(SCREEN_MAIN_MENU), model.layersOf(Screen.MainMenu))
         assertEquals(GameLayers(SCREEN_ASSIST), model.layersOf(Screen.AssistSelect))
     }
 
-    @Test fun theGameKeysAreTheModelsAndTheRestIsThePresenters() {
+    @Test
+    fun theGameKeysAreTheModelsAndTheRestIsThePresenters() {
         val model = model()
         assertTrue(model.key(Input.Keys.ESCAPE))
         assertFalse("Up and Down move focus on menus", model.key(Input.Keys.UP))

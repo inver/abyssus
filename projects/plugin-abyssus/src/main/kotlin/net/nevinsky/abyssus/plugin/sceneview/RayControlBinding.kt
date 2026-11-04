@@ -28,15 +28,26 @@ internal class RayControlBinding(private val renderer: SceneRenderer) {
     /** The current Ray Tracing mode of this view (Off until it is switched on from Abyssus Properties). */
     val mode: RayModeSnapshot? get() = feed?.runtime?.mode?.snapshot
 
-    /** The only switch for Ray Tracing: the Abyssus Properties panel flips it. The Scene View toolbar has no ray control. */
-    val control: RayControl? get() = if (feed == null) null else panelControl
+    /**
+     * The only switch for Ray Tracing: the Abyssus Properties panel flips it. The Scene View toolbar has no ray
+     * control.
+     */
+    val control: RayControl? get() = if (feed == null) {
+        null
+    } else {
+        panelControl
+    }
 
     private val panelControl = object : RayControl {
         override val mode: RayModeSnapshot? get() = this@RayControlBinding.mode
 
         /** The ray-traced image traces this scene's models and terrains only, so a scene that shows foliage says so. */
         override val foliageNote: String? get() =
-            if (renderer.content.foliages.isEmpty()) null else AbyssusBundle.message("propertiesSceneRayFoliage")
+            if (renderer.content.foliages.isEmpty()) {
+                null
+            } else {
+                AbyssusBundle.message("propertiesSceneRayFoliage")
+            }
 
         override fun setRequested(enabled: Boolean) {
             feed?.runtime?.setRequested(enabled)
@@ -61,18 +72,27 @@ internal class RayControlBinding(private val renderer: SceneRenderer) {
     fun install(integration: RayIntegration) {
         feed?.close()
         val fresh = integration.newFeed("scene-view-${NEXT_VIEW.incrementAndGet()}", renderer.assets)
-        fresh.runtime.mode.addListener { SwingUtilities.invokeLater { if (feed === fresh) refresh() } }
+        fresh.runtime.mode.addListener { SwingUtilities.invokeLater {
+            if (feed === fresh) {
+                refresh()
+            }
+        } }
         feed = fresh
         renderer.rayFrameProvider = { context -> fresh.frame(context) }
         shownRay = null
         refresh()
     }
 
-    /** Tells listeners (the Properties panel's switch) when the mode changed, or the foliage note with it. Cheap when nothing did. */
+    /**
+     * Tells listeners (the Properties panel's switch) when the mode changed, or the foliage note with it. Cheap when
+     * nothing did.
+     */
     fun refresh() {
         val snapshot = feed?.runtime?.mode?.snapshot
         val foliage = renderer.content.foliages.isNotEmpty()
-        if (snapshot == shownRay && foliage == shownFoliage) return
+        if (snapshot == shownRay && foliage == shownFoliage) {
+            return
+        }
         shownRay = snapshot
         shownFoliage = foliage
         listeners.toList().forEach { it() }

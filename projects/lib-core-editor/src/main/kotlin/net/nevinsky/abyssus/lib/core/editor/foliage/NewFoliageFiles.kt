@@ -5,8 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.foliage
 
-import net.nevinsky.abyssus.lib.core.editor.document.newAssetMetaText
-
+import java.io.File
+import java.util.UUID
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaParser
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDataFile
@@ -14,13 +14,12 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageFingerprint
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageMeta
 import net.nevinsky.abyssus.lib.core.assets.foliage.foliageChunkSize
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainData
-import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
-import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.editor.document.newAssetMetaText
 import net.nevinsky.abyssus.lib.core.editor.terrain.FolderNameError
 import net.nevinsky.abyssus.lib.core.editor.terrain.checkFolderName
 import net.nevinsky.abyssus.lib.core.editor.terrain.uniqueAssetUuid
-import java.io.File
-import java.util.UUID
+import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.ASSETS_DIR
+import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 
 /** Why a foliage asset cannot be created; the dialog shows a localized reason for each. */
 sealed interface FoliageCreateError {
@@ -31,7 +30,10 @@ sealed interface FoliageCreateError {
     data object MaskResolution : FoliageCreateError
 }
 
-/** A new foliage asset ready to be written: its [folder] under the project's `assets`, a fresh [uuid] and the staged files. */
+/**
+ * A new foliage asset ready to be written: its [folder] under the project's `assets`, a fresh [uuid] and the staged
+ * files.
+ */
 class NewFoliageFiles(val folder: String, val uuid: String, val metaText: String, val dataBytes: ByteArray)
 
 /**
@@ -48,9 +50,13 @@ class FoliageAssetWriter(
     private val clock: () -> Long = System::currentTimeMillis,
     private val randomUuid: () -> UUID = { UUID.randomUUID() },
 ) {
-    /** Why nothing may be written for [rawName] and [maskResolution], or null when they may. Reads the assets folder. */
+    /**
+     * Why nothing may be written for [rawName] and [maskResolution], or null when they may. Reads the assets folder.
+     */
     fun check(projectDir: File, rawName: String, maskResolution: Int): FoliageCreateError? {
-        checkFolderName(File(projectDir, ASSETS_DIR), rawName)?.let { return FoliageCreateError.FolderName(it) }
+        checkFolderName(File(projectDir, ASSETS_DIR), rawName)?.let {
+            return FoliageCreateError.FolderName(it)
+        }
         if (maskResolution !in FOLIAGE_MASK_RESOLUTION_MIN..FOLIAGE_MASK_RESOLUTION_MAX) {
             return FoliageCreateError.MaskResolution
         }
@@ -61,18 +67,35 @@ class FoliageAssetWriter(
      * The staged foliage for [terrainFolder], or null when [check] refuses it (re-checked here: the folder may have
      * appeared since). [terrain] is the chosen terrain's heights, which the empty bake's fingerprint covers.
      */
-    fun plan(projectDir: File, terrainFolder: String, rawName: String, maskResolution: Int, terrain: TerrainData): NewFoliageFiles? {
+    fun plan(
+        projectDir: File,
+        terrainFolder: String,
+        rawName: String,
+        maskResolution: Int,
+        terrain: TerrainData,
+    ): NewFoliageFiles? {
         val name = rawName.trim()
-        if (check(projectDir, name, maskResolution) != null) return null
+        if (check(projectDir, name, maskResolution) != null) {
+            return null
+        }
         val uuid = uniqueAssetUuid(json, File(projectDir, ASSETS_DIR), randomUuid)
         val settings = FoliageMeta(terrain = terrainFolder, maskResolution = maskResolution)
         val empty = dataFile.empty(fingerprint.of(settings, terrain, emptyMap()), foliageChunkSize(terrain.size))
-        return NewFoliageFiles(name, uuid.toString(), metaText(terrainFolder, maskResolution, uuid, clock()), dataFile.write(empty))
+        return NewFoliageFiles(
+            name,
+            uuid.toString(),
+            metaText(terrainFolder, maskResolution, uuid, clock()),
+            dataFile.write(empty),
+        )
     }
 
     private fun metaText(terrainFolder: String, maskResolution: Int, uuid: UUID, lastModified: Long): String {
         return newAssetMetaText(
-            parser, MetaType.FOLIAGE, FoliageMeta(terrain = terrainFolder, maskResolution = maskResolution), uuid, lastModified,
+            parser,
+            MetaType.FOLIAGE,
+            FoliageMeta(terrain = terrainFolder, maskResolution = maskResolution),
+            uuid,
+            lastModified,
         )
     }
 }

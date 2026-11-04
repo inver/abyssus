@@ -25,27 +25,34 @@ private const val GL_RGBA32F = 0x8814
  * density and phase in mu, each sampled at [SAMPLES] points of its range. Opt-in: `-Dabyssus.glTests=true`.
  */
 class CloudLightingGlTest {
-    @Before
-    fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
+    @Before fun requireGl() = assumeTrue("GL tests are opt-in (-Dabyssus.glTests=true)", TestGl.enabled)
 
-    private val vertex = """
+    private val vertex =
+        """
         attribute vec2 a_position;
         void main() { gl_Position = vec4(a_position, 0.0, 1.0); }
-    """.trimIndent()
+        """
+            .trimIndent()
 
-    private val fragment = """
+    private val fragment =
+        """
         void main() {
             float f = floor(gl_FragCoord.x) / ${SAMPLES - 1}.0;
             gl_FragColor = vec4(cloudSunTransmittance(f * 12.0), cloudPowder(f), cloudPhase(f * 2.0 - 1.0), 0.0);
         }
-    """.trimIndent()
+    """
+            .trimIndent()
 
     /** The (transmittance, powder, phase) values at the sample [i] of every function's range. GL thread. */
     private fun samples(): List<FloatArray> {
         val values = ArrayList<FloatArray>()
         TestGl.run {
             val gl = Gdx.gl
-            val program = ShaderProgram(vertex, skyShaders().fragment("clouds_common.glsl", "clouds_light.glsl") + "\n" + fragment)
+            val program =
+                ShaderProgram(
+                    vertex,
+                    skyShaders().fragment("clouds_common.glsl", "clouds_light.glsl") + "\n" + fragment,
+                )
             check(program.isCompiled) { program.log }
             val mesh = createFullscreenTriangle()
             val texture = gl.glGenTexture()
@@ -80,8 +87,10 @@ class CloudLightingGlTest {
     fun transmittanceFallsOffSmoothly() {
         val values = samples().map { it[0] }
         for (i in 1 until values.size) {
-            assertTrue("transmittance falls from ${values[i - 1]} to ${values[i]} at tau ${i * 12f / (SAMPLES - 1)}",
-                values[i] < values[i - 1])
+            assertTrue(
+                "transmittance falls from ${values[i - 1]} to ${values[i]} at tau ${i * 12f / (SAMPLES - 1)}",
+                values[i] < values[i - 1],
+            )
         }
         assertTrue("T(0) = ${values.first()}", values.first() >= 1.5f)
         assertTrue("T(12) = ${values.last()}", values.last() >= 0.01f)
@@ -91,8 +100,10 @@ class CloudLightingGlTest {
     fun powderRisesWithDensity() {
         val values = samples().map { it[1] }
         for (i in 1 until values.size) {
-            assertTrue("powder rises from ${values[i - 1]} to ${values[i]} at density ${i.toFloat() / (SAMPLES - 1)}",
-                values[i] > values[i - 1])
+            assertTrue(
+                "powder rises from ${values[i - 1]} to ${values[i]} at density ${i.toFloat() / (SAMPLES - 1)}",
+                values[i] > values[i - 1],
+            )
         }
         assertTrue("powder(0) = ${values.first()}", values.first() < 0.5f)
         assertTrue("powder(1) = ${values.last()}", values.last() > 0.7f)

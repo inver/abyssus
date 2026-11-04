@@ -6,7 +6,8 @@ import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
 
 
 /**
- * One `ecs` entry: its [type], the integer [flags], the classes of the components its `disabledComponents` lists, and its
+  * One `ecs` entry: its [type], the integer [flags], the classes of the components its `disabledComponents` lists, and
+  * its
  * components in file order (a component this program cannot model is a
  * [net.nevinsky.abyssus.lib.core.ecs.component.RawComponent]). The first three are the entity's header
  * ([net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent]).
@@ -28,7 +29,9 @@ data class EntityDto(
     fun <C : Component> component(type: Class<C>): C? =
         components.firstOrNull { type.isInstance(it) }?.let(type::cast)
 
-    /** True when the entity is enabled; a disabled entity contributes nothing. An entity without a header is enabled. */
+    /**
+     * True when the entity is enabled; a disabled entity contributes nothing. An entity without a header is enabled.
+     */
     @JsonIgnore
     fun isActive(): Boolean = component(HeaderComponent::class.java)?.entityEnabled ?: true
 
@@ -44,5 +47,9 @@ data class EntityDto(
 
     /** The [type] component when the entity and the component are both enabled, else null. */
     @JsonIgnore
-    fun <C : Component> activeComponent(type: Class<C>): C? = if (isActive(type)) component(type) else null
+    fun <C : Component> activeComponent(type: Class<C>): C? = if (isActive(type)) {
+        component(type)
+    } else {
+        null
+    }
 }

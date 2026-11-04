@@ -24,10 +24,14 @@ class SceneWriteTest {
 
     private val reader = json.binderWith(net.nevinsky.abyssus.lib.core.dto.EntityDtoModule(registry))
 
-    /** Reads written text back without the marker check, which G9 removes: [SceneDto] has no `format` fields to write. */
-    private fun reparse(written: String) = reader.bind(json.readObject(written), net.nevinsky.abyssus.lib.core.dto.SceneDto::class.java)
+    /**
+     * Reads written text back without the marker check, which G9 removes: [SceneDto] has no `format` fields to write.
+     */
+    private fun reparse(written: String) =
+        reader.bind(json.readObject(written), net.nevinsky.abyssus.lib.core.dto.SceneDto::class.java)
 
-    private val text = """
+    private val text =
+        """
         {
           "format": "abyssus",
           "formatVersion": 1,
@@ -45,7 +49,8 @@ class SceneWriteTest {
             }
           }
         }
-    """.trimIndent()
+        """
+            .trimIndent()
 
     @Test
     fun aSceneRoundTripsToTheSameScene() {

@@ -56,7 +56,13 @@ class SculptStampTest {
     @Test
     fun `max only raises and min only lowers toward the target`() {
         // the target is the height under the click plus the image value (0 on the left, 10 on the right)
-        val high = draft { x, _ -> if (x < 16) 40f else 20f }
+        val high = draft { x, _ ->
+            if (x < 16) {
+                40f
+            } else {
+                20f
+            }
+        }
         stamp(high, StampTool(image, 20f, 10f, 0f, StampBlend.MAX))
         assertEquals(40f, high.composed[16 * resolution + 12], 0f) // already above the target: kept
         assertTrue(high.composed[16 * resolution + 21] > 25f) // below the target: raised
@@ -65,7 +71,13 @@ class SculptStampTest {
         stamp(low, StampTool(image, 20f, 10f, 0f, StampBlend.MIN))
         assertTrue(low.delta.all { it == 0f }) // flat ground is never above the target
 
-        val bump = draft { x, z -> if (x == 21 && z == 16) 50f else 0f }
+        val bump = draft { x, z ->
+            if (x == 21 && z == 16) {
+                50f
+            } else {
+                0f
+            }
+        }
         stamp(bump, StampTool(image, 20f, 10f, 0f, StampBlend.MIN))
         assertTrue(bump.composed[16 * resolution + 21] < 50f) // above the target: lowered
     }
@@ -73,7 +85,8 @@ class SculptStampTest {
     @Test
     fun `one click is one stamp however far it is dragged`() {
         val clicked = draft().also { stamp(it, StampTool(image, 20f, 10f, 0f, StampBlend.ADD)) }
-        val dragged = draft().also { stamp(it, StampTool(image, 20f, 10f, 0f, StampBlend.ADD), to = Vector3(60f, 0f, 32f)) }
+        val dragged =
+            draft().also { stamp(it, StampTool(image, 20f, 10f, 0f, StampBlend.ADD), to = Vector3(60f, 0f, 32f)) }
         assertEquals(clicked.composed.toList(), dragged.composed.toList())
     }
 

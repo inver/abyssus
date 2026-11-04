@@ -6,28 +6,29 @@
 package net.nevinsky.abyssus.lib.core.assets.loading
 
 import com.badlogic.gdx.utils.Disposable
+import java.util.concurrent.Executor
+import net.nevinsky.abyssus.lib.core.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetLoader
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetState
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.lib.core.assets.loading.BuiltAssets
 import net.nevinsky.abyssus.lib.core.assets.loading.Prepared
-import net.nevinsky.abyssus.lib.core.assets.AssetMeta
-import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
-import org.slf4j.Logger
-import net.nevinsky.abyssus.lib.core.assets.loading.exception.DependencyFailedException
-import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.loading.exception.AssetAbsentException
+import net.nevinsky.abyssus.lib.core.assets.loading.exception.DependencyFailedException
+import net.nevinsky.abyssus.lib.gdx.testing.RecordingLogger
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.concurrent.Executor
+import org.slf4j.Logger
 
 class AssetStorageTest {
     private class Res(val name: String) : Disposable {
         var disposed = false
+
         override fun dispose() {
             disposed = true
         }
@@ -37,7 +38,9 @@ class AssetStorageTest {
     private val executor = Executor { queue += it }
     private val recorder = RecordingLogger()
     private val log: Logger = recorder
-    private val logged: List<String> get() = recorder.warnings
+    private val logged: List<String>
+        get() = recorder.warnings
+
     private val prepares = mutableListOf<String>()
     private val builds = mutableListOf<String>()
 
@@ -54,11 +57,14 @@ class AssetStorageTest {
         private val builtData = mutableListOf<String>()
 
         override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, String>? = error("the storage prepares by name")
+
         override fun prepare(name: String): Prepared<Unit, String>? {
             prepares += name
             return prepare.invoke(name)?.let { Prepared(it) }
         }
+
         override fun upload(staged: String): Boolean = upload.invoke(staged)
+
         override fun dependencies(staged: String): Set<String> = needs.invoke(staged)
 
         override fun build(staged: String, assets: BuiltAssets): Res {
@@ -70,7 +76,9 @@ class AssetStorageTest {
         override fun discard(model: Unit) = Unit
 
         override fun discardStaged(staged: String) {
-            if (!builtData.remove(staged)) discarded += staged
+            if (!builtData.remove(staged)) {
+                discarded += staged
+            }
         }
     }
 
@@ -137,7 +145,16 @@ class AssetStorageTest {
 
     @Test
     fun aFailedAssetIsLoggedOnce() {
-        val c = cache(prepare = { if (it == "bad") error("broken") else it })
+        val c =
+            cache(
+                prepare = {
+                    if (it == "bad") {
+                        error("broken")
+                    } else {
+                        it
+                    }
+                }
+            )
         repeat(3) {
             c.request("bad")
             c.request("good")
@@ -151,7 +168,19 @@ class AssetStorageTest {
 
     @Test
     fun buildFailureDoesNotStopOthers() {
-        val c = cache(loader = FakeLoader(build = { n -> if (n == "x") error("boom") else Res(n) }))
+        val c =
+            cache(
+                loader =
+                    FakeLoader(
+                        build = { n ->
+                            if (n == "x") {
+                                error("boom")
+                            } else {
+                                Res(n)
+                            }
+                        }
+                    )
+            )
         c.request("x")
         c.request("y")
         runBackground()
@@ -196,7 +225,18 @@ class AssetStorageTest {
         val loader = FakeLoader()
         val discarded = loader.discarded
         lateinit var c: AssetStorage
-        c = AssetStorage(executor, FakeLoader(prepare = { c.retain(emptySet()); it }, discarded = discarded), log)
+        c =
+            AssetStorage(
+                executor,
+                FakeLoader(
+                    prepare = {
+                        c.retain(emptySet())
+                        it
+                    },
+                    discarded = discarded,
+                ),
+                log,
+            )
         c.request("a")
         runBackground()
         assertEquals(listOf("a"), discarded)
@@ -209,7 +249,18 @@ class AssetStorageTest {
         val loader = FakeLoader()
         val discarded = loader.discarded
         lateinit var c: AssetStorage
-        c = AssetStorage(executor, FakeLoader(prepare = { c.dispose(); it }, discarded = discarded), log)
+        c =
+            AssetStorage(
+                executor,
+                FakeLoader(
+                    prepare = {
+                        c.dispose()
+                        it
+                    },
+                    discarded = discarded,
+                ),
+                log,
+            )
         c.request("a")
         runBackground()
         assertEquals(listOf("a"), discarded)
@@ -221,11 +272,21 @@ class AssetStorageTest {
         val discarded = loader.discarded
         var abandonNext = true
         lateinit var c: AssetStorage
-        c = AssetStorage(executor, FakeLoader(prepare = {
-            if (abandonNext) c.abandon()
-            abandonNext = false
-            it
-        }, discarded = discarded), log)
+        c =
+            AssetStorage(
+                executor,
+                FakeLoader(
+                    prepare = {
+                        if (abandonNext) {
+                            c.abandon()
+                        }
+                        abandonNext = false
+                        it
+                    },
+                    discarded = discarded,
+                ),
+                log,
+            )
         c.request("a")
         runBackground()
         assertEquals(listOf("a"), discarded)
@@ -265,7 +326,16 @@ class AssetStorageTest {
 
     @Test
     fun isLoadingUntilEveryRequestIsBuiltOrFailed() {
-        val c = cache(prepare = { if (it == "bad") null else it })
+        val c =
+            cache(
+                prepare = {
+                    if (it == "bad") {
+                        null
+                    } else {
+                        it
+                    }
+                }
+            )
         assertFalse(c.isLoading())
         c.request("a")
         c.request("bad")
@@ -281,10 +351,18 @@ class AssetStorageTest {
     @Test
     fun slowGpuWorkIsSpreadOverSeveralSteps() {
         val slices = mutableMapOf<String, Int>()
-        val c = AssetStorage(
-            executor,
-            FakeLoader(upload = { d -> val n = (slices[d] ?: 0) + 1; slices[d] = n; n >= 3 }), log,
-        )
+        val c =
+            AssetStorage(
+                executor,
+                FakeLoader(
+                    upload = { d ->
+                        val n = (slices[d] ?: 0) + 1
+                        slices[d] = n
+                        n >= 3
+                    }
+                ),
+                log,
+            )
         c.request("big")
         c.request("small")
         runBackground()
@@ -293,7 +371,8 @@ class AssetStorageTest {
         assertEquals(mapOf("big" to 1, "small" to 1), slices)
         assertTrue(c.isLoading())
         assertTrue(builds.isEmpty())
-        c.update(1); c.update(1) // slice 2 each
+        c.update(1)
+        c.update(1) // slice 2 each
         assertTrue(builds.isEmpty())
         c.update(1) // big done
         assertEquals(listOf("big"), builds)
@@ -319,19 +398,37 @@ class AssetStorageTest {
     // --- revisions: invalidate, replace, retry ---
 
     /** A cache whose prepared data carries a revision number, so a test can tell which revision became the asset. */
-    private fun revisions(discarded: MutableList<String>, fail: Set<Int> = emptySet(), slices: Int = 1): Triple<AssetStorage, () -> Unit, MutableMap<String, Int>> {
+    private fun revisions(
+        discarded: MutableList<String>,
+        fail: Set<Int> = emptySet(),
+        slices: Int = 1,
+    ): Triple<AssetStorage, () -> Unit, MutableMap<String, Int>> {
         var revision = 0
         val current = mutableMapOf<String, Int>()
         val progress = mutableMapOf<String, Int>()
-        val c = AssetStorage(
-            executor,
-            loader = FakeLoader(
-                prepare = { n -> val r = ++revision; current[n] = r; if (r in fail) null else "$n#$r" },
-                upload = { d -> val k = (progress[d] ?: 0) + 1; progress[d] = k; k >= slices },
-                discarded = discarded,
-            ),
-            log = log,
-        )
+        val c =
+            AssetStorage(
+                executor,
+                loader =
+                    FakeLoader(
+                        prepare = { n ->
+                            val r = ++revision
+                            current[n] = r
+                            if (r in fail) {
+                                null
+                            } else {
+                                "$n#$r"
+                            }
+                        },
+                        upload = { d ->
+                            val k = (progress[d] ?: 0) + 1
+                            progress[d] = k
+                            k >= slices
+                        },
+                        discarded = discarded,
+                    ),
+                log = log,
+            )
         return Triple(c, { runBackground() }, progress)
     }
 
@@ -403,14 +500,26 @@ class AssetStorageTest {
 
     @Test
     fun isLoadingByNameFollowsOneAssetFromRequestToBuiltAndToFailed() {
-        val c = cache(prepare = { if (it == "bad") null else it })
+        val c =
+            cache(
+                prepare = {
+                    if (it == "bad") {
+                        null
+                    } else {
+                        it
+                    }
+                }
+            )
         assertFalse("never requested", c.isLoading("a"))
-        c.request("a"); c.request("bad")
-        assertTrue(c.isLoading("a")); assertTrue(c.isLoading("bad"))
+        c.request("a")
+        c.request("bad")
+        assertTrue(c.isLoading("a"))
+        assertTrue(c.isLoading("bad"))
         runBackground()
         assertTrue("prepared, not yet built", c.isLoading("a"))
         c.update(2)
-        assertFalse(c.isLoading("a")); assertFalse("failed is settled", c.isLoading("bad"))
+        assertFalse(c.isLoading("a"))
+        assertFalse("failed is settled", c.isLoading("bad"))
         c.invalidate(setOf("a"))
         assertTrue("a loaded asset marked changed is being replaced", c.isLoading("a"))
     }
@@ -426,7 +535,12 @@ class AssetStorageTest {
     @Test
     fun anAssetRequestsItsDependenciesAndWaitsUntilTheyAreBuilt() {
         var seen: Res? = null
-        val c = withDependencies(mapOf("terr" to setOf("tex"))) { name, assets -> if (name == "terr") seen = assets.get("tex") as Res }
+        val c =
+            withDependencies(mapOf("terr" to setOf("tex"))) { name, assets ->
+                if (name == "terr") {
+                    seen = assets.get("tex") as Res
+                }
+            }
         c.request("terr")
         runBackground()
         c.update()
@@ -444,10 +558,22 @@ class AssetStorageTest {
 
     @Test
     fun aDependencyThatFailsFailsTheAssetThatNeedsIt() {
-        val c = withDependencies(mapOf("terr" to setOf("tex")), prepare = { if (it == "tex") null else it })
+        val c =
+            withDependencies(
+                mapOf("terr" to setOf("tex")),
+                prepare = {
+                    if (it == "tex") {
+                        null
+                    } else {
+                        it
+                    }
+                },
+            )
         c.request("terr")
-        runBackground(); c.update()
-        runBackground(); c.update(3)
+        runBackground()
+        c.update()
+        runBackground()
+        c.update(3)
         assertTrue(builds.isEmpty())
         assertNull(c.getAs<Res>("tex"))
         assertNull(c.getAs<Res>("terr"))
@@ -469,7 +595,10 @@ class AssetStorageTest {
 
     /** Pumps until nothing is loading: enough rounds for every request, preparation and build to happen. */
     private fun settle(c: AssetStorage) {
-        repeat(10) { runBackground(); c.update(3) }
+        repeat(10) {
+            runBackground()
+            c.update(3)
+        }
     }
 
     @Test
@@ -477,13 +606,17 @@ class AssetStorageTest {
         val c = withDependencies(mapOf("a" to setOf("b"), "b" to setOf("a")))
         c.request("a")
         settle(c)
-        assertNull(c.getAs<Res>("a")); assertNull(c.getAs<Res>("b"))
+        assertNull(c.getAs<Res>("a"))
+        assertNull(c.getAs<Res>("b"))
         assertFalse("nothing is left loading", c.isLoading())
         assertTrue(builds.isEmpty())
         assertEquals(2, logged.size)
         assertTrue(logged.toString(), logged.all { it.startsWith("Failed to load asset") })
         val reasons = recorder.throwables.map { it.message }
-        assertTrue(reasons.toString(), reasons.all { it == "Cyclic asset dependencies: a -> b" || it == "Cyclic asset dependencies: b -> a" })
+        assertTrue(
+            reasons.toString(),
+            reasons.all { it == "Cyclic asset dependencies: a -> b" || it == "Cyclic asset dependencies: b -> a" },
+        )
     }
 
     @Test
@@ -499,8 +632,12 @@ class AssetStorageTest {
     @Test
     fun aLongerCycleFailsEveryMemberAndEverythingThatNeedsIt() {
         // a -> b -> c -> a is a cycle; d needs a and e needs d, and neither is part of it
-        val c = withDependencies(mapOf("a" to setOf("b"), "b" to setOf("c"), "c" to setOf("a"), "d" to setOf("a"), "e" to setOf("d")))
-        c.request("e"); c.request("a")
+        val c =
+            withDependencies(
+                mapOf("a" to setOf("b"), "b" to setOf("c"), "c" to setOf("a"), "d" to setOf("a"), "e" to setOf("d"))
+            )
+        c.request("e")
+        c.request("a")
         settle(c)
         for (name in listOf("a", "b", "c")) assertNull(name, c.getAs<Res>(name))
         for (name in listOf("d", "e")) {
@@ -525,17 +662,25 @@ class AssetStorageTest {
     fun aCycleIsFoundWhenItsLastMemberIsPreparedEvenIfTheOthersAreAlreadyBlocked() {
         val c = withDependencies(mapOf("a" to setOf("b"), "b" to setOf("a")))
         c.request("a")
-        runBackground(); c.update(2) // a is prepared and blocked on b, which is requested but not prepared yet
-        assertTrue(c.isLoading("a")); assertEquals(emptyList<String>(), logged)
-        runBackground(); c.update(2) // b is prepared: it closes the cycle
-        assertFalse(c.isLoading("a")); assertFalse(c.isLoading("b"))
+        runBackground()
+        c.update(2) // a is prepared and blocked on b, which is requested but not prepared yet
+        assertTrue(c.isLoading("a"))
+        assertEquals(emptyList<String>(), logged)
+        runBackground()
+        c.update(2) // b is prepared: it closes the cycle
+        assertFalse(c.isLoading("a"))
+        assertFalse(c.isLoading("b"))
         assertEquals(2, logged.size)
     }
 
     @Test
     fun retainKeepsWhatARetainedAssetNeeds() {
         val c = withDependencies(mapOf("terr" to setOf("tex")))
-        c.request("terr"); runBackground(); c.update(); runBackground(); c.update(3)
+        c.request("terr")
+        runBackground()
+        c.update()
+        runBackground()
+        c.update(3)
         val tex = c.getAs<Res>("tex")!!
         c.retain(setOf("terr"))
         assertFalse("needed by a retained asset", tex.disposed)
@@ -548,7 +693,9 @@ class AssetStorageTest {
     @Test
     fun getAsReadsABuiltAssetAsItsKind() {
         val c = cache()
-        c.request("a"); runBackground(); c.update()
+        c.request("a")
+        runBackground()
+        c.update()
         assertEquals("a", c.getAs<Res>("a")!!.name)
         assertNull(c.getAs<String>("a"))
         assertNull(c.getAs<Res>("missing"))
@@ -726,24 +873,30 @@ class AssetStorageTest {
     private inner class KindLoader(val kind: String, val needs: Set<String> = emptySet()) :
         AssetLoader<Unit, String, Res> {
         override fun loadPrepared(meta: AssetMeta<Any>): Prepared<Unit, String> = Prepared("$kind:${meta.name}")
+
         override fun prepare(name: String): Prepared<Unit, String>? = error("a typed storage prepares from the meta")
+
         override fun dependencies(staged: String): Set<String> = needs
+
         override fun build(staged: String, assets: BuiltAssets): Res = Res(staged)
+
         override fun discard(model: Unit) = Unit
     }
 
     @Test
     fun theMetaTypePicksTheLoaderAndWhatNothingCanLoadFailsAsAbsent() {
-        val types = mapOf("m" to MetaType.MODEL, "t" to MetaType.TERRAIN, "tex" to MetaType.TEXTURE, "sky" to MetaType.SKYBOX)
-        val c = AssetStorage(log, executor) { name ->
-            types[name]?.let {
-                AssetMeta<Any>(
-                    name = name,
-                    type = it,
-                    additional = Unit
-                )
+        val types =
+            mapOf("m" to MetaType.MODEL, "t" to MetaType.TERRAIN, "tex" to MetaType.TEXTURE, "sky" to MetaType.SKYBOX)
+        val c =
+            AssetStorage(log, executor) { name ->
+                types[name]?.let {
+                    AssetMeta<Any>(
+                        name = name,
+                        type = it,
+                        additional = Unit,
+                    )
+                }
             }
-        }
         c.register(KindLoader("model"), MetaType.MODEL)
         c.register(KindLoader("terrain", setOf("tex")), MetaType.TERRAIN)
         c.register(KindLoader("texture"), MetaType.TEXTURE, MetaType.PIXMAP_TEXTURE)

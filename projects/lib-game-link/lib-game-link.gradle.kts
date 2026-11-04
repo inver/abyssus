@@ -39,5 +39,6 @@ dependencies {
 
 extra["abyssusSingletonExcludes"] = listOf<String>()
 
-// No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in lib-core-editor (see gradle/checks.gradle.kts).
+// No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in
+// lib-core-editor (see gradle/checks.gradle.kts).
 extra["abyssusJacksonTreeAllowed"] = emptyList<String>()

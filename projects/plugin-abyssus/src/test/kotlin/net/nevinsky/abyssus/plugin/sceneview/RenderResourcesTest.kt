@@ -21,7 +21,9 @@ class RenderResourcesTest {
 
     private fun make(name: String, failing: Boolean = false) = resources.own(
         Fake(name),
-        release = { released += it.name; if (failing) throw IllegalStateException(it.name) },
+        release = { released += it.name; if (failing) {
+            throw IllegalStateException(it.name)
+        } },
         abandon = { abandoned += it.name },
     )
 

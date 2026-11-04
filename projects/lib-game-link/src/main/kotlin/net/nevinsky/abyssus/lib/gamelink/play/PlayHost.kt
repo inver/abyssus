@@ -78,7 +78,9 @@ class PlayHost(
                 while (true) {
                     val f = protocol.read(input)
                     queue.put(f)
-                    if (f == PlayFrame.Bye) break
+                    if (f == PlayFrame.Bye) {
+                        break
+                    }
                 }
             } catch (_: IOException) {
                 queue.put(closed)
@@ -87,13 +89,19 @@ class PlayHost(
         try {
             while (true) {
                 val next =
-                    if (playing) queue.poll(maxOf(0L, last + TICK - clock()), TimeUnit.NANOSECONDS) else queue.take()
+                    if (playing) {
+                        queue.poll(maxOf(0L, last + TICK - clock()), TimeUnit.NANOSECONDS)
+                    } else {
+                        queue.take()
+                    }
                 when (next) {
                     null -> Unit
                     closed, PlayFrame.Bye -> return 0
                     is PlayFrame -> handle(next)
                 }
-                if (playing) tick()
+                if (playing) {
+                    tick()
+                }
             }
         } finally {
             endSession()
@@ -143,14 +151,20 @@ class PlayHost(
     private fun tick() {
         val s = session ?: return
         val now = clock()
-        if (now - last < TICK) return
+        if (now - last < TICK) {
+            return
+        }
         val seconds = ((now - last) / 1e9f).coerceAtMost(MAX_FRAME_SECONDS)
         last = now
-        for (system in s.systems) if (system.checkProcessing()) system.update(seconds)
+        for (system in s.systems) if (system.checkProcessing()) {
+            system.update(seconds)
+        }
         val steps = s.world.advance(seconds)
         frame += steps
         simTime += steps * PHYSICS_STEP.toDouble()
-        if (now - lastSent >= POSE_INTERVAL) sendPoses()
+        if (now - lastSent >= POSE_INTERVAL) {
+            sendPoses()
+        }
     }
 
     private fun load(command: PlayFrame.Load): Session {
@@ -178,7 +192,11 @@ class PlayHost(
             throw e
         }
         return try {
-            val selection = if (command.selection == NO_ENTITY) null else loaded.engine.ids[command.selection]
+            val selection = if (command.selection == NO_ENTITY) {
+                null
+            } else {
+                loaded.engine.ids[command.selection]
+            }
             val systems = module.systems(world, loaded.engine, selection)
             for (system in systems) loaded.engine.addSystem(system)
             frame = 0

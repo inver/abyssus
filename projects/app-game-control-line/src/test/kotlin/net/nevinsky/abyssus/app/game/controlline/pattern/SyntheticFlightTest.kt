@@ -19,7 +19,10 @@ class SyntheticFlightTest {
         assertTrue(flown.size > 100)
         for (s in flown) {
             val u = sphere.direction(s)
-            assertTrue("a sample is ${track.points.minOf { sphere.angle(it.u, u) }} degrees off the ideal", track.points.any { sphere.angle(it.u, u) < 0.3f })
+            assertTrue(
+                "a sample is ${track.points.minOf { sphere.angle(it.u, u) }} degrees off the ideal",
+                track.points.any { sphere.angle(it.u, u) < 0.3f },
+            )
         }
         // one step of 1/120 s at 22 m/s is 0.18 m
         val step = sphere.distance(sphere.direction(flown[10]), sphere.direction(flown[11]))
@@ -48,7 +51,11 @@ class SyntheticFlightTest {
         val track = ideal.loops(vertical = 40f, count = 2)
         val plain = SyntheticFlight().fly(track)
         val shifted = SyntheticFlight().fly(track, Perturbation(azimuthShift = 10f))
-        assertEquals(10f, sphere.azimuth(sphere.direction(shifted.first())) - sphere.azimuth(sphere.direction(plain.first())), 0.1f)
+        assertEquals(
+            10f,
+            sphere.azimuth(sphere.direction(shifted.first())) - sphere.azimuth(sphere.direction(plain.first())),
+            0.1f,
+        )
         val raised = SyntheticFlight().fly(track, Perturbation(lowRaise = 1f))
         assertEquals(plain.first().height + 1f, raised.first().height, 0.1f)
         val apart = SyntheticFlight().fly(track, Perturbation(repeatShift = 90f))

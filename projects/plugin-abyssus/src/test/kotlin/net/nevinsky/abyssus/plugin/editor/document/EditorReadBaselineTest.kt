@@ -1,23 +1,24 @@
 package net.nevinsky.abyssus.lib.core.editor.document
 
+import com.badlogic.gdx.math.Vector3
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.io.File
+import net.nevinsky.abyssus.lib.core.editor.parseScene
+import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
 import net.nevinsky.abyssus.lib.core.editor.scene.renderParamsOf
 import net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf
-import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import com.badlogic.gdx.math.Vector3
-import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.plugin.projectView.ComponentTarget
 import net.nevinsky.abyssus.plugin.projectView.ecsRows
 import net.nevinsky.abyssus.plugin.projectView.entityRows
 import net.nevinsky.abyssus.plugin.properties.PanelState
 import net.nevinsky.abyssus.plugin.properties.readEntityState
-import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
 import net.nevinsky.abyssus.plugin.testPanelServices
-import java.io.File
 
 /** Frozen consumer outputs before introducing SceneDocument, using a copy of the committed fixture text. */
 class EditorReadBaselineTest : BasePlatformTestCase() {
-    private val text get() = File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()
+    private val text
+        get() = File("src/test/testData/project/Untitled/scenes/Main Scene.scene").readText()
 
     fun testContentAndRayCaptureInputs() {
         val scene = parseScene(text)
@@ -38,12 +39,18 @@ class EditorReadBaselineTest : BasePlatformTestCase() {
     fun testTreeRowsAndPanelState() {
         val root = parseScene(text)
         assertEquals((0..10).map(Int::toString), ecsRows(root).map { it.name })
-        assertEquals(listOf("NameComponent", "PositionComponent", "RenderComponent", "PickableComponent"),
-            entityRows(net.nevinsky.abyssus.plugin.projectView.EntityNode(root, 0)).map { it.name })
+        assertEquals(
+            listOf("NameComponent", "PositionComponent", "RenderComponent", "PickableComponent"),
+            entityRows(net.nevinsky.abyssus.plugin.projectView.EntityNode(root, 0)).map { it.name },
+        )
         val file = myFixture.addFileToProject("baseline/Main.scene", text).virtualFile
-        val state = readEntityState(ComponentTarget(file, 0L, null), testPanelServices(project)) as PanelState.EntityDetails
+        val state =
+            readEntityState(ComponentTarget(file, 0L, null), testPanelServices(project)) as PanelState.EntityDetails
         assertEquals("Model 0", state.name)
-        assertEquals(listOf("NameComponent", "PositionComponent", "RenderComponent", "PickableComponent"), state.sections.map { it.kind })
+        assertEquals(
+            listOf("NameComponent", "PositionComponent", "RenderComponent", "PickableComponent"),
+            state.sections.map { it.kind },
+        )
         assertEquals(listOf("ParentComponent", "CameraComponent", "LightComponent"), state.addable)
         assertNotNull(state.sections.single { it.kind == "PickableComponent" }.raw)
     }
