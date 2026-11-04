@@ -85,7 +85,7 @@ update request fails. A run that discovers no UI test fails (`failOnNoDiscovered
 IDE logs and the JUnit report).
 
 GitHub workflows build only for release tags: `build.yml` (headless `check`, Plugin Verifier, Qodana, draft release) for
-`plugin-cX.Y.Z`, which must equal `pluginVersion`, and `release-control-line.yml` for `cl-vX.Y.Z`. Pull requests and pushes
+`plugin-cX.Y.Z`, which must equal `pluginVersion`, and `release-control-line.yml` for `control-line-vX.Y.Z`. Pull requests and pushes
 to `main` start no workflow; run `./gradlew check` locally before merging.
 
 ### UI screenshot baselines

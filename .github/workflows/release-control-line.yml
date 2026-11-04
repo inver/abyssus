@@ -1,21 +1,24 @@
 name: Release Control Line
 
-# Runs only for a tag `cl-vX.Y.Z` and publishes the release `cl-vX.Y.Z` with:
+# Runs only for a tag `control-line-vX.Y.Z` and publishes an immutable release `control-line-vX.Y.Z` with:
 # - the installers that carry the game's launcher and its own Java runtime: .deb, .rpm and .AppImage (Linux x64),
 #   .msi (Windows x64), .dmg (macOS arm64 and Intel). jpackage cannot cross-build, so each is built on a runner of its OS;
-# - the update package `control-line-X.Y.Z-update.zip`: the game's jars (natives of every desktop platform) and its
-#   project, which an installed launcher downloads instead of a new installer;
-# - `SHA256SUMS` over every asset and `SHA256SUMS.sig`, its Ed25519 signature made with the private update key, plus
-#   `update-key.pub.pem`, the public half, so anyone can check the files with
-#   `openssl pkeyutl -verify -pubin -inkey update-key.pub.pem -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig`.
+# - the update parts `game-code-X.Y.Z.zip` and `game-project-X.Y.Z.zip` and `manifest.json`, which an installed launcher
+#   downloads instead of a new installer;
+# - `SHA256SUMS` over the installers.
 #
-# The private key is the secret UPDATE_SIGNING_KEY (PEM, `openssl genpkey -algorithm ED25519`), read only by the publish
-# job in the `release` environment. The macOS .dmg files are signed with a Developer ID Application certificate and notarized by Apple; the secrets
-# MAC_CERT_P12 (base64 .p12), MAC_CERT_PASSWORD, APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID live in the
-# `release` environment, which the macOS build jobs use. Other installers are not code-signed yet (Authenticode).
+# There is no key of ours: GitHub signs an immutable release itself (a release attestation listing the tag, the commit and
+# the SHA-256 of every asset), and the game accepts a manifest only when that attestation lists it. The release is made last,
+# after every platform and every check passed, so a failure leaves the previous release the latest.
+#
+# Maintainer setup (repository settings, not code): enable "Immutable releases"; the `release` environment with required
+# reviewers; a tag protection rule for control-line-v*. The macOS .dmg files are signed with a Developer ID Application
+# certificate and notarized by Apple; the secrets MAC_CERT_P12 (base64 .p12), MAC_CERT_PASSWORD, APPLE_ID,
+# APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID live in the `release` environment, which the macOS build jobs use. Other
+# installers are not code-signed yet (Authenticode).
 on:
   push:
-    tags: ['cl-v*']
+    tags: ['control-line-v*']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -32,14 +35,14 @@ jobs:
       version: ${{ steps.tag.outputs.version }}
     steps:
       # The .msi needs a numeric version, the .dmg a major version above 0 (jpackage rejects 0.y.z on macOS), and the
-      # launcher orders releases by it: only cl-vX.Y.Z with X >= 1 is accepted
+      # launcher orders releases by it: only control-line-vX.Y.Z with X >= 1 is accepted
       - name: Check tag
         id: tag
         env:
           TAG: ${{ github.ref_name }}
         run: |
-          if [[ ! "$TAG" =~ ^cl-v([1-9][0-9]*\.[0-9]+\.[0-9]+)$ ]]; then
-            echo "::error::Tag '$TAG' is not cl-vX.Y.Z with a major version X of 1 or more (macOS packages reject 0.y.z)"
+          if [[ ! "$TAG" =~ ^control-line-v([1-9][0-9]*\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "::error::Tag '$TAG' is not control-line-vX.Y.Z with a major version X of 1 or more (macOS packages reject 0.y.z)"
             exit 1
           fi
           echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
@@ -57,7 +60,7 @@ jobs:
           - name: Linux x64 (deb, rpm, AppImage)
             os: ubuntu-22.04 # the older glibc is the floor of the AppImage
             artifact: linux-x64
-            tasks: ":app-game-control-line:packageDeb :app-game-control-line:packageRpm :app-game-control-line:packageAppImage"
+            tasks: ":app-game-control-line:packageDeb :app-game-control-line:packageRpm :app-game-control-line:packageAppImage :app-game-control-line:buildUpdateParts"
             paths: |
               projects/app-game-control-line/build/packaging/deb/*.deb
               projects/app-game-control-line/build/packaging/rpm/*.rpm
@@ -143,7 +146,8 @@ jobs:
 
       - name: Build installers
         shell: bash
-        run: ./gradlew ${{ matrix.tasks }} -PcontrolLineVersion=${{ needs.version.outputs.version }} --no-daemon
+        # every OS's seed holds the same jars (Jolt natives of all platforms), so one manifest fits all installers
+        run: ./gradlew ${{ matrix.tasks }} -PcontrolLineVersion=${{ needs.version.outputs.version }} -Pabyssus.universalDist=true --no-daemon
 
       # Apple scans the .dmg and everything in it; the ticket is stapled so the app opens offline too
       - name: Notarize macOS disk image
@@ -199,90 +203,96 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      # The update package: game jars with the natives of every desktop platform and the bundled project, no Java runtime
-      - name: Build update package
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          version='${{ needs.version.outputs.version }}'
-          ./gradlew :app-game-control-line:distZip -Pabyssus.universalDist=true -PcontrolLineVersion="$version" --no-daemon
-          mkdir -p build/update
-          zips=(projects/app-game-control-line/build/distributions/*.zip)
-          if [ "${#zips[@]}" -ne 1 ]; then
-            echo "::error::Expected one distribution zip, found: ${zips[*]}"
-            exit 1
-          fi
-          cp "${zips[0]}" "build/update/control-line-$version-update.zip"
-
-      - name: Upload update package
-        if: runner.os == 'Linux'
+      # The Linux job builds the update parts and the unsigned manifest; every job reports its installer.digest
+      - name: Upload update parts
+        if: matrix.artifact == 'linux-x64'
         uses: actions/upload-artifact@v4
         with:
           name: control-line-update
-          path: build/update/*.zip
+          path: projects/app-game-control-line/build/packaging/update/*
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload installer digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.artifact }}
+          path: projects/app-game-control-line/build/packaging/installer.digest
           if-no-files-found: error
           retention-days: 7
 
   # Only when every platform built: a failed platform publishes nothing
   publish:
-    name: Sign and publish release
+    name: Check and publish release
     needs: [version, build]
     runs-on: ubuntu-latest
     environment: release
     permissions:
       contents: write
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
       - name: Download all packages
         uses: actions/download-artifact@v4
         with:
-          pattern: control-line-*
-          merge-multiple: true
           path: dist
 
-      # Some artifacts keep a subfolder (appimage/, deb/, rpm/); the release takes a flat list of files
-      - name: Flatten assets
+      # Every platform's installer.digest must equal the one in the manifest: a runner on another JDK patch would otherwise
+      # tell that OS's players "a new installer is needed" forever
+      - name: Check the installer digests agree
+        run: |
+          mapfile -t digests < <(find dist -name installer.digest | sort)
+          [ "${#digests[@]}" -eq 4 ] || { echo "::error::expected 4 installer.digest files, found ${#digests[@]}"; exit 1; }
+          [ "$(cat "${digests[@]}" | sort -u | wc -l)" -eq 1 ] || { echo "::error::the platforms disagree on installer.digest"; head -v "${digests[@]}"; exit 1; }
+
+      - name: Gather the release folder
         run: |
           mkdir release
-          find dist -type f -exec mv -n {} release/ \;
+          find dist -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.msi' -o -name '*.dmg' \
+            -o -name 'game-code-*.zip' -o -name 'game-project-*.zip' -o -name manifest.json \) -exec cp {} release/ \;
           ls -l release
 
-      # The private key comes only from the environment and is written nowhere but a 0600 temporary file
-      - name: Sign checksums
-        env:
-          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
-        working-directory: release
+      # SHA256SUMS over the installers (GitHub's release attestation covers it like every other asset)
+      - name: Write SHA256SUMS and check the folder
         run: |
-          if [ -z "$UPDATE_SIGNING_KEY" ]; then
-            echo "::error::Secret UPDATE_SIGNING_KEY is not set (Ed25519 private key, PEM)"
-            exit 1
-          fi
-          key="$(mktemp)"
-          trap 'rm -f "$key"' EXIT
-          chmod 600 "$key"
-          printf '%s\n' "$UPDATE_SIGNING_KEY" > "$key"
-          sha256sum -- * | LC_ALL=C sort -k2 > ../SHA256SUMS
-          mv ../SHA256SUMS .
-          openssl pkey -in "$key" -pubout -out update-key.pub.pem
-          openssl pkeyutl -sign -inkey "$key" -rawin -in SHA256SUMS -out SHA256SUMS.sig
-          openssl pkeyutl -verify -pubin -inkey update-key.pub.pem -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig
-          sha256sum --check --strict SHA256SUMS
-          cat SHA256SUMS
+          ./gradlew :app-game-control-line:writeChecksums -PreleaseDir="$PWD/release" --no-daemon
+          ./gradlew :lib-updater:verifyReleaseManifest -PreleaseDir="$PWD/release" -PrequireChecksums=true --no-daemon
 
-      - name: Publish release
+      # GitHub signs only an immutable release. Refuse to publish when the setting is off (best effort: a token that may not
+      # read the setting continues, and the check after publishing is the ground truth)
+      - name: Check immutable releases are enabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if state="$(gh api "repos/$GH_REPO/immutable-releases" --jq .enabled 2>/dev/null)"; then
+            [ "$state" = "true" ] || { echo "::error::Immutable releases are not enabled for $GH_REPO: GitHub would not sign the release. Nothing is published."; exit 1; }
+          else
+            echo "::warning::Could not read the immutable-releases setting; the attestation check after publishing decides"
+          fi
+
+      # A draft first, then published: an immutable release is locked when it is published, so every asset must be there by then
+      - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
-          VERSION: ${{ needs.version.outputs.version }}
         run: |
-          mapfile -t assets < <(find release -type f | sort)
-          gh release create "$TAG" "${assets[@]}" \
-            --verify-tag \
-            --title "Control Line $VERSION" \
-            --notes "Control Line $VERSION.
+          gh release create "$TAG" release/* \
+            --draft --verify-tag \
+            --title "Control Line ${TAG#control-line-v}" \
+            --notes "Control Line ${TAG#control-line-v}: .deb, .rpm and .AppImage (Linux x64), .msi (Windows x64), .dmg (macOS arm64 and Intel). This is an immutable release signed by GitHub: check a download with \`gh release verify-asset $TAG <file>\` (see the game's README). Installed games update themselves from manifest.json. The macOS .dmg files are signed and notarized; the other installers are not code-signed, so Windows SmartScreen warns on first start."
+          gh release edit "$TAG" --draft=false
 
-          - Installers with the launcher and their own Java runtime: .deb, .rpm and .AppImage (Linux x64), .msi (Windows x64), .dmg (macOS arm64 and Intel).
-          - \`control-line-$VERSION-update.zip\`: the update package the installed launcher downloads.
-          - \`SHA256SUMS\` with its Ed25519 signature \`SHA256SUMS.sig\` and the public key \`update-key.pub.pem\`: \`openssl pkeyutl -verify -pubin -inkey update-key.pub.pem -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig\`, then \`sha256sum --check SHA256SUMS\`.
-
-          The macOS .dmg files are signed and notarized. The other installers are not code-signed, so Windows SmartScreen warns on first start; see the game's README."
+      # GitHub issues the attestation a moment after publishing; the game accepts the release only once it exists and lists the
+      # manifest, so wait for it and compare it with the files that were uploaded
+      - name: Verify GitHub's release attestation
+        run: ./gradlew :lib-updater:verifyPublishedRelease -Prepository="$GITHUB_REPOSITORY" -Ptag="$GITHUB_REF_NAME" -PreleaseDir="$PWD/release" --no-daemon
