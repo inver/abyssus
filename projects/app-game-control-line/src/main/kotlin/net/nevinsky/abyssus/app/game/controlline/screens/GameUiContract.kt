@@ -155,7 +155,6 @@ val PUBLISHED_BINDINGS: Map<String, String> = mapOf(
 
 /** The named actions the asset emits; `openRow` arrives as `openRow#<row>` from the board rows. */
 val ACTIONS = listOf(
-    "freeFlight",
     "f2bPattern",
     "scale",
     "settings",

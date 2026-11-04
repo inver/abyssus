@@ -6,6 +6,7 @@ package net.nevinsky.abyssus.app.game.controlline.render
 
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.components.PilotComponent
 import net.nevinsky.abyssus.app.game.controlline.components.VitrineTableComponent
@@ -18,8 +19,10 @@ import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.ModelKey
 import net.nevinsky.abyssus.lib.core.ecs.SceneFoliage
 import net.nevinsky.abyssus.lib.core.ecs.SceneFoliageListing
+import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.activeComponent
@@ -31,11 +34,14 @@ import net.nevinsky.abyssus.lib.core.scene.SceneContext
 /** The field scene's file in the project. */
 const val FIELD_SCENE = "scenes/Field.scene"
 
+/** The hangar scene: plane select shows the planes on its table. */
+const val HANGAR_SCENE = "scenes/Hangar.scene"
+
 /**
  * One load of the field scene, as the game draws it (no GL): its entities, the sky, the sun, ambient light and fog, and
  * the planes for plane select. A flight gets its own load, so the parked planes are parked again afterward.
  */
-class FieldScene(val loaded: SceneContext) {
+class FieldScene(val loaded: SceneContext, private val borrowed: List<Entity> = emptyList()) {
     val engine = loaded.engine
     private val entities: Map<Int, Entity> = engine.ids.ids.sorted().associateWith { engine.ids[it]!! }
 
@@ -76,9 +82,23 @@ class FieldScene(val loaded: SceneContext) {
         }
     }
 
-    /** Entities drawn with a model: (entity, model asset folder). */
+    /**
+     * Entities drawn with a model: (entity, model asset folder). The [borrowed] entities of another scene (the planes
+     * plane select shows in the hangar) come last; they are drawn where the caller's poses put them.
+     */
     val models: List<Pair<Entity, String>> =
-        entities.values.mapNotNull { e -> assetName(e, MetaType.MODEL)?.let { e to it } }
+        (entities.values + borrowed).mapNotNull { e -> assetName(e, MetaType.MODEL)?.let { e to it } }
+
+    /** The first entity with a camera: where the scene says to look from, along its `direction`. */
+    val camera: Pair<PositionComponent, PerspectiveCamera>? =
+        entities.values.firstNotNullOfOrNull { e ->
+            val cam = e.getComponent(CameraComponent::class.java) ?: return@firstNotNullOfOrNull null
+            position(e) to cam.camera
+        }
+
+    /** The entity named [name], if the scene has one. */
+    fun named(name: String): Entity? =
+        entities.values.firstOrNull { it.getComponent(NameComponent::class.java)?.name == name }
 
     /**
      * The asset storage name the model [asset] of [entity] is built under: its folder, or with its mesh a `ModelKey`.

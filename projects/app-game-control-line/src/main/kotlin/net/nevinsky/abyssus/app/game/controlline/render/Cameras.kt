@@ -7,12 +7,11 @@ package net.nevinsky.abyssus.app.game.controlline.render
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefFrame
+import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefView
 import kotlin.math.abs
 import kotlin.math.atan
 import kotlin.math.max
-import kotlin.math.min
-import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefFrame
-import net.nevinsky.abyssus.app.game.controlline.pattern.DebriefView
 
 /** The pilot's eyes, above the ground under the handle (m). */
 const val EYE_HEIGHT = 1.65f
@@ -34,23 +33,18 @@ const val OUTSIDE_HEIGHT = 6f
 /** The picture is this much wider than the figure it fits. */
 private const val DEBRIEF_MARGIN = 1.08f
 
-/** How quickly the plane-select camera glides to the next plane (per second). */
-private const val GLIDE = 4f
-
 /**
- * Where the camera is on each screen. Flying: at the pilot's eyes, turning to follow the plane. Plane select: in front
- * of the chosen parked plane, gliding between them. Menus: slowly circling the field.
+ * Where the camera is on each screen. Flying: at the pilot's eyes, turning to follow the plane. Plane select: the hangar
+ * scene's own camera. Menus: slowly circling the field.
  */
 class Cameras(width: Float, height: Float) {
-    val camera =
-        PerspectiveCamera(67f, width, height).apply {
-            near = 0.1f
-            far = 600f
-        }
+    val camera = PerspectiveCamera(67f, width, height).apply {
+        near = 0.1f
+        far = 600f
+    }
     private val eye = Vector3()
     private val target = Vector3()
     private var menuAngle = 0f
-    private var gliding = false
 
     fun resize(width: Float, height: Float) {
         camera.viewportWidth = width
@@ -60,30 +54,20 @@ class Cameras(width: Float, height: Float) {
 
     /** At [pilot]'s eyes, looking at [plane]. */
     fun flying(pilot: Vector3, plane: Vector3) {
-        gliding = false
         eye.set(pilot).add(0f, EYE_HEIGHT, 0f)
         target.set(plane)
         apply()
     }
 
-    /** Gliding over [seconds] towards the front of the parked plane at [plane], which faces along [nose]. */
-    fun planeSelect(plane: Vector3, nose: Vector3, seconds: Float) {
-        val side = Vector3(nose).crs(Vector3.Y).nor()
-        val wantedEye = Vector3(plane).mulAdd(nose, 2.4f).mulAdd(side, 1.4f).add(0f, 0.9f, 0f)
-        if (!gliding) {
-            eye.set(wantedEye)
-            target.set(plane)
-            gliding = true
-        }
-        val t = min(1f, GLIDE * seconds)
-        eye.lerp(wantedEye, t)
-        target.lerp(plane, t)
-        apply()
+    /** Looking from [position] along [direction], as a scene's own camera says, with the field of view [fov]. */
+    fun fixed(position: Vector3, direction: Vector3, fov: Float = DEFAULT_FOV) {
+        eye.set(position)
+        target.set(position).add(direction)
+        apply(fov)
     }
 
     /** Circling the field's centre [centre] over [seconds]. */
     fun menu(centre: Vector3, seconds: Float) {
-        gliding = false
         menuAngle += seconds * 4f
         eye.set(centre).add(MathUtils.cosDeg(menuAngle) * 14f, 2.5f, MathUtils.sinDeg(menuAngle) * 14f)
         target.set(centre).add(0f, 1.5f, 0f)
@@ -96,7 +80,6 @@ class Cameras(width: Float, height: Float) {
      * of view is widened, up to [DEBRIEF_MAX_FOV], to take in all of its points.
      */
     fun debrief(view: DebriefView, pilot: Vector3, frame: DebriefFrame) {
-        gliding = false
         val azimuth = frame.azimuth * MathUtils.degreesToRadians
         val outward = Vector3(MathUtils.cos(azimuth), 0f, -MathUtils.sin(azimuth))
         when (view) {

@@ -905,7 +905,6 @@ class GameUiModel(
             return true
         }
         when (name) {
-            "freeFlight" -> flow.freeFlight()
             "f2bPattern" -> flow.f2bPattern()
             "scale" -> flow.scale()
             "scores" -> flow.scores()

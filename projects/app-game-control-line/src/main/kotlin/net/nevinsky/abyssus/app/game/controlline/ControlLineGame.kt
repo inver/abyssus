@@ -4,10 +4,12 @@
  */
 package net.nevinsky.abyssus.app.game.controlline
 
+import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.*
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.HdpiUtils
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import java.nio.file.Path
 import net.nevinsky.abyssus.app.game.controlline.components.GAME_COMPONENTS
@@ -107,6 +109,9 @@ class ControlLineGame(
     private lateinit var cameras: Cameras
     private lateinit var parked: FieldScene
 
+    // plane select's own scene, the hangar, with the field's planes standing on its table; null when it is unusable
+    private var hangar: HangarStage? = null
+
     private lateinit var flights: FlightRunner
     private lateinit var controllers: ControllerService
     private lateinit var display: GdxDisplay
@@ -137,6 +142,7 @@ class ControlLineGame(
             "#version 150\n#define varying in\n#define texture2D texture\n" +
                 "#define textureCube texture\n#define gl_FragColor fragColor\nout vec4 fragColor;\n"
         parked = loadScene().also { it.standOnTables(physicsAssets::modelPoints) }
+        hangar = loadHangar()
         flow =
             GameFlow(
                 parked.planes,
@@ -194,7 +200,13 @@ class ControlLineGame(
         val s = flights.session
         val guide = flights.guide
 
-        val scene = (screen as? Screen.Debrief)?.let { debriefSceneOf(it.model) } ?: flights.scene ?: parked
+        val stage = hangar.takeIf { screen is Screen.PlaneSelect }
+        if (stage == null) {
+            hangar?.leave()
+        }
+        val scene =
+            (screen as? Screen.Debrief)?.let { debriefSceneOf(it.model) } ?: stage?.scene ?: flights.scene ?: parked
+        var hangarPoses = emptyMap<Entity, Matrix4>()
         var lines = emptyList<LineSegment>()
         var cables = emptyList<Cable>()
         var hidden =
@@ -210,13 +222,9 @@ class ControlLineGame(
             }
 
             is Screen.PlaneSelect ->
-                parked.entity(flow.choices(screen.mode)[screen.index].entityId)?.let { plane ->
-                    val p = parked.position(plane)
-                    cameras.planeSelect(
-                        p.localPosition,
-                        p.localRotation.transform(Vector3(0f, 0f, 1f)).also { it.y = 0f }.nor(),
-                        seconds,
-                    )
+                stage?.let {
+                    hangarPoses = it.poses(flow.choices(screen.mode), screen.index, seconds)
+                    it.look(cameras)
                 }
 
             else ->
@@ -271,7 +279,9 @@ class ControlLineGame(
             seconds = seconds,
             cables = cables,
             poses =
-                if (s == null || screen is Screen.Debrief) {
+                if (stage != null) {
+                    hangarPoses
+                } else if (s == null || screen is Screen.Debrief) {
                     emptyMap()
                 } else {
                     mapOf(s.plane to s.drawnTransform())
@@ -354,6 +364,19 @@ class ControlLineGame(
             debriefScene = null
             debriefOf = null
         }
+    }
+
+    /** The hangar with the field's planes borrowed, or null (the game then keeps the field for plane select). */
+    private fun loadHangar(): HangarStage? {
+        val loaded = sceneLoader.load(project.resolve(HANGAR_SCENE).fileName.toString())
+        if (loaded == null) {
+            log.warn("The hangar scene {} could not be read; plane select stays in the field", HANGAR_SCENE)
+            return null
+        }
+        val planes = parked.planes.mapNotNull { choice -> parked.entity(choice.entityId)?.let { choice.entityId to it } }
+        val scene = FieldScene(loaded, planes.map { it.second })
+        return HangarStage(scene, planes.toMap(), physicsAssets::modelPoints).takeIf { it.usable }
+            ?: null.also { log.warn("The hangar scene {} has no Table or camera; plane select has no camera there", HANGAR_SCENE) }
     }
 
     private fun loadScene(): FieldScene {

@@ -1,0 +1,28 @@
+{
+  "importer": "model",
+  "source": "warehouse_fbx_model_free.glb",
+  "sourcePath": "/home/inv3r/Downloads/warehouse_fbx_model_free.glb",
+  "sourceSha256": "c3a45d814ce024156a0ff7a1488d5937893928ec33df24c720aaff69676bfc6a",
+  "sourceFormat": "GLB",
+  "stated": {
+    "unit": "m",
+    "upAxis": "Y"
+  },
+  "chosen": {
+    "unit": "m",
+    "upAxis": "Y"
+  },
+  "size": "original",
+  "animations": [],
+  "skipped": [
+    {
+      "item": "KHR_materials_emissive_strength",
+      "reason": "glTF extension"
+    },
+    {
+      "item": "KHR_materials_specular",
+      "reason": "glTF extension"
+    }
+  ],
+  "approximated": []
+}

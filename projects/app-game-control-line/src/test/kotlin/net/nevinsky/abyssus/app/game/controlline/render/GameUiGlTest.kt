@@ -77,7 +77,7 @@ class GameUiGlTest {
             fun assertShows(vararg lines: String) =
                 driver.dump().let { dump -> lines.forEach { assertTrue("$it in $dump", it in dump) } }
             show()
-            assertShows("label|normal|Control Line", "button|enabled|checked|Free flight")
+            assertShows("label|normal|Control Line", "button|enabled|checked|F2B (Pilotage)")
             flow.f2bPattern()
             show()
             assertEquals(Screen.AssistSelect, flow.screen)

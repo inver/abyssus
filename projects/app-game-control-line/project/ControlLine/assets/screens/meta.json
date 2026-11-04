@@ -1094,27 +1094,6 @@
                     }
                   },
                   {
-                    "id": "mm-free",
-                    "type": "button",
-                    "layout": {
-                      "width": 340,
-                      "height": 56
-                    },
-                    "properties": {
-                      "text": "Free flight"
-                    },
-                    "bindings": {
-                      "enabled": "freeEnabled"
-                    },
-                    "actions": {
-                      "click": {
-                        "type": "emitAction",
-                        "name": "freeFlight"
-                      }
-                    },
-                    "style": "primary"
-                  },
-                  {
                     "id": "mm-pattern",
                     "type": "button",
                     "layout": {
@@ -1122,7 +1101,7 @@
                       "height": 56
                     },
                     "properties": {
-                      "text": "F2B pattern"
+                      "text": "F2B (Pilotage)"
                     },
                     "bindings": {
                       "enabled": "patternEnabled"
@@ -1133,7 +1112,7 @@
                         "name": "f2bPattern"
                       }
                     },
-                    "style": "outline"
+                    "style": "primary"
                   },
                   {
                     "id": "mm-scale",

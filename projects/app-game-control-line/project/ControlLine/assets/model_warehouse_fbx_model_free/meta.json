@@ -1,0 +1,13 @@
+{
+  "formatVersion": 1,
+  "version": 1,
+  "lastModified": 1793826353108,
+  "uuid": "1c117975-0904-464a-912d-31b7949754c2",
+  "type": "MODEL",
+  "additional": {
+    "file": "model.glb",
+    "format": "GLTF",
+    "binary": true,
+    "materials": []
+  }
+}

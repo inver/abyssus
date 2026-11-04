@@ -15,26 +15,6 @@
   "fogEnabled": false,
   "skyboxEnabled": false,
   "ecs": {
-    "1": {
-      "type": "OBJECT",
-      "components": {
-        "NameComponent": {
-          "name": "Hangar"
-        },
-        "PositionComponent": {
-          "localPosition": {
-            "x": 0.045512676,
-            "y": 0.088040546,
-            "z": 6.6339746
-          }
-        },
-        "RenderComponent": {
-          "shaderKey": "defaultShader",
-          "type": "MODEL",
-          "assetName": "model_aircrafthangarcargarage"
-        }
-      }
-    },
     "2": {
       "type": "LIGHT_SPOT",
       "components": {
@@ -44,7 +24,7 @@
         "PositionComponent": {
           "localPosition": {
             "x": -0.086706996,
-            "y": 7,
+            "y": 4,
             "z": -0.63282126
           },
           "localRotation": {
@@ -99,13 +79,13 @@
           "camera": {
             "viewPointPosition": {
               "x": 0,
-              "y": 0,
-              "z": -1
+              "y": -0.3335499,
+              "z": -0.9427325
             },
             "position": {
               "x": 0,
-              "y": 1.6750345,
-              "z": 0.45310378
+              "y": 1.9810913,
+              "z": 0.99457616
             },
             "far": 100,
             "near": 1,
@@ -115,27 +95,14 @@
         "PositionComponent": {
           "localPosition": {
             "x": 0,
-            "y": 1.6750345,
-            "z": 0.45310378
-          }
-        }
-      }
-    },
-    "5": {
-      "type": "OBJECT",
-      "components": {
-        "NameComponent": {
-          "name": "Floor"
-        },
-        "RenderComponent": {
-          "type": "TERRAIN",
-          "assetName": "plate_terrain"
-        },
-        "PositionComponent": {
-          "localPosition": {
-            "x": -137.65004,
+            "y": 1.9810913,
+            "z": 0.99457616
+          },
+          "localRotation": {
+            "x": -0.16921514,
             "y": 0,
-            "z": -337.68018
+            "z": 0,
+            "w": 0.98557913
           }
         }
       }
@@ -149,7 +116,7 @@
         "PositionComponent": {
           "localPosition": {
             "x": 1.3485708,
-            "y": 7,
+            "y": 4,
             "z": -0.68423367
           },
           "localRotation": {
@@ -184,7 +151,7 @@
         "PositionComponent": {
           "localPosition": {
             "x": -1.5467215,
-            "y": 7,
+            "y": 4,
             "z": -0.7
           },
           "localRotation": {
@@ -197,6 +164,67 @@
         "LightComponent": {
           "light": {
             "intensity": 0.2,
+            "range": 100,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "8": {
+      "type": "OBJECT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0.045512676,
+            "y": 0.07376695,
+            "z": 4.530506
+          },
+          "localRotation": {
+            "x": 0,
+            "y": 0.71382153,
+            "z": 0,
+            "w": -0.70032763
+          }
+        },
+        "RenderComponent": {
+          "shaderKey": "defaultShader",
+          "type": "MODEL",
+          "assetName": "model_warehouse_fbx_model_free"
+        }
+      }
+    },
+    "9": {
+      "type": "LIGHT_SPOT",
+      "components": {
+        "NameComponent": {
+          "name": "Spot Light 9"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0,
+            "y": 6.0018682,
+            "z": 5.7892876
+          },
+          "localRotation": {
+            "x": 0.27427483,
+            "y": 0,
+            "z": 0,
+            "w": -0.9616513
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 1,
             "range": 100,
             "coneAngle": 45,
             "edgeSoftness": 0.2,

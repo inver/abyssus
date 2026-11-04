@@ -87,7 +87,7 @@ class GameUiHiDpiGlTest {
             Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
             ui.draw(0f)
             val ref = UiScreenRef(SCREENS_ASSET, SCREEN_MAIN_MENU)
-            val button = ui.presenter.layout(ref)!!.nodes.getValue("mm-free").bounds
+            val button = ui.presenter.layout(ref)!!.nodes.getValue("mm-pattern").bounds
             assertEquals("the menu column is the design's left column", 96f, button.x, 1f)
             assertTrue(
                 "and sits in the middle of the window's height, not against the top edge",
