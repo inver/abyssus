@@ -36,6 +36,11 @@
           "sample": "The F2B pattern needs a stunt plane"
         },
         {
+          "name": "version",
+          "type": "string",
+          "sample": "Version 1.0.0"
+        },
+        {
           "name": "hasModeLabel",
           "type": "boolean",
           "sample": true
@@ -1204,6 +1209,17 @@
                       }
                     },
                     "style": "outline"
+                  },
+                  {
+                    "id": "mm-version",
+                    "type": "label",
+                    "style": "muted",
+                    "bindings": {
+                      "text": "version"
+                    },
+                    "layout": {
+                      "height": 19
+                    }
                   },
                   {
                     "id": "mm-message",
