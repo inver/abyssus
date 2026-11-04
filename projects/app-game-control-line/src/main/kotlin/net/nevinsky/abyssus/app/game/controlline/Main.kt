@@ -5,6 +5,7 @@
 package net.nevinsky.abyssus.app.game.controlline
 
 import com.badlogic.ashley.core.Entity
+import com.badlogic.gdx.Files
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.math.Matrix4
@@ -103,6 +104,18 @@ internal fun gameConfiguration(
     displayMode: () -> Graphics.DisplayMode = { Lwjgl3ApplicationConfiguration.getDisplayMode() },
 ): Lwjgl3ApplicationConfiguration = Lwjgl3ApplicationConfiguration().apply {
     setTitle("Control Line")
+    // The window and taskbar icon on Linux and Windows: without it the window manager shows Java's icon. The sizes are
+    // packaged into the jar from packaging/icons/ (processResources in app-game-control-line.gradle.kts); one 1024 px
+    // icon is not enough because X11's _NET_WM_ICON request would exceed the server's maximum request size.
+    setWindowIcon(
+        Files.FileType.Classpath,
+        "icons/control-line-16.png",
+        "icons/control-line-32.png",
+        "icons/control-line-48.png",
+        "icons/control-line-64.png",
+        "icons/control-line-128.png",
+        "icons/control-line-256.png",
+    )
     setWindowedMode(1280, 720)
     useVsync(true)
     // a steady 60 frames a second: on a 120 Hz screen an uncapped, vsynced loop alternates 8, 17 and 25 ms frames

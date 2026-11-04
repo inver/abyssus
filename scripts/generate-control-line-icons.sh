@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
 # Renders Control Line's application icons from packaging/icons/control-line-icon.svg into the same folder:
-# control-line.png (1024 px, Linux and the AppImage), control-line.ico (Windows) and control-line.icns (macOS).
+# control-line.png (1024 px, the Linux package and the AppImage), control-line-{16,32,48,64,128,256}.png (the window
+# icon), control-line.ico (Windows) and control-line.icns (macOS).
 # The outputs are committed, so builds and CI need none of these tools; run this only when the SVG changes.
 #
 # Needs an SVG renderer (`rsvg-convert` or Inkscape; ImageMagick's own SVG renderer drops the transformed plane and the
@@ -46,6 +47,10 @@ size() { magick "$work/1024.png" -filter Lanczos -resize "${1}x${1}" "PNG32:$2";
 
 cp "$work/1024.png" "$dir/control-line.png"
 
+# Linux and Windows window icon (setWindowIcon in Main.kt): the sizes the window manager picks from. They are separate
+# files because one 1024 px image would exceed X11's maximum request size for _NET_WM_ICON.
+for s in 16 32 48 64 128 256; do size "$s" "$dir/control-line-$s.png"; done
+
 # Windows: a multi-size .ico
 for s in 16 32 48 64 128 256; do size "$s" "$work/ico-$s.png"; done
 magick "$work"/ico-16.png "$work"/ico-32.png "$work"/ico-48.png "$work"/ico-64.png "$work"/ico-128.png \
@@ -60,4 +65,4 @@ for s in 16 32 128 256 512; do
 done
 iconutil --convert icns --output "$dir/control-line.icns" "$iconset"
 
-echo "wrote $dir/control-line.png, control-line.ico, control-line.icns"
+echo "wrote $dir/control-line.png, control-line-{16,32,48,64,128,256}.png, control-line.ico, control-line.icns"

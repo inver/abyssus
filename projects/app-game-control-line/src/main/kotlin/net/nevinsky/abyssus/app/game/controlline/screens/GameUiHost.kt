@@ -8,31 +8,24 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputAdapter
 import com.badlogic.gdx.InputProcessor
-import net.nevinsky.abyssus.lib.core.ui.model.showOverlayAction
 import net.nevinsky.abyssus.app.game.controlline.ai.InstructorControl
-import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
 import net.nevinsky.abyssus.app.game.controlline.controller.ControllerSettings
 import net.nevinsky.abyssus.app.game.controlline.controller.NoControllerSettings
 import net.nevinsky.abyssus.app.game.controlline.controller.navigateKey
 import net.nevinsky.abyssus.app.game.controlline.display.DisplayOptions
 import net.nevinsky.abyssus.app.game.controlline.display.NoDisplayOptions
+import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
 import net.nevinsky.abyssus.app.game.controlline.flow.GameFlow
 import net.nevinsky.abyssus.app.game.controlline.flow.Screen
 import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
 import net.nevinsky.abyssus.app.game.controlline.scale.ScaleJudge
-import net.nevinsky.abyssus.lib.core.assets.ui.UiBuiltResources
-import net.nevinsky.abyssus.lib.core.assets.ui.UiBundledFont
-import net.nevinsky.abyssus.lib.core.assets.ui.UiPreparedResource
-import net.nevinsky.abyssus.lib.core.assets.ui.UiPreparedResources
-import net.nevinsky.abyssus.lib.core.assets.ui.UiResourcePreparer
-import net.nevinsky.abyssus.lib.core.assets.ui.UiResourceResolver
+import net.nevinsky.abyssus.lib.core.assets.ui.*
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
 import net.nevinsky.abyssus.lib.core.project.ProjectLoader
 import net.nevinsky.abyssus.lib.core.project.UiProjectRegistry
-import net.nevinsky.abyssus.lib.core.ui.model.UiAction
-import net.nevinsky.abyssus.lib.core.ui.model.UiActionType
 import net.nevinsky.abyssus.lib.core.ui.model.UiAdmission
+import net.nevinsky.abyssus.lib.core.ui.model.showOverlayAction
 import net.nevinsky.abyssus.lib.core.ui.render.UiPresenter
 import net.nevinsky.abyssus.lib.core.ui.state.UiBindingSession
 import org.slf4j.Logger
@@ -56,7 +49,13 @@ class GameUiHost(
     private var shown: GameLayers? = null
 
     /** Shows the flow's screen (when it changed) and takes the model's values for this frame. */
-    fun update(session: FlightSession?, judge: PatternJudge?, seconds: Float, scaleJudge: ScaleJudge? = null, instructor: InstructorControl? = null) {
+    fun update(
+        session: FlightSession?,
+        judge: PatternJudge?,
+        seconds: Float,
+        scaleJudge: ScaleJudge? = null,
+        instructor: InstructorControl? = null
+    ) {
         val layers = model.layersOf(flow.screen)
         if (layers != shown) {
             shown = layers
@@ -87,7 +86,10 @@ class GameUiHost(
         if (enter && field) return true
         // no input device in a test without a window: no shift
         val input: Input? = Gdx.input
-        return presenter.keyDown(keycode, input != null && (input.isKeyPressed(Input.Keys.SHIFT_LEFT) || input.isKeyPressed(Input.Keys.SHIFT_RIGHT)))
+        return presenter.keyDown(
+            keycode,
+            input != null && (input.isKeyPressed(Input.Keys.SHIFT_LEFT) || input.isKeyPressed(Input.Keys.SHIFT_RIGHT))
+        )
     }
 
     /**
@@ -102,10 +104,18 @@ class GameUiHost(
 
     /** Pointer and text input for the screens; the game puts it behind its own key processor. */
     val inputProcessor: InputProcessor = object : InputAdapter() {
-        override fun touchDown(x: Int, y: Int, pointer: Int, button: Int) = presenter.touchDown(x.toFloat(), y.toFloat())
+        override fun touchDown(x: Int, y: Int, pointer: Int, button: Int) =
+            presenter.touchDown(x.toFloat(), y.toFloat())
+
         override fun touchUp(x: Int, y: Int, pointer: Int, button: Int) = presenter.touchUp(x.toFloat(), y.toFloat())
-        override fun touchDragged(x: Int, y: Int, pointer: Int): Boolean { presenter.touchDragged(x.toFloat(), y.toFloat()); return true }
-        override fun mouseMoved(x: Int, y: Int): Boolean { presenter.pointerMoved(x.toFloat(), y.toFloat()); return false }
+        override fun touchDragged(x: Int, y: Int, pointer: Int): Boolean {
+            presenter.touchDragged(x.toFloat(), y.toFloat()); return true
+        }
+
+        override fun mouseMoved(x: Int, y: Int): Boolean {
+            presenter.pointerMoved(x.toFloat(), y.toFloat()); return false
+        }
+
         override fun keyTyped(character: Char) = presenter.keyTyped(character)
     }
 
@@ -114,6 +124,19 @@ class GameUiHost(
 
 /** The back buffer's pixels per logical pixel; 1 on an ordinary display, 2 on a Retina one. */
 private fun backBufferScale(): Float = Gdx.graphics.backBufferWidth.toFloat() / Gdx.graphics.width.coerceAtLeast(1)
+
+/** The screens' reference height (`referenceHeight` of the UI asset); the stage is fitted to the window from it. */
+private const val REFERENCE_HEIGHT = 720f
+
+/**
+ * The largest pixels-per-reference-pixel the UI can be drawn at: the window's now, or the monitor's when the game goes
+ * fullscreen later (fonts are chosen once, and a 1x font stretched to a fullscreen window is blurred).
+ */
+private fun uiScale(): Float {
+    val window = backBufferScale() * Gdx.graphics.height / REFERENCE_HEIGHT
+    val fullscreen = backBufferScale() * Gdx.graphics.displayMode.height / REFERENCE_HEIGHT
+    return maxOf(window, fullscreen)
+}
 
 /** From this scale on the sharper `@2x` fonts are used. */
 private const val HIDPI_FROM = 1.5f
@@ -137,8 +160,13 @@ private fun UiPreparedResources.withHiDpiFonts(): UiPreparedResources = UiPrepar
  * must be registered in the project file and admitted. Needs the GL context, and the core-profile shader prefixes set.
  */
 fun createGameUi(
-    project: Path, projectFile: String, flow: GameFlow, log: Logger, controls: ControllerSettings = NoControllerSettings,
-    display: DisplayOptions = NoDisplayOptions, quit: () -> Unit,
+    project: Path,
+    projectFile: String,
+    flow: GameFlow,
+    log: Logger,
+    controls: ControllerSettings = NoControllerSettings,
+    display: DisplayOptions = NoDisplayOptions,
+    quit: () -> Unit,
 ): GameUiHost {
     val json = JsonProcessor(log)
     val files = FileLoader(project.toFile())
@@ -149,8 +177,9 @@ fun createGameUi(
         ?: throw IllegalStateException("The '$SCREENS_ASSET' UI asset of $project is not registered or was refused: $admission")
     val collection = admitted.collection
     admitted.warnings.forEach { log.warn("screens asset: {}", it) }
-    val prepared = UiResourcePreparer(UiResourceResolver(project.resolve("assets/$SCREENS_ASSET").toFile())).prepare(collection)
-        .let { if (backBufferScale() >= HIDPI_FROM) it.withHiDpiFonts() else it }
+    val prepared =
+        UiResourcePreparer(UiResourceResolver(project.resolve("assets/$SCREENS_ASSET").toFile())).prepare(collection)
+            .let { if (uiScale() >= HIDPI_FROM) it.withHiDpiFonts() else it }
     prepared.issues.forEach { log.warn("screens resource {}: {}", it.resourceId, it.problem) }
     val built = UiBuiltResources.Builder().build(prepared)
     val font = UiBundledFont()
@@ -162,6 +191,8 @@ fun createGameUi(
     return GameUiHost(flow, model, presenter) {
         presenter.dispose()
         built.dispose()
-        if (font.activeLeases > 0) font.release()
+        if (font.activeLeases > 0) {
+            font.release()
+        }
     }
 }

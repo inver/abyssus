@@ -170,6 +170,16 @@ distributions.main {
     }
 }
 
+// The window icon (`setWindowIcon` in Main.kt) is the packaging icons copied onto the runtime classpath: a run from
+// Gradle and the packaged jars show the same icon, and the icon has a single source in packaging/icons/.
+tasks.named<ProcessResources>("processResources") {
+    from(layout.projectDirectory.dir("packaging/icons")) {
+        include("control-line-16.png", "control-line-32.png", "control-line-48.png",
+            "control-line-64.png", "control-line-128.png", "control-line-256.png")
+        into("icons")
+    }
+}
+
 tasks.named<JavaExec>("run") {
     val dir = gameProject.asFile.absolutePath
     systemProperty("controlLine.project", dir)

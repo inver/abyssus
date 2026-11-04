@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.app.game.controlline
 
+import com.badlogic.gdx.Files
 import com.badlogic.gdx.Graphics
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowConfiguration
@@ -43,5 +44,24 @@ class MainConfigTest {
         assertEquals("-1 is libGDX's 'centre the window'", -1, field(config, "windowX"))
         assertNull(field(config, "fullscreenMode"))
         assertTrue(log.warnings.isEmpty())
+    }
+
+    @Test fun theWindowCarriesTheApplicationIconFromTheClasspath() {
+        val log = RecordingLogger()
+        val config = gameConfiguration(savedFullscreen = false, primaryMonitor = true, log = log, displayMode = noDisplayMode)
+
+        val icons = arrayOf(
+            "icons/control-line-16.png",
+            "icons/control-line-32.png",
+            "icons/control-line-48.png",
+            "icons/control-line-64.png",
+            "icons/control-line-128.png",
+            "icons/control-line-256.png",
+        )
+        assertArrayEquals(icons, field(config, "windowIconPaths") as Array<*>)
+        assertEquals(Files.FileType.Classpath, field(config, "windowIconFileType"))
+        icons.forEach { icon ->
+            assertNotNull("the icon is copied from packaging/icons/ by processResources", javaClass.getResource("/$icon"))
+        }
     }
 }
