@@ -27,6 +27,11 @@ concurrency:
 permissions:
   contents: read
 
+# One exact JDK patch on every runner: installer.digest includes java.version, so a runner that resolved "21" to another
+# patch (the Intel macOS one did) would make the platforms disagree. Bump it here only.
+env:
+  CONTROL_LINE_JDK: 21.0.9
+
 jobs:
   version:
     name: Read version from tag
@@ -90,7 +95,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: ${{ env.CONTROL_LINE_JDK }}
           cache: gradle
 
       - name: Install Linux packaging tools
@@ -237,7 +242,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: ${{ env.CONTROL_LINE_JDK }}
           cache: gradle
 
       - name: Download all packages
