@@ -1,0 +1,17 @@
+scene load ms (first is cold): [1266,1, 39,4, 28,1, 23,6, 22,0, 20,8, 22,2, 18,2]
+scene load MB allocated: [508,8, 5,0, 5,0, 5,3, 5,0, 5,1, 5,0, 5,0]
+session build ms (first is cold, includes Jolt load): [2089,9, 1418,6, 1394,5, 1389,1, 1388,9, 1384,2, 1382,3, 1378,7]
+session close ms: [2,5, 0,1, 0,1, 0,1, 0,1, 0,1, 0,1, 0,1]
+session build ms, shared PhysicsAssets: [1382,5, 1283,5, 1282,1, 1282,5, 1282,5, 1280,6]
+PhysicsWorld alone ms, fresh PhysicsAssets: [1379,5, 1377,6, 1371,6]
+judge.ended ms: 0,360
+flight: LANDED after 369,2 s, 22156 frames, GCs 6
+advance per frame ms         n= 21556 p50=   0,147 p95=   0,530 p99=   0,640 max=  11,731 mean=   0,198
+wires per frame ms           n= 21556 p50=   0,004 p95=   0,004 p99=   0,006 max=   0,064 mean=   0,004
+judge.sample per step ms     n= 43111 p50=   0,014 p95=   0,206 p99=   0,261 max=  11,433 mean=   0,040
+bot.tilt per step ms         n= 43112 p50=   0,000 p95=   0,001 p99=   0,003 max=   6,446 mean=   0,001
+flight alloc per frame KB    n= 21556 p50=   5,477 p95=   7,250 p99=   7,781 max=1068,898 mean=   6,437
+judge.sample first 60 s      n=  7200 p50=   0,016 p95=   0,062 p99=   0,072 max=  11,433 mean=   0,026
+judge.sample last 60 s       n=  7200 p50=   0,154 p95=   0,262 p99=   0,268 max=   1,773 mean=   0,154
+slowest judge samples: [11,43 ms @ 19,1 s, 7,65 ms @ 229,1 s, 5,20 ms @ 53,7 s, 4,81 ms @ 38,5 s, 4,60 ms @ 205,2 s, 3,10 ms @ 73,4 s, 2,85 ms @ 260,5 s, 2,66 ms @ 133,7 s]
+reportOf ms: 10,854 (report true)

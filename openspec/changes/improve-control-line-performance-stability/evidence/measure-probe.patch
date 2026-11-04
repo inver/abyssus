@@ -1,0 +1,613 @@
+diff --git a/projects/app-game-control-line/app-game-control-line.gradle.kts b/projects/app-game-control-line/app-game-control-line.gradle.kts
+index e773ab70..f02783e7 100644
+--- a/projects/app-game-control-line/app-game-control-line.gradle.kts
++++ b/projects/app-game-control-line/app-game-control-line.gradle.kts
+@@ -349,3 +349,12 @@ kover {
+ 
+ // No Jackson tree types (JsonNode, ObjectNode, ...) here: reading JSON lives in lib-core and writing it in lib-core-editor (see gradle/checks.gradle.kts).
+ extra["abyssusJacksonTreeAllowed"] = emptyList<String>()
++
++tasks.register<JavaExec>("measureGame") {
++    classpath = sourceSets.main.get().runtimeClasspath
++    mainClass.set("net.nevinsky.abyssus.app.game.controlline.measure.MeasureGameKt")
++    systemProperty("controlLine.project", gameProject.asFile.absolutePath)
++    if (System.getProperty("os.name").lowercase().contains("mac")) jvmArgs("-XstartOnFirstThread")
++    listOf("measure.noCull", "measure.counters", "measure.out", "measure.clouds").forEach { k -> System.getProperty(k)?.let { systemProperty(k, it) } }
++    providers.gradleProperty("measureJvm").orNull?.let { jvmArgs(it.split(" ")) }
++}
+diff --git a/projects/app-game-control-line/src/main/kotlin/net/nevinsky/abyssus/app/game/controlline/ControlLineGame.kt b/projects/app-game-control-line/src/main/kotlin/net/nevinsky/abyssus/app/game/controlline/ControlLineGame.kt
+index ff1536a3..4aab7987 100644
+--- a/projects/app-game-control-line/src/main/kotlin/net/nevinsky/abyssus/app/game/controlline/ControlLineGame.kt
++++ b/projects/app-game-control-line/src/main/kotlin/net/nevinsky/abyssus/app/game/controlline/ControlLineGame.kt
+@@ -34,6 +34,7 @@ import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
+ import net.nevinsky.abyssus.app.game.controlline.screens.GameUiHost
+ import net.nevinsky.abyssus.app.game.controlline.screens.createGameUi
+ import net.nevinsky.abyssus.lib.core.BaseCtx
++import net.nevinsky.abyssus.app.game.controlline.measure.Probe
+ import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+ import net.nevinsky.abyssus.lib.physics.PHYSICS_COMPONENTS
+ import net.nevinsky.abyssus.lib.physics.PhysicsAssets
+@@ -71,8 +72,8 @@ class ControlLineGame(
+         Executors.newFixedThreadPool(2) { r -> Thread(r, "asset-prepare").apply { isDaemon = true } }
+     private val natives = JoltNatives()
+ 
+-    private lateinit var flow: GameFlow
+-    private val raster = lazy { FieldRenderer(ctx) }
++    internal lateinit var flow: GameFlow
++    private val raster = lazy { FieldRenderer(ctx, clouds = System.getProperty("measure.clouds")?.let { net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique.valueOf(it) }) }
+ 
+     /** The opt-in view (ray mode) while it works; null once it failed or when there was none: the raster field draws. */
+     private var optIn: FieldView? = fieldView
+@@ -125,10 +126,13 @@ class ControlLineGame(
+ 
+     override fun render() {
+         val seconds = Gdx.graphics.deltaTime.coerceIn(0f, 0.1f)
++        Probe.begin()
+         display.applyPending()
+         controllers.drive(flow, seconds, ui::navigate)
+         followFlow()
++        Probe.mark("prep")
+         flights.advance(seconds)
++        Probe.mark("flight")
+         val screen = flow.screen
+         val s = flights.session
+         val guide = flights.guide
+@@ -186,8 +190,12 @@ class ControlLineGame(
+             cables = cables,
+         )
+         (optIn as? FailableFieldView)?.failure?.let(::fallBackToRaster)
++        Probe.skipTo("ui.update")
+         ui.update(s, flights.judge, seconds, flights.scaleJudge, flights.instructor)
++        Probe.mark("ui.update")
+         ui.draw(seconds)
++        Probe.mark("ui.draw")
++        Probe.end()
+     }
+ 
+     /** Ray rendering failed after start: dispose it and continue raster, with the reason in the title and the log. */
+diff --git a/projects/app-game-control-line/src/main/kotlin/net/nevinsky/abyssus/app/game/controlline/measure/MeasureGame.kt b/projects/app-game-control-line/src/main/kotlin/net/nevinsky/abyssus/app/game/controlline/measure/MeasureGame.kt
+new file mode 100644
+index 00000000..5045bffd
+--- /dev/null
++++ b/projects/app-game-control-line/src/main/kotlin/net/nevinsky/abyssus/app/game/controlline/measure/MeasureGame.kt
+@@ -0,0 +1,105 @@
++package net.nevinsky.abyssus.app.game.controlline.measure
++
++import com.badlogic.gdx.ApplicationListener
++import com.badlogic.gdx.Gdx
++import com.badlogic.gdx.graphics.GL20
++import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application
++import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration
++import net.nevinsky.abyssus.app.game.controlline.ControlLineGame
++import net.nevinsky.abyssus.app.game.controlline.flow.Screen
++import net.nevinsky.abyssus.app.game.controlline.pattern.AssistLevel
++import java.io.File
++import java.lang.management.ManagementFactory
++import java.nio.file.Files
++import java.nio.file.Path
++
++/** Scratch measurement driver: the real game, scripted through its flow, timed by [Probe]. */
++fun main() {
++    val project = Path.of(System.getProperty("controlLine.project")).toAbsolutePath()
++    val home = Files.createTempDirectory("cl-measure")
++    val config = Lwjgl3ApplicationConfiguration().apply {
++        setTitle("Control Line (measure)"); setWindowedMode(1280, 720); setWindowPosition(40, 40)
++        useVsync(false); setForegroundFPS(60)
++        setBackBufferConfig(8, 8, 8, 8, 24, 0, 4)
++        setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.GL30, 3, 3)
++    }
++    val game = ControlLineGame(project, home.resolve("scores.json"))
++    Lwjgl3Application(Script(game), config)
++}
++
++private class Script(val game: ControlLineGame) : ApplicationListener {
++    var frame = 0
++    val marks = ArrayList<Pair<String, IntRange>>() // phase name -> frame indices in Probe.frames
++    var phase: String? = null; var phaseStart = 0
++    var starts = 0
++    var next = 0
++    val out = StringBuilder()
++    val gcBean = ManagementFactory.getGarbageCollectorMXBeans()
++    var gcAt = 0L; var gcMsAt = 0L
++
++    override fun create() {
++        game.create()
++        out.appendLine("GL_RENDERER=${Gdx.gl.glGetString(GL20.GL_RENDERER)} GL_VERSION=${Gdx.gl.glGetString(GL20.GL_VERSION)}")
++        out.appendLine("backBuffer=${Gdx.graphics.backBufferWidth}x${Gdx.graphics.backBufferHeight} logical=${Gdx.graphics.width}x${Gdx.graphics.height} clouds=${System.getProperty("measure.clouds")}")
++        out.appendLine("JVM=${System.getProperty("java.vendor")} ${System.getProperty("java.version")} maxHeap=${Runtime.getRuntime().maxMemory() / 1048576} MB noCull=${Probe.noCull} counters=${Probe.counters}")
++        Probe.on = true
++    }
++    override fun resize(width: Int, height: Int) = game.resize(width, height)
++    override fun pause() = game.pause()
++    override fun resume() = game.resume()
++    override fun dispose() = game.dispose()
++
++    fun open(name: String) { phase = name; phaseStart = Probe.frames.size; gcAt = gcBean.sumOf { it.collectionCount }; gcMsAt = gcBean.sumOf { it.collectionTime } }
++    fun close() { marks += phase!! to (phaseStart until Probe.frames.size); out.appendLine("phase $phase GCs=${gcBean.sumOf { it.collectionCount } - gcAt} gcMs=${gcBean.sumOf { it.collectionTime } - gcMsAt}"); phase = null }
++
++    override fun render() {
++        val flow = game.flow
++        // script, in frames at 60 a second
++        when {
++            frame == 600 -> open("menu")
++            frame == 1200 -> { close(); flow.f2bPattern(); flow.chooseAssist(AssistLevel.MID); flow.watchAi(); open("start1") }
++            frame == 1201 -> { close(); open("after-start1") }
++            frame == 1260 -> close()
++            frame == 1200 + 1200 -> open("flying")       // 20 s into the flight
++            frame == 1200 + 1200 + 3600 -> { close(); flow.pause(); flow.mainMenu(); open("return1") }
++            frame == 6001 -> { close(); open("after-return1") }
++            frame == 6060 -> { close(); next = 6200 }
++            next in 1..frame && starts < 5 -> {
++                starts++
++                flow.f2bPattern(); flow.chooseAssist(AssistLevel.MID); flow.watchAi(); open("start${starts + 1}")
++                next = -frame
++            }
++            next < 0 && frame == -next + 1 -> close()
++            next < 0 && frame == -next + 180 -> { flow.pause(); flow.mainMenu(); open("return${starts + 1}") }
++            next < 0 && frame == -next + 181 -> { close(); next = frame + 120 }
++            starts >= 5 && next in 1..frame -> { report(); Gdx.app.exit() }
++        }
++        game.render()
++        frame++
++    }
++
++    fun pct(xs: List<Double>, p: Double) = if (xs.isEmpty()) Double.NaN else xs.sorted()[((xs.size - 1) * p).toInt()]
++    fun row(name: String, xs: List<Double>) = "  %-14s p50=%7.3f p95=%7.3f p99=%7.3f max=%8.3f mean=%7.3f".format(name, pct(xs, .5), pct(xs, .95), pct(xs, .99), xs.maxOrNull() ?: Double.NaN, xs.average())
++
++    fun report() {
++        for ((name, range) in marks) {
++            val fs = range.map { Probe.frames[it] }
++            if (fs.isEmpty()) continue
++            out.appendLine("== $name frames=${fs.size}")
++            out.appendLine(row("cpu frame ms", fs.map { it.total / 1e6 }))
++            Probe.spans.forEachIndexed { i, s -> out.appendLine(row("cpu $s", fs.map { it.cpu[i] / 1e6 })) }
++            val g = fs.mapNotNull { it.gpu }
++            out.appendLine("  gpu frames with results: ${g.size}")
++            if (g.isNotEmpty()) {
++                out.appendLine(row("gpu frame ms", g.map { it.sum() / 1e6 }))
++                Probe.spans.forEachIndexed { i, s -> out.appendLine(row("gpu $s", g.map { it[i] / 1e6 })) }
++            }
++            out.appendLine(row("alloc KB", fs.map { it.alloc / 1024.0 }))
++            Probe.spans.forEachIndexed { i, s -> out.appendLine(row("allocKB $s", fs.map { it.spanAlloc[i] / 1024.0 })) }
++            if (Probe.counters) Probe.spans.forEachIndexed { i, s ->
++                out.appendLine("  counters %-14s calls=%.0f switches=%.0f binds=%.0f verts=%.0f".format(s, fs.map { it.calls[i] }.average(), fs.map { it.switches[i] }.average(), fs.map { it.binds[i] }.average(), fs.map { it.verts[i] }.average()))
++            }
++        }
++        val f = File(System.getProperty("measure.out")); f.parentFile.mkdirs(); f.writeText(out.toString())
++    }
++}
+diff --git a/projects/app-game-control-line/src/main/kotlin/net/nevinsky/abyssus/app/game/controlline/measure/Probe.kt b/projects/app-game-control-line/src/main/kotlin/net/nevinsky/abyssus/app/game/controlline/measure/Probe.kt
+new file mode 100644
+index 00000000..54eea45c
+--- /dev/null
++++ b/projects/app-game-control-line/src/main/kotlin/net/nevinsky/abyssus/app/game/controlline/measure/Probe.kt
+@@ -0,0 +1,86 @@
++package net.nevinsky.abyssus.app.game.controlline.measure
++
++import com.badlogic.gdx.Gdx
++import com.badlogic.gdx.graphics.profiling.GLProfiler
++import org.lwjgl.opengl.GL15
++import org.lwjgl.opengl.GL33
++import java.lang.management.ManagementFactory
++
++/** Scratch measurement probe (worktree only, never committed). */
++object Probe {
++    val noCull = System.getProperty("measure.noCull") == "true"
++    val counters = System.getProperty("measure.counters") == "true"
++    var on = false
++    val spans = listOf("prep", "flight", "field.assets", "field.sky", "field.skylight", "field.shadow", "field.terrain", "field.models", "field.lines", "ui.update", "ui.draw")
++    private val n = spans.size
++    private const val RING = 8
++    private var queries: IntArray? = null
++    private var slot = 0
++    private val pending = ArrayDeque<Int>()
++    private var cursor = 0
++    private var last = 0L
++    private var start = 0L
++    private var allocStart = 0L
++    private val mx = ManagementFactory.getThreadMXBean() as com.sun.management.ThreadMXBean
++    private var profiler: GLProfiler? = null
++    private val cpu = LongArray(n)
++    private val spanAlloc = LongArray(n)
++    private var lastAlloc = 0L
++    private val calls = IntArray(n); private val switches = IntArray(n); private val binds = IntArray(n); private val verts = IntArray(n)
++    private var lastCalls = 0; private var lastSwitches = 0; private var lastBinds = 0; private var lastVerts = 0
++
++    class Frame(val total: Long, val cpu: LongArray, val alloc: Long, val spanAlloc: LongArray, val calls: IntArray, val switches: IntArray, val binds: IntArray, val verts: IntArray) { var gpu: LongArray? = null }
++    val frames = ArrayList<Frame>()
++    private val bySlot = arrayOfNulls<Frame>(RING)
++
++    fun begin() {
++        if (!on) return
++        if (queries == null) { queries = IntArray(RING * (n + 1)).also { GL15.glGenQueries(it) } }
++        if (counters && profiler == null) profiler = GLProfiler(Gdx.graphics).also { it.enable() }
++        poll()
++        if (pending.size >= RING) { pending.clear() } // never block: drop GPU data of a frame still in flight
++        cursor = 0
++        profiler?.reset(); lastCalls = 0; lastSwitches = 0; lastBinds = 0; lastVerts = 0
++        allocStart = mx.getThreadAllocatedBytes(Thread.currentThread().id)
++        start = System.nanoTime(); last = start; lastAlloc = allocStart
++        GL15.glBeginQuery(GL33.GL_TIME_ELAPSED, queries!![slot * (n + 1)])
++    }
++
++    fun mark(name: String) {
++        if (!on) return
++        val i = cursor
++        check(spans[i] == name) { "expected ${spans[i]}, got $name" }
++        val now = System.nanoTime(); cpu[i] = now - last; last = now
++        val a = mx.getThreadAllocatedBytes(Thread.currentThread().id); spanAlloc[i] = a - lastAlloc; lastAlloc = a
++        profiler?.let { p ->
++            val c = p.drawCalls; val s = p.shaderSwitches; val b = p.textureBindings; val v = p.vertexCount.total.toInt()
++            calls[i] = c - lastCalls; switches[i] = s - lastSwitches; binds[i] = b - lastBinds; verts[i] = v - lastVerts
++            lastCalls = c; lastSwitches = s; lastBinds = b; lastVerts = v
++        }
++        GL15.glEndQuery(GL33.GL_TIME_ELAPSED)
++        if (i + 1 < n) GL15.glBeginQuery(GL33.GL_TIME_ELAPSED, queries!![slot * (n + 1) + i + 1])
++        cursor++
++    }
++
++    /** Skips the marks a frame did not reach (no session, no lines) so the indices line up. */
++    fun skipTo(name: String) { if (!on) return; while (spans[cursor] != name) mark(spans[cursor]) }
++
++    fun end() {
++        if (!on) return
++        while (cursor < n) mark(spans[cursor])
++        val f = Frame(System.nanoTime() - start, cpu.copyOf(), mx.getThreadAllocatedBytes(Thread.currentThread().id) - allocStart, spanAlloc.copyOf(), calls.copyOf(), switches.copyOf(), binds.copyOf(), verts.copyOf())
++        frames += f; bySlot[slot] = f; pending.addLast(slot)
++        slot = (slot + 1) % RING
++    }
++
++    private fun poll() {
++        val q = queries ?: return
++        while (pending.isNotEmpty()) {
++            val s = pending.first()
++            val lastQ = q[s * (n + 1) + n - 1]
++            if (GL15.glGetQueryObjecti(lastQ, GL15.GL_QUERY_RESULT_AVAILABLE) == 0) return
++            pending.removeFirst()
++            bySlot[s]?.gpu = LongArray(n) { GL33.glGetQueryObjecti64(q[s * (n + 1) + it], GL15.GL_QUERY_RESULT) }
++        }
++    }
++}
+diff --git a/projects/app-game-control-line/src/main/kotlin/net/nevinsky/abyssus/app/game/controlline/render/FieldRenderer.kt b/projects/app-game-control-line/src/main/kotlin/net/nevinsky/abyssus/app/game/controlline/render/FieldRenderer.kt
+index d78d4be1..fb791e8c 100644
+--- a/projects/app-game-control-line/src/main/kotlin/net/nevinsky/abyssus/app/game/controlline/render/FieldRenderer.kt
++++ b/projects/app-game-control-line/src/main/kotlin/net/nevinsky/abyssus/app/game/controlline/render/FieldRenderer.kt
+@@ -4,24 +4,23 @@
+  */
+ package net.nevinsky.abyssus.app.game.controlline.render
+ 
+-import net.nevinsky.abyssus.lib.render.light.setSkyLight
+ import com.badlogic.ashley.core.Entity
+ import com.badlogic.gdx.Gdx
+ import com.badlogic.gdx.graphics.Camera
+ import com.badlogic.gdx.graphics.Color
+-import com.badlogic.gdx.graphics.PerspectiveCamera
+ import com.badlogic.gdx.graphics.GL20
++import com.badlogic.gdx.graphics.g3d.Environment
+ import com.badlogic.gdx.graphics.g3d.Model
+ import com.badlogic.gdx.graphics.g3d.ModelBatch
+ import com.badlogic.gdx.graphics.g3d.ModelInstance
+ import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
+ import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
+ import com.badlogic.gdx.graphics.g3d.utils.AnimationController
+-import com.badlogic.gdx.graphics.glutils.ImmediateModeRenderer20
+ import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+ import com.badlogic.gdx.math.Vector3
+ import com.badlogic.gdx.utils.Disposable
+ import net.nevinsky.abyssus.lib.core.BaseCtx
++import net.nevinsky.abyssus.app.game.controlline.measure.Probe
+ import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
+ import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageDrawable
+ import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
+@@ -29,25 +28,24 @@ import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
+ import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
+ import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
+ import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
++import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironment
+ import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
+ import net.nevinsky.abyssus.lib.core.assets.standard.StandardAssetLoaders
+ import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
+ import net.nevinsky.abyssus.lib.core.io.FileLoader
+ import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+-import com.badlogic.gdx.graphics.g3d.Environment
+ import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
+ import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
+ import net.nevinsky.abyssus.lib.gdx.shader.OutputTransformAttribute
+-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironment
+ import net.nevinsky.abyssus.lib.render.frame.FrameInputs
+ import net.nevinsky.abyssus.lib.render.frame.RenderFog
+ import net.nevinsky.abyssus.lib.render.light.DirectionalInput
+ import net.nevinsky.abyssus.lib.render.light.RenderLights
++import net.nevinsky.abyssus.lib.render.light.setSkyLight
+ import net.nevinsky.abyssus.lib.render.terrain.*
+ import org.slf4j.Logger
+ import java.io.File
+ import java.util.concurrent.Executor
+-import kotlin.math.min
+ 
+ /**
+  * The one asset storage of the project in [projectDir], wired by constructors like the plugin does (both take the
+@@ -152,6 +150,7 @@ class FieldRenderer(
+     private val sun = DirectionalLight()
+     private val shadows = FieldShadows()
+     private val cableMesh = CableMesh()
++    private val culling = ModelCulling()
+ 
+     /** The sky light the models and terrain are lit with this frame, and the one fading in over it. */
+     private class SkyLight(val environment: HdrEnvironment, val fadeTo: HdrEnvironment?, val weight: Float) {
+@@ -188,7 +187,14 @@ class FieldRenderer(
+      * failed. Foliage is optional, so a missing or unsupported one must not keep the game on its loading screen.
+      */
+     fun loaded(field: FieldScene): Boolean =
+-        field.models.all { (entity, name) -> ctx.assetStorage.getAs<Model>(field.modelStorageName(entity, name)) != null }
++        field.models.all { (entity, name) ->
++            ctx.assetStorage.getAs<Model>(
++                field.modelStorageName(
++                    entity,
++                    name
++                )
++            ) != null
++        }
+                 && field.terrains.all { ctx.assetStorage.getAs<TerrainMesh>(it.second) != null }
+                 && field.foliages.all { !ctx.assetStorage.isLoading(it.foliage) }
+ 
+@@ -224,6 +230,7 @@ class FieldRenderer(
+         }
+         wanted.forEach(ctx.assetStorage::request)
+         ctx.assetStorage.update()
++        Probe.mark("field.assets")
+ 
+         val fog = field.fogColor ?: Color(0.6f, 0.7f, 0.85f, 1f)
+         Gdx.gl.glClearColor(fog.r, fog.g, fog.b, 1f)
+@@ -238,7 +245,9 @@ class FieldRenderer(
+             Gdx.gl.glDepthMask(true)
+             stepDownClouds(it, seconds)
+         }
++        Probe.mark("field.sky")
+         val skyLight = lightWithSky(field, sky, seconds)
++        Probe.mark("field.skylight")
+ 
+         val drawn = drawnModels(field)
+         animate(drawn, clips, seconds)
+@@ -252,10 +261,14 @@ class FieldRenderer(
+             light,
+             field.position(entity).getTransform()
+         )
+-        shadows.render(drawn.map { it.second }, terrains) { out, pool ->
++        // only what the sun camera's volume meets is drawn into the map; animated models keep their rest-pose box out of it
++        val lightFrustum = light.frustum
++        val casters = drawn.filter { (entity, instance) -> entity in clips || Probe.noCull || culling.visible(instance, lightFrustum) }
++        shadows.render(casters.map { it.second }, terrains) { out, pool ->
+             for (placement in foliage.values) placement.drawable.getCasterRenderables(out, pool)
+         }
+         shadows.attribute()?.let(environment::set)
++        Probe.mark("field.shadow")
+ 
+         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
+         Gdx.gl.glDepthFunc(GL20.GL_LEQUAL)
+@@ -279,18 +292,27 @@ class FieldRenderer(
+             skyLight?.irradiance, skyLight?.fadeTo?.irradiance, skyLight?.weight ?: 0f,
+         )
+         terrainPass.draw(frame, sun, terrains.map { (mesh, world) -> TerrainDraw(mesh, world) })
++        Probe.mark("field.terrain")
+ 
+         // the viewer's own culling and buffers, after the light pass: casters never touch them
+         for ((entity, placement) in foliage) placement.drawable.update(camera, field.position(entity).getTransform())
+         batch.begin(camera)
+         for ((entity, instance) in drawn) {
+-            if (entity === hidden) continue
++            if (entity === hidden) {
++                continue
++            }
++            if (entity !in clips && !Probe.noCull && !culling.visible(instance, camera.frustum)) {
++                continue
++            }
+             batch.render(instance, environment)
+         }
+-        for (placement in foliage.values) batch.render(placement.drawable, environment)
++        for (placement in foliage.values) {
++            batch.render(placement.drawable, environment)
++        }
+         cableMesh.update(cables, camera, Gdx.graphics.backBufferHeight.toFloat().coerceAtLeast(1f))
+         batch.render(cableMesh, environment)
+         batch.end()
++        Probe.mark("field.models")
+ 
+         val (wires, plain) = lines.partition { it.thickness > 0f }
+         if (plain.isNotEmpty()) {
+@@ -314,6 +336,7 @@ class FieldRenderer(
+         if (wires.isNotEmpty()) wireRenderer.draw(wires, camera, field.sunDirection)
+         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
+         Gdx.gl.glDisable(GL20.GL_CULL_FACE)
++        Probe.mark("field.lines")
+     }
+ 
+     private val wireRenderer = WireRenderer()
+diff --git a/projects/app-game-control-line/src/test/kotlin/net/nevinsky/abyssus/app/game/controlline/MeasureHeadlessTest.kt b/projects/app-game-control-line/src/test/kotlin/net/nevinsky/abyssus/app/game/controlline/MeasureHeadlessTest.kt
+new file mode 100644
+index 00000000..793d289a
+--- /dev/null
++++ b/projects/app-game-control-line/src/test/kotlin/net/nevinsky/abyssus/app/game/controlline/MeasureHeadlessTest.kt
+@@ -0,0 +1,128 @@
++package net.nevinsky.abyssus.app.game.controlline
++
++import net.nevinsky.abyssus.app.game.controlline.ai.f2bBot
++import net.nevinsky.abyssus.app.game.controlline.components.PlaneComponent
++import net.nevinsky.abyssus.app.game.controlline.flight.FlightControlSource
++import net.nevinsky.abyssus.app.game.controlline.flight.FlightEnd
++import net.nevinsky.abyssus.app.game.controlline.flight.FlightJudge
++import net.nevinsky.abyssus.app.game.controlline.flight.FlightSession
++import net.nevinsky.abyssus.app.game.controlline.track.TrackSample
++import net.nevinsky.abyssus.app.game.controlline.flow.Mode
++import net.nevinsky.abyssus.app.game.controlline.flow.reportOf
++import net.nevinsky.abyssus.app.game.controlline.pattern.AssistLevel
++import net.nevinsky.abyssus.app.game.controlline.pattern.PatternJudge
++import net.nevinsky.abyssus.app.game.controlline.render.FieldScene
++import net.nevinsky.abyssus.lib.physics.PhysicsAssets
++import net.nevinsky.abyssus.lib.physics.RigidBodyComponent
++import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
++import net.nevinsky.abyssus.lib.gdx.testing.failOnWarnings
++import org.junit.Test
++import java.io.File
++import java.lang.management.ManagementFactory
++
++/** Scratch measurement (not for the repo): headless costs of scene load, flight start and a Watch AI F2B flight. */
++class MeasureHeadlessTest {
++    private val mx = ManagementFactory.getThreadMXBean() as com.sun.management.ThreadMXBean
++    private val tid = Thread.currentThread().id
++    private fun alloc() = mx.getThreadAllocatedBytes(Thread.currentThread().id)
++
++    private fun pct(xs: List<Double>, p: Double): Double = xs.sorted().let { it[((it.size - 1) * p).toInt()] }
++    private fun row(name: String, xs: List<Double>) =
++        "%-28s n=%6d p50=%8.3f p95=%8.3f p99=%8.3f max=%8.3f mean=%8.3f".format(name, xs.size, pct(xs, .5), pct(xs, .95), pct(xs, .99), xs.max(), xs.average())
++
++    @Test
++    fun measure() {
++        val out = StringBuilder()
++        val natives = JoltNatives()
++        val assets = { PhysicsAssets(bundledProject().toFile()) }
++        // scene load as FlightRunner.start / debriefSceneOf do it (document read, bind, ECS build, FieldScene listing)
++        val loads = ArrayList<Double>()
++        val loadAlloc = ArrayList<Double>()
++        repeat(8) {
++            val a = alloc(); val t = System.nanoTime()
++            FieldScene(loadField())
++            loads += (System.nanoTime() - t) / 1e6; loadAlloc += (alloc() - a) / 1e6
++        }
++        out.appendLine("scene load ms (first is cold): ${loads.map { "%.1f".format(it) }}")
++        out.appendLine("scene load MB allocated: ${loadAlloc.map { "%.1f".format(it) }}")
++
++        // physics world + session build (the rest of FlightRunner.start), and close
++        val builds = ArrayList<Double>(); val closes = ArrayList<Double>()
++        repeat(8) {
++            val scene = FieldScene(loadField())
++            val plane = scene.planes.first { it.name == "Stunter" }.let { scene.entity(it.entityId)!! }
++            val pilot = scene.pilot!!
++            val t = System.nanoTime()
++            val s = FlightSession(scene.engine, pilot, plane, assets(), failOnWarnings(), natives)
++            builds += (System.nanoTime() - t) / 1e6
++            val c = System.nanoTime(); s.close(); closes += (System.nanoTime() - c) / 1e6
++        }
++        out.appendLine("session build ms (first is cold, includes Jolt load): ${builds.map { "%.1f".format(it) }}")
++        out.appendLine("session close ms: ${closes.map { "%.1f".format(it) }}")
++        // the same with one PhysicsAssets kept across flights, and the parts of a build
++        val shared = assets()
++        val sharedBuilds = ArrayList<Double>(); val assetRead = ArrayList<Double>()
++        repeat(6) {
++            val scene = FieldScene(loadField())
++            val plane = scene.planes.first { it.name == "Stunter" }.let { scene.entity(it.entityId)!! }
++            val t = System.nanoTime()
++            val s = FlightSession(scene.engine, scene.pilot!!, plane, shared, failOnWarnings(), natives)
++            sharedBuilds += (System.nanoTime() - t) / 1e6
++            s.close()
++        }
++        out.appendLine("session build ms, shared PhysicsAssets: ${sharedBuilds.map { "%.1f".format(it) }}")
++        repeat(3) {
++            val fresh = assets(); val scene = FieldScene(loadField())
++            val t = System.nanoTime()
++            val w = net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld(scene.engine, fresh, failOnWarnings(), natives)
++            assetRead += (System.nanoTime() - t) / 1e6
++            w.close()
++        }
++        out.appendLine("PhysicsWorld alone ms, fresh PhysicsAssets: ${assetRead.map { "%.1f".format(it) }}")
++
++        // a whole Watch AI F2B flight at 60 frames a second
++        val scene = FieldScene(loadField())
++        val planeEntity = scene.planes.first { it.name == "Stunter" }.let { scene.entity(it.entityId)!! }
++        val settings = planeEntity.getComponent(PlaneComponent::class.java)
++        val mass = planeEntity.getComponent(RigidBodyComponent::class.java).mass
++        val judge = PatternJudge(settings.lineLength)
++        val bot = f2bBot(settings, mass, judge::guideInput)
++        val judgeMs = ArrayList<Double>(); val botMs = ArrayList<Double>()
++        val timedJudge = object : FlightJudge {
++            override fun sample(sample: TrackSample) { val t = System.nanoTime(); judge.sample(sample); judgeMs += (System.nanoTime() - t) / 1e6 }
++            override fun ended(end: FlightEnd) { val t = System.nanoTime(); judge.ended(end); out.appendLine("judge.ended ms: %.3f".format((System.nanoTime() - t) / 1e6)) }
++        }
++        val control = FlightControlSource { o -> val t = System.nanoTime(); bot.tilt(o).also { botMs += (System.nanoTime() - t) / 1e6 } }
++        val session = FlightSession(scene.engine, scene.pilot!!, planeEntity, assets(), failOnWarnings(), natives, timedJudge, control)
++        val frameMs = ArrayList<Double>(); val frameAlloc = ArrayList<Double>(); val wiresMs = ArrayList<Double>()
++        val gcBefore = ManagementFactory.getGarbageCollectorMXBeans().sumOf { it.collectionCount }
++        while (session.flight.result == null && session.flight.time < 430f) {
++            val a = alloc(); val t = System.nanoTime()
++            session.advance(1f / 60f)
++            val w = System.nanoTime()
++            session.wires(1f / 60f)
++            val e = System.nanoTime()
++            frameMs += (w - t) / 1e6; wiresMs += (e - w) / 1e6; frameAlloc += (alloc() - a).toDouble()
++        }
++        val gcAfter = ManagementFactory.getGarbageCollectorMXBeans().sumOf { it.collectionCount }
++        out.appendLine("flight: ${session.flight.result} after %.1f s, ${frameMs.size} frames, GCs %d".format(session.flight.time, gcAfter - gcBefore))
++        val steady = frameMs.drop(600)
++        out.appendLine(row("advance per frame ms", steady))
++        out.appendLine(row("wires per frame ms", wiresMs.drop(600)))
++        out.appendLine(row("judge.sample per step ms", judgeMs.drop(1200)))
++        out.appendLine(row("bot.tilt per step ms", botMs.drop(1200)))
++        out.appendLine(row("flight alloc per frame KB", frameAlloc.drop(600).map { it / 1024 }))
++        // judge cost over time: the first and last minute of samples
++        out.appendLine(row("judge.sample first 60 s", judgeMs.drop(1200).take(7200)))
++        out.appendLine(row("judge.sample last 60 s", judgeMs.takeLast(7200)))
++        val top = judgeMs.withIndex().sortedByDescending { it.value }.take(8).map { "%.2f ms @ %.1f s".format(it.value, it.index / 120f) }
++        out.appendLine("slowest judge samples: $top")
++        val t = System.nanoTime()
++        val report = reportOf(session, Mode.Pattern(AssistLevel.values().first()), judge, "Stunter")
++        out.appendLine("reportOf ms: %.3f (report ${report != null})".format((System.nanoTime() - t) / 1e6))
++        session.close()
++        val file = File(System.getProperty("measure.out", "build/measure-headless.txt"))
++        file.parentFile.mkdirs(); file.writeText(out.toString())
++        println(out)
++    }
++}
+diff --git a/projects/app-game-control-line/src/test/kotlin/net/nevinsky/abyssus/app/game/controlline/MeasureShapesTest.kt b/projects/app-game-control-line/src/test/kotlin/net/nevinsky/abyssus/app/game/controlline/MeasureShapesTest.kt
+new file mode 100644
+index 00000000..c64ea47c
+--- /dev/null
++++ b/projects/app-game-control-line/src/test/kotlin/net/nevinsky/abyssus/app/game/controlline/MeasureShapesTest.kt
+@@ -0,0 +1,48 @@
++package net.nevinsky.abyssus.app.game.controlline
++
++import com.github.stephengold.joltjni.ConvexHullShapeSettings
++import com.github.stephengold.joltjni.HeightFieldShapeSettings
++import com.github.stephengold.joltjni.Vec3
++import net.nevinsky.abyssus.lib.core.assets.MetaType
++import net.nevinsky.abyssus.lib.core.ecs.component.assetName
++import net.nevinsky.abyssus.lib.physics.ColliderComponent
++import net.nevinsky.abyssus.lib.physics.PhysicsAssets
++import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
++import org.junit.Test
++import java.io.File
++
++class MeasureShapesTest {
++    @Test
++    fun shapes() {
++        JoltNatives().load()
++        val assets = PhysicsAssets(bundledProject().toFile())
++        val scene = loadField()
++        val out = StringBuilder()
++        for (e in scene.engine.entities) {
++            val c = e.getComponent(ColliderComponent::class.java) ?: continue
++            when (c.shape.name) {
++                "CONVEX_HULL" -> {
++                    val name = assetName(e, MetaType.MODEL)!!
++                    val t0 = System.nanoTime(); val pts = assets.modelPoints(name)!!; val read = (System.nanoTime() - t0) / 1e6
++                    val times = (1..3).map {
++                        val t = System.nanoTime(); val r = ConvexHullShapeSettings(pts.map { Vec3(it.x, it.y, it.z) }).create(); val ms = (System.nanoTime() - t) / 1e6
++                        check(!r.hasError()) { r.getError() }; ms
++                    }
++                    val unique = pts.map { Triple(it.x, it.y, it.z) }.toSet().size
++                    out.appendLine("hull %-40s points=%7d unique=%7d read=%.1f ms create=%s".format(name, pts.size, unique, read, times.map { "%.1f".format(it) }))
++                }
++                "HEIGHT_FIELD" -> {
++                    val name = assetName(e, MetaType.TERRAIN)!!
++                    val td = assets.terrain(name)!!
++                    val n = if (td.resolution % 2 == 0) td.resolution else td.resolution + 1
++                    val times = (1..3).map {
++                        val samples = FloatArray(n * n); for (z in 0 until td.resolution) for (x in 0 until td.resolution) samples[z * n + x] = td.heights[z * td.resolution + x]
++                        val t = System.nanoTime(); HeightFieldShapeSettings(samples, Vec3(0f, 0f, 0f), Vec3(1f, 1f, 1f), n).create(); (System.nanoTime() - t) / 1e6
++                    }
++                    out.appendLine("heightfield %s resolution=%d create=%s".format(name, td.resolution, times.map { "%.1f".format(it) }))
++                }
++            }
++        }
++        File("build/measure-shapes.txt").writeText(out.toString()); println(out)
++    }
++}

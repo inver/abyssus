@@ -1,0 +1,5 @@
+heightfield terrain_airfield_site resolution=255 create=[63,6, 48,7, 48,7]
+hull model_racer                              points=    288 unique=     96 read=251,3 ms create=[4,5, 1,8, 1,8]
+hull model_stunter                            points=  84826 unique=  77662 read=135,2 ms create=[1064,2, 1056,5, 1050,6]
+hull model_trainer                            points=   1361 unique=    542 read=11,5 ms create=[8,0, 7,8, 7,8]
+hull model_mig3                               points=  21612 unique=  13870 read=31,8 ms create=[171,4, 169,7, 169,5]

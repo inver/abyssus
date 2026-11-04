@@ -1,0 +1,627 @@
+GL_RENDERER=Apple M1 Pro GL_VERSION=4.1 Metal - 91.7
+backBuffer=2560x1440 logical=1280x720 clouds=CUMULUS
+JVM=Eclipse Adoptium 25.0.4 maxHeap=8192 MB noCull=false counters=false
+phase menu GCs=6 gcMs=15
+phase start1 GCs=2 gcMs=7
+phase after-start1 GCs=0 gcMs=0
+phase flying GCs=37 gcMs=36
+phase return1 GCs=2 gcMs=3
+phase after-return1 GCs=0 gcMs=0
+phase start2 GCs=2 gcMs=7
+phase return2 GCs=3 gcMs=4
+phase start3 GCs=0 gcMs=0
+phase return3 GCs=0 gcMs=0
+phase start4 GCs=0 gcMs=0
+phase return4 GCs=0 gcMs=0
+phase start5 GCs=0 gcMs=0
+phase return5 GCs=0 gcMs=0
+phase start6 GCs=1 gcMs=1
+phase return6 GCs=0 gcMs=0
+== menu frames=600
+  cpu frame ms   p50= 24,415 p95= 25,372 p99= 41,165 max=  46,428 mean= 24,335
+  cpu prep       p50=  0,021 p95=  0,031 p99=  0,042 max=   0,120 mean=  0,022
+  cpu flight     p50=  0,003 p95=  0,004 p99=  0,006 max=   0,016 mean=  0,003
+  cpu field.assets p50=  0,069 p95=  0,097 p99=  0,118 max=   4,756 mean=  0,079
+  cpu field.sky  p50= 14,759 p95= 15,503 p99= 15,800 max=  18,567 mean= 13,051
+  cpu field.skylight p50=  0,093 p95=  1,236 p99= 14,031 max=  15,442 mean=  0,451
+  cpu field.shadow p50=  3,169 p95=  5,358 p99=  6,291 max=   7,884 mean=  3,297
+  cpu field.terrain p50=  0,295 p95=  0,372 p99=  0,467 max=   2,516 mean=  0,306
+  cpu field.models p50=  5,171 p95=  7,082 p99= 17,321 max=  27,436 mean=  5,357
+  cpu field.lines p50=  0,148 p95= 13,428 p99= 14,225 max=  14,744 mean=  1,121
+  cpu ui.update  p50=  0,089 p95=  0,130 p99=  0,183 max=   0,430 mean=  0,094
+  cpu ui.draw    p50=  0,226 p95=  0,288 p99= 10,647 max=  15,393 mean=  0,380
+  gpu frames with results: 600
+  gpu frame ms   p50= 23,120 p95= 23,824 p99= 23,979 max=  24,832 mean= 21,274
+  gpu prep       p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu flight     p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.assets p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.sky  p50= 16,608 p95= 16,761 p99= 16,903 max=  16,999 mean= 16,598
+  gpu field.skylight p50=  0,000 p95=  0,000 p99=  0,031 max=   0,051 mean= -1,802
+  gpu field.shadow p50=  0,910 p95=  0,984 p99=  1,015 max=   1,274 mean=  0,889
+  gpu field.terrain p50=  0,973 p95=  1,062 p99=  1,124 max=   1,817 mean=  0,965
+  gpu field.models p50=  4,106 p95=  4,851 p99=  4,922 max=   5,643 mean=  4,126
+  gpu field.lines p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.update  p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.draw    p50=  0,500 p95=  0,602 p99=  0,682 max=   0,733 mean=  0,498
+  alloc KB       p50=498,930 p95=863,422 p99=921,867 max=2299,680 mean=584,996
+  allocKB prep   p50=  0,547 p95=  0,547 p99=  0,547 max=   0,547 mean=  0,547
+  allocKB flight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  allocKB field.assets p50=  5,719 p95=  5,961 p99=  5,961 max=   5,961 mean=  5,784
+  allocKB field.sky p50=  0,523 p95=  0,523 p99=  0,523 max=   0,586 mean=  0,524
+  allocKB field.skylight p50=  0,789 p95=  1,359 p99=382,547 max= 382,898 mean=  7,876
+  allocKB field.shadow p50= 29,305 p95= 29,305 p99= 29,305 max=  29,305 mean= 29,305
+  allocKB field.terrain p50=  0,438 p95=  0,438 p99=  0,438 max=   0,438 mean=  0,438
+  allocKB field.models p50=427,859 p95=791,188 p99=849,109 max=2228,883 mean=507,044
+  allocKB field.lines p50=  0,070 p95=  0,070 p99=  0,070 max=   0,070 mean=  0,070
+  allocKB ui.update p50= 13,203 p95= 13,234 p99= 13,234 max=  13,258 mean= 13,206
+  allocKB ui.draw p50= 20,047 p95= 20,047 p99= 20,047 max=  20,273 mean= 20,048
+== start1 frames=1
+  cpu frame ms   p50=1735,813 p95=1735,813 p99=1735,813 max=1735,813 mean=1735,813
+  cpu prep       p50=1636,126 p95=1636,126 p99=1636,126 max=1636,126 mean=1636,126
+  cpu flight     p50= 17,542 p95= 17,542 p99= 17,542 max=  17,542 mean= 17,542
+  cpu field.assets p50=  2,485 p95=  2,485 p99=  2,485 max=   2,485 mean=  2,485
+  cpu field.sky  p50=  9,077 p95=  9,077 p99=  9,077 max=   9,077 mean=  9,077
+  cpu field.skylight p50=  0,239 p95=  0,239 p99=  0,239 max=   0,239 mean=  0,239
+  cpu field.shadow p50= 43,452 p95= 43,452 p99= 43,452 max=  43,452 mean= 43,452
+  cpu field.terrain p50=  4,338 p95=  4,338 p99=  4,338 max=   4,338 mean=  4,338
+  cpu field.models p50= 17,601 p95= 17,601 p99= 17,601 max=  17,601 mean= 17,601
+  cpu field.lines p50=  1,955 p95=  1,955 p99=  1,955 max=   1,955 mean=  1,955
+  cpu ui.update  p50=  0,986 p95=  0,986 p99=  0,986 max=   0,986 mean=  0,986
+  cpu ui.draw    p50=  1,827 p95=  1,827 p99=  1,827 max=   1,827 mean=  1,827
+  gpu frames with results: 1
+  gpu frame ms   p50= 36,365 p95= 36,365 p99= 36,365 max=  36,365 mean= 36,365
+  gpu prep       p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu flight     p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.assets p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.sky  p50= 19,977 p95= 19,977 p99= 19,977 max=  19,977 mean= 19,977
+  gpu field.skylight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.shadow p50=  6,293 p95=  6,293 p99=  6,293 max=   6,293 mean=  6,293
+  gpu field.terrain p50=  0,838 p95=  0,838 p99=  0,838 max=   0,838 mean=  0,838
+  gpu field.models p50=  8,818 p95=  8,818 p99=  8,818 max=   8,818 mean=  8,818
+  gpu field.lines p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.update  p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.draw    p50=  0,439 p95=  0,439 p99=  0,439 max=   0,439 mean=  0,439
+  alloc KB       p50=141197,148 p95=141197,148 p99=141197,148 max=141197,148 mean=141197,148
+  allocKB prep   p50=74735,102 p95=74735,102 p99=74735,102 max=74735,102 mean=74735,102
+  allocKB flight p50=1153,750 p95=1153,750 p99=1153,750 max=1153,750 mean=1153,750
+  allocKB field.assets p50= 58,297 p95= 58,297 p99= 58,297 max=  58,297 mean= 58,297
+  allocKB field.sky p50=  0,523 p95=  0,523 p99=  0,523 max=   0,523 mean=  0,523
+  allocKB field.skylight p50=  0,703 p95=  0,703 p99=  0,703 max=   0,703 mean=  0,703
+  allocKB field.shadow p50=63236,016 p95=63236,016 p99=63236,016 max=63236,016 mean=63236,016
+  allocKB field.terrain p50=  0,438 p95=  0,438 p99=  0,438 max=   0,438 mean=  0,438
+  allocKB field.models p50=1860,023 p95=1860,023 p99=1860,023 max=1860,023 mean=1860,023
+  allocKB field.lines p50=  0,070 p95=  0,070 p99=  0,070 max=   0,070 mean=  0,070
+  allocKB ui.update p50= 44,586 p95= 44,586 p99= 44,586 max=  44,586 mean= 44,586
+  allocKB ui.draw p50=107,484 p95=107,484 p99=107,484 max= 107,484 mean=107,484
+== after-start1 frames=59
+  cpu frame ms   p50= 24,011 p95= 24,572 p99= 25,392 max=  42,614 mean= 23,435
+  cpu prep       p50=  0,019 p95=  0,039 p99=  0,055 max=   0,065 mean=  0,022
+  cpu flight     p50=  1,725 p95=  2,586 p99=  3,651 max=   8,358 mean=  1,946
+  cpu field.assets p50=  0,078 p95=  0,108 p99=  0,341 max=   0,349 mean=  0,089
+  cpu field.sky  p50= 10,692 p95= 11,360 p99= 11,466 max=  11,695 mean=  8,342
+  cpu field.skylight p50=  0,094 p95=  2,975 p99=  3,972 max=  10,158 mean=  0,438
+  cpu field.shadow p50=  2,648 p95=  3,912 p99=  4,700 max=   5,672 mean=  2,749
+  cpu field.terrain p50=  0,286 p95=  0,346 p99=  0,411 max=   0,486 mean=  0,290
+  cpu field.models p50=  7,383 p95=  8,119 p99= 15,687 max=  15,721 mean=  7,304
+  cpu field.lines p50=  0,226 p95= 11,978 p99= 12,166 max=  12,437 mean=  1,397
+  cpu ui.update  p50=  0,295 p95=  0,404 p99=  0,439 max=   0,498 mean=  0,283
+  cpu ui.draw    p50=  0,349 p95=  0,659 p99=  0,827 max=   1,798 mean=  0,424
+  gpu frames with results: 59
+  gpu frame ms   p50= 22,870 p95= 23,218 p99= 23,500 max=  24,665 mean= 20,529
+  gpu prep       p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu flight     p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.assets p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.sky  p50= 16,419 p95= 16,574 p99= 16,709 max=  17,002 mean= 16,437
+  gpu field.skylight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,042 mean= -2,276
+  gpu field.shadow p50=  0,919 p95=  0,966 p99=  0,992 max=   1,033 mean=  0,900
+  gpu field.terrain p50=  1,016 p95=  1,063 p99=  1,080 max=   1,108 mean=  0,999
+  gpu field.models p50=  4,108 p95=  4,325 p99=  4,699 max=   5,204 mean=  4,027
+  gpu field.lines p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.update  p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.draw    p50=  0,437 p95=  0,542 p99=  0,569 max=   0,590 mean=  0,442
+  alloc KB       p50=1363,938 p95=1503,000 p99=1776,328 max=1922,180 mean=1339,693
+  allocKB prep   p50=  0,516 p95=  0,547 p99=  0,547 max=   0,602 mean=  0,524
+  allocKB flight p50= 15,680 p95= 43,289 p99= 90,539 max= 121,469 mean= 25,881
+  allocKB field.assets p50=  8,242 p95=  8,242 p99=  8,242 max=   8,336 mean=  8,244
+  allocKB field.sky p50=  0,523 p95=  0,523 p99=  0,523 max=   0,523 mean=  0,523
+  allocKB field.skylight p50=  0,789 p95=  2,391 p99=118,883 max= 382,547 mean= 11,097
+  allocKB field.shadow p50= 29,242 p95= 29,242 p99= 29,242 max=  29,242 mean= 29,242
+  allocKB field.terrain p50=  0,438 p95=  0,438 p99=  0,438 max=   0,438 mean=  0,438
+  allocKB field.models p50=1223,063 p95=1249,391 p99=1250,828 max=1753,898 mean=1169,793
+  allocKB field.lines p50=  0,070 p95=  0,070 p99=  0,070 max=   0,070 mean=  0,070
+  allocKB ui.update p50= 35,617 p95= 35,617 p99= 35,617 max=  35,672 mean= 30,448
+  allocKB ui.draw p50= 75,781 p95= 75,781 p99= 75,828 max=  75,859 mean= 63,276
+== flying frames=3600
+  cpu frame ms   p50= 24,504 p95= 29,476 p99= 42,412 max=  55,778 mean= 25,181
+  cpu prep       p50=  0,012 p95=  0,017 p99=  0,024 max=   0,043 mean=  0,012
+  cpu flight     p50=  0,396 p95=  0,551 p99=  0,703 max=   6,624 mean=  0,412
+  cpu field.assets p50=  0,045 p95=  0,062 p99=  0,094 max=   1,050 mean=  0,048
+  cpu field.sky  p50= 14,357 p95= 21,683 p99= 22,903 max=  24,049 mean= 13,730
+  cpu field.skylight p50=  0,076 p95=  1,090 p99= 12,326 max=  24,937 mean=  0,426
+  cpu field.shadow p50=  2,921 p95=  4,223 p99=  5,951 max=   8,287 mean=  3,050
+  cpu field.terrain p50=  0,278 p95=  0,352 p99=  0,417 max=   2,120 mean=  0,276
+  cpu field.models p50=  5,141 p95=  7,595 p99= 19,113 max=  27,074 mean=  5,207
+  cpu field.lines p50=  0,161 p95= 13,605 p99= 21,826 max=  23,587 mean=  1,338
+  cpu ui.update  p50=  0,099 p95=  0,144 p99=  0,178 max=   1,302 mean=  0,105
+  cpu ui.draw    p50=  0,230 p95=  0,302 p99= 10,868 max=  21,732 mean=  0,399
+  gpu frames with results: 3600
+  gpu frame ms   p50= 22,962 p95= 27,670 p99= 29,201 max=  31,203 mean= 21,939
+  gpu prep       p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu flight     p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.assets p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.sky  p50= 17,485 p95= 26,360 p99= 26,915 max=  27,442 mean= 19,377
+  gpu field.skylight p50=  0,000 p95=  0,000 p99=  0,043 max=   1,450 mean= -1,947
+  gpu field.shadow p50=  0,832 p95=  0,954 p99=  0,997 max=   1,287 mean=  0,795
+  gpu field.terrain p50=  0,789 p95=  0,952 p99=  0,995 max=   1,126 mean=  0,615
+  gpu field.models p50=  2,858 p95=  4,470 p99=  4,660 max=   4,991 mean=  2,648
+  gpu field.lines p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.update  p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.draw    p50=  0,447 p95=  0,561 p99=  0,607 max=   0,774 mean=  0,450
+  alloc KB       p50=974,133 p95=1486,539 p99=1510,227 max=1842,398 mean=960,246
+  allocKB prep   p50=  0,414 p95=  0,445 p99=  0,445 max=   0,445 mean=  0,424
+  allocKB flight p50=  7,430 p95= 10,742 p99= 14,758 max=1035,227 mean=  8,842
+  allocKB field.assets p50=  7,594 p95=  7,594 p99=  7,594 max=   7,594 mean=  7,553
+  allocKB field.sky p50=  0,453 p95=  0,453 p99=  0,453 max=   0,500 mean=  0,430
+  allocKB field.skylight p50=  0,789 p95=  2,219 p99=341,906 max= 342,375 mean=  7,923
+  allocKB field.shadow p50= 29,039 p95= 29,430 p99= 29,430 max=  30,813 mean= 29,046
+  allocKB field.terrain p50=  0,438 p95=  0,438 p99=  0,438 max=   0,438 mean=  0,438
+  allocKB field.models p50=832,148 p95=1344,000 p99=1354,648 max=1375,711 mean=813,039
+  allocKB field.lines p50=  0,070 p95=  0,070 p99=  0,070 max=   0,070 mean=  0,070
+  allocKB ui.update p50= 24,875 p95= 25,055 p99= 25,055 max=  36,773 mean= 24,878
+  allocKB ui.draw p50= 67,180 p95= 69,813 p99= 69,836 max=  75,680 mean= 67,447
+== return1 frames=1
+  cpu frame ms   p50= 73,125 p95= 73,125 p99= 73,125 max=  73,125 mean= 73,125
+  cpu prep       p50=  3,765 p95=  3,765 p99=  3,765 max=   3,765 mean=  3,765
+  cpu flight     p50=  0,007 p95=  0,007 p99=  0,007 max=   0,007 mean=  0,007
+  cpu field.assets p50=  1,165 p95=  1,165 p99=  1,165 max=   1,165 mean=  1,165
+  cpu field.sky  p50= 10,360 p95= 10,360 p99= 10,360 max=  10,360 mean= 10,360
+  cpu field.skylight p50=  0,110 p95=  0,110 p99=  0,110 max=   0,110 mean=  0,110
+  cpu field.shadow p50= 46,859 p95= 46,859 p99= 46,859 max=  46,859 mean= 46,859
+  cpu field.terrain p50=  1,429 p95=  1,429 p99=  1,429 max=   1,429 mean=  1,429
+  cpu field.models p50=  7,189 p95=  7,189 p99=  7,189 max=   7,189 mean=  7,189
+  cpu field.lines p50=  0,796 p95=  0,796 p99=  0,796 max=   0,796 mean=  0,796
+  cpu ui.update  p50=  0,188 p95=  0,188 p99=  0,188 max=   0,188 mean=  0,188
+  cpu ui.draw    p50=  0,797 p95=  0,797 p99=  0,797 max=   0,797 mean=  0,797
+  gpu frames with results: 1
+  gpu frame ms   p50= 30,183 p95= 30,183 p99= 30,183 max=  30,183 mean= 30,183
+  gpu prep       p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu flight     p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.assets p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.sky  p50= 15,903 p95= 15,903 p99= 15,903 max=  15,903 mean= 15,903
+  gpu field.skylight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.shadow p50=  3,404 p95=  3,404 p99=  3,404 max=   3,404 mean=  3,404
+  gpu field.terrain p50=  0,861 p95=  0,861 p99=  0,861 max=   0,861 mean=  0,861
+  gpu field.models p50=  9,357 p95=  9,357 p99=  9,357 max=   9,357 mean=  9,357
+  gpu field.lines p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.update  p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.draw    p50=  0,658 p95=  0,658 p99=  0,658 max=   0,658 mean=  0,658
+  alloc KB       p50=64190,836 p95=64190,836 p99=64190,836 max=64190,836 mean=64190,836
+  allocKB prep   p50=  4,281 p95=  4,281 p99=  4,281 max=   4,281 mean=  4,281
+  allocKB flight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  allocKB field.assets p50= 14,680 p95= 14,680 p99= 14,680 max=  14,680 mean= 14,680
+  allocKB field.sky p50=  0,320 p95=  0,320 p99=  0,320 max=   0,320 mean=  0,320
+  allocKB field.skylight p50=  0,531 p95=  0,531 p99=  0,531 max=   0,531 mean=  0,531
+  allocKB field.shadow p50=63235,641 p95=63235,641 p99=63235,641 max=63235,641 mean=63235,641
+  allocKB field.terrain p50=  0,438 p95=  0,438 p99=  0,438 max=   0,438 mean=  0,438
+  allocKB field.models p50=861,773 p95=861,773 p99=861,773 max= 861,773 mean=861,773
+  allocKB field.lines p50=  0,070 p95=  0,070 p99=  0,070 max=   0,070 mean=  0,070
+  allocKB ui.update p50= 21,961 p95= 21,961 p99= 21,961 max=  21,961 mean= 21,961
+  allocKB ui.draw p50= 50,984 p95= 50,984 p99= 50,984 max=  50,984 mean= 50,984
+== after-return1 frames=59
+  cpu frame ms   p50= 24,667 p95= 25,569 p99= 25,884 max=  42,052 mean= 23,917
+  cpu prep       p50=  0,011 p95=  0,015 p99=  0,017 max=   0,026 mean=  0,012
+  cpu flight     p50=  0,002 p95=  0,003 p99=  0,004 max=   0,005 mean=  0,003
+  cpu field.assets p50=  0,059 p95=  0,079 p99=  0,084 max=   0,114 mean=  0,061
+  cpu field.sky  p50= 13,408 p95= 14,365 p99= 14,807 max=  14,972 mean= 10,807
+  cpu field.skylight p50=  0,067 p95=  3,297 p99=  7,474 max=  11,889 mean=  0,603
+  cpu field.shadow p50=  3,020 p95=  6,201 p99=  6,258 max=   6,706 mean=  3,277
+  cpu field.terrain p50=  0,295 p95=  0,331 p99=  0,346 max=   0,378 mean=  0,284
+  cpu field.models p50=  6,670 p95=  8,177 p99= 12,902 max=  19,324 mean=  6,777
+  cpu field.lines p50=  0,232 p95= 12,384 p99= 12,968 max=  13,151 mean=  1,480
+  cpu ui.update  p50=  0,049 p95=  0,078 p99=  0,086 max=   0,087 mean=  0,053
+  cpu ui.draw    p50=  0,185 p95=  0,244 p99=  0,349 max=   9,522 mean=  0,348
+  gpu frames with results: 59
+  gpu frame ms   p50= 23,266 p95= 23,845 p99= 23,904 max=  23,904 mean= 20,870
+  gpu prep       p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu flight     p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.assets p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.sky  p50= 16,492 p95= 16,575 p99= 16,667 max=  16,670 mean= 16,469
+  gpu field.skylight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,044 mean= -2,506
+  gpu field.shadow p50=  0,894 p95=  0,986 p99=  1,017 max=   1,025 mean=  0,894
+  gpu field.terrain p50=  1,012 p95=  1,103 p99=  1,128 max=   1,146 mean=  1,001
+  gpu field.models p50=  4,426 p95=  4,933 p99=  4,946 max=   4,969 mean=  4,533
+  gpu field.lines p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.update  p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.draw    p50=  0,495 p95=  0,576 p99=  0,600 max=   0,719 mean=  0,480
+  alloc KB       p50=910,133 p95=918,039 p99=1024,617 max=1251,016 mean=921,128
+  allocKB prep   p50=  0,414 p95=  0,414 p99=  0,414 max=   0,414 mean=  0,414
+  allocKB flight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  allocKB field.assets p50=  5,719 p95=  5,719 p99=  5,719 max=   5,719 mean=  5,719
+  allocKB field.sky p50=  0,320 p95=  0,320 p99=  0,320 max=   0,320 mean=  0,320
+  allocKB field.skylight p50=  0,617 p95=  2,219 p99=115,102 max= 341,500 mean= 10,103
+  allocKB field.shadow p50= 28,867 p95= 28,867 p99= 28,867 max=  28,867 mean= 28,867
+  allocKB field.terrain p50=  0,438 p95=  0,438 p99=  0,438 max=   0,438 mean=  0,438
+  allocKB field.models p50=841,086 p95=847,438 p99=847,789 max= 848,992 mean=842,595
+  allocKB field.lines p50=  0,070 p95=  0,070 p99=  0,070 max=   0,070 mean=  0,070
+  allocKB ui.update p50= 12,852 p95= 12,852 p99= 12,852 max=  12,852 mean= 12,852
+  allocKB ui.draw p50= 19,594 p95= 19,594 p99= 19,594 max=  19,594 mean= 19,594
+== start2 frames=1
+  cpu frame ms   p50=1493,242 p95=1493,242 p99=1493,242 max=1493,242 mean=1493,242
+  cpu prep       p50=1423,562 p95=1423,562 p99=1423,562 max=1423,562 mean=1423,562
+  cpu flight     p50=  5,390 p95=  5,390 p99=  5,390 max=   5,390 mean=  5,390
+  cpu field.assets p50=  1,256 p95=  1,256 p99=  1,256 max=   1,256 mean=  1,256
+  cpu field.sky  p50=  8,601 p95=  8,601 p99=  8,601 max=   8,601 mean=  8,601
+  cpu field.skylight p50=  0,196 p95=  0,196 p99=  0,196 max=   0,196 mean=  0,196
+  cpu field.shadow p50= 39,379 p95= 39,379 p99= 39,379 max=  39,379 mean= 39,379
+  cpu field.terrain p50=  3,395 p95=  3,395 p99=  3,395 max=   3,395 mean=  3,395
+  cpu field.models p50=  8,667 p95=  8,667 p99=  8,667 max=   8,667 mean=  8,667
+  cpu field.lines p50=  1,928 p95=  1,928 p99=  1,928 max=   1,928 mean=  1,928
+  cpu ui.update  p50=  0,192 p95=  0,192 p99=  0,192 max=   0,192 mean=  0,192
+  cpu ui.draw    p50=  0,544 p95=  0,544 p99=  0,544 max=   0,544 mean=  0,544
+  gpu frames with results: 1
+  gpu frame ms   p50= 39,352 p95= 39,352 p99= 39,352 max=  39,352 mean= 39,352
+  gpu prep       p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu flight     p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.assets p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.sky  p50= 23,641 p95= 23,641 p99= 23,641 max=  23,641 mean= 23,641
+  gpu field.skylight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.shadow p50=  5,800 p95=  5,800 p99=  5,800 max=   5,800 mean=  5,800
+  gpu field.terrain p50=  0,885 p95=  0,885 p99=  0,885 max=   0,885 mean=  0,885
+  gpu field.models p50=  8,604 p95=  8,604 p99=  8,604 max=   8,604 mean=  8,604
+  gpu field.lines p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.update  p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.draw    p50=  0,423 p95=  0,423 p99=  0,423 max=   0,423 mean=  0,423
+  alloc KB       p50=125629,063 p95=125629,063 p99=125629,063 max=125629,063 mean=125629,063
+  allocKB prep   p50=60279,680 p95=60279,680 p99=60279,680 max=60279,680 mean=60279,680
+  allocKB flight p50=695,422 p95=695,422 p99=695,422 max= 695,422 mean=695,422
+  allocKB field.assets p50= 16,555 p95= 16,555 p99= 16,555 max=  16,555 mean= 16,555
+  allocKB field.sky p50=  0,320 p95=  0,320 p99=  0,320 max=   0,320 mean=  0,320
+  allocKB field.skylight p50=  0,617 p95=  0,617 p99=  0,617 max=   0,617 mean=  0,617
+  allocKB field.shadow p50=63235,641 p95=63235,641 p99=63235,641 max=63235,641 mean=63235,641
+  allocKB field.terrain p50=  0,438 p95=  0,438 p99=  0,438 max=   0,438 mean=  0,438
+  allocKB field.models p50=1284,703 p95=1284,703 p99=1284,703 max=1284,703 mean=1284,703
+  allocKB field.lines p50=  0,070 p95=  0,070 p99=  0,070 max=   0,070 mean=  0,070
+  allocKB ui.update p50= 23,891 p95= 23,891 p99= 23,891 max=  23,891 mean= 23,891
+  allocKB ui.draw p50= 91,570 p95= 91,570 p99= 91,570 max=  91,570 mean= 91,570
+== return2 frames=1
+  cpu frame ms   p50= 67,942 p95= 67,942 p99= 67,942 max=  67,942 mean= 67,942
+  cpu prep       p50=  0,181 p95=  0,181 p99=  0,181 max=   0,181 mean=  0,181
+  cpu flight     p50=  0,004 p95=  0,004 p99=  0,004 max=   0,004 mean=  0,004
+  cpu field.assets p50=  0,920 p95=  0,920 p99=  0,920 max=   0,920 mean=  0,920
+  cpu field.sky  p50= 13,269 p95= 13,269 p99= 13,269 max=  13,269 mean= 13,269
+  cpu field.skylight p50=  0,077 p95=  0,077 p99=  0,077 max=   0,077 mean=  0,077
+  cpu field.shadow p50= 43,786 p95= 43,786 p99= 43,786 max=  43,786 mean= 43,786
+  cpu field.terrain p50=  1,018 p95=  1,018 p99=  1,018 max=   1,018 mean=  1,018
+  cpu field.models p50=  6,925 p95=  6,925 p99=  6,925 max=   6,925 mean=  6,925
+  cpu field.lines p50=  0,756 p95=  0,756 p99=  0,756 max=   0,756 mean=  0,756
+  cpu ui.update  p50=  0,157 p95=  0,157 p99=  0,157 max=   0,157 mean=  0,157
+  cpu ui.draw    p50=  0,501 p95=  0,501 p99=  0,501 max=   0,501 mean=  0,501
+  gpu frames with results: 1
+  gpu frame ms   p50= 27,797 p95= 27,797 p99= 27,797 max=  27,797 mean= 27,797
+  gpu prep       p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu flight     p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.assets p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.sky  p50= 14,729 p95= 14,729 p99= 14,729 max=  14,729 mean= 14,729
+  gpu field.skylight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.shadow p50=  2,121 p95=  2,121 p99=  2,121 max=   2,121 mean=  2,121
+  gpu field.terrain p50=  0,974 p95=  0,974 p99=  0,974 max=   0,974 mean=  0,974
+  gpu field.models p50=  9,211 p95=  9,211 p99=  9,211 max=   9,211 mean=  9,211
+  gpu field.lines p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.update  p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.draw    p50=  0,762 p95=  0,762 p99=  0,762 max=   0,762 mean=  0,762
+  alloc KB       p50=64195,859 p95=64195,859 p99=64195,859 max=64195,859 mean=64195,859
+  allocKB prep   p50=  0,727 p95=  0,727 p99=  0,727 max=   0,727 mean=  0,727
+  allocKB flight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  allocKB field.assets p50= 14,680 p95= 14,680 p99= 14,680 max=  14,680 mean= 14,680
+  allocKB field.sky p50=  0,320 p95=  0,320 p99=  0,320 max=   0,320 mean=  0,320
+  allocKB field.skylight p50=  0,617 p95=  0,617 p99=  0,617 max=   0,617 mean=  0,617
+  allocKB field.shadow p50=63235,609 p95=63235,609 p99=63235,609 max=63235,609 mean=63235,609
+  allocKB field.terrain p50=  0,438 p95=  0,438 p99=  0,438 max=   0,438 mean=  0,438
+  allocKB field.models p50=869,906 p95=869,906 p99=869,906 max= 869,906 mean=869,906
+  allocKB field.lines p50=  0,070 p95=  0,070 p99=  0,070 max=   0,070 mean=  0,070
+  allocKB ui.update p50= 21,961 p95= 21,961 p99= 21,961 max=  21,961 mean= 21,961
+  allocKB ui.draw p50= 51,375 p95= 51,375 p99= 51,375 max=  51,375 mean= 51,375
+== start3 frames=1
+  cpu frame ms   p50=1464,842 p95=1464,842 p99=1464,842 max=1464,842 mean=1464,842
+  cpu prep       p50=1401,050 p95=1401,050 p99=1401,050 max=1401,050 mean=1401,050
+  cpu flight     p50=  5,363 p95=  5,363 p99=  5,363 max=   5,363 mean=  5,363
+  cpu field.assets p50=  1,389 p95=  1,389 p99=  1,389 max=   1,389 mean=  1,389
+  cpu field.sky  p50=  8,685 p95=  8,685 p99=  8,685 max=   8,685 mean=  8,685
+  cpu field.skylight p50=  0,280 p95=  0,280 p99=  0,280 max=   0,280 mean=  0,280
+  cpu field.shadow p50= 33,296 p95= 33,296 p99= 33,296 max=  33,296 mean= 33,296
+  cpu field.terrain p50=  3,348 p95=  3,348 p99=  3,348 max=   3,348 mean=  3,348
+  cpu field.models p50=  8,392 p95=  8,392 p99=  8,392 max=   8,392 mean=  8,392
+  cpu field.lines p50=  2,355 p95=  2,355 p99=  2,355 max=   2,355 mean=  2,355
+  cpu ui.update  p50=  0,164 p95=  0,164 p99=  0,164 max=   0,164 mean=  0,164
+  cpu ui.draw    p50=  0,374 p95=  0,374 p99=  0,374 max=   0,374 mean=  0,374
+  gpu frames with results: 1
+  gpu frame ms   p50= 35,208 p95= 35,208 p99= 35,208 max=  35,208 mean= 35,208
+  gpu prep       p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu flight     p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.assets p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.sky  p50= 19,361 p95= 19,361 p99= 19,361 max=  19,361 mean= 19,361
+  gpu field.skylight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.shadow p50=  5,780 p95=  5,780 p99=  5,780 max=   5,780 mean=  5,780
+  gpu field.terrain p50=  0,846 p95=  0,846 p99=  0,846 max=   0,846 mean=  0,846
+  gpu field.models p50=  8,810 p95=  8,810 p99=  8,810 max=   8,810 mean=  8,810
+  gpu field.lines p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.update  p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.draw    p50=  0,411 p95=  0,411 p99=  0,411 max=   0,411 mean=  0,411
+  alloc KB       p50=125562,945 p95=125562,945 p99=125562,945 max=125562,945 mean=125562,945
+  allocKB prep   p50=60213,844 p95=60213,844 p99=60213,844 max=60213,844 mean=60213,844
+  allocKB flight p50=695,469 p95=695,469 p99=695,469 max= 695,469 mean=695,469
+  allocKB field.assets p50= 16,469 p95= 16,469 p99= 16,469 max=  16,469 mean= 16,469
+  allocKB field.sky p50=  0,320 p95=  0,320 p99=  0,320 max=   0,320 mean=  0,320
+  allocKB field.skylight p50=  0,531 p95=  0,531 p99=  0,531 max=   0,531 mean=  0,531
+  allocKB field.shadow p50=63235,484 p95=63235,484 p99=63235,484 max=63235,484 mean=63235,484
+  allocKB field.terrain p50=  0,438 p95=  0,438 p99=  0,438 max=   0,438 mean=  0,438
+  allocKB field.models p50=1284,703 p95=1284,703 p99=1284,703 max=1284,703 mean=1284,703
+  allocKB field.lines p50=  0,070 p95=  0,070 p99=  0,070 max=   0,070 mean=  0,070
+  allocKB ui.update p50= 23,891 p95= 23,891 p99= 23,891 max=  23,891 mean= 23,891
+  allocKB ui.draw p50= 91,570 p95= 91,570 p99= 91,570 max=  91,570 mean= 91,570
+== return3 frames=1
+  cpu frame ms   p50= 59,973 p95= 59,973 p99= 59,973 max=  59,973 mean= 59,973
+  cpu prep       p50=  0,181 p95=  0,181 p99=  0,181 max=   0,181 mean=  0,181
+  cpu flight     p50=  0,006 p95=  0,006 p99=  0,006 max=   0,006 mean=  0,006
+  cpu field.assets p50=  0,922 p95=  0,922 p99=  0,922 max=   0,922 mean=  0,922
+  cpu field.sky  p50= 13,559 p95= 13,559 p99= 13,559 max=  13,559 mean= 13,559
+  cpu field.skylight p50=  0,079 p95=  0,079 p99=  0,079 max=   0,079 mean=  0,079
+  cpu field.shadow p50= 36,468 p95= 36,468 p99= 36,468 max=  36,468 mean= 36,468
+  cpu field.terrain p50=  0,551 p95=  0,551 p99=  0,551 max=   0,551 mean=  0,551
+  cpu field.models p50=  6,936 p95=  6,936 p99=  6,936 max=   6,936 mean=  6,936
+  cpu field.lines p50=  0,512 p95=  0,512 p99=  0,512 max=   0,512 mean=  0,512
+  cpu ui.update  p50=  0,085 p95=  0,085 p99=  0,085 max=   0,085 mean=  0,085
+  cpu ui.draw    p50=  0,360 p95=  0,360 p99=  0,360 max=   0,360 mean=  0,360
+  gpu frames with results: 1
+  gpu frame ms   p50= 26,030 p95= 26,030 p99= 26,030 max=  26,030 mean= 26,030
+  gpu prep       p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu flight     p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.assets p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.sky  p50= 16,228 p95= 16,228 p99= 16,228 max=  16,228 mean= 16,228
+  gpu field.skylight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.shadow p50=  0,965 p95=  0,965 p99=  0,965 max=   0,965 mean=  0,965
+  gpu field.terrain p50=  1,081 p95=  1,081 p99=  1,081 max=   1,081 mean=  1,081
+  gpu field.models p50=  7,049 p95=  7,049 p99=  7,049 max=   7,049 mean=  7,049
+  gpu field.lines p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.update  p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.draw    p50=  0,706 p95=  0,706 p99=  0,706 max=   0,706 mean=  0,706
+  alloc KB       p50=64407,680 p95=64407,680 p99=64407,680 max=64407,680 mean=64407,680
+  allocKB prep   p50=  0,508 p95=  0,508 p99=  0,508 max=   0,508 mean=  0,508
+  allocKB flight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  allocKB field.assets p50= 14,680 p95= 14,680 p99= 14,680 max=  14,680 mean= 14,680
+  allocKB field.sky p50=  0,320 p95=  0,320 p99=  0,320 max=   0,320 mean=  0,320
+  allocKB field.skylight p50=  0,617 p95=  0,617 p99=  0,617 max=   0,617 mean=  0,617
+  allocKB field.shadow p50=63232,547 p95=63232,547 p99=63232,547 max=63232,547 mean=63232,547
+  allocKB field.terrain p50=  0,438 p95=  0,438 p99=  0,438 max=   0,438 mean=  0,438
+  allocKB field.models p50=1085,320 p95=1085,320 p99=1085,320 max=1085,320 mean=1085,320
+  allocKB field.lines p50=  0,070 p95=  0,070 p99=  0,070 max=   0,070 mean=  0,070
+  allocKB ui.update p50= 21,961 p95= 21,961 p99= 21,961 max=  21,961 mean= 21,961
+  allocKB ui.draw p50= 51,063 p95= 51,063 p99= 51,063 max=  51,063 mean= 51,063
+== start4 frames=1
+  cpu frame ms   p50=1460,260 p95=1460,260 p99=1460,260 max=1460,260 mean=1460,260
+  cpu prep       p50=1399,674 p95=1399,674 p99=1399,674 max=1399,674 mean=1399,674
+  cpu flight     p50=  4,769 p95=  4,769 p99=  4,769 max=   4,769 mean=  4,769
+  cpu field.assets p50=  1,328 p95=  1,328 p99=  1,328 max=   1,328 mean=  1,328
+  cpu field.sky  p50=  8,723 p95=  8,723 p99=  8,723 max=   8,723 mean=  8,723
+  cpu field.skylight p50=  0,203 p95=  0,203 p99=  0,203 max=   0,203 mean=  0,203
+  cpu field.shadow p50= 31,308 p95= 31,308 p99= 31,308 max=  31,308 mean= 31,308
+  cpu field.terrain p50=  3,325 p95=  3,325 p99=  3,325 max=   3,325 mean=  3,325
+  cpu field.models p50=  8,372 p95=  8,372 p99=  8,372 max=   8,372 mean=  8,372
+  cpu field.lines p50=  2,012 p95=  2,012 p99=  2,012 max=   2,012 mean=  2,012
+  cpu ui.update  p50=  0,101 p95=  0,101 p99=  0,101 max=   0,101 mean=  0,101
+  cpu ui.draw    p50=  0,337 p95=  0,337 p99=  0,337 max=   0,337 mean=  0,337
+  gpu frames with results: 1
+  gpu frame ms   p50= 36,687 p95= 36,687 p99= 36,687 max=  36,687 mean= 36,687
+  gpu prep       p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu flight     p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.assets p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.sky  p50= 21,176 p95= 21,176 p99= 21,176 max=  21,176 mean= 21,176
+  gpu field.skylight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.shadow p50=  5,762 p95=  5,762 p99=  5,762 max=   5,762 mean=  5,762
+  gpu field.terrain p50=  0,845 p95=  0,845 p99=  0,845 max=   0,845 mean=  0,845
+  gpu field.models p50=  8,474 p95=  8,474 p99=  8,474 max=   8,474 mean=  8,474
+  gpu field.lines p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.update  p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.draw    p50=  0,429 p95=  0,429 p99=  0,429 max=   0,429 mean=  0,429
+  alloc KB       p50=125515,367 p95=125515,367 p99=125515,367 max=125515,367 mean=125515,367
+  allocKB prep   p50=60182,578 p95=60182,578 p99=60182,578 max=60182,578 mean=60182,578
+  allocKB flight p50=683,531 p95=683,531 p99=683,531 max= 683,531 mean=683,531
+  allocKB field.assets p50= 16,469 p95= 16,469 p99= 16,469 max=  16,469 mean= 16,469
+  allocKB field.sky p50=  0,320 p95=  0,320 p99=  0,320 max=   0,320 mean=  0,320
+  allocKB field.skylight p50=  0,531 p95=  0,531 p99=  0,531 max=   0,531 mean=  0,531
+  allocKB field.shadow p50=63232,547 p95=63232,547 p99=63232,547 max=63232,547 mean=63232,547
+  allocKB field.terrain p50=  0,438 p95=  0,438 p99=  0,438 max=   0,438 mean=  0,438
+  allocKB field.models p50=1284,703 p95=1284,703 p99=1284,703 max=1284,703 mean=1284,703
+  allocKB field.lines p50=  0,070 p95=  0,070 p99=  0,070 max=   0,070 mean=  0,070
+  allocKB ui.update p50= 23,867 p95= 23,867 p99= 23,867 max=  23,867 mean= 23,867
+  allocKB ui.draw p50= 90,156 p95= 90,156 p99= 90,156 max=  90,156 mean= 90,156
+== return4 frames=1
+  cpu frame ms   p50= 65,465 p95= 65,465 p99= 65,465 max=  65,465 mean= 65,465
+  cpu prep       p50=  0,162 p95=  0,162 p99=  0,162 max=   0,162 mean=  0,162
+  cpu flight     p50=  0,003 p95=  0,003 p99=  0,003 max=   0,003 mean=  0,003
+  cpu field.assets p50=  0,952 p95=  0,952 p99=  0,952 max=   0,952 mean=  0,952
+  cpu field.sky  p50= 13,827 p95= 13,827 p99= 13,827 max=  13,827 mean= 13,827
+  cpu field.skylight p50=  0,131 p95=  0,131 p99=  0,131 max=   0,131 mean=  0,131
+  cpu field.shadow p50= 40,974 p95= 40,974 p99= 40,974 max=  40,974 mean= 40,974
+  cpu field.terrain p50=  0,462 p95=  0,462 p99=  0,462 max=   0,462 mean=  0,462
+  cpu field.models p50=  7,522 p95=  7,522 p99=  7,522 max=   7,522 mean=  7,522
+  cpu field.lines p50=  0,665 p95=  0,665 p99=  0,665 max=   0,665 mean=  0,665
+  cpu ui.update  p50=  0,083 p95=  0,083 p99=  0,083 max=   0,083 mean=  0,083
+  cpu ui.draw    p50=  0,350 p95=  0,350 p99=  0,350 max=   0,350 mean=  0,350
+  gpu frames with results: 1
+  gpu frame ms   p50= 27,039 p95= 27,039 p99= 27,039 max=  27,039 mean= 27,039
+  gpu prep       p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu flight     p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.assets p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.sky  p50= 15,926 p95= 15,926 p99= 15,926 max=  15,926 mean= 15,926
+  gpu field.skylight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.shadow p50=  1,542 p95=  1,542 p99=  1,542 max=   1,542 mean=  1,542
+  gpu field.terrain p50=  0,893 p95=  0,893 p99=  0,893 max=   0,893 mean=  0,893
+  gpu field.models p50=  8,186 p95=  8,186 p99=  8,186 max=   8,186 mean=  8,186
+  gpu field.lines p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.update  p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.draw    p50=  0,492 p95=  0,492 p99=  0,492 max=   0,492 mean=  0,492
+  alloc KB       p50=64482,570 p95=64482,570 p99=64482,570 max=64482,570 mean=64482,570
+  allocKB prep   p50=  0,508 p95=  0,508 p99=  0,508 max=   0,508 mean=  0,508
+  allocKB flight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  allocKB field.assets p50= 14,680 p95= 14,680 p99= 14,680 max=  14,680 mean= 14,680
+  allocKB field.sky p50=  0,320 p95=  0,320 p99=  0,320 max=   0,320 mean=  0,320
+  allocKB field.skylight p50=  0,531 p95=  0,531 p99=  0,531 max=   0,531 mean=  0,531
+  allocKB field.shadow p50=63179,547 p95=63179,547 p99=63179,547 max=63179,547 mean=63179,547
+  allocKB field.terrain p50=  0,438 p95=  0,438 p99=  0,438 max=   0,438 mean=  0,438
+  allocKB field.models p50=1213,359 p95=1213,359 p99=1213,359 max=1213,359 mean=1213,359
+  allocKB field.lines p50=  0,070 p95=  0,070 p99=  0,070 max=   0,070 mean=  0,070
+  allocKB ui.update p50= 21,961 p95= 21,961 p99= 21,961 max=  21,961 mean= 21,961
+  allocKB ui.draw p50= 51,000 p95= 51,000 p99= 51,000 max=  51,000 mean= 51,000
+== start5 frames=1
+  cpu frame ms   p50=1453,582 p95=1453,582 p99=1453,582 max=1453,582 mean=1453,582
+  cpu prep       p50=1394,393 p95=1394,393 p99=1394,393 max=1394,393 mean=1394,393
+  cpu flight     p50=  4,674 p95=  4,674 p99=  4,674 max=   4,674 mean=  4,674
+  cpu field.assets p50=  1,289 p95=  1,289 p99=  1,289 max=   1,289 mean=  1,289
+  cpu field.sky  p50=  8,566 p95=  8,566 p99=  8,566 max=   8,566 mean=  8,566
+  cpu field.skylight p50=  0,217 p95=  0,217 p99=  0,217 max=   0,217 mean=  0,217
+  cpu field.shadow p50= 29,465 p95= 29,465 p99= 29,465 max=  29,465 mean= 29,465
+  cpu field.terrain p50=  3,555 p95=  3,555 p99=  3,555 max=   3,555 mean=  3,555
+  cpu field.models p50=  8,812 p95=  8,812 p99=  8,812 max=   8,812 mean=  8,812
+  cpu field.lines p50=  2,081 p95=  2,081 p99=  2,081 max=   2,081 mean=  2,081
+  cpu ui.update  p50=  0,094 p95=  0,094 p99=  0,094 max=   0,094 mean=  0,094
+  cpu ui.draw    p50=  0,326 p95=  0,326 p99=  0,326 max=   0,326 mean=  0,326
+  gpu frames with results: 1
+  gpu frame ms   p50= 39,788 p95= 39,788 p99= 39,788 max=  39,788 mean= 39,788
+  gpu prep       p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu flight     p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.assets p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.sky  p50= 23,702 p95= 23,702 p99= 23,702 max=  23,702 mean= 23,702
+  gpu field.skylight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.shadow p50=  5,998 p95=  5,998 p99=  5,998 max=   5,998 mean=  5,998
+  gpu field.terrain p50=  0,892 p95=  0,892 p99=  0,892 max=   0,892 mean=  0,892
+  gpu field.models p50=  8,774 p95=  8,774 p99=  8,774 max=   8,774 mean=  8,774
+  gpu field.lines p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.update  p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.draw    p50=  0,423 p95=  0,423 p99=  0,423 max=   0,423 mean=  0,423
+  alloc KB       p50=125388,453 p95=125388,453 p99=125388,453 max=125388,453 mean=125388,453
+  allocKB prep   p50=60108,578 p95=60108,578 p99=60108,578 max=60108,578 mean=60108,578
+  allocKB flight p50=683,531 p95=683,531 p99=683,531 max= 683,531 mean=683,531
+  allocKB field.assets p50= 16,469 p95= 16,469 p99= 16,469 max=  16,469 mean= 16,469
+  allocKB field.sky p50=  0,320 p95=  0,320 p99=  0,320 max=   0,320 mean=  0,320
+  allocKB field.skylight p50=  0,617 p95=  0,617 p99=  0,617 max=   0,617 mean=  0,617
+  allocKB field.shadow p50=63179,547 p95=63179,547 p99=63179,547 max=63179,547 mean=63179,547
+  allocKB field.terrain p50=  0,438 p95=  0,438 p99=  0,438 max=   0,438 mean=  0,438
+  allocKB field.models p50=1284,766 p95=1284,766 p99=1284,766 max=1284,766 mean=1284,766
+  allocKB field.lines p50=  0,070 p95=  0,070 p99=  0,070 max=   0,070 mean=  0,070
+  allocKB ui.update p50= 23,867 p95= 23,867 p99= 23,867 max=  23,867 mean= 23,867
+  allocKB ui.draw p50= 90,094 p95= 90,094 p99= 90,094 max=  90,094 mean= 90,094
+== return5 frames=1
+  cpu frame ms   p50= 63,936 p95= 63,936 p99= 63,936 max=  63,936 mean= 63,936
+  cpu prep       p50=  0,164 p95=  0,164 p99=  0,164 max=   0,164 mean=  0,164
+  cpu flight     p50=  0,003 p95=  0,003 p99=  0,003 max=   0,003 mean=  0,003
+  cpu field.assets p50=  0,970 p95=  0,970 p99=  0,970 max=   0,970 mean=  0,970
+  cpu field.sky  p50= 13,459 p95= 13,459 p99= 13,459 max=  13,459 mean= 13,459
+  cpu field.skylight p50=  0,067 p95=  0,067 p99=  0,067 max=   0,067 mean=  0,067
+  cpu field.shadow p50= 38,628 p95= 38,628 p99= 38,628 max=  38,628 mean= 38,628
+  cpu field.terrain p50=  0,966 p95=  0,966 p99=  0,966 max=   0,966 mean=  0,966
+  cpu field.models p50=  7,945 p95=  7,945 p99=  7,945 max=   7,945 mean=  7,945
+  cpu field.lines p50=  0,928 p95=  0,928 p99=  0,928 max=   0,928 mean=  0,928
+  cpu ui.update  p50=  0,086 p95=  0,086 p99=  0,086 max=   0,086 mean=  0,086
+  cpu ui.draw    p50=  0,334 p95=  0,334 p99=  0,334 max=   0,334 mean=  0,334
+  gpu frames with results: 1
+  gpu frame ms   p50= 25,999 p95= 25,999 p99= 25,999 max=  25,999 mean= 25,999
+  gpu prep       p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu flight     p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.assets p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.sky  p50= 16,164 p95= 16,164 p99= 16,164 max=  16,164 mean= 16,164
+  gpu field.skylight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.shadow p50=  0,971 p95=  0,971 p99=  0,971 max=   0,971 mean=  0,971
+  gpu field.terrain p50=  0,904 p95=  0,904 p99=  0,904 max=   0,904 mean=  0,904
+  gpu field.models p50=  7,451 p95=  7,451 p99=  7,451 max=   7,451 mean=  7,451
+  gpu field.lines p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.update  p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.draw    p50=  0,509 p95=  0,509 p99=  0,509 max=   0,509 mean=  0,509
+  alloc KB       p50=64632,297 p95=64632,297 p99=64632,297 max=64632,297 mean=64632,297
+  allocKB prep   p50=  0,508 p95=  0,508 p99=  0,508 max=   0,508 mean=  0,508
+  allocKB flight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  allocKB field.assets p50= 14,680 p95= 14,680 p99= 14,680 max=  14,680 mean= 14,680
+  allocKB field.sky p50=  0,320 p95=  0,320 p99=  0,320 max=   0,320 mean=  0,320
+  allocKB field.skylight p50=  0,531 p95=  0,531 p99=  0,531 max=   0,531 mean=  0,531
+  allocKB field.shadow p50=63179,547 p95=63179,547 p99=63179,547 max=63179,547 mean=63179,547
+  allocKB field.terrain p50=  0,438 p95=  0,438 p99=  0,438 max=   0,438 mean=  0,438
+  allocKB field.models p50=1363,227 p95=1363,227 p99=1363,227 max=1363,227 mean=1363,227
+  allocKB field.lines p50=  0,070 p95=  0,070 p99=  0,070 max=   0,070 mean=  0,070
+  allocKB ui.update p50= 21,961 p95= 21,961 p99= 21,961 max=  21,961 mean= 21,961
+  allocKB ui.draw p50= 50,859 p95= 50,859 p99= 50,859 max=  50,859 mean= 50,859
+== start6 frames=1
+  cpu frame ms   p50=1445,036 p95=1445,036 p99=1445,036 max=1445,036 mean=1445,036
+  cpu prep       p50=1386,066 p95=1386,066 p99=1386,066 max=1386,066 mean=1386,066
+  cpu flight     p50=  3,302 p95=  3,302 p99=  3,302 max=   3,302 mean=  3,302
+  cpu field.assets p50=  1,209 p95=  1,209 p99=  1,209 max=   1,209 mean=  1,209
+  cpu field.sky  p50=  9,261 p95=  9,261 p99=  9,261 max=   9,261 mean=  9,261
+  cpu field.skylight p50=  0,222 p95=  0,222 p99=  0,222 max=   0,222 mean=  0,222
+  cpu field.shadow p50= 29,783 p95= 29,783 p99= 29,783 max=  29,783 mean= 29,783
+  cpu field.terrain p50=  3,384 p95=  3,384 p99=  3,384 max=   3,384 mean=  3,384
+  cpu field.models p50=  9,115 p95=  9,115 p99=  9,115 max=   9,115 mean=  9,115
+  cpu field.lines p50=  2,121 p95=  2,121 p99=  2,121 max=   2,121 mean=  2,121
+  cpu ui.update  p50=  0,097 p95=  0,097 p99=  0,097 max=   0,097 mean=  0,097
+  cpu ui.draw    p50=  0,352 p95=  0,352 p99=  0,352 max=   0,352 mean=  0,352
+  gpu frames with results: 1
+  gpu frame ms   p50= 36,438 p95= 36,438 p99= 36,438 max=  36,438 mean= 36,438
+  gpu prep       p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu flight     p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.assets p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.sky  p50= 20,466 p95= 20,466 p99= 20,466 max=  20,466 mean= 20,466
+  gpu field.skylight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.shadow p50=  5,847 p95=  5,847 p99=  5,847 max=   5,847 mean=  5,847
+  gpu field.terrain p50=  0,898 p95=  0,898 p99=  0,898 max=   0,898 mean=  0,898
+  gpu field.models p50=  8,783 p95=  8,783 p99=  8,783 max=   8,783 mean=  8,783
+  gpu field.lines p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.update  p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.draw    p50=  0,445 p95=  0,445 p99=  0,445 max=   0,445 mean=  0,445
+  alloc KB       p50=125383,203 p95=125383,203 p99=125383,203 max=125383,203 mean=125383,203
+  allocKB prep   p50=60118,242 p95=60118,242 p99=60118,242 max=60118,242 mean=60118,242
+  allocKB flight p50=669,039 p95=669,039 p99=669,039 max= 669,039 mean=669,039
+  allocKB field.assets p50= 16,469 p95= 16,469 p99= 16,469 max=  16,469 mean= 16,469
+  allocKB field.sky p50=  0,320 p95=  0,320 p99=  0,320 max=   0,320 mean=  0,320
+  allocKB field.skylight p50=  0,617 p95=  0,617 p99=  0,617 max=   0,617 mean=  0,617
+  allocKB field.shadow p50=63179,547 p95=63179,547 p99=63179,547 max=63179,547 mean=63179,547
+  allocKB field.terrain p50=  0,438 p95=  0,438 p99=  0,438 max=   0,438 mean=  0,438
+  allocKB field.models p50=1284,766 p95=1284,766 p99=1284,766 max=1284,766 mean=1284,766
+  allocKB field.lines p50=  0,070 p95=  0,070 p99=  0,070 max=   0,070 mean=  0,070
+  allocKB ui.update p50= 23,867 p95= 23,867 p99= 23,867 max=  23,867 mean= 23,867
+  allocKB ui.draw p50= 89,672 p95= 89,672 p99= 89,672 max=  89,672 mean= 89,672
+== return6 frames=1
+  cpu frame ms   p50= 64,292 p95= 64,292 p99= 64,292 max=  64,292 mean= 64,292
+  cpu prep       p50=  0,158 p95=  0,158 p99=  0,158 max=   0,158 mean=  0,158
+  cpu flight     p50=  0,004 p95=  0,004 p99=  0,004 max=   0,004 mean=  0,004
+  cpu field.assets p50=  0,986 p95=  0,986 p99=  0,986 max=   0,986 mean=  0,986
+  cpu field.sky  p50= 12,685 p95= 12,685 p99= 12,685 max=  12,685 mean= 12,685
+  cpu field.skylight p50=  0,079 p95=  0,079 p99=  0,079 max=   0,079 mean=  0,079
+  cpu field.shadow p50= 39,517 p95= 39,517 p99= 39,517 max=  39,517 mean= 39,517
+  cpu field.terrain p50=  0,637 p95=  0,637 p99=  0,637 max=   0,637 mean=  0,637
+  cpu field.models p50=  8,639 p95=  8,639 p99=  8,639 max=   8,639 mean=  8,639
+  cpu field.lines p50=  0,743 p95=  0,743 p99=  0,743 max=   0,743 mean=  0,743
+  cpu ui.update  p50=  0,092 p95=  0,092 p99=  0,092 max=   0,092 mean=  0,092
+  cpu ui.draw    p50=  0,373 p95=  0,373 p99=  0,373 max=   0,373 mean=  0,373
+  gpu frames with results: 1
+  gpu frame ms   p50= 25,619 p95= 25,619 p99= 25,619 max=  25,619 mean= 25,619
+  gpu prep       p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu flight     p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.assets p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.sky  p50= 15,109 p95= 15,109 p99= 15,109 max=  15,109 mean= 15,109
+  gpu field.skylight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu field.shadow p50=  0,925 p95=  0,925 p99=  0,925 max=   0,925 mean=  0,925
+  gpu field.terrain p50=  0,902 p95=  0,902 p99=  0,902 max=   0,902 mean=  0,902
+  gpu field.models p50=  8,163 p95=  8,163 p99=  8,163 max=   8,163 mean=  8,163
+  gpu field.lines p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.update  p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  gpu ui.draw    p50=  0,520 p95=  0,520 p99=  0,520 max=   0,520 mean=  0,520
+  alloc KB       p50=64675,992 p95=64675,992 p99=64675,992 max=64675,992 mean=64675,992
+  allocKB prep   p50=  0,508 p95=  0,508 p99=  0,508 max=   0,508 mean=  0,508
+  allocKB flight p50=  0,000 p95=  0,000 p99=  0,000 max=   0,000 mean=  0,000
+  allocKB field.assets p50= 14,680 p95= 14,680 p99= 14,680 max=  14,680 mean= 14,680
+  allocKB field.sky p50=  0,320 p95=  0,320 p99=  0,320 max=   0,320 mean=  0,320
+  allocKB field.skylight p50=  0,617 p95=  0,617 p99=  0,617 max=   0,617 mean=  0,617
+  allocKB field.shadow p50=63179,547 p95=63179,547 p99=63179,547 max=63179,547 mean=63179,547
+  allocKB field.terrain p50=  0,438 p95=  0,438 p99=  0,438 max=   0,438 mean=  0,438
+  allocKB field.models p50=1406,836 p95=1406,836 p99=1406,836 max=1406,836 mean=1406,836
+  allocKB field.lines p50=  0,070 p95=  0,070 p99=  0,070 max=   0,070 mean=  0,070
+  allocKB ui.update p50= 21,961 p95= 21,961 p99= 21,961 max=  21,961 mean= 21,961
+  allocKB ui.draw p50= 50,859 p95= 50,859 p99= 50,859 max=  50,859 mean= 50,859

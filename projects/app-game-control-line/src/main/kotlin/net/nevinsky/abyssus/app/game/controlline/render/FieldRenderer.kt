@@ -4,20 +4,18 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.render
 
-import net.nevinsky.abyssus.lib.render.light.setSkyLight
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.g3d.Environment
 import com.badlogic.gdx.graphics.g3d.Model
 import com.badlogic.gdx.graphics.g3d.ModelBatch
 import com.badlogic.gdx.graphics.g3d.ModelInstance
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
 import com.badlogic.gdx.graphics.g3d.utils.AnimationController
-import com.badlogic.gdx.graphics.glutils.ImmediateModeRenderer20
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
@@ -29,25 +27,24 @@ import net.nevinsky.abyssus.lib.core.assets.loading.ShaderStorage
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyFrame
 import net.nevinsky.abyssus.lib.core.assets.sky.SkyRenderer
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
+import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironment
 import net.nevinsky.abyssus.lib.core.assets.sky.procedural.ProceduralSky
 import net.nevinsky.abyssus.lib.core.assets.standard.StandardAssetLoaders
 import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
-import com.badlogic.gdx.graphics.g3d.Environment
 import net.nevinsky.abyssus.lib.gdx.g3d.ModelShaderProvider
 import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.OutputTransformAttribute
-import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrEnvironment
 import net.nevinsky.abyssus.lib.render.frame.FrameInputs
 import net.nevinsky.abyssus.lib.render.frame.RenderFog
 import net.nevinsky.abyssus.lib.render.light.DirectionalInput
 import net.nevinsky.abyssus.lib.render.light.RenderLights
+import net.nevinsky.abyssus.lib.render.light.setSkyLight
 import net.nevinsky.abyssus.lib.render.terrain.*
 import org.slf4j.Logger
 import java.io.File
 import java.util.concurrent.Executor
-import kotlin.math.min
 
 /**
  * The one asset storage of the project in [projectDir], wired by constructors like the plugin does (both take the
@@ -152,6 +149,7 @@ class FieldRenderer(
     private val sun = DirectionalLight()
     private val shadows = FieldShadows()
     private val cableMesh = CableMesh()
+    private val culling = ModelCulling()
 
     /** The sky light the models and terrain are lit with this frame, and the one fading in over it. */
     private class SkyLight(val environment: HdrEnvironment, val fadeTo: HdrEnvironment?, val weight: Float) {
@@ -188,7 +186,14 @@ class FieldRenderer(
      * failed. Foliage is optional, so a missing or unsupported one must not keep the game on its loading screen.
      */
     fun loaded(field: FieldScene): Boolean =
-        field.models.all { (entity, name) -> ctx.assetStorage.getAs<Model>(field.modelStorageName(entity, name)) != null }
+        field.models.all { (entity, name) ->
+            ctx.assetStorage.getAs<Model>(
+                field.modelStorageName(
+                    entity,
+                    name
+                )
+            ) != null
+        }
                 && field.terrains.all { ctx.assetStorage.getAs<TerrainMesh>(it.second) != null }
                 && field.foliages.all { !ctx.assetStorage.isLoading(it.foliage) }
 
@@ -252,7 +257,10 @@ class FieldRenderer(
             light,
             field.position(entity).getTransform()
         )
-        shadows.render(drawn.map { it.second }, terrains) { out, pool ->
+        // only what the sun camera's volume meets is drawn into the map; animated models keep their rest-pose box out of it
+        val lightFrustum = light.frustum
+        val casters = drawn.filter { (entity, instance) -> entity in clips || culling.visible(instance, lightFrustum) }
+        shadows.render(casters.map { it.second }, terrains) { out, pool ->
             for (placement in foliage.values) placement.drawable.getCasterRenderables(out, pool)
         }
         shadows.attribute()?.let(environment::set)
@@ -284,10 +292,17 @@ class FieldRenderer(
         for ((entity, placement) in foliage) placement.drawable.update(camera, field.position(entity).getTransform())
         batch.begin(camera)
         for ((entity, instance) in drawn) {
-            if (entity === hidden) continue
+            if (entity === hidden) {
+                continue
+            }
+            if (entity !in clips && !culling.visible(instance, camera.frustum)) {
+                continue
+            }
             batch.render(instance, environment)
         }
-        for (placement in foliage.values) batch.render(placement.drawable, environment)
+        for (placement in foliage.values) {
+            batch.render(placement.drawable, environment)
+        }
         cableMesh.update(cables, camera, Gdx.graphics.backBufferHeight.toFloat().coerceAtLeast(1f))
         batch.render(cableMesh, environment)
         batch.end()
