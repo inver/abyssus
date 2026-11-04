@@ -23,8 +23,12 @@ fun componentIconKey(kind: String): String = when (kind.substringAfterLast('.').
     else -> "generic"
 }
 
-/** The icon of an entity row by its `type`. */
-fun entityIconKey(type: String?): String = when {
+/**
+ * The icon of an entity row by its `type`. An entity carrying a camera component reads as a camera when its type is
+ * absent or `OBJECT`, as in the tree.
+ */
+fun entityIconKey(type: String?, componentKinds: List<String> = emptyList()): String = when {
+    (type == null || type == "OBJECT") && componentKinds.any { componentIconKey(it) == "camera" } -> "camera"
     type == null -> "object"
     type == "GROUP" -> "group"
     type.startsWith("LIGHT") -> "dlight"

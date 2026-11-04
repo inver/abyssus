@@ -19,7 +19,7 @@
       "type": "OBJECT",
       "components": {
         "NameComponent": {
-          "name": "hangar"
+          "name": "Hangar"
         },
         "PositionComponent": {
           "localPosition": {

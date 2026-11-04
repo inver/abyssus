@@ -34,5 +34,9 @@ object EntityIcons {
             }
         }
 
-    fun forType(type: EntityType?): Icon = icons[type] ?: PropertyIcons.ECS
+    fun forType(type: EntityType?): Icon = if (type == EntityType.CAMERA) {
+        ComponentIcons.CAMERA
+    } else {
+        icons[type] ?: PropertyIcons.ECS
+    }
 }

@@ -218,7 +218,7 @@ class PanelBuilders(
         val entityOn = entityEnabled(scene, entityId)
         return PanelModel(
             Header(
-                listOf(projectFile, scene.name.orEmpty(), "ecs"), entityIconKey(type), read.name,
+                listOf(projectFile, scene.name.orEmpty(), "ecs"), entityIconKey(type, read.sections.map { it.kind }), read.name,
                 messages.message("panelSubtitleEntity", entityId, type ?: "OBJECT"),
             ),
             read.sections

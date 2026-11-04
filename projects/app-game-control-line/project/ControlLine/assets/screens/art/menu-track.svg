@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+    <!-- Control Line menu track: radar-style rings, flight circle and plane -->
+    <g fill="none" stroke="#1f3347" stroke-width="2">
+        <circle cx="320" cy="320" r="319"/>
+        <circle cx="320" cy="320" r="120"/>
+        <line x1="1" y1="320" x2="639" y2="320"/>
+        <line x1="320" y1="1" x2="320" y2="639"/>
+    </g>
+    <circle cx="320" cy="320" r="220" fill="none" stroke="#ff6a2b" stroke-width="3" stroke-dasharray="2 5"/>
+    <line x1="320" y1="320" x2="458" y2="182" stroke="#dce9f2" stroke-width="1.5"/>
+    <circle cx="320" cy="320" r="7" fill="#dce9f2"/>
+    <path fill="#ff6a2b" transform="translate(470 170) rotate(45) scale(1.1)"
+          d="M0,-30 C3,-30 4,-24 4,-18 L4,-6 L32,10 L32,17 L4,8 L4,20 L12,27 L12,32 L0,29 L-12,32 L-12,27 L-4,20 L-4,8 L-32,17 L-32,10 L-4,-6 L-4,-18 C-4,-24 -3,-30 0,-30 Z"/>
+</svg>
