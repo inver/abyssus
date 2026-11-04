@@ -7,10 +7,12 @@
      so Java AST checks cannot parse .kt sources. Only file-level (Checker) modules are effective here. -->
 <module name="Checker">
 
+    <!-- Checkstyle is fed Kotlin sources and build scripts as plain text; no Java AST modules are used. -->
+    <property name="fileExtensions" value="java, kt, kts"/>
+
     <!-- Files must not contain tab characters. -->
     <module name="FileTabCharacter"/>
 
-    <!-- Files must not contain lines longer than 120 characters. -->
     <module name="LineLength">
         <property name="max" value="120"/>
     </module>
@@ -30,5 +32,37 @@
     <module name="RegexpSingleline">
         <property name="format" value="\r"/>
         <property name="message" value="Line contains a carriage return; use LF line endings only."/>
+    </module>
+
+    <!--
+      Kotlin if/else style: every branch is a braced block written on separate lines. A branch written as
+      `if (condition) action` or `if (condition) { action }` is rejected.
+
+      Checkstyle cannot parse Kotlin, so the condition is matched with a small balanced-parenthesis expression
+      (four nesting levels). The expression only has to identify the closing `)` of the `if`; it does not
+      validate the condition itself.
+    -->
+    <module name="RegexpMultiline">
+        <property name="format"
+                  value="(?s)\bif\s*\((?:[^()]|\((?:[^()]|\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\))*\))*\)(?!\s*(?:(?://[^\n]*\n|/\*.*?\*/)\s*)*\{)\s*"/>
+        <property name="message" value="An if branch must be enclosed in braces on separate lines."/>
+    </module>
+
+    <module name="RegexpMultiline">
+        <property name="format"
+                  value="(?s)(?:^|\})[ \t]*else(?!\s*(?:(?://[^\n]*\n|/\*.*?\*/)\s*)*(?:if\b|\{|->))\s*"/>
+        <property name="message" value="An else branch must be enclosed in braces on separate lines."/>
+    </module>
+
+    <module name="RegexpMultiline">
+        <property name="format"
+                  value="(?ms)\bif\s*\((?:[^()]|\((?:[^()]|\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\))*\))*\)\s*\{[^\n]*\}(?=[ \t]*(?:else\b|//|;|$))"/>
+        <property name="message" value="An if branch body must not be written on one line."/>
+    </module>
+
+    <module name="RegexpMultiline">
+        <property name="format"
+                  value="(?ms)(?:^|\})[ \t]*else\s*\{[^\n]*\}(?=[ \t]*(?:else\b|//|;|$))"/>
+        <property name="message" value="An else branch body must not be written on one line."/>
     </module>
 </module>
