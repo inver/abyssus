@@ -81,7 +81,7 @@ class FieldModelMeshGlTest {
             assertEquals(1, messages.count { it.contains("nope") })
         } finally {
             renderer.dispose()
-            ctx.assetStorage.dispose()
+            ctx.close()
         }
     }
 }

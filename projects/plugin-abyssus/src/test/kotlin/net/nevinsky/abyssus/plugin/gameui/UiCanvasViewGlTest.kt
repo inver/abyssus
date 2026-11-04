@@ -126,8 +126,11 @@ class UiCanvasViewGlTest {
         // preview shows the plain UI
         model.mode = UiEditorMode.PREVIEW
         model.listeners.forEach { it() }
-        waitFor("preview without the frame") { atPreview(canvas, canvas.snapshot()!!, layout, 100f, 150f) != 0x2d8cff }
-        assertEquals(0x3a4a5c, atPreview(canvas, snapshot(), layout, 200f, 110f))
+        // the preview lays the UI out at its own size: map through its layout, not the edit mode's
+        waitFor("the preview's layout") { canvas.layoutOf("main")?.fit != layout.fit }
+        val preview = canvas.layoutOf("main")!!
+        waitFor("preview without the frame") { atPreview(canvas, canvas.snapshot()!!, preview, 100f, 150f) != 0x2d8cff }
+        assertEquals(0x3a4a5c, atPreview(canvas, snapshot(), preview, 200f, 110f))
     }
 
     @Test fun aClickPicksTheWidgetUnderItAtAReducedZoom() {

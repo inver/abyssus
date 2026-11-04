@@ -68,4 +68,7 @@ class PreparedProceduralSky(
     val name: String = "",
     val clouds: String? = null,
     val lightsScene: Boolean = false,
-)
+) {
+    /** Whether [fragment] declares `#define SKY_CACHEABLE`: its atmosphere is then cached in a cube map ([AtmosphereCache]). */
+    val cacheable: Boolean get() = declaresCacheable(fragment)
+}

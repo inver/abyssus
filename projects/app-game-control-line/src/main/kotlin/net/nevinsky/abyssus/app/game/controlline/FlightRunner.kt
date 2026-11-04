@@ -27,6 +27,7 @@ import net.nevinsky.abyssus.app.game.controlline.scale.ScaleJudge
 import net.nevinsky.abyssus.lib.physics.PhysicsAssets
 import net.nevinsky.abyssus.lib.physics.RigidBodyComponent
 import net.nevinsky.abyssus.lib.physics.jolt.JoltNatives
+import net.nevinsky.abyssus.lib.physics.jolt.ShapeCache
 import org.slf4j.Logger
 
 /**
@@ -42,6 +43,8 @@ class FlightRunner(
     private val assets: () -> PhysicsAssets,
     private val log: Logger,
     private val natives: JoltNatives,
+    /** Collider shapes kept across flights; its owner closes it after this runner. */
+    private val shapes: ShapeCache? = null,
 ) : AutoCloseable {
     /** The player's handle, from the keys and the mouse. */
     val input = HandleInput()
@@ -146,7 +149,7 @@ class FlightRunner(
                 f2bBot(settings, mass, checkNotNull(judge) { "Watch AI flies an F2B pattern" }::guideInput).also { bot = it }
             }
         }
-        session = FlightSession(loaded.engine, pilot, plane, assets(), log, natives, judge ?: scaleJudge, control)
+        session = FlightSession(loaded.engine, pilot, plane, assets(), log, natives, judge ?: scaleJudge, control, shapes)
         scene = loaded
         flying = screen
     }

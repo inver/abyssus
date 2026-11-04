@@ -54,7 +54,9 @@ class WireRendererGlTest {
     }
 
     @Test
-    fun aWireIsDrawnToScaleAndADistantHalfMillimetreOneIsFaint() = TestGl.run {
+    // the window is the size drawn at: the renderer sizes a pixel by the window's height, and a 240-high window over a
+    // 200-high viewport made the thin wire 0.83 px wide, too thin to cover a pixel centre
+    fun aWireIsDrawnToScaleAndADistantHalfMillimetreOneIsFaint() = TestGl.run(30, size, size) {
         // 20 cm thick, 2 m away: about 15 pixels wide and opaque
         val thick = LineSegment(Vector3(-5f, 0f, -2f), Vector3(5f, 0f, -2f), Color.WHITE, thickness = 0.2f)
         val near = draw(thick, alongTheWire, size / 2, 0, size - 1)

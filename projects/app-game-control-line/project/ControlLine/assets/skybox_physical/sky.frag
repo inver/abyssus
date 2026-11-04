@@ -1,5 +1,10 @@
 // Single-scattering Rayleigh + Mie atmosphere (Nishita), ray-marched per pixel. World Y is up. Lengths are worked in
 // kilometres: 32-bit floats cannot hold a planet radius in metres and a camera a few metres above it.
+//
+// The sky's sun does not move, so the game keeps this atmosphere in a cube map (SKY_CACHEABLE): SKY_BAKE renders the cube
+// without the sun's disc, and SKY_DETAIL_ONLY draws over it only the pixels a cube would blur (the disc and the horizon
+// line), exactly as without the cache. A copy of this sky without the define is drawn per pixel, as before.
+#define SKY_CACHEABLE
 #ifdef GL_ES
 precision highp float;
 #endif
@@ -22,6 +27,8 @@ const float KM = 1000.0;
 const float EXPOSURE = 1.0;
 const float SUN_ANGULAR_RADIUS = 0.00465;
 const float GROUND_ALBEDO = 0.04;
+// how far (as the sine of an elevation) from the horizon line SKY_DETAIL_ONLY still draws: four texels of a 512 cube face
+const float HORIZON_BAND = 0.012;
 
 // distances along d to the sphere of radius r around the origin; x > y when it is missed
 vec2 raySphere(vec3 o, vec3 d, float r) {
@@ -43,6 +50,13 @@ void main() {
     vec3 dir = normalize(v_dir);
     vec3 sun = normalize(u_sunDir);
     vec3 origin = vec3(0.0, R + u_cameraHeight / KM, 0.0);
+
+#ifdef SKY_DETAIL_ONLY
+    // the ground's edge is where a ray grazes the planet; the disc is where the smoothstep below is above 0
+    float grazing = R / origin.y;
+    float horizon = -sqrt(max(1.0 - grazing * grazing, 0.0));
+    if (abs(dir.y - horizon) > HORIZON_BAND && dot(dir, sun) < cos(SUN_ANGULAR_RADIUS * 1.3)) discard;
+#endif
 
     vec2 atmosphere = raySphere(origin, dir, Ra);
     vec2 planet = raySphere(origin, dir, R);
@@ -96,8 +110,10 @@ void main() {
         vec3 sunAtGround = exp(-(betaR * hR + 1.1 * betaM * hM) / max(sun.y, 0.02));
         color += transmittance * sunAtGround * (u_sunIntensity * GROUND_ALBEDO * max(sun.y, 0.0));
     } else {
+#ifndef SKY_BAKE
         float disc = smoothstep(cos(SUN_ANGULAR_RADIUS * 1.3), cos(SUN_ANGULAR_RADIUS), mu);
         color += transmittance * (disc * u_sunIntensity * 20.0);
+#endif
     }
     vec3 mapped = 1.0 - exp(-color * EXPOSURE);
     gl_FragColor = vec4(pow(mapped, vec3(1.0 / 2.2)), 1.0);

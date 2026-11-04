@@ -13,9 +13,6 @@ import com.badlogic.gdx.graphics.g3d.attributes.DirectionalLightsAttribute
 import com.badlogic.gdx.graphics.g3d.attributes.PointLightsAttribute
 import com.badlogic.gdx.graphics.g3d.attributes.SpotLightsAttribute
 import com.badlogic.gdx.graphics.g3d.environment.AmbientCubemap
-import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
-import com.badlogic.gdx.graphics.g3d.environment.PointLight
-import com.badlogic.gdx.graphics.g3d.environment.SpotLight
 import com.badlogic.gdx.graphics.g3d.shaders.BaseShader
 import com.badlogic.gdx.graphics.g3d.shaders.BaseShader.LocalSetter
 import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader
@@ -27,6 +24,7 @@ import net.nevinsky.abyssus.lib.gdx.shader.OutputTransformAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShaderSources
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasBindings
+import net.nevinsky.abyssus.lib.gdx.shader.ShadowLightRecord
 
 /**
  * This module's uber shader on the stock [DefaultShader]: the same GLSL as before (per-pixel lighting, shadow atlas,
@@ -103,20 +101,32 @@ open class ModelShader(
         bindDirectionalVisibility(attributes)
     }
 
+    // the atlas records of the environment's lights, refilled per renderable without allocating (bound for every one)
+    private val dirRecords = ArrayList<ShadowLightRecord?>()
+    private val pointRecords = ArrayList<ShadowLightRecord?>()
+    private val spotRecords = ArrayList<ShadowLightRecord?>()
+
     private fun bindShadowAtlas(attributes: Attributes) {
         val atlas = attributes.get(ShadowAtlasAttribute.Type) as? ShadowAtlasAttribute ?: return
-        val dirs = lights<DirectionalLightsAttribute, DirectionalLight>(attributes, DirectionalLightsAttribute.Type) { it.lights }
-        val points = lights<PointLightsAttribute, PointLight>(attributes, PointLightsAttribute.Type) { it.lights }
-        val spots = lights<SpotLightsAttribute, SpotLight>(attributes, SpotLightsAttribute.Type) { it.lights }
+        records(atlas, (attributes.get(DirectionalLightsAttribute.Type) as? DirectionalLightsAttribute)?.lights, dirRecords)
+        records(atlas, (attributes.get(PointLightsAttribute.Type) as? PointLightsAttribute)?.lights, pointRecords)
+        records(atlas, (attributes.get(SpotLightsAttribute.Type) as? SpotLightsAttribute)?.lights, spotRecords)
         val unit = context.textureBinder.bind(atlas.atlas)
-        atlasBindings.bind(
-            program, atlas, dirs.map(atlas::recordFor), points.map(atlas::recordFor), spots.map(atlas::recordFor), unit
-        )
+        atlasBindings.bind(program, atlas, dirRecords, pointRecords, spotRecords, unit)
     }
 
-    private inline fun <reified A : com.badlogic.gdx.graphics.g3d.Attribute, L> lights(
-        attributes: Attributes, type: Long, of: (A) -> Iterable<L>
-    ): List<L> = (attributes.get(type) as? A)?.let { of(it).toList() } ?: emptyList()
+    /** Fills [out] with [atlas]'s record of each of [lights] (null for a light it has none of). */
+    private fun records(atlas: ShadowAtlasAttribute, lights: com.badlogic.gdx.utils.Array<out com.badlogic.gdx.graphics.g3d.environment.BaseLight<*>>?, out: ArrayList<ShadowLightRecord?>) {
+        out.clear()
+        if (lights == null) return
+        val records = atlas.records
+        for (i in 0 until lights.size) {
+            val light = lights[i]
+            var found: ShadowLightRecord? = null
+            for (r in records.indices) if (records[r].light === light) { found = records[r]; break }
+            out.add(found)
+        }
+    }
 
     private fun bindDirectionalVisibility(attributes: Attributes) {
         val visibility = attributes.get(DirectionalVisibilityAttribute.Type) as? DirectionalVisibilityAttribute ?: return

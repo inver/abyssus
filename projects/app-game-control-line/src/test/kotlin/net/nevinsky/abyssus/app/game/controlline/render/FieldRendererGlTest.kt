@@ -45,7 +45,7 @@ class FieldRendererGlTest {
     }
 
     @Test
-    fun twoTransformedPlacementsOfOneAssetDrawIndependentlyAndASceneReplacementLeavesNothing() = TestGl.run {
+    fun twoTransformedPlacementsOfOneAssetDrawIndependentlyAndASceneReplacementLeavesNothing() = TestGl.run(300) { // CI runs it on Mesa's software GL, far slower than a GPU
         Gdx.files = Lwjgl3Files()
         ShaderProgram.pedantic = false
         FieldFoliageProject().use { project ->
@@ -103,7 +103,7 @@ class FieldRendererGlTest {
                 renderer.draw(field, camera, seconds = 0.016f)
                 assertEquals(listOf(tree.size, tree.size), drawn.map { it.drawnCopies })
 
-                // replacing the scene repeatedly leaves exactly the new scene's two placements and no GL errors
+                // reloading the scene repeatedly keeps exactly its two placements (reused, design decision D8) and no GL errors
                 repeat(6) {
                     val old = renderer.placementDrawables().values.toList()
                     field = field()
@@ -115,13 +115,13 @@ class FieldRendererGlTest {
                     }
                     val now = renderer.placementDrawables().values.toList()
                     assertEquals(2, now.size)
-                    assertTrue(now.none { n -> old.any { it === n } })
+                    assertTrue("a reload reuses the placements", now.all { n -> old.any { it === n } })
                     assertEquals(GL20.GL_NO_ERROR, Gdx.gl.glGetError())
                     drawn = now
                 }
             } finally {
                 renderer.dispose()
-                ctx.executor.shutdownNow()
+                ctx.close()
             }
         }
     }

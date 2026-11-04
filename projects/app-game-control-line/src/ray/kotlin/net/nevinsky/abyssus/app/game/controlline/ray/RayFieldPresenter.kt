@@ -43,13 +43,15 @@ class RayFieldPresenter(
     private val quad = RayFrameQuad()
     private var shapes: ShapeRenderer? = null
 
+    override val kind: String get() = "ray"
+
     override val failure: String? get() = runtime.failure ?: assetFailure
 
     private var assetFailure: String? = null
 
     override fun draw(
         field: FieldScene, camera: Camera, lines: List<LineSegment>, hidden: Entity?,
-        clips: Map<Entity, String>, seconds: Float, cables: List<Cable>,
+        clips: Map<Entity, String>, seconds: Float, cables: List<Cable>, poses: Map<Entity, Matrix4>,
     ) {
         // `drawsCables` stays false: the game gives this view its control lines as `lines`, like the other overlays
         val fog = field.fogColor ?: Color(0.6f, 0.7f, 0.85f, 1f)
@@ -74,7 +76,7 @@ class RayFieldPresenter(
                     return
                 }
                 val frame = try {
-                    builder.build(inputsOf(field, drawnModels, state, perspective))
+                    builder.build(inputsOf(field, drawnModels, state, perspective, poses))
                 } catch (e: RuntimeException) {
                     assetFailure = "ray scene could not be built: ${e.message ?: e}"
                     return
@@ -88,10 +90,11 @@ class RayFieldPresenter(
 
     private fun inputsOf(
         field: FieldScene, models: List<Pair<Entity, String>>, state: RayFieldAssetState.Ready, camera: PerspectiveCamera,
+        poses: Map<Entity, Matrix4>,
     ): RayFieldInputs {
         fun ray(c: Color) = RayColor(c.r, c.g, c.b)
         val placedModels = models.mapIndexedNotNull { index, (entity, name) ->
-            state.models[field.modelStorageName(entity, name)]?.let { RayPlacedModel("m$index", it, Matrix4(field.position(entity).getTransform())) }
+            state.models[field.modelStorageName(entity, name)]?.let { RayPlacedModel("m$index", it, Matrix4(poses[entity] ?: field.position(entity).getTransform())) }
         }
         val placedTerrains = field.terrains.mapIndexedNotNull { index, (entity, name) ->
             state.terrains[name]?.let { RayPlacedTerrain("t$index", it, Matrix4(field.position(entity).getTransform())) }

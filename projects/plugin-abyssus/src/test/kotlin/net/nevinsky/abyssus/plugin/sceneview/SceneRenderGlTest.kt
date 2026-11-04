@@ -5,8 +5,7 @@
 
 package net.nevinsky.abyssus.plugin.sceneview
 
-import net.nevinsky.abyssus.plugin.parsedScene
-import net.nevinsky.abyssus.plugin.printScene
+import net.nevinsky.abyssus.plugin.printSceneWith
 
 import net.nevinsky.abyssus.lib.core.editor.scene.ModelEntity
 import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
@@ -70,7 +69,9 @@ class SceneRenderGlTest {
         }
     }
 
-    private fun edit(text: String, change: (Draft) -> Unit): String = printScene(Draft(parsedScene(text)).also(change).scene)
+    // without the IDE: this is a plain JUnit test, and the plugin's services exist only when an IDE test ran first
+    private fun edit(text: String, change: (Draft) -> Unit): String =
+        printSceneWith(net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry(), Draft(parseScene(text)).also(change).scene)
 
     private fun noFog(root: Draft) {
         root.put("fogEnabled", false)
@@ -125,8 +126,8 @@ class SceneRenderGlTest {
         val result = GlHarness.render(p, 220) { renderer, frame ->
             val now = renderer.drawnModels.map { "m:" + it.placement.entityId }.toSet() +
                 renderer.drawnTerrains.map { "t:" + it.placement.entityId }
-            if (now != ids) assertTrue(renderer.drawnVersion > previous)
-            else assertEquals(previous, renderer.drawnVersion)
+            if (now != ids) assertTrue("frame $frame: $ids -> $now, version stayed ${renderer.drawnVersion}", renderer.drawnVersion > previous)
+            else assertEquals("frame $frame: $now unchanged", previous, renderer.drawnVersion)
             ids = now
             previous = renderer.drawnVersion
             if (frame == 180) {
@@ -348,13 +349,21 @@ class SceneRenderGlTest {
         val noSky = params("Untitled", "Main Scene.scene") { edit(it) { root -> noFog(root); root.putNull("skyboxName") } }
         val without = GlHarness.render(noSky, 240)
         val c = noSky.clear
-        val clear = (Math.round(c.r * 255) shl 16) or (Math.round(c.g * 255) shl 8) or Math.round(c.b * 255)
+        // the clear colour as GL stored it: 0.1 * 255 is 25.5, which a driver may store as 25 or 26
+        fun isClear(rgb: Int) = abs((rgb shr 16 and 255) - c.r * 255) <= 1f && abs((rgb shr 8 and 255) - c.g * 255) <= 1f &&
+            abs((rgb and 255) - c.b * 255) <= 1f
         var content = 0
         var covered = 0
         for (y in 0 until without.image.height) for (x in 0 until without.image.width) {
-            if (without.image.getRGB(x, y) and 0xFFFFFF == clear) continue
+            if (isClear(without.image.getRGB(x, y))) continue
             content++
             if (withSky.image.getRGB(x, y) != skyOnly.image.getRGB(x, y)) covered++
+        }
+        if (covered <= content * 0.9) {
+            val folder = File("build/screenshots/hdr-sky").also { it.mkdirs() }
+            GlHarness.save(withSky.image, File(folder, "with-sky.png"))
+            GlHarness.save(skyOnly.image, File(folder, "sky-only.png"))
+            GlHarness.save(without.image, File(folder, "without-sky.png"))
         }
         assertTrue("no content drawn", content > 1000)
         assertTrue("the sky hid content: $covered of $content content pixels differ from the sky alone", covered > content * 0.9)
@@ -437,7 +446,9 @@ class SceneRenderGlTest {
     fun mainSceneIsUnchangedByADisabledHdrSky() {
         val p = params("Untitled", "Main Scene.scene") { edit(it) { root -> noFog(root); root.putNull("skyboxName") } }
         val disabled = params("Untitled", "Main Scene.scene") { edit(it) { root -> noFog(root); root.put("skyboxEnabled", false); root.put("skyboxName", "skybox_hdr") } }
-        assertEquals(p, disabled)
+        // the entity DTOs hold component objects without equals: compare what is drawn, and the entities by their ids
+        assertEquals(p.copy(ecs = emptyMap()), disabled.copy(ecs = emptyMap()))
+        assertEquals(p.ecs.keys, disabled.ecs.keys)
         val a = GlHarness.render(p, 240)
         val b = GlHarness.render(disabled, 240)
         assertNull(a.error ?: b.error)
@@ -535,7 +546,7 @@ class SceneRenderGlTest {
                 val orbit = OrbitCamera(Vector3(0f, 1f, -2f), 14f, 0.7f, if (terrainReceives) 0.65f else 0.04f)
                 val result = GlHarness.render(base.copy(content = content.copy(lights = listOf(red, other))), 160, orbit) { r, frame ->
                     if (frame == 159 && mask.isEmpty()) {
-                        assertEquals(setOf("a"), r.shadowedLightIds)
+                        assertEquals("the light with id 1 gets the one tile", setOf(1L), r.shadowedLightIds)
                         for (y in 0 until r.lastHeight step 2) for (x in 0 until r.lastWidth step 2)
                             if (r.queries.pick(x, y, r.lastWidth, r.lastHeight) == receiver) mask += x to y
                     }
@@ -562,27 +573,27 @@ class SceneRenderGlTest {
         val base = fixture.copy(content = fixture.content.copy(lights = listOf(light)))
         var removed = false
         var rebuilt = false
-        val result = GlHarness.render(base, 180) { renderer, frame ->
+        // after the rebuild the assets load again: wait for them (up to frame 599) rather than a fixed frame
+        val result = GlHarness.render(base, 600) { renderer, frame ->
             when (frame) {
                 100 -> {
-                    assertEquals(setOf("shadow"), renderer.shadowedLightIds)
+                    assertEquals(setOf(3L), renderer.shadowedLightIds)
                     renderer.params = base.copy(content = base.content.copy(lights = emptyList()))
                 }
                 101 -> {
-                    assertTrue(renderer.shadowedLightIds.isEmpty())
+                    assertTrue("frame 101, light removed: ${renderer.shadowedLightIds}", renderer.shadowedLightIds.isEmpty())
                     removed = true
                     renderer.params = base
                 }
                 102 -> {
-                    assertEquals(setOf("shadow"), renderer.shadowedLightIds)
+                    assertEquals(setOf(3L), renderer.shadowedLightIds)
                     renderer.abandonShadows()
-                    assertTrue(renderer.shadowedLightIds.isEmpty())
+                    assertTrue("after abandon: ${renderer.shadowedLightIds}", renderer.shadowedLightIds.isEmpty())
                     renderer.create()
-                    assertTrue(renderer.shadowedLightIds.isEmpty())
+                    assertTrue("after create: ${renderer.shadowedLightIds}", renderer.shadowedLightIds.isEmpty())
                 }
-                179 -> {
-                    assertFalse(renderer.loading)
-                    assertEquals(setOf("shadow"), renderer.shadowedLightIds)
+                else -> if (frame > 102 && !rebuilt && !renderer.loading) {
+                    assertEquals(setOf(3L), renderer.shadowedLightIds)
                     rebuilt = true
                 }
             }
@@ -818,8 +829,11 @@ class SceneRenderGlTest {
         val p = params("Untitled", "Main Scene.scene")
         val widget = OrientationWidget().apply { show(0.4f, 0.3f) }
         val strip = StatsStrip().apply { show("12 objects \u00b7 Move \u00b7 World") }
-        val plain = GlHarness.render(p, 60)
-        val withOverlays = GlHarness.render(p, 60) { r, frame ->
+        // both loaded: while assets load, the spinner in the middle turns from frame to frame
+        val loaded = untilLoaded { !it.loading }
+        val plain = GlHarness.render(p, 240, afterFrame = loaded)
+        val withOverlays = GlHarness.render(p, 240) { r, frame ->
+            loaded(r, frame)
             if (frame == 0) {
                 r.cornerSprites = listOf(
                     CornerSprite(widget.corner, widget.toImage(1.0), widget.version, CORNER_MARGIN),

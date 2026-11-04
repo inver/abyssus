@@ -106,18 +106,7 @@ class ProceduralLightingCube(
         allocated = true
     }
 
-    private fun orient(face: Int) {
-        camera.position.setZero()
-        when (face) {
-            0 -> { camera.direction.set(1f, 0f, 0f); camera.up.set(0f, -1f, 0f) }
-            1 -> { camera.direction.set(-1f, 0f, 0f); camera.up.set(0f, -1f, 0f) }
-            2 -> { camera.direction.set(0f, 1f, 0f); camera.up.set(0f, 0f, 1f) }
-            3 -> { camera.direction.set(0f, -1f, 0f); camera.up.set(0f, 0f, -1f) }
-            4 -> { camera.direction.set(0f, 0f, 1f); camera.up.set(0f, -1f, 0f) }
-            5 -> { camera.direction.set(0f, 0f, -1f); camera.up.set(0f, -1f, 0f) }
-        }
-        camera.update()
-    }
+    private fun orient(face: Int) = orientCubeFace(camera, face)
 
     override fun dispose() {
         if (disposed) return
@@ -129,4 +118,21 @@ class ProceduralLightingCube(
         if (fbo != 0) Gdx.gl.glDeleteFramebuffer(fbo)
         fbo = 0
     }
+}
+
+/**
+ * Points the 90-degree [camera] at the origin's cube face [face] (`GL_TEXTURE_CUBE_MAP_POSITIVE_X + face`), with the up
+ * vector GL's cube map layout expects, so a face rendered through it samples back along the same world direction.
+ */
+internal fun orientCubeFace(camera: PerspectiveCamera, face: Int) {
+    camera.position.setZero()
+    when (face) {
+        0 -> { camera.direction.set(1f, 0f, 0f); camera.up.set(0f, -1f, 0f) }
+        1 -> { camera.direction.set(-1f, 0f, 0f); camera.up.set(0f, -1f, 0f) }
+        2 -> { camera.direction.set(0f, 1f, 0f); camera.up.set(0f, 0f, 1f) }
+        3 -> { camera.direction.set(0f, -1f, 0f); camera.up.set(0f, 0f, -1f) }
+        4 -> { camera.direction.set(0f, 0f, 1f); camera.up.set(0f, -1f, 0f) }
+        5 -> { camera.direction.set(0f, 0f, -1f); camera.up.set(0f, -1f, 0f) }
+    }
+    camera.update()
 }

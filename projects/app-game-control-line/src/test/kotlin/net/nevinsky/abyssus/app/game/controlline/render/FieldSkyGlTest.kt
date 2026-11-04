@@ -100,12 +100,17 @@ class FieldSkyGlTest {
                 target.end()
             }
             fun shot(camera: PerspectiveCamera): Shot {
-                repeat(10) { draw(camera, 30.0) }
+                repeat(30) { draw(camera, 30.0) }
                 target.begin(); Gdx.gl.glFinish(); target.end()
-                val start = System.nanoTime()
-                repeat(60) { draw(camera, 30.0) }
-                target.begin(); Gdx.gl.glFinish()
-                val millis = (System.nanoTime() - start) / 60e6
+                // the fastest of five batches: a GPU still raising its clock, or busy with something else, only slows a batch
+                var millis = Double.MAX_VALUE
+                repeat(5) {
+                    val start = System.nanoTime()
+                    repeat(20) { draw(camera, 30.0) }
+                    target.begin(); Gdx.gl.glFinish(); target.end()
+                    millis = minOf(millis, (System.nanoTime() - start) / 20e6)
+                }
+                target.begin()
                 val pixmap = Pixmap.createFromFrameBuffer(0, 0, 1280, 720)
                 target.end()
                 // the frame buffer reads bottom-up
@@ -117,7 +122,7 @@ class FieldSkyGlTest {
             return mapOf("sky" to shot(view(25f)), "low" to shot(view(8f)))
         } finally {
             target.dispose()
-            ctx.executor.shutdownNow()
+            ctx.close()
             project.deleteRecursively()
         }
     }

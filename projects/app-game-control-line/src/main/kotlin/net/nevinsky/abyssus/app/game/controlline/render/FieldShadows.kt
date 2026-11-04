@@ -107,6 +107,9 @@ class FieldShadows : Disposable {
      */
     fun casterCamera(): OrthographicCamera = camera.also { it.update(true) }
 
+    /** How many depth shaders the last [render] drew its casters with (each bound once). */
+    val depthShaders: Int get() = depth.lastShaderGroups
+
     /**
      * Draws the depth of [models], [terrains] (mesh to world transform) and the extra casters [extra] adds (foliage
      * OBJECT copies) into the map.

@@ -69,7 +69,7 @@ class ModelDepthShader(private val pass: ShadowDepthPass, renderable: Renderable
         context.setDepthTest(GL20.GL_LEQUAL)
         context.setDepthMask(true)
         context.setBlending(false, GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)
-        program.bind()
+        // the program is bound once in [begin]: a submission renders a run of casters between begin and end
         program.setUniformMatrix("u_projViewTrans", pass.viewProjection)
         // an instanced mesh takes its world transform from the a_instance attribute, so u_worldTrans is not declared
         if (!instanced) {

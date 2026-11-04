@@ -25,7 +25,9 @@ data class PerfFinding(val workload: String, val verdict: PerfVerdict, val detai
 /**
  * Compares a candidate with its baseline on matched environments only. The p95 frame time and the steady-state
  * allocation per frame may grow by [threshold] (a provisional 10%); beyond that is a regression. If the baseline's
- * own sample p95s spread by more than [threshold] the answer is inconclusive, never a pass.
+ * own sample p95s spread by more than [threshold] the answer is inconclusive, never a pass. The optional fields are
+ * compared only where both reports hold them: the p95 of each span and of each GPU pass. A run with other agents
+ * attached, or whose CPU times are marked not comparable, is mismatched.
  */
 class PerfComparison(private val threshold: Double = 0.10) {
     init {
@@ -46,20 +48,29 @@ class PerfComparison(private val threshold: Double = 0.10) {
                     PerfFinding(base.name, PerfVerdict.NOT_MEASURED, "baseline ${base.status}, candidate ${next.status}")
                 base.sceneHash != next.sceneHash -> PerfFinding(base.name, PerfVerdict.MISMATCHED, "scene hash differs")
                 base.settings != next.settings -> PerfFinding(base.name, PerfVerdict.MISMATCHED, "settings differ")
-                else -> compareStats(base.name, base.stats!!, next.stats!!)
+                base.agents != next.agents -> PerfFinding(base.name, PerfVerdict.MISMATCHED, "agents ${base.agents} vs ${next.agents}")
+                (base.cpuNotComparable ?: next.cpuNotComparable) != null ->
+                    PerfFinding(base.name, PerfVerdict.MISMATCHED, "CPU times not comparable: ${base.cpuNotComparable ?: next.cpuNotComparable}")
+                else -> compareStats(base.name, base.stats!!, next.stats!!, base.gpu?.passes.orEmpty(), next.gpu?.passes.orEmpty())
             }
         }
     }
 
-    private fun compareStats(name: String, base: PerfStats, next: PerfStats): PerfFinding {
+    private fun compareStats(
+        name: String, base: PerfStats, next: PerfStats, baseGpu: Map<String, PerfSpan>, nextGpu: Map<String, PerfSpan>,
+    ): PerfFinding {
         val spread = spread(base.samplesP95Ms)
         if (spread > threshold) {
             return PerfFinding(name, PerfVerdict.INCONCLUSIVE, "baseline p95 samples spread %.1f%%".format(java.util.Locale.ROOT, spread * 100))
         }
         val frame = growth(base.p95Ms, next.p95Ms)
         val alloc = growth(base.allocatedBytesPerFrame, next.allocatedBytesPerFrame)
-        val detail = "p95 %+.1f%%, allocation %+.1f%%".format(java.util.Locale.ROOT, frame * 100, alloc * 100)
-        return if (frame > threshold || alloc > threshold) PerfFinding(name, PerfVerdict.REGRESSION, detail)
+        // the optional fields count only where both sides hold them
+        val parts = base.spans.keys.intersect(next.spans.keys).sorted().map { "span $it" to growth(base.spans.getValue(it).p95Ms, next.spans.getValue(it).p95Ms) } +
+            baseGpu.keys.intersect(nextGpu.keys).sorted().map { "gpu $it" to growth(baseGpu.getValue(it).p95Ms, nextGpu.getValue(it).p95Ms) }
+        val detail = ("p95 %+.1f%%, allocation %+.1f%%".format(java.util.Locale.ROOT, frame * 100, alloc * 100) +
+            parts.joinToString("") { (part, g) -> ", %s p95 %+.1f%%".format(java.util.Locale.ROOT, part, g * 100) })
+        return if (frame > threshold || alloc > threshold || parts.any { it.second > threshold }) PerfFinding(name, PerfVerdict.REGRESSION, detail)
         else PerfFinding(name, PerfVerdict.PASS, detail)
     }
 

@@ -17,13 +17,39 @@ import kotlin.math.max
  * and lamps costs the same whichever way the camera looks. A model's bounding sphere (its rest-pose box, once per
  * [Model]) is moved by the instance's transform and tested against a frustum; an instance wholly outside it is left
  * out. Not thread safe; GL thread only, like the renderer that owns it.
+ *
+ * The spheres follow the asset storage (design decision D6): [track] drops the sphere of a model the storage built
+ * again, and [clear] drops all of them when the scene changes, so no sphere outlives its model.
  */
 class ModelCulling {
     private class Sphere(val center: Vector3, val radius: Float)
+    private class Tracked(val model: Model, val version: Long)
 
     private val spheres = IdentityHashMap<Model, Sphere>()
+    private val tracked = HashMap<String, Tracked>()
     private val box = BoundingBox()
     private val center = Vector3()
+
+    /** How many models have a sphere kept. */
+    val cached: Int get() = spheres.size
+
+    /**
+     * [model] is the asset the storage built under [name] as its [version]th build. When that is another model or another
+     * build than last time, the earlier model's sphere is dropped, so the next [visible] measures the new bounds.
+     */
+    fun track(name: String, version: Long, model: Model) {
+        val known = tracked[name]
+        if (known != null && known.model === model && known.version == version) return
+        known?.let { spheres.remove(it.model) }
+        spheres.remove(model)
+        tracked[name] = Tracked(model, version)
+    }
+
+    /** Drops every sphere: the scene changed, and the models of the last one may be gone. */
+    fun clear() {
+        spheres.clear()
+        tracked.clear()
+    }
 
     /** Whether any part of [instance] may be inside [frustum]. Errs towards true: an empty model is kept. */
     fun visible(instance: ModelInstance, frustum: Frustum): Boolean {

@@ -1,0 +1,47 @@
+{
+  "schema" : 1,
+  "host" : "game",
+  "environment" : {
+    "commit" : "ea2f274b5a28bc0ce259c6db1d562abfc3519e0a",
+    "dirty" : true,
+    "os" : "Linux 7.0.0-38-generic amd64",
+    "jdk" : "Eclipse Adoptium 21.0.9",
+    "gpu" : "NVIDIA GeForce RTX 3070 Ti/PCIe/SSE2",
+    "driver" : "3.3.0 NVIDIA 615.71.09",
+    "backend" : "OpenGL"
+  },
+  "workloads" : [ {
+    "name" : "control-line-field",
+    "status" : "MEASURED",
+    "reason" : null,
+    "sceneHash" : "4a92e8423264938d0127fc4520a37c9cdcbabd113bbae74aab4a5d658c51d200",
+    "settings" : {
+      "resolution" : "1280x720",
+      "warmupSeconds" : "10.0",
+      "sampleSeconds" : "30.0",
+      "samples" : "5",
+      "fixedDeltaSeconds" : "0.016666668",
+      "frameTime" : "CPU time of FieldRenderer.draw (submission), not GPU time",
+      "target" : "the default framebuffer of a 1280x720 window (the game's own)",
+      "pipeline" : "pbr"
+    },
+    "stats" : {
+      "frames" : 17284,
+      "p50Ms" : 7.02663603274705,
+      "p95Ms" : 9.511040416280954,
+      "p99Ms" : 11.496066239875029,
+      "samplesP95Ms" : [ 9.320336, 9.557756, 8.8627, 10.213013, 9.617281 ],
+      "allocatedBytesPerFrame" : 2243064.1587595465,
+      "gcCount" : 306,
+      "gcMillis" : 188
+    },
+    "uploadWork" : 234,
+    "assetCounts" : {
+      "models" : 203,
+      "terrains" : 2
+    },
+    "coldLoadMs" : 2463.0141617325594,
+    "reloadMs" : -11.47755826744077,
+    "gpuMs" : null
+  } ]
+}

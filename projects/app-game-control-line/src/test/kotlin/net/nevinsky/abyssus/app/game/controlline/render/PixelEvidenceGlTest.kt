@@ -100,7 +100,7 @@ class PixelEvidenceGlTest {
             return image
         } finally {
             renderer.dispose()
-            ctx.executor.shutdownNow()
+            ctx.close()
             project.deleteRecursively()
         }
     }

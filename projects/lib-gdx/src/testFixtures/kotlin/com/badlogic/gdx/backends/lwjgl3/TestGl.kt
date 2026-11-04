@@ -38,7 +38,22 @@ object TestGl {
     @Volatile
     private var height = WINDOW_HEIGHT
 
-    val enabled: Boolean get() = System.getProperty("abyssus.glTests") == "true" && !GraphicsEnvironment.isHeadless()
+    /**
+     * Whether GL tests run: `-Dabyssus.glTests=true` and a display. With `-Dabyssus.glTests.require=true` too (the CI GL
+     * job) a missing display is a failure, not a skip: see [enabledFor].
+     */
+    val enabled: Boolean
+        get() = enabledFor(System.getProperty("abyssus.glTests"), System.getProperty("abyssus.glTests.require"), GraphicsEnvironment.isHeadless())
+
+    /** [enabled] for these property values and display state; throws when GL tests are required but cannot run. */
+    fun enabledFor(glTests: String?, require: String?, headless: Boolean): Boolean {
+        val asked = glTests == "true"
+        if (require == "true") {
+            if (!asked) throw AssertionError("abyssus.glTests.require is set without -Dabyssus.glTests=true")
+            if (headless) throw AssertionError("GL tests are required (abyssus.glTests.require) but there is no display to make an OpenGL 3.3 context on")
+        }
+        return asked && !headless
+    }
 
     fun <T> run(block: () -> T): T = run(30, block)
 
@@ -80,7 +95,7 @@ object TestGl {
             // the canvas has a context only once it is shown: render from a later event
             javax.swing.Timer(50) { e -> if (result == null) canvas.render() else (e.source as javax.swing.Timer).stop() }.start()
         }
-        check(done.await(timeoutSeconds, TimeUnit.SECONDS)) { "GL test timed out" }
+        check(done.await(timeoutSeconds, TimeUnit.SECONDS)) { "GL test timed out (no OpenGL 3.3 context was made, or the block ran too long)" }
         SwingUtilities.invokeLater { window.dispose() }
         return result!!.getOrThrow()
     }

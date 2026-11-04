@@ -56,9 +56,11 @@ class PhysicsWorld internal constructor(
     private val log: Logger,
     natives: JoltNatives,
     private val injected: FoliageFailure?,
+    private val shapes: ShapeCache? = null,
 ) : AutoCloseable {
-    constructor(engine: SceneEngine, assets: PhysicsAssets, log: Logger, natives: JoltNatives) :
-            this(engine, assets, log, natives, null)
+    /** [shapes] keeps the collider shapes of assets across worlds; without it every world builds its own. */
+    constructor(engine: SceneEngine, assets: PhysicsAssets, log: Logger, natives: JoltNatives, shapes: ShapeCache? = null) :
+            this(engine, assets, log, natives, null, shapes)
 
     // [injected] is a seam for tests: it may make a foliage chunk fail to build, as Jolt could.
 
@@ -106,7 +108,7 @@ class PhysicsWorld internal constructor(
         jobs = own(JobSystemSingleThreaded(Jolt.cMaxPhysicsJobs))
         bodies = system.getBodyInterface()
         bodyFactory = PhysicsBodyFactory(
-            bodies, ShapeFactory(assets, ::own), LAYER_STATIC, LAYER_MOVING, ::own, ::entityId, ::warn,
+            bodies, ShapeFactory(assets, ::own, shapes), LAYER_STATIC, LAYER_MOVING, ::own, ::entityId, ::warn,
         )
         poseWriter = PhysicsPoseWriter(bodies, records.values)
         stepper = PhysicsStepper(

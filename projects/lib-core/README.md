@@ -307,6 +307,15 @@ HDR skies all tone map or encode inside their own shaders. A host that lights it
 an `OutputTransform` (`lib-gdx`) therefore draws the sky first, untouched, and the transform applies only to what is drawn over
 it; `SkyFrame` carries no transform. The sky's *lighting* cube is separate: it is linear radiance (see below).
 
+## Cached procedural atmosphere
+
+`AtmosphereCache` keeps the atmosphere of a `SKYBOX_PROCEDURAL` sky whose fragment shader declares `#define SKY_CACHEABLE`
+in an 8-bit, mipmapped 512-texel cube map, rendered only when the sun direction changes. Each frame draws the cube (the
+sky's vertex shader with `skybox.frag`), then the sky's shader compiled with `SKY_DETAIL_ONLY`, which discards all but the
+pixels a cube would blur (the sun's disc, the horizon line) and draws those exactly; the cube itself is rendered with
+`SKY_BAKE`, without the disc. `ProceduralSky(cacheAtmosphere = false)` draws a cacheable sky per pixel, which
+`AtmosphereCacheGlTest` compares with the cached one (at most 1/255 apart). See `docs/ai/file-formats.md`.
+
 ## Procedural sky light and the cloudy environment
 
 A `SKYBOX_PROCEDURAL` asset with the boolean `additional.lightsScene: true` (anything else does not opt in) gives the

@@ -183,9 +183,11 @@ float getShadow()
 #endif //shadowMapFlag
 
 #pragma include "shadow_visibility.glsl"
-#pragma include "output_transform.glsl"
 
 #endif //lightingFlag
+
+// outside lightingFlag: an unlit material samples its colour through sampleColor too
+#pragma include "output_transform.glsl"
 
 #ifdef fogFlag
 uniform vec4 u_fogColor;

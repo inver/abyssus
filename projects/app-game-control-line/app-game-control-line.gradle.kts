@@ -41,6 +41,11 @@ dependencies {
         }
     }
     testImplementation(libs.junit4)
+    // FieldAssetsGlTest loads the editor's Untitled fixture, whose HDR sky is EXR; the bundled project has none, so the
+    // shipped game carries no TinyEXR natives
+    listOf("natives-macos-arm64", "natives-macos", "natives-windows", "natives-linux").forEach {
+        testRuntimeOnly(variantOf(libs.lwjgl.tinyexr) { classifier(it) })
+    }
     testImplementation(testFixtures(project(":lib-core")))
     testImplementation(testFixtures(project(":lib-gdx")))
 }
@@ -192,6 +197,8 @@ tasks.test {
     inputs.dir(gameProject).withPropertyName("controlLineProject")
     // GL tests open a window: opt in with -Dabyssus.glTests=true
     System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
+    // with -Dabyssus.glTests.require=true a GL test that gets no display fails instead of being skipped (CI)
+    System.getProperty("abyssus.glTests.require")?.let { systemProperty("abyssus.glTests.require", it) }
     // the opt-in graphics workload runner (docs/ai/testing.md, "Graphics performance evidence")
     System.getProperties().stringPropertyNames().filter { it.startsWith("abyssus.perf.") }
         .forEach { systemProperty(it, System.getProperty(it)) }

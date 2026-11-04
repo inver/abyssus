@@ -73,6 +73,8 @@ kotlin {
 tasks.test {
     // GL tests open a window: opt in with -Dabyssus.glTests=true
     System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
+    // with -Dabyssus.glTests.require=true a GL test that gets no display fails instead of being skipped (CI)
+    System.getProperty("abyssus.glTests.require")?.let { systemProperty("abyssus.glTests.require", it) }
 }
 
 // Games ship this library: `checkNoEditorCode` keeps editor imports and ray-tracing snapshot types out of it.

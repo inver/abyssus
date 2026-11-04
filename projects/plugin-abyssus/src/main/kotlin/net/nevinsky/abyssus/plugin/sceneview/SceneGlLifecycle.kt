@@ -64,6 +64,9 @@ internal class SceneGlLifecycle(
     /** The capabilities of the current context; the canvas capture re-binds them before reading pixels. */
     val capabilities: GLCapabilities? get() = host.capabilities
 
+    /** The samples per pixel the current context really has; null before it is made. */
+    val contextSamples: Int? get() = host.contextSamples
+
     /** True once the current canvas ran `initGL`: a failure after that is a renderer error, not a refused pixel format. */
     var contextInitialized = false
 

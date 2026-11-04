@@ -20,7 +20,8 @@ This file is a map. Detail lives in `docs/ai/`; start at `docs/README.md`.
 | `lib-core` tests only | `./gradlew :lib-core:test` (one class: `./gradlew :lib-core:test --tests 'net.nevinsky.abyssus.lib.core.assets.loading.AssetStorageTest'`) |
 | `lib-core-editor` tests only | `./gradlew :lib-core-editor:test` (one class: `./gradlew :lib-core-editor:test --tests 'net.nevinsky.abyssus.lib.core.editor.pick.OrbitCameraTest'`) |
 | One plugin test class | `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.sceneview.SceneViewPanelTest'` |
-| Also run GL tests (open a window) | add `-Dabyssus.glTests=true` |
+| Also run GL tests (open a window) | add `-Dabyssus.glTests=true` (and `-Dabyssus.glTests.require=true` to fail, not skip, without a display) |
+| Control Line GL tests as CI runs them (Mesa, Xvfb; `.github/workflows/gl-tests.yml`) | see `docs/ai/testing.md`, "CI GL job" |
 | Sandbox IDE | `./gradlew :plugin-abyssus:runIde` (open a project with `-PideProject=/path/to/project`) |
 | Control Line game: play / tests | `./gradlew :app-game-control-line:run` / `./gradlew :app-game-control-line:test` |
 | Control Line native package payload (per OS; installers come in later tasks) | `./gradlew :app-game-control-line:packageApplication` / `:app-game-control-line:packageDmg` (see the game's README, "Packages") |

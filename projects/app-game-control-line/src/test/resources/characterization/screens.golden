@@ -23,6 +23,7 @@ button|enabled|<
 label|normal|Stunter
 button|enabled|>
 label|normal|Stunt    Lines 18 m    Mass 1.10 kg    Fuel 360 s
+label|normal|Instructor  (I)
 button|enabled|Fly  (Enter)
 button|enabled|Back  (Esc)
 button|enabled|Watch AI  (A)
@@ -431,6 +432,7 @@ label|normal|Mig-3
 button|enabled|>
 label|normal|Scale    Lines 16 m    Mass 0.85 kg    Fuel 240 s
 label|normal|Replica of the MiG-3    First flight 1940    Span 10.3 m    Scale 1:10
+label|normal|Instructor  (I)
 button|enabled|Fly  (Enter)
 button|enabled|Back  (Esc)
 == hud-free
@@ -512,6 +514,7 @@ label|normal|Mig-3
 button|enabled|>
 label|normal|Scale    Lines 16 m    Mass 0.85 kg    Fuel 240 s
 label|normal|Replica of the MiG-3    First flight 1940    Span 10.3 m    Scale 1:10
+label|normal|Instructor  (I)
 button|enabled|Fly  (Enter)
 button|enabled|Back  (Esc)
 == hud-scale
@@ -626,6 +629,7 @@ button|enabled|<
 label|normal|Stunter
 button|enabled|>
 label|normal|Stunt    Lines 18 m    Mass 1.10 kg    Fuel 360 s
+label|normal|Instructor  (I)
 button|enabled|Fly  (Enter)
 button|enabled|Back  (Esc)
 button|enabled|Watch AI  (A)
@@ -636,6 +640,7 @@ button|enabled|<
 label|normal|Stunter
 button|enabled|>
 label|normal|Stunt    Lines 18 m    Mass 1.10 kg    Fuel 360 s
+label|normal|Instructor  (I)
 button|enabled|Fly  (Enter)
 button|enabled|Back  (Esc)
 button|enabled|checked|Watch AI  (A)

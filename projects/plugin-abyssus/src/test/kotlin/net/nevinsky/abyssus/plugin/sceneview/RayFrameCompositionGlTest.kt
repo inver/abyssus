@@ -116,8 +116,11 @@ class RayFrameCompositionGlTest {
                     glReadPixels(renderer.lastWidth / 2, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, bytes)
                     return IntArray(4) { bytes.get(it).toInt() and 255 }
                 }
-                assertArrayEquals(intArrayOf(255, 0, 0, 255), pixel(renderer.lastHeight / 4))
-                assertArrayEquals(intArrayOf(0, 255, 0, 255), pixel(renderer.lastHeight * 3 / 4))
+                // the frame goes through float colour: a driver may store 1.0 as 254, which is still the colour
+                fun assertNear(want: IntArray, got: IntArray) =
+                    assertTrue("${got.toList()} is not ${want.toList()}", want.indices.all { kotlin.math.abs(want[it] - got[it]) <= 2 })
+                assertNear(intArrayOf(255, 0, 0, 255), pixel(renderer.lastHeight / 4))
+                assertNear(intArrayOf(0, 255, 0, 255), pixel(renderer.lastHeight * 3 / 4))
                 assertEquals(GL_NO_ERROR, glGetError())
             } finally {
                 glPixelStorei(GL_UNPACK_ROW_LENGTH, unpack)

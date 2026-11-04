@@ -71,6 +71,52 @@ data class PerfStats(
     val allocatedBytesPerFrame: Double,
     val gcCount: Long,
     val gcMillis: Long,
+    /**
+     * CPU time and allocation of named parts of each frame (a game reports `frame`, `flight`, `field` and `ui`); empty
+     * in a report that measured only the frame as a whole.
+     */
+    val spans: Map<String, PerfSpan> = emptyMap(),
+)
+
+/** CPU time percentiles of one named part of the frame, and what it allocated per frame (null when not measured). */
+data class PerfSpan(
+    val p50Ms: Double,
+    val p95Ms: Double,
+    val p99Ms: Double,
+    val allocatedBytesPerFrame: Double? = null,
+)
+
+/**
+ * GPU time per pass from timer queries ([passes], with the whole frame under `total`), measured independently of
+ * submission. When the context has no usable timer queries, [passes] is empty and [unavailable] says why: CPU time is
+ * never put in its place.
+ */
+data class PerfGpu(
+    val passes: Map<String, PerfSpan> = emptyMap(),
+    val unavailable: String? = null,
+) {
+    init {
+        require(passes.isNotEmpty() != (unavailable != null)) { "GPU times are either measured or unavailable with a reason" }
+    }
+}
+
+/**
+ * Render counters per frame of one pass (`GLProfiler`), averaged over the samples. [run] names the run they came from:
+ * the profiler wraps every GL call, so its run's CPU times are never the report's.
+ */
+data class PerfCounters(
+    val drawCalls: Double,
+    val shaderSwitches: Double,
+    val textureBindings: Double,
+    val vertices: Double,
+    val run: String,
+)
+
+/** The wall time of a one-off event (a flight start, the debrief opening) over its [samplesMs] repetitions. */
+data class PerfHitch(
+    val medianMs: Double,
+    val maxMs: Double,
+    val samplesMs: List<Double>,
 )
 
 /** One workload of a report. [stats] is null unless the status is [PerfStatus.MEASURED]. */
@@ -91,6 +137,19 @@ data class PerfWorkload(
     val reloadMs: Double? = null,
     /** Set only when the GPU time was measured independently of submission (a timer query); never inferred. */
     val gpuMs: Double? = null,
+    /** GPU time per pass, or why it is unavailable; null in a report that did not try. */
+    val gpu: PerfGpu? = null,
+    /** Render counters per pass (a game reports `main` and `shadow`). */
+    val counters: Map<String, PerfCounters> = emptyMap(),
+    /** One-off events (a game reports `flightStart` and `debriefOpen`). */
+    val hitches: Map<String, PerfHitch> = emptyMap(),
+    /**
+     * Why this run's CPU times may not be compared (the screen was locked or the window hidden, so presentation was
+     * throttled), or null. GPU times, counters, allocation and hitches stay valid.
+     */
+    val cpuNotComparable: String? = null,
+    /** The coverage or profiling agents attached to the measuring JVM; a run with agents never compares with one without. */
+    val agents: List<String> = emptyList(),
 ) {
     init {
         require((status == PerfStatus.MEASURED) == (stats != null)) { "stats belong to measured workloads only: $name" }

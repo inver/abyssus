@@ -1,10 +1,10 @@
-
+# control-line-pbr-rendering Specification
 ## Purpose
 
 Defines how Control Line's raster game lights and shows its field physically: in linear light, with sky light on every
 surface and a correct display transform, and with the control lines drawn as real cables.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Lit in linear light, shown through the output transform
 

@@ -33,6 +33,9 @@ class DepthCasters : Disposable {
         renderables.clear()
     }
 
+    /** How many depth shaders the last [submit] drew with, each bound once. */
+    val lastShaderGroups: Int get() = submission.lastGroups
+
     /** Draws [casters] (the collected [renderables] by default) seen from [camera]. */
     fun submit(camera: Camera, casters: Iterable<Renderable> = renderables) = submission.submit(camera, casters)
 

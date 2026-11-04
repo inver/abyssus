@@ -19,6 +19,15 @@ Free flight scores are kept in `<user-home>/.abyssus-control-line/scores.json`, 
 `<user-home>/.abyssus-control-line/f2b-scores.json` and Scale scores in `<user-home>/.abyssus-control-line/scale-scores.json`; a file
 that cannot be read is renamed to `scores.json.bad`, `f2b-scores.json.bad` or `scale-scores.json.bad`.
 
+At start the game logs one line naming its version, the OS, the JVM, the maximum heap, the GL renderer and version and the
+field view (`raster` or `ray`). When an exception escapes a frame or any game thread, the game writes a crash record
+`<user-home>/.abyssus-control-line/logs/crash-<timestamp>.txt` (the time, the thread, that environment and the stack trace)
+and exits with status 1; only the ten newest records are kept, and none is sent anywhere. When that folder cannot be
+written, the record goes to standard error. `-DcontrolLine.crashTest=true` (in a package:
+`JAVA_TOOL_OPTIONS=-DcontrolLine.crashTest=true`) makes the field fail on its first frame, to see that path. When no
+monitor is reported (a locked screen, a virtual display) the window opens at a fixed position, windowed for that start
+even when fullscreen was chosen, and the log says so.
+
 ## Packages
 
 Native packages bundle a trimmed Java runtime, so the player needs no Java. They are built with the JDK's `jpackage`
@@ -84,7 +93,9 @@ whose hash differs is deleted and the build fails). The files are `build/packagi
 - The packages are built on Ubuntu 22.04, so they need glibc 2.35 or newer. The game needs OpenGL 3.3.
 - The bundled natives are those of x64 Linux (LWJGL's Assimp natives have no arm64 Linux build), so arm64 Linux is not supported.
 - `scripts/smoke-control-line-linux.sh` (run by CI after the build) unpacks the `.deb`, checks its jars with `checkExtractedPackage`, and starts the
-  unpacked game and the AppImage for 20 seconds each under Xvfb on Mesa software GL; it fails on an early exit or a logged exception.
+  unpacked game and the AppImage for 20 seconds each under Xvfb on Mesa software GL, each with an empty home folder of its own; it
+  fails on an early exit, a logged exception or a crash record, which it prints. With
+  `JAVA_TOOL_OPTIONS=-DcontrolLine.crashTest=true` it fails on purpose.
 
 ### Windows installer
 
@@ -96,6 +107,18 @@ Run on Windows with a JDK 21 and the WiX Toolset 3.x (`candle.exe` and `light.ex
 `build/packaging/msi/control-line-<version>-windows-x64.msi`. The installer adds a Start menu entry and a desktop shortcut and lets
 the player pick the folder. Its upgrade code is fixed in `abyssus.control-line-packaging`, so installing a higher
 `controlLineVersion` upgrades an installed Control Line in place, and the version must stay numeric (`x.y.z`).
+
+### Release hand check (macOS and Windows)
+
+Hosted macOS and Windows runners have no OpenGL 3.3, so CI never starts the game there. Before a release, on each:
+
+1. Install the package (`.dmg`, `.msi`) and start Control Line from Finder or the Start menu.
+2. Fly a Free flight, return to the menu and quit. The game must exit without a new file in the crash folder:
+   `<user-home>/.abyssus-control-line/logs` (on Windows `<user-home>` is `%USERPROFILE%`).
+3. Start it once more with `JAVA_TOOL_OPTIONS=-DcontrolLine.crashTest=true` set (macOS:
+   `JAVA_TOOL_OPTIONS=-DcontrolLine.crashTest=true "/Applications/Control Line.app/Contents/MacOS/Control Line"`; Windows: set the
+   variable in a `cmd` window, then start `Control Line.exe` from it). The window closes at once, and the crash folder holds a
+   new `crash-<timestamp>.txt` naming the version, the OS, the GL renderer and `field view: crash test`. Delete it.
 
 ### Signing
 
@@ -181,8 +204,36 @@ are `docs/perf/control-line-pbr/legacy-field.png` and `pbr-field.png`. Commands:
 ./gradlew :app-game-control-line:test --tests '*render.PixelEvidenceGlTest' -Dabyssus.glTests=true -Dabyssus.perf.pixels=record -Dabyssus.perf.pixelsDir=<dir>
 ```
 
+The workload now measures the whole game frame during a Watch AI flight (workload `control-line-flight`); the CPU time of
+`FieldRenderer.draw` above is its `field` span (see `docs/ai/testing.md`, "Graphics performance evidence").
+
 The GL test window asks for a 3.3 core context (the game's own minimum); a 3.2 request returned a context without
 `glVertexAttribDivisor` on Linux and aborted the JVM on the first instanced draw.
+
+## Performance
+
+Required behaviour: `control-line-performance` (OpenSpec change `improve-control-line-performance-stability`). A budget is
+claimed met only from a report taken on the machine it names. A budget the maintainer has not approved is `proposed`.
+
+| Machine | GPU | OS | Driver | JDK |
+|---|---|---|---|---|
+| Reference | Apple M1 Pro (14 GPU cores) | macOS arm64 | Metal-backed OpenGL 4.1 | JetBrains Runtime 21 (the GPU runner of `docs/ai/testing.md`) |
+| Minimum spec (`proposed`) | GTX 750 Ti class, OpenGL 3.3 | Windows 10 or Ubuntu 22.04 | vendor driver | the bundled runtime |
+
+The minimum spec draws at 1280 x 720. No minimum-spec machine has reported yet, so every minimum-spec budget stays
+`proposed`.
+
+| Budget | Value | Machine | Status |
+|---|---|---|---|
+| p99 whole frame, CPU | ≤ 16.7 ms | reference | `proposed` |
+| p99 whole frame, GPU | ≤ 14 ms | reference | `proposed` |
+| Flight start, maximum | ≤ 250 ms | reference | `proposed` |
+| Debrief open, maximum | ≤ 250 ms | reference | `proposed` |
+| Steady allocation per whole frame | ≤ 256 KB | reference | `proposed` |
+| Shadow pass share of GPU frame | ≤ 25% | minimum spec | `proposed` |
+
+The field-renderer frame time of [Rendering](#rendering) is the budget the `control-line-pbr-rendering` "Frame time" scenario
+refers to: `pbr` within 20% of `legacy` on the machine of that table.
 
 ## Controls
 

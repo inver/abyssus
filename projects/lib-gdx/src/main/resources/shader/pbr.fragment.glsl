@@ -192,7 +192,6 @@ float getShadow()
 #endif //shadowMapFlag
 
 #pragma include "shadow_visibility.glsl"
-#pragma include "output_transform.glsl"
 
 // GGX normal distribution
 float distributionGGX(float NdotH, float alpha)
@@ -233,6 +232,9 @@ vec3 shadeLight(vec3 radiance, vec3 L, vec3 N, vec3 V, float NdotV, vec3 diffuse
 	return (diffuse + specular) * radiance * NdotL;
 }
 #endif //lightingFlag
+
+// outside lightingFlag: an unlit material samples its colour through sampleColor too
+#pragma include "output_transform.glsl"
 
 #ifdef fogFlag
 uniform vec4 u_fogColor;

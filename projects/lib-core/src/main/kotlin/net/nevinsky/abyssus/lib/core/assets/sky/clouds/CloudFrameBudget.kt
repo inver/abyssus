@@ -5,7 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.assets.sky.clouds
 
-/** A frame slower than this, in seconds, is over budget. */
+/** A frame slower than this, in seconds, is over budget, unless a view passes its own budget. */
 const val CLOUD_FRAME_BUDGET = 0.033f
 
 /** How long, in seconds, frames must stay over budget before volumetric clouds fall back. */
@@ -16,10 +16,14 @@ const val CLOUD_FRAME_GAP = 0.25f
 
 /**
  * Watches a view's frame intervals (the wall time between two rendered frames) while it draws volumetric clouds and
- * reports when they have stayed over [CLOUD_FRAME_BUDGET] for [CLOUD_SLOW_SECONDS] in a row. Gaps over
- * [CLOUD_FRAME_GAP] neither count nor break the run. Pure; EDT only.
+ * reports when they have stayed over [budgetSeconds] (the editor's [CLOUD_FRAME_BUDGET], or a game's own frame budget)
+ * for [CLOUD_SLOW_SECONDS] in a row. Gaps over [CLOUD_FRAME_GAP] neither count nor break the run. Pure; one thread.
  */
-class CloudFrameBudget {
+class CloudFrameBudget(val budgetSeconds: Float = CLOUD_FRAME_BUDGET) {
+    init {
+        require(budgetSeconds > 0f && budgetSeconds < CLOUD_FRAME_GAP) { "a frame budget of $budgetSeconds s" }
+    }
+
     private var slowSeconds = 0f
 
     /**
@@ -32,7 +36,7 @@ class CloudFrameBudget {
             return false
         }
         if (!interval.isFinite() || interval <= 0f || interval > CLOUD_FRAME_GAP) return false
-        if (interval <= CLOUD_FRAME_BUDGET) {
+        if (interval <= budgetSeconds) {
             slowSeconds = 0f
             return false
         }

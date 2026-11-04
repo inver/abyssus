@@ -24,6 +24,12 @@ val controlLineVersion: Provider<String> = providers.gradleProperty("controlLine
     it
 }
 
+// The game names its version in its start log and crash records (`GameEnvironment`), read from the jar's manifest.
+tasks.named<Jar>("jar") {
+    inputs.property("controlLineVersion", controlLineVersion)
+    manifest.attributes(mapOf("Implementation-Title" to "Control Line", "Implementation-Version" to controlLineVersion.get()))
+}
+
 val packagingBuild: Provider<Directory> = layout.buildDirectory.dir("packaging")
 val installDist = tasks.named<Sync>("installDist")
 

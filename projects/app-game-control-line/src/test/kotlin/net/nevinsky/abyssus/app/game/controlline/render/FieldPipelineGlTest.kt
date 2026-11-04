@@ -127,7 +127,7 @@ class FieldPipelineGlTest {
             )
         } finally {
             renderer.dispose()
-            ctx.executor.shutdownNow()
+            ctx.close()
             project.deleteRecursively()
         }
     }

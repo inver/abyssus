@@ -5,6 +5,9 @@
 package net.nevinsky.abyssus.app.game.controlline.render
 
 import com.badlogic.ashley.core.Entity
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CLOUD_FRAME_BUDGET
+import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudFrameBudget
+import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.Color
@@ -17,6 +20,7 @@ import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
 import com.badlogic.gdx.graphics.g3d.utils.AnimationController
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.Disposable
 import net.nevinsky.abyssus.lib.core.BaseCtx
@@ -76,15 +80,23 @@ class LineSegment(
 /** The game's field view: draw a frame, resize with the window, and release GL resources. Raster and ray modes both
  * present through this interface; `Main` picks the implementation at launch (design decision 7). */
 interface FieldView {
+    /** What draws the field, as the start log and a crash record name it: `raster` or `ray`. */
+    val kind: String
+
     /**
      * Whether this view draws the control lines as lit [Cable] geometry given in [draw]; one that does not (the ray view)
      * is given them as [LineSegment]s in `lines` like the other overlays.
      */
     val drawsCables: Boolean get() = false
 
+    /**
+     * Draws [field]. An entity in [poses] is drawn at that transform instead of its `PositionComponent`'s: the flying
+     * plane's drawn pose, between its last two simulated steps (design decision D3), which the simulation never reads.
+     */
     fun draw(
         field: FieldScene, camera: Camera, lines: List<LineSegment> = emptyList(), hidden: Entity? = null,
         clips: Map<Entity, String> = emptyMap(), seconds: Float = 0f, cables: List<Cable> = emptyList(),
+        poses: Map<Entity, Matrix4> = emptyMap(),
     )
 
     fun resize(width: Float, height: Float)
@@ -110,7 +122,13 @@ class FieldRenderer(
     /** The cloud technique to draw the sky with; null: the sky's cloud asset's own. */
     clouds: CloudTechnique? = null,
     requested: FieldRenderSettings = FieldRenderSettings(),
+    /** Marks the start and end of each pass for the performance workload; the game's does nothing. */
+    private val probe: FrameProbe = FrameProbe.NONE,
+    /** The frame interval (s) the cloud step-down holds the game to; the game passes [CLOUD_STEP_DOWN_INTERVAL]. */
+    cloudFrameBudget: Float = CLOUD_FRAME_BUDGET,
 ) : FieldView, Disposable {
+    override val kind: String get() = "raster"
+
     /** What the field is drawn with: [requested], less the display transform on a context that cannot run it. */
     val settings: FieldRenderSettings = requested.forContext(Gdx.graphics.isGL30Available).also {
         if (it !== requested) ctx.log.warn("The display transform needs OpenGL 3.0; drawing the field without it")
@@ -120,7 +138,16 @@ class FieldRenderer(
     private val batch = ModelBatch(modelShaders)
     private val terrainPass = TerrainPass(ctx.shaderStorage, TerrainVariant.GAME_SINGLE_SUN)
     private val shapes = ShapeRenderer()
-    private val instances = HashMap<Entity, Pair<Model, ModelInstance>>()
+    /**
+     * What a model instance or foliage placement is kept for: the scene file's entity id and the storage key it draws. A
+     * flight or the debrief loads the field again with new [Entity] objects; keyed so, the reload reuses what the last
+     * scene built instead of rebuilding it (design decision D8, option 1).
+     */
+    private data class Slot(val entityId: Long, val key: String)
+
+    private fun idOf(entity: Entity): Long = entity.getComponent(HeaderComponent::class.java)?.id ?: -1L
+
+    private val instances = HashMap<Slot, Pair<Model, ModelInstance>>()
     private val playing = HashMap<Entity, Pair<String, AnimationController>>()
     private var scene: FieldScene? = null
 
@@ -129,11 +156,14 @@ class FieldRenderer(
         val drawn = (sky as? ProceduralSky)?.drawnTechnique
         val next = cloudStepDown.frame(seconds, drawn) ?: return
         clouds = next
-        ctx.log.warn("${drawn?.key} clouds held the game under 30 frames a second for two seconds; drawing ${next.key} clouds instead")
+        ctx.log.warn(
+            "{} clouds held the game's frames over {} ms for two seconds; drawing {} clouds instead",
+            drawn?.key, "%.1f".format(java.util.Locale.ROOT, cloudStepDown.budgetSeconds * 1000f), next.key,
+        )
     }
 
     /** One drawable per terrain placement, made from the shared asset it was copied from and released before it. */
-    private val placements = HashMap<Entity, Placement>()
+    private val placements = HashMap<Slot, Placement>()
     private val reported = HashSet<String>()
 
     /**
@@ -141,7 +171,7 @@ class FieldRenderer(
      * hold the game too slow, then the next simpler one each time (never back up, never written to a file).
      */
     private var clouds: CloudTechnique? = clouds
-    private val cloudStepDown = CloudStepDown()
+    private val cloudStepDown = CloudStepDown(CloudFrameBudget(cloudFrameBudget))
 
     /** Seconds of play drawn so far: the sky's clouds drift by it. */
     private var skyTime = 0.0
@@ -206,13 +236,12 @@ class FieldRenderer(
 
     override fun draw(
         field: FieldScene, camera: Camera, lines: List<LineSegment>, hidden: Entity?,
-        clips: Map<Entity, String>, seconds: Float, cables: List<Cable>,
+        clips: Map<Entity, String>, seconds: Float, cables: List<Cable>, poses: Map<Entity, Matrix4>,
     ) {
         skyTime += seconds
         if (scene !== field) {
-            releasePlacements()
-            instances.clear()
-            playing.clear()
+            keepOnly(field)
+            culling.clear()
             scene = field
             environment.clear()
             environment.set(ColorAttribute(ColorAttribute.AmbientLight, field.ambient))
@@ -235,6 +264,7 @@ class FieldRenderer(
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT or GL20.GL_DEPTH_BUFFER_BIT)
 
         val sky = field.skyName?.let { ctx.assetStorage.getAs<SkyRenderer>(it) }
+        probe.begin(FrameSpan.SKY)
         sky?.let {
             Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
             Gdx.gl.glDepthMask(false)
@@ -243,14 +273,17 @@ class FieldRenderer(
             Gdx.gl.glDepthMask(true)
             stepDownClouds(it, seconds)
         }
+        probe.end(FrameSpan.SKY)
         val skyLight = lightWithSky(field, sky, seconds)
 
-        val drawn = drawnModels(field)
+        stopUnaskedClips(clips)
+        val drawn = drawnModels(field, poses)
         animate(drawn, clips, seconds)
         val terrains = field.terrains.mapNotNull { (entity, name) ->
             ctx.assetStorage.getAs<TerrainMesh>(name)?.let { it to field.position(entity).getTransform() }
         }
         val foliage = foliageOf(field)
+        probe.begin(FrameSpan.SHADOW)
         shadows.aim(sun, field.sunDirection, field.pilot?.let { field.position(it).localPosition } ?: Vector3.Zero)
         val light = shadows.casterCamera()
         for ((entity, placement) in foliage) placement.drawable.updateCasters(
@@ -264,6 +297,7 @@ class FieldRenderer(
             for (placement in foliage.values) placement.drawable.getCasterRenderables(out, pool)
         }
         shadows.attribute()?.let(environment::set)
+        probe.end(FrameSpan.SHADOW)
 
         Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
         Gdx.gl.glDepthFunc(GL20.GL_LEQUAL)
@@ -286,11 +320,15 @@ class FieldRenderer(
             SunShadowInput(shadows.texture, shadows.matrix, 1f / SHADOW_MAP_SIZE, shadows.bias),
             skyLight?.irradiance, skyLight?.fadeTo?.irradiance, skyLight?.weight ?: 0f,
         )
+        probe.begin(FrameSpan.TERRAIN)
         terrainPass.draw(frame, sun, terrains.map { (mesh, world) -> TerrainDraw(mesh, world) })
+        probe.end(FrameSpan.TERRAIN)
 
         // the viewer's own culling and buffers, after the light pass: casters never touch them
+        probe.begin(FrameSpan.MODELS)
         for ((entity, placement) in foliage) placement.drawable.update(camera, field.position(entity).getTransform())
         batch.begin(camera)
+        lastDrawnModels = 0
         for ((entity, instance) in drawn) {
             if (entity === hidden) {
                 continue
@@ -299,6 +337,7 @@ class FieldRenderer(
                 continue
             }
             batch.render(instance, environment)
+            lastDrawnModels++
         }
         for (placement in foliage.values) {
             batch.render(placement.drawable, environment)
@@ -306,7 +345,9 @@ class FieldRenderer(
         cableMesh.update(cables, camera, Gdx.graphics.backBufferHeight.toFloat().coerceAtLeast(1f))
         batch.render(cableMesh, environment)
         batch.end()
+        probe.end(FrameSpan.MODELS)
 
+        probe.begin(FrameSpan.LINES)
         val (wires, plain) = lines.partition { it.thickness > 0f }
         if (plain.isNotEmpty()) {
             Gdx.gl.glEnable(GL20.GL_DEPTH_TEST)
@@ -327,6 +368,7 @@ class FieldRenderer(
             Gdx.gl.glDisable(GL20.GL_BLEND)
         }
         if (wires.isNotEmpty()) wireRenderer.draw(wires, camera, field.sunDirection)
+        probe.end(FrameSpan.LINES)
         Gdx.gl.glDisable(GL20.GL_DEPTH_TEST)
         Gdx.gl.glDisable(GL20.GL_CULL_FACE)
     }
@@ -351,14 +393,15 @@ class FieldRenderer(
                                 + " but entity ${entry.entityId} draws '${entry.terrain}': nothing drawn for it"
                     )
                 }
-                placements.remove(entry.entity)?.drawable?.dispose()
+                placements.remove(Slot(entry.entityId, entry.foliage))?.drawable?.dispose()
                 continue
             }
-            val current = placements[entry.entity]
+            val slot = Slot(entry.entityId, entry.foliage)
+            val current = placements[slot]
             val placement = if (current != null && current.shared === shared) current else {
                 current?.drawable?.dispose()
                 Placement(shared, FoliageDrawable(shared.foliage, ctx.assetStorage)).also {
-                    placements[entry.entity] = it
+                    placements[slot] = it
                 }
             }
             shown[entry.entity] = placement
@@ -371,7 +414,13 @@ class FieldRenderer(
     }
 
     /** The placement drawables of the last [draw], by entity: for tests. */
-    internal fun placementDrawables(): Map<Entity, FoliageDrawable> = placements.mapValues { it.value.drawable }
+    /** How many model instances the last [draw] submitted to the view (after culling). */
+    internal var lastDrawnModels = 0
+        private set
+
+    /** The foliage drawables of the current scene, by its terrain entities. */
+    internal fun placementDrawables(): Map<Entity, FoliageDrawable> = scene?.foliages.orEmpty()
+        .mapNotNull { entry -> placements[Slot(entry.entityId, entry.foliage)]?.let { entry.entity to it.drawable } }.toMap()
 
     /** The environment the models are drawn with: for tests. */
     internal val modelEnvironment: Environment get() = environment
@@ -386,20 +435,50 @@ class FieldRenderer(
         reported.clear()
     }
 
+    /**
+     * The scene changed to [field]: keeps the instances and placements it draws again, releases the others. An instance
+     * that played a clip is not kept, as its nodes hold the clip's last pose.
+     */
+    private fun keepOnly(field: FieldScene) {
+        for (entity in playing.keys) instances.keys.removeIf { it.entityId == idOf(entity) }
+        playing.clear()
+        val models = field.models.mapTo(HashSet()) { (entity, name) -> Slot(idOf(entity), field.modelStorageName(entity, name)) }
+        instances.keys.retainAll(models)
+        val foliage = field.foliages.mapTo(HashSet()) { Slot(it.entityId, it.foliage) }
+        val gone = placements.keys.filter { it !in foliage }
+        for (slot in gone) placements.remove(slot)?.drawable?.dispose()
+        reported.clear()
+    }
+
     private class Placement(val shared: FoliageDrawable, val drawable: FoliageDrawable)
 
-    /** The scene's models that are built, each with its instance placed at the entity's transform. */
-    private fun drawnModels(field: FieldScene): List<Pair<Entity, ModelInstance>> =
+    /** The scene's models that are built, each with its instance placed at the entity's transform (or its pose in [poses]). */
+    private fun drawnModels(field: FieldScene, poses: Map<Entity, Matrix4>): List<Pair<Entity, ModelInstance>> =
         field.models.mapNotNull { (entity, name) ->
-            val model = ctx.assetStorage.getAs<Model>(field.modelStorageName(entity, name)) ?: return@mapNotNull null
-            val instance = instances[entity]?.takeIf { it.first === model }?.second
+            val key = field.modelStorageName(entity, name)
+            val model = ctx.assetStorage.getAs<Model>(key) ?: return@mapNotNull null
+            culling.track(key, ctx.assetStorage.version(key), model)
+            val slot = Slot(idOf(entity), key)
+            val instance = instances[slot]?.takeIf { it.first === model }?.second
                 ?: ModelInstance(model).also {
-                    instances[entity] = model to it
+                    instances[slot] = model to it
                     playing.remove(entity)
                 }
-            instance.transform!!.set(field.position(entity).getTransform())
+            instance.transform!!.set(poses[entity] ?: field.position(entity).getTransform())
             entity to instance
         }
+
+    /**
+     * Stops a clip no longer asked for in [clips] (the debrief replays the flight's own scene): its instance is made
+     * again in its rest pose before this frame's models are placed.
+     */
+    private fun stopUnaskedClips(clips: Map<Entity, String>) {
+        if (playing.isEmpty() || playing.keys.all { it in clips }) return
+        for (entity in playing.keys.filter { it !in clips }) {
+            playing.remove(entity)
+            instances.keys.removeIf { it.entityId == idOf(entity) }
+        }
+    }
 
     /** Starts the [clips] not yet playing on the [drawn] models, and advances every playing clip by [seconds]. */
     private fun animate(drawn: List<Pair<Entity, ModelInstance>>, clips: Map<Entity, String>, seconds: Float) {
@@ -411,9 +490,9 @@ class FieldRenderer(
         for ((_, controller) in playing.values) controller.update(seconds)
     }
 
+    /** Releases what this renderer made; the asset storage is the context's ([BaseCtx.close]). */
     override fun dispose() {
         releasePlacements()
-        ctx.assetStorage.dispose()
         shadows.dispose()
         modelShaders.dispose()
         terrainPass.dispose()

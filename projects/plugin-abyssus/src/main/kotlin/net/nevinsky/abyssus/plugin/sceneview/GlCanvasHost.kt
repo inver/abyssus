@@ -61,10 +61,21 @@ internal class GlCanvasHost(
     var capabilities: GLCapabilities? = null
         private set
 
-    fun newCanvas(data: GLData): GuardedGLCanvas = object : GuardedGLCanvas(data) {
+    /**
+     * The samples per pixel of the current context's default framebuffer, read when it was made; null before. A platform
+     * may accept a multisampled request and still give none (an AWT canvas on X11 draws into a window whose visual AWT
+     * already chose), so this, not the request, says whether the view is antialiased.
+     */
+    var contextSamples: Int? = null
+        private set
+
+    fun newCanvas(data: GLData): GuardedGLCanvas = newGuardedCanvas(data).also { contextSamples = null }
+
+    private fun newGuardedCanvas(data: GLData): GuardedGLCanvas = object : GuardedGLCanvas(data) {
         override fun initGL() {
             hooks.beforeCreate()
             capabilities = GL.createCapabilities()
+            contextSamples = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL13.GL_SAMPLES)
             val ctx = GdxRuntime.newContext(frame, GdxGlBridge.gl20(), GdxGlBridge.gl30(), Lwjgl3Files())
             gdx = ctx
             GdxRuntime.withContext(ctx) { hooks.create() }
@@ -86,6 +97,7 @@ internal class GlCanvasHost(
         override fun onContextAbandoned() {
             hooks.abandoned()
             gdx = null
+            contextSamples = null
             hooks.contextLost()
         }
 

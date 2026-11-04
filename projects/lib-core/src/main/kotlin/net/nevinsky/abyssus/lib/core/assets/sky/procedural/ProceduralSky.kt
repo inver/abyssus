@@ -33,6 +33,9 @@ import org.slf4j.helpers.NOPLogger
 /** How far above the ground, in metres, a procedural sky (and its clouds) is seen from. */
 const val SKY_CAMERA_HEIGHT = 100f
 
+/** The fragment shader that draws a cached atmosphere: the cube sampled along the sky's `v_dir`. */
+private const val CACHE_LOOKUP_FRAGMENT = "skybox.frag"
+
 /** The altitude, in metres, whose sunlight and sky light every cloud band is lit with. */
 private const val CLOUD_LIGHT_ALTITUDE = 1500f
 
@@ -52,6 +55,8 @@ class ProceduralSky(
     shaders: ShaderStorage = ShaderStorage(),
     log: Logger = NOPLogger.NOP_LOGGER,
     cloudFactory: ((CloudTechnique) -> CloudRenderer)? = null,
+    /** Whether a sky whose shader declares `SKY_CACHEABLE` uses the cache; false draws it per pixel (a test compares the two). */
+    cacheAtmosphere: Boolean = true,
 ) : SkyRenderer {
     /** The atmosphere the asset's shader is given; clouds sit on its planet. */
     val params: AtmosphereParams = prepared.params
@@ -72,6 +77,16 @@ class ProceduralSky(
         }
     }
     private val mesh = createFullscreenTriangle()
+
+    /** The cached atmosphere of a sky that opts in ([PreparedProceduralSky.cacheable]); null draws it per pixel. */
+    private val cache: AtmosphereCache? = if (cacheAtmosphere && prepared.cacheable) {
+        AtmosphereCache(prepared.vertex, prepared.fragment, shaders.read(CACHE_LOOKUP_FRAGMENT), params)
+    } else {
+        null
+    }
+
+    /** How many times the cached atmosphere was rendered; null when this sky is drawn per pixel. */
+    val atmosphereBakes: Int? get() = cache?.bakes
     private val invViewProj = Matrix4()
     private val field = CloudField()
     private val ambient = SkyAmbientEstimate(params)
@@ -158,10 +173,15 @@ class ProceduralSky(
     override fun draw(camera: Camera, frame: SkyFrame) {
         val sun = frame.sun
         rotationOnlyViewProj(camera, invViewProj).inv()
-        program.bind()
-        program.setUniformMatrix("u_invViewProj", invViewProj)
-        params.bindTo(program, sun)
-        mesh.render(program, GL20.GL_TRIANGLES)
+        val cached = cache
+        if (cached != null) {
+            cached.draw(mesh, invViewProj, sun)
+        } else {
+            program.bind()
+            program.setUniformMatrix("u_invViewProj", invViewProj)
+            params.bindTo(program, sun)
+            mesh.render(program, GL20.GL_TRIANGLES)
+        }
         drawClouds(camera, frame)
     }
 
@@ -185,6 +205,7 @@ class ProceduralSky(
         lighting?.dispose()
         lighting = null
         techniques.dispose()
+        cache?.dispose()
         mesh.dispose()
         program.dispose()
     }

@@ -4,15 +4,25 @@
  */
 package net.nevinsky.abyssus.app.game.controlline
 
+import com.badlogic.ashley.core.Entity
+import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.graphics.Camera
+import com.badlogic.gdx.math.Matrix4
+import net.nevinsky.abyssus.app.game.controlline.render.Cable
+import net.nevinsky.abyssus.app.game.controlline.render.FieldScene
 import net.nevinsky.abyssus.app.game.controlline.render.FieldView
+import net.nevinsky.abyssus.app.game.controlline.render.LineSegment
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration
 import net.nevinsky.abyssus.app.game.controlline.display.DisplaySettings
 import net.nevinsky.abyssus.app.game.controlline.display.defaultDisplayFile
 import net.nevinsky.abyssus.app.game.controlline.pattern.defaultPatternScoresFile
 import net.nevinsky.abyssus.app.game.controlline.score.defaultScoresFile
+import com.badlogic.gdx.Graphics
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
+import kotlin.system.exitProcess
 
 private val log = LoggerFactory.getLogger("control-line")
 
@@ -24,37 +34,102 @@ private val log = LoggerFactory.getLogger("control-line")
  * loaded reflectively here so the shipped main classpath never sees it. On `Unavailable` (classes absent, probe refused,
  * runtime missing) the game starts the raster field and states the reason in the window title and the log: it never
  * crashes and never switches silently. Without the option the field renders exactly as before.
+ *
+ * A failure on any game thread leaves a crash record in `~/.abyssus-control-line/logs` ([CrashReporter]) and the process
+ * exits with status 1. `controlLine.crashTest=true` makes the field view fail on its first frame, to check that path in a
+ * run or a package (`JAVA_TOOL_OPTIONS=-DcontrolLine.crashTest=true`).
  */
 fun main() {
-    val project = (System.getProperty("controlLine.project")?.let { Path.of(it) } ?: defaultProjectFolder()).toAbsolutePath()
-    val config = Lwjgl3ApplicationConfiguration().apply {
-        setTitle("Control Line")
-        setWindowedMode(1280, 720)
-        useVsync(true)
-        // a steady 60 frames a second: on a 120 Hz screen an uncapped, vsynced loop alternates 8, 17 and 25 ms frames
-        setForegroundFPS(60)
-        setBackBufferConfig(8, 8, 8, 8, 24, 0, 4)
-        // foliage is drawn instanced, which needs glVertexAttribDivisor, core in OpenGL 3.3: a 3.3 core context (forward compatible on macOS)
-        setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.GL30, 3, 3)
-        // the mode the player last chose on the settings screen: the window opens in it, with no windowed flash
-        if (DisplaySettings(defaultDisplayFile()).fullscreen) setFullscreenMode(Lwjgl3ApplicationConfiguration.getDisplayMode())
+    val crashes = CrashReporter(defaultLogsFolder())
+    crashes.onCrash = { Gdx.app?.exit() }
+    Thread.setDefaultUncaughtExceptionHandler(crashes)
+    try {
+        start(crashes)
+    } catch (error: Throwable) {
+        // the window could not be made, or the game failed before its first guarded call
+        crashes.report(Thread.currentThread(), error)
     }
-    val fieldView = resolveFieldView(project)
+    if (crashes.crashed) exitProcess(1)
+}
+
+private fun start(crashes: CrashReporter) {
+    val project = (System.getProperty("controlLine.project")?.let { Path.of(it) } ?: defaultProjectFolder()).toAbsolutePath()
+    val config = gameConfiguration(DisplaySettings(defaultDisplayFile()).fullscreen, primaryMonitorPresent(), log)
+    val fieldView = if (System.getProperty("controlLine.crashTest") == "true") {
+        log.warn("controlLine.crashTest is set: the field view fails on its first frame")
+        RayFieldResult.Available(CrashTestFieldView())
+    } else {
+        resolveFieldView(project)
+    }
     val reason = if (fieldView is RayFieldResult.Unavailable) fieldView.reason else null
-    val game = when (fieldView) {
-        is RayFieldResult.Available -> {
-            config.setTitle("Control Line (ray)")
-            ControlLineGame(project, defaultScoresFile(), defaultPatternScoresFile(), fieldView.view)
-        }
+    val view = when (fieldView) {
+        is RayFieldResult.Available -> fieldView.view.also { if (it.kind == "ray") config.setTitle("Control Line (ray)") }
         else -> {
             reason?.let { r ->
                 config.setTitle("Control Line (raster: $r)")
                 log.warn("Ray-traced field view unavailable: $r; running the raster field")
             }
-            ControlLineGame(project, defaultScoresFile(), defaultPatternScoresFile(), null)
+            null
         }
     }
-    Lwjgl3Application(game, config)
+    Lwjgl3Application(ControlLineGame(project, defaultScoresFile(), defaultPatternScoresFile(), view, crashes = crashes), config)
+}
+
+/** The field view of `controlLine.crashTest`: it fails on its first frame, so a run shows what a crash leaves behind. */
+private class CrashTestFieldView : FieldView {
+    override val kind: String get() = "crash test"
+
+    override fun draw(
+        field: FieldScene, camera: Camera, lines: List<LineSegment>, hidden: Entity?,
+        clips: Map<Entity, String>, seconds: Float, cables: List<Cable>, poses: Map<Entity, Matrix4>,
+    ): Unit = throw IllegalStateException("controlLine.crashTest: a forced failure while drawing a frame")
+
+    override fun resize(width: Float, height: Float) = Unit
+    override fun dispose() = Unit
+}
+
+/** Where the window opens when no monitor is reported: libGDX would centre it on a primary monitor there is none of. */
+internal const val NO_MONITOR_WINDOW_X = 64
+internal const val NO_MONITOR_WINDOW_Y = 64
+
+/**
+ * The window of the game. With a [primaryMonitor] it opens centred, or fullscreen at [displayMode] when the player last
+ * chose fullscreen ([savedFullscreen]). Without one (a locked screen, a virtual display: evidence M5 of OpenSpec change
+ * `improve-control-line-performance-stability`) it opens windowed at a fixed position for this start, ignoring a saved
+ * fullscreen choice (which stays saved), and [log] says so.
+ */
+internal fun gameConfiguration(
+    savedFullscreen: Boolean, primaryMonitor: Boolean, log: Logger,
+    displayMode: () -> Graphics.DisplayMode = { Lwjgl3ApplicationConfiguration.getDisplayMode() },
+): Lwjgl3ApplicationConfiguration = Lwjgl3ApplicationConfiguration().apply {
+    setTitle("Control Line")
+    setWindowedMode(1280, 720)
+    useVsync(true)
+    // a steady 60 frames a second: on a 120 Hz screen an uncapped, vsynced loop alternates 8, 17 and 25 ms frames
+    setForegroundFPS(60)
+    setBackBufferConfig(8, 8, 8, 8, 24, 0, 4)
+    // foliage is drawn instanced, which needs glVertexAttribDivisor, core in OpenGL 3.3: a 3.3 core context (forward compatible on macOS)
+    setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.GL30, 3, 3)
+    if (!primaryMonitor) {
+        setWindowPosition(NO_MONITOR_WINDOW_X, NO_MONITOR_WINDOW_Y)
+        log.warn(
+            "No primary monitor is reported; opening a window at ($NO_MONITOR_WINDOW_X, $NO_MONITOR_WINDOW_Y)" +
+                if (savedFullscreen) " instead of fullscreen for this start" else ""
+        )
+    } else if (savedFullscreen) {
+        // the mode the player last chose on the settings screen: the window opens in it, with no windowed flash
+        setFullscreenMode(displayMode())
+    }
+}
+
+/**
+ * Whether GLFW reports a primary monitor; asking initializes GLFW the way the application will. libGDX's own call fails
+ * reading the position of a monitor that is not there (evidence M5); only `GlfwJoysticks` talks to GLFW directly.
+ */
+private fun primaryMonitorPresent(): Boolean = try {
+    Lwjgl3ApplicationConfiguration.getPrimaryMonitor() != null
+} catch (none: RuntimeException) {
+    false
 }
 
 /**

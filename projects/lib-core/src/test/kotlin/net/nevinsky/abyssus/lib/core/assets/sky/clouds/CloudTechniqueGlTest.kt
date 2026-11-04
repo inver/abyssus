@@ -32,7 +32,15 @@ import java.io.File
 private const val SIZE = 160
 
 /** The CRC of the volumetric cirrus image before heaped bands got their own shaping: it must not change. */
-private const val CIRRUS_CHECKSUM = 2430506748L
+/**
+ * The CRC of the cirrus image by GL_RENDERER: an exact image is only the same on the GPU and driver that drew it. The
+ * maintainer's Mac (the GPU runner of docs/ai/testing.md) and the Linux workstation; another renderer skips the check
+ * and prints its value to add here.
+ */
+private val CIRRUS_CHECKSUMS = mapOf(
+    "Apple M1 Pro" to 2430506748L,
+    "NVIDIA GeForce RTX 3070 Ti/PCIe/SSE2" to 3510994478L,
+)
 
 /**
  * The three cloud techniques drawn over the fixture's procedural sky into an offscreen target and read back. Opt-in:
@@ -124,9 +132,11 @@ class CloudTechniqueGlTest {
         elevation: Float = 60f,
         yaw: Float = 0f,
         frames: Int = 1,
+        onGl: () -> Unit = {},
     ): Image {
         var image: Image? = null
         TestGl.run {
+            onGl()
             val sky = sky(clouds)
             try {
                 val camera = camera(elevation, yaw)
@@ -474,10 +484,15 @@ class CloudTechniqueGlTest {
 
     @Test
     fun aVolumetricCirrusBandIsDrawnAsBefore() {
-        val image = render(volumetric(CloudType.CIRRUS, CloudLevel.HIGH, 0.5f), CloudTechnique.VOLUMETRIC, elevation = 70f, frames = 8)
+        var renderer = ""
+        val image = render(volumetric(CloudType.CIRRUS, CloudLevel.HIGH, 0.5f), CloudTechnique.VOLUMETRIC, elevation = 70f, frames = 8) {
+            renderer = Gdx.gl.glGetString(GL20.GL_RENDERER) ?: ""
+        }
         val checksum = java.util.zip.CRC32().also { crc -> image.rgb.forEach { crc.update(it) } }.value
-        println("cirrus volumetric checksum $checksum")
-        assertEquals("the image of a cirrus band drawn volumetrically", CIRRUS_CHECKSUM, checksum)
+        println("cirrus volumetric checksum $checksum on '$renderer'")
+        val expected = CIRRUS_CHECKSUMS[renderer]
+        assumeTrue("no cirrus checksum is recorded for '$renderer' (this one draws $checksum)", expected != null)
+        assertEquals("the image of a cirrus band drawn volumetrically", expected, checksum)
     }
 
     @Test

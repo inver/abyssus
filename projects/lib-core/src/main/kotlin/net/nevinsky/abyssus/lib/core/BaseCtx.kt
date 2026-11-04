@@ -14,11 +14,13 @@ import org.slf4j.Logger
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
- * Context for dependency injection
+ * Context for dependency injection. It owns its [executor] and its [assetStorage]: [close] releases both, and whoever
+ * made the context calls it, on the GL thread that built the storage's assets, once nothing draws with them.
  */
-class BaseCtx(val projectDir: String, shadersPath: String?, shadersAnchor: Class<*>?, val logger: Logger) {
+class BaseCtx(val projectDir: String, shadersPath: String?, shadersAnchor: Class<*>?, val logger: Logger) : AutoCloseable {
     val jsonProcessor: JsonProcessor
     val fileLoader: FileLoader
     val metaLoader: AssetMetaLoader
@@ -50,4 +52,20 @@ class BaseCtx(val projectDir: String, shadersPath: String?, shadersAnchor: Class
         sceneLoader = SceneLoader(jsonProcessor, fileLoader, componentRegistry)
         ecsLoader = EcsLoader()
     }
+
+    /**
+     * Disposes the asset storage, then stops the asset-prepare threads and waits up to [CLOSE_WAIT_SECONDS] for them to
+     * end. Closing again does nothing more.
+     */
+    override fun close() {
+        try {
+            assetStorage.dispose()
+        } finally {
+            executor.shutdownNow()
+            executor.awaitTermination(CLOSE_WAIT_SECONDS, TimeUnit.SECONDS)
+        }
+    }
 }
+
+/** How long [BaseCtx.close] waits for an asset preparation in progress to end. */
+const val CLOSE_WAIT_SECONDS = 5L

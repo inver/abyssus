@@ -373,6 +373,15 @@ pixel; the fixture is `assets/skybox_physical`). The plugin supplies these unifo
 `u_heightMie`, `u_mieG`, `u_sunIntensity`. The vertex shader takes `attribute vec2 a_position` (the three corners of
 the triangle). A missing file or a compile error skips that sky and logs it.
 
+**A cached atmosphere** (OpenSpec change `improve-control-line-performance-stability`, design decision D15). A fragment
+shader with a line `#define SKY_CACHEABLE` opts in. Its atmosphere is then rendered into a 512-texel cube map only when the
+sun moves (`AtmosphereCache`), and each frame draws that cube through the sky's own vertex shader (which must pass the
+world direction as `varying vec3 v_dir`). The shader is compiled twice more: with `SKY_BAKE` it renders the cube and leaves
+out what the cube would blur (the sun's disc); with `SKY_DETAIL_ONLY` it is drawn over the cube and must `discard` every
+pixel except those (the disc, the horizon line), which it draws as it would without the cache. Control Line's
+`skybox_physical` opts in; the editor's fixtures and any sky without the define draw per pixel as before. The define is
+shader text, not a `meta.json` field: no file format changes.
+
 **Clouds** are their own asset, type `CLOUDS`, which a `SKYBOX_PROCEDURAL` names by `uuid` in `additional.clouds`, the
 way a terrain names its splat textures. Several skies can share one. The view draws them over the sky asset's own
 atmosphere with plugin shaders (`projects/lib-core/src/main/resources/shader/sky/clouds_*`), so they work with any

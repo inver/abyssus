@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.g3d.Model
 import com.badlogic.gdx.graphics.g3d.ModelInstance
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -51,5 +52,51 @@ class ModelCullingTest {
         val culling = ModelCulling()
         val big = ModelInstance(model()).also { it.transform.setToTranslation(25f, 0f, -20f).scale(40f, 40f, 40f) }
         assertTrue(culling.visible(big, camera.frustum))
+    }
+
+    /** A model whose rest-pose box is a cube of [half] metres either side of its origin; [half] may change, as a rebuild does. */
+    private class Cube(var half: Float) : Model() {
+        override fun calculateBoundingBox(out: BoundingBox): BoundingBox = out.set(Vector3(-half, -half, -half), Vector3(half, half, half))
+    }
+
+    @Test
+    fun `a model rebuilt with larger bounds is measured again`() {
+        val culling = ModelCulling()
+        val small = Cube(1f)
+        // 10 m to the side of the view at 20 m: a 1 m cube is outside, a 10 m one reaches in
+        val at = Vector3(30f, 0f, -20f)
+        culling.track("models/hangar", 1, small)
+        assertFalse(culling.visible(ModelInstance(small).also { it.transform.setToTranslation(at) }, camera.frustum))
+
+        val rebuilt = Cube(10f)
+        culling.track("models/hangar", 2, rebuilt)
+        assertEquals("the old model's sphere is dropped", 0, culling.cached)
+        assertTrue(culling.visible(ModelInstance(rebuilt).also { it.transform.setToTranslation(at) }, camera.frustum))
+        assertEquals(1, culling.cached)
+    }
+
+    @Test
+    fun `a new build of the same model object is measured again`() {
+        val culling = ModelCulling()
+        val cube = Cube(1f)
+        val instance = ModelInstance(cube).also { it.transform.setToTranslation(30f, 0f, -20f) }
+        culling.track("models/hangar", 1, cube)
+        assertFalse(culling.visible(instance, camera.frustum))
+        cube.half = 10f
+        culling.track("models/hangar", 1, cube)
+        assertFalse("the same build keeps its sphere", culling.visible(instance, camera.frustum))
+        culling.track("models/hangar", 2, cube)
+        assertTrue("the next build's bounds are used", culling.visible(instance, camera.frustum))
+    }
+
+    @Test
+    fun `clearing drops every sphere`() {
+        val culling = ModelCulling()
+        val cube = Cube(1f)
+        culling.track("a", 1, cube)
+        culling.visible(ModelInstance(cube), camera.frustum)
+        assertEquals(1, culling.cached)
+        culling.clear()
+        assertEquals(0, culling.cached)
     }
 }

@@ -32,6 +32,8 @@ tasks.test {
     systemProperty("abyssus.renderSources", file("src/main/kotlin").absolutePath)
     // GL tests open a window: opt in with -Dabyssus.glTests=true
     System.getProperty("abyssus.glTests")?.let { systemProperty("abyssus.glTests", it) }
+    // with -Dabyssus.glTests.require=true a GL test that gets no display fails instead of being skipped (CI)
+    System.getProperty("abyssus.glTests.require")?.let { systemProperty("abyssus.glTests.require", it) }
 }
 
 extra["abyssusSingletonExcludes"] = listOf<String>()

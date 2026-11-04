@@ -208,7 +208,8 @@ class SceneViewPanel internal constructor(
     )
 
     /** Sample count requested for the current canvas, after any pixel-format fallback. */
-    internal val effectiveSampleCount: Int get() = antialiasing.samples
+    /** The samples per pixel the view draws with: what its context really has once made, else what it asked for. */
+    internal val effectiveSampleCount: Int get() = lifecycle.contextSamples ?: antialiasing.samples
 
     override fun setAntialiasing(level: AntialiasingLevel) {
         com.intellij.openapi.application.ApplicationManager.getApplication().assertIsDispatchThread()

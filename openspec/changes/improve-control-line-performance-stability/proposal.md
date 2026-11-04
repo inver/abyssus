@@ -70,7 +70,7 @@ record, neither speed nor stability can be judged, so this change adds both and 
 - **Files.** The crash record is a new plain-text file under `<user-home>/.abyssus-control-line/logs/`. It isn't a native
   document and isn't read back by the game. No `.scene`, `.abss` or asset `meta.json` field is read or written differently,
   and no format version changes.
-- **CI.** `.github/workflows/build.yml` gets a GL test job on Ubuntu with Xvfb and Mesa. `scripts/smoke-control-line-linux.sh`
+- **CI.** A new `.github/workflows/gl-tests.yml` runs a GL test job on Ubuntu with Xvfb and Mesa for main and pull requests. `scripts/smoke-control-line-linux.sh`
   also checks for a crash record.
 - **Docs.** The game's README ("Rendering" frame-time section, "Packages"), `docs/ai/testing.md` ("Graphics performance
   evidence") and the committed `docs/perf/` baseline for the game.

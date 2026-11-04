@@ -64,7 +64,7 @@ class FieldShadowsGlTest {
             block(renderer, field)
         } finally {
             renderer.dispose()
-            ctx.executor.shutdownNow()
+            ctx.close()
         }
     }
 

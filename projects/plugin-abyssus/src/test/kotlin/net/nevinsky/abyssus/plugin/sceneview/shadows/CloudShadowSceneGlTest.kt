@@ -144,7 +144,7 @@ class CloudShadowSceneGlTest {
         assertNull(result.error)
         assertTrue("the feed asked for the sun visibility", provided)
         val map = checkNotNull(copy) { "rays never got a cloud shade" }
-        assertEquals("sun", map.lightId)
+        assertEquals("the sun entity's id", sun.entityId.toString(), map.lightId)
         assertEquals(256, map.size)
         assertSame("asked twice in one frame: the same copy", map, again)
         assertEquals("beyond the map the uniform factor applies", scale, map.outside, 0.05f)

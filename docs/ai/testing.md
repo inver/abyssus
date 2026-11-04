@@ -16,6 +16,13 @@
 | One class | `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.projectView.SkyboxPickerModelTest'` |
 | One method | `./gradlew :plugin-abyssus:test --tests 'net.nevinsky.abyssus.plugin.AbyssusViewTest.testNodeTree'` |
 | GL tests too | add `-Dabyssus.glTests=true` (opens a window; needs a display) |
+| GL tests that must not be skipped | add `-Dabyssus.glTests.require=true` too: without a display `TestGl` fails instead of skipping (the CI GL job) |
+| Control Line's CI GL job, locally | `LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew :app-game-control-line:test --tests '*render.FieldRendererGlTest' --tests '*render.FieldPipelineGlTest' --tests '*render.FieldShadowsGlTest' --tests '*render.ModelCullingTest' --tests '*render.FlyAgainGlTest' -Dabyssus.glTests=true -Dabyssus.glTests.require=true` |
+
+**CI GL job.** `.github/workflows/gl-tests.yml` runs the command above on every push to `main` and every pull request,
+on `ubuntu-22.04` under Xvfb on Mesa's software GL (`llvmpipe`). It compares no pixels: Mesa's output is not the reference
+machine's. A flaky test there is fixed or named in the workflow with its reason, never retried silently. macOS and Windows
+startup are a hand check before a release (the game's README, "Release hand check").
 
 **Use `:plugin-abyssus:test` with `--tests`.** Plain `test --tests X` also runs the other modules' tests, which fail with
 "No tests found". For a library module, name it: `./gradlew :lib-core:test --tests '<class>'`.
@@ -294,7 +301,7 @@ a change, and a comparison after it. Nothing here is a platform-wide claim; ever
   compared with its baseline (`MISMATCHED`).
 - **Lane:** manual, on that Mac, with a display and the machine otherwise idle (no other build or IDE busy; on power).
   There is no scheduled GPU job. The runner commands below are the whole lane.
-- **CPU CI** (`.github/workflows/build.yml`, `./gradlew check`) only validates the report schema, the comparison policy and
+- **CPU CI** (`.github/workflows/build.yml`, `./gradlew check`; the Mesa GL job of `.github/workflows/gl-tests.yml` measures nothing) only validates the report schema, the comparison policy and
   the stress scene (`lib-core`'s `testing.perf` tests) and the skipped path: without `-Dabyssus.glTests=true` the runners
   write a report whose workloads are `SKIPPED` with a reason. A skipped or unavailable workload is never a pass.
 
@@ -309,13 +316,31 @@ advance identically in every run), a 10 s warmup and five samples of 30 s, over 
 | editor | `animated` | `Animated`, `Main` (skinned, animated models) |
 | editor | `foliage` | `Foliage`, `Main Scene` (the fixture holds no model binaries, so this measures the terrain and an empty scene) |
 | editor | `stress` | the generated stress scene: 1,000 placements of one model, the 1600 m `Untitled` terrain and 5,000 foliage copies, seed `20261016` (`StressScene`; its SHA-256 over scene and bake is in the report) |
-| game | `control-line-field` | Control Line's `Field.scene` through `FieldRenderer`, into the default framebuffer of a 1280 x 720 window (the game's own target), with two control-line cables; `-Dabyssus.perf.pipeline=legacy` (flat ambient, no display transform) or `pbr` (the default) |
+| game | `control-line-flight` | the whole frame of the real `ControlLineGame` (input and flight, `FieldRenderer`, the UI) into the default framebuffer of a 1280 x 720 window, during a Watch AI F2B flight (Mid) on a copy of the bundled project; `-Dabyssus.perf.pipeline=legacy` (flat ambient, no display transform) or `pbr` (the default). It replaced `control-line-field` (only `FieldRenderer.draw`), whose `field` span it still reports |
 
 Per workload the report holds: commit and dirty state, OS, JDK, GPU and driver (GL_RENDERER / GL_VERSION), backend, scene
 hash, the settings above, CPU frame time p50 / p95 / p99 (the p95 of each sample too), steady-state allocation per frame and
 GC count and time of the render thread, upload work (the frames the cold load took, as uploads are sliced per frame), asset
 counts, and cold-load and reload times. **Frame time is the CPU time of the renderer's draw call (command submission), not GPU
 time**; `gpuMs` stays empty unless a timer query measured it on its own. A report can say `MEASURED`, `SKIPPED` or `UNAVAILABLE`.
+
+The game workload (OpenSpec change `improve-control-line-performance-stability`, design decision D4) adds optional fields; a
+report without them still reads, and `comparePerf` compares only what both sides hold:
+
+- `stats.spans`: CPU p50 / p95 / p99 and allocation per frame of `frame`, `flight`, `field` and `ui`, and of the field's passes
+  `sky`, `shadow`, `terrain`, `models` and `lines`, taken through the game's `FrameProbe` (the shipped game's does nothing).
+- `gpu.passes`: GPU p50 / p95 / p99 of those passes and the UI from `GL_TIME_ELAPSED` queries (a ring of three per pass, read
+  back without blocking; `total` sums a frame's passes). On a context without timer queries `gpu.unavailable` says why and no
+  CPU time stands in for it.
+- `counters`: `GLProfiler` draw calls, shader switches, texture bindings and vertices per frame for `main` (sky, terrain,
+  models, lines), `shadow` and `ui`, from a separate run (`run: counters`), as the counting GL slows every call.
+- `hitches`: `flightStart` (Watch AI requested on plane select to the end of the first frame drawn with the flight) and
+  `debriefOpen` (Debrief on GAME OVER to the end of its first frame), median and maximum of five after a warm one.
+- `agents`: the JVM's `-javaagent` jars. The game's `test` task attaches Kover's, which skews JVM timings; a report never
+  compares with one taken with other agents. `cpuNotComparable`: why the CPU times may not be compared (on macOS, a locked
+  session throttles presentation); GPU times, counters, allocation and hitches stay valid.
+- `-Dabyssus.perf.allocationBudget=<bytes>` makes the run fail, after writing its report, when the steady allocation per whole
+  frame is over that budget (the game's README, "Performance").
 
 ### Commands
 
@@ -339,7 +364,8 @@ A run lasts about 3 minutes per workload at the full protocol (the editor's four
 settings; the commit and dirty state may differ). The p95 frame time and the steady-state allocation per frame may grow by a
 **provisional 10%**; more is a `REGRESSION`. If the baseline's own five sample p95s spread by more than the threshold the answer is
 `INCONCLUSIVE`: improve repeatability, do not accept a regression. A mismatch, or a skipped or missing workload, is
-`MISMATCHED` or `NOT_MEASURED`. No absolute frame rate or speedup is promised.
+`MISMATCHED` or `NOT_MEASURED`. No absolute frame rate or speedup is promised. The p95 of each span and GPU pass both reports
+hold may grow by the same threshold. Other `agents`, or CPU times marked `cpuNotComparable` on either side, are `MISMATCHED`.
 
 ### Pixel tolerances
 

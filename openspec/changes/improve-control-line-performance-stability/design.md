@@ -234,9 +234,12 @@ editor gains the same.
 
 ### D10. CI GL job
 
-- A new `gl-tests` job in `build.yml` on `ubuntu-22.04`, which installs `xvfb libgl1-mesa-dri`. It runs `xvfb-run -a`
+- A `gl-tests` job in a workflow of its own, `.github/workflows/gl-tests.yml`, run on every push to `main` and every pull
+  request. (`build.yml` runs only for a `plugin-c*` tag, and giving it pull request triggers would also run the release
+  build and its draft release.) On `ubuntu-22.04` it installs `xvfb libgl1-mesa-dri` and runs `xvfb-run -a`
   `./gradlew :app-game-control-line:test --tests '*render.FieldRendererGlTest' --tests '*render.FieldPipelineGlTest'`
-  `--tests '*render.FieldShadowsGlTest' --tests '*render.ModelCullingTest' -Dabyssus.glTests=true -Dabyssus.glTests.require=true`.
+  `--tests '*render.FieldShadowsGlTest' --tests '*render.ModelCullingTest' --tests '*render.FlyAgainGlTest'`
+  `-Dabyssus.glTests=true -Dabyssus.glTests.require=true` with `LIBGL_ALWAYS_SOFTWARE=1`.
 - `abyssus.glTests.require` is a new property that makes `TestGl` fail instead of skip when it gets no context.
 - Pixel evidence isn't compared in CI: Mesa output differs from the reference machine.
 

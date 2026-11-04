@@ -22,4 +22,4 @@ pipeline the game SHALL draw as before and log the reason.
 
 - **WHEN** the pilot view is drawn on the recorded reference machine and resolution
 - **THEN** the steady frame time, measured by the repository's performance harness apart from loading, stays within the field-renderer
-  and whole-frame budgets that the game's README records under `control-line-performance`
+  and whole-frame budgets in the "Performance" section of the game's README (`control-line-performance`)

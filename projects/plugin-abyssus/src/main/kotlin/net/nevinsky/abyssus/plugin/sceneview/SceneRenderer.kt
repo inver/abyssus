@@ -178,13 +178,14 @@ class SceneRenderer(
     var drawnVersion: Long = 0
         private set
     private var drawnIds: Pair<Set<Long>, Set<Long>> = emptySet<Long>() to emptySet()
-    private var drawnAssets: List<Pair<Long, Int>> = emptyList()
+    private var drawnAssets: Set<Pair<Long, Int>> = emptySet()
 
     private fun updateDrawnVersion() {
         val fresh =
             models.drawn.mapTo(HashSet()) { it.placement.entityId } to terrains.drawn.mapTo(HashSet()) { it.placement.entityId }
         // a replaced asset (new heights under the same entity) changes what the entities are standing on
-        val assets = models.drawn.map { it.placement.entityId to System.identityHashCode(it.model) } +
+        // as sets: the drawn lists may come in another order without anything entering or leaving them
+        val assets = models.drawn.mapTo(HashSet()) { it.placement.entityId to System.identityHashCode(it.model) } +
                 terrains.drawn.map { it.placement.entityId to System.identityHashCode(it.terrain) }
         if (fresh != drawnIds || assets != drawnAssets) {
             drawnIds = fresh; drawnAssets = assets; drawnVersion++
@@ -261,11 +262,12 @@ class SceneRenderer(
         sculptSync.apply(terrains.drawn.map { it.sculptTarget() })
         splatSync.apply(terrains.drawn.map { it.splatTarget(splatTexture) })
         foliage.update(c.foliages, p.projectDir, camera)
-        updateDrawnVersion()
         skybox?.update(c.skybox, p.projectDir)
         // the foliage and sky updates share the storage and may have replaced a model or terrain built above
         models.refresh()
         terrains.refresh()
+        // after the refreshes: the version names what this frame draws, which is what the snapshot publishes
+        updateDrawnVersion()
         skybox?.updateLighting(
             c.skybox,
             SunDirection.of(c.lights),
