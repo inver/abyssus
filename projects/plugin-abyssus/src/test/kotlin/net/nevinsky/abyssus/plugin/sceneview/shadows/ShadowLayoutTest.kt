@@ -13,6 +13,8 @@ import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.lib.core.editor.scene.PointSource
 import net.nevinsky.abyssus.lib.core.editor.scene.SpotCone
 import net.nevinsky.abyssus.lib.core.editor.scene.SpotSource
+import net.nevinsky.abyssus.lib.gdx.shader.SHADOW_MAX_LOCAL
+import net.nevinsky.abyssus.lib.gdx.shader.SHADOW_MAX_VIEWS
 import net.nevinsky.abyssus.plugin.sceneview.*
 import org.junit.Assert.*
 import org.junit.Test
@@ -43,22 +45,49 @@ class ShadowLayoutTest {
         )
 
     @Test
-    fun budgetsAndUniqueTilesAreBounded() {
+    fun everyLightGetsTilesAndTheTilesAreUniqueAndInsideTheAtlas() {
         val allocated =
             ShadowLayout()
                 .allocate(lights(listOf("p3", "p1", "p2"), listOf("s4", "s3", "s2", "s1"), listOf("d2", "d1")))
         assertEquals(
-            setOf("d1", "p1", "p2", "s1", "s2", "s3").map(::lid).toSet(),
+            setOf("d1", "p1", "p2", "p3", "s1", "s2", "s3", "s4").map(::lid).toSet(),
             allocated.map { it.entityId }.toSet(),
         )
         val tiles = allocated.flatMap { it.tiles }
-        assertEquals(16, tiles.size)
-        assertEquals(16, tiles.map { it.index }.toSet().size)
+        assertEquals(1 + 3 * 6 + 4, tiles.size)
+        assertEquals(tiles.size, tiles.map { it.index }.toSet().size)
         for (tile in tiles) {
-            assertEquals(1024, tile.size)
+            assertEquals(4096 / 5, tile.size)
             assertEquals(4096, tile.atlasSize)
-            assertTrue(tile.x in 0..3072 && tile.y in 0..3072)
+            assertTrue(tile.x >= 0 && tile.y >= 0 && tile.x + tile.size <= 4096 && tile.y + tile.size <= 4096)
         }
+    }
+
+    @Test
+    fun twoHundredFiftySixPointLightsAreAllShadowedWithinTheViewBudget() {
+        val names = (1..SHADOW_MAX_LOCAL).map { "p$it" }
+        val allocated = ShadowLayout().allocate(lights(names, dirs = listOf("sun")))
+        assertEquals(names.size + 1, allocated.size)
+        val tiles = allocated.flatMap { it.tiles }
+        assertEquals(1 + SHADOW_MAX_LOCAL * 6, tiles.size)
+        assertTrue(tiles.size <= SHADOW_MAX_VIEWS)
+        assertEquals(tiles.size, tiles.map { it.index }.toSet().size)
+        assertTrue(tiles.all { it.x + it.size <= 4096 && it.y + it.size <= 4096 })
+    }
+
+    @Test
+    fun twoHundredFiftySixSpotLightsUseSixteenByTheSixteenTiles() {
+        val allocated = ShadowLayout().allocate(lights(emptyList(), (1..SHADOW_MAX_LOCAL).map { "s$it" }))
+        assertEquals(SHADOW_MAX_LOCAL, allocated.size)
+        assertTrue(allocated.flatMap { it.tiles }.all { it.size == 256 })
+    }
+
+    @Test
+    fun theGridShrinksAgainWhenMostLightsAreGone() {
+        val layout = ShadowLayout()
+        layout.allocate(lights(emptyList(), (1..64).map { "s$it" }))
+        val one = layout.allocate(lights(emptyList(), listOf("s1"))).single()
+        assertEquals(4096, one.tiles.single().size)
     }
 
     @Test

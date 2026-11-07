@@ -103,6 +103,50 @@ class ModelImportTest {
         assertEquals(0, source["approximated"].size())
     }
 
+    /**
+     * `crate.glb` with its material given emissive factor (0.39, 0.78, 1.0) and `KHR_materials_emissive_strength` 10,
+     * and `KHR_texture_transform` declared too (an extension the renderer does not use), in a folder of its own.
+     */
+    private fun emissiveCrate(): File {
+        val glb = File(fixtures, "crate.glb").readBytes()
+        val buffer = java.nio.ByteBuffer.wrap(glb).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        val jsonLength = buffer.getInt(12)
+        val mapper = com.fasterxml.jackson.databind.ObjectMapper()
+        val doc = mapper.readTree(glb.copyOfRange(20, 20 + jsonLength)) as com.fasterxml.jackson.databind.node.ObjectNode
+        doc.putArray("extensionsUsed").add("KHR_materials_emissive_strength").add("KHR_texture_transform")
+        for (material in doc["materials"]) {
+            material as com.fasterxml.jackson.databind.node.ObjectNode
+            material.putArray("emissiveFactor").add(0.39).add(0.78).add(1.0)
+            material.putObject("extensions").putObject("KHR_materials_emissive_strength").put("emissiveStrength", 10.0)
+        }
+        var text = mapper.writeValueAsBytes(doc)
+        text += ByteArray((4 - text.size % 4) % 4) { ' '.code.toByte() }
+        val rest = glb.copyOfRange(20 + jsonLength, glb.size)
+        val out = java.nio.ByteBuffer.allocate(20 + text.size + rest.size).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        out.putInt(0x46546C67).putInt(2).putInt(20 + text.size + rest.size)
+        out.putInt(text.size).putInt(0x4E4F534A).put(text).put(rest)
+        val dir = Files.createTempDirectory("abyssus_emissive").toFile()
+        return File(dir, "emissive_crate.glb").apply { writeBytes(out.array()) }
+    }
+
+    @Test
+    fun aGlbKeepsItsEmissiveStrength() {
+        val source = emissiveCrate()
+        val staged =
+            ModelSourceOpener().open(source).use {
+                import.stage(it, ImportSettings("model_lamp", LengthUnit.M, UpAxis.Y), fixtures, uuid, 1_700_000_000_000)
+            }
+        val left = staged.report.leftOut.map { it.item }
+        assertTrue("emissive strength reported as left out: $left", "KHR_materials_emissive_strength" !in left)
+        assertTrue("an unused extension is still reported: $left", "KHR_texture_transform" in left)
+        val record = json.readObject(String(staged.files.getValue(SOURCE_FILE)))
+        assertTrue(record["skipped"].none { it["item"].asText() == "KHR_materials_emissive_strength" })
+        val (_, data) = reload(staged)
+        val material = usedMaterial(data) as PbrModelMaterial
+        assertEquals(10f, material.emissiveStrength, 1e-5f)
+        assertEquals(0.78f, material.emissive!!.g, 1e-4f)
+    }
+
     @Test
     fun aDaeWithItsStatedFrameIsOneMetreAndUpright() {
         val staged = stage("crate.dae", ImportSettings("model_dae", LengthUnit.CM, UpAxis.Z))

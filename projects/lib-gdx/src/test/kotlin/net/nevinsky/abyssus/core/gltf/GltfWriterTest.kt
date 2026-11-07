@@ -299,6 +299,35 @@ class GltfWriterTest {
     }
 
     @Test
+    fun emissiveStrengthIsWrittenAndReadBack() {
+        // OpenSpec model-import "A GLB with emissive strength": factor (0.39, 0.78, 1.0), strength 10
+        val data = quads()
+        (data.materials[1] as PbrModelMaterial).apply {
+            emissive = Color(0.39f, 0.78f, 1f, 1f)
+            emissiveStrength = 10f
+        }
+        val glb = GltfWriter().write(data, mapOf("textures/skin.png" to "textures/skin.png"), "test")
+        val json = glbJson(glb)
+        val glass = json["materials"][1]
+        assertEquals(listOf(0.39f, 0.78f, 1f), glass["emissiveFactor"].asFloatArray().toList())
+        assertEquals(10f, glass["extensions"]["KHR_materials_emissive_strength"].getFloat("emissiveStrength"))
+        assertEquals(listOf("KHR_materials_emissive_strength"), json["extensionsUsed"].asStringArray().toList())
+        // a material of strength 1 writes no extension
+        assertTrue(json["materials"][0]["extensions"] == null)
+
+        val back = reread(glb).materials.map { it as PbrModelMaterial }.associateBy { it.id }
+        assertEquals(10f, back.getValue("glass").emissiveStrength)
+        assertEquals(1f, back.getValue("skin").emissiveStrength)
+        assertEquals(0.78f, back.getValue("glass").emissive!!.g, 1e-4f)
+    }
+
+    @Test
+    fun noEmissiveStrengthWritesNoExtension() {
+        val json = glbJson(GltfWriter().write(quads(), mapOf("textures/skin.png" to "textures/skin.png"), "test"))
+        assertTrue(json["extensionsUsed"] == null)
+    }
+
+    @Test
     fun theModelLoaderReadsItBackWithItsTexture() {
         val folder = Files.createTempDirectory("abyssus_quads").toFile()
         File(folder, "textures").mkdirs()

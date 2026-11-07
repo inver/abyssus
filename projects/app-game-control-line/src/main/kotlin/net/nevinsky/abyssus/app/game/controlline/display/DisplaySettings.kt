@@ -19,16 +19,20 @@ const val DISPLAY_VERSION = 1
 const val WINDOW_WIDTH = 1280
 const val WINDOW_HEIGHT = 720
 
-private data class DisplayFile(val version: Int = DISPLAY_VERSION, val fullscreen: Boolean = false)
+/** `display.json`: [highQualityPost] is missing from a file written before it existed, and then on. */
+private data class DisplayFile(
+    val version: Int = DISPLAY_VERSION,
+    val fullscreen: Boolean = false,
+    val highQualityPost: Boolean = true,
+)
 
 /** Where the game keeps its display setting: `~/.abyssus-control-line/display.json`. */
 fun defaultDisplayFile(home: String = System.getProperty("user.home")): Path =
     Path.of(home, ".abyssus-control-line", "display.json")
 
 /**
-  * Whether the game runs fullscreen (design decision 8), kept in [file] (`{version: 1, fullscreen: <boolean>}`) the way
-  * the
- * score tables are: written through a temporary file and an atomic move, and a file that cannot be read renamed to
+ * Whether the game runs fullscreen (design decision 8), kept in [file] (`{version: 1, fullscreen: <boolean>}`) the way
+ * the score tables are: written through a temporary file and an atomic move, and a file that cannot be read renamed to
  * `display.json.bad` with a window used and [damaged] set. No file means a window.
  */
 class DisplaySettings(private val file: Path, private val json: ObjectMapper = jacksonObjectMapper()) {
@@ -37,17 +41,26 @@ class DisplaySettings(private val file: Path, private val json: ObjectMapper = j
     var fullscreen = false
         private set
 
+    /**
+     * Whether the field's final pass draws its costlier effects, bloom and ambient occlusion (OpenSpec
+     * `control-line-post-processing`, "Post settings and fallback"); off for a modest GPU.
+     */
+    var highQualityPost = true
+        private set
+
     /** The file there was could not be read; the settings screen says so. */
     var damaged = false
         private set
 
     init {
-        fullscreen = store.read(file, {
+        val read = store.read(file, {
             val read = json.copy().configure(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, true)
                 .readValue(it.toFile(), DisplayFile::class.java)
             require(read.version == DISPLAY_VERSION) { "unknown version ${read.version}" }
-            read.fullscreen
-        }, { damaged = true }) ?: false
+            read
+        }, { damaged = true })
+        fullscreen = read?.fullscreen ?: false
+        highQualityPost = read?.highQualityPost ?: true
     }
 
     /** Keeps [on] and saves the file. */
@@ -56,9 +69,23 @@ class DisplaySettings(private val file: Path, private val json: ObjectMapper = j
             return
         }
         fullscreen = on
+        save()
+    }
+
+    /** Keeps [on] (the field's bloom and ambient occlusion) and saves the file. */
+    fun setHighQualityPost(on: Boolean) {
+        if (highQualityPost == on) {
+            return
+        }
+        highQualityPost = on
+        save()
+    }
+
+    private fun save() {
         store.save(file, "display") { temp ->
             Files.writeString(temp, json.copy().enable(SerializationFeature.INDENT_OUTPUT)
-                .writeValueAsString(DisplayFile(DISPLAY_VERSION, on)).replace("\r\n", "\n") + "\n")
+                .writeValueAsString(DisplayFile(DISPLAY_VERSION, fullscreen, highQualityPost))
+                .replace("\r\n", "\n") + "\n")
         }
     }
 }
@@ -72,6 +99,12 @@ interface DisplayOptions {
     val damaged: Boolean
 
     fun setFullscreen(on: Boolean)
+
+    /** Whether the field draws bloom and ambient occlusion (the settings screen's "High quality effects"). */
+    val highQualityPost: Boolean
+        get() = true
+
+    fun setHighQualityPost(on: Boolean) {}
 }
 
 /** The display of a game with no window of its own (tests, Play). */

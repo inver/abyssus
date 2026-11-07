@@ -140,6 +140,10 @@
             <add-to-group group-id="ProjectViewPopupMenu" anchor="after"
                           relative-to-action="Abyssus.RegenerateArrangement"/>
         </action>
+        <action id="Abyssus.CreateLightsFromModel"
+                class="net.nevinsky.abyssus.plugin.projectView.CreateLightsFromModelAction">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.AddFoliage"/>
+        </action>
         <action id="Abyssus.AddComponent"
                 class="net.nevinsky.abyssus.plugin.projectView.AddComponentAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>

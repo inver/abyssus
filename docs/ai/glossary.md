@@ -7,9 +7,10 @@
 | **Asset** | A folder under `assets/` described by its `meta.json` (`type`, `uuid`, `additional`). Scenes name assets by folder; asset references use `uuid` or, for foliage, terrain/model folder names. |
 | **Unused asset** | An asset no scene of its project reaches (see `docs/ai/file-formats.md`). Grayed and tagged `unused` in the tree. |
 | **ECS** | Entity-component-system. In a scene file, `ecs.<id>.components.<Name>Component`. In code, the Ashley-based `core.ecs` package used by games and the Play host; the editor decodes scene JSON directly. |
+| **Lamp (Create Lights From Model)** | One connected piece of the geometry of a model material the user marks as lamps. The action bakes one ordinary `LIGHT_POINT` entity per lamp (color from the material's emissive color); it is not a live link, so the lights do not follow the model if it moves, and running it again adds new lights. |
 | **Entity id** | The key under `ecs`. Picking, tree selection and transform writes all use it. |
 | **Component class name** | The key of a component in a scene's `components`: the fully qualified class name or the short name of a built-in or registered component class. `EcsLoader` binds the value into that class with Jackson, `EcsWriter` writes it back. Any other key is carried raw. |
-| **Placement** | What the scene view draws for an entity (`AssetPlacement`, `FoliagePlacement`, `LightPlacement`, `CameraPlacement`, gathered in `SceneContent` in `lib-core-editor`), taken directly from the `ecs` JSON. |
+| **Placement** | What the scene view draws for an entity (`AssetPlacement`, `FoliagePlacement`, `LightPlacement`, `CameraPlacement`, gathered in `SceneContent` in `lib-core-editor`), taken directly from the `ecs` JSON. `LightPlacement` and its reading rules live in `lib-core`'s `light` package, which games share. |
 | **Mesh id** | The optional `meshId` of a model `RenderComponent`: the `id` of one mesh of the model asset. The entity then draws only that mesh and its materials. |
 | **Model variant** | One model asset built for one mesh id, named in the asset storage by an encoded `ModelKey` (`ModelKey(asset, meshId)`; the bare asset name for the whole model). Variants of an asset are cached, invalidated and retained with it. |
 | **Abyssus view** | The Abyssus pane of the Project tool window: the project / scene / asset tree. |

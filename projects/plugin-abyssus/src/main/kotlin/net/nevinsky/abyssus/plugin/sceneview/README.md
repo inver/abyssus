@@ -229,9 +229,12 @@ frame yet, from `ArrangementHeights`. Clicking the curve in the edit mode adds a
 ## Spotlight illumination
 
 `LightSet` retains each light's entity id and separates directional, point and spot sources. It selects at most two
-directional lights and five local lights total (point and spot share that limit), nearest the orbit target with
-entity-id tie-breaking. Invalid light values are skipped. The model shader configuration supports five spot slots;
-the shared selection ceiling keeps the total selected local lights bounded.
+directional lights and 256 local lights total (`EDITOR_MAX_LOCAL`; point and spot share that limit), nearest the orbit
+target with entity-id tie-breaking. Invalid light values are skipped. The model shader configuration has 256 point and
+256 spot slots; the model fragments read the lights from a float texture (`LocalLightBindings`) because 256 of each as
+uniform structs exceed the 1024 fragment constant registers. Every selected light can cast a shadow (`SHADOWED_LOCAL`,
+see Scene shadows). The terrain shader's uniform arrays hold the nearest
+`TERRAIN_MAX_LOCAL` (64) point and 64 spot lights, as 256 of each exceeds the 1024 fragment constant registers.
 
 Default models, PBR models and terrain use the spotlight's rotated -Z axis, saved full cone angle and edge softness.
 `SpotCone` computes outer and inner half-angle cosines; the inner angle is the outer angle times one minus softness.
@@ -276,12 +279,16 @@ The atlas uses `lib-gdx`'s `ShadowLightKind` directly. `ShadowResources` and `Wa
 `ShadowGlState` restores caller state after success or failure; `CloudShadowMap` uses the same snapshot around its
 draw. These helpers require the current safe canvas GL context and own none of the host's targets or shaders.
 
-The atlas is RGBA8888 with a depth buffer, 4096 square, with at most sixteen views. A single shadow uses a
-4096-square tile; two to four views use 2048-square tiles, five to nine use 1365-square tiles, and larger sets use
-1024-square tiles. The grid grows when needed and keeps its size until all shadow lights are removed, preserving
-surviving tile positions after deletion. Among selected
-lights, stable entity-id order assigns shadows to one directional light, two point lights (six faces each), and
-three spots. Additional selected lights still illuminate. Point faces store radial distance; spot projection uses
+The atlas is RGBA8888 with a depth buffer, 4096 square, with at most 1544 views (`SHADOW_MAX_VIEWS`). The tiles form
+a square grid sized to the number of views, so a single shadow uses a 4096-square tile, two to four views use
+2048-square tiles, and the tile shrinks as lights are added (256 spot lights get 256-square tiles; 256 point lights,
+which need 1536 views, get 102-square tiles). The grid grows when needed and shrinks again once it is twice as fine as
+needed, preserving surviving tile positions. Stable entity-id order assigns shadows to one directional light and up to
+256 point lights (six faces each) and 256 spot lights, which is every light the scene selects. Each view is rendered as
+its own depth pass every frame, so shadowing hundreds of lights costs that many passes. The per-view and per-light
+data (matrices, tiles, positions, bias and the light index to first-view tables) is not in uniforms: `ShadowAtlasBindings`
+packs it into a `FloatDataTexture` (RGBA32F, laid out as `ShadowDataLayout.kt` describes and `shadow_visibility.glsl`
+repeats), bound next to the atlas. Point faces store radial distance; spot projection uses
 the saved full cone and range. Directional fitting clips receivers to an 80-unit camera region, includes upstream
 casters overlapping that region in light space, and snaps to texels. Four bilinear PCF samples (sixteen depth comparisons) smooth edges while clamping to actual tile texel centers.
 Receiver-plane depth gradients correct each tap for surface slope, with a small numerical bias rather than a large

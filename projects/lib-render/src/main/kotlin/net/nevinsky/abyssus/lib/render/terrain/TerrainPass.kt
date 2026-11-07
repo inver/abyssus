@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.render.terrain
 
+import net.nevinsky.abyssus.lib.core.util.TERRAIN_MAX_LOCAL
+import net.nevinsky.abyssus.lib.core.util.TERRAIN_SHADOW_DATA_TEXTURE_UNIT
 import net.nevinsky.abyssus.lib.core.util.TERRAIN_SHADOW_TEXTURE_UNIT
 import net.nevinsky.abyssus.lib.core.util.TERRAIN_IRRADIANCE_TEXTURE_UNIT
 import net.nevinsky.abyssus.lib.core.util.TERRAIN_IRRADIANCE_TO_TEXTURE_UNIT
@@ -28,9 +30,8 @@ import net.nevinsky.abyssus.lib.render.light.packLights
 const val RENDER_SHADER_ROOT = "/shader/render"
 
 /**
-  * Which terrain program a host draws with. The two differ in what they light with and how they fog and shadow, so each
-  * is
- * a program of its own with its own uniform binding; what they share is [TerrainPass].
+ * Which terrain program a host draws with. The two differ in what they light with and how they fog and shadow, so each
+ * is a program of its own with its own uniform binding; what they share is [TerrainPass].
  */
 enum class TerrainVariant(internal val program: String, val profile: LightProfile) {
     /** Several lights, an optional HDR sky and the shadow atlas; fog is a quadratic ramp. */
@@ -41,16 +42,13 @@ enum class TerrainVariant(internal val program: String, val profile: LightProfil
 }
 
 /**
-  * Draws terrains with one of the [TerrainVariant] programs: the program, the camera, the frame's ambient light and
-  * fog, the
-  * variant's lighting, then each terrain's world transform and its splat layers
-  * ([net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh.draw]).
+ * Draws terrains with one of the [TerrainVariant] programs: the program, the camera, the frame's ambient light and fog,
+ * the variant's lighting, then each terrain's world transform and its splat layers
+ * ([net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh.draw]).
  *
-  * It creates and disposes its program and, unless the host lends one as [blank], the 1x1 white texture that stands in
-  * for
-  * a layer a terrain does not have; a lent texture and every texture and map in the inputs stay the host's. Needs a
-  * current
- * GL context; call it on the thread that owns that context.
+ * It creates and disposes its program and, unless the host lends one as [blank], the 1x1 white texture that stands in
+ * for a layer a terrain does not have; a lent texture and every texture and map in the inputs stay the host's. Needs a
+ * current GL context; call it on the thread that owns that context.
  */
 class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Texture? = null) : Disposable {
     private val program: ShaderProgram =
@@ -87,6 +85,7 @@ class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Te
     }
 
     override fun dispose() {
+        binding.dispose()
         program.dispose()
         ownedBlank?.dispose()
     }
@@ -95,6 +94,8 @@ class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Te
     private interface Binding {
         fun bindFrame(program: ShaderProgram, frame: FrameInputs, lighting: TerrainLighting)
         fun bindTerrain(program: ShaderProgram, lighting: TerrainLighting, terrain: TerrainDraw) = Unit
+
+        fun dispose() = Unit
     }
 
     private inner class EditorBinding : Binding {
@@ -144,15 +145,19 @@ class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Te
             (editor.atlas?.atlas ?: blank).bind(SHADOW_UNIT)
             fun record(id: String) = editor.atlas?.records?.firstOrNull { it.lightId == id }
             val lights = frame.lights
+            atlasBindings.dataTexture.bind(SHADOW_DATA_UNIT)
             atlasBindings.bind(
                 program, editor.atlas, lights.directional.map { record(it.entityId) },
-                lights.point.map { record(it.entityId) }, lights.spot.map { record(it.entityId) }, SHADOW_UNIT
+                lights.point.map { record(it.entityId) }, lights.spot.map { record(it.entityId) }, SHADOW_UNIT,
+                SHADOW_DATA_UNIT
             )
         }
 
         override fun bindTerrain(program: ShaderProgram, lighting: TerrainLighting, terrain: TerrainDraw) {
             program.setUniformMatrix("u_normalMatrix", normalMatrix.set(terrain.world).inv().transpose())
         }
+
+        override fun dispose() = atlasBindings.dispose()
 
         private fun bindSunVisibility(program: ShaderProgram, editor: TerrainLighting.Editor) {
             val visibility = editor.sunVisibility
@@ -164,10 +169,10 @@ class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Te
         }
 
         private fun bindLights(program: ShaderProgram, frame: FrameInputs) {
-            val a = packLights(frame.lights, MAX)
+            val a = packLights(frame.lights, MAX, MAX_DIR)
             program.setUniformi("u_numDirectional", a.directionalCount)
-            program.setUniform3fv("u_dirDirection", a.directionalDirection, 0, MAX * 3)
-            program.setUniform3fv("u_dirColor", a.directionalColor, 0, MAX * 3)
+            program.setUniform3fv("u_dirDirection", a.directionalDirection, 0, MAX_DIR * 3)
+            program.setUniform3fv("u_dirColor", a.directionalColor, 0, MAX_DIR * 3)
             program.setUniformi("u_numPoint", a.pointCount)
             program.setUniform3fv("u_pointPosition", a.pointPosition, 0, MAX * 3)
             program.setUniform3fv("u_pointColor", a.pointColor, 0, MAX * 3)
@@ -205,6 +210,14 @@ class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Te
             // 0 leaves the program writing what it always wrote; above 0 it lights in linear space and ends in the
             // display transform
             program.setUniformf("u_exposure", frame.output?.exposure ?: 0f)
+            program.setUniformi(
+                "u_linearTarget",
+                if (frame.output != null && frame.linearTarget) {
+                    1
+                } else {
+                    0
+                },
+            )
             // always on its own unit: a samplerCube left on unit 0 would share it with a 2D splat texture, which GL
             // forbids
             program.setUniformi("u_irradiance", IRRADIANCE_UNIT)
@@ -236,8 +249,10 @@ class TerrainPass(shaders: ShaderStorage, val variant: TerrainVariant, blank: Te
 
 }
 
-internal val MAX = LightProfile.EDITOR_MULTI_LIGHT.let { maxOf(it.maxDirectional, it.maxPoint, it.maxSpot) }
+internal const val MAX = TERRAIN_MAX_LOCAL
+internal val MAX_DIR = LightProfile.EDITOR_MULTI_LIGHT.maxDirectional
 internal const val SHADOW_UNIT = TERRAIN_SHADOW_TEXTURE_UNIT // after the splat units (0 to 5), before the HDR cube
+private const val SHADOW_DATA_UNIT = TERRAIN_SHADOW_DATA_TEXTURE_UNIT // the shadow atlas's view and light tables
 private const val IRRADIANCE_UNIT = TERRAIN_IRRADIANCE_TEXTURE_UNIT
 private const val IRRADIANCE_TO_UNIT =
     TERRAIN_IRRADIANCE_TO_TEXTURE_UNIT // the cube a sky light fades to; bound only while fading

@@ -27,7 +27,10 @@ fun bundledProject(): Path =
     )
 
 /** The bundled field scene with the game's components; [messages] collects the log. */
-fun loadField(messages: MutableList<String> = mutableListOf()): SceneContext {
+fun loadField(messages: MutableList<String> = mutableListOf()): SceneContext = loadScene("Field.scene", messages)
+
+/** The bundled scene [file] (in `scenes`) with the game's components; [messages] collects the log. */
+fun loadScene(file: String, messages: MutableList<String> = mutableListOf()): SceneContext {
     val log = warningsTo(messages)
     val json = JsonProcessor(log)
     val registry = ComponentRegistry().also { it.registerAll(CONTROL_LINE_COMPONENTS) }
@@ -37,7 +40,7 @@ fun loadField(messages: MutableList<String> = mutableListOf()): SceneContext {
             EcsLoader(),
             log,
         )
-    return requireNotNull(loader.load("Field.scene")) { messages.joinToString("\n") }
+    return requireNotNull(loader.load(file)) { messages.joinToString("\n") }
 }
 
 /** A physics world over [scene] of the bundled project. */

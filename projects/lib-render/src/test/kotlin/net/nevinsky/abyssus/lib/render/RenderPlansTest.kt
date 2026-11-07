@@ -15,6 +15,8 @@ import net.nevinsky.abyssus.lib.render.light.LightProfile
 import net.nevinsky.abyssus.lib.render.light.PointInput
 import net.nevinsky.abyssus.lib.render.light.RenderLights
 import net.nevinsky.abyssus.lib.render.light.SpotInput
+import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_POINT
+import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_SPOT
 import net.nevinsky.abyssus.lib.render.light.packLights
 import net.nevinsky.abyssus.lib.render.shadow.sunShadowBias
 import net.nevinsky.abyssus.lib.render.shadow.sunShadowCamera
@@ -35,11 +37,11 @@ class RenderPlansTest {
     @Test
     fun theEditorProfileKeepsSeveralLightsOfEveryKindUpToItsBudget() {
         val lights =
-            RenderLights(listOf(dir("a"), dir("b"), dir("c")), List(7) { point("p$it") }, List(6) { spot("s$it") })
+            RenderLights(listOf(dir("a"), dir("b"), dir("c")), List(EDITOR_MAX_POINT + 2) { point("p$it") }, List(EDITOR_MAX_SPOT + 1) { spot("s$it") })
         val chosen = LightProfile.EDITOR_MULTI_LIGHT.select(lights)
         assertEquals(listOf("a", "b"), chosen.directional.map { it.entityId })
-        assertEquals(5, chosen.point.size)
-        assertEquals(5, chosen.spot.size)
+        assertEquals(EDITOR_MAX_POINT, chosen.point.size)
+        assertEquals(EDITOR_MAX_SPOT, chosen.spot.size)
     }
 
     @Test

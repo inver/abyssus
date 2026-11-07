@@ -46,7 +46,8 @@ class GltfWriteException(message: String) : IllegalArgumentException(message)
  *
  * The output depends only on the input: the same data gives the same bytes. The data is validated first (indices and
  * joints in range, finite positions, weights summing to 1 ± 1e-3); invalid data throws [GltfWriteException]. Morph
- * targets, cameras, lights and extensions are never written.
+ * targets, cameras and lights are never written; the one extension written is `KHR_materials_emissive_strength`, for a
+ * material whose emissive strength is not 1.
  */
 class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
     fun write(data: ModelData, images: Map<String, String>, generator: String): ByteArray =
@@ -58,6 +59,7 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
         val bufferViews = ArrayList<Map<String, Any>>()
         val nodes = ArrayList<MutableMap<String, Any>>()
         val meshes = ArrayList<Map<String, Any>>()
+        val extensionsUsed = LinkedHashSet<String>()
         val skins = ArrayList<Map<String, Any>>()
         val skinKeys = HashMap<List<Any>, Int>()
         val animations = ArrayList<Map<String, Any>>()
@@ -106,6 +108,9 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
             }
             if (materials.isNotEmpty()) {
                 doc["materials"] = materials
+            }
+            if (extensionsUsed.isNotEmpty()) {
+                doc["extensionsUsed"] = extensionsUsed.sorted()
             }
             if (images.isNotEmpty()) {
                 doc["textures"] = images.values.map { mapOf("sampler" to 0, "source" to it) }
@@ -477,6 +482,11 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
                 emissive != null -> out["emissiveFactor"] = listOf(emissive.r, emissive.g, emissive.b)
                 emissiveTexture != null -> out["emissiveFactor"] = listOf(1f, 1f, 1f)
             }
+            if (material.emissiveStrength != 1f && (emissive != null || emissiveTexture != null)) {
+                out["extensions"] =
+                    mapOf(EMISSIVE_STRENGTH to mapOf("emissiveStrength" to material.emissiveStrength))
+                extensionsUsed += EMISSIVE_STRENGTH
+            }
             if (material.alphaMode != PbrModelMaterial.AlphaMode.OPAQUE) {
                 out["alphaMode"] = material.alphaMode.name
             }
@@ -735,3 +745,6 @@ class GltfWriter(private val phongToPbr: PhongToPbr = PhongToPbr()) {
         }
     }
 }
+
+/** The glTF extension that carries a material's emissive strength. */
+private const val EMISSIVE_STRENGTH = "KHR_materials_emissive_strength"

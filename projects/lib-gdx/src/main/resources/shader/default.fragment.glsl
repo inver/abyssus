@@ -99,6 +99,10 @@ uniform vec4 u_specularColor;
 uniform vec4 u_emissiveColor;
 #endif
 
+#ifdef emissiveIntensityFlag
+uniform float u_emissiveIntensity; // glTF KHR_materials_emissive_strength
+#endif
+
 #ifdef lightingFlag
 
 #ifdef shininessFlag
@@ -134,6 +138,18 @@ struct DirectionalLight
 uniform DirectionalLight u_dirLights[numDirectionalLights];
 #endif // numDirectionalLights
 
+#if numPointLights > 0 || numSpotLights > 0
+// Point and spot lights are rows of a float texture (see LocalLightLayout.kt, which these numbers repeat): the uniform
+// registers cannot hold hundreds of lights.
+uniform sampler2D u_localLights;
+#define LOCAL_LIGHT_WIDTH 4.0
+#define LOCAL_LIGHT_HEIGHT 512.0
+#define LOCAL_LIGHT_SPOT_ROW 256.0
+vec4 localLightTexel(float column, float row) {
+	return texture2D(u_localLights, vec2((column + 0.5) / LOCAL_LIGHT_WIDTH, (row + 0.5) / LOCAL_LIGHT_HEIGHT));
+}
+#endif
+
 #if numPointLights > 0
 struct PointLight
 {
@@ -141,7 +157,15 @@ struct PointLight
 	vec3 position;
 	float intensity;
 };
-uniform PointLight u_pointLights[numPointLights];
+uniform int u_numPointLights;
+PointLight pointLight(int i) {
+	vec4 colorAndRange = localLightTexel(0.0, float(i));
+	PointLight light;
+	light.color = colorAndRange.rgb;
+	light.intensity = colorAndRange.a;
+	light.position = localLightTexel(1.0, float(i)).xyz;
+	return light;
+}
 #endif // numPointLights
 
 #if numSpotLights > 0
@@ -153,7 +177,21 @@ struct SpotLight {
     float cutoffAngle; // half angle in degrees
     float exponent; // inward edge softness fraction
 };
-uniform SpotLight u_spotLights[numSpotLights];
+uniform int u_numSpotLights;
+SpotLight spotLight(int i) {
+    float row = LOCAL_LIGHT_SPOT_ROW + float(i);
+    vec4 colorAndRange = localLightTexel(0.0, row);
+    vec4 positionAndCutoff = localLightTexel(1.0, row);
+    vec4 directionAndExponent = localLightTexel(2.0, row);
+    SpotLight light;
+    light.color = colorAndRange.rgb;
+    light.intensity = colorAndRange.a;
+    light.position = positionAndCutoff.xyz;
+    light.cutoffAngle = positionAndCutoff.a;
+    light.direction = directionAndExponent.xyz;
+    light.exponent = directionAndExponent.a;
+    return light;
+}
 float spotCone(SpotLight light, vec3 L) {
     float outer = cos(radians(light.cutoffAngle));
     float inner = cos(radians(light.cutoffAngle * (1.0 - light.exponent)));
@@ -261,6 +299,9 @@ void main() {
 	#else
 		vec4 emissive = vec4(0.0);
 	#endif
+	#ifdef emissiveIntensityFlag
+		emissive.rgb *= u_emissiveIntensity;
+	#endif
 
 	#if (!defined(lightingFlag))
 		gl_FragColor.rgb = diffuse.rgb + emissive.rgb;
@@ -303,7 +344,7 @@ void main() {
 				float NdotL = clamp(dot(normal, lightDir), 0.0, 1.0);
 				vec3 value = u_dirLights[i].color * NdotL;
 				#ifdef shadowAtlasFlag
-					value *= shadowTileVisibility(u_dirShadowTile[i], v_worldPos, -1.0, NdotL);
+					value *= shadowTileVisibility(dirShadowTile(i), v_worldPos, -1.0, NdotL);
 				#endif
 				#ifdef directionalVisibilityFlag
 					if (i == u_dirVisIndex) value *= directionalVisibility(v_worldPos);
@@ -318,12 +359,16 @@ void main() {
 
 		#if numPointLights > 0
 			for (int i = 0; i < numPointLights; i++) {
-                if (u_pointLights[i].intensity <= 0.0) continue;
-				vec3 lightDir = u_pointLights[i].position - v_worldPos;
+				if (i >= u_numPointLights) break;
+				PointLight pl = pointLight(i);
+                if (pl.intensity <= 0.0) continue;
+				vec3 lightDir = pl.position - v_worldPos;
 				float dist2 = dot(lightDir, lightDir);
+				// beyond the range a light contributes exactly 0 (the window below): skip its shading
+				if (dist2 >= pl.intensity * pl.intensity) continue;
 				lightDir *= inversesqrt(max(dist2, 1e-8));
 				float NdotL = clamp(dot(normal, lightDir), 0.0, 1.0);
-				vec3 value = u_pointLights[i].color * (NdotL / (1.0 + dist2)) * (1.0 - smoothstep(0.75 * u_pointLights[i].intensity, u_pointLights[i].intensity, sqrt(dist2)));
+				vec3 value = pl.color * (NdotL / (1.0 + dist2)) * (1.0 - smoothstep(0.75 * pl.intensity, pl.intensity, sqrt(dist2)));
 				#ifdef shadowAtlasFlag
 					value *= pointShadowVisibility(i, v_worldPos, NdotL);
 				#endif
@@ -336,14 +381,18 @@ void main() {
 		#endif // numPointLights
         #if numSpotLights > 0
             for (int i = 0; i < numSpotLights; i++) {
-                if (u_spotLights[i].intensity <= 0.0) continue;
-                vec3 toLight = u_spotLights[i].position - v_worldPos;
+                if (i >= u_numSpotLights) break;
+                SpotLight sl = spotLight(i);
+                if (sl.intensity <= 0.0) continue;
+                vec3 toLight = sl.position - v_worldPos;
                 float dist2 = dot(toLight, toLight);
+                // beyond the range a light contributes exactly 0 (the window below): skip its shading
+                if (dist2 >= sl.intensity * sl.intensity) continue;
                 vec3 L = toLight * inversesqrt(max(dist2, 1e-8));
-                float cutoff = 1.0 - smoothstep(0.75 * u_spotLights[i].intensity, u_spotLights[i].intensity, sqrt(dist2));
-                vec3 value = u_spotLights[i].color * (max(dot(normal, L), 0.0) / (1.0 + dist2)) * cutoff * spotCone(u_spotLights[i], L);
+                float cutoff = 1.0 - smoothstep(0.75 * sl.intensity, sl.intensity, sqrt(dist2));
+                vec3 value = sl.color * (max(dot(normal, L), 0.0) / (1.0 + dist2)) * cutoff * spotCone(sl, L);
                 #ifdef shadowAtlasFlag
-                    value *= shadowTileVisibility(u_spotShadowTile[i], v_worldPos, -1.0, max(dot(normal, L), 0.0));
+                    value *= shadowTileVisibility(spotShadowTile(i), v_worldPos, -1.0, max(dot(normal, L), 0.0));
                 #endif
                 lightDiffuse += value;
                 #ifdef specularFlag
@@ -388,7 +437,8 @@ void main() {
 		#endif
 	#endif // end fogFlag
 
-	#ifdef outputTransformFlag
+	// into a linear target the host's final pass applies the transform (linearTargetFlag): write the lit colour
+	#if defined(outputTransformFlag) && !defined(linearTargetFlag)
 		gl_FragColor.rgb = outputTransform(gl_FragColor.rgb);
 	#endif
 

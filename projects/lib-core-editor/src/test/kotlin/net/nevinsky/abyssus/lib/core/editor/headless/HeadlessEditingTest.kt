@@ -10,6 +10,9 @@ import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
+import net.nevinsky.abyssus.lib.core.editor.modellights.MaterialGeometrySource
+import net.nevinsky.abyssus.lib.core.editor.modellights.lampsAt
+import net.nevinsky.abyssus.lib.core.editor.modellights.materialGeometries
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.lib.core.format.DocumentKind
 import net.nevinsky.abyssus.lib.core.format.FormatProblem
@@ -37,6 +40,25 @@ class HeadlessEditingTest {
 
     // Cases that check the edited text (one changed line, the same text as the scene view writes) wait for the
     // entity serializer (Phase 6.1); the edits themselves are covered on the DTO by the component and pick tests.
+
+    @Test
+    fun lightsFromAModelReturnTheIdsOfTheLightsTheTextHolds() {
+        val geometry = materialGeometries(lampsAt(0f, 5f, 10f)).single()
+        val source = MaterialGeometrySource { _, _ -> listOf(geometry) }
+
+        val made = editing.createLightsFromModel(sceneText, 0L, "lamp", source)
+
+        assertEquals(listOf(11L, 12L, 13L), made.ids)
+        val text = (made.edit as HeadlessEdit.Edited).text
+        // re-validating the printed text waits for the entity serializer (Phase 6.1), like the cases above
+        assertTrue(text.contains("LIGHT_POINT"))
+        assertTrue(text.contains("Model 0 Lamp 3"))
+
+        val notAModel = editing.createLightsFromModel(sceneText, 7L, "lamp", source)
+        assertTrue(notAModel.edit is HeadlessEdit.Refused)
+        val noMaterial = editing.createLightsFromModel(sceneText, 0L, "other", source)
+        assertTrue(noMaterial.edit is HeadlessEdit.Refused)
+    }
 
     @Test
     fun anEditEqualToTheCurrentValueIsUnchanged() {

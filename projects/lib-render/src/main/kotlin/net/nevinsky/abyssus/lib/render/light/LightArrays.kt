@@ -6,9 +6,8 @@
 package net.nevinsky.abyssus.lib.render.light
 
 /**
-  * The lights laid out for a shader's uniform arrays (`vec3[max]`, `float[max]`): the pure part of binding, so a host
-  * can
- * test it without GL. Slots past a light kind's count stay zero.
+ * The lights laid out for a shader's uniform arrays (`vec3[max]`, `float[max]`): the pure part of binding, so a host
+ * can test it without GL. Slots past a light kind's count stay zero.
  */
 class LightArrays(
     val directionalCount: Int,
@@ -27,13 +26,16 @@ class LightArrays(
     val spotInner: FloatArray,
 )
 
-/** Packs [lights] into arrays of [slots] entries per kind; lights past [slots] are dropped. */
-fun packLights(lights: RenderLights, slots: Int): LightArrays {
-    val dirs = lights.directional.take(slots)
+/**
+ * Packs [lights] into arrays of [slots] entries per local kind and [directionalSlots] per directional kind; lights past
+ * their slots are dropped.
+ */
+fun packLights(lights: RenderLights, slots: Int, directionalSlots: Int = slots): LightArrays {
+    val dirs = lights.directional.take(directionalSlots)
     val points = lights.point.take(slots)
     val spots = lights.spot.take(slots)
-    val dirDirection = FloatArray(slots * 3)
-    val dirColor = FloatArray(slots * 3)
+    val dirDirection = FloatArray(directionalSlots * 3)
+    val dirColor = FloatArray(directionalSlots * 3)
     dirs.forEachIndexed { i, d ->
         put(dirDirection, i, d.direction.x, d.direction.y, d.direction.z)
         put(dirColor, i, d.r, d.g, d.b)

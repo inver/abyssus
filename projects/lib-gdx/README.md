@@ -51,6 +51,10 @@ pin this down with a 90,000-vertex mesh.
   The atlas depth format uses base-255 RGBA8 digits (least significant in R) to match channel quantization. Disable
   color dithering and sRGB output while writing it and use nearest texture filtering. The receivers interpolate PCF
   comparisons and correct sample depths using receiver-plane gradients; the atlas's UV rectangles may vary in size.
+  The view matrices, tiles, positions and biases, and the table from a light's index to its first view, are packed by
+  `ShadowAtlasBindings` into a `FloatDataTexture` (layout in `ShadowDataLayout.kt`, up to 1544 views, 2 directional and
+  256 point and 256 spot lights), so the number of shadowed lights is not limited by uniform registers. The model
+  shaders likewise read up to 256 point and 256 spot lights from a texture (`LocalLightBindings`, `LOCAL_LIGHT_*`).
 - Optional pass support for planar reflections and water depth (all of it off by default, so a scene that sets nothing
   renders and compiles exactly as before):
   - `ClipPlaneAttribute` is a world-space clip plane `a x + b y + c z + d >= 0` set on an `Environment` (or a material)
@@ -63,7 +67,16 @@ pin this down with a 90,000-vertex mesh.
     last write of the fragment is the transform. Material and vertex colour factors are used as they are (glTF values), and
     data textures (normal, metallic-roughness, occlusion) are never decoded. Without the attribute the shaders write what
     they always did. `OutputTransform.kt` holds the Kotlin reference of the maths; `OutputTransformGlTest` compares the GPU
-    with it and with the recorded output of the pre-transform shaders.
+    with it and with the recorded output of the pre-transform shaders. A `LinearTargetAttribute` beside it adds
+    `linearTargetFlag`: the same decoding and linear lighting, but the lit linear colour is written, unclamped, for a host
+    whose final pass applies the transform once (`lib-render`'s `CompositePass`).
+  - `ProbeBoxAttribute` (a box and the point a reflection probe was taken from) beside an `EnvironmentLightAttribute` makes
+    `PbrModelShader` compile `envBoxFlag`: the specular cube is looked up where the reflected ray leaves the box
+    (`boxProjected` is the reference, `BoxProjectionTest`), so a room's reflections stay put as the camera moves.
+- Emissive strength: `PbrModelMaterial.emissiveStrength` (glTF `KHR_materials_emissive_strength`, read by the Assimp material
+  processor and written by `GltfWriter`) becomes `PBRFloatAttribute.EmissiveIntensity`, and the model shaders multiply the
+  emissive colour by it (`emissiveIntensityFlag`); a material of strength 1 compiles and draws as before. Point and spot
+  lights beyond their range are skipped before they are shaded (they contribute exactly 0).
   - `ShadowDepthPass.clipPlane` clips the depth pass the same way, and `ShadowDepthPass.linearFar` (above 0) makes it
     write the linear view depth divided by that distance, packed like the shadow depths, instead of the window depth.
     `ModelDepthShader` still skips alpha-blended materials.

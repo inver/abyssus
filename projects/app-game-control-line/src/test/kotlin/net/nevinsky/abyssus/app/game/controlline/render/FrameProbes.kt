@@ -327,7 +327,8 @@ class CounterProbe : WorkloadProbe() {
             FrameSpan.SKY,
             FrameSpan.TERRAIN,
             FrameSpan.MODELS,
-            FrameSpan.LINES -> totals["main"]
+            FrameSpan.LINES,
+            FrameSpan.POST -> totals["main"]
             else -> null
         }
 

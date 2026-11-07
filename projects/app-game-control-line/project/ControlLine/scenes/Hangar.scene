@@ -10,7 +10,7 @@
       "b": 1.0,
       "a": 1.0
     },
-    "intensity": 0.6
+    "intensity": 0.05
   },
   "fogEnabled": false,
   "skyboxEnabled": false,
@@ -36,7 +36,7 @@
         },
         "LightComponent": {
           "light": {
-            "intensity": 0.2,
+            "intensity": 10,
             "range": 100,
             "coneAngle": 45,
             "edgeSoftness": 0.2,
@@ -128,7 +128,7 @@
         },
         "LightComponent": {
           "light": {
-            "intensity": 0.2,
+            "intensity": 10,
             "range": 100,
             "coneAngle": 45,
             "edgeSoftness": 0.2,
@@ -163,7 +163,7 @@
         },
         "LightComponent": {
           "light": {
-            "intensity": 0.2,
+            "intensity": 10,
             "range": 100,
             "coneAngle": 45,
             "edgeSoftness": 0.2,
@@ -224,7 +224,7 @@
         },
         "LightComponent": {
           "light": {
-            "intensity": 1,
+            "intensity": 12,
             "range": 100,
             "coneAngle": 45,
             "edgeSoftness": 0.2,
@@ -232,6 +232,1862 @@
               "r": 1,
               "g": 1,
               "b": 1,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "10": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 1"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 21.94771,
+            "y": 2.7476995,
+            "z": -2.9751453
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873657,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "11": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 2"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 20.248026,
+            "y": 2.7476995,
+            "z": -3.007585
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873657,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "12": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 3"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 8.511517,
+            "y": 2.9414198,
+            "z": -2.5160942
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.373646,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "13": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 4"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -3.2476854,
+            "y": 2.7477038,
+            "z": -3.4560194
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873657,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "14": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 5"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -4.9473753,
+            "y": 2.7477043,
+            "z": -3.4884596
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873646,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "15": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 6"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -16.683886,
+            "y": 2.9414246,
+            "z": -2.9969683
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.373611,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "16": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 7"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 16.909983,
+            "y": 2.9414184,
+            "z": -2.355803
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.373634,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "17": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 8"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 13.549244,
+            "y": 2.747701,
+            "z": -3.135436
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873634,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "18": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 9"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 11.849558,
+            "y": 2.747701,
+            "z": -3.1678762
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873657,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "19": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 10"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 5.150783,
+            "y": 2.7477024,
+            "z": -3.2957273
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873657,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "20": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 11"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 3.4510925,
+            "y": 2.7477028,
+            "z": -3.3281674
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873646,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "21": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 12"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0.11304846,
+            "y": 2.9414217,
+            "z": -2.6763854
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.373646,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "22": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 13"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -8.285421,
+            "y": 2.9414232,
+            "z": -2.836677
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.373652,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "23": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 14"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -11.646151,
+            "y": 2.7477052,
+            "z": -3.6163101
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.8736515,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "24": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 15"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -13.345839,
+            "y": 2.7477057,
+            "z": -3.6487503
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.8736515,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "25": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 16"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -20.04462,
+            "y": 2.7477067,
+            "z": -3.7766018
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873646,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "26": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 17"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -21.744307,
+            "y": 2.7477071,
+            "z": -3.809041
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873657,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "27": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 18"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 16.891422,
+            "y": 3.8646905,
+            "z": -0.07337904
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073662,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "28": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 19"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0.09449269,
+            "y": 3.8646936,
+            "z": -0.3939619
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.07365,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "29": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 20"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -8.303976,
+            "y": 3.864695,
+            "z": -0.5542531
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073656,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "30": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 21"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 8.49296,
+            "y": 3.864692,
+            "z": -0.23367023
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073639,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "31": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 22"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -16.702442,
+            "y": 3.8646965,
+            "z": -0.7145438
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073627,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "32": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 23"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 16.856674,
+            "y": 4.2584057,
+            "z": 1.7473178
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073639,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "33": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 24"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 8.45821,
+            "y": 4.2584076,
+            "z": 1.5870266
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073639,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "34": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 25"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0.05974326,
+            "y": 4.2584085,
+            "z": 1.4267352
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.07365,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "35": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 26"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -8.338726,
+            "y": 4.2584105,
+            "z": 1.266444
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073656,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "36": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 27"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -16.737192,
+            "y": 4.2584114,
+            "z": 1.1061525
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073627,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "37": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 28"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 16.81814,
+            "y": 4.455405,
+            "z": 3.766357
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073639,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "38": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 29"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0.021206409,
+            "y": 4.455408,
+            "z": 3.4457746
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.07365,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "39": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 30"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -8.377262,
+            "y": 4.45541,
+            "z": 3.285483
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073645,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "40": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 31"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 8.419676,
+            "y": 4.455407,
+            "z": 3.606066
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073639,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "41": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 32"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -16.775726,
+            "y": 4.455411,
+            "z": 3.125192
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073627,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "42": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 33"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -0.02016674,
+            "y": 4.455408,
+            "z": 5.613521
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.07365,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "43": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 34"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 16.776768,
+            "y": 4.455405,
+            "z": 5.9341044
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073662,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "44": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 35"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -8.418634,
+            "y": 4.45541,
+            "z": 5.4532304
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073645,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "45": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 36"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 8.378304,
+            "y": 4.455407,
+            "z": 5.7738132
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073639,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "46": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 37"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -16.8171,
+            "y": 4.455411,
+            "z": 5.2929397
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073656,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "47": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 38"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 8.339769,
+            "y": 4.2584076,
+            "z": 7.7928514
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073662,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "48": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 39"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -16.855635,
+            "y": 4.2584114,
+            "z": 7.3119774
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073656,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "49": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 40"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -0.05870074,
+            "y": 4.2584085,
+            "z": 7.6325607
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073639,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "50": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 41"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 16.738234,
+            "y": 4.2584057,
+            "z": 7.953144
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073662,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "51": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 42"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -8.457169,
+            "y": 4.2584105,
+            "z": 7.47227
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073639,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "52": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 43"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -0.09345016,
+            "y": 3.8646936,
+            "z": 9.453257
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073639,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "53": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 44"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 16.70348,
+            "y": 3.8646905,
+            "z": 9.77384
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073662,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "54": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 45"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -8.491919,
+            "y": 3.864695,
+            "z": 9.292967
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073645,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "55": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 46"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 8.305017,
+            "y": 3.864692,
+            "z": 9.613549
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.073639,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "56": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 47"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -16.890385,
+            "y": 3.8646967,
+            "z": 9.132675
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.07365,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "57": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 48"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -0.16199797,
+            "y": 2.9414217,
+            "z": 11.734728
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.373634,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "58": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 49"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 16.634933,
+            "y": 2.9414184,
+            "z": 12.055309
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.373657,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "59": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 50"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 8.236469,
+            "y": 2.9414198,
+            "z": 11.895019
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.373634,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "60": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 51"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -8.560467,
+            "y": 2.9414232,
+            "z": 11.574436
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.373646,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "61": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 52"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -16.958933,
+            "y": 2.9414246,
+            "z": 11.4141445
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 19.373657,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "62": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 53"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 21.64536,
+            "y": 2.7476995,
+            "z": 12.866428
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873657,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "63": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 54"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 19.945673,
+            "y": 2.7476995,
+            "z": 12.833989
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873657,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "64": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 55"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 4.848434,
+            "y": 2.7477024,
+            "z": 12.545846
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873657,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "65": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 56"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 3.1487455,
+            "y": 2.7477028,
+            "z": 12.513407
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873646,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "66": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 57"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -3.550034,
+            "y": 2.7477038,
+            "z": 12.385555
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873657,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "67": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 58"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -5.2497234,
+            "y": 2.7477043,
+            "z": 12.353115
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873634,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "68": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 59"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -20.346968,
+            "y": 2.7477067,
+            "z": 12.064972
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873657,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "69": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 60"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -22.046658,
+            "y": 2.7477071,
+            "z": 12.032532
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873646,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "70": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 61"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 11.547205,
+            "y": 2.747701,
+            "z": 12.673698
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873657,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "71": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 62"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -13.648191,
+            "y": 2.7477057,
+            "z": 12.192824
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.8736515,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "72": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 63"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 13.246895,
+            "y": 2.747701,
+            "z": 12.706139
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.873634,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
+              "a": 1
+            }
+          }
+        }
+      }
+    },
+    "73": {
+      "type": "LIGHT_POINT",
+      "components": {
+        "NameComponent": {
+          "name": "Wirehouse Lamp 64"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -11.9485,
+            "y": 2.7477052,
+            "z": 12.225265
+          }
+        },
+        "LightComponent": {
+          "light": {
+            "intensity": 3,
+            "range": 8.8736515,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 0.95,
+              "b": 0.88,
               "a": 1
             }
           }

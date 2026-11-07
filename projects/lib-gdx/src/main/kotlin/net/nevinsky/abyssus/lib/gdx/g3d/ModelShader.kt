@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.g3d.Attributes
 import com.badlogic.gdx.graphics.g3d.Renderable
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
 import com.badlogic.gdx.graphics.g3d.attributes.DirectionalLightsAttribute
+import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute
 import com.badlogic.gdx.graphics.g3d.attributes.PointLightsAttribute
 import com.badlogic.gdx.graphics.g3d.attributes.SpotLightsAttribute
 import com.badlogic.gdx.graphics.g3d.environment.AmbientCubemap
@@ -17,9 +18,12 @@ import com.badlogic.gdx.graphics.g3d.shaders.BaseShader
 import com.badlogic.gdx.graphics.g3d.shaders.BaseShader.LocalSetter
 import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.gdx.model.PBRFloatAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ClipPlaneAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.DirectionalVisibilityAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.LinearTargetAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.LocalLightBindings
 import net.nevinsky.abyssus.lib.gdx.shader.OutputTransformAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShaderSources
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowAtlasAttribute
@@ -50,8 +54,12 @@ open class ModelShader(
     val instanced: Boolean = renderable.meshPart.mesh.isInstanced
 
     private val atlasBindings = ShadowAtlasBindings()
+    private val localLights = LocalLightBindings()
 
     init {
+        registerLocal("u_emissiveIntensity", PBRFloatAttribute.EmissiveIntensity) { shader, id, _, attributes ->
+            shader.set(id, (attributes.get(PBRFloatAttribute.EmissiveIntensity) as FloatAttribute).value)
+        }
         if (renderable.environment != null) {
             // the stock setter starts from the ambient light only; this one starts from the sky when there is one
             register(Inputs.ambientCube, AmbientCubemapSetter(config.numDirectionalLights, config.numPointLights))
@@ -106,10 +114,41 @@ open class ModelShader(
         }
     }
 
+    override fun dispose() {
+        atlasBindings.dispose()
+        localLights.dispose()
+        super.dispose()
+    }
+
     override fun bindLights(renderable: Renderable, attributes: Attributes) {
         super.bindLights(renderable, attributes)
+        bindLocalLights(attributes)
         bindShadowAtlas(attributes)
         bindDirectionalVisibility(attributes)
+    }
+
+    private val localLightsLocation by lazy { program.fetchUniformLocation("u_localLights", false) }
+    private val pointCountLocation by lazy { program.fetchUniformLocation("u_numPointLights", false) }
+    private val spotCountLocation by lazy { program.fetchUniformLocation("u_numSpotLights", false) }
+
+    /** The point and spot lights go to the shader as a texture; the stock uniform arrays are not in its source. */
+    private fun bindLocalLights(attributes: Attributes) {
+        if (localLightsLocation < 0) {
+            return
+        }
+        localLights.pack(
+            (attributes.get(PointLightsAttribute.Type) as? PointLightsAttribute)?.lights,
+            (attributes.get(SpotLightsAttribute.Type) as? SpotLightsAttribute)?.lights,
+        )
+        val unit = context.textureBinder.bind(localLights.localLightTexture)
+        localLights.upload(unit)
+        program.setUniformi(localLightsLocation, unit)
+        if (pointCountLocation >= 0) {
+            program.setUniformi(pointCountLocation, localLights.points)
+        }
+        if (spotCountLocation >= 0) {
+            program.setUniformi(spotCountLocation, localLights.spots)
+        }
     }
 
     // the atlas records of the environment's lights, refilled per renderable without allocating (bound for every one)
@@ -127,7 +166,8 @@ open class ModelShader(
         records(atlas, (attributes.get(PointLightsAttribute.Type) as? PointLightsAttribute)?.lights, pointRecords)
         records(atlas, (attributes.get(SpotLightsAttribute.Type) as? SpotLightsAttribute)?.lights, spotRecords)
         val unit = context.textureBinder.bind(atlas.atlas)
-        atlasBindings.bind(program, atlas, dirRecords, pointRecords, spotRecords, unit)
+        val dataUnit = context.textureBinder.bind(atlasBindings.dataTexture)
+        atlasBindings.bind(program, atlas, dirRecords, pointRecords, spotRecords, unit, dataUnit)
     }
 
     /** Fills [out] with [atlas]'s record of each of [lights] (null for a light it has none of). */
@@ -240,6 +280,12 @@ fun extraDefines(attributes: Attributes, vertexMask: Long, hasEnvironment: Boole
     }
     if (attributes.has(OutputTransformAttribute.Type)) {
         sb.append("#define outputTransformFlag\n")
+        if (attributes.has(LinearTargetAttribute.Type)) {
+            sb.append("#define linearTargetFlag\n")
+        }
+    }
+    if (attributes.has(PBRFloatAttribute.EmissiveIntensity)) {
+        sb.append("#define emissiveIntensityFlag\n")
     }
     val normal = VertexAttributes.Usage.Normal.toLong()
     val tangentAndBinormal = (VertexAttributes.Usage.Tangent or VertexAttributes.Usage.BiNormal).toLong()

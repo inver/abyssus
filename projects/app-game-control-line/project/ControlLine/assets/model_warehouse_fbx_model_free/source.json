@@ -16,10 +16,6 @@
   "animations": [],
   "skipped": [
     {
-      "item": "KHR_materials_emissive_strength",
-      "reason": "glTF extension"
-    },
-    {
       "item": "KHR_materials_specular",
       "reason": "glTF extension"
     }

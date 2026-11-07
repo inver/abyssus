@@ -14,6 +14,7 @@ import com.badlogic.gdx.graphics.g3d.attributes.SpotLightsAttribute
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
+import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_LOCAL
 import net.nevinsky.abyssus.lib.core.editor.scene.MAX_DIRECTIONAL
 import net.nevinsky.abyssus.lib.core.editor.scene.MAX_POINT
 import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
@@ -115,10 +116,11 @@ class SceneLightingTest {
 
     @Test
     fun pointLightsAreCappedKeepingTheNearest() {
-        val lights = (1..8).map { light(LightKind.POINT, position = Vector3(it.toFloat(), 0f, 0f), id = it.toLong()) }
+        val lights =
+            (1..MAX_POINT + 3).map { light(LightKind.POINT, position = Vector3(it.toFloat(), 0f, 0f), id = it.toLong()) }
         val set = lightSetOf(lights, origin)
         assertEquals(MAX_POINT, set.point.size)
-        assertEquals((1..5).map { it.toFloat() }, set.point.map { it.position.x })
+        assertEquals((1..MAX_POINT).map { it.toFloat() }, set.point.map { it.position.x })
     }
 
     @Test
@@ -150,7 +152,7 @@ class SceneLightingTest {
     @Test
     fun localBudgetIsSharedWithStableIdentityTiesAndInvalidBeamsSkipped() {
         val lights =
-            (1..8).map {
+            (1..EDITOR_MAX_LOCAL + 3).map {
                 light(
                     if (it % 2 == 0) {
                         LightKind.SPOT
@@ -162,9 +164,9 @@ class SceneLightingTest {
             }
         val a = lightSetOf(lights, origin)
         val b = lightSetOf(lights.reversed(), origin)
-        assertEquals(5, a.point.size + a.spot.size)
-        assertEquals(listOf(1L, 3L, 5L), a.point.map { it.entityId })
-        assertEquals(listOf(2L, 4L), a.spot.map { it.entityId })
+        assertEquals(EDITOR_MAX_LOCAL, a.point.size + a.spot.size)
+        assertEquals((1L..EDITOR_MAX_LOCAL step 2).toList(), a.point.map { it.entityId })
+        assertEquals((2L..EDITOR_MAX_LOCAL step 2).toList(), a.spot.map { it.entityId })
         assertEquals(a.point, b.point)
         assertEquals(a.spot.map { it.entityId }, b.spot.map { it.entityId })
         val invalid =

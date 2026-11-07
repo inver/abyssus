@@ -7,19 +7,11 @@ import net.nevinsky.abyssus.lib.core.assets.ModelKey
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FAR
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_FOV
 import net.nevinsky.abyssus.lib.core.ecs.component.CAMERA_NEAR
-import net.nevinsky.abyssus.lib.core.ecs.component.LIGHT_CONE_ANGLE
-import net.nevinsky.abyssus.lib.core.ecs.component.LIGHT_EDGE_SOFTNESS
-import net.nevinsky.abyssus.lib.core.ecs.component.LIGHT_RANGE
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 
 /** A [Color] whose components are not clamped to 0..1: light colors are scaled by intensity and can exceed 1. */
 fun unclampedColor(r: Float, g: Float, b: Float, a: Float): Color =
-    Color().also {
-        it.r = r
-        it.g = g
-        it.b = b
-        it.a = a
-    }
+    net.nevinsky.abyssus.lib.core.light.unclampedColor(r, g, b, a)
 
 data class Pose(val position: Vector3, val rotation: Quaternion)
 
@@ -51,29 +43,11 @@ val AssetPlacement.storageName: String
 /** A path arrangement entity: its [arrangement] component as the file holds it (read, never changed, by the view). */
 class ArrangementPlacement(val entityId: Long, val arrangement: PathArrangementComponent)
 
-enum class LightKind {
-    DIRECTIONAL,
-    POINT,
-    SPOT,
-}
+/** The kind of a light entity; the type lives in `lib-core`, which games share with the editor. */
+typealias LightKind = net.nevinsky.abyssus.lib.core.light.LightKind
 
-/**
- * [direction] is the unit vector the light shines along (directional and spot); [position] matters for point and spot.
- */
-data class LightPlacement(
-    val entityId: Long,
-    val kind: LightKind,
-    val color: Color,
-    val intensity: Float,
-    val position: Vector3,
-    val direction: Vector3,
-    val range: Float = LIGHT_RANGE,
-    val rotation: Quaternion = Quaternion(),
-    val coneAngle: Float = LIGHT_CONE_ANGLE,
-    val edgeSoftness: Float = LIGHT_EDGE_SOFTNESS,
-    /** The `PositionComponent.lookAtId` of the light, or null when it does not name a target. */
-    val lookAtId: Long? = null,
-)
+/** A light entity as renderers read it; the type lives in `lib-core`, which games share with the editor. */
+typealias LightPlacement = net.nevinsky.abyssus.lib.core.light.LightPlacement
 
 /**
  * A camera entity. [direction] is the view direction from `viewPointPosition` (as in the file, not yet normalized); it

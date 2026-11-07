@@ -24,6 +24,8 @@ import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrPreview
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ToneCurve
 import net.nevinsky.abyssus.lib.core.assets.standard.StandardAssetLoaders
 import net.nevinsky.abyssus.lib.core.editor.modelmesh.ModelMeshInfo
+import net.nevinsky.abyssus.lib.core.editor.modellights.MaterialGeometry
+import net.nevinsky.abyssus.lib.core.editor.modellights.ModelLampReader
 import net.nevinsky.abyssus.lib.core.editor.modelmesh.ModelMeshLister
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.HdrSkyRaySnapshotLoader
 import net.nevinsky.abyssus.lib.core.editor.ray.snapshot.ModelRaySnapshotLoader
@@ -109,6 +111,15 @@ class AssetLoading(
         val meshes = ModelMeshLister(files, AssetMetaLoader(json, files, log), assimp).list(name) ?: return null
         meshTables[model] = stamp to meshes
         return meshes
+    }
+
+    /**
+     * The geometry of the materials of model asset [name] (only its mesh [meshId] when given), read on the caller's
+     * thread without images or GL (so off the UI thread); null when it is not a readable model.
+     */
+    fun modelLamps(projectDir: File, name: String, meshId: String?): List<MaterialGeometry>? {
+        val files = FileLoader(projectDir)
+        return ModelLampReader(files, AssetMetaLoader(json, files, log), assimp).read(name, meshId)
     }
 
     /** A model's material identifiers and PBR flags, read on the caller's thread without images or GL. */

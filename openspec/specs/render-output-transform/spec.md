@@ -1,10 +1,11 @@
+# render-output-transform Specification
 
 ## Purpose
 
 Gives rendering hosts an opt-in way to turn linear scene light into display colour (exposure, tone map, sRGB encode) so a
 host can light physically and still show a correct image, without changing hosts that do not ask for it.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Output transform is opt-in and off by default
 

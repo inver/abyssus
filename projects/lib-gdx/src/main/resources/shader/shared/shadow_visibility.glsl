@@ -2,14 +2,29 @@
 uniform sampler2D u_shadowAtlas;
 uniform float u_shadowEnabled;
 uniform vec2 u_shadowTexel;
-uniform float u_shadowBias[16];
-uniform mat4 u_shadowMatrices[16];
-uniform vec4 u_shadowTiles[16];
-uniform vec3 u_shadowPositions[16];
-uniform float u_shadowFars[16];
-uniform float u_dirShadowTile[2];
-uniform float u_pointShadowTiles[30];
-uniform float u_spotShadowTile[5];
+uniform sampler2D u_shadowData;
+// The per-view and per-light data is a float texture (see ShadowDataTexture.kt, which these numbers repeat): row r of
+// the views holds the light matrix in texels 0 to 3, the atlas tile in 4, position and far in 5 and the bias in 6.
+#define SHADOW_DATA_WIDTH 8.0
+#define SHADOW_DATA_HEIGHT 2048.0
+#define SHADOW_DIRECTIONAL_TABLE_ROW 1544.0
+#define SHADOW_POINT_TABLE_ROW 1552.0
+#define SHADOW_SPOT_TABLE_ROW 1584.0
+vec4 shadowTexel(float column, float row) {
+    return texture2D(u_shadowData, vec2((column + 0.5) / SHADOW_DATA_WIDTH, (row + 0.5) / SHADOW_DATA_HEIGHT));
+}
+// The first view of light i of a kind (its table), or -1.
+float shadowTableEntry(float tableRow, int i) {
+    float entry = float(i);
+    float row = floor(entry / SHADOW_DATA_WIDTH);
+    return shadowTexel(entry - row * SHADOW_DATA_WIDTH, tableRow + row).x;
+}
+float dirShadowTile(int lightIndex) {
+    return shadowTableEntry(SHADOW_DIRECTIONAL_TABLE_ROW, lightIndex);
+}
+float spotShadowTile(int lightIndex) {
+    return shadowTableEntry(SHADOW_SPOT_TABLE_ROW, lightIndex);
+}
 float readPackedShadow(vec2 uv) {
     vec4 c = texture2D(u_shadowAtlas, uv);
     return c.r / 16581375.0 + c.g / 65025.0 + c.b / 255.0 + c.a;
@@ -31,13 +46,14 @@ float shadowBilinear(vec2 sampleUv, vec2 centerUv, float depth, vec2 gradient, v
 }
 float shadowTileVisibility(float tileValue, vec3 worldPos, float radialDepth, float ndotl) {
     if (u_shadowEnabled < 0.5 || tileValue < 0.0) return 1.0;
-    int tile = int(tileValue + 0.5);
-    vec4 clip = u_shadowMatrices[tile] * vec4(worldPos, 1.0);
+    float tile = floor(tileValue + 0.5);
+    mat4 lightMatrix = mat4(shadowTexel(0.0, tile), shadowTexel(1.0, tile), shadowTexel(2.0, tile), shadowTexel(3.0, tile));
+    vec4 clip = lightMatrix * vec4(worldPos, 1.0);
     vec3 ndc = clip.xyz / (abs(clip.w) < 1e-6 ? 1e-6 : clip.w);
-    vec4 rect = u_shadowTiles[tile];
+    vec4 rect = shadowTexel(4.0, tile);
     vec2 uv = rect.xy + (ndc.xy * 0.5 + 0.5) * rect.zw;
     float compareDepth = radialDepth >= 0.0 ? radialDepth : ndc.z * 0.5 + 0.5;
-    compareDepth -= u_shadowBias[tile] * (0.2 + 2.0 * (1.0 - clamp(ndotl, 0.0, 1.0)));
+    compareDepth -= shadowTexel(6.0, tile).x * (0.2 + 2.0 * (1.0 - clamp(ndotl, 0.0, 1.0)));
     vec2 dx = dFdx(uv), dy = dFdy(uv);
     float zx = dFdx(compareDepth), zy = dFdy(compareDepth);
     float determinant = dx.x * dy.y - dx.y * dy.x;
@@ -61,16 +77,17 @@ float shadowTileVisibility(float tileValue, vec3 worldPos, float radialDepth, fl
     return visible * 0.25;
 }
 float pointShadowVisibility(int lightIndex, vec3 worldPos, float ndotl) {
-    float firstTile = u_pointShadowTiles[lightIndex * 6];
-    if (u_shadowEnabled < 0.5 || firstTile < 0.0) return 1.0;
-    int firstIndex = int(firstTile + 0.5);
-    vec3 ray = worldPos - u_shadowPositions[firstIndex];
+    if (u_shadowEnabled < 0.5) return 1.0;
+    float firstTile = shadowTableEntry(SHADOW_POINT_TABLE_ROW, lightIndex);
+    if (firstTile < 0.0) return 1.0;
+    vec4 source = shadowTexel(5.0, floor(firstTile + 0.5));
+    vec3 ray = worldPos - source.xyz;
     vec3 a = abs(ray);
-    int face = a.x >= a.y && a.x >= a.z ? (ray.x >= 0.0 ? 0 : 1) :
-               (a.y >= a.z ? (ray.y >= 0.0 ? 2 : 3) : (ray.z >= 0.0 ? 4 : 5));
-    float tile = u_pointShadowTiles[lightIndex * 6 + face];
-    int ti = int(tile + 0.5);
-    return shadowTileVisibility(tile, worldPos, length(worldPos - u_shadowPositions[ti]) / max(u_shadowFars[ti], 1e-4), ndotl);
+    float face = a.x >= a.y && a.x >= a.z ? (ray.x >= 0.0 ? 0.0 : 1.0) :
+                 (a.y >= a.z ? (ray.y >= 0.0 ? 2.0 : 3.0) : (ray.z >= 0.0 ? 4.0 : 5.0));
+    float tile = firstTile + face;
+    vec4 view = shadowTexel(5.0, floor(tile + 0.5));
+    return shadowTileVisibility(tile, worldPos, length(worldPos - view.xyz) / max(view.w, 1e-4), ndotl);
 }
 #endif
 

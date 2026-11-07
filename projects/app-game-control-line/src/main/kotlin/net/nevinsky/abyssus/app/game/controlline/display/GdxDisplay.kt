@@ -42,6 +42,11 @@ class GdxDisplay(private val settings: DisplaySettings, private val window: Disp
     override val damaged: Boolean
         get() = settings.damaged
 
+    override val highQualityPost: Boolean
+        get() = settings.highQualityPost
+
+    override fun setHighQualityPost(on: Boolean) = settings.setHighQualityPost(on)
+
     /** The mode the window will be in after the next frame while a switch is pending, else the one it is in. */
     override val fullscreen: Boolean
         get() =

@@ -13,6 +13,7 @@ import com.badlogic.gdx.graphics.g3d.shaders.DefaultShader
 import net.nevinsky.abyssus.lib.gdx.model.PBRFloatAttribute
 import net.nevinsky.abyssus.lib.gdx.model.PBRTextureAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.EnvironmentLightAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.ProbeBoxAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.ShaderSources
 
 /**
@@ -53,6 +54,16 @@ class PbrModelShader(
         }
         registerLocal("u_envMaxLod", EnvironmentLightAttribute.Type) { shader, id, _, attributes ->
             shader.set(id, (sky(attributes).levels - 1).toFloat())
+        }
+        // only programs compiled with envBoxFlag have these uniforms
+        registerLocal("u_envBoxMin", ProbeBoxAttribute.Type) { shader, id, _, attributes ->
+            shader.set(id, (attributes.get(ProbeBoxAttribute.Type) as ProbeBoxAttribute).min)
+        }
+        registerLocal("u_envBoxMax", ProbeBoxAttribute.Type) { shader, id, _, attributes ->
+            shader.set(id, (attributes.get(ProbeBoxAttribute.Type) as ProbeBoxAttribute).max)
+        }
+        registerLocal("u_envProbe", ProbeBoxAttribute.Type) { shader, id, _, attributes ->
+            shader.set(id, (attributes.get(ProbeBoxAttribute.Type) as ProbeBoxAttribute).probe)
         }
         // the second environment of a cross-fade; only programs compiled with environmentFadeFlag have these uniforms
         registerLocal("u_envIrradianceTo", EnvironmentLightAttribute.Type) { shader, id, _, attributes ->
@@ -115,6 +126,9 @@ class PbrModelShader(
             }
             if (EnvironmentLightAttribute.has(environment)) {
                 sb.append("#define environmentLightFlag\n")
+                if (environment?.has(ProbeBoxAttribute.Type) == true) {
+                    sb.append("#define envBoxFlag\n")
+                }
                 if (EnvironmentLightAttribute.isFading(environment)) {
                     sb.append("#define environmentFadeFlag\n")
                 }

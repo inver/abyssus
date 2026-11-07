@@ -11,10 +11,11 @@ presentation; a game's lines and hidden pilot) and adapts its own types at the b
 
 | Package | What |
 |---|---|
-| `light` | `RenderLights` (directional, point, spot), `LightProfile` (named policies `EDITOR_MULTI_LIGHT` and `GAME_SINGLE_SUN` with their budgets) and `packLights`, which lays lights out for uniform arrays. No GL |
+| `light` | `RenderLights` (directional, point, spot), `LightProfile` (named policies `EDITOR_MULTI_LIGHT`, `GAME_SINGLE_SUN` and `GAME_SCENE_LIGHTS` with their budgets), `packLights`, which lays lights out for uniform arrays, and `selectLocalLights`, which picks the point and spot lights that reach one model's bounds, strongest first (`localLightWeight` repeats the model shaders' falloff). No GL |
 | `frame` | `FrameInputs` (camera matrices and position, ambient, `RenderFog`, the lights cut to the profile, and an optional `OutputTransform` from `lib-gdx`) and `RenderFog`. No GL |
 | `shadow` | `sunShadowCamera` / `sunShadowBias` and `cameraUp` (camera math; no GL), `DepthSubmission` (draws casters through the host's `DepthShaders`), and `GlRenderTarget` / `ShadowGlState` (packed-depth target rendering and caller-state restoration in the current GL context) |
 | `hostframe` | `HostFramePresenter`: uploads a host-produced frame (RGBA floats and GL window depth, e.g. a ray-traced image) into two float textures and draws it as a fullscreen triangle writing `gl_FragDepth`; GLSL is `ray-frame.{vert,frag}` in `src/main/resources/shader/render`. It takes sizes and fill callbacks, so it knows no ray type. GL thread only |
+| `post` | A host frame in linear HDR and its final pass: `HdrFrameTarget` (multisampled RGBA16F colour and depth, resolved by blit to textures), `BloomPass` (thresholdless 13-tap / tent mip chain, `bloomPlan`), `SsaoPass` (half-size hemisphere ambient occlusion from depth with a depth-aware blur, `ssaoKernel`), `CompositePass` (bloom, occlusion, the `lib-gdx` output transform, vignette and `ColorGrade`, blended over the host's display-referred background by coverage) and `ReflectionProbe` (a scene seen from one point into a cube over a few frames, prefiltered by `lib-core`'s `HdrEnvironmentBuild`). LWJGL GL 3.2 calls; GL thread only |
 | `terrain` | `TerrainPass` with `TerrainVariant`: the terrain program's binding and drawing. `TerrainLighting.Editor` (several lights, HDR sky, shadow atlas, cloud shadow map, clip plane) and `TerrainLighting.Sun` (one sun, one shadow map, an optional sky irradiance cube) are the inputs only their variant understands; the GLSL is `terrain_editor.{vert,frag}` and `terrain_game.{vert,frag}` in `src/main/resources/shader/render` |
 
 ## Ownership
@@ -27,6 +28,11 @@ the target. Storage of assets stays outside: assets come from the host's `AssetS
 `GlRenderTarget` borrows a framebuffer and restores the caller's GL state, including winding, after success or failure.
 Hosts may override its viewport/scissor step for atlas tiles. `ShadowGlState` can also surround a host's own draw,
 as the editor's cloud shadow pass does. Neither helper allocates or disposes targets or shaders.
+
+The `post` passes own their targets and programs and borrow the textures they are given; each restores the framebuffer,
+viewport, program, texture bindings and switches it changes (`CompositePassGlTest`, `BloomPassGlTest`, `SsaoPassGlTest`,
+`ReflectionProbeGlTest`). The environment a `ReflectionProbe` returns is the caller's to dispose. With `FrameInputs.linearTarget`
+the game terrain program writes linear light for such a final pass instead of ending in the output transform.
 
 ## Variants
 

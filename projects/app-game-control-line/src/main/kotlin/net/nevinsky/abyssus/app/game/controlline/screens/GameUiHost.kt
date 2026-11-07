@@ -153,7 +153,9 @@ private const val REFERENCE_HEIGHT = 720f
  */
 private fun uiScale(): Float {
     val window = backBufferScale() * Gdx.graphics.height / REFERENCE_HEIGHT
-    val fullscreen = backBufferScale() * Gdx.graphics.displayMode.height / REFERENCE_HEIGHT
+    // no display mode without a monitor (a test window or an odd driver): the window's own height then
+    val monitor = Gdx.graphics.displayMode?.height ?: Gdx.graphics.height
+    val fullscreen = backBufferScale() * monitor / REFERENCE_HEIGHT
     return maxOf(window, fullscreen)
 }
 

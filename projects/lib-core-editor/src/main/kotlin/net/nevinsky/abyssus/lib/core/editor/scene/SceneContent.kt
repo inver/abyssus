@@ -108,12 +108,7 @@ private fun decode(id: Long, entity: EntityDto): DecodedEntity {
 }
 
 /** The libGDX forward axis (-Z) rotated by [q]. */
-fun forwardOf(q: Quaternion): Vector3 {
-    if (q.len2() < 1e-12f) {
-        return Vector3(0f, 0f, -1f)
-    }
-    return Quaternion(q).nor().transform(Vector3(0f, 0f, -1f))
-}
+fun forwardOf(q: Quaternion): Vector3 = net.nevinsky.abyssus.lib.core.light.forwardOf(q)
 
 /**
  * The unit direction from [from] toward [to], or null when the two are (almost) the same point. Shared by look-at

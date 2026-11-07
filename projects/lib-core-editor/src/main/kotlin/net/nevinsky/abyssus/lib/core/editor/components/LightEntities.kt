@@ -63,4 +63,12 @@ class LightEntities(private val messages: EditorMessages) {
             }
         return AddedLight(EditResult.Changed, id)
     }
+
+    /** Adds one point light named [name] at [position]; its id is the next free one. */
+    fun addPoint(scene: SceneDto, name: String, position: Vector3, color: Color, intensity: Float, range: Float): Long {
+        val light = LightComponent(LightDto(intensity = intensity, range = range).also { it.color.set(color) })
+        return scene.add(EntityType.LIGHT_POINT) { _ ->
+            listOf(NameComponent(name), PositionComponent(position.x, position.y, position.z), light)
+        }
+    }
 }

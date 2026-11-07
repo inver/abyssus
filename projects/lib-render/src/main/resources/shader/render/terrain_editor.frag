@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Splat-blended terrain layers lit by the ambient (or an HDR sky's irradiance), up to 2 directional and 5 local lights, then fogged.
+// Splat-blended terrain layers lit by the ambient (or an HDR sky's irradiance), up to 2 directional and 64 point and 64 spot lights (the first 5 of each kind cast shadows), then fogged.
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -38,16 +38,16 @@ uniform int u_numDirectional;
 uniform vec3 u_dirDirection[5];
 uniform vec3 u_dirColor[5];
 uniform int u_numPoint;
-uniform vec3 u_pointPosition[5];
-uniform vec3 u_pointColor[5];
-uniform float u_pointRange[5];
+uniform vec3 u_pointPosition[64];
+uniform vec3 u_pointColor[64];
+uniform float u_pointRange[64];
 uniform int u_numSpot;
-uniform vec3 u_spotPosition[5];
-uniform vec3 u_spotDirection[5];
-uniform vec3 u_spotColor[5];
-uniform float u_spotRange[5];
-uniform float u_spotOuter[5];
-uniform float u_spotInner[5];
+uniform vec3 u_spotPosition[64];
+uniform vec3 u_spotDirection[64];
+uniform vec3 u_spotColor[64];
+uniform float u_spotRange[64];
+uniform float u_spotOuter[64];
+uniform float u_spotInner[64];
 varying vec3 v_normal;
 varying vec3 v_world;
 varying vec2 v_uv;
@@ -77,24 +77,24 @@ void main() {
     for (int i = 0; i < 2; i++) {
         if (i >= u_numDirectional) break;
         float ndotl = max(dot(n, -normalize(u_dirDirection[i])), 0.0);
-        float visibility = shadowTileVisibility(u_dirShadowTile[i], v_world, -1.0, ndotl);
+        float visibility = shadowTileVisibility(dirShadowTile(i), v_world, -1.0, ndotl);
         if (i == u_dirVisIndex) visibility *= directionalVisibility(v_world);
         light += u_dirColor[i] * ndotl * visibility;
     }
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 64; i++) {
         if (i >= u_numPoint) break;
         vec3 toLight = u_pointPosition[i] - v_world;
         float dist = length(toLight);
         light += pointShadowVisibility(i, v_world, max(dot(n, toLight / max(dist, 0.0001)), 0.0)) * u_pointColor[i] * max(dot(n, toLight / max(dist, 0.0001)), 0.0) * (u_pointRange[i] / (1.0 + dist * dist)) * (1.0 - smoothstep(0.75 * u_pointRange[i], u_pointRange[i], dist));
     }
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 64; i++) {
         if (i >= u_numSpot) break;
         vec3 toLight = u_spotPosition[i] - v_world;
         float dist = length(toLight);
         vec3 L = toLight / max(dist, 0.0001);
         float c = dot(normalize(u_spotDirection[i]), -L);
         float cone = u_spotInner[i] <= u_spotOuter[i] ? step(u_spotOuter[i], c) : smoothstep(u_spotOuter[i], u_spotInner[i], c);
-        light += shadowTileVisibility(u_spotShadowTile[i], v_world, -1.0, max(dot(n, L), 0.0)) * u_spotColor[i] * max(dot(n, L), 0.0) * (u_spotRange[i] / (1.0 + dist * dist)) *
+        light += shadowTileVisibility(spotShadowTile(i), v_world, -1.0, max(dot(n, L), 0.0)) * u_spotColor[i] * max(dot(n, L), 0.0) * (u_spotRange[i] / (1.0 + dist * dist)) *
             (1.0 - smoothstep(0.75 * u_spotRange[i], u_spotRange[i], dist)) * cone;
     }
     vec3 rgb = color.rgb * light;

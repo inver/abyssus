@@ -142,7 +142,7 @@ class RaySceneSnapshotTest {
         val set = lightSetOf(sources.reversed(), Vector3(0f, 0f, 0f))
         val frame = ready(params(SceneContent(lights = sources)), lights = set)
         assertEquals(set.point.map { it.entityId.toString() }, frame.scene.lights.map { it.id })
-        assertEquals(5, frame.scene.lights.size)
+        assertEquals(sources.size, frame.scene.lights.size)
         assertEquals(20f, frame.scene.lights.first().color.r, 0f) // raster binder multiplies color by range
         val chosen = LightSet(set.directional, set.point.reversed(), set.spot)
         assertEquals(

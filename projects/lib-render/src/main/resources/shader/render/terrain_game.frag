@@ -28,6 +28,7 @@ uniform vec3 u_lightDirection; // toward the light
 uniform vec3 u_lightColor;
 uniform vec3 u_ambient;
 uniform vec3 u_fogColor;
+uniform int u_linearTarget; // 1: write linear light for the host's final pass (only with u_exposure above 0)
 
 // the sun's shadow: packed depth in a map seen through u_shadowMatrix (FieldShadows)
 uniform sampler2D u_shadowTexture;
@@ -91,7 +92,9 @@ void main() {
     if (u_hasSky == 1 && u_skyFade > 0.0) ambient = mix(ambient, textureCube(u_irradianceTo, normal).rgb, u_skyFade);
     vec3 lit = color * (ambient + u_lightColor * diffuse);
     if (u_exposure > 0.0) {
-        gl_FragColor = vec4(outputTransform(mix(lit, outputSrgbToLinear(u_fogColor), v_fog)), 1.0);
+        vec3 linear = mix(lit, outputSrgbToLinear(u_fogColor), v_fog);
+        // into a linear target the host's final pass applies the transform
+        gl_FragColor = vec4(u_linearTarget == 1 ? max(linear, 0.0) : outputTransform(linear), 1.0);
     } else {
         gl_FragColor = vec4(mix(lit, u_fogColor, v_fog), 1.0);
     }

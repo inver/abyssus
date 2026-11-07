@@ -10,7 +10,9 @@ import com.intellij.ide.impl.ProjectViewSelectInTarget
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.projectView.impl.*
 import com.intellij.ide.util.treeView.AbstractTreeNode
+import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.ui.RelativeFont
@@ -197,6 +199,15 @@ class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectVi
     override fun createCellRenderer(): TreeCellRenderer = GrayKeepingRenderer()
 
     /**
+     * Delete on an entity or modeled component row removes it from its scene. Set on the tree, the focused component,
+     * so it wins over the pane's file delete provider.
+     */
+    override fun uiDataSnapshot(sink: DataSink) {
+        super.uiDataSnapshot(sink)
+        removableSelectionOf(this)?.let { sink[PlatformDataKeys.DELETE_ELEMENT_PROVIDER] = RowDeleteProvider(project, it) }
+    }
+
+    /**
      * Each level's icon starts [LEVEL_INDENT] px right of its parent's, whatever indent the platform's tree UI brings.
      */
     override fun updateUI() {
@@ -284,6 +295,7 @@ class EyeTree(model: DefaultTreeModel, private val project: Project) : ProjectVi
         // This exact use is the project-tree finding in the recorded verifier baseline (design D9).
         putClientProperty(RenderingUtil.CUSTOM_SELECTION_BACKGROUND, Supplier<Color> { DesignColors.SELECTION })
         ToolTipManager.sharedInstance().registerComponent(this)
+        installBackspaceRemoval(this, project)
         addMouseListener(
             object : MouseAdapter() {
                 override fun mouseClicked(e: MouseEvent) {

@@ -101,6 +101,10 @@ uniform vec4 u_diffuseColor;
 uniform vec4 u_emissiveColor;
 #endif
 
+#ifdef emissiveIntensityFlag
+uniform float u_emissiveIntensity; // glTF KHR_materials_emissive_strength
+#endif
+
 #ifdef metallicFactorFlag
 uniform float u_metallicFactor;
 #endif
@@ -121,6 +125,21 @@ uniform vec3 u_ambientCubemap[6];
 uniform samplerCube u_envIrradiance;
 uniform samplerCube u_envSpecular;
 uniform float u_envMaxLod;
+#if defined(envBoxFlag) && defined(normalFlag)
+// a probe captured inside a room (ProbeBoxAttribute.kt): look up where the reflected ray leaves the room's box
+uniform vec3 u_envBoxMin;
+uniform vec3 u_envBoxMax;
+uniform vec3 u_envProbe;
+vec3 envDirection(vec3 r) {
+	vec3 d = normalize(r);
+	d += vec3(equal(d, vec3(0.0))) * 1e-6;
+	vec3 far = max((u_envBoxMax - v_worldPos) / d, (u_envBoxMin - v_worldPos) / d);
+	float t = min(min(far.x, far.y), far.z);
+	return v_worldPos + d * t - u_envProbe;
+}
+#else
+#define envDirection(r) (r)
+#endif
 #if __VERSION__ >= 130
 #define textureCubeLodCompat textureLod
 #else
@@ -143,6 +162,18 @@ struct DirectionalLight
 uniform DirectionalLight u_dirLights[numDirectionalLights];
 #endif // numDirectionalLights
 
+#if numPointLights > 0 || numSpotLights > 0
+// Point and spot lights are rows of a float texture (see LocalLightLayout.kt, which these numbers repeat): the uniform
+// registers cannot hold hundreds of lights.
+uniform sampler2D u_localLights;
+#define LOCAL_LIGHT_WIDTH 4.0
+#define LOCAL_LIGHT_HEIGHT 512.0
+#define LOCAL_LIGHT_SPOT_ROW 256.0
+vec4 localLightTexel(float column, float row) {
+	return texture2D(u_localLights, vec2((column + 0.5) / LOCAL_LIGHT_WIDTH, (row + 0.5) / LOCAL_LIGHT_HEIGHT));
+}
+#endif
+
 #if numPointLights > 0
 struct PointLight
 {
@@ -150,7 +181,15 @@ struct PointLight
 	vec3 position;
 	float intensity;
 };
-uniform PointLight u_pointLights[numPointLights];
+uniform int u_numPointLights;
+PointLight pointLight(int i) {
+	vec4 colorAndRange = localLightTexel(0.0, float(i));
+	PointLight light;
+	light.color = colorAndRange.rgb;
+	light.intensity = colorAndRange.a;
+	light.position = localLightTexel(1.0, float(i)).xyz;
+	return light;
+}
 #endif // numPointLights
 
 #if numSpotLights > 0
@@ -162,7 +201,21 @@ struct SpotLight {
     float cutoffAngle; // half angle in degrees
     float exponent; // inward edge softness fraction
 };
-uniform SpotLight u_spotLights[numSpotLights];
+uniform int u_numSpotLights;
+SpotLight spotLight(int i) {
+    float row = LOCAL_LIGHT_SPOT_ROW + float(i);
+    vec4 colorAndRange = localLightTexel(0.0, row);
+    vec4 positionAndCutoff = localLightTexel(1.0, row);
+    vec4 directionAndExponent = localLightTexel(2.0, row);
+    SpotLight light;
+    light.color = colorAndRange.rgb;
+    light.intensity = colorAndRange.a;
+    light.position = positionAndCutoff.xyz;
+    light.cutoffAngle = positionAndCutoff.a;
+    light.direction = directionAndExponent.xyz;
+    light.exponent = directionAndExponent.a;
+    return light;
+}
 float spotCone(SpotLight light, vec3 L) {
     float outer = cos(radians(light.cutoffAngle));
     float inner = cos(radians(light.cutoffAngle * (1.0 - light.exponent)));
@@ -328,6 +381,9 @@ void main() {
 	#else
 		vec3 emissive = vec3(0.0);
 	#endif
+	#ifdef emissiveIntensityFlag
+		emissive *= u_emissiveIntensity;
+	#endif
 
 	#ifdef occlusionTextureFlag
 		float occlusion = texture2D(u_occlusionTexture, v_occlusionUV).r;
@@ -350,7 +406,7 @@ void main() {
 			for (int i = 0; i < numDirectionalLights; i++) {
 				float visibility = 1.0;
 				#ifdef shadowAtlasFlag
-					visibility = shadowTileVisibility(u_dirShadowTile[i], v_worldPos, -1.0, max(dot(normal, -u_dirLights[i].direction), 0.0));
+					visibility = shadowTileVisibility(dirShadowTile(i), v_worldPos, -1.0, max(dot(normal, -u_dirLights[i].direction), 0.0));
 				#endif
 				#ifdef directionalVisibilityFlag
 					if (i == u_dirVisIndex) visibility *= directionalVisibility(v_worldPos);
@@ -361,29 +417,37 @@ void main() {
 
 		#if numPointLights > 0
 			for (int i = 0; i < numPointLights; i++) {
-                if (u_pointLights[i].intensity <= 0.0) continue;
-				vec3 toLight = u_pointLights[i].position - v_worldPos;
+				if (i >= u_numPointLights) break;
+				PointLight pl = pointLight(i);
+                if (pl.intensity <= 0.0) continue;
+				vec3 toLight = pl.position - v_worldPos;
 				float dist2 = dot(toLight, toLight);
+				// beyond the range a light contributes exactly 0 (the window below): skip its shading
+				if (dist2 >= pl.intensity * pl.intensity) continue;
 				vec3 L = toLight * inversesqrt(max(dist2, 1e-8));
 				float visibility = 1.0;
 				#ifdef shadowAtlasFlag
 					visibility = pointShadowVisibility(i, v_worldPos, max(dot(normal, L), 0.0));
 				#endif
-				direct += visibility * shadeLight(u_pointLights[i].color * (1.0 - smoothstep(0.75 * u_pointLights[i].intensity, u_pointLights[i].intensity, sqrt(dist2))) / (1.0 + dist2), L, normal, V, NdotV, diffuseColor, f0, alpha);
+				direct += visibility * shadeLight(pl.color * (1.0 - smoothstep(0.75 * pl.intensity, pl.intensity, sqrt(dist2))) / (1.0 + dist2), L, normal, V, NdotV, diffuseColor, f0, alpha);
 			}
 		#endif // numPointLights
         #if numSpotLights > 0
             for (int i = 0; i < numSpotLights; i++) {
-                if (u_spotLights[i].intensity <= 0.0) continue;
-                vec3 toLight = u_spotLights[i].position - v_worldPos;
+                if (i >= u_numSpotLights) break;
+                SpotLight sl = spotLight(i);
+                if (sl.intensity <= 0.0) continue;
+                vec3 toLight = sl.position - v_worldPos;
                 float dist2 = dot(toLight, toLight);
+                // beyond the range a light contributes exactly 0 (the window below): skip its shading
+                if (dist2 >= sl.intensity * sl.intensity) continue;
                 vec3 L = toLight * inversesqrt(max(dist2, 1e-8));
-                float cutoff = 1.0 - smoothstep(0.75 * u_spotLights[i].intensity, u_spotLights[i].intensity, sqrt(dist2));
+                float cutoff = 1.0 - smoothstep(0.75 * sl.intensity, sl.intensity, sqrt(dist2));
                 float visibility = 1.0;
                 #ifdef shadowAtlasFlag
-                    visibility = shadowTileVisibility(u_spotShadowTile[i], v_worldPos, -1.0, max(dot(normal, L), 0.0));
+                    visibility = shadowTileVisibility(spotShadowTile(i), v_worldPos, -1.0, max(dot(normal, L), 0.0));
                 #endif
-                direct += visibility * shadeLight(u_spotLights[i].color * cutoff * spotCone(u_spotLights[i], L) / (1.0 + dist2), L,
+                direct += visibility * shadeLight(sl.color * cutoff * spotCone(sl, L) / (1.0 + dist2), L,
                     normal, V, NdotV, diffuseColor, f0, alpha);
             }
         #endif
@@ -412,10 +476,10 @@ void main() {
 		#ifdef environmentLightFlag
 			// the sky replaces the ambient: diffuse by normal, specular by reflection at the roughness's mip
 			ambient = textureCube(u_envIrradiance, normal).rgb;
-			vec3 prefiltered = textureCubeLodCompat(u_envSpecular, reflect(-V, normal), roughness * u_envMaxLod).rgb;
+			vec3 prefiltered = textureCubeLodCompat(u_envSpecular, envDirection(reflect(-V, normal)), roughness * u_envMaxLod).rgb;
 			#ifdef environmentFadeFlag
 				ambient = mix(ambient, textureCube(u_envIrradianceTo, normal).rgb, u_envFade);
-				prefiltered = mix(prefiltered, textureCubeLodCompat(u_envSpecularTo, reflect(-V, normal), roughness * u_envMaxLodTo).rgb, u_envFade);
+				prefiltered = mix(prefiltered, textureCubeLodCompat(u_envSpecularTo, envDirection(reflect(-V, normal)), roughness * u_envMaxLodTo).rgb, u_envFade);
 			#endif // environmentFadeFlag
 			vec3 ambientSpecular = prefiltered * (f0 * envBrdf.x + envBrdf.y);
 		#else
@@ -433,7 +497,8 @@ void main() {
 		#endif
 	#endif // end fogFlag
 
-	#ifdef outputTransformFlag
+	// into a linear target the host's final pass applies the transform (linearTargetFlag): write the lit colour
+	#if defined(outputTransformFlag) && !defined(linearTargetFlag)
 		gl_FragColor.rgb = outputTransform(gl_FragColor.rgb);
 	#endif
 

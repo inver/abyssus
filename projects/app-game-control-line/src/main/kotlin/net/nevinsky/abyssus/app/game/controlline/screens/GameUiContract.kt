@@ -87,6 +87,7 @@ val PUBLISHED_BINDINGS: Map<String, String> = mapOf(
     "controlsDamaged" to "string",
     // the display settings
     "fullscreen" to "boolean",
+    "highQualityPost" to "boolean",
     "hasDisplayDamaged" to "boolean",
     "displayDamaged" to "string",
     // who flies: an AI demonstration on the HUD, the pause menu, GAME OVER and the debrief, or the player

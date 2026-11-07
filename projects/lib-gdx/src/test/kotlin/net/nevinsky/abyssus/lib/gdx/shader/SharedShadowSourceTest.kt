@@ -43,7 +43,7 @@ class SharedShadowSourceTest {
             listOf(
                 "u_shadowAtlas",
                 "u_shadowTexel",
-                "u_shadowMatrices",
+                "u_shadowData",
                 "u_dirVisMap",
                 "u_dirVisIndex",
                 "#ifdef shadowAtlasFlag",

@@ -25,10 +25,11 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * Pixel evidence of Control Line's field (see the editor's `PixelEvidenceGlTest` and docs/ai/testing.md): opt in with
- * `-Dabyssus.glTests=true -Dabyssus.perf.pixels=record|compare`, with `-Dabyssus.perf.pixelsDir` (record) or
- * `-Dabyssus.perf.pixelsReference` (compare). The field is drawn into a 1280 x 720 target for a fixed number of frames
- * at a fixed 1/60 s step, from the flying camera, and read back.
+ * Pixel evidence of Control Line's field and hangar (see the editor's `PixelEvidenceGlTest` and docs/ai/testing.md):
+ * opt in with `-Dabyssus.glTests=true -Dabyssus.perf.pixels=record|compare`, with `-Dabyssus.perf.pixelsDir` (record)
+ * or `-Dabyssus.perf.pixelsReference` (compare). Each case is drawn into a 1280 x 720 target for a fixed number of
+ * frames at a fixed 1/60 s step, the field from the flying camera and the hangar from its own camera, and read back. A
+ * case with no picture in the reference folder is not compared.
  */
 class PixelEvidenceGlTest {
     private val evidence = PixelEvidence()
@@ -39,39 +40,46 @@ class PixelEvidenceGlTest {
         assumeTrue("set -Dabyssus.perf.pixels=record|compare", mode == "record" || mode == "compare")
         assumeTrue("GL tests are opt-in", TestGl.enabled)
         TestGl.run(1200, 1280, 720) {
-            if (mode == "record") {
-                record()
-            } else {
-                compare()
+            for (case in CASES) {
+                if (mode == "record") {
+                    record(case)
+                } else {
+                    compare(case)
+                }
             }
         }
     }
 
-    private fun record() {
+    private fun record(case: Case) {
         val out = File(System.getProperty("abyssus.perf.pixelsDir") ?: "build/perf/pixels")
-        val first = render()
-        val diffs = (1 until RUNS).map { evidence.diff(first, render()) }
-        evidence.writeImage(first, File(out, "$CASE.png"))
+        val first = render(case)
+        val diffs = (1 until RUNS).map { evidence.diff(first, render(case)) }
+        evidence.writeImage(first, File(out, "${case.name}.png"))
         evidence.writeTolerance(
-            PixelTolerance(CASE, RUNS, first.width, first.height, evidence.toleranceOf(diffs)),
-            File(out, "$CASE.tolerance.json"),
+            PixelTolerance(case.name, RUNS, first.width, first.height, evidence.toleranceOf(diffs)),
+            File(out, "${case.name}.tolerance.json"),
         )
-        println("pixels $CASE: repeated-run tolerance ${evidence.toleranceOf(diffs)}")
+        println("pixels ${case.name}: repeated-run tolerance ${evidence.toleranceOf(diffs)}")
     }
 
-    private fun compare() {
+    private fun compare(case: Case) {
         val reference =
             File(
                 checkNotNull(System.getProperty("abyssus.perf.pixelsReference")) {
                     "set -Dabyssus.perf.pixelsReference=<dir>"
                 }
             )
-        val tolerance = evidence.readTolerance(File(reference, "$CASE.tolerance.json")).tolerance
-        val diff = evidence.diff(evidence.readImage(File(reference, "$CASE.png")), render())
-        assertTrue("$CASE: $diff is outside the recorded tolerance $tolerance", evidence.within(diff, tolerance))
+        val picture = File(reference, "${case.name}.png")
+        if (!picture.isFile) {
+            println("pixels ${case.name}: no reference in $reference, not compared")
+            return
+        }
+        val tolerance = evidence.readTolerance(File(reference, "${case.name}.tolerance.json")).tolerance
+        val diff = evidence.diff(evidence.readImage(picture), render(case))
+        assertTrue("${case.name}: $diff is outside the recorded tolerance $tolerance", evidence.within(diff, tolerance))
     }
 
-    private fun render(): BufferedImage {
+    private fun render(case: Case): BufferedImage {
         Gdx.files = Lwjgl3Files()
         ShaderProgram.pedantic = false
         val project = Files.createTempDirectory("pixels-control-line").toFile()
@@ -94,20 +102,15 @@ class PixelEvidenceGlTest {
                     },
             )
         try {
-            val field = FieldScene(requireNotNull(loader.load("Field.scene")) { messages.joinToString("\n") })
+            val field = FieldScene(requireNotNull(loader.load(case.scene)) { messages.joinToString("\n") })
             val cameras = Cameras(1280f, 720f)
-            val pilot = field.position(checkNotNull(field.pilot)).getTransform().getTranslation(Vector3())
-            val plane =
-                field
-                    .position(checkNotNull(field.entity(field.planes.first().entityId)))
-                    .getTransform()
-                    .getTranslation(Vector3())
+            val aim = case.aim(field)
             // draw until everything is built, then a fixed number of frames so the sky and clouds are at the same time
             // every run
             var settled = 0
             var frames = 0
             while (settled < 30) {
-                cameras.flying(pilot, plane)
+                aim(cameras)
                 Gdx.gl.glViewport(0, 0, 1280, 720)
                 renderer.draw(field, cameras.camera, seconds = 0f)
                 // everything built and nothing still loading (textures arrive after the models and terrains)
@@ -123,7 +126,7 @@ class PixelEvidenceGlTest {
                 check(++frames < 20_000) { "the field never loaded: $messages" }
             }
             repeat(FRAMES) {
-                cameras.flying(pilot, plane)
+                aim(cameras)
                 Gdx.gl.glViewport(0, 0, 1280, 720)
                 renderer.draw(field, cameras.camera, seconds = 1f / 60f)
             }
@@ -140,8 +143,31 @@ class PixelEvidenceGlTest {
         }
     }
 
+    /** A picture: [name] of the files, the [scene] drawn and how [aim] points the camera at it. */
+    private class Case(val name: String, val scene: String, val aim: (FieldScene) -> (Cameras) -> Unit)
+
     private companion object {
-        const val CASE = "control-line-field"
+        /** The field from the flying camera, and the hangar (plane select) from its own camera. */
+        val CASES =
+            listOf(
+                Case("control-line-field", "Field.scene") { field ->
+                    val pilot = field.position(checkNotNull(field.pilot)).getTransform().getTranslation(Vector3())
+                    val plane =
+                        field
+                            .position(checkNotNull(field.entity(field.planes.first().entityId)))
+                            .getTransform()
+                            .getTranslation(Vector3())
+                    val aim: (Cameras) -> Unit = { cameras -> cameras.flying(pilot, plane) }
+                    aim
+                },
+                Case("control-line-hangar", "Hangar.scene") { field ->
+                    val (at, camera) = checkNotNull(field.camera) { "the hangar has no camera" }
+                    val aim: (Cameras) -> Unit = { cameras ->
+                        cameras.fixed(at.localPosition, camera.direction, camera.fieldOfView)
+                    }
+                    aim
+                },
+            )
         const val RUNS = 5
         const val FRAMES = 120
     }

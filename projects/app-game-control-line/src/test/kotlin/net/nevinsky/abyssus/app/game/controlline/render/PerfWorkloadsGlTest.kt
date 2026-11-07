@@ -49,6 +49,8 @@ import org.junit.Test
  * - `GLProfiler` counters for the main view, the shadow pass and the UI, from a separate run (`counters`).
  * - Five flight starts from plane select and five debrief openings after a warm one of each: request to the end of the
  *   first frame drawn with it.
+ * - A second workload, `control-line-hangar`: plane select in the hangar from its camera, before the flight, with its
+ *   own spans (`abyssus.perf.hangarSampleSeconds`, 10 s by default).
  *
  * `-Dabyssus.perf.jfr=<file.jfr>` records a JFR `profile` of the samples alone (task 6.1).
  *
@@ -60,6 +62,10 @@ class PerfWorkloadsGlTest {
     private val warmupSeconds = System.getProperty("abyssus.perf.warmupSeconds")?.toDouble() ?: 10.0
     private val sampleSeconds = System.getProperty("abyssus.perf.sampleSeconds")?.toDouble() ?: 30.0
     private val samples = System.getProperty("abyssus.perf.samples")?.toInt() ?: 5
+
+    /** Seconds of each hangar sample (`-Dabyssus.perf.hangarSampleSeconds`): plane select is steady, so shorter. */
+    private val hangarSampleSeconds =
+        System.getProperty("abyssus.perf.hangarSampleSeconds")?.toDouble() ?: minOf(sampleSeconds, 10.0)
     private val step = 1f / 60f
 
     /** `legacy` (flat ambient, no display transform) or `pbr` (the default), chosen with `-Dabyssus.perf.pipeline`. */
@@ -104,7 +110,12 @@ class PerfWorkloadsGlTest {
                                     WORKLOAD,
                                     PerfStatus.SKIPPED,
                                     reason = "GL tests are opt-in (-Dabyssus.glTests=true) and need a display",
-                                )
+                                ),
+                                PerfWorkload(
+                                    HANGAR_WORKLOAD,
+                                    PerfStatus.SKIPPED,
+                                    reason = "GL tests are opt-in (-Dabyssus.glTests=true) and need a display",
+                                ),
                             ),
                     ),
                     file!!,
@@ -114,7 +125,7 @@ class PerfWorkloadsGlTest {
         val total = (warmupSeconds + sampleSeconds * samples).toLong() + 900
         var gpu = "unavailable"
         var driver = "unavailable"
-        val workload =
+        val workloads =
             TestGl.run(total, 1280, 720) {
                 gpu = Gdx.gl.glGetString(GL20.GL_RENDERER) ?: "unknown"
                 driver = Gdx.gl.glGetString(GL20.GL_VERSION) ?: "unknown"
@@ -125,10 +136,11 @@ class PerfWorkloadsGlTest {
                 PerfReport(
                     host = "game",
                     environment = PerfEnvironment.current(gpu, driver, repo = repo),
-                    workloads = listOf(workload),
+                    workloads = workloads,
                 ),
                 file!!,
             )
+        val workload = workloads.first { it.name == WORKLOAD }
         // spec "Allocation per frame stays within budget": the run fails, naming the measured value, after its report
         // is written
         val measured = workload.stats?.allocatedBytesPerFrame ?: return
@@ -209,15 +221,16 @@ class PerfWorkloadsGlTest {
         }
     }
 
-    private fun measure(): PerfWorkload {
+    private fun measure(): List<PerfWorkload> {
         Gdx.files = Lwjgl3Files()
         val project = Files.createTempDirectory("perf-control-line").toFile()
         val home = Files.createTempDirectory("perf-control-line-home").toFile()
         File(checkNotNull(System.getProperty("controlLine.project"))).copyRecursively(project, overwrite = true)
         val spans = SpanRecorder()
+        val hangarSpans = SpanRecorder()
         val timer = GpuPassTimer()
         val counters = CounterProbe()
-        val probes = Probes(listOf(spans, timer, counters))
+        val probes = Probes(listOf(spans, hangarSpans, timer, counters))
         val log = RecordingLogger(echo = true)
         val crashes =
             CrashReporter(
@@ -242,11 +255,39 @@ class PerfWorkloadsGlTest {
             )
         run = Run(game, crashes, probes, log)
         val hash = hashOf(File(project, "scenes/Field.scene"))
+        val hangarHash = hashOf(File(project, HANGAR_SCENE))
+        var hangar: PerfWorkload? = null
         try {
             game.create()
             game.resize(1280, 720)
             check(!crashes.crashed) { "the game failed to start: ${log.entries}" }
             run.settle()
+
+            // plane select in the hangar, before any flight: its own CPU spans and frame times
+            run.toPlaneSelect()
+            run.frame()
+            run.settle()
+            run.framesFor(minOf(warmupSeconds, hangarSampleSeconds))
+            hangarSpans.recording = true
+            val hangarSampler = FrameSampler()
+            val hangarRuns = (0 until samples).map {
+                hangarSampler.start()
+                run.framesFor(hangarSampleSeconds) { hangarSampler.record(it) }
+                hangarSampler.stats()
+            }
+            hangarSpans.recording = false
+            hangar =
+                PerfWorkload(
+                    HANGAR_WORKLOAD,
+                    PerfStatus.MEASURED,
+                    sceneHash = hangarHash,
+                    settings = settings + ("sampleSeconds" to hangarSampleSeconds.toString()) +
+                        ("flight" to "none: F2B (Mid) plane select in the hangar, from its camera"),
+                    stats = FrameSampler.combine(hangarRuns).copy(spans = hangarSpans.spans()),
+                    assetCounts = emptyMap(),
+                    cpuNotComparable = presentationThrottled(),
+                    agents = agents(),
+                )
 
             // the warm flight: its start is not one of the measured hitches
             run.toPlaneSelect()
@@ -336,7 +377,7 @@ class PerfWorkloadsGlTest {
                 }
 
             val combined = FrameSampler.combine(finished).copy(spans = spans.spans())
-            return PerfWorkload(
+            return listOf(PerfWorkload(
                 WORKLOAD,
                 PerfStatus.MEASURED,
                 sceneHash = hash,
@@ -348,13 +389,16 @@ class PerfWorkloadsGlTest {
                 hitches = mapOf("flightStart" to hitchOf(flightStart), "debriefOpen" to hitchOf(debrief)),
                 cpuNotComparable = presentationThrottled(),
                 agents = agents(),
-            )
+            ), checkNotNull(hangar))
         } catch (failed: IllegalStateException) {
-            return PerfWorkload(
-                WORKLOAD,
-                PerfStatus.UNAVAILABLE,
-                reason = failed.message ?: failed.toString(),
-                sceneHash = hash,
+            // the crash record, when the game crashed: the reason then says why, not only that it did
+            val record =
+                home.resolve("logs").listFiles { f -> f.name.startsWith("crash-") }?.maxByOrNull { it.name }?.readText()
+            val reason = listOfNotNull(failed.message ?: failed.toString(), record).joinToString("\n")
+            return listOf(
+                PerfWorkload(WORKLOAD, PerfStatus.UNAVAILABLE, reason = reason, sceneHash = hash),
+                hangar
+                    ?: PerfWorkload(HANGAR_WORKLOAD, PerfStatus.UNAVAILABLE, reason = reason, sceneHash = hangarHash),
             )
         } finally {
             game.dispose()
@@ -410,6 +454,7 @@ class PerfWorkloadsGlTest {
 
     private companion object {
         const val WORKLOAD = "control-line-flight"
+        const val HANGAR_WORKLOAD = "control-line-hangar"
         const val SETTLED = 20
         const val HITCHES = 5
         const val ALLOCATION_BUDGET_BYTES = 256L * 1024

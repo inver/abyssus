@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.modelmesh
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
@@ -17,21 +18,25 @@ import java.util.concurrent.ConcurrentHashMap
 /** One mesh of a model asset: its [id] (what `meshId` names) and the ids of the materials its parts use. */
 data class ModelMeshInfo(val id: String, val materials: List<String>)
 
+/** One material of a model asset: its [id] and its [emissive] color, null when it has none or it is black. */
+data class ModelMaterialInfo(val id: String, val emissive: Color?)
+
 /**
-  * The meshes of model assets, for the mesh choosers. Reads the geometry only (no image is decoded, no GL), so it may
-  * run
- * on any thread, but it parses the model file: call it off the UI thread. The answer for an asset is kept until
+ * The meshes of model assets, for the mesh choosers. Reads the geometry only (no image is decoded, no GL), so it may
+ * run on any thread, but it parses the model file: call it off the UI thread. The answer for an asset is kept until
  * [invalidate] drops it.
  */
 class ModelMeshLister(files: FileLoader, metas: AssetMetaLoader, assimp: AssimpModelLoader = AssimpModelLoader()) {
     private val loader = ModelLoader(metas, assimp, files, decodeTextures = false)
     private val known = ConcurrentHashMap<String, List<ModelMeshInfo>>()
+    private val knownMaterials = ConcurrentHashMap<String, List<ModelMaterialInfo>>()
 
     /** The meshes of the model asset [assetName], in the model's order; null when it is missing or cannot be read. */
     fun list(assetName: String): List<ModelMeshInfo>? {
         known[assetName]?.let { return it }
         val prepared = runCatchingKeepingCancellation { loader.prepare(assetName) }.getOrNull() ?: return null
         val infos = try {
+            knownMaterials[assetName] = materialsOf(prepared.staged.data)
             meshesOf(prepared.staged.data)
         } finally {
             loader.discardStaged(prepared.staged)
@@ -39,16 +44,33 @@ class ModelMeshLister(files: FileLoader, metas: AssetMetaLoader, assimp: AssimpM
         return known.putIfAbsent(assetName, infos) ?: infos
     }
 
+    /** The materials of the model asset [assetName], in the model's order; null when it cannot be read. */
+    fun materials(assetName: String): List<ModelMaterialInfo>? {
+        list(assetName) ?: return null
+        return knownMaterials[assetName]
+    }
+
+    private fun materialsOf(data: ModelData): List<ModelMaterialInfo> =
+        data.materials.mapNotNull { material ->
+            val id = material.id ?: return@mapNotNull null
+            val emissive = material.emissive?.takeIf { it.r > 0f || it.g > 0f || it.b > 0f }
+            ModelMaterialInfo(id, emissive?.let(::Color))
+        }
+
     /** The answer already read for [assetName], without reading; null before [list] or after [invalidate]. */
     fun cached(assetName: String): List<ModelMeshInfo>? = known[assetName]
 
     /** Forgets [assetName], whose files changed. */
     fun invalidate(assetName: String) {
         known.remove(assetName)
+        knownMaterials.remove(assetName)
     }
 
     /** Forgets everything. */
-    fun clear() = known.clear()
+    fun clear() {
+        known.clear()
+        knownMaterials.clear()
+    }
 
     private fun meshesOf(data: ModelData): List<ModelMeshInfo> {
         val materialOfPart = LinkedHashMap<String, MutableList<String>>()

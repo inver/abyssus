@@ -17,6 +17,9 @@ import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
 import net.nevinsky.abyssus.lib.core.editor.components.*
+import net.nevinsky.abyssus.lib.core.editor.modellights.AddedLamps
+import net.nevinsky.abyssus.lib.core.editor.modellights.MaterialGeometry
+import net.nevinsky.abyssus.lib.core.editor.modellights.ModelLights
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.EditorBundle
 import net.nevinsky.abyssus.plugin.dto.MetaFiles
@@ -28,8 +31,8 @@ import net.nevinsky.abyssus.plugin.schema.ComponentSchemas
 
 /**
  * Adds, changes and removes components of a scene's entities as undoable commands on the scene file. The rules are
-  * [net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor]'s; nothing is written unless an edit comes back
-  * [EditResult.Changed].
+ * [net.nevinsky.abyssus.lib.core.editor.components.ComponentEditor]'s; nothing is written unless an edit comes back
+ * [EditResult.Changed].
  */
 object SceneComponentEdits {
     private fun readMeta(folder: VirtualFile, metaFiles: MetaFiles) =
@@ -92,9 +95,26 @@ object SceneComponentEdits {
     }
 
     /**
-      * Adds [asset] of the project to the scene at [position] as one undoable command (a terrain centred on it, sized
-      * from
-     * its `meta.json`); the result names the new entity. A model with [meshId] draws only that mesh.
+     * Adds a point light for each lamp of [geometry] (a material of the model entity [entityId] draws) as one undoable
+     * command; the result names the new lights and says whether lamps were merged to stay under the maximum.
+     */
+    fun createLightsFromModel(
+        project: Project,
+        file: VirtualFile,
+        entityId: Long,
+        geometry: MaterialGeometry,
+    ): AddedLamps {
+        var added = AddedLamps(EditResult.Rejected(EditorBundle.message("componentSceneUnreadable")))
+        editSceneDocument(project, file, AbyssusBundle.message("commandCreateLightsFromModel")) { scene ->
+            added = ModelLights(EditorBundle).add(scene, entityId, geometry)
+            added.result == EditResult.Changed
+        }
+        return added
+    }
+
+    /**
+     * Adds [asset] of the project to the scene at [position] as one undoable command (a terrain centred on it, sized
+     * from its `meta.json`); the result names the new entity. A model with [meshId] draws only that mesh.
      */
     fun addAsset(
         project: Project,
@@ -130,9 +150,8 @@ object SceneComponentEdits {
     }
 
     /**
-      * Creates a new entity (`Entity <id>`) holding a [kindName] component started from [initial], as one undoable
-      * command;
-     * nothing is written when the component is refused.
+     * Creates a new entity (`Entity <id>`) holding a [kindName] component started from [initial], as one undoable
+     * command; nothing is written when the component is refused.
      */
     fun addAsNewEntity(
         project: Project,

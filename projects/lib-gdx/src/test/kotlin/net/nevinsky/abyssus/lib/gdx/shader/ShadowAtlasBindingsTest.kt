@@ -10,6 +10,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.GLTexture
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight
+import com.badlogic.gdx.graphics.g3d.environment.PointLight
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
@@ -27,20 +28,7 @@ import org.junit.Test
  * `improve-control-line-performance-stability`. The same atlas bound twice uploads once.
  */
 class ShadowAtlasBindingsTest {
-    private val names =
-        listOf(
-            "u_shadowAtlas",
-            "u_shadowEnabled",
-            "u_shadowTexel",
-            "u_shadowMatrices[0]",
-            "u_shadowTiles[0]",
-            "u_shadowPositions[0]",
-            "u_shadowFars[0]",
-            "u_shadowBias[0]",
-            "u_dirShadowTile[0]",
-            "u_pointShadowTiles[0]",
-            "u_spotShadowTile[0]",
-        )
+    private val names = listOf("u_shadowAtlas", "u_shadowData", "u_shadowEnabled", "u_shadowTexel")
 
     /** Uniform calls by location, in order: (location, the floats or ints given). */
     private val uniforms = ArrayList<Pair<Int, List<Float>>>()
@@ -182,17 +170,40 @@ class ShadowAtlasBindingsTest {
 
     private fun location(name: String) = names.indexOf(name)
 
+    private fun at(bindings: ShadowAtlasBindings, row: Int, column: Int, component: Int = 0) =
+        bindings.data[(row * SHADOW_DATA_WIDTH + column) * 4 + component]
+
+    private fun entry(bindings: ShadowAtlasBindings, tableRow: Int, i: Int) =
+        at(bindings, tableRow + i / SHADOW_DATA_WIDTH, i % SHADOW_DATA_WIDTH)
+
+    private fun bind(
+        bindings: ShadowAtlasBindings,
+        program: ShaderProgram,
+        atlas: ShadowAtlasAttribute?,
+        unit: Int = 3,
+        dataUnit: Int = 4,
+    ) =
+        bindings.bind(
+            program,
+            atlas,
+            atlas?.records?.take(1).orEmpty(),
+            emptyList(),
+            emptyList(),
+            unit,
+            dataUnit,
+        )
+
     @Test
     fun theSameAtlasBoundTwiceUploadsOnce() {
         val bindings = ShadowAtlasBindings()
         val program = program()
         val atlas = atlas(5f)
-        bindings.bind(program, atlas, listOf(atlas.records[0]), emptyList(), emptyList(), 3)
+        bind(bindings, program, atlas)
         val first = uniforms.size
         assertTrue("the first bind uploads", first > 0)
         assertEquals(1L, bindings.uploads)
 
-        bindings.bind(program, atlas, listOf(atlas.records[0]), emptyList(), emptyList(), 3)
+        bind(bindings, program, atlas)
         assertEquals("no upload the second time", first, uniforms.size)
         assertEquals(1L, bindings.uploads)
     }
@@ -201,20 +212,20 @@ class ShadowAtlasBindingsTest {
     fun theUploadHoldsTheAtlasValues() {
         val bindings = ShadowAtlasBindings()
         val atlas = atlas(5f)
-        bindings.bind(program(), atlas, listOf(atlas.records[0]), emptyList(), emptyList(), 3)
+        bind(bindings, program(), atlas)
         fun last(name: String) = uniforms.last { it.first == location(name) }.second
         assertEquals(listOf(3f), last("u_shadowAtlas"))
+        assertEquals(listOf(4f), last("u_shadowData"))
         assertEquals(listOf(1f), last("u_shadowEnabled"))
         assertEquals(listOf(1f / 2048, 1f / 2048), last("u_shadowTexel"))
-        val matrices = last("u_shadowMatrices[0]")
-        assertEquals(16 * 16, matrices.size)
-        assertEquals("the view's translation", 5f, matrices[12], 0f)
-        assertEquals("an unused view is the identity", 1f, matrices[16], 0f)
-        assertEquals(listOf(0f, 0f, 1f, 1f), last("u_shadowTiles[0]").take(4))
-        assertEquals(listOf(1f, 2f, 3f), last("u_shadowPositions[0]").take(3))
-        assertEquals(0.002f, last("u_shadowBias[0]")[0], 0f)
-        assertEquals("the sun's view starts at 0", listOf(0f, -1f), last("u_dirShadowTile[0]"))
-        assertTrue(last("u_pointShadowTiles[0]").all { it == -1f })
+        assertEquals("the view's matrix", 5f, bindings.data[12], 0f)
+        assertEquals(listOf(0f, 0f, 1f, 1f), (0..3).map { at(bindings, 0, 4, it) })
+        assertEquals(listOf(1f, 2f, 3f, 1f), (0..3).map { at(bindings, 0, 5, it) })
+        assertEquals(0.002f, at(bindings, 0, 6), 0f)
+        assertEquals("the sun's view starts at 0", 0f, entry(bindings, SHADOW_DIRECTIONAL_TABLE_ROW, 0), 0f)
+        assertEquals(-1f, entry(bindings, SHADOW_DIRECTIONAL_TABLE_ROW, 1), 0f)
+        assertEquals(-1f, entry(bindings, SHADOW_POINT_TABLE_ROW, 0), 0f)
+        assertEquals(-1f, entry(bindings, SHADOW_SPOT_TABLE_ROW, SHADOW_MAX_LOCAL - 1), 0f)
     }
 
     @Test
@@ -222,27 +233,59 @@ class ShadowAtlasBindingsTest {
         val bindings = ShadowAtlasBindings()
         val program = program()
         val a = atlas(5f)
-        bindings.bind(program, a, listOf(a.records[0]), emptyList(), emptyList(), 3)
+        bind(bindings, program, a)
         val b = atlas(9f)
-        bindings.bind(program, b, listOf(b.records[0]), emptyList(), emptyList(), 3)
+        bind(bindings, program, b)
         assertEquals("the light camera moved: a new atlas revision", 2L, bindings.uploads)
-        assertEquals(9f, uniforms.last { it.first == location("u_shadowMatrices[0]") }.second[12], 0f)
+        assertEquals(9f, bindings.data[12], 0f)
 
-        bindings.bind(program, b, listOf(b.records[0]), emptyList(), emptyList(), 4)
+        bind(bindings, program, b, unit = 4, dataUnit = 5)
         assertEquals("another texture unit", 3L, bindings.uploads)
 
         val other = program()
-        bindings.bind(other, b, listOf(b.records[0]), emptyList(), emptyList(), 4)
+        bind(bindings, other, b, unit = 4, dataUnit = 5)
         assertEquals("a program that never held it", 4L, bindings.uploads)
-        bindings.bind(program, b, listOf(b.records[0]), emptyList(), emptyList(), 4)
+        bind(bindings, program, b, unit = 4, dataUnit = 5)
         assertEquals("each program keeps what it holds", 4L, bindings.uploads)
     }
 
     @Test
     fun noAtlasDisablesShadows() {
         val bindings = ShadowAtlasBindings()
-        bindings.bind(program(), null, emptyList(), emptyList(), emptyList(), 2)
+        bind(bindings, program(), null, unit = 2)
         assertEquals(listOf(0f), uniforms.last { it.first == location("u_shadowEnabled") }.second)
-        assertEquals(listOf(-1f, -1f), uniforms.last { it.first == location("u_dirShadowTile[0]") }.second)
+        assertEquals(-1f, entry(bindings, SHADOW_DIRECTIONAL_TABLE_ROW, 0), 0f)
+    }
+
+    @Test
+    fun aSceneOfTwoHundredFiftySixPointLightsKeepsEveryLightsSixViews() {
+        val lights = (0 until SHADOW_MAX_LOCAL).map { PointLight() }
+        val records =
+            lights.mapIndexed { i, light ->
+                ShadowLightRecord(
+                    "p$i",
+                    ShadowLightKind.POINT,
+                    light,
+                    List(6) { face ->
+                        ShadowAtlasView(
+                            Matrix4().setToTranslation(i.toFloat(), face.toFloat(), 0f),
+                            Vector4(0f, 0f, 1f, 1f),
+                        )
+                    },
+                    Vector3(i.toFloat(), 0f, 0f),
+                    10f,
+                )
+            }
+        val atlas = ShadowAtlasAttribute(texture, records)
+        val bindings = ShadowAtlasBindings()
+        bindings.bind(program(), atlas, emptyList(), atlas.records, emptyList(), 3, 4)
+        for (i in 0 until SHADOW_MAX_LOCAL) {
+            assertEquals("first view of light $i", (i * 6).toFloat(), entry(bindings, SHADOW_POINT_TABLE_ROW, i), 0f)
+        }
+        val lastView = SHADOW_MAX_LOCAL * 6 - 1
+        assertEquals("the last face of the last light", 255f, at(bindings, lastView, 5), 0f)
+        assertEquals("the matrix of that view", 5f, at(bindings, lastView, 3, 1), 0f)
+        assertEquals(10f, at(bindings, lastView, 5, 3), 0f)
+        assertTrue("the views stay clear of the tables", lastView < SHADOW_VIEW_ROWS)
     }
 }

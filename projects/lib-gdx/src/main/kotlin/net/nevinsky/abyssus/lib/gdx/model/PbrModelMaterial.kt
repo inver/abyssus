@@ -26,6 +26,9 @@ class PbrModelMaterial : ModelMaterial() {
     var alphaMode: AlphaMode = AlphaMode.OPAQUE
     var alphaCutoff: Float = 0.5f
 
+    /** glTF's `KHR_materials_emissive_strength`: what [emissive] is multiplied by, 1 when the source gives none. */
+    var emissiveStrength: Float = 1f
+
     companion object {
         const val USAGE_METALLIC_ROUGHNESS: Int = 100
         const val USAGE_OCCLUSION: Int = 101

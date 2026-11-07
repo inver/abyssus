@@ -105,7 +105,12 @@ class FieldFoliageProject : AutoCloseable {
               "RenderComponent":{"shaderKey":"terrain","type":"TERRAIN","assetName":"terr"}
               ${foliage?.let { ""","FoliageComponent":{"assetName":"$it"}""" } ?: ""}}}"""
         }
-        return """{"format":"abyssus","formatVersion":1,"ecs":{${terrains.joinToString(",")}$extra}}"""
+        // the sun 45 degrees up toward +z (a scene without a directional light has no sun in the game)
+        val sun =
+            """"1000":{"type":"LIGHT_DIRECTIONAL","components":{"NameComponent":{"name":"Sun"},
+              "PositionComponent":{"localRotation":{"x":-0.38268343,"y":0,"z":0,"w":0.9238795}},
+              "LightComponent":{"light":{"intensity":1}}}}"""
+        return """{"format":"abyssus","formatVersion":1,"ecs":{${(terrains + sun).joinToString(",")}$extra}}"""
     }
 
     fun load(text: String, messages: MutableList<String> = mutableListOf()): SceneContext {

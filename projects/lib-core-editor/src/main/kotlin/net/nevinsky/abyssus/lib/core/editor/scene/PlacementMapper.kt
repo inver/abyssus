@@ -5,13 +5,11 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
-import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.LightComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.LightDto
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.editor.content.ArrangementPlacement
@@ -21,6 +19,8 @@ import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.format.EntityType
+import net.nevinsky.abyssus.lib.core.light.lightKindOf
+import net.nevinsky.abyssus.lib.core.light.lightPlacementOf
 
 /**
  * The asset a `RenderComponent` shows: its `type` and `assetName`, and for a model the `meshId` of the one mesh drawn.
@@ -148,31 +148,13 @@ class PlacementMapper {
 
     /** A `LIGHT_<KIND>` entity, or one that has a `LightComponent` and no other kind (a directional light). */
     private fun lightOf(entity: DecodedEntity, transform: PlacementTransform): LightPlacement? {
-        val type = entity.type
-        val kind =
-            when {
-                type == null || !type.name.startsWith("LIGHT") ->
-                    if (entity.light != null) {
-                        LightKind.DIRECTIONAL
-                    } else {
-                        return null
-                    }
-                type == EntityType.LIGHT_POINT -> LightKind.POINT
-                type == EntityType.LIGHT_SPOT -> LightKind.SPOT
-                else -> LightKind.DIRECTIONAL
-            }
-        val light: LightDto = entity.light?.light ?: LightDto()
-        return LightPlacement(
+        val kind = lightKindOf(entity.type, entity.light != null) ?: return null
+        return lightPlacementOf(
             entity.id,
             kind,
-            Color(light.color.r, light.color.g, light.color.b, 1f),
-            light.intensity.coerceAtLeast(0f),
+            entity.light?.light,
             transform.position,
-            forwardOf(transform.rotation),
-            light.range,
             transform.rotation,
-            light.coneAngle,
-            light.edgeSoftness,
             lookAtOf(entity),
         )
     }

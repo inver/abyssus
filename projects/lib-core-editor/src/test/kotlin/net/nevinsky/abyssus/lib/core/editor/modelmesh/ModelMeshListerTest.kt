@@ -59,4 +59,20 @@ class ModelMeshListerTest {
     fun aMissingAssetHasNoMeshes() {
         assertNull(lister().second.list("nothing"))
     }
+
+    @Test
+    fun listsMaterialsWithTheirEmissiveColor() {
+        GdxNativesLoader.load()
+        val root = Files.createTempDirectory("lister").toFile().also(dirs::add)
+        val data = twoQuadData()
+        data.materials.first { it.id == "glass" }.emissive = com.badlogic.gdx.graphics.Color(0.4f, 0.8f, 1f, 1f)
+        writeModelAsset(root, "duo", data)
+        val files = testFileLoader(root)
+        val lister = ModelMeshLister(files, testMetaLoader(root, fileLoader = files))
+
+        val materials = lister.materials("duo")!!.associateBy { it.id }
+        assertNull("no emissive", materials.getValue("skin").emissive)
+        assertEquals(0.8f, materials.getValue("glass").emissive!!.g, 0.01f)
+        assertNull(lister.materials("nothing"))
+    }
 }

@@ -152,7 +152,9 @@ class ModelSource(
                     )
             }
             if (format == SourceFormat.GLTF || format == SourceFormat.GLB) {
-                gltfExtensions(file, format, mapper).forEach { left += LeftOutItem(it, LeftOutReason.GLTF_EXTENSION) }
+                gltfExtensions(file, format, mapper)
+                    .filter { it !in KEPT_GLTF_EXTENSIONS }
+                    .forEach { left += LeftOutItem(it, LeftOutReason.GLTF_EXTENSION) }
             }
 
             val approximated = ArrayList<ApproximatedItem>()
@@ -318,3 +320,9 @@ class ModelSourceOpener(
     fun open(file: File, cancel: () -> Unit = {}): ModelSource =
         ModelSource(file, loader, collada, mapper, phongToPbr, cancel)
 }
+
+/**
+ * The glTF extensions the written model keeps, so they are not reported as left out: the material's emissive strength
+ * (read by Assimp, written by `GltfWriter`, drawn by the model shaders).
+ */
+private val KEPT_GLTF_EXTENSIONS = setOf("KHR_materials_emissive_strength")

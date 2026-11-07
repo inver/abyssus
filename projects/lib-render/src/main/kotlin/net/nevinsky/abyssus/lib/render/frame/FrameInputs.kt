@@ -17,9 +17,8 @@ import net.nevinsky.abyssus.lib.core.util.quadraticFogCoefficient
  */
 class RenderFog(val r: Float, val g: Float, val b: Float, val density: Float, val gradient: Float) {
     /**
-      * Multiplier for a `dot(d, d) * k` fog term that reaches the exponential share at `1 / density` for any gradient
-      * (the
-     * editor's model shaders fog with such a quadratic ramp).
+     * Multiplier for a `dot(d, d) * k` fog term that reaches the exponential share at `1 / density` for any gradient
+     * (the editor's model shaders fog with such a quadratic ramp).
      */
     val quadraticCoefficient: Float get() = quadraticFogCoefficient(density)
 }
@@ -38,6 +37,11 @@ class FrameInputs(
     lights: RenderLights,
     val profile: LightProfile,
     val output: OutputTransform? = null,
+    /**
+     * With an [output]: the frame is drawn into a linear HDR target whose final pass applies the transform, so the
+     * passes write the lit linear colour instead of ending in it.
+     */
+    val linearTarget: Boolean = false,
 ) {
     val lights: RenderLights = profile.select(lights)
 

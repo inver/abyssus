@@ -11,6 +11,8 @@ import net.nevinsky.abyssus.lib.core.util.EDITOR_MAX_SPOT
 import net.nevinsky.abyssus.lib.core.util.GAME_MAX_DIRECTIONAL
 import net.nevinsky.abyssus.lib.core.util.GAME_MAX_POINT
 import net.nevinsky.abyssus.lib.core.util.GAME_MAX_SPOT
+import net.nevinsky.abyssus.lib.core.util.GAME_SCENE_MAX_POINT
+import net.nevinsky.abyssus.lib.core.util.GAME_SCENE_MAX_SPOT
 
 import com.badlogic.gdx.math.Vector3
 
@@ -53,13 +55,19 @@ class RenderLights(
 val NO_RENDER_LIGHTS = RenderLights()
 
 /**
-  * How many lights a host lights with, by name. The editor lights terrains with several lights of every kind; a game
-  * that
- * lights with one sun keeps to the first directional light and ignores the rest.
+ * How many lights a host lights with, by name. The editor lights terrains with several lights of every kind; a game
+ * that lights with one sun keeps to the first directional light and ignores the rest.
  */
 enum class LightProfile(val maxDirectional: Int, val maxPoint: Int, val maxSpot: Int) {
     EDITOR_MULTI_LIGHT(maxDirectional = EDITOR_MAX_DIRECTIONAL, maxPoint = EDITOR_MAX_POINT, maxSpot = EDITOR_MAX_SPOT),
-    GAME_SINGLE_SUN(maxDirectional = GAME_MAX_DIRECTIONAL, maxPoint = GAME_MAX_POINT, maxSpot = GAME_MAX_SPOT);
+    GAME_SINGLE_SUN(maxDirectional = GAME_MAX_DIRECTIONAL, maxPoint = GAME_MAX_POINT, maxSpot = GAME_MAX_SPOT),
+
+    /** One sun and, per model, the strongest of the scene's point and spot lights there ([selectLocalLights]). */
+    GAME_SCENE_LIGHTS(
+        maxDirectional = GAME_MAX_DIRECTIONAL,
+        maxPoint = GAME_SCENE_MAX_POINT,
+        maxSpot = GAME_SCENE_MAX_SPOT,
+    );
 
     /** [lights] cut to this profile's budget, in their order. The same instance when nothing is cut. */
     fun select(lights: RenderLights): RenderLights {

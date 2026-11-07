@@ -223,6 +223,7 @@ class GameUiModel(
     /** The settings screen's display values: the mode the window is in, and whether the old file could not be read. */
     private fun displaySettings(values: MutableMap<String, UiValue>) {
         values["fullscreen"] = flag(display.fullscreen)
+        values["highQualityPost"] = flag(display.highQualityPost)
         values["hasDisplayDamaged"] = flag(display.damaged)
         values["displayDamaged"] =
             text(
@@ -842,6 +843,14 @@ class GameUiModel(
                 val on =
                     (write.value as? UiValue.Bool)?.value ?: return UiWriteResult.Rejected("fullscreen is on or off")
                 display.setFullscreen(on)
+                return UiWriteResult.Accepted(write.value)
+            }
+
+            "highQualityPost" -> {
+                val on =
+                    (write.value as? UiValue.Bool)?.value
+                        ?: return UiWriteResult.Rejected("high quality effects are on or off")
+                display.setHighQualityPost(on)
                 return UiWriteResult.Accepted(write.value)
             }
         }

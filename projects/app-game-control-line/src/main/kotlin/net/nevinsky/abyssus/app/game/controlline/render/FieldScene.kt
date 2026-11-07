@@ -29,6 +29,10 @@ import net.nevinsky.abyssus.lib.core.ecs.component.activeComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.assetName
 import net.nevinsky.abyssus.lib.core.ecs.component.isActive
 import net.nevinsky.abyssus.lib.core.format.EntityType
+import net.nevinsky.abyssus.lib.core.light.LightPlacement
+import net.nevinsky.abyssus.lib.core.light.lightKindOf
+import net.nevinsky.abyssus.lib.core.light.lightPlacementOf
+import net.nevinsky.abyssus.lib.core.light.usable
 import net.nevinsky.abyssus.lib.core.scene.SceneContext
 
 /** The field scene's file in the project. */
@@ -89,6 +93,19 @@ class FieldScene(val loaded: SceneContext, private val borrowed: List<Entity> = 
     val models: List<Pair<Entity, String>> =
         (entities.values + borrowed).mapNotNull { e -> assetName(e, MetaType.MODEL)?.let { e to it } }
 
+    /**
+     * The entities whose models never move while the scene is shown: every model of the scene's own but its planes and
+     * pilot, and none of the [borrowed] ones. A reflection probe sees only these.
+     */
+    val staticModels: Set<Entity> =
+        planes.mapNotNullTo(HashSet()) { entity(it.entityId) }.let { moving ->
+            pilot?.let(moving::add)
+            moving.addAll(borrowed)
+            models.map { it.first }.filterTo(java.util.Collections.newSetFromMap(java.util.IdentityHashMap())) {
+                it !in moving
+            }
+        }
+
     /** The first entity with a camera: where the scene says to look from, along its `direction`. */
     val camera: Pair<PositionComponent, PerspectiveCamera>? =
         entities.values.firstNotNullOfOrNull { e ->
@@ -128,22 +145,49 @@ class FieldScene(val loaded: SceneContext, private val borrowed: List<Entity> = 
 
     val skyName: String? = loaded.scene.skyboxName.takeIf { loaded.scene.skyboxEnabled }
 
+    private val sunEntity: Entity? =
+        entities.values.firstOrNull {
+            it.getComponent(HeaderComponent::class.java)?.type == EntityType.LIGHT_DIRECTIONAL &&
+                it.isActive(LightComponent::class.java)
+        }
+
+    /**
+     * Whether the scene has a sun, an active directional light. Without one the raster game draws it with no sun light
+     * and no sun shadow (a closed hangar); [sunDirection] and [sunColor] still give the sky and the ray view their
+     * default.
+     */
+    val hasSun: Boolean = sunEntity != null
+
     /** The unit vector toward the sun: against the first directional light's direction, 45° up without one. */
-    val sunDirection: Vector3 =
-        entities.values
-            .firstOrNull {
-                it.getComponent(HeaderComponent::class.java)?.type == EntityType.LIGHT_DIRECTIONAL &&
-                    it.isActive(LightComponent::class.java)
+    val sunDirection: Vector3 = sunEntity?.let(::lightDirection)?.scl(-1f) ?: Vector3(0f, 1f, 1f).nor()
+
+    /**
+     * The scene's active point and spot lights that can light anything, read as the editor reads them (`lib-core`
+     * [lightPlacementOf]); a spot that looks at an entity points at it.
+     */
+    val localLights: List<LightPlacement> =
+        entities.values.mapNotNull { e ->
+            val type = e.getComponent(HeaderComponent::class.java)?.type
+            if (type != EntityType.LIGHT_POINT && type != EntityType.LIGHT_SPOT) {
+                return@mapNotNull null
             }
-            ?.let(::lightDirection)
-            ?.scl(-1f) ?: Vector3(0f, 1f, 1f).nor()
+            val light = e.activeComponent(LightComponent::class.java) ?: return@mapNotNull null
+            val kind = lightKindOf(type, true) ?: return@mapNotNull null
+            val at = position(e)
+            val placement =
+                lightPlacementOf(
+                    e.getComponent(HeaderComponent::class.java)?.id ?: -1L,
+                    kind,
+                    light.light,
+                    at.localPosition.cpy(),
+                    at.localRotation.cpy(),
+                )
+            val facing = lightDirection(e) ?: placement.direction
+            placement.copy(direction = facing).takeIf(::usable)
+        }
 
     val sunColor: Color =
-        entities.values
-            .firstOrNull {
-                it.getComponent(HeaderComponent::class.java)?.type == EntityType.LIGHT_DIRECTIONAL &&
-                    it.isActive(LightComponent::class.java)
-            }
+        sunEntity
             ?.getComponent(LightComponent::class.java)
             ?.light
             ?.let { color(it.color, it.intensity) }

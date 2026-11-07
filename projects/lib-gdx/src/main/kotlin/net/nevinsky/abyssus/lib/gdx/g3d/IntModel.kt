@@ -240,6 +240,10 @@ class IntModel private constructor() : Model() {
         }
         mtl.metallic?.let { result.set(PBRFloatAttribute.createMetallic(it)) }
         mtl.roughness?.let { result.set(PBRFloatAttribute.createRoughness(it)) }
+        // only a strength other than 1 changes the program: a model without one draws exactly as before
+        if (mtl.emissiveStrength != 1f) {
+            result.set(PBRFloatAttribute.createEmissiveIntensity(mtl.emissiveStrength))
+        }
         if (mtl.doubleSided) {
             result.set(IntAttribute.createCullFace(GL20.GL_NONE))
         }

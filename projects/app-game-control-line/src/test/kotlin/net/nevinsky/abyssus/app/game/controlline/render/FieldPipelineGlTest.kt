@@ -45,6 +45,7 @@ class FieldPipelineGlTest {
         val hadTransform: Boolean,
         val hadSkyLight: Boolean,
         val messages: List<String>,
+        val hadProbe: Boolean = false,
         val combined: com.badlogic.gdx.math.Matrix4 = com.badlogic.gdx.math.Matrix4(),
     ) {
         /** Where the world point [p] lands on the picture: pixels from the left and from the top. */
@@ -79,6 +80,7 @@ class FieldPipelineGlTest {
         frames: Int = 120,
         waitForSkyLight: Boolean = false,
         cablesFor: (PerspectiveCamera) -> List<Cable> = { emptyList() },
+        after: () -> Unit = {},
         editProject: (File) -> Unit = {},
     ): Drawn {
         Gdx.files = Lwjgl3Files()
@@ -147,6 +149,7 @@ class FieldPipelineGlTest {
                 frame(1f / 60f)
                 check(++extra < 3_000) { "the sky light never got built: $messages" }
             }
+            after()
             val pixmap = Pixmap.createFromFrameBuffer(0, 0, W, H)
             // the read is bottom-up as RGBA: keep it upright
             val upright = Pixmap(W, H, Pixmap.Format.RGBA8888)
@@ -157,6 +160,7 @@ class FieldPipelineGlTest {
                 renderer.modelEnvironment.has(OutputTransformAttribute.Type),
                 renderer.modelEnvironment.has(EnvironmentLightAttribute.Type),
                 messages.toList(),
+                renderer.litByProbe || renderer.probeBounds != null,
                 (if (flying) {
                         cameras.camera
                     } else {
@@ -190,12 +194,91 @@ class FieldPipelineGlTest {
             val pipeline = draw(FieldRenderSettings(), flying = true, waitForSkyLight = true)
             assertTrue("the transform", pipeline.hadTransform)
             assertTrue("the sky light of the opted-in field sky", pipeline.hadSkyLight)
+            // the field has a sky: it is lit by it, never by a probe of itself
+            assertFalse("the field took a reflection probe", pipeline.hadProbe)
             val legacy = draw(FieldRenderSettings.LEGACY, flying = true)
             pipeline.save("pilot-pipeline")
             legacy.save("pilot-legacy")
             assertFalse(legacy.hadTransform)
             assertFalse(legacy.hadSkyLight)
             assertEquals(emptyList<String>(), pipeline.messages.filter { "lighting build failed" in it })
+        }
+
+    /**
+     * The final pass with every effect off against the transform at the end of each shader (OpenSpec
+     * `control-line-post-processing`, "Effects off match the plain path"). The HDR frame is multisampled and the test
+     * window is not, so silhouettes differ by their antialiasing: the pixels away from them must agree within 2/255.
+     */
+    @Test
+    fun theFinalPassWithNoEffectsShowsWhatTheShadersShowed() =
+        TestGl.run(600) {
+            val plain = draw(FieldRenderSettings(post = null), flying = true)
+            val post = draw(FieldRenderSettings(post = PostSettings.OFF), flying = true)
+            plain.save("pilot-plain")
+            post.save("pilot-post-off")
+            // a pixel away from silhouettes: its 3 x 3 neighbourhood in the plain picture is flat
+            fun flat(x: Int, y: Int): Boolean {
+                val centre = plain.rgb(x, y)
+                for (dy in -1..1) for (dx in -1..1) {
+                    val n = plain.rgb(x + dx, y + dy)
+                    if ((0..2).any { abs(n[it] - centre[it]) > 6 }) {
+                        return false
+                    }
+                }
+                return true
+            }
+            var within = 0
+            var total = 0
+            for (y in 1 until H - 1) for (x in 1 until W - 1) {
+                if (!flat(x, y)) {
+                    continue
+                }
+                total++
+                val p = post.rgb(x, y)
+                val q = plain.rgb(x, y)
+                if ((0..2).all { abs(p[it] - q[it]) <= 2 }) {
+                    within++
+                }
+            }
+            val share = within.toDouble() / total
+            println("final pass, effects off: ${"%.4f".format(share)} of $total flat pixels within 2/255")
+            assertTrue("too few flat pixels to compare: $total", total > W * H / 4)
+            assertTrue("only ${"%.4f".format(share)} of the flat pixels are within 2/255", share >= 0.995)
+        }
+
+    /**
+     * What the game draws after the field (its menus and HUD) is not post-processed (OpenSpec
+     * `control-line-post-processing`, "UI is not post-processed"): a panel over the corner, where a full vignette
+     * darkens the field most, keeps its exact colour.
+     */
+    @Test
+    fun whatIsDrawnAfterTheFieldIsNotVignetted() =
+        TestGl.run(600) {
+            val panel = com.badlogic.gdx.graphics.Color(0.8f, 0.6f, 0.4f, 1f)
+            val shapes = com.badlogic.gdx.graphics.glutils.ShapeRenderer()
+            try {
+                val shot =
+                    draw(FieldRenderSettings(post = PostSettings.OFF.copy(vignette = 1f)), flying = true, after = {
+                        shapes.projectionMatrix.setToOrtho2D(0f, 0f, W.toFloat(), H.toFloat())
+                        shapes.begin(com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType.Filled)
+                        shapes.color = panel
+                        shapes.rect(0f, 0f, 40f, 40f)
+                        shapes.end()
+                    })
+                val (r, g, b) = shot.rgb(10, H - 10).toList()
+                assertEquals(Math.round(panel.r * 255).toFloat(), r.toFloat(), 1f)
+                assertEquals(Math.round(panel.g * 255).toFloat(), g.toFloat(), 1f)
+                assertEquals(Math.round(panel.b * 255).toFloat(), b.toFloat(), 1f)
+                // while the field in that corner is darkened by the vignette
+                val plain = draw(FieldRenderSettings(post = PostSettings.OFF), flying = true)
+                val vignetted = draw(FieldRenderSettings(post = PostSettings.OFF.copy(vignette = 1f)), flying = true)
+                assertTrue(
+                    "the vignette did not darken the corner",
+                    vignetted.rgb(60, H - 10).sum() < plain.rgb(60, H - 10).sum() - 6,
+                )
+            } finally {
+                shapes.dispose()
+            }
         }
 
     private fun worstSkyDifference(a: Drawn, b: Drawn): Int {

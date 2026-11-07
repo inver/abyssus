@@ -41,9 +41,14 @@ class PBRFloatAttribute(type: Long, value: Float) : FloatAttribute(type, value) 
 
         @JvmField val Roughness: Long = register("Roughness")
 
+        /** glTF's `KHR_materials_emissive_strength`: the emissive colour is multiplied by it (1 when absent). */
+        @JvmField val EmissiveIntensity: Long = register("EmissiveIntensity")
+
         fun createMetallic(value: Float) = PBRFloatAttribute(Metallic, value)
 
         fun createRoughness(value: Float) = PBRFloatAttribute(Roughness, value)
+
+        fun createEmissiveIntensity(value: Float) = PBRFloatAttribute(EmissiveIntensity, value)
     }
 }
 

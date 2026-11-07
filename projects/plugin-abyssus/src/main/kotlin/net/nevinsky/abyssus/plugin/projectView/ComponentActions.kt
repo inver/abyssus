@@ -153,15 +153,9 @@ open class AddComponentOnEcsAction : AbyssusTreeAction<VirtualFile>() {
 
 /** Right-click "Remove Component" on a component row the plugin models. */
 open class RemoveComponentAction : AbyssusTreeAction<ComponentTarget>() {
-    override fun targetOf(node: Any?) =
-        componentTargetOf(node)?.takeIf { target ->
-            val project = ProjectLocator.getInstance().guessProjectForFile(target.file) ?: return@takeIf false
-            target.kind != null && ComponentSchemas.of(project).editorFor(target.file).kindOf(target.kind) != null
-        }
+    override fun targetOf(node: Any?) = removableComponentOf(node)
 
-    override fun perform(project: Project, target: ComponentTarget, e: AnActionEvent) {
-        reportRejection(project, SceneComponentEdits.remove(project, target.file, target.entityId, target.kind!!))
-    }
+    override fun perform(project: Project, target: ComponentTarget, e: AnActionEvent) = removeRow(project, target)
 }
 
 /**
@@ -169,9 +163,32 @@ open class RemoveComponentAction : AbyssusTreeAction<ComponentTarget>() {
  * Another entity that still refers to it, or an arrangement that owns copies, refuses the removal with a message.
  */
 open class RemoveEntityAction : AbyssusTreeAction<ComponentTarget>() {
-    override fun targetOf(node: Any?) = componentTargetOf(node)?.takeIf { it.kind == null }
+    override fun targetOf(node: Any?) = removableEntityOf(node)
 
-    override fun perform(project: Project, target: ComponentTarget, e: AnActionEvent) {
-        reportRejection(project, SceneComponentEdits.removeEntity(project, target.file, target.entityId))
+    override fun perform(project: Project, target: ComponentTarget, e: AnActionEvent) = removeRow(project, target)
+}
+
+/** The entity row [node] stands for, which Remove Entity (and Delete) removes, or null. */
+internal fun removableEntityOf(node: Any?): ComponentTarget? = componentTargetOf(node)?.takeIf { it.kind == null }
+
+/** The component row [node] stands for when the plugin models its kind, which Remove Component (and Delete) removes. */
+internal fun removableComponentOf(node: Any?): ComponentTarget? =
+    componentTargetOf(node)?.takeIf { target ->
+        val project = ProjectLocator.getInstance().guessProjectForFile(target.file) ?: return@takeIf false
+        target.kind != null && ComponentSchemas.of(project).editorFor(target.file).kindOf(target.kind) != null
     }
+
+/** What Delete / Backspace removes for the Abyssus view row [node]: an entity or a modeled component, else null. */
+internal fun removableRowOf(node: Any?): ComponentTarget? = removableEntityOf(node) ?: removableComponentOf(node)
+
+/** Removes the entity or component [target] stands for as one undoable edit, reporting a refusal. */
+internal fun removeRow(project: Project, target: ComponentTarget) {
+    val kind = target.kind
+    val result =
+        if (kind == null) {
+            SceneComponentEdits.removeEntity(project, target.file, target.entityId)
+        } else {
+            SceneComponentEdits.remove(project, target.file, target.entityId, kind)
+        }
+    reportRejection(project, result)
 }

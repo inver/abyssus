@@ -28,7 +28,17 @@ class FieldRenderSettingsTest {
     fun aContextWithoutOpenGl30DropsTheTransformAndKeepsTheRest() {
         val settings = FieldRenderSettings(OutputTransform(1.5f), skyLight = true)
         assertSame(settings, settings.forContext(gl30 = true))
-        assertEquals(FieldRenderSettings(null, skyLight = true), settings.forContext(gl30 = false))
+        assertEquals(FieldRenderSettings(null, skyLight = true, post = null), settings.forContext(gl30 = false))
         assertSame(FieldRenderSettings.LEGACY, FieldRenderSettings.LEGACY.forContext(gl30 = false))
+    }
+
+    @Test
+    fun theFinalPassIsOnByDefaultAndNeedsTheTransform() {
+        assertEquals(PostSettings(), FieldRenderSettings().post)
+        assertEquals(DEFAULT_VIGNETTE, FieldRenderSettings().post!!.vignette)
+        assertNull(FieldRenderSettings.LEGACY.post)
+        // no transform, no final pass: the pass ends in the transform
+        assertNull(FieldRenderSettings(outputTransform = null).forContext(gl30 = true).post)
+        assertEquals(0f, PostSettings.OFF.vignette)
     }
 }

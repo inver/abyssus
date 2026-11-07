@@ -34,9 +34,9 @@ class ModelCulling {
     val cached: Int get() = spheres.size
 
     /**
-      * [model] is the asset the storage built under [name] as its [version]th build. When that is another model or
-      * another
-     * build than last time, the earlier model's sphere is dropped, so the next [visible] measures the new bounds.
+     * [model] is the asset the storage built under [name] as its [version]th build. When that is another model or
+     * another build than last time, the earlier model's sphere is dropped, so the next [visible] measures the new
+     * bounds.
      */
     fun track(name: String, version: Long, model: Model) {
         val known = tracked[name]
@@ -64,6 +64,22 @@ class ModelCulling {
         center.set(sphere.center).mul(transform)
         val scale = max(transform.getScaleX(), max(transform.getScaleY(), transform.getScaleZ()))
         return frustum.sphereInFrustum(center, sphere.radius * scale)
+    }
+
+    /**
+     * Sets [out] to a box around [instance] in world space: its bounding sphere moved by the instance's transform, as
+     * [visible] tests it. False, with [out] left as it was, for an empty model.
+     */
+    fun bounds(instance: ModelInstance, out: BoundingBox): Boolean {
+        val sphere = spheres.getOrPut(instance.model) { sphereOf(instance.model) }
+        if (sphere.radius < 0f) {
+            return false
+        }
+        val transform = instance.transform
+        center.set(sphere.center).mul(transform)
+        val r = sphere.radius * max(transform.getScaleX(), max(transform.getScaleY(), transform.getScaleZ()))
+        out.set(out.min.set(center).sub(r), out.max.set(center).add(r))
+        return true
     }
 
     private fun sphereOf(model: Model): Sphere {

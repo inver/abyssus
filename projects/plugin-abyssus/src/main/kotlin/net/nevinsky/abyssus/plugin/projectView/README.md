@@ -17,6 +17,7 @@ the row actions that call `editSceneDocument` (`projects/plugin-abyssus/src/main
 | `RowActions.kt` | What a row paints at its right edge: eye, "View", the amber `unused` text; the `game` badge is painted by the row renderer (`GameBadge.kt`, decided by `isGameComponent`) |
 | `scene/SceneComponentEdits.kt` | Add, update and remove a component as undoable `editSceneDocument` commands; also lists a project's model and terrain assets |
 | `ComponentActions.kt`, `ComponentTarget.kt` | The **Add Component...** / **Remove Component** / **Remove Entity** tree actions and the entity or component a row stands for; `RemoveEntityAction` (entity rows only) removes that one entity through `SceneComponentEdits.removeEntity` as one undoable command that is also a project-level (`global`) one, so Undo and Redo work with the tree focused, and shows the refusal of `EntityRemoval` when another entity still refers to it or an arrangement owns copies. It supersedes the archived `redesign-project-view-menus` statement that entity menus are unchanged; `AddComponentOnEcsAction` is Add Component... on a scene's `ecs` row, creating a new `Entity <id>` with the chosen component (`SceneComponentEdits.addAsNewEntity`, inserted by `SceneEntities`) |
+| `RowDeleteProvider.kt` | **Delete** and **Backspace** on an entity row or a modeled component row: `EyeTree` supplies a `DELETE_ELEMENT_PROVIDER` for those rows (the tree is the focused component, so it wins over the pane's file delete provider) and a Backspace shortcut that stands aside while speed search is typing; both run the same `removeRow` as Remove Entity / Remove Component. Other rows keep the platform's Delete |
 | `EnabledToggle.kt` | The writes built on `editSceneDocument`: `toggleEnabled`, `renameScene`, `setSkybox` |
 | `AbyssusTreeAction` | The Template Method of a right-click action: `targetOf` (the node it applies to), `isEnabled`, `perform`; `update` and `actionPerformed` are final and read the one selection lookup, `selectedNode`. Rename Scene, New Terrain, New Foliage, Import Model, Import FlightGear, New UI Asset and the component and light actions extend it; tests replace `selected` |
 | `RenameSceneAction` | Right-click **Rename Scene...**: offered on any scene row — a standalone `.scene` at the top of the view and a scene listed under a project — starting from the scene's current `name` and editing only `name` in one undoable command. Right-click menus group creation/import actions under **Import Model** (Import FlightGear Aircraft, Import Model), **New** (New UI Asset, New Terrain, New Foliage) and **Add** (Add Asset, Add Path Arrangement, Add Light, Add Water); Rename Scene stays flat above **Add** on scene rows.
@@ -81,6 +82,14 @@ that is missing and for a file in `icons/tree/` that nothing lists; add a new gl
   `GrayKeepingRenderer` keeps the gray on disabled rows so they still read as disabled while selected.
 - **HDR sizes come from headers.** `hdrSkyInfo` reads the EXR data window off the EDT without decoding pixels.
   An unreadable header keeps the filename with unknown dimensions; preview failures still show their own reason.
+
+## Create Lights From Model
+
+`CreateLightsFromModelAction` is offered on a model entity row (its `RenderComponent` is a `MODEL`); it is disabled when the
+entity's asset folder is missing. It reads the model's geometry under a progress dialog (`AssetLoading.modelLamps`, off the UI
+thread, no GL), lets the user pick the lamp material in `LampMaterialDialog` (emissive materials first, with lamp counts),
+and `SceneComponentEdits.createLightsFromModel` adds one point light per lamp through `editSceneDocument` as one undoable
+command. The lights are plain entities and do not follow the model if it moves. `readGeometry` and `choose` are the test seams.
 
 ## Add Light
 

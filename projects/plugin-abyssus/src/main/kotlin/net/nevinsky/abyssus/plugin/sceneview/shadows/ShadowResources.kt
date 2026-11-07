@@ -36,7 +36,7 @@ class ShadowResources(private val size: Int = ShadowLayout.ATLAS_SIZE) : Disposa
         val state = ShadowGlState()
         framebuffer =
             try {
-                if (size in 1..maxTexture.get(0) && maxSamplers.get(0) >= 12) {
+                if (size in 1..maxTexture.get(0) && maxSamplers.get(0) >= 13) {
                     runCatchingKeepingCancellation {
                         FrameBuffer(Pixmap.Format.RGBA8888, size, size, true).also {
                             it.colorBufferTexture.setFilter(

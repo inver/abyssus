@@ -19,13 +19,13 @@ enum class FrameSpan(val key: String, val pass: Boolean) {
     TERRAIN("terrain", true),
     MODELS("models", true),
     LINES("lines", true),
+    POST("post", true),
 }
 
 /**
  * Where the game marks the start and end of each [FrameSpan]. The shipped game uses [NONE], which does nothing, so the
-  * game carries no timing work; the performance workload passes one that records CPU time, GPU timer queries or
-  * counters.
- * Main thread only.
+ * game carries no timing work; the performance workload passes one that records CPU time, GPU timer queries or
+ * counters. Main thread only.
  */
 interface FrameProbe {
     fun begin(span: FrameSpan) {}

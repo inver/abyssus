@@ -1,0 +1,297 @@
+{
+  "schema" : 1,
+  "host" : "game",
+  "environment" : {
+    "commit" : "b3892c848a5a398c968df0879c64d97be4276cb5",
+    "dirty" : true,
+    "os" : "Linux 7.0.0-38-generic amd64",
+    "jdk" : "Eclipse Adoptium 21.0.9",
+    "gpu" : "NVIDIA GeForce RTX 3070 Ti/PCIe/SSE2",
+    "driver" : "3.3.0 NVIDIA 615.71.09",
+    "backend" : "OpenGL"
+  },
+  "workloads" : [ {
+    "name" : "control-line-flight",
+    "status" : "MEASURED",
+    "reason" : null,
+    "sceneHash" : "0f51ee8ac2bad51b8a2604cdda103e7cdb55280ee8ff0b79b1d68970f912142c",
+    "settings" : {
+      "resolution" : "1280x720",
+      "warmupSeconds" : "10.0",
+      "sampleSeconds" : "30.0",
+      "samples" : "5",
+      "fixedDeltaSeconds" : "0.016666668",
+      "pipeline" : "pbr",
+      "frameTime" : "CPU time of ControlLineGame.render (whole frame), not GPU time",
+      "flight" : "Watch AI, F2B pattern, Mid, the first stunt plane",
+      "hitches" : "5 after a warm one",
+      "target" : "the default framebuffer of a 1280x720 window (the game's own)"
+    },
+    "stats" : {
+      "frames" : 18008,
+      "p50Ms" : 4.908644426754776,
+      "p95Ms" : 7.509464110895157,
+      "p99Ms" : 10.55998177276766,
+      "samplesP95Ms" : [ 6.317019, 6.23959, 8.858427, 6.984697, 9.539055 ],
+      "allocatedBytesPerFrame" : 169466.51132829854,
+      "gcCount" : 55,
+      "gcMillis" : 97,
+      "spans" : {
+        "frame" : {
+          "p50Ms" : 4.842998,
+          "p95Ms" : 7.757419,
+          "p99Ms" : 11.324832,
+          "allocatedBytesPerFrame" : 168946.9004886717
+        },
+        "flight" : {
+          "p50Ms" : 0.1187,
+          "p95Ms" : 0.29886,
+          "p99Ms" : 0.397088,
+          "allocatedBytesPerFrame" : 6275.455353176366
+        },
+        "field" : {
+          "p50Ms" : 4.423229,
+          "p95Ms" : 7.206306,
+          "p99Ms" : 10.578122,
+          "allocatedBytesPerFrame" : 60623.32741003998
+        },
+        "ui" : {
+          "p50Ms" : 0.243951,
+          "p95Ms" : 0.38161,
+          "p99Ms" : 0.455401,
+          "allocatedBytesPerFrame" : 100078.57529986673
+        },
+        "sky" : {
+          "p50Ms" : 0.14524,
+          "p95Ms" : 0.276551,
+          "p99Ms" : 0.390275,
+          "allocatedBytesPerFrame" : 1456.9529098178587
+        },
+        "shadow" : {
+          "p50Ms" : 1.392389,
+          "p95Ms" : 2.151587,
+          "p99Ms" : 2.538807,
+          "allocatedBytesPerFrame" : 21233.882718791647
+        },
+        "terrain" : {
+          "p50Ms" : 0.011727,
+          "p95Ms" : 0.022208,
+          "p99Ms" : 0.030234,
+          "allocatedBytesPerFrame" : 160.0
+        },
+        "models" : {
+          "p50Ms" : 2.279098,
+          "p95Ms" : 3.959231,
+          "p99Ms" : 5.327218,
+          "allocatedBytesPerFrame" : 10206.21323856064
+        },
+        "lines" : {
+          "p50Ms" : 0.001049,
+          "p95Ms" : 0.003147,
+          "p99Ms" : 0.004127,
+          "allocatedBytesPerFrame" : 72.0
+        },
+        "post" : {
+          "p50Ms" : 0.29806,
+          "p95Ms" : 0.505062,
+          "p99Ms" : 1.834462,
+          "allocatedBytesPerFrame" : 752.0
+        }
+      }
+    },
+    "uploadWork" : null,
+    "assetCounts" : { },
+    "coldLoadMs" : null,
+    "reloadMs" : null,
+    "gpuMs" : null,
+    "gpu" : {
+      "passes" : {
+        "ui" : {
+          "p50Ms" : 0.00512,
+          "p95Ms" : 0.006144,
+          "p99Ms" : 0.0256,
+          "allocatedBytesPerFrame" : null
+        },
+        "sky" : {
+          "p50Ms" : 1.096704,
+          "p95Ms" : 2.68288,
+          "p99Ms" : 5.380096,
+          "allocatedBytesPerFrame" : null
+        },
+        "shadow" : {
+          "p50Ms" : 0.615424,
+          "p95Ms" : 0.64,
+          "p99Ms" : 1.826816,
+          "allocatedBytesPerFrame" : null
+        },
+        "terrain" : {
+          "p50Ms" : 0.067584,
+          "p95Ms" : 0.07168,
+          "p99Ms" : 0.072704,
+          "allocatedBytesPerFrame" : null
+        },
+        "models" : {
+          "p50Ms" : 0.98816,
+          "p95Ms" : 2.279424,
+          "p99Ms" : 4.230144,
+          "allocatedBytesPerFrame" : null
+        },
+        "lines" : {
+          "p50Ms" : 0.001024,
+          "p95Ms" : 0.002048,
+          "p99Ms" : 0.002048,
+          "allocatedBytesPerFrame" : null
+        },
+        "post" : {
+          "p50Ms" : 0.208896,
+          "p95Ms" : 0.217088,
+          "p99Ms" : 1.507328,
+          "allocatedBytesPerFrame" : null
+        },
+        "total" : {
+          "p50Ms" : 3.062784,
+          "p95Ms" : 6.019072,
+          "p99Ms" : 9.832448,
+          "allocatedBytesPerFrame" : null
+        }
+      },
+      "unavailable" : null
+    },
+    "counters" : {
+      "main" : {
+        "drawCalls" : 510.25,
+        "shaderSwitches" : 280.7142857142857,
+        "textureBindings" : 169.17857142857142,
+        "vertices" : 2111745.6785714286,
+        "run" : "counters"
+      },
+      "shadow" : {
+        "drawCalls" : 423.0,
+        "shaderSwitches" : 6.0,
+        "textureBindings" : 81.0,
+        "vertices" : 2047603.1785714286,
+        "run" : "counters"
+      },
+      "ui" : {
+        "drawCalls" : 15.0,
+        "shaderSwitches" : 1.0,
+        "textureBindings" : 15.0,
+        "vertices" : 799.4285714285714,
+        "run" : "counters"
+      }
+    },
+    "hitches" : {
+      "flightStart" : {
+        "medianMs" : 163.524819,
+        "maxMs" : 330.879538,
+        "samplesMs" : [ 330.879538, 179.634133, 163.524819, 152.466474, 160.111598 ]
+      },
+      "debriefOpen" : {
+        "medianMs" : 11.822747,
+        "maxMs" : 30.099241,
+        "samplesMs" : [ 11.239259, 30.099241, 11.822747, 10.558568, 14.058612 ]
+      }
+    },
+    "cpuNotComparable" : null,
+    "agents" : [ "kover-jvm-agent-0.9.11.jar" ]
+  }, {
+    "name" : "control-line-hangar",
+    "status" : "MEASURED",
+    "reason" : null,
+    "sceneHash" : "1bc2dfeac1035148f3160fd2df1dbb998ab3ebb3f6d997721b387dbc67fbf529",
+    "settings" : {
+      "resolution" : "1280x720",
+      "warmupSeconds" : "10.0",
+      "sampleSeconds" : "10.0",
+      "samples" : "5",
+      "fixedDeltaSeconds" : "0.016666668",
+      "pipeline" : "pbr",
+      "frameTime" : "CPU time of ControlLineGame.render (whole frame), not GPU time",
+      "flight" : "none: F2B (Mid) plane select in the hangar, from its camera",
+      "hitches" : "5 after a warm one",
+      "target" : "the default framebuffer of a 1280x720 window (the game's own)"
+    },
+    "stats" : {
+      "frames" : 29948,
+      "p50Ms" : 0.6698542698009884,
+      "p95Ms" : 0.8859986024442367,
+      "p99Ms" : 1.155139739548551,
+      "samplesP95Ms" : [ 0.97696, 0.854336, 0.903135, 0.860864, 0.838248 ],
+      "allocatedBytesPerFrame" : 49721.39067717377,
+      "gcCount" : 30,
+      "gcMillis" : 31,
+      "spans" : {
+        "frame" : {
+          "p50Ms" : 0.668131,
+          "p95Ms" : 0.897104,
+          "p99Ms" : 1.173042,
+          "allocatedBytesPerFrame" : 49533.40243088019
+        },
+        "flight" : {
+          "p50Ms" : 6.5E-4,
+          "p95Ms" : 0.001785,
+          "p99Ms" : 0.004779,
+          "allocatedBytesPerFrame" : 181.00066782422866
+        },
+        "field" : {
+          "p50Ms" : 0.575245,
+          "p95Ms" : 0.765388,
+          "p99Ms" : 0.982389,
+          "allocatedBytesPerFrame" : 7304.002137037532
+        },
+        "ui" : {
+          "p50Ms" : 0.086291,
+          "p95Ms" : 0.131302,
+          "p99Ms" : 0.171616,
+          "allocatedBytesPerFrame" : 41168.10738613597
+        },
+        "sky" : {
+          "p50Ms" : 1.71E-4,
+          "p95Ms" : 3.08E-4,
+          "p99Ms" : 4.4E-4,
+          "allocatedBytesPerFrame" : 0.0
+        },
+        "shadow" : {
+          "p50Ms" : 1.31E-4,
+          "p95Ms" : 2.03E-4,
+          "p99Ms" : 2.8E-4,
+          "allocatedBytesPerFrame" : 0.0
+        },
+        "terrain" : {
+          "p50Ms" : 2.83E-4,
+          "p95Ms" : 5.15E-4,
+          "p99Ms" : 9.2E-4,
+          "allocatedBytesPerFrame" : 56.002137037531725
+        },
+        "models" : {
+          "p50Ms" : 0.320734,
+          "p95Ms" : 0.41715,
+          "p99Ms" : 0.573447,
+          "allocatedBytesPerFrame" : 160.0
+        },
+        "lines" : {
+          "p50Ms" : 2.91E-4,
+          "p95Ms" : 5.31E-4,
+          "p99Ms" : 8.95E-4,
+          "allocatedBytesPerFrame" : 72.0
+        },
+        "post" : {
+          "p50Ms" : 0.22525,
+          "p95Ms" : 0.312382,
+          "p99Ms" : 0.411621,
+          "allocatedBytesPerFrame" : 752.0
+        }
+      }
+    },
+    "uploadWork" : null,
+    "assetCounts" : { },
+    "coldLoadMs" : null,
+    "reloadMs" : null,
+    "gpuMs" : null,
+    "gpu" : null,
+    "counters" : { },
+    "hitches" : { },
+    "cpuNotComparable" : null,
+    "agents" : [ "kover-jvm-agent-0.9.11.jar" ]
+  } ]
+}

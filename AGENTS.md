@@ -72,7 +72,8 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
   The plugin owns view integration; native probing starts only when enabled. See `projects/lib-raytracing/README.md`.
 - `projects/lib-render/`: a plain JVM library on `lib-core` and `lib-gdx`, root package `net.nevinsky.abyssus.lib.render`: the rendering mechanics the
   editor and games share (the terrain pass and its two shader variants, shadow depth submission, host-neutral frame inputs, light profiles
-  and the sun shadow camera). Hosts keep their scenes and passes and adapt their own types to it. See `projects/lib-render/README.md`.
+  and the sun shadow camera, and the `post` package: an HDR frame with bloom, ambient occlusion, one composite output transform and a
+  reflection probe). Hosts keep their scenes and passes and adapt their own types to it. See `projects/lib-render/README.md`.
 - `projects/lib-physics/`: a plain JVM library on `lib-core`, root package `net.nevinsky.abyssus.lib.physics`: the physics components
   (`PHYSICS_COMPONENTS`) and `PhysicsWorld`, which runs Jolt through jolt-jni (only its `jolt` package imports Jolt). See
   `projects/lib-physics/README.md`.

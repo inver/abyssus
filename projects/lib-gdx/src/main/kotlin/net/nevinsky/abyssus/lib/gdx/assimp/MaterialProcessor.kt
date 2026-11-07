@@ -120,9 +120,8 @@ internal class MaterialProcessor(private val textures: TextureProcessor) {
         )
 
         /**
-          * Only meaningful for PBR materials: glTF maps the metallic-roughness texture to UNKNOWN and the occlusion
-          * texture
-         * to LIGHTMAP.
+         * Only meaningful for PBR materials: glTF maps the metallic-roughness texture to UNKNOWN and the occlusion
+         * texture to LIGHTMAP.
          */
         private val PBR_TEXTURE_USAGES = arrayOf<IntArray>(
             intArrayOf(Assimp.aiTextureType_UNKNOWN, PbrModelMaterial.Companion.USAGE_METALLIC_ROUGHNESS),
@@ -167,6 +166,11 @@ internal class MaterialProcessor(private val textures: TextureProcessor) {
             val cutoff: Float? = readFloat(aiMaterial, Assimp.AI_MATKEY_GLTF_ALPHACUTOFF, stack)
             if (cutoff != null) {
                 material.alphaCutoff = cutoff
+            }
+            // Assimp's glTF importer reads KHR_materials_emissive_strength into the emissive intensity
+            val strength: Float? = readFloat(aiMaterial, Assimp.AI_MATKEY_EMISSIVE_INTENSITY, stack)
+            if (strength != null && strength.isFinite() && strength >= 0f) {
+                material.emissiveStrength = strength
             }
             return material
         }

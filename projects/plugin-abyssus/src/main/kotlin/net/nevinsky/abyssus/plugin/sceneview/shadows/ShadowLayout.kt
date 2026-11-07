@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.plugin.sceneview.shadows
 
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
+import net.nevinsky.abyssus.lib.gdx.shader.SHADOW_MAX_LOCAL
 import net.nevinsky.abyssus.lib.gdx.shader.ShadowLightKind
 
 data class ShadowTile(val index: Int, val x: Int, val y: Int, val size: Int = 1024, val atlasSize: Int = 4096)
@@ -23,8 +24,14 @@ class ShadowLayout {
                 .sortedBy { it.entityId }
                 .take(1)
                 .forEach { add(it.entityId to ShadowLightKind.DIRECTIONAL) }
-            lights.point.sortedBy { it.entityId }.take(2).forEach { add(it.entityId to ShadowLightKind.POINT) }
-            lights.spot.sortedBy { it.entityId }.take(3).forEach { add(it.entityId to ShadowLightKind.SPOT) }
+            lights.point
+                .sortedBy { it.entityId }
+                .take(SHADOW_MAX_LOCAL)
+                .forEach { add(it.entityId to ShadowLightKind.POINT) }
+            lights.spot
+                .sortedBy { it.entityId }
+                .take(SHADOW_MAX_LOCAL)
+                .forEach { add(it.entityId to ShadowLightKind.SPOT) }
         }
         if (candidates.isEmpty()) {
             previous = emptyMap()
@@ -32,12 +39,17 @@ class ShadowLayout {
             return emptyList()
         }
         val count = candidates.sumOf { tileCount(it.second) }
-        grid = maxOf(grid, kotlin.math.ceil(kotlin.math.sqrt(count.toDouble())).toInt())
+        val needed = kotlin.math.ceil(kotlin.math.sqrt(count.toDouble())).toInt()
+        // the grid grows with the lights; it shrinks only when it is twice as fine as needed, so a light that comes
+        // and goes does not move every tile
+        if (needed > grid || needed * 2 <= grid) {
+            grid = needed
+        }
         val used = HashSet<Int>()
         val indices = HashMap<Long, List<Int>>()
         candidates.forEach { (id, kind) ->
             val old = previous[id]?.takeIf { it.kind == kind }
-            if (old != null && old.tiles.size == tileCount(kind) && old.tiles.none { it.index in used }) {
+            if (old != null && old.tiles.size == tileCount(kind) && old.tiles.none { it.index in used || it.index >= grid * grid }) {
                 indices[id] = old.tiles.map { it.index }
                 used.addAll(old.tiles.map { it.index })
             }
@@ -45,7 +57,7 @@ class ShadowLayout {
         candidates.forEach { (id, kind) ->
             if (id !in indices) {
                 val count = tileCount(kind)
-                val free = (0 until ATLAS_TILES).filterNot(used::contains).take(count)
+                val free = (0 until grid * grid).filterNot(used::contains).take(count)
                 if (free.size == count) {
                     indices[id] = free
                     used.addAll(free)
@@ -75,7 +87,5 @@ class ShadowLayout {
     companion object {
         const val ATLAS_SIZE = 4096
         const val TILE_SIZE = 1024
-        const val GRID = 4
-        const val ATLAS_TILES = GRID * GRID
     }
 }

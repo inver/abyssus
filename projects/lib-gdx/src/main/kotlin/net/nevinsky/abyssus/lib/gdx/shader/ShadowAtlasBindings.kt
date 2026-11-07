@@ -6,7 +6,6 @@
 package net.nevinsky.abyssus.lib.gdx.shader
 
 import com.badlogic.gdx.graphics.glutils.ShaderProgram
-import com.badlogic.gdx.math.Matrix4
 import java.util.IdentityHashMap
 
 /**
@@ -18,22 +17,26 @@ import java.util.IdentityHashMap
  * per program, and a program that already holds this revision with the same texture unit gets no upload at all.
  */
 class ShadowAtlasBindings {
-    private val matrices = FloatArray(MAX_VIEWS * 16)
-    private val tiles = FloatArray(MAX_VIEWS * 4)
-    private val positions = FloatArray(MAX_VIEWS * 3)
-    private val fars = FloatArray(MAX_VIEWS)
-    private val bias = FloatArray(MAX_VIEWS)
-    private val dirs = FloatArray(MAX_DIRECTIONAL)
-    private val local = FloatArray(MAX_POINT * 6)
-    private val cones = FloatArray(MAX_SPOT)
+    /** The packed view and light tables, laid out as `ShadowDataTexture` describes. */
+    internal val data = FloatArray(SHADOW_DATA_WIDTH * SHADOW_DATA_HEIGHT * 4)
+
+    private var texture: FloatDataTexture? = null
+    private var uploadedRevision = -1L
+
+    /**
+     * The texture holding the packed data, made on first use. The caller binds it to a unit and passes that unit to
+     * [bind].
+     */
+    val dataTexture: FloatDataTexture
+        get() = texture ?: FloatDataTexture(SHADOW_DATA_WIDTH, SHADOW_DATA_HEIGHT).also { texture = it }
 
     // what the arrays were packed from: the atlas and, per light slot, the record (identity: records belong to the
     // atlas)
     private var packed = false
     private var packedAtlas: ShadowAtlasAttribute? = null
-    private val packedDirs = arrayOfNulls<ShadowLightRecord>(MAX_DIRECTIONAL)
-    private val packedPoints = arrayOfNulls<ShadowLightRecord>(MAX_POINT)
-    private val packedSpots = arrayOfNulls<ShadowLightRecord>(MAX_SPOT)
+    private val packedDirs = arrayOfNulls<ShadowLightRecord>(SHADOW_MAX_DIRECTIONAL)
+    private val packedPoints = arrayOfNulls<ShadowLightRecord>(SHADOW_MAX_LOCAL)
+    private val packedSpots = arrayOfNulls<ShadowLightRecord>(SHADOW_MAX_LOCAL)
     private var dirCount = -1
     private var pointCount = -1
     private var spotCount = -1
@@ -43,18 +46,12 @@ class ShadowAtlasBindings {
 
     private class Program(program: ShaderProgram) {
         val sampler = program.fetchUniformLocation("u_shadowAtlas", false)
+        val data = program.fetchUniformLocation("u_shadowData", false)
         val enabled = program.fetchUniformLocation("u_shadowEnabled", false)
         val texel = program.fetchUniformLocation("u_shadowTexel", false)
-        val matrices = program.fetchUniformLocation("u_shadowMatrices[0]", false)
-        val tiles = program.fetchUniformLocation("u_shadowTiles[0]", false)
-        val positions = program.fetchUniformLocation("u_shadowPositions[0]", false)
-        val fars = program.fetchUniformLocation("u_shadowFars[0]", false)
-        val bias = program.fetchUniformLocation("u_shadowBias[0]", false)
-        val dirs = program.fetchUniformLocation("u_dirShadowTile[0]", false)
-        val local = program.fetchUniformLocation("u_pointShadowTiles[0]", false)
-        val cones = program.fetchUniformLocation("u_spotShadowTile[0]", false)
         var revision = -1L
         var unit = -1
+        var dataUnit = -1
     }
 
     private val programs = IdentityHashMap<ShaderProgram, Program>()
@@ -70,24 +67,40 @@ class ShadowAtlasBindings {
         points: List<ShadowLightRecord?>,
         spots: List<ShadowLightRecord?>,
         unit: Int,
+        dataUnit: Int,
     ) {
         if (!samePack(atlas, directional, points, spots)) {
             pack(atlas, directional, points, spots)
             revision++
         }
+        val data = dataTexture
+        if (uploadedRevision != revision || !data.allocated) {
+            data.upload(dataUnit, this.data)
+            uploadedRevision = revision
+        }
         val state = programs.getOrPut(program) { Program(program) }
-        if (state.revision == revision && state.unit == unit) {
+        if (state.revision == revision && state.unit == unit && state.dataUnit == dataUnit) {
             return
         }
-        upload(program, state, atlas, unit)
+        upload(program, state, atlas, unit, dataUnit)
         state.revision = revision
         state.unit = unit
+        state.dataUnit = dataUnit
         uploads++
     }
 
     /** Forgets [program] (it was disposed): its locations and what it held. */
     fun forget(program: ShaderProgram) {
         programs.remove(program)
+    }
+
+    /** Releases the data texture; the bindings can be used again and make a new one. */
+    fun dispose() {
+        texture?.dispose()
+        texture = null
+        uploadedRevision = -1L
+        programs.clear()
+        packed = false
     }
 
     private fun samePack(
@@ -99,9 +112,9 @@ class ShadowAtlasBindings {
         if (!packed || atlas !== packedAtlas) {
             return false
         }
-        return same(packedDirs, dirCount, directional, MAX_DIRECTIONAL) &&
-            same(packedPoints, pointCount, points, MAX_POINT) &&
-            same(packedSpots, spotCount, spots, MAX_SPOT)
+        return same(packedDirs, dirCount, directional, SHADOW_MAX_DIRECTIONAL) &&
+            same(packedPoints, pointCount, points, SHADOW_MAX_LOCAL) &&
+            same(packedSpots, spotCount, spots, SHADOW_MAX_LOCAL)
     }
 
     private fun same(packed: Array<ShadowLightRecord?>, count: Int, now: List<ShadowLightRecord?>, max: Int): Boolean {
@@ -121,67 +134,68 @@ class ShadowAtlasBindings {
         points: List<ShadowLightRecord?>,
         spots: List<ShadowLightRecord?>,
     ) {
-        for (i in 0 until MAX_VIEWS) IDENTITY.copyInto(matrices, i * 16)
-        tiles.fill(0f)
-        positions.fill(0f)
-        fars.fill(1f)
-        bias.fill(0f)
+        data.fill(0f)
+        for (table in intArrayOf(SHADOW_DIRECTIONAL_TABLE_ROW, SHADOW_POINT_TABLE_ROW, SHADOW_SPOT_TABLE_ROW)) {
+            val entries = if (table == SHADOW_DIRECTIONAL_TABLE_ROW) SHADOW_MAX_DIRECTIONAL else SHADOW_MAX_LOCAL
+            for (i in 0 until entries) data[entryOffset(table, i)] = -1f
+        }
         var index = 0
         val records = atlas?.records.orEmpty()
         for (r in records.indices) {
             val record = records[r]
-            require(index + record.views.size <= MAX_VIEWS) { "A shadow atlas supports at most $MAX_VIEWS views" }
+            require(index + record.views.size <= SHADOW_MAX_VIEWS) {
+                "A shadow atlas supports at most $SHADOW_MAX_VIEWS views"
+            }
             for (v in record.views.indices) {
                 val view = record.views[v]
-                view.matrix.`val`.copyInto(matrices, index * 16)
+                view.matrix.`val`.copyInto(data, texel(index, 0))
                 val uv = view.uvTransform
-                tiles[index * 4] = uv.x
-                tiles[index * 4 + 1] = uv.y
-                tiles[index * 4 + 2] = uv.z
-                tiles[index * 4 + 3] = uv.w
-                positions[index * 3] = record.position.x
-                positions[index * 3 + 1] = record.position.y
-                positions[index * 3 + 2] = record.position.z
-                fars[index] = record.far
-                bias[index] = record.depthBias
+                val tile = texel(index, 4)
+                data[tile] = uv.x
+                data[tile + 1] = uv.y
+                data[tile + 2] = uv.z
+                data[tile + 3] = uv.w
+                val position = texel(index, 5)
+                data[position] = record.position.x
+                data[position + 1] = record.position.y
+                data[position + 2] = record.position.z
+                data[position + 3] = record.far
+                data[texel(index, 6)] = record.depthBias
                 index++
             }
         }
-        dirs.fill(-1f)
-        local.fill(-1f)
-        cones.fill(-1f)
-        dirCount = minOf(directional.size, MAX_DIRECTIONAL)
+        dirCount = minOf(directional.size, SHADOW_MAX_DIRECTIONAL)
         for (i in 0 until dirCount) {
             val record = directional[i]
             packedDirs[i] = record
             if (record != null) {
                 startOf(records, record).let {
                     if (it >= 0) {
-                        dirs[i] = it.toFloat()
+                        data[entryOffset(SHADOW_DIRECTIONAL_TABLE_ROW, i)] = it.toFloat()
                     }
                 }
             }
         }
-        pointCount = minOf(points.size, MAX_POINT)
+        pointCount = minOf(points.size, SHADOW_MAX_LOCAL)
         for (i in 0 until pointCount) {
             val record = points[i]
             packedPoints[i] = record
-            if (record != null && record.views.size == 6) {
+            if (record != null && record.views.size == SHADOW_POINT_FACES) {
                 startOf(records, record).let { start ->
                     if (start >= 0) {
-                        for (face in 0..5) local[i * 6 + face] = (start + face).toFloat()
+                        data[entryOffset(SHADOW_POINT_TABLE_ROW, i)] = start.toFloat()
                     }
                 }
             }
         }
-        spotCount = minOf(spots.size, MAX_SPOT)
+        spotCount = minOf(spots.size, SHADOW_MAX_LOCAL)
         for (i in 0 until spotCount) {
             val record = spots[i]
             packedSpots[i] = record
             if (record != null) {
                 startOf(records, record).let {
                     if (it >= 0) {
-                        cones[i] = it.toFloat()
+                        data[entryOffset(SHADOW_SPOT_TABLE_ROW, i)] = it.toFloat()
                     }
                 }
             }
@@ -207,9 +221,12 @@ class ShadowAtlasBindings {
         return start
     }
 
-    private fun upload(program: ShaderProgram, state: Program, atlas: ShadowAtlasAttribute?, unit: Int) {
+    private fun upload(program: ShaderProgram, state: Program, atlas: ShadowAtlasAttribute?, unit: Int, dataUnit: Int) {
         if (state.sampler >= 0) {
             program.setUniformi(state.sampler, unit)
+        }
+        if (state.data >= 0) {
+            program.setUniformi(state.data, dataUnit)
         }
         if (state.enabled >= 0) {
             program.setUniformf(
@@ -224,37 +241,12 @@ class ShadowAtlasBindings {
         if (state.texel >= 0) {
             program.setUniformf(state.texel, 1f / (atlas?.atlas?.width ?: 4096), 1f / (atlas?.atlas?.height ?: 4096))
         }
-        if (state.matrices >= 0) {
-            program.setUniformMatrix4fv(state.matrices, matrices, 0, matrices.size)
-        }
-        if (state.tiles >= 0) {
-            program.setUniform4fv(state.tiles, tiles, 0, tiles.size)
-        }
-        if (state.positions >= 0) {
-            program.setUniform3fv(state.positions, positions, 0, positions.size)
-        }
-        if (state.fars >= 0) {
-            program.setUniform1fv(state.fars, fars, 0, fars.size)
-        }
-        if (state.bias >= 0) {
-            program.setUniform1fv(state.bias, bias, 0, bias.size)
-        }
-        if (state.dirs >= 0) {
-            program.setUniform1fv(state.dirs, dirs, 0, dirs.size)
-        }
-        if (state.local >= 0) {
-            program.setUniform1fv(state.local, local, 0, local.size)
-        }
-        if (state.cones >= 0) {
-            program.setUniform1fv(state.cones, cones, 0, cones.size)
-        }
     }
 
     private companion object {
-        const val MAX_VIEWS = 16
-        const val MAX_DIRECTIONAL = 2
-        const val MAX_POINT = 5
-        const val MAX_SPOT = 5
-        val IDENTITY: FloatArray = Matrix4().`val`
+        fun texel(row: Int, column: Int) = (row * SHADOW_DATA_WIDTH + column) * 4
+
+        /** The float index of table entry [i], whose x holds the light's first view (or -1). */
+        fun entryOffset(tableRow: Int, i: Int) = texel(tableRow + i / SHADOW_DATA_WIDTH, i % SHADOW_DATA_WIDTH)
     }
 }

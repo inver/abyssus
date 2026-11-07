@@ -229,9 +229,32 @@ The raster field is lit physically (OpenSpec `control-line-pbr-rendering`, `rend
   field's `sky.frag` already tone maps and encodes itself.
 - **Sky light.** `skybox_physical` has `lightsScene: true`, so its irradiance and reflection light the models and the terrain
   instead of the flat ambient colour, and cross-fade as the sky's light rebuilds. A sky that does not opt in keeps the flat ambient.
+- **Scene lights.** Models are lit by the scene's point and spot light entities too, read as the editor reads them (`lib-core`
+  `light`), with intensity as a plain multiplier (above 1 brightens). Each model gets the lights whose range reaches its bounds,
+  the strongest first, up to 64 point and 16 spot lights (`LightProfile.GAME_SCENE_LIGHTS`); terrain and foliage stay lit by the
+  sun alone. **A scene without a directional light has no sun** (no sun light, no sun shadow pass): the hangar is lit only by its
+  ambient, its lamps and its emissive surfaces. Earlier, such a scene got a white sun 45° up; a scene that relied on that now needs
+  a directional light of its own (the bundled Field has one).
 - **Control lines are lit cable** (`CableMesh`): a thin tube through the model pipeline, at least 0.75 px wide on screen,
   depth-tested and shadowed, coloured by tension. Ray mode and the debrief tracks keep their 1 px overlay lines.
-- MSAA (4x on the default framebuffer) is kept, so the transform is applied per shader; the resolve averages tone mapped values.
+- **One final pass** (OpenSpec `control-line-post-processing`; `FieldRenderSettings.post`, `PostSettings`). The sky is drawn on the
+  default framebuffer as display colour; terrain, models, foliage, cables and lines go into a 4x multisampled linear HDR frame
+  (`lib-render` `HdrFrameTarget`; shaders write linear light under `LinearTargetAttribute`), whose alpha is the surfaces' coverage.
+  `CompositePass` then applies bloom (`BloomPass`, strength `DEFAULT_BLOOM_STRENGTH`), ambient occlusion (`SsaoPass`, strength
+  `DEFAULT_AO_STRENGTH`), exposure, the tone map, a vignette (`DEFAULT_VIGNETTE`), a grade and the sRGB encode once per pixel, and
+  blends the result over the sky. Menus and the HUD are drawn after it, untouched. `PostSettings.OFF` shows what the per-shader
+  transform shows. Without OpenGL 3.0, or when the multisampled RGBA16F frame cannot be made, the field ends each shader in the
+  transform as before and logs why once. The settings screen's **High quality effects** (`display.json`, `highQualityPost`, on by
+  default) turns bloom and ambient occlusion off for a modest GPU (`FieldRenderer.highQuality`). The pass is timed as the `post` span.
+- **Interiors** (the hangar): a scene with no sky is lit by a **reflection probe** of its own static models (`lib-render`
+  `ReflectionProbe`, from the scene camera, over a few frames once its assets are built), corrected to the box around them
+  (`ProbeBoxAttribute`), in place of the flat ambient (`FieldRenderSettings.reflectionProbe`). With no sun, its lights cast the
+  shadows instead (`FieldShadows.renderInterior`, `FieldRenderSettings.localShadows`, a 4096 map of its own): up to four spot
+  lights, the brightest first, every frame, and the eight point lights nearest the scene camera, whose cubes see only the static
+  models and are drawn once per scene. In the hangar the spots over the table are the key light and the lamps a fill. Emissive surfaces keep their glTF
+  emissive strength, so the hangar's window strips glow and bloom. The hangar's warehouse is "Warehouse FBX Model Free" by
+  Nicholas-3D (https://sketchfab.com/3d-models/warehouse-fbx-model-free-daa7fd3ff88945298d00045ca40a4c03), CC BY 4.0;
+  `docs/perf/control-line-interior/` holds the before and after pictures and frame times.
 
 `FieldPipelineGlTest` (`-Dabyssus.glTests=true`) checks it and writes `build/pipeline-shots/*.png` for a person to look at.
 

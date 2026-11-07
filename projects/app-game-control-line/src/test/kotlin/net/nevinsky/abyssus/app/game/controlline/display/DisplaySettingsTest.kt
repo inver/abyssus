@@ -43,6 +43,28 @@ class DisplaySettingsTest {
     }
 
     @Test
+    fun highQualityEffectsAreOnByDefaultAndSurviveAReload() {
+        val settings = DisplaySettings(file())
+        assertTrue("on with no file", settings.highQualityPost)
+        settings.setHighQualityPost(false)
+        val reloaded = DisplaySettings(file())
+        assertFalse(reloaded.highQualityPost)
+        assertFalse("the effects choice does not touch fullscreen", reloaded.fullscreen)
+        reloaded.setFullscreen(true)
+        assertFalse("saving fullscreen keeps the effects choice", DisplaySettings(file()).highQualityPost)
+    }
+
+    @Test
+    fun aFileFromBeforeTheEffectsChoiceKeepsThemOn() {
+        Files.createDirectories(home)
+        Files.writeString(file(), """{"version": 1, "fullscreen": true}""")
+        val settings = DisplaySettings(file())
+        assertTrue(settings.fullscreen)
+        assertTrue(settings.highQualityPost)
+        assertFalse(settings.damaged)
+    }
+
+    @Test
     fun anUnreadableFileIsRenamedAndAWindowIsUsed() {
         Files.createDirectories(home)
         Files.writeString(file(), "not json")

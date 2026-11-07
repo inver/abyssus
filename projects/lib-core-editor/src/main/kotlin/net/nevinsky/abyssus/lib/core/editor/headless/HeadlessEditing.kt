@@ -25,6 +25,8 @@ import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetMetaEditor
 import net.nevinsky.abyssus.lib.core.editor.meta.EditOutcome
 import net.nevinsky.abyssus.lib.core.editor.meta.message
+import net.nevinsky.abyssus.lib.core.editor.modellights.MaterialGeometrySource
+import net.nevinsky.abyssus.lib.core.editor.modellights.ModelLights
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneTransformWriter
 import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneEdit
@@ -41,6 +43,12 @@ import net.nevinsky.abyssus.lib.core.scene.SceneParser
 data class Refusal(val message: String, val rejection: FormatRejection? = null)
 
 /** What a headless edit made of a document's text. */
+/**
+ * The outcome of creating lights from a model: the [edit], the [ids] of the lights it added and whether lamps were
+ * [merged].
+ */
+data class HeadlessLamps(val edit: HeadlessEdit, val ids: List<Long> = emptyList(), val merged: Boolean = false)
+
 sealed interface HeadlessEdit {
     /** The edited text: the input with only the edited values changed, key order and number text kept. */
     data class Edited(val text: String) : HeadlessEdit
@@ -70,6 +78,7 @@ class HeadlessEditing(
     private val enabledAction = SetEnabledAction()
     private val entityRemoval = EntityRemoval(messages)
     private val assetEntities = AssetEntities(messages)
+    private val modelLights = ModelLights(messages)
 
     /** Null when [text] is a readable document of [kind], else why it is refused. */
     fun validate(text: String, kind: DocumentKind): Refusal? = runCatchingKeepingCancellation {
@@ -134,6 +143,40 @@ class HeadlessEditing(
                 }
             }
         return rejected?.let { HeadlessEdit.Refused(Refusal(it)) } ?: outcome
+    }
+
+    /**
+     * Adds one point light per lamp of the material [materialId] of the model entity [entityId] draws, as Create Lights
+     * From Model does; [source] supplies the model's geometry. Refused when the entity draws no model, the model cannot
+     * be read, or the material has no geometry.
+     */
+    fun createLightsFromModel(
+        sceneText: String,
+        entityId: Long,
+        materialId: String,
+        source: MaterialGeometrySource,
+    ): HeadlessLamps {
+        var rejected: String? = null
+        var ids = emptyList<Long>()
+        var merged = false
+        val outcome =
+            editScene(sceneText) { scene ->
+                val (assetName, meshId) =
+                    modelLights.modelOf(scene, entityId)
+                        ?: return@editScene false.also { rejected = messages.message("lampsNotModel") }
+                val geometry =
+                    source.read(assetName, meshId)?.firstOrNull { it.materialId == materialId }
+                        ?: return@editScene false.also { rejected = messages.message("lampsNoGeometry") }
+                val added = modelLights.add(scene, entityId, geometry)
+                ids = added.ids
+                merged = added.merged
+                when (val result = added.result) {
+                    EditResult.Changed -> true
+                    EditResult.Unchanged -> false
+                    is EditResult.Rejected -> false.also { rejected = result.reason }
+                }
+            }
+        return rejected?.let { HeadlessLamps(HeadlessEdit.Refused(Refusal(it))) } ?: HeadlessLamps(outcome, ids, merged)
     }
 
     /**

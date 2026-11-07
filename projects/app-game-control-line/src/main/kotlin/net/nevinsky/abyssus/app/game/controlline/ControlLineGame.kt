@@ -191,6 +191,9 @@ class ControlLineGame(
     private fun frame() {
         val seconds = frameSeconds().coerceIn(0f, 0.1f)
         display.applyPending()
+        if (raster.isInitialized()) {
+            raster.value.highQuality = display.highQualityPost
+        }
         probe.begin(FrameSpan.FLIGHT)
         controllers.drive(flow, seconds, ui::navigate)
         followFlow()

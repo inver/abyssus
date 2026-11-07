@@ -27,6 +27,7 @@ import com.badlogic.gdx.graphics.glutils.FrameBuffer
 import com.badlogic.gdx.utils.BufferUtils
 import net.nevinsky.abyssus.lib.gdx.model.PBRFloatAttribute
 import net.nevinsky.abyssus.lib.gdx.model.PBRTextureAttribute
+import net.nevinsky.abyssus.lib.gdx.shader.LinearTargetAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.OutputTransform
 import net.nevinsky.abyssus.lib.gdx.shader.OutputTransformAttribute
 import net.nevinsky.abyssus.lib.gdx.shader.apply
@@ -115,7 +116,7 @@ class OutputTransformGlTest {
          * The pixel in the middle of a triangle lit by a white sun head on, no ambient, drawn with [material] and
          * [exposure] (null: no transform).
          */
-        fun draw(material: Material, exposure: Float?, sun: Float = 1f): IntArray {
+        fun draw(material: Material, exposure: Float?, sun: Float = 1f, linear: Boolean = false): IntArray {
             val renderable =
                 Renderable().apply {
                     meshPart.set("tri", mesh, 0, 3, GL20.GL_TRIANGLES)
@@ -125,6 +126,9 @@ class OutputTransformGlTest {
                             add(DirectionalLight().set(Color(sun, sun, sun, 1f), 0f, 0f, -1f))
                             if (exposure != null) {
                                 set(OutputTransformAttribute(exposure))
+                            }
+                            if (linear) {
+                                set(LinearTargetAttribute())
                             }
                         }
                 }
@@ -250,6 +254,49 @@ class OutputTransformGlTest {
                 "decoded and stored texels light alike: ${decoded.toList()} ${want.toList()}",
                 Math.abs(decoded[0] - want[0]) > 6,
             )
+        }
+    }
+
+    /**
+     * `KHR_materials_emissive_strength` (OpenSpec `scene-model-rendering`, "Strong emissive"): an emissive colour of
+     * 0.2 at strength 5 draws as an emissive colour of 1 at no strength, in an unlit scene, with both shaders.
+     */
+    @Test
+    fun emissiveStrengthScalesTheEmissiveColour() = TestGl.run {
+        Scene().use { scene ->
+            for (pbr in listOf(false, true)) {
+                fun lamp(emissive: Float, strength: Float?): Material =
+                    material(scene, 0, pbr).also {
+                        it.set(ColorAttribute.createEmissive(emissive, emissive, emissive, 1f))
+                        strength?.let { s -> it.set(PBRFloatAttribute.createEmissiveIntensity(s)) }
+                    }
+                val strong = scene.draw(lamp(0.2f, 5f), null, sun = 0f)
+                val plain = scene.draw(lamp(1f, null), null, sun = 0f)
+                val dim = scene.draw(lamp(0.2f, null), null, sun = 0f)
+                for (c in 0..2) assertEquals("pbr=$pbr channel $c", plain[c].toFloat(), strong[c].toFloat(), 1f)
+                assertTrue("pbr=$pbr: the strength did nothing ${dim.toList()}", dim[0] < strong[0] - 100)
+            }
+        }
+    }
+
+    /**
+     * Into a linear target (OpenSpec `render-output-transform`, "Final pass equals per-shader transform"): the shaders
+     * write the lit linear light, and the transform of it is what they write with the transform at their end.
+     */
+    @Test
+    fun aLinearTargetGetsTheLightTheTransformWouldShow() = TestGl.run {
+        Scene().use { scene ->
+            for (pbr in listOf(false, true)) for (albedo in listOf(255, 128)) {
+                val linear = scene.draw(material(scene, albedo, pbr), 1f, sun = 0.6f, linear = true)
+                val shown = scene.draw(material(scene, albedo, pbr), 1f, sun = 0.6f)
+                val want = OutputTransform(1f).apply(FloatArray(3) { linear[it] / 255f }).map { Math.round(it * 255f) }
+                for (c in 0..2) assertEquals(
+                    "pbr=$pbr albedo=$albedo linear=${linear.toList()} shown=${shown.toList()}",
+                    want[c].toFloat(),
+                    shown[c].toFloat(),
+                    3f,
+                )
+            }
         }
     }
 

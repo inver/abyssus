@@ -96,7 +96,7 @@ class FrameProbesGlTest {
                     println("GPU times unavailable here: ${gpu.unavailable}")
                 }
                 val cpu = spans.spans()
-                listOf("sky", "shadow", "terrain", "models", "lines").forEach {
+                listOf("sky", "shadow", "terrain", "models", "lines", "post").forEach {
                     assertTrue("CPU span $it in ${cpu.keys}", it in cpu)
                 }
                 val count = counters.result("counters")

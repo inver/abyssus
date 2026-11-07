@@ -20,6 +20,7 @@ import net.nevinsky.abyssus.lib.core.assets.terrain.TerrainMesh
 import net.nevinsky.abyssus.lib.core.editor.content.*
 import net.nevinsky.abyssus.lib.core.editor.pick.*
 import net.nevinsky.abyssus.lib.core.editor.scene.LightSet
+import net.nevinsky.abyssus.lib.core.editor.scene.MAX_POINT
 import net.nevinsky.abyssus.lib.core.editor.scene.MAX_SPOT
 import net.nevinsky.abyssus.lib.core.editor.scene.NO_LIGHTS
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
@@ -63,6 +64,7 @@ internal class SceneContentPass(
                 .own(
                     ModelShaderProvider(
                         com.badlogic.gdx.graphics.g3d.shaders.DefaultShader.Config().apply {
+                            numPointLights = MAX_POINT
                             numSpotLights = MAX_SPOT
                         }
                     ),
