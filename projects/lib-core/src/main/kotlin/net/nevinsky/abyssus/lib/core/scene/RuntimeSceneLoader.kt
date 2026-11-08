@@ -10,6 +10,7 @@ import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import net.nevinsky.abyssus.lib.core.ecs.EcsLoadingWarns
 import net.nevinsky.abyssus.lib.core.dto.EcsLoader
 import net.nevinsky.abyssus.lib.core.ecs.component.RawComponent
+import net.nevinsky.abyssus.lib.core.ecs.system.HierarchySystem
 import net.nevinsky.abyssus.lib.core.ecs.system.LookAtSystem
 import net.nevinsky.abyssus.lib.core.ecs.system.SynchronizeCameraComponentSystem
 import org.slf4j.Logger
@@ -42,6 +43,7 @@ class RuntimeSceneLoader(
 
     private fun loadContext(scene: SceneDto): SceneContext {
         val engine = SceneEngine().also {
+            it.addSystem(HierarchySystem(log::warn))
             it.addSystem(LookAtSystem(it.ids, 0))
             it.addSystem(SynchronizeCameraComponentSystem(it.ids, 2))
         }

@@ -73,6 +73,14 @@ internal class SceneToolsToolbar(
                     layerAction(SceneViewIcon.GRID, "sceneViewGridTooltip", { model.display.grid }, model::setGrid) {
                         it.gridEnabled
                     },
+                    layerAction(
+                        SceneViewIcon.DUMMIES,
+                        "sceneViewDummiesTooltip",
+                        { model.display.dummies },
+                        model::setDummies,
+                    ) {
+                        true
+                    },
                 ),
             ),
         )

@@ -12,6 +12,8 @@ import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.TimeUnit
+import com.badlogic.gdx.math.Quaternion
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.foliage.FoliageCopy
 import net.nevinsky.abyssus.lib.core.assets.testProject
 import net.nevinsky.abyssus.lib.physics.FoliageProject
@@ -84,6 +86,38 @@ class PlayHostMainTest {
         protocol.write(output, PlayFrame.Bye)
         assertTrue("the play process did not exit", process.waitFor(10, TimeUnit.SECONDS))
         assertEquals(0, process.exitValue())
+    }
+
+    @Test
+    fun aChildFollowsItsFallingParentInThePoses() = playing { _, _, input, output ->
+        val project = testProject("Physics")
+        val dummy =
+            """"20": {"type": "DUMMY", "components": {"NameComponent": {"name": "Dummy"},
+            "PositionComponent": {"localPosition": {"x": 0, "y": 1,
+                    "z": 0}}, "ParentComponent": {"parentEntityId": 0}}},"""
+        val text = File(project, "scenes/Main Scene.scene").readText().replaceFirst("\"ecs\": {", "\"ecs\": {$dummy")
+        protocol.write(output, PlayFrame.Load(text, project.path, -1))
+        assertEquals(PlayFrame.Ready, protocol.read(input))
+        val start = protocol.read(input) as PlayFrame.Poses
+        assertEquals(3.086434f + 1f, start.poses.single { it.id == 20 }.y, 1e-5f)
+        protocol.write(output, PlayFrame.Play)
+        var fallen: PlayFrame.Poses? = null
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+        while (fallen == null && System.nanoTime() < deadline) {
+            val frame = protocol.read(input)
+            if (frame is PlayFrame.Poses && frame.poses.single { it.id == 0 }.y < 2.5f) {
+                fallen = frame
+            }
+        }
+        assertNotNull("Model 0 did not fall", fallen)
+        val model = fallen!!.poses.single { it.id == 0 }
+        val child = fallen.poses.single { it.id == 20 }
+        val offset = Quaternion(model.qx, model.qy, model.qz, model.qw).transform(Vector3(0f, 1f, 0f))
+        val expected = Vector3(model.x, model.y, model.z).add(offset)
+        assertTrue("$expected vs ${child.x}, ${child.y}, ${child.z}", expected.epsilonEquals(child.x, child.y,
+                child.z, 1e-4f))
+        protocol.write(output, PlayFrame.Stop)
+        protocol.write(output, PlayFrame.Bye)
     }
 
     @Test

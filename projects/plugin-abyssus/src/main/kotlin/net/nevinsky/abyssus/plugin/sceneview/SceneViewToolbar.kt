@@ -203,6 +203,7 @@ internal class SceneViewToolbar(
     fun sync() {
         renderer.state.gizmoSpace = tools.space
         renderer.display = tools.display
+        renderer.state.showDummies = tools.display.dummies
         renderer.state.snap =
             if (tools.snapOn) {
                 GizmoSnap(tools.snapStep, SNAP_ANGLE_DEGREES)

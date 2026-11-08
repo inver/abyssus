@@ -260,8 +260,9 @@ tasks.test {
 // Generators of the bundled project's assets (tools/): their output is committed, so the game needs none of them.
 val tools by sourceSets.creating {
     kotlin.srcDir("tools")
-    // FieldFoliage.kt has its own source set (it needs the editing library): the older tools compile without it
-    kotlin.exclude("FieldFoliage.kt", "UiFonts.kt", "UiArt.kt")
+    // FieldFoliage.kt and FieldLeadouts.kt have their own source set (they need the editing library): the older tools
+    // compile without it
+    kotlin.exclude("FieldFoliage.kt", "FieldLeadouts.kt", "UiFonts.kt", "UiArt.kt")
     compileClasspath += sourceSets["main"].runtimeClasspath
     runtimeClasspath += sourceSets["main"].runtimeClasspath
 }
@@ -349,11 +350,12 @@ tasks.register<JavaExec>("generateField") {
     args(gameProject.asFile.absolutePath)
 }
 
-// The field foliage migration (tools/FieldFoliage.kt): a source set of its own that compiles just that file, with the
-// editing library on its tool classpath only. The game's runtime classpath never sees lib-core-editor or the tool.
+// The field migrations (tools/FieldFoliage.kt, tools/FieldLeadouts.kt): a source set of its own that compiles just
+// those files, with the editing library on its tool classpath only. The game's runtime classpath never sees
+// lib-core-editor or the tools.
 val fieldFoliageTools by sourceSets.creating {
     kotlin.srcDir("tools")
-    kotlin.include("FieldFoliage.kt")
+    kotlin.include("FieldFoliage.kt", "FieldLeadouts.kt")
     compileClasspath += sourceSets["main"].runtimeClasspath
     runtimeClasspath += sourceSets["main"].runtimeClasspath
 }
@@ -408,7 +410,25 @@ tasks.register<JavaExec>("recordFieldFoliage") {
     )
 }
 
-// Tests of the migration, kept out of the game's test source set so the game's classpath stays free of the editing
+val fieldLeadoutsScenes = providers.gradleProperty("fieldLeadoutsScenes")
+
+tasks.register<JavaExec>("migrateFieldLeadouts") {
+    group = "control line"
+    description =
+        "Turns the planes' PlaneComponent.leadoutUp / leadoutDown into leadoutUp / leadoutDown dummies, editing the " +
+            "scene files given as -PfieldLeadoutsScenes=<file>[,<file>] in place (a rerun changes nothing)."
+    classpath = fieldFoliageTools.runtimeClasspath
+    mainClass.set("net.nevinsky.abyssus.app.game.controlline.tools.FieldLeadouts")
+    val scenes = fieldLeadoutsScenes
+    argumentProviders.add(
+        CommandLineArgumentProvider {
+            scenes.orNull?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
+                ?: throw GradleException("Pass the scene files: -PfieldLeadoutsScenes=<file>[,<file>] (copies first)")
+        }
+    )
+}
+
+// Tests of the migrations, kept out of the game's test source set so the game's classpath stays free of the editing
 // library
 val fieldFoliageToolsTest by sourceSets.creating {
     kotlin.srcDir("toolsTest")
@@ -423,7 +443,7 @@ dependencies {
 
 tasks.register<Test>("testFieldFoliageTools") {
     group = "verification"
-    description = "Runs the field foliage migration tests."
+    description = "Runs the field foliage and leadout migration tests."
     testClassesDirs = fieldFoliageToolsTest.output.classesDirs
     classpath = fieldFoliageToolsTest.runtimeClasspath
     systemProperty("controlLine.project", gameProject.asFile.absolutePath)

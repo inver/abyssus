@@ -15,8 +15,8 @@ import net.nevinsky.abyssus.lib.core.assets.BaseMeta
  * editor writes the copies as ordinary entities, each with a `ParentComponent` pointing at this entity, and lists them
  * in [slots] (`NO_ENTITY`, `-1`, for a slot with no copy). The runtime runs no system for it.
  *
- * The points and the copies are in **world coordinates**. Moving the arrangement entity does not move them, and a
- * transform hierarchy built on `ParentComponent` must not compose it for the copies of an arrangement.
+ * The points and the copies are in the arrangement entity's frame, like any child. An arrangement without a
+ * `PositionComponent` sits at the origin, so its points and copies are then world values.
  */
 class PathArrangementComponent : Component {
     var points: MutableList<Vector3> = ArrayList()

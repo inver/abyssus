@@ -7,6 +7,7 @@ package net.nevinsky.abyssus.app.game.controlline.render
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.PerspectiveCamera
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.app.game.controlline.components.PilotComponent
 import net.nevinsky.abyssus.app.game.controlline.components.VitrineTableComponent
@@ -33,7 +34,10 @@ import net.nevinsky.abyssus.lib.core.light.LightPlacement
 import net.nevinsky.abyssus.lib.core.light.lightKindOf
 import net.nevinsky.abyssus.lib.core.light.lightPlacementOf
 import net.nevinsky.abyssus.lib.core.light.usable
+import net.nevinsky.abyssus.lib.core.ecs.component.worldTransform
+import net.nevinsky.abyssus.lib.core.ecs.system.HierarchySystem
 import net.nevinsky.abyssus.lib.core.scene.SceneContext
+import org.slf4j.LoggerFactory
 
 /** The field scene's file in the project. */
 const val FIELD_SCENE = "scenes/Field.scene"
@@ -45,11 +49,16 @@ const val HANGAR_SCENE = "scenes/Hangar.scene"
  * One load of the field scene, as the game draws it (no GL): its entities, the sky, the sun, ambient light and fog, and
  * the planes for plane select. A flight gets its own load, so the parked planes are parked again afterward.
  */
-class FieldScene(val loaded: SceneContext, private val borrowed: List<Entity> = emptyList()) {
+class FieldScene(
+    val loaded: SceneContext,
+    private val borrowed: List<Entity> = emptyList(),
+    /** Where a plane left out of plane select (it lacks a leadout dummy) is reported. */
+    warn: (String) -> Unit = LoggerFactory.getLogger("control-line")::warn,
+) {
     val engine = loaded.engine
     private val entities: Map<Int, Entity> = engine.ids.ids.sorted().associateWith { engine.ids[it]!! }
 
-    val planes: List<PlaneChoice> = planeChoices(entities)
+    val planes: List<PlaneChoice> = planeChoices(entities, warn)
     val pilot: Entity? = entities.values.firstOrNull { it.getComponent(PilotComponent::class.java) != null }
 
     fun entity(id: Int): Entity? = entities[id]
@@ -211,6 +220,17 @@ class FieldScene(val loaded: SceneContext, private val borrowed: List<Entity> = 
     fun position(entity: Entity): PositionComponent =
         entity.getComponent(PositionComponent::class.java) ?: PositionComponent()
 
+    /**
+     * Resolves every entity's world transform through its parents (the engine's `HierarchySystem`, which a game that
+     * never updates its engine runs here); the renderer calls it once per frame before it reads [world].
+     */
+    fun resolveWorld() {
+        engine.getSystem(HierarchySystem::class.java)?.update(0f)
+    }
+
+    /** Where [entity] is drawn: its world transform (OpenSpec `scene-ecs-systems`), identity without a pose. */
+    fun world(entity: Entity): Matrix4 = entity.worldTransform() ?: IDENTITY
+
     /** Where a light shines: toward its look-at entity, else along its rotated -Z. */
     private fun lightDirection(light: Entity): Vector3? {
         val p = light.getComponent(PositionComponent::class.java) ?: return null
@@ -221,3 +241,5 @@ class FieldScene(val loaded: SceneContext, private val borrowed: List<Entity> = 
 
     private fun color(c: Color, intensity: Float) = Color(c.r * intensity, c.g * intensity, c.b * intensity, 1f)
 }
+
+private val IDENTITY = Matrix4()

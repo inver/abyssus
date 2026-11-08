@@ -7,6 +7,9 @@ package net.nevinsky.abyssus.lib.core.editor.modelmesh
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
+import com.badlogic.gdx.math.Matrix4
+import com.badlogic.gdx.math.Quaternion
+import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
@@ -30,6 +33,7 @@ class ModelMeshLister(files: FileLoader, metas: AssetMetaLoader, assimp: AssimpM
     private val loader = ModelLoader(metas, assimp, files, decodeTextures = false)
     private val known = ConcurrentHashMap<String, List<ModelMeshInfo>>()
     private val knownMaterials = ConcurrentHashMap<String, List<ModelMaterialInfo>>()
+    private val knownNodes = ConcurrentHashMap<String, Map<String, Matrix4>>()
 
     /** The meshes of the model asset [assetName], in the model's order; null when it is missing or cannot be read. */
     fun list(assetName: String): List<ModelMeshInfo>? {
@@ -37,6 +41,7 @@ class ModelMeshLister(files: FileLoader, metas: AssetMetaLoader, assimp: AssimpM
         val prepared = runCatchingKeepingCancellation { loader.prepare(assetName) }.getOrNull() ?: return null
         val infos = try {
             knownMaterials[assetName] = materialsOf(prepared.staged.data)
+            knownNodes[assetName] = nodeRestTransforms(prepared.staged.data)
             meshesOf(prepared.staged.data)
         } finally {
             loader.discardStaged(prepared.staged)
@@ -57,6 +62,19 @@ class ModelMeshLister(files: FileLoader, metas: AssetMetaLoader, assimp: AssimpM
             ModelMaterialInfo(id, emissive?.let(::Color))
         }
 
+    /**
+     * The rest transform within the model of every named node of model asset [assetName] (node id to matrix, parents'
+     * transforms applied), already read; null before [list] or after [invalidate]. Never reads.
+     */
+    fun cachedNodes(assetName: String): Map<String, Matrix4>? = knownNodes[assetName]
+
+    /** The node rest transforms of [assetName], reading the model when needed (off the UI thread); null when
+     * unreadable. */
+    fun nodes(assetName: String): Map<String, Matrix4>? {
+        list(assetName) ?: return null
+        return knownNodes[assetName]
+    }
+
     /** The answer already read for [assetName], without reading; null before [list] or after [invalidate]. */
     fun cached(assetName: String): List<ModelMeshInfo>? = known[assetName]
 
@@ -64,12 +82,14 @@ class ModelMeshLister(files: FileLoader, metas: AssetMetaLoader, assimp: AssimpM
     fun invalidate(assetName: String) {
         known.remove(assetName)
         knownMaterials.remove(assetName)
+        knownNodes.remove(assetName)
     }
 
     /** Forgets everything. */
     fun clear() {
         known.clear()
         knownMaterials.clear()
+        knownNodes.clear()
     }
 
     private fun meshesOf(data: ModelData): List<ModelMeshInfo> {
@@ -91,4 +111,24 @@ class ModelMeshLister(files: FileLoader, metas: AssetMetaLoader, assimp: AssimpM
             ModelMeshInfo(id, mesh.parts.flatMap { materialOfPart[it.id].orEmpty() }.distinct())
         }
     }
+}
+
+/**
+ * The rest transform within the model of every node of [data] that has an id: each node's translation, rotation and
+ * scale composed under its parents'. The first node of a name wins.
+ */
+fun nodeRestTransforms(data: ModelData): Map<String, Matrix4> {
+    val out = LinkedHashMap<String, Matrix4>()
+    fun walk(node: ModelNode, parent: Matrix4) {
+        val local = Matrix4().set(
+            node.translation ?: Vector3(),
+            node.rotation ?: Quaternion(),
+            node.scale ?: Vector3(1f, 1f, 1f),
+        )
+        val global = Matrix4(parent).mul(local)
+        node.id?.let { out.putIfAbsent(it, global) }
+        node.children?.forEach { walk(it, global) }
+    }
+    data.nodes.forEach { walk(it, Matrix4()) }
+    return out
 }

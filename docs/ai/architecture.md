@@ -289,8 +289,19 @@ typed entities into engine entities. Unregistered or unbindable component entrie
 JSON in `EcsLoadingWarns`, with warnings. Entity ids are numeric; invalid references become
 `NO_ENTITY`. `FoliageComponent` is built in and keeps unmodeled members in an extras map (any-setter/any-getter), so a typed write keeps them. `SceneFoliageListing` lists a loaded engine's terrain-bound foliage without files or GL.
 `NativeJsonTree` in `core.io` is the one token-level JSON reader (exact number text and key order).
-`SceneEngine` and `SceneEntityIds` live in `core.ecs`; the look-at and camera synchronization systems
+`SceneEngine` and `SceneEntityIds` live in `core.ecs`; the hierarchy, look-at and camera synchronization systems
 are in `projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/ecs/system`.
+
+**World transforms.** `ParentComponent` makes an entity's `PositionComponent` local to its parent (or to a named node of
+the parent's model). `core.hierarchy.WorldPoses` is the one pure resolver of world poses that the editor and the runtime
+share (missing parents, self-links and cycles become roots with one warning; a disabled ancestor disables the subtree).
+At runtime `HierarchySystem` runs first (priority `HIERARCHY_PRIORITY`) and fills each entity's runtime-only
+`WorldTransformComponent`; game logic and physics keep writing `PositionComponent`. The system order in one update is:
+hierarchy, look-at (priority 0: aims from the entity's world position at the target's, writing the rotation of the
+entity's own world matrix, never its stored `localRotation`, so children follow the stored pose), camera
+synchronization (priority 2: the camera at its entity's world position), then a game's own systems and renderer, which
+read `worldTransform()`. `core.ecs.Dummies` finds a `DUMMY` child of an entity by name. The play host sends world
+poses, and `PhysicsWorld` places bodies at world poses (only roots carry moving bodies).
 
 `RuntimeSceneLoader` combines `SceneLoader` and `EcsLoader`, installs those systems and returns a `SceneContext`.
 The editor view reads the `SceneDto` directly instead of updating an Ashley engine. Components are edited in place on the

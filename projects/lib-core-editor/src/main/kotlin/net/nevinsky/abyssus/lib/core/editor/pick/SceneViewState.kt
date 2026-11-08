@@ -102,6 +102,9 @@ class SceneViewState {
     /** Simulated poses shown instead of the authored placements while playing (entity id to pose); empty otherwise. */
     var poses: Map<Long, Pose> = emptyMap()
 
+    /** Whether every dummy's marker is drawn and pickable ("Show Dummies"); off when a view opens. */
+    var showDummies: Boolean = false
+
     /** Whether gizmos are offered: off while a simulation plays. */
     var gizmosEnabled: Boolean = true
 

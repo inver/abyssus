@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.play
 
+import net.nevinsky.abyssus.app.game.controlline.flight.leadoutsOf
+import net.nevinsky.abyssus.lib.core.ecs.Dummies
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.core.EntitySystem
 import com.badlogic.gdx.math.MathUtils
@@ -58,7 +60,8 @@ class ControlLinePlay : PlayModule {
         val field =
             entities.firstOrNull { it.getComponent(ColliderComponent::class.java)?.shape == ColliderShape.HEIGHT_FIELD }
         val ground = Ground(field, null)
-        val next = Flight(world, LineRig(world, pilot, plane, ground), ground)
+        val leadouts = leadoutsOf(entities, plane, Dummies { }, { }) ?: return emptyList()
+        val next = Flight(world, LineRig(world, pilot, plane, ground, leadouts), ground)
         flight = next
         flights = 0
         lastEnd = "-"

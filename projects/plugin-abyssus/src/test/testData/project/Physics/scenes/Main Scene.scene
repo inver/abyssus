@@ -1,7 +1,6 @@
 {
-  "format": "abyssus",
   "formatVersion": 1,
-  "id": 0,
+  "id": "0",
   "name": "Ololo",
   "ambientLightEnabled": true,
   "ambientLight": {
@@ -30,18 +29,8 @@
     "0": {
       "type": "OBJECT",
       "components": {
-        "RigidBodyComponent": {},
-        "ColliderComponent": {},
         "NameComponent": {
           "name": "Model 0"
-        },
-        "PickableComponent": {
-          "pickerIdAttribute": {
-            "a": 255,
-            "b": 0,
-            "g": 0,
-            "r": 0
-          }
         },
         "PositionComponent": {
           "localPosition": {
@@ -54,17 +43,39 @@
           "shaderKey": "defaultShader",
           "type": "MODEL",
           "assetName": "model_29e9be61-6594-4f82-a6cf-44ccf09f71fb"
+        },
+        "RigidBodyComponent": {},
+        "ColliderComponent": {},
+        "PickableComponent": {
+          "pickerIdAttribute": {
+            "a": 255,
+            "b": 0,
+            "g": 0,
+            "r": 0
+          }
         }
       }
     },
     "1": {
       "type": "TERRAIN",
       "components": {
-        "ColliderComponent": {
-          "shape": "HEIGHT_FIELD"
-        },
         "NameComponent": {
           "name": "Terrain"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -38.25267,
+            "y": 0,
+            "z": -32.7754
+          }
+        },
+        "RenderComponent": {
+          "shaderKey": "terrain",
+          "type": "TERRAIN",
+          "assetName": "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
+        },
+        "ColliderComponent": {
+          "shape": "HEIGHT_FIELD"
         },
         "PickableComponent": {
           "pickerIdAttribute": {
@@ -73,33 +84,39 @@
             "g": 0,
             "r": 1
           }
-        },
-        "PositionComponent": {
-          "localPosition": {
-            "x": -38.25267,
-            "y": 0.0,
-            "z": -32.7754
-          }
-        },
-        "RenderComponent": {
-          "shaderKey": "terrain",
-          "type": "TERRAIN",
-          "assetName": "terrain_2cf70bf7-f7ee-4c41-934c-e40df1d35c8b"
         }
       }
     },
     "2": {
       "type": "OBJECT",
       "components": {
+        "NameComponent": {
+          "name": "Model 2"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": -5.250234,
+            "y": 2.462766,
+            "z": 6.35708
+          },
+          "localRotation": {
+            "x": 0.63250726,
+            "y": 0.30553034,
+            "z": 0.29924944,
+            "w": -0.6457829
+          }
+        },
+        "RenderComponent": {
+          "shaderKey": "defaultShader",
+          "type": "MODEL",
+          "assetName": "model_fc33e1f1-015b-4524-9b10-aa417acd273c"
+        },
         "ColliderComponent": {
           "shape": "SPHERE"
         },
         "ConstraintComponent": {
           "other": 0,
           "maxDistance": 3
-        },
-        "NameComponent": {
-          "name": "Model 2"
         },
         "PickableComponent": {
           "pickerIdAttribute": {
@@ -108,24 +125,6 @@
             "g": 0,
             "r": 2
           }
-        },
-        "PositionComponent": {
-          "localRotation": {
-            "w": -0.6457829,
-            "x": 0.63250726,
-            "y": 0.30553034,
-            "z": 0.29924944
-          },
-          "localPosition": {
-            "x": -5.250234,
-            "y": 2.462766,
-            "z": 6.35708
-          }
-        },
-        "RenderComponent": {
-          "shaderKey": "defaultShader",
-          "type": "MODEL",
-          "assetName": "model_fc33e1f1-015b-4524-9b10-aa417acd273c"
         }
       }
     },
@@ -138,6 +137,14 @@
         "ParentComponent": {
           "parentEntityId": 4
         },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 1.606697,
+            "y": -3.9456348,
+            "z": -26.26185
+          }
+        },
+        "RenderComponent": {},
         "PickableComponent": {
           "pickerIdAttribute": {
             "a": 255,
@@ -145,9 +152,7 @@
             "g": 0,
             "r": 3
           }
-        },
-        "PositionComponent": {},
-        "RenderComponent": {}
+        }
       }
     },
     "4": {
@@ -170,14 +175,31 @@
             "fieldOfView": 67
           }
         },
+        "NameComponent": {
+          "name": "Camera 4"
+        },
+        "PositionComponent": {
+          "lookAtId": 3,
+          "localPosition": {
+            "x": -23.56657,
+            "y": 12.318308,
+            "z": -0.84287655
+          },
+          "localRotation": {
+            "x": -0.11914976,
+            "y": -0.6859156,
+            "z": -0.115346394,
+            "w": 0.7085326
+          }
+        },
+        "RenderComponent": {
+          "shaderKey": "defaultShader"
+        },
         "DependenciesComponent": {
           "dependencies": [
             5,
             4
           ]
-        },
-        "NameComponent": {
-          "name": "Camera 4"
         },
         "PickableComponent": {
           "pickerIdAttribute": {
@@ -186,33 +208,16 @@
             "g": 0,
             "r": 4
           }
-        },
-        "PositionComponent": {
-          "localRotation": {
-            "w": 0.7085326,
-            "x": -0.11914976,
-            "y": -0.6859156,
-            "z": -0.115346394
-          },
-          "lookAtId": 3,
-          "localPosition": {
-            "x": -23.56657,
-            "y": 12.318308,
-            "z": -0.84287655
-          }
-        },
-        "RenderComponent": {
-          "shaderKey": "defaultShader"
         }
       }
     },
     "5": {
       "components": {
+        "RenderComponent": {},
         "Point2PointPositionComponent": {
           "entity1Id": 4,
           "entity2Id": 3
-        },
-        "RenderComponent": {}
+        }
       }
     },
     "6": {
@@ -221,24 +226,16 @@
         "NameComponent": {
           "name": "Model 6"
         },
-        "PickableComponent": {
-          "pickerIdAttribute": {
-            "a": 255,
-            "b": 0,
-            "g": 0,
-            "r": 6
-          }
-        },
         "PositionComponent": {
           "localPosition": {
             "x": 9.440927,
-            "y": 0.0,
-            "z": 0.0
+            "y": 0,
+            "z": 0
           },
           "localRotation": {
-            "x": 0.0,
+            "x": 0,
             "y": 0.49121734,
-            "z": 0.0,
+            "z": 0,
             "w": -0.87103707
           }
         },
@@ -246,6 +243,14 @@
           "shaderKey": "pbr",
           "type": "MODEL",
           "assetName": "model_900f6f61-6384-434a-be81-56ce303fbb56"
+        },
+        "PickableComponent": {
+          "pickerIdAttribute": {
+            "a": 255,
+            "b": 0,
+            "g": 0,
+            "r": 6
+          }
         }
       }
     },
@@ -256,14 +261,16 @@
           "name": "Directional Light 7"
         },
         "PositionComponent": {
-          "localRotation": {
-            "x": 0.38268328,
-            "w": -0.9238796
-          },
           "localPosition": {
             "x": -4.6727066,
             "y": 6.4600496,
             "z": 16.883846
+          },
+          "localRotation": {
+            "x": 0.38268328,
+            "y": 0,
+            "z": 0,
+            "w": -0.9238796
           }
         }
       }
@@ -283,13 +290,16 @@
         },
         "LightComponent": {
           "light": {
+            "intensity": 1,
+            "range": 100,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
             "color": {
               "r": 1,
               "g": 1,
               "b": 1,
               "a": 1
-            },
-            "intensity": 1
+            }
           }
         }
       }

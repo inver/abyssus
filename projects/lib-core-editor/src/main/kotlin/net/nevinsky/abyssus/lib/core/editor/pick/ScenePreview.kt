@@ -5,7 +5,10 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
+import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
+import net.nevinsky.abyssus.lib.core.editor.hierarchy.placementOf
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
 import net.nevinsky.abyssus.lib.core.editor.content.Pose
@@ -40,8 +43,48 @@ class ScenePreview {
         return Vector3(p.x + direction.x * distance, p.y + direction.y * distance, p.z + direction.z * distance)
     }
 
-    /** [content] with the entity [entityId] shown at [result]; [content] itself when there is no such entity. */
+    /**
+     * [content] with the entity [entityId] shown at [result] (a world pose); [content] itself when there is no such
+     * entity. The entity's descendants follow it (OpenSpec `scene-entity-hierarchy`, "Moving a parent carries its
+     * children"), except when a rotate drag on a handle-aimed light turns only its aim: its stored pose, which its
+     * children follow, does not change then.
+     */
     fun apply(content: SceneContent, entityId: Long, result: DragResult): SceneContent {
+        val moved = applyOne(content, entityId, result)
+        val descendants = content.hierarchy.descendantsOf(entityId)
+        if (descendants.isEmpty() || turnsOnlyTheAim(content, entityId, result)) {
+            return moved
+        }
+        val delta = result.transform.toMatrix().mul(content.hierarchy.worldOf(entityId).inv())
+        var c = moved
+        for (id in descendants) {
+            val world = Matrix4(delta).mul(content.hierarchy.worldOf(id))
+            c = applyOne(c, id, DragResult(placementOf(world), null))
+        }
+        return reaim(c, (descendants + entityId).toSet())
+    }
+
+    /** Whether [result] turns a handle-aimed light (its position unchanged), which moves its handle, not its pose. */
+    private fun turnsOnlyTheAim(content: SceneContent, entityId: Long, result: DragResult): Boolean {
+        val light = content.light(entityId) ?: return false
+        return content.aimHandleOf(light) != null && result.transform.position == light.position
+    }
+
+    /** [c] with every directional or spot light that looks at one of [moved] (or is one of them) aimed again. */
+    private fun reaim(c: SceneContent, moved: Set<Long>): SceneContent =
+        c.copy(
+            lights = c.lights.map { light ->
+                val target = light.lookAtId?.takeIf { light.kind != LightKind.POINT }
+                if (target == null || (target !in moved && light.entityId !in moved)) {
+                    light
+                } else {
+                    val at = c.entityPositions[target] ?: return@map light
+                    light.copy(direction = aimDirection(light.position, at) ?: forwardOf(light.rotation))
+                }
+            },
+        )
+
+    private fun applyOne(content: SceneContent, entityId: Long, result: DragResult): SceneContent {
         val t = result.transform
         val light = content.light(entityId)
         // A rotate drag keeps the light's position and turns its direction; it moves the handle. A move drag changes
@@ -130,6 +173,18 @@ class ScenePreview {
                 } else {
                     content.entityPositions
                 },
+            dummies =
+                if (content.dummy(entityId) == null) {
+                    content.dummies
+                } else {
+                    content.dummies.map {
+                        if (it.entityId == entityId) {
+                            it.copy(transform = t)
+                        } else {
+                            it
+                        }
+                    }
+                },
         )
     }
 
@@ -157,6 +212,9 @@ class ScenePreview {
         content.camera(entityId)?.let {
             val direction = cameraDirectionOf(it, content.entityPositions)
             return Selected(PlacementTransform(it.position, it.rotation, Vector3(1f, 1f, 1f)), direction)
+        }
+        content.dummy(entityId)?.let {
+            return Selected(it.transform, null)
         }
         content.light(entityId)?.let {
             val facing =

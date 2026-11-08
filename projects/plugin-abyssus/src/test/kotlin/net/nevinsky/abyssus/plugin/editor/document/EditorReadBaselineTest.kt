@@ -38,7 +38,10 @@ class EditorReadBaselineTest : BasePlatformTestCase() {
 
     fun testTreeRowsAndPanelState() {
         val root = parseScene(text)
-        assertEquals((0..10).map(Int::toString), ecsRows(root).map { it.name })
+        // the camera's direction handle (3) is listed under the camera (4), not under ecs
+        assertEquals((0..10).filter { it != 3 }.map(Int::toString), ecsRows(root).map { it.name })
+        assertEquals(listOf("3"), net.nevinsky.abyssus.plugin.projectView.childEntityRows(
+            net.nevinsky.abyssus.plugin.projectView.EntityNode(root, 4)).map { it.name })
         assertEquals(
             listOf("NameComponent", "PositionComponent", "RenderComponent", "PickableComponent"),
             entityRows(net.nevinsky.abyssus.plugin.projectView.EntityNode(root, 0)).map { it.name },

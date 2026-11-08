@@ -626,6 +626,7 @@ Plugin actions (`plugin.xml`); the scenario IDs say where each is exercised.
 | `Abyssus.RemoveWater` | WAT-02 | passed (`WaterLifecycleUiTest`) |
 | `Abyssus.AddAsset` | ENT-02, JRN-01 | unverified |
 | `Abyssus.AddPathArrangement` | PTH-01, PTH-02 | unverified |
+| `Abyssus.AddDummy` | none yet (headless: `AddDummyActionTest`) | unverified |
 | `Abyssus.RegenerateArrangement` | PTH-03 | unverified |
 | `Abyssus.AddFoliage` | FOL-01 | passed (`FoliageLifecycleUiTest`) |
 | `Abyssus.CreateLightsFromModel` | none yet | partial: `CreateLightsFromModelActionTest` passed; the runIde hand check (task 3.2 of `add-lights-from-model-meshes`) is open |

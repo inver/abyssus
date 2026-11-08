@@ -85,7 +85,6 @@ update's rotation.
 - **WHEN** an entity with a look-at target and a renderable is updated once
 - **THEN** the renderable is drawn with the rotation computed in that same update
 
-## ADDED Requirements
 
 ### Requirement: Systems skip disabled entities and components
 

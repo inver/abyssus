@@ -17,6 +17,7 @@ import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementCopyCount
 import net.nevinsky.abyssus.lib.core.editor.arrange.arrangementCopyIds
 import net.nevinsky.abyssus.lib.core.editor.components.SetEnabledAction
+import net.nevinsky.abyssus.lib.core.editor.hierarchy.SceneHierarchy
 import net.nevinsky.abyssus.lib.core.format.EntityType
 
 /** The `ecs` row of a scene: its entities. */
@@ -100,17 +101,40 @@ fun componentEye(entity: EntityDto, name: String): Boolean? {
     return !(raw?.disabled ?: false)
 }
 
-/** The entity rows of [scene]; the linked copies of a path arrangement are squashed into its row, which counts them. */
+/**
+ * The parent of each child entity of [scene] whose link is followed (OpenSpec `abyssus-project-view`, "Child entities
+ * are listed under their parent"): a valid parent, not itself, not a cycle, and not a squashed arrangement copy.
+ */
+fun treeParents(scene: SceneDto): Map<Long, Long> {
+    val copies = arrangementCopyIds(scene)
+    return SceneHierarchy().resolve(scene).parents.filterKeys { it !in copies }
+}
+
+/** The ids of [id]'s child entities in the tree, in id order. */
+fun treeChildren(scene: SceneDto, id: Long): List<Long> =
+    treeParents(scene).filterValues { it == id }.keys.sorted()
+
+/**
+ * The root entity rows of [scene]: a child is listed under its parent instead, and the linked copies of a path
+ * arrangement are squashed into its row, which counts them. A broken parent link leaves the entity here.
+ */
 fun ecsRows(scene: SceneDto): List<DtoRow> {
     val copies = arrangementCopyIds(scene)
-    return scene.entities().filter { (id, _) -> id !in copies }
+    val parents = treeParents(scene)
+    return scene.entities().filter { (id, _) -> id !in copies && id !in parents }
         .map { (id, entity) -> DtoRow(id.toString(), EntityNode(scene, id), enabled = entityEye(entity)) }
 }
 
-/** The component rows of an entity. */
+/** The child entity rows of an entity, in id order. */
+fun childEntityRows(node: EntityNode): List<DtoRow> =
+    treeChildren(node.scene, node.id).mapNotNull { id ->
+        node.scene.entity(id)?.let { DtoRow(id.toString(), EntityNode(node.scene, id), enabled = entityEye(it)) }
+    }
+
+/** The rows of an entity: its child entities first, then its components. */
 fun entityRows(node: EntityNode): List<DtoRow> {
     val entity = node.entity ?: return emptyList()
-    return componentNames(entity).map { name ->
+    return childEntityRows(node) + componentNames(entity).map { name ->
         DtoRow(name, ComponentNode(node.scene, node.id, name), enabled = componentEye(entity, name))
     }
 }

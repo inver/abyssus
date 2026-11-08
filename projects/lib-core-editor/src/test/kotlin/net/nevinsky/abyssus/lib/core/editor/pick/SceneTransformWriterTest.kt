@@ -166,7 +166,8 @@ class SceneTransformWriterTest {
         val lightBefore = snapshot(scene).getValue(1L)
         assertTrue(writer.apply(scene, 1L, TransformEdit(target = TargetMove(0L, Vector3(0f, 10f, -10f)))))
 
-        assertEquals(Vector3(0f, 10f, -10f), local(scene, 0))
+        // the handle is the light's child: world (0, 10, -10) is (0, 0, -10) under the light at (0, 10, 0)
+        assertEquals(Vector3(0f, 0f, -10f), local(scene, 0))
         // the light itself is unchanged, and so is every other entity
         assertEquals(lightBefore, snapshot(scene).getValue(1L))
         assertEquals(0, scene.component(1, PositionComponent::class.java)!!.lookAtId)
@@ -228,5 +229,76 @@ class SceneTransformWriterTest {
         assertFalse(writer.apply(scene, 14L, TransformEdit(position = Vector3(local(scene, 14)))))
         assertEquals(11, scene.component(14, ParentComponent::class.java)!!.parentEntityId)
         assertEquals(listOf(12, 13, 14, 15, 16), slots(scene))
+    }
+
+    // ---- children (OpenSpec scene-object-transform, "Moving a child writes its local position") ----
+
+    private fun dummyUnder(scene: SceneDto, parent: Int, x: Float, y: Float, z: Float): Long {
+        val id = (scene.ecs.keys.maxOrNull() ?: -1L) + 1
+        scene.ecs[id] = entityOf(id, EntityType.DUMMY, NameComponent("Dummy"), PositionComponent(x, y, z),
+                ParentComponent(parent))
+        return id
+    }
+
+    @Test
+    fun movingAChildWritesItsLocalPosition() {
+        val scene = main()
+        val dummy = dummyUnder(scene, 9, 0f, 1f, 0f)
+        val modelBefore = snapshot(scene).getValue(9L)
+        // the dummy is at (0, 22.632797, 0) in world space; moved along X by 2
+        assertTrue(writer.apply(scene, dummy, TransformEdit(position = Vector3(2f, 22.632797f, 0f))))
+        val written = local(scene, dummy)
+        assertTrue("$written", Vector3(2f, 1f, 0f).epsilonEquals(written, 1e-5f))
+        assertEquals(modelBefore, snapshot(scene).getValue(9L))
+    }
+
+    @Test
+    fun aWorldYMoveUnderAParentTurnedAboutX() {
+        val scene = sceneOf(
+            entityOf(1, EntityType.OBJECT, PositionComponent().also { it.localRotation.set(Vector3.X, 90f) }),
+            entityOf(2, EntityType.DUMMY, NameComponent("Dummy"), PositionComponent(0f, 0f, 1f), ParentComponent(1)),
+        )
+        // local (0, 0, 1) under a quarter turn about X is world (0, -1, 0); dragged up by 1 to the origin
+        val parentBefore = snapshot(scene).getValue(1L)
+        assertTrue(writer.apply(scene, 2, TransformEdit(position = Vector3(0f, 0f, 0f))))
+        assertTrue("${local(scene, 2)}", Vector3(0f, 0f, 0f).epsilonEquals(local(scene, 2), 1e-5f))
+        assertTrue(writer.apply(scene, 2, TransformEdit(position = Vector3(0f, 1f, 0f))))
+        // world +Y is local -Z under that parent
+        assertTrue("${local(scene, 2)}", Vector3(0f, 0f, -1f).epsilonEquals(local(scene, 2), 1e-5f))
+        assertEquals(parentBefore, snapshot(scene).getValue(1L))
+    }
+
+    @Test
+    fun aChildUnderARotatedNonUniformlyScaledParentWarnsAndKeepsThePosition() {
+        val warnings = ArrayList<String>()
+        val scene = sceneOf(
+            entityOf(1, EntityType.OBJECT, PositionComponent().also {
+                it.localRotation.set(Vector3.X, 90f)
+                it.localScale = Vector3(1f, 2f, 1f)
+            }),
+            entityOf(2, EntityType.DUMMY, NameComponent("Dummy"), PositionComponent(0f, 0f, 1f), ParentComponent(1)),
+        )
+        val shearing = SceneTransformWriter(warn = warnings::add)
+        assertTrue(shearing.apply(scene, 2, TransformEdit(position = Vector3(0.5f, 1f, 2f))))
+        val world = net.nevinsky.abyssus.lib.core.editor.hierarchy.SceneHierarchy().resolve(scene).worldOf(2)
+        assertTrue(Vector3(0.5f, 1f, 2f).epsilonEquals(world.getTranslation(Vector3()), 1e-4f))
+        assertEquals(1, warnings.size)
+        assertTrue(warnings.single(), warnings.single().contains("entity 2"))
+    }
+
+    @Test
+    fun turningTheAbyssusLightMovesItsChildHandleLocally() {
+        val scene = lights
+        // the light at (0, 10, 0) turned to face -Z puts its handle at world (0, 10, -10)
+        assertTrue(writer.apply(scene, 1L, TransformEdit(target = TargetMove(0L, Vector3(0f, 10f, -10f)))))
+        assertEquals(Vector3(0f, 0f, -10f), local(scene, 0))
+        assertEquals(Vector3(0f, 10f, 0f), local(scene, 1))
+    }
+
+    @Test
+    fun aRootIsWrittenAsBefore() {
+        val scene = main()
+        assertTrue(writer.apply(scene, 0L, TransformEdit(position = Vector3(1.5f, 2f, 3f))))
+        assertEquals(Vector3(1.5f, 2f, 3f), local(scene, 0))
     }
 }

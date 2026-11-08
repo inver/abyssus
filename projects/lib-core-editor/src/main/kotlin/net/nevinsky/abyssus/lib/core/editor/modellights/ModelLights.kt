@@ -9,7 +9,7 @@ import com.badlogic.gdx.math.Matrix4
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
-import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.editor.hierarchy.SceneHierarchy
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.components.EditResult
@@ -46,7 +46,8 @@ class ModelLights(private val messages: EditorMessages, private val lights: Ligh
         }
         val capped = capPieces(pieces, max)
         val transform =
-            scene.component(entityId, PositionComponent::class.java)?.getTransform()?.let(::Matrix4) ?: Matrix4()
+            // the lights are roots: the model's world pose, through its parents
+            SceneHierarchy().resolve(scene).worldOf(entityId)
         val entityName =
             scene.component(entityId, NameComponent::class.java)?.name?.takeIf(String::isNotEmpty) ?: assetName
         val color = lampColor(geometry.emissive)

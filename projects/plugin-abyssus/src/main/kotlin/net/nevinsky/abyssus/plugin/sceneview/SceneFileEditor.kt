@@ -107,6 +107,15 @@ class SceneFileEditor(
 
     private var disposed = false
 
+    /** Children written under a shearing parent this tab has already warned about (once per entity). */
+    private val shearWarnings = HashSet<Long>()
+
+    /** Model node tables being read for this tab, so a model is asked for once. */
+    private val nodeReads = HashSet<String>()
+
+    /** Hierarchy problems already reported for this tab's scene: each once per entity and reason. */
+    private val hierarchyWarnings = net.nevinsky.abyssus.lib.core.hierarchy.HierarchyWarningLog()
+
     private val viewSettings = project.service<SceneViewSettings>()
     private val projectSettings = project.service<AbyssusProjectSettings>()
 
@@ -359,7 +368,41 @@ class SceneFileEditor(
             .onFailure { showStatus(AbyssusBundle.message("sceneViewParseError", it.documentDisplayMessage())) }
     }
 
+    /**
+     * Has the models whose nodes [params]' children are bound to read off the UI thread, then re-reads the scene so the
+     * children sit on their nodes (design decision 2 of `add-entity-hierarchy-and-dummies`).
+     */
+    private fun readBoundModels(params: SceneRenderParams) {
+        val dir = params.projectDir ?: return
+        val hierarchy = params.content.hierarchy
+        if (hierarchy.nodes.isEmpty()) {
+            return
+        }
+        val loading = service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().assets.loading
+        val missing = hierarchy.nodes.keys.mapNotNull { child ->
+            val parent = hierarchy.parents[child] ?: return@mapNotNull null
+            params.ecs[parent]?.component(net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent::class.java)
+                ?.assetName?.takeIf { it.isNotEmpty() }
+        }.toSet().filter { loading.cachedModelNodes(dir, it) == null && nodeReads.add(it) }
+        if (missing.isEmpty()) {
+            return
+        }
+        ApplicationManager.getApplication().executeOnPooledThread {
+            missing.forEach { runCatchingKeepingCancellation { loading.modelNodes(dir, it) } }
+            ApplicationManager.getApplication().invokeLater {
+                missing.forEach(nodeReads::remove)
+                if (!disposed) {
+                    reload()
+                }
+            }
+        }
+    }
+
     private fun showScene(params: SceneRenderParams) {
+        for (warning in hierarchyWarnings.fresh(params.content.hierarchy.warnings)) {
+            thisLogger().warn("${file.name}: ${warning.message()}")
+        }
+        readBoundModels(params)
         projectInputs = projectInputs()
         rayControls.recordFacts(file, this, params.content)
         view?.let {
@@ -414,7 +457,14 @@ class SceneFileEditor(
                 }
             )
         return editSceneDocument(project, file, command) { scene ->
-            SceneTransformWriter().apply(scene, entityId, edit)
+            SceneTransformWriter(
+                nodes = cachedNodeTransforms(scene, ProjectLayout.projectDirFor(file)),
+                warn = { message ->
+                    if (shearWarnings.add(entityId)) {
+                        thisLogger().warn(message)
+                    }
+                },
+            ).apply(scene, entityId, edit)
         }
     }
 

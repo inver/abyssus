@@ -8,6 +8,7 @@ package net.nevinsky.abyssus.plugin
 import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.utils.Disposable
 import java.io.File
+import com.badlogic.gdx.math.Matrix4
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executor
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
@@ -91,6 +92,32 @@ class AssetLoading(
             files.loadAssetFile(name, meta.typedAdditional<ModelMeta>().file)
         }
             .getOrNull()
+    }
+
+    private val nodeTables = ConcurrentHashMap<File, Pair<Long, Map<String, Matrix4>>>()
+
+    /**
+     * The node rest transforms of model asset [name] already read for its current file (node name to transform within
+     * the model; empty when the asset is no readable model), or null when they still have to be read with
+     * [modelNodes]. Never reads a model, so it may run on the UI thread.
+     */
+    fun cachedModelNodes(projectDir: File, name: String): Map<String, Matrix4>? {
+        val model = modelFile(projectDir, name)?.canonicalFile ?: return emptyMap()
+        return nodeTables[model]?.takeIf { it.first == model.lastModified() }?.second
+    }
+
+    /**
+     * The node rest transforms of model asset [name], read on the caller's thread without images or GL (so off the UI
+     * thread); empty when it is not a readable model. The model file is parsed once per modification.
+     */
+    fun modelNodes(projectDir: File, name: String): Map<String, Matrix4> {
+        val model = modelFile(projectDir, name)?.canonicalFile ?: return emptyMap()
+        val stamp = model.lastModified()
+        nodeTables[model]?.takeIf { it.first == stamp }?.let { return it.second }
+        val files = FileLoader(projectDir)
+        val nodes = ModelMeshLister(files, AssetMetaLoader(json, files, log), assimp).nodes(name).orEmpty()
+        nodeTables[model] = stamp to nodes
+        return nodes
     }
 
     private val meshTables = ConcurrentHashMap<File, Pair<Long, List<ModelMeshInfo>>>()

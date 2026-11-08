@@ -76,7 +76,6 @@ shown as read-only JSON and kept unchanged.
 - **THEN** the `RigidBodyComponent` becomes editable without reopening the scene, and "Add component" offers
   `RigidBodyComponent`, `ColliderComponent` and `ConstraintComponent`
 
-## ADDED Requirements
 
 ### Requirement: Disabled physics components create nothing
 

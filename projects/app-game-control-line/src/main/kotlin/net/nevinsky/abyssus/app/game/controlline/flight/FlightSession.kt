@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.flight
 
+import net.nevinsky.abyssus.lib.core.ecs.Dummies
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Quaternion
@@ -50,7 +51,12 @@ class FlightSession(
 ) : AutoCloseable {
     private val world = PhysicsWorld(engine, assets, log, natives, shapes)
     private val ground = groundOf(engine, assets)
-    val rig = LineRig(world, pilot, plane, ground)
+    val rig = LineRig(
+        world, pilot, plane, ground,
+        requireNotNull(leadoutsOf(engine.entities, plane, Dummies(log::warn), log::warn)) {
+            "the plane has no leadoutUp / leadoutDown dummies"
+        },
+    )
     val flight = Flight(world, rig, ground).also { it.takeoff(0f, judge) }
     private val planeBody = requireNotNull(world.bodyOf(plane))
     private var carried = 0f

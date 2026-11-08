@@ -239,7 +239,8 @@ class SceneContentTest {
         assertEquals(1f, cam.near, 0f)
         assertEquals(100f, cam.far, 0f)
         assertEquals(67f, cam.fieldOfView, 0f)
-        assertEquals(Vector3(0f, 0f, 0f), c.entityPositions[3L])
+        // the handle is the camera's child, rebased so that it is still at the origin
+        assertTrue("${c.entityPositions[3L]}", Vector3(0f, 0f, 0f).epsilonEquals(c.entityPositions[3L], 1e-4f))
         assertEquals(listOf(7L, 8L), c.lights.map { it.entityId })
         assertEquals(3, c.models.size)
     }

@@ -19,6 +19,7 @@ import net.nevinsky.abyssus.lib.core.editor.meta.EntitySections
 import net.nevinsky.abyssus.lib.core.editor.meta.readEntitySections
 import net.nevinsky.abyssus.lib.core.editor.parseScene
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -142,12 +143,12 @@ class PanelBuildersTest {
         val panel = builders.ecs(field, "ControlLine.abss")
         val entities = panel.sections.single()
         assertEquals("Entities", entities.title)
-        assertEquals("214", entities.row<ReadonlyRow>("entities").value)
+        assertEquals("222", entities.row<ReadonlyRow>("entities").value)
         assertTrue(entities.rows.last() is NoteRow)
         assertTrue((entities.rows.last() as NoteRow).text.startsWith("Types in this scene: OBJECT "))
         assertEquals(BadgeKind.READ_ONLY, panel.header.badges.single().kind)
         assertEquals(listOf("ControlLine.abss", "Field"), panel.header.breadcrumb)
-        assertTrue(panel.header.subtitle.startsWith("ecs · 214 entities"))
+        assertTrue(panel.header.subtitle.startsWith("ecs · 222 entities"))
     }
 
     // ---- entities and components ----
@@ -544,5 +545,27 @@ class PanelBuildersTest {
         assertEquals(first.size, first.toSet().size)
         val scene = builders.scene(field, "p.abss", "s").sections.map { it.key }
         assertEquals(scene.size, scene.toSet().size)
+    }
+
+    // ---- a child's position is local (OpenSpec object-properties-panel) ----
+
+    @Test
+    fun aDummysPositionSaysItIsLocalToItsParent() {
+        val scene = parseScene(fieldText)
+        val id = net.nevinsky.abyssus.lib.core.editor.dummy.DummyEntities(messages).add(scene, 3L).entityId!!
+        val read = readEntitySections(
+            scene, id, null, editor, EntityAssetChoices(emptyList(), emptyMap()), messages, json,
+        ) as EntitySections.Read
+        val position = builders.entity(scene, id, read, "ControlLine.abss").sections.first { it.title == "Position" }
+        val note = position.rows.filterIsInstance<NoteRow>().single()
+        val parentName = scene.entity(3L)!!.component(NameComponent::class.java)!!.name
+        assertEquals("local to $parentName", note.text)
+    }
+
+    @Test
+    fun aRootsPositionHasNoLocalNote() {
+        val position =
+            builders.entity(field, 3L, read(3L), "ControlLine.abss").sections.first { it.title == "Position" }
+        assertTrue(position.rows.none { it is NoteRow })
     }
 }

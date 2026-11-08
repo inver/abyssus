@@ -18,9 +18,21 @@ import net.nevinsky.abyssus.lib.core.assets.foliage.*
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import net.nevinsky.abyssus.lib.core.ecs.SceneFoliageListing
+import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.activeComponent
+import net.nevinsky.abyssus.lib.core.ecs.system.HierarchySystem
+import net.nevinsky.abyssus.lib.core.format.EntityType
+import net.nevinsky.abyssus.lib.core.hierarchy.LocalPose
+import net.nevinsky.abyssus.lib.core.hierarchy.ParentLink
+import net.nevinsky.abyssus.lib.core.hierarchy.ResolvedPoses
+import net.nevinsky.abyssus.lib.core.hierarchy.WorldPoses
+import net.nevinsky.abyssus.lib.core.hierarchy.columnRotation
+import net.nevinsky.abyssus.lib.core.hierarchy.columnScale
+import net.nevinsky.abyssus.lib.core.ecs.component.localPoseOf
+import net.nevinsky.abyssus.lib.core.hierarchy.noNodeTransforms
 import net.nevinsky.abyssus.lib.physics.*
 import org.slf4j.Logger
 
@@ -42,8 +54,13 @@ private const val MAX_BODIES = 10_240
  * bodies for the OBJECT layers with a collider (see `buildFoliage`); a contact with one is reported against the terrain
  * entity.
  *
- * [advance] runs fixed steps of [PHYSICS_STEP] and writes dynamic and kinematic poses to each entity's
- * [PositionComponent] (`localPosition` / `localRotation`; parents are ignored). One world is used by one thread at a
+ * Bodies are placed at their entity's world pose, resolved through `ParentComponent` links. Only roots carry moving
+ * bodies: a child with a [RigidBodyComponent] is refused, a child collider is a static body when no ancestor moves and
+ * is left out (with one warning) under a dynamic or kinematic ancestor; dummies take no part.
+ *
+ * [advance] runs fixed steps of [PHYSICS_STEP] and writes dynamic and kinematic poses to each (root) entity's
+ * [PositionComponent] (`localPosition` / `localRotation`), so its children follow without being written. One world is
+ * used by one thread at a
  * time, and runs single-threaded, so a run is deterministic on one machine. [close] releases every native object;
  * afterwards every method throws [IllegalStateException].
  *
@@ -254,11 +271,24 @@ internal constructor(
 
     private fun build() {
         val ids = engine.ids.ids.sorted()
+        val hierarchy = resolveHierarchy(ids)
         for (id in ids) {
             val entity = engine.ids[id] ?: continue
-            // a disabled entity or component creates nothing, and says nothing: it is data the file keeps
+            // a dummy is an attach point, never a body, whatever components it carries
+            if (entity.getComponent(HeaderComponent::class.java)?.type == EntityType.DUMMY) {
+                continue
+            }
+            // a disabled entity, ancestor or component creates nothing, and says nothing: it is data the file keeps
+            if (id.toLong() in hierarchy.disabled) {
+                continue
+            }
             val body = entity.activeComponent(RigidBodyComponent::class.java)
             val collider = entity.activeComponent(ColliderComponent::class.java)
+            val parent = hierarchy.parents[id.toLong()]
+            if (parent != null && (body != null || collider != null)) {
+                childBody(entity, id.toLong(), body, collider, hierarchy)
+                continue
+            }
             if (collider == null) {
                 if (body != null && entity.getComponent(ColliderComponent::class.java) == null) {
                     warn(
@@ -310,6 +340,68 @@ internal constructor(
             }
         }
         buildFoliage()
+    }
+
+    /** World poses of the scene's entities, through their parent links (node bindings from the engine's system). */
+    private fun resolveHierarchy(ids: List<Int>): ResolvedPoses {
+        val locals = HashMap<Long, LocalPose>()
+        val parents = HashMap<Long, ParentLink>()
+        val disabled = HashSet<Long>()
+        for (id in ids) {
+            val entity = engine.ids[id] ?: continue
+            entity.getComponent(PositionComponent::class.java)?.let { locals[id.toLong()] = localPoseOf(it) }
+            entity.getComponent(ParentComponent::class.java)?.let {
+                if (it.parentEntityId != NO_ENTITY) {
+                    parents[id.toLong()] = ParentLink(it.parentEntityId.toLong(), it.node)
+                }
+            }
+            if (entity.getComponent(HeaderComponent::class.java)?.entityEnabled == false) {
+                disabled += id.toLong()
+            }
+        }
+        val nodes = engine.getSystem(HierarchySystem::class.java)?.nodes ?: noNodeTransforms()
+        return WorldPoses().resolve(ids.map(Int::toLong), locals, parents, nodes, disabled)
+    }
+
+    /**
+     * A child entity with physics components: a rigid body is refused; a collider is a static body at the world pose
+     * when no ancestor moves, and is left out under a dynamic or kinematic ancestor (until compound colliders).
+     */
+    private fun childBody(
+        entity: Entity,
+        id: Long,
+        body: RigidBodyComponent?,
+        collider: ColliderComponent?,
+        hierarchy: ResolvedPoses,
+    ) {
+        if (body != null) {
+            warn(
+                entity,
+                "is a child entity with a rigid body; only root entities move in the simulation, so it is left out",
+            )
+            return
+        }
+        if (collider == null) {
+            return
+        }
+        val moving = hierarchy.ancestorsOf(id).firstOrNull { ancestor ->
+            engine.ids[ancestor.toInt()]?.activeComponent(RigidBodyComponent::class.java)
+                ?.let { it.motionType != MotionType.STATIC } == true
+        }
+        if (moving != null) {
+            warn(
+                entity,
+                "is a child collider of moving entity $moving, which is simulated without it; " +
+                    "the collider is left out of the simulation",
+            )
+            return
+        }
+        val world = hierarchy.worldOf(id)
+        val scale = columnScale(world, Vector3())
+        val pose = LocalPose(world.getTranslation(Vector3()), columnRotation(world, scale, Quaternion()), scale)
+        createBody(entity, null, collider, pose)?.let { problem ->
+            warn(entity, "$problem; it is left out of the simulation")
+        }
     }
 
     // ---- foliage ----
@@ -527,8 +619,13 @@ internal constructor(
     }
 
     /** Registers a successfully built body, preserving the scene's entity and contact lookup order. */
-    private fun createBody(entity: Entity, body: RigidBodyComponent?, collider: ColliderComponent): String? =
-        when (val built = bodyFactory.create(entity, body, collider)) {
+    private fun createBody(
+        entity: Entity,
+        body: RigidBodyComponent?,
+        collider: ColliderComponent,
+        world: LocalPose? = null,
+    ): String? =
+        when (val built = bodyFactory.create(entity, body, collider, world)) {
             is PhysicsBodyFactory.Built.Refused -> built.reason
             is PhysicsBodyFactory.Built.Created -> {
                 val record = BodyRecord(entity, built.id, built.body, built.motion, built.mass, built.gravityFactor)
@@ -656,6 +753,9 @@ internal constructor(
         val v = bodies.getLinearVelocity(record.id)
         return out.set(v.getX(), v.getY(), v.getZ())
     }
+
+    /** Test seam: the native world transform of [entity]'s body, or null when it has none. */
+    internal fun bodyTransformOf(entity: Entity): Matrix4? = open { records[entity]?.let(poseWriter::transformOf) }
 
     internal fun anchorsOf(c: ConstraintRecord, a: Vector3, b: Vector3) {
         a.set(c.anchor).mul(poseWriter.transformOf(records.getValue(c.entity)))

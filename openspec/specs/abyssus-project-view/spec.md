@@ -469,7 +469,6 @@ item, and the view SHALL NOT add buttons to the header by hand.
 - **WHEN** the user presses Collapse All with a scene expanded
 - **THEN** the tree shows only the project row's children, collapsed
 
-## ADDED Requirements
 
 ### Requirement: Enabled eye on entities and components
 

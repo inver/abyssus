@@ -252,8 +252,8 @@ class DtoEntryNode(
             // a path arrangement is a plain line: its copies are squashed into it and its components are edited in
             // Properties
             dto is EntityNode && dto.entity?.let(::isArrangementEntity) == true -> emptyList()
-            // a camera, light or model is a leaf: its components are edited in Properties
-            dto is EntityNode && dto.entity?.let(::isLeafEntity) == true -> emptyList()
+            // a camera, light or model lists only its child entities: its components are edited in Properties
+            dto is EntityNode && dto.entity?.let(::isLeafEntity) == true -> childEntityRows(dto)
             else -> childrenOf(dto)
         }.filterNot { sceneFileOf(v) != null && it.name in SCENE_HEADER }.foldToggles()
         return rows.mapIndexed { i, row ->

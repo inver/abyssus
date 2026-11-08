@@ -37,7 +37,14 @@ const val DAMPING_RATIO = 0.1f
  *
  * The handle's [tilt] (-1 full down .. 1 full up) moves the elevator directly, but only through taut lines.
  */
-class LineRig(private val world: PhysicsWorld, val pilot: Entity, val plane: Entity, private val ground: Ground) {
+class LineRig(
+    private val world: PhysicsWorld,
+    val pilot: Entity,
+    val plane: Entity,
+    private val ground: Ground,
+    /** Where the lines enter the plane: its `leadoutUp` / `leadoutDown` dummies ([leadoutsOf]). */
+    val leadouts: PlaneLeadouts,
+) {
     val pilotSettings: PilotComponent = pilot.getComponent(PilotComponent::class.java)
     val planeSettings: PlaneComponent = plane.getComponent(PlaneComponent::class.java)
 
@@ -128,7 +135,7 @@ class LineRig(private val world: PhysicsWorld, val pilot: Entity, val plane: Ent
         val a = azimuth * MathUtils.degreesToRadians
         val rotation =
             Quaternion(Vector3.Y, azimuth + 180f).mul(Quaternion(Vector3.X, -parkedPitch * MathUtils.radiansToDegrees))
-        val leadouts = listOf(planeSettings.leadoutUp, planeSettings.leadoutDown)
+        val ends = listOf(leadouts.up, leadouts.down)
         val points = handlePoints().map { Vector3(it).add(pilotPosition) }
 
         // the radius at which the longer line is exactly its length
@@ -140,7 +147,7 @@ class LineRig(private val world: PhysicsWorld, val pilot: Entity, val plane: Ent
 
         fun longest(radius: Float): Float {
             val p = position(radius)
-            return points.indices.maxOf { i -> rotation.transform(Vector3(leadouts[i])).add(p).dst(points[i]) }
+            return points.indices.maxOf { i -> rotation.transform(Vector3(ends[i])).add(p).dst(points[i]) }
         }
 
         // the pilot leaves the wire a little stretched, so the lines pull from the first step
@@ -158,7 +165,7 @@ class LineRig(private val world: PhysicsWorld, val pilot: Entity, val plane: Ent
         planeBody.setPose(position(low), rotation)
         pilotBody.setPose(pilotPosition, facing(azimuth))
         lines =
-            handlePoints().zip(leadouts) { from, to ->
+            handlePoints().zip(ends) { from, to ->
                 world.addRope(pilot, from, plane, to, planeSettings.lineLength * (1f + ROPE_MARGIN))
             }
         lineTension.fill(0f)

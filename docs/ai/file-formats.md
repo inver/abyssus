@@ -100,7 +100,8 @@ ecs: { "<id>": { type: "<EntityType>", flags: <int>, disabledComponents: ["<Name
 
 `type`, `flags` and `disabledComponents` are all optional and make up the entity's header (`HeaderComponent` in the
 engine, which also holds the id): `type` is `GROUP`, `LIGHT_DIRECTIONAL`, `LIGHT_POINT`, `LIGHT_SPOT`, `OBJECT`,
-`TERRAIN`, `CAMERA` or `HANDLE`. There is no `TypeComponent`: a scene that has one is unsupported.
+`TERRAIN`, `CAMERA`, `HANDLE` or `DUMMY` (a named attach point: `NameComponent`, `PositionComponent` and
+`ParentComponent` only; drawn as a marker in the editor, never in a game, and ignored by physics). There is no `TypeComponent`: a scene that has one is unsupported.
 
 `ecs` is the id-keyed entity map itself. The old `entities` wrapper, `archetypes`, `metadata` and an entity `archetype` or
 `enabled` are not part of the format: a scene that has them is unsupported (no importer). `SceneLoader` binds the whole
@@ -119,7 +120,7 @@ The native component fields described by the specs and fixtures:
 | `CameraComponent.camera` | `position`, `viewPointPosition` (the view direction), `near`, `far`, `fieldOfView` |
 | `LightComponent` | `color`, `intensity`, `range` (positive reach, default 100 omitted), either directly or under `light` |
 | `Point2PointPositionComponent` | `entity1Id` / `entity2Id` |
-| `ParentComponent` | Read by the ECS loader; the scene view ignores parents and uses `local*` as world values |
+| `ParentComponent` | `parentEntityId` and optional `node` (omitted when unset). The entity's `PositionComponent` is local to that entity, or to the rest transform of the named node of its model; world pose = parent world x node x local, resolved recursively (`lib-core`'s `hierarchy.WorldPoses`). Composition uses the parent's stored pose, never a `lookAtId` orientation. A missing parent, a self-link or a cycle makes the entity a root, with one warning; an unknown node places it on the parent itself. A disabled parent disables its subtree |
 
 **Defaults are omitted:** under the native version 1 contract, a missing field is its default (position 0, identity rotation, scale 1). An
 empty `PositionComponent: {}` is valid. Writers add fields when they change them (`SceneTransformWriter`,
@@ -312,12 +313,13 @@ mask per layer (`layer-<id>.mask`), and the bake named by `additional.dataFile` 
   `"FoliageComponent": { "assetName": "<foliage folder>" }`. The component keeps its other members, their order and
   number text when a scene is written back; a missing or null name shows nothing, and a name that is not a string
   leaves the component unchanged in the file with one warning.
-- A path arrangement is an entity of type `GROUP` with a `PathArrangementComponent`: `points` (`x`, `y`, `z`, world
-  coordinates), `closed`, `asset` (`type` `MODEL`, `name`), `spacing` (default 10), `offset` (default 0), `sides`
+- A path arrangement is an entity of type `GROUP` with a `PathArrangementComponent`: `points` (`x`, `y`, `z`, in the
+  arrangement's frame), `closed`, `asset` (`type` `MODEL`, `name`), `spacing` (default 10), `offset` (default 0), `sides`
   (`CENTER` default, `LEFT`, `RIGHT`, `BOTH`), `alignToPath` (default true), `yawOffset` (degrees, default 0) and
   `slots`, the entity id of the copy in each place along the line (`-1` for none). Defaults are omitted. The copies
-  are ordinary `OBJECT` entities in world coordinates with a `ParentComponent` pointing at the arrangement; the
-  runtime reads the component as data and runs no system for it. Moving the arrangement entity does not move them.
+  are ordinary `OBJECT` entities with a `ParentComponent` pointing at the arrangement, so their poses are local to it
+  like any child. An arrangement without a `PositionComponent` (as every one written so far) sits at the origin, so
+  its points and copies are world values. The runtime reads the component as data and runs no system for it.
 
 ### Imported FlightGear models
 

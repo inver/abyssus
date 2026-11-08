@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.flow
 
+import net.nevinsky.abyssus.app.game.controlline.flight.leadoutsOf
+import net.nevinsky.abyssus.lib.core.ecs.Dummies
 import com.badlogic.ashley.core.Entity
 import java.time.Instant
 import net.nevinsky.abyssus.app.game.controlline.components.PlaneClass
@@ -68,11 +70,16 @@ data class PlaneChoice(
     val scale: ScaleFacts? = null,
 )
 
-/** Every entity of a scene with a [PlaneComponent], in the order of their names. */
-fun planeChoices(entities: Map<Int, Entity>): List<PlaneChoice> =
-    entities
+/**
+ * Every entity of a scene with a [PlaneComponent], in the order of their names. A plane without its `leadoutUp` and
+ * `leadoutDown` dummies is left out, with one line to [warn] naming it and the missing dummy.
+ */
+fun planeChoices(entities: Map<Int, Entity>, warn: (String) -> Unit = {}): List<PlaneChoice> {
+    val dummies = Dummies(warn)
+    return entities
         .mapNotNull { (id, entity) ->
             val plane = entity.getComponent(PlaneComponent::class.java) ?: return@mapNotNull null
+            leadoutsOf(entities.values, entity, dummies, warn) ?: return@mapNotNull null
             PlaneChoice(
                 id,
                 entity.getComponent(NameComponent::class.java)?.name ?: "Plane $id",
@@ -86,6 +93,7 @@ fun planeChoices(entities: Map<Int, Entity>): List<PlaneChoice> =
             )
         }
         .sortedWith(compareBy<PlaneChoice> { it.name }.thenBy { it.entityId })
+}
 
 /** Who holds the handle in a flight: the player, or the Watch AI bot (an F2B demonstration). */
 enum class Control {

@@ -8,6 +8,8 @@ package net.nevinsky.abyssus.lib.core.editor.headless
 import com.badlogic.gdx.math.Vector3
 import java.io.File
 import net.nevinsky.abyssus.lib.core.assets.testProject
+import net.nevinsky.abyssus.lib.core.dto.entityWriter
+import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
 import net.nevinsky.abyssus.lib.core.editor.meta.AssetFieldValue
 import net.nevinsky.abyssus.lib.core.editor.modellights.MaterialGeometrySource
@@ -140,5 +142,37 @@ class HeadlessEditingTest {
     fun removingAReferencedEntityIsRefusedWithTheRelationship() {
         val refused = editing.removeEntity(sceneText, 3L) as HeadlessEdit.Refused
         assertTrue(refused.refusal.message, refused.refusal.message.contains("lookAtId"))
+    }
+
+    // ---- add a dummy (OpenSpec headless-scene-editing, "Add a dummy without the IDE") ----
+
+    private val printing = HeadlessEditing(
+        JsonProcessor(
+            NOPLogger.NOP_LOGGER,
+            listOf(entityWriter(ComponentRegistry())),
+        )
+    )
+
+    @Test
+    fun addDummyWritesWhatTheActionWrites() {
+        val edited = printing.addDummy(sceneText, 9L) as HeadlessEdit.Edited
+        val scene = net.nevinsky.abyssus.lib.core.editor.parseScene(edited.text)
+        val id = scene.ecs.keys.max()
+        assertEquals(11L, id)
+        val text = edited.text
+        val entry = text.substring(text.indexOf("\"$id\": {"))
+        assertTrue(entry, entry.contains("\"type\": \"DUMMY\""))
+        assertTrue(entry, entry.contains("\"NameComponent\": {\n          \"name\": \"Dummy\""))
+        assertTrue(entry, entry.contains("\"PositionComponent\": {}"))
+        assertTrue(entry, entry.contains("\"ParentComponent\": {\n          \"parentEntityId\": 9\n"))
+        // the same as the action's edit on the DTO
+        val direct = net.nevinsky.abyssus.lib.core.editor.parseScene(sceneText)
+        net.nevinsky.abyssus.lib.core.editor.dummy.DummyEntities(ResourceEditorMessages()).add(direct, 9L)
+        assertEquals(direct.ecs.keys, scene.ecs.keys)
+    }
+
+    @Test
+    fun addDummyToAnUnknownEntityIsUnchanged() {
+        assertEquals(HeadlessEdit.Unchanged, printing.addDummy(sceneText, 99L))
     }
 }

@@ -9,5 +9,8 @@ enum class EntityType {
     OBJECT,
     TERRAIN,
     CAMERA,
-    HANDLE
+    HANDLE,
+
+    /** A named attach point: a child entity with only a name and a pose, drawn as a marker in the editor. */
+    DUMMY,
 }

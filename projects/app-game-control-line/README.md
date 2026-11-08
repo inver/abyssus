@@ -385,7 +385,8 @@ select scene is rearranged; a flight loads its own copy.
 ### A replica in Abyssus
 
 Add a model entity with a `RigidBodyComponent`, a convex hull `ColliderComponent` and a `PlaneComponent` of class `SCALE`
-(lines, leadouts, thrust, wing area...: tuned by hand as for any plane), and a `ScaleComponent`
+(lines, thrust, wing area...: tuned by hand as for any plane), its two leadout dummies (see *Leadouts* below), and a
+`ScaleComponent`
 (`prototype`, `firstFlight`, `wingspan` in metres, `scale` as a denominator). The model must be in the plane frame: nose +Z, up +Y,
 the wings along X, resting on y = 0 (the bundled `model_mig3` was turned 90° about Y at its root node after import; see its
 `source.json`). A `SCALE` plane without a `ScaleComponent` is flown too, with its prototype shown as unknown. To add a table,
@@ -661,7 +662,21 @@ in a figure is accepted).
 ## The project in Abyssus
 
 Open a **copy** of `project/ControlLine` in Abyssus (`./gradlew :plugin-abyssus:runIde`), never the committed folder:
-the tests assert on its scene. `PlaneComponent`, `PilotComponent`, `ScaleComponent` and `VitrineTableComponent` are registered game components and currently
+the tests assert on its scene.
+
+### Leadouts
+
+A plane's lines enter it at its two child **dummies** named `leadoutUp` and `leadoutDown` (OpenSpec
+`control-line-flight`, "Leadouts are the plane's dummies"): their `PositionComponent` is the point in the plane's frame
+(nose +Z, up +Y, inboard wing +X). In Abyssus they are listed under the plane's row; turn on **Show Dummies** in the Scene
+view to see their markers, and move one with the gizmo or in Properties. Add Dummy on a plane's row adds another; rename it
+to `leadoutUp` / `leadoutDown`. `LineRig` reads them through `lib-core`'s `Dummies` (`flight/PlaneLeadouts.kt`); a plane
+that lacks either is not offered on plane select, with one warning naming it and the missing dummy.
+
+They replaced `PlaneComponent.leadoutUp` / `leadoutDown`. `tools/FieldLeadouts.kt` made the dummies once from those values
+(`./gradlew :app-game-control-line:migrateFieldLeadouts -PfieldLeadoutsScenes=<file>[,<file>]`; a rerun changes nothing),
+and `FieldLeadoutsMigrationTest` (in `testFieldFoliageTools`) checks the committed field. `toolsTest/fixtures/Field.original.scene`
+is the pinned input of the foliage migration, so it keeps the old members. `PlaneComponent`, `PilotComponent`, `ScaleComponent` and `VitrineTableComponent` are registered game components and currently
 remain read-only JSON in the editor. The committed `abyssus/components.schema.json` is retained data; it does not
 enable Properties editing. A plane duplicated in the field scene appears on plane select at the next game start.
 

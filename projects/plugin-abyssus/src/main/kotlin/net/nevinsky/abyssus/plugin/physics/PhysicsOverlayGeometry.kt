@@ -205,8 +205,8 @@ class PhysicsOverlayGeometry(private val terrainSize: (String) -> Float? = { nul
     }
 
     /**
-     * The entity's transform: where the view shows it (a model, terrain, light or camera placement, or a bare
-     * position), with the rotation and scale its `PositionComponent` holds when the view does not place it.
+     * The entity's world transform: where the view shows it (a model or terrain placement), else its world matrix
+     * resolved through its parents, else its `PositionComponent` as a world pose.
      */
     private fun transformOf(id: Long, entity: EntityDto?, content: SceneContent): Matrix4 {
         val authored = entity?.component(PositionComponent::class.java) ?: PositionComponent()
@@ -230,6 +230,8 @@ class PhysicsOverlayGeometry(private val terrainSize: (String) -> Float? = { nul
                     it.scale,
                 )
             }
+        // any other entity at its world pose, through its parents (OpenSpec `scene-physics-overlay`)
+        content.hierarchy.worlds[id]?.let { return Matrix4(it) }
         val at =
             content.entityPositions[id]?.let { Vector3(it.x, it.y, it.z) }
                 ?: Vector3(authored.localPosition.x, authored.localPosition.y, authored.localPosition.z)

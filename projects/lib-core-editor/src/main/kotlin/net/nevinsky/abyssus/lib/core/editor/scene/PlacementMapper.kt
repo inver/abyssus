@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
@@ -18,6 +19,8 @@ import net.nevinsky.abyssus.lib.core.editor.content.CameraPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.LightKind
 import net.nevinsky.abyssus.lib.core.editor.content.LightPlacement
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.core.editor.hierarchy.placementOf
+import net.nevinsky.abyssus.lib.core.hierarchy.ResolvedPoses
 import net.nevinsky.abyssus.lib.core.format.EntityType
 import net.nevinsky.abyssus.lib.core.light.lightKindOf
 import net.nevinsky.abyssus.lib.core.light.lightPlacementOf
@@ -44,6 +47,8 @@ class DecodedEntity(
     val foliage: String? = null,
     /** The entity's path arrangement, or null. */
     val arrangement: PathArrangementComponent? = null,
+    /** Whether the entity is an enabled `DUMMY`. */
+    val dummy: Boolean = false,
 )
 
 /**
@@ -51,17 +56,34 @@ class DecodedEntity(
  * what the scene view draws is unit-tested without them.
  */
 class PlacementMapper {
-    fun map(entities: List<DecodedEntity>, skybox: String?): SceneContent {
+    /**
+     * Maps [entities] at the world poses of [poses] (each entity's own `PositionComponent` as its world pose when it
+     * is null); [nodes] are the model nodes children are bound to.
+     */
+    fun map(
+        entities: List<DecodedEntity>,
+        skybox: String?,
+        poses: ResolvedPoses? = null,
+        nodes: Map<Long, String> = emptyMap(),
+    ): SceneContent {
         val models = mutableListOf<AssetPlacement>()
         val terrains = mutableListOf<AssetPlacement>()
         val foliages = mutableListOf<FoliagePlacement>()
         val lights = mutableListOf<LightPlacement>()
         val cameras = mutableListOf<CameraPlacement>()
         val arrangements = mutableListOf<ArrangementPlacement>()
+        val dummies = mutableListOf<DummyPlacement>()
         val positions = linkedMapOf<Long, Vector3>()
         val handleIds = mutableSetOf<Long>()
+        val locals = linkedMapOf<Long, PlacementTransform>()
         for (entity in entities) {
-            val transform = entity.position?.let(::transformOf) ?: PlacementTransform.IDENTITY
+            entity.position?.let { locals[entity.id] = transformOf(it) }
+            val world = poses?.world?.get(entity.id)
+            // a root, or a child of an identity frame, keeps its stored values exactly (no decomposition round trip)
+            val framed = poses != null && entity.id in poses.parents &&
+                !poses.parentWorldOf(entity.id).`val`.contentEquals(IDENTITY_VALUES)
+            val framedWorld = world?.takeIf { framed }?.let(::placementOf)
+            val transform = framedWorld ?: entity.position?.let(::transformOf) ?: PlacementTransform.IDENTITY
             if (entity.position != null) {
                 positions[entity.id] = transform.position
             }
@@ -69,7 +91,11 @@ class PlacementMapper {
                 handleIds += entity.id
             }
             val asset = entity.asset
-            entity.arrangement?.let { arrangements += ArrangementPlacement(entity.id, it) }
+            entity.arrangement?.let { arrangements += ArrangementPlacement(entity.id, inWorld(it, world)) }
+            if (entity.dummy) {
+                dummies += DummyPlacement(entity.id, entity.name, transform, poses?.parents?.get(entity.id))
+                continue
+            }
             when {
                 asset != null && asset.type == "MODEL" ->
                     models += AssetPlacement(entity.id, asset.name, transform, asset.meshId)
@@ -102,7 +128,49 @@ class PlacementMapper {
             entityPositions = positions,
             handleIds = handleIds,
             arrangements = arrangements,
+            dummies = dummies,
+            hierarchy = hierarchyOf(poses, locals, nodes),
         )
+    }
+
+    private fun hierarchyOf(
+        resolved: ResolvedPoses?,
+        locals: Map<Long, PlacementTransform>,
+        nodes: Map<Long, String>,
+    ): ContentHierarchy {
+        resolved ?: return ContentHierarchy(locals = locals)
+        return ContentHierarchy(
+            parents = resolved.parents,
+            parentFrames = resolved.parents.keys.associateWith(resolved::parentWorldOf),
+            worlds = resolved.world.mapValues { (_, m) -> Matrix4(m) },
+            locals = locals,
+            nodes = nodes,
+            disabledByAncestor = resolved.disabled.filterTo(HashSet()) { id ->
+                resolved.ancestorsOf(id).any { it in resolved.disabled }
+            },
+            warnings = resolved.warnings,
+        )
+    }
+
+    /**
+     * [arrangement] with its points in world space under the arrangement entity's [world] matrix; the component itself
+     * when there is no frame or it is the identity (every arrangement without a `PositionComponent`).
+     */
+    private fun inWorld(arrangement: PathArrangementComponent, world: Matrix4?): PathArrangementComponent {
+        if (world == null || world.`val`.contentEquals(IDENTITY_VALUES)) {
+            return arrangement
+        }
+        return PathArrangementComponent().also {
+            it.points = arrangement.points.map { p -> Vector3(p).mul(world) }.toMutableList()
+            it.closed = arrangement.closed
+            it.asset = arrangement.asset
+            it.spacing = arrangement.spacing
+            it.offset = arrangement.offset
+            it.sides = arrangement.sides
+            it.alignToPath = arrangement.alignToPath
+            it.yawOffset = arrangement.yawOffset
+            it.slots = arrangement.slots
+        }
     }
 
     private fun transformOf(position: PositionComponent) =
@@ -159,3 +227,5 @@ class PlacementMapper {
         )
     }
 }
+
+private val IDENTITY_VALUES = Matrix4().`val`.copyOf()

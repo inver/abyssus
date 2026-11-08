@@ -75,10 +75,47 @@ class EntityRemovalTest {
     }
 
     @Test
-    fun parentBlocks() {
+    fun aParentGoesWithItsChildren() {
+        val scene = sceneOf(plain(0), with(1, ParentComponent(0)), with(2, ParentComponent(1)), plain(3))
+        assertEquals(EditResult.Changed, removal.remove(scene, 0L))
+        assertEquals(setOf(3L), scene.ecs.keys)
+    }
+
+    @Test
+    fun aChildGoesAloneAndItsParentStays() {
         val scene = sceneOf(plain(0), with(1, ParentComponent(0)))
-        assertTrue(rejected(removal.remove(scene, 0L)).contains("ParentComponent.parentEntityId"))
-        assertEquals(setOf(0L, 1L), scene.ecs.keys)
+        assertEquals(EditResult.Changed, removal.remove(scene, 1L))
+        assertEquals(setOf(0L), scene.ecs.keys)
+    }
+
+    @Test
+    fun aModelWithADummyGoesInOneEdit() {
+        val scene = parseScene(untitled)
+        scene.ecs[20L] = entityOf(20, EntityType.DUMMY, NameComponent("Dummy"), PositionComponent(), ParentComponent(9))
+        assertEquals(EditResult.Changed, removal.remove(scene, 9L))
+        assertFalse(9L in scene.ecs || 20L in scene.ecs)
+    }
+
+    @Test
+    fun aLightGoesWithItsHandle() {
+        val scene = sceneOf(
+            entityOf(0, EntityType.HANDLE, PositionComponent(), ParentComponent(1)),
+            entityOf(1, EntityType.LIGHT_DIRECTIONAL, PositionComponent(0f, 10f, 0f).also { it.lookAtId = 0 }),
+        )
+        assertEquals(EditResult.Changed, removal.remove(scene, 1L))
+        assertTrue(scene.ecs.isEmpty())
+    }
+
+    @Test
+    fun anOutsideReferenceToAChildStillRefuses() {
+        val scene = sceneOf(
+            plain(0),
+            with(1, ParentComponent(0)),
+            with(2, PositionComponent().also { it.lookAtId = 1 }),
+        )
+        val reason = rejected(removal.remove(scene, 0L))
+        assertTrue(reason, reason.contains("lookAtId") && reason.contains("entity 2"))
+        assertEquals(setOf(0L, 1L, 2L), scene.ecs.keys)
     }
 
     @Test
@@ -136,9 +173,12 @@ class EntityRemovalTest {
     @Test
     fun untitledReferencedEntitiesAreRefused() {
         val scene = parseScene(untitled)
-        for (id in listOf(3L, 4L)) rejected(removal.remove(scene, id))
+        // the camera's handle alone is refused: the camera looks at it
         val reason = rejected(removal.remove(scene, 3L))
         assertTrue(reason, reason.contains("entity 4") && reason.contains("lookAtId"))
         rejected(removal.remove(scene, 99L))
+        // the camera goes with its handle
+        assertEquals(EditResult.Changed, removal.remove(scene, 4L))
+        assertFalse(3L in scene.ecs || 4L in scene.ecs)
     }
 }

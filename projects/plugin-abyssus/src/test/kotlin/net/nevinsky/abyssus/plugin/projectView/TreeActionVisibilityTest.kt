@@ -134,8 +134,11 @@ class TreeActionVisibilityTest : BasePlatformTestCase() {
         assertEquals(listOf("Abyssus.NewUiAsset", "Abyssus.NewTerrain", "Abyssus.NewFoliage"), childIds(group))
     }
 
-    fun testAddGroupContainsAssetThenPathArrangementThenLight() {
+    fun testAddGroupContainsAssetThenPathArrangementThenLightThenDummy() {
         val group = groupOf("Abyssus.Menu.Add")
-        assertEquals(listOf("Abyssus.AddAsset", "Abyssus.AddPathArrangement", "Abyssus.AddLight"), childIds(group))
+        assertEquals(
+            listOf("Abyssus.AddAsset", "Abyssus.AddPathArrangement", "Abyssus.AddLight", "Abyssus.AddDummy"),
+            childIds(group),
+        )
     }
 }

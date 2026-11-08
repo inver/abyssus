@@ -47,11 +47,11 @@
           "type": "TERRAIN",
           "assetName": "terrain_airfield_site"
         },
-        "ColliderComponent": {
-          "shape": "HEIGHT_FIELD"
-        },
         "FoliageComponent": {
           "assetName": "foliage_airfield_site"
+        },
+        "ColliderComponent": {
+          "shape": "HEIGHT_FIELD"
         }
       }
     },
@@ -147,16 +147,6 @@
         "PlaneComponent": {
           "planeClass": "SPEED",
           "lineLength": 21,
-          "leadoutUp": {
-            "x": 0.33,
-            "y": 0,
-            "z": 0.01
-          },
-          "leadoutDown": {
-            "x": 0.33,
-            "y": 0,
-            "z": -0.03
-          },
           "thrust": 6,
           "fuelTime": 60,
           "wingArea": 0.09,
@@ -202,16 +192,6 @@
         "PlaneComponent": {
           "planeClass": "STUNT",
           "lineLength": 18,
-          "leadoutUp": {
-            "x": 0.75,
-            "y": 0,
-            "z": 0.02
-          },
-          "leadoutDown": {
-            "x": 0.75,
-            "y": 0,
-            "z": -0.04
-          },
           "thrust": 5.2,
           "fuelTime": 360,
           "wingArea": 0.325,
@@ -254,16 +234,6 @@
         },
         "PlaneComponent": {
           "lineLength": 15,
-          "leadoutUp": {
-            "x": 0.48,
-            "y": 0,
-            "z": 0.02
-          },
-          "leadoutDown": {
-            "x": 0.48,
-            "y": 0,
-            "z": -0.04
-          },
           "thrust": 5.5,
           "zeroLiftDrag": 0.06
         }
@@ -5907,16 +5877,6 @@
         "PlaneComponent": {
           "planeClass": "SCALE",
           "lineLength": 16,
-          "leadoutUp": {
-            "x": 0.485,
-            "y": 0,
-            "z": 0.02
-          },
-          "leadoutDown": {
-            "x": 0.485,
-            "y": 0,
-            "z": -0.04
-          },
           "thrust": 5.2,
           "fuelTime": 240,
           "wingArea": 0.22,
@@ -6045,6 +6005,150 @@
         },
         "VitrineTableComponent": {
           "topHeight": 0.958
+        }
+      }
+    },
+    "761": {
+      "type": "DUMMY",
+      "components": {
+        "NameComponent": {
+          "name": "leadoutUp"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0.33,
+            "y": 0,
+            "z": 0.01
+          }
+        },
+        "ParentComponent": {
+          "parentEntityId": 3
+        }
+      }
+    },
+    "762": {
+      "type": "DUMMY",
+      "components": {
+        "NameComponent": {
+          "name": "leadoutDown"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0.33,
+            "y": 0,
+            "z": -0.03
+          }
+        },
+        "ParentComponent": {
+          "parentEntityId": 3
+        }
+      }
+    },
+    "763": {
+      "type": "DUMMY",
+      "components": {
+        "NameComponent": {
+          "name": "leadoutUp"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0.75,
+            "y": 0,
+            "z": 0.02
+          }
+        },
+        "ParentComponent": {
+          "parentEntityId": 4
+        }
+      }
+    },
+    "764": {
+      "type": "DUMMY",
+      "components": {
+        "NameComponent": {
+          "name": "leadoutDown"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0.75,
+            "y": 0,
+            "z": -0.04
+          }
+        },
+        "ParentComponent": {
+          "parentEntityId": 4
+        }
+      }
+    },
+    "765": {
+      "type": "DUMMY",
+      "components": {
+        "NameComponent": {
+          "name": "leadoutUp"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0.48,
+            "y": 0,
+            "z": 0.02
+          }
+        },
+        "ParentComponent": {
+          "parentEntityId": 5
+        }
+      }
+    },
+    "766": {
+      "type": "DUMMY",
+      "components": {
+        "NameComponent": {
+          "name": "leadoutDown"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0.48,
+            "y": 0,
+            "z": -0.04
+          }
+        },
+        "ParentComponent": {
+          "parentEntityId": 5
+        }
+      }
+    },
+    "767": {
+      "type": "DUMMY",
+      "components": {
+        "NameComponent": {
+          "name": "leadoutUp"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0.485,
+            "y": 0,
+            "z": 0.02
+          }
+        },
+        "ParentComponent": {
+          "parentEntityId": 756
+        }
+      }
+    },
+    "768": {
+      "type": "DUMMY",
+      "components": {
+        "NameComponent": {
+          "name": "leadoutDown"
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0.485,
+            "y": 0,
+            "z": -0.04
+          }
+        },
+        "ParentComponent": {
+          "parentEntityId": 756
         }
       }
     }

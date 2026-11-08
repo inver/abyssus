@@ -5,6 +5,10 @@
 
 package net.nevinsky.abyssus.lib.core.editor.panel
 
+import net.nevinsky.abyssus.lib.core.editor.hierarchy.SceneHierarchy
+import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.editor.scene.SCENE_SETTING_KIND
 import com.badlogic.gdx.graphics.Color
 import net.nevinsky.abyssus.lib.core.assets.terrain.SPLAT_FIELDS
@@ -279,7 +283,7 @@ class PanelBuilders(
         val rows = if (section.raw != null) {
             rawRows(section)
         } else {
-            rows(section, entityId, entityName, type)
+            localNote(scene, entityId, section.kind) + rows(section, entityId, entityName, type)
         }
         return Section(
             "$entityId.${section.kind}", humanize(section.label), componentIconKey(section.kind), rows, section.kind,
@@ -290,6 +294,29 @@ class PanelBuilders(
                 null
             },
             disabled = !entityOn || !componentOn,
+        )
+    }
+
+    /**
+     * The note over a child's `PositionComponent` (OpenSpec `object-properties-panel`, "A child's position is shown as
+     * local"): its values are local to its parent, named with the model node it is bound to. None for a root.
+     */
+    private fun localNote(scene: SceneDto, entityId: Long, kind: String): List<Row> {
+        if (kind.substringAfterLast('.') != PositionComponent::class.java.simpleName) {
+            return emptyList()
+        }
+        val parentId = SceneHierarchy().resolve(scene).parents[entityId] ?: return emptyList()
+        val parentName = scene.entity(parentId)?.component(NameComponent::class.java)?.name?.takeIf { it.isNotBlank() }
+            ?: parentId.toString()
+        val node = scene.entity(entityId)?.component(ParentComponent::class.java)?.node?.takeIf { it.isNotBlank() }
+        return listOf(
+            NoteRow(
+                if (node == null) {
+                    messages.message("panelLocalTo", parentName)
+                } else {
+                    messages.message("panelLocalToNode", parentName, node)
+                }
+            )
         )
     }
 

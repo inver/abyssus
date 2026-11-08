@@ -5,6 +5,8 @@
 
 package net.nevinsky.abyssus.lib.core.editor.scene
 
+import net.nevinsky.abyssus.lib.core.hierarchy.NodeTransforms
+import net.nevinsky.abyssus.lib.core.hierarchy.noNodeTransforms
 import net.nevinsky.abyssus.lib.core.ecs.component.CameraDto
 import net.nevinsky.abyssus.lib.core.editor.content.unclampedColor
 
@@ -76,14 +78,19 @@ data class SceneRenderParams(
   * defaults:
  * a scene does not save them.
  */
-fun renderParamsOf(scene: SceneDto, camera: CameraParams, projectDir: File? = null): SceneRenderParams {
+fun renderParamsOf(
+    scene: SceneDto,
+    camera: CameraParams,
+    projectDir: File? = null,
+    nodes: NodeTransforms = noNodeTransforms(),
+): SceneRenderParams {
     val fog = fogOf(scene)
     return SceneRenderParams(
         fog?.color ?: SceneRenderParams.DEFAULT_CLEAR,
         ambientOf(scene),
         fog,
         camera,
-        sceneContentOf(scene),
+        sceneContentOf(scene, nodes),
         projectDir,
         scene.ecs,
     )

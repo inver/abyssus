@@ -18,16 +18,36 @@ import net.nevinsky.abyssus.plugin.dto.SceneDocumentCache
 
 private val LOG = Logger.getInstance("net.nevinsky.abyssus.projectView.EntitySelection")
 
-/** Where an entity sits under its scene's node: `ecs` / `<id>` (the `entities` level is not shown). */
-private fun entityPath(entityId: Long) = listOf("ecs", entityId.toString())
+/**
+ * Where an entity sits under its scene's node: `ecs` / its [ancestors] (root first) / `<id>`, as a child row is listed
+ * under its parent's row (the `entities` level is not shown).
+ */
+private fun entityPath(entityId: Long, ancestors: List<Long>) =
+    listOf("ecs") + ancestors.map(Long::toString) + entityId.toString()
 
 /**
  * What a tree visitor should do with the node at the end of [chain] (the user objects from the view root down) when
- * looking for the row of entity [entityId] of [sceneFile]. The scene is found either as a standalone `.scene` asset or
- * as an entry of its project's `scenes` list.
+ * looking for the row of entity [entityId] of [sceneFile], whose parent rows are [ancestors] (root first; empty for a
+ * root entity). The scene is found either as a standalone `.scene` asset or as an entry of its project's `scenes` list.
  */
-fun entityVisitAction(sceneFile: VirtualFile, entityId: Long, chain: List<Any?>): TreeVisitor.Action =
-    rowVisitAction(sceneFile, entityPath(entityId), chain)
+fun entityVisitAction(
+    sceneFile: VirtualFile,
+    entityId: Long,
+    chain: List<Any?>,
+    ancestors: List<Long> = emptyList(),
+): TreeVisitor.Action = rowVisitAction(sceneFile, entityPath(entityId, ancestors), chain)
+
+/** The parent rows of entity [entityId] in [scene]'s tree, root first; empty for a root entity. */
+fun treeAncestors(scene: net.nevinsky.abyssus.lib.core.dto.SceneDto, entityId: Long): List<Long> {
+    val parents = treeParents(scene)
+    val chain = ArrayList<Long>()
+    var current = parents[entityId]
+    while (current != null && current !in chain) {
+        chain += current
+        current = parents[current]
+    }
+    return chain.asReversed()
+}
 
 /**
  * What a tree visitor should do with the node at the end of [chain] when looking for the row [wanted] (row names below
@@ -81,10 +101,13 @@ private fun isSceneRoot(node: Any, sceneFile: VirtualFile): Boolean =
 fun selectEntityInAbyssusView(project: Project, sceneFile: VirtualFile, entityId: Long) {
     try {
         // a linked copy of a path arrangement has no row of its own: its arrangement's row stands for it
-        val rowId =
-            SceneDocumentCache.of(project).read(sceneFile)?.scene?.let { arrangementOwnerOf(it, entityId) } ?: entityId
+        val scene = SceneDocumentCache.of(project).read(sceneFile)?.scene
+        val rowId = scene?.let { arrangementOwnerOf(it, entityId) } ?: entityId
+        // a child's row is under its parent's: the walk expands each ancestor on the way (OpenSpec
+        // abyssus-project-view)
+        val ancestors = scene?.let { treeAncestors(it, rowId) }.orEmpty()
         val visitor = TreeVisitor { path ->
-            entityVisitAction(sceneFile, rowId, path.path.map(TreeUtil::getUserObject))
+            entityVisitAction(sceneFile, rowId, path.path.map(TreeUtil::getUserObject), ancestors)
         }
         selectInAbyssusView(project, visitor)
     } catch (e: Throwable) {

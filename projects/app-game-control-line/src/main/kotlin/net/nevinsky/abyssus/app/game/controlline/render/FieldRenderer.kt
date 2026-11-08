@@ -357,6 +357,7 @@ class FieldRenderer(
         poses: Map<Entity, Matrix4>,
     ) {
         skyTime += seconds
+        field.resolveWorld()
         if (scene !== field) {
             keepOnly(field)
             culling.clear()
@@ -421,7 +422,7 @@ class FieldRenderer(
         animate(drawn, clips, seconds)
         val terrains =
             field.terrains.mapNotNull { (entity, name) ->
-                ctx.assetStorage.getAs<TerrainMesh>(name)?.let { it to field.position(entity).getTransform() }
+                ctx.assetStorage.getAs<TerrainMesh>(name)?.let { it to field.world(entity) }
             }
         val foliage = foliageOf(field)
         probe.begin(FrameSpan.SHADOW)
@@ -430,7 +431,7 @@ class FieldRenderer(
             val light = shadows.casterCamera()
             for ((entity, placement) in foliage) placement.drawable.updateCasters(
                 light,
-                field.position(entity).getTransform(),
+                field.world(entity),
             )
             // only what the sun camera's volume meets is drawn into the map; animated models keep their rest-pose box
             // out of it
@@ -523,7 +524,7 @@ class FieldRenderer(
 
         // the viewer's own culling and buffers, after the light pass: casters never touch them
         probe.begin(FrameSpan.MODELS)
-        for ((entity, placement) in foliage) placement.drawable.update(camera, field.position(entity).getTransform())
+        for ((entity, placement) in foliage) placement.drawable.update(camera, field.world(entity))
         batch.begin(camera)
         lastDrawnModels = 0
         for ((entity, instance) in drawn) {
@@ -958,7 +959,7 @@ class FieldRenderer(
                         instances[slot] = model to it
                         playing.remove(entity)
                     }
-            instance.transform!!.set(poses[entity] ?: field.position(entity).getTransform())
+            instance.transform!!.set(poses[entity] ?: field.world(entity))
             entity to instance
         }
 

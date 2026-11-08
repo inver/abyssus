@@ -48,7 +48,9 @@ material. It SHALL write nothing when the user cancels.
 
 For the chosen material the action SHALL find each connected piece of its geometry (triangles that share vertices at the
 same position) and SHALL add one `LIGHT_POINT` entity per piece, placed at the centre of the piece's bounds in world space. World space
-SHALL include the entity's position, rotation and scale and the transforms of the model's nodes. The new entities' ids
+SHALL include the entity's world pose (its position, rotation and scale, composed with its parents' when it is a child,
+as the `scene-entity-hierarchy` capability describes) and the transforms of the model's nodes; the new lights are root
+entities. The new entities' ids
 SHALL follow the highest numeric entity id of the scene in order, and their names SHALL be the model entity's name,
 `Lamp` and the lamp's number. Everything else in the file SHALL stay as it was.
 
@@ -61,6 +63,11 @@ SHALL follow the highest numeric entity id of the scene in order, and their name
 
 - **WHEN** the model entity is moved 10 units along x and scaled by 2
 - **THEN** each light is at its lamp's centre after that move and scale
+
+#### Scenario: A child model's lamps
+
+- **WHEN** the model entity is the child of an entity moved 10 units along x
+- **THEN** each light, a root entity, is at its lamp's centre in world space, 10 units further along x
 
 #### Scenario: Material not used
 

@@ -142,6 +142,24 @@ metadata file through `AssetTransaction`; `AssetFileCommand.execute` owns rollba
 `selectAssetInAbyssusView` selects the created cloud asset after refresh. Its UUID, timestamp and bytes remain
 stable on Redo. Source cloud metadata, the sky, scenes and project are never edited by creation.
 
+## Child entities in the tree
+
+`ecsRows` (`SceneTreeNodes.kt`) lists only root entities under `ecs`; an entity whose `ParentComponent` names another
+entity of the scene (`treeParents`: a followed link, as `lib-core-editor`'s `SceneHierarchy` resolves it, not a squashed
+arrangement copy) is listed under its parent's row, before the component rows (`childEntityRows`, `entityRows`), in id
+order. A camera, light or model row, which shows no component rows, lists its children only. A broken link (missing
+parent, itself, a cycle) leaves the entity under `ecs`. The `ecs` row still counts every entity; a row with children reads
+`N components, M children`. A `DUMMY` row has the dummy icon (`entity_dummy_icon.svg`). Selecting an entity from the
+Scene view walks the tree through its ancestors (`treeAncestors`, `entityVisitAction`), which expands them. Remove Entity
+on a parent removes its descendants in the same edit (`EntityRemoval`).
+
+## Add Dummy
+
+`AddDummyAction` (`Abyssus.AddDummy`, last in `Abyssus.Menu.Add`) is offered on an entity row that is not a path
+arrangement (a linked copy has no row). It adds a `DUMMY` child named `Dummy` (`Dummy 2`... beside a sibling of that name)
+at the entity's origin through `lib-core-editor`'s `DummyEntities`, as one undoable `editSceneDocument` command, and
+selects the new row.
+
 ## Arrangement copies in the tree
 
 `ecsRows` (`DtoTree.kt`) leaves out the linked copies of a path arrangement (`arrangementCopyIds` in `lib-core-editor`: the

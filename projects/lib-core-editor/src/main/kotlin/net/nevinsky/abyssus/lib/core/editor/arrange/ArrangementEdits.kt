@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.lib.core.editor.arrange
 
 import com.badlogic.ashley.core.Component
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.MetaType
@@ -19,6 +20,8 @@ import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
 import net.nevinsky.abyssus.lib.core.editor.document.PlacementWrites
+import net.nevinsky.abyssus.lib.core.editor.hierarchy.SceneHierarchy
+import net.nevinsky.abyssus.lib.core.editor.hierarchy.placementOf
 import net.nevinsky.abyssus.lib.core.editor.util.Util
 import net.nevinsky.abyssus.lib.core.format.EntityType
 
@@ -36,7 +39,9 @@ sealed interface ArrangementResult {
  * Creates, regenerates and detaches the copies of a path arrangement by editing a [SceneDto]. The arrangement's
  * [PathArrangementComponent] holds the line and the settings; its copies are ordinary entities that point back with a
  * `ParentComponent`, and `slots` lists the entity of each place along the line. Callers write the scene through
- * `editSceneJson` as one undoable command. [detach] needs no [messages], so the default suits callers that only detach.
+ * `editSceneDocument` as one undoable command. The line and the copies are in the arrangement entity's frame (world
+ * values when it has no `PositionComponent`); [setPoints] takes world points, as the view edits them. [detach] needs
+ * no [messages], so the default suits callers that only detach.
  */
 class ArrangementEdits(private val messages: EditorMessages = EditorMessages { key, _ -> key }) {
     private val layout = PathLayout()
@@ -96,6 +101,8 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
             return ArrangementResult.Rejected(messages.message("arrangementInvalid"))
         }
         val slots = layout.slots(component) ?: return tooMany()
+        // the line and the copies are in the arrangement's frame; the ground is sampled at the world positions
+        val heights = framed(heights, frameOf(scene, arrangementId))
 
         val refill =
             before != null &&
@@ -157,6 +164,10 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
         if (points.size < 2 || points.any { !Util.isFinite(it) }) {
             return ArrangementResult.Rejected(messages.message("arrangementInvalid"))
         }
+        // the view edits the line in world space; the component holds it in the arrangement's frame
+        val frame = frameOf(scene, arrangementId)
+        val inverse = frame?.let { Matrix4(it).inv() }
+        val points = inverse?.let { m -> points.map { Vector3(it).mul(m) } } ?: points
         val before = arrangementAlong(component.points, component)
         val after = arrangementAlong(points, component)
         if (!after.isUsable()) {
@@ -170,8 +181,9 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
     }
 
     /**
-     * Makes the copy [copyId] an ordinary entity: removes its `ParentComponent` and writes `-1` for it in the slots of
-     * its arrangement. False, leaving [scene] as it was, when the entity is not a linked copy.
+     * Makes the copy [copyId] an ordinary entity: writes its world pose as its own pose (so it does not move), removes
+     * its `ParentComponent` and writes `-1` for it in the slots of its arrangement. False, leaving [scene] as it was,
+     * when the entity is not a linked copy.
      */
     fun detach(scene: SceneDto, copyId: Long): Boolean {
         val id = copyId.toInt()
@@ -183,11 +195,38 @@ class ArrangementEdits(private val messages: EditorMessages = EditorMessages { k
             return false
         }
         arrangement.slots[at] = NO_ENTITY
+        // the copy keeps its place: its world pose becomes its own pose (unchanged under an unplaced arrangement)
+        val frame = SceneHierarchy().resolve(scene).parentWorldOf(copyId)
+        if (!frame.`val`.contentEquals(Matrix4().`val`)) {
+            val world = placementOf(SceneHierarchy().resolve(scene).worldOf(copyId))
+            val placement = placements.placementOf(copy)
+            placements.setPosition(placement, world.position)
+            placements.setRotation(placement, world.rotation)
+            placement.localScale = Vector3(world.scale)
+        }
         copy.components.removeAll { it is ParentComponent }
         return true
     }
 
-    /** Whether [copyId] is linked to the arrangement: it exists and its `ParentComponent` points at [arrangementId]. */
+    /** The world matrix of the arrangement entity [arrangementId], or null when it is the identity (no frame to
+     * apply). */
+    private fun frameOf(scene: SceneDto, arrangementId: Long): Matrix4? =
+        SceneHierarchy().resolve(scene).worldOf(arrangementId).takeUnless { it.`val`.contentEquals(Matrix4().`val`) }
+
+    /** [heights] for points in the frame [frame]: a local point is sampled at its world position, and answered
+     * locally. */
+    private fun framed(heights: GroundHeight, frame: Matrix4?): GroundHeight {
+        frame ?: return heights
+        val inverse = Matrix4(frame).inv()
+        return GroundHeight { x, z, fallbackY ->
+            val world = Vector3(x, fallbackY, z).mul(frame)
+            val ground = heights.heightAt(world.x, world.z, world.y)
+            Vector3(world.x, ground, world.z).mul(inverse).y
+        }
+    }
+
+        /** Whether [copyId] is linked to the arrangement: it exists and its `ParentComponent` points at
+         * [arrangementId]. */
     private fun isCopy(scene: SceneDto, copyId: Int, arrangementId: Long): Boolean {
         if (copyId < 0) {
             return false

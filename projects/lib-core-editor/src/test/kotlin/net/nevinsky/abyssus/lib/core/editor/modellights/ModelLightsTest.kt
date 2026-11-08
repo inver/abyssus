@@ -9,6 +9,7 @@ import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.MetaType
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent
 import net.nevinsky.abyssus.lib.core.editor.ResourceEditorMessages
@@ -89,5 +90,20 @@ class ModelLightsTest {
         val added = edit.add(scene, 2, geometry(), max = 1)
         assertEquals(1, added.ids.size)
         assertTrue(added.merged)
+    }
+
+    @Test
+    fun aChildModelsLampsAreAtItsWorldPose() {
+        val scene = scene()
+        // the warehouse (2) becomes the child of a group moved 10 units along x
+        val group = scene.add(EntityType.GROUP, PositionComponent().also { it.localPosition.set(10f, 0f, 0f) })
+        scene.entity(2)!!.add(ParentComponent(group.toInt()))
+        val added = edit.add(scene, 2, geometry())
+        assertEquals(EditResult.Changed, added.result)
+        val lights = sceneContentOf(scene).lights.filter { it.kind == LightKind.POINT }
+        assertEquals(Vector3(21f, 1f, 0f), lights[0].position)
+        assertEquals(Vector3(31f, 1f, 0f), lights[1].position)
+        // the lights are roots
+        assertTrue(added.ids.all { scene.entity(it)!!.component(ParentComponent::class.java) == null })
     }
 }

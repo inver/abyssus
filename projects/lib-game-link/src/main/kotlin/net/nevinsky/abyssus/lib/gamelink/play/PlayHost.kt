@@ -4,6 +4,8 @@
  */
 package net.nevinsky.abyssus.lib.gamelink.play
 
+import com.badlogic.gdx.math.Quaternion
+import com.badlogic.gdx.math.Vector3
 import com.badlogic.ashley.core.EntitySystem
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
@@ -15,6 +17,10 @@ import net.nevinsky.abyssus.lib.physics.jolt.PhysicsWorld
 import net.nevinsky.abyssus.lib.core.scene.RuntimeSceneLoader
 import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.worldTransform
+import net.nevinsky.abyssus.lib.core.ecs.system.HierarchySystem
+import net.nevinsky.abyssus.lib.core.hierarchy.columnRotation
+import net.nevinsky.abyssus.lib.core.hierarchy.columnScale
 import net.nevinsky.abyssus.lib.core.ecs.SceneEngine
 import net.nevinsky.abyssus.lib.core.assets.loading.AssetStorage
 import net.nevinsky.abyssus.lib.core.ecs.ComponentRegistry
@@ -222,18 +228,18 @@ class PlayHost(
     private fun sendPoses() {
         val s = session ?: return
         lastSent = clock()
+        // world poses: physics writes roots, and a child follows its parent through the hierarchy
+        s.engine.getSystem(HierarchySystem::class.java)?.update(0f)
+        val position = Vector3()
+        val scale = Vector3()
+        val rotation = Quaternion()
         val poses = s.engine.ids.ids.sorted().mapNotNull { id ->
-            val p = s.engine.ids[id]?.getComponent(PositionComponent::class.java) ?: return@mapNotNull null
-            EntityPose(
-                id,
-                p.localPosition.x,
-                p.localPosition.y,
-                p.localPosition.z,
-                p.localRotation.x,
-                p.localRotation.y,
-                p.localRotation.z,
-                p.localRotation.w
-            )
+            val entity = s.engine.ids[id] ?: return@mapNotNull null
+            entity.getComponent(PositionComponent::class.java) ?: return@mapNotNull null
+            val world = entity.worldTransform() ?: return@mapNotNull null
+            world.getTranslation(position)
+            columnRotation(world, columnScale(world, scale), rotation)
+            EntityPose(id, position.x, position.y, position.z, rotation.x, rotation.y, rotation.z, rotation.w)
         }
         send(PlayFrame.Poses(frame, simTime, poses))
         module.lines(s.world).takeIf { it.isNotEmpty() }?.let { send(PlayFrame.Lines(it)) }

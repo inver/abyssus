@@ -145,7 +145,8 @@ class RemoveEntityActionTest : BasePlatformTestCase() {
         copyProject()
         val before = document().text
         val modCount = document().modificationStamp
-        val dialogs = run(entity("3"))
+        // the camera's direction handle is its child row
+        val dialogs = run(descend(entity("4"), "3"))
         assertEquals(before, document().text)
         assertEquals(modCount, document().modificationStamp)
         assertEquals(1, dialogs.size)

@@ -25,7 +25,11 @@ import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreEntry
 import net.nevinsky.abyssus.app.game.controlline.scale.ScaleScoreTable
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreEntry
 import net.nevinsky.abyssus.app.game.controlline.score.ScoreTable
+import net.nevinsky.abyssus.lib.core.ecs.component.HeaderComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.NameComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
+import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.format.EntityType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -653,10 +657,45 @@ class GameFlowTest {
 
     private fun scaleEntity(id: Int, facts: ScaleComponent?) =
         Entity().apply {
+            add(HeaderComponent(id = id.toLong(), type = EntityType.OBJECT))
             add(NameComponent("Replica $id"))
             add(PlaneComponent().also { it.planeClass = PlaneClass.SCALE })
             facts?.let(::add)
         }
+
+    /** A `DUMMY` child of entity [parent] named [name]. */
+    private fun dummy(id: Int, parent: Int, name: String) =
+        Entity().apply {
+            add(HeaderComponent(id = id.toLong(), type = EntityType.DUMMY))
+            add(NameComponent(name))
+            add(PositionComponent(0.48f, 0f, 0.02f))
+            add(ParentComponent(parent))
+        }
+
+    /** Entity [id] built by [scaleEntity], with its two leadout dummies. */
+    private fun flyable(id: Int, facts: ScaleComponent?) =
+        mapOf(id to scaleEntity(id, facts), id + 1 to dummy(id + 1, id, "leadoutUp"), id + 2 to dummy(id + 2, id,
+                "leadoutDown"))
+
+    @Test
+    fun aPlaneWithoutLeadoutDownIsNotOfferedAndOneWarningNamesIt() {
+        val warnings = ArrayList<String>()
+        val choices = planeChoices(mapOf(7 to scaleEntity(7, null), 8 to dummy(8, 7, "leadoutUp")), warnings::add)
+        assertTrue(choices.isEmpty())
+        assertEquals(1, warnings.size)
+        assertTrue(warnings.single(), warnings.single().contains("Replica 7") &&
+                warnings.single().contains("leadoutDown"))
+    }
+
+    @Test
+    fun everyFieldPlaneIsOfferedWithItsLeadouts() {
+        val warnings = ArrayList<String>()
+        val names = loadField().engine.let { engine ->
+            planeChoices(engine.ids.ids.associateWith { engine.ids[it]!! }, warnings::add)
+        }.map { it.name }
+        assertEquals(listOf("Mig-3", "Racer", "Stunter", "Trainer"), names)
+        assertTrue(warnings.toString(), warnings.isEmpty())
+    }
 
     @Test
     fun aScalePlaneCarriesItsPrototypeFacts() {
@@ -667,14 +706,14 @@ class GameFlowTest {
                 it.wingspan = 10.3f
                 it.scale = 8
             }
-        val choice = planeChoices(mapOf(7 to scaleEntity(7, facts))).single()
+        val choice = planeChoices(flyable(7, facts)).single()
         assertEquals(PlaneClass.SCALE, choice.planeClass)
         assertEquals(ScaleFacts("MiG-3", 1940, 10.3f, 8), choice.scale)
     }
 
     @Test
     fun aScalePlaneWithoutTheComponentHasNoFacts() {
-        assertNull(planeChoices(mapOf(7 to scaleEntity(7, null))).single().scale)
+        assertNull(planeChoices(flyable(7, null)).single().scale)
     }
 
     private val replica =

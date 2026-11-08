@@ -26,6 +26,7 @@ object EntityIcons {
                     EntityType.TERRAIN -> "terrain"
                     EntityType.CAMERA -> "camera"
                     EntityType.HANDLE -> "handle"
+                    EntityType.DUMMY -> "dummy"
                 }
             if (type in redesigned) {
                 TreeIcons.load("entity_$name")

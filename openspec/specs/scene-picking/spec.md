@@ -51,7 +51,6 @@ itself SHALL NOT modify the scene file or any project file.
   view is not showing the Abyssus pane)
 - **THEN** the Abyssus view is opened if possible, otherwise nothing happens and nothing fails
 
-## ADDED Requirements
 
 ### Requirement: Disabled entities are not picked
 

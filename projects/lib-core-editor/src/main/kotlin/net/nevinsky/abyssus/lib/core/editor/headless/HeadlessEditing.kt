@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.headless
 
+import net.nevinsky.abyssus.lib.core.editor.dummy.DummyEntities
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
@@ -79,6 +80,7 @@ class HeadlessEditing(
     private val entityRemoval = EntityRemoval(messages)
     private val assetEntities = AssetEntities(messages)
     private val modelLights = ModelLights(messages)
+    private val dummies = DummyEntities(messages)
 
     /** Null when [text] is a readable document of [kind], else why it is refused. */
     fun validate(text: String, kind: DocumentKind): Refusal? = runCatchingKeepingCancellation {
@@ -137,6 +139,25 @@ class HeadlessEditing(
         val outcome =
             editScene(sceneText) { scene ->
                 when (val added = assetEntities.add(scene, asset, Vector3(x, y, z), terrainSize, meshId).result) {
+                    EditResult.Changed -> true
+                    EditResult.Unchanged -> false
+                    is EditResult.Rejected -> false.also { rejected = added.reason }
+                }
+            }
+        return rejected?.let { HeadlessEdit.Refused(Refusal(it)) } ?: outcome
+    }
+
+    /**
+     * Adds a dummy under the entity [parentId], as Add Dummy does (OpenSpec `headless-scene-editing`, "Add a dummy
+     * without the IDE"): same fields, unique sibling name and next free id. The text is returned unchanged when the
+     * scene
+     * has no such entity; refused for a path arrangement or one of its copies.
+     */
+    fun addDummy(sceneText: String, parentId: Long): HeadlessEdit {
+        var rejected: String? = null
+        val outcome =
+            editScene(sceneText) { scene ->
+                when (val added = dummies.add(scene, parentId).result) {
                     EditResult.Changed -> true
                     EditResult.Unchanged -> false
                     is EditResult.Rejected -> false.also { rejected = added.reason }

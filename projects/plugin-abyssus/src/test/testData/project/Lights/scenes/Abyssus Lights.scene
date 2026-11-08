@@ -1,1 +1,195 @@
-{"format":"abyssus","formatVersion":1,"id":0,"name":"Mundus Lights","ambientLightEnabled":false,"ambientLight":{"color":{"r":1.0,"g":1.0,"b":1.0,"a":1.0},"intensity":0.3},"fogEnabled":false,"fog":{"color":{"r":1.0,"g":1.0,"b":1.0,"a":1.0},"density":0.001,"gradient":1.5},"skyboxEnabled":false,"skyboxName":null,"ecs":{"0":{"type":"HANDLE","components":{"NameComponent":{"name":"'Direction' handle"},"ParentComponent":{"parentEntityId":1},"PickableComponent":{"pickerIdAttribute":{"a":255,"b":0,"g":0,"r":0}},"PositionComponent":{},"RenderComponent":{}}},"1":{"type":"LIGHT_DIRECTIONAL","components":{"DependenciesComponent":{"dependencies":[2,1]},"LightComponent":{},"NameComponent":{"name":"Direction light 1"},"PickableComponent":{"pickerIdAttribute":{"a":255,"b":0,"g":0,"r":1}},"PositionComponent":{"lookAtId":0,"localPosition":{"y":10}},"RenderComponent":{"shaderKey":"defaultShader"}}},"2":{"components":{"Point2PointPositionComponent":{"entity1Id":1,"entity2Id":0},"RenderComponent":{}}},"3":{"type":"HANDLE","components":{"NameComponent":{"name":"'Direction' handle"},"ParentComponent":{"parentEntityId":4},"PickableComponent":{"pickerIdAttribute":{"a":255,"b":0,"g":0,"r":3}},"PositionComponent":{},"RenderComponent":{}}},"4":{"type":"LIGHT_SPOT","components":{"DependenciesComponent":{"dependencies":[5,4]},"LightComponent":{},"NameComponent":{"name":"Spot light 4"},"PickableComponent":{"pickerIdAttribute":{"a":255,"b":0,"g":0,"r":4}},"PositionComponent":{"lookAtId":3,"localPosition":{"y":5}},"RenderComponent":{"shaderKey":"defaultShader"}}},"5":{"components":{"Point2PointPositionComponent":{"entity1Id":4,"entity2Id":3},"RenderComponent":{}}}}}
+{
+  "formatVersion": 1,
+  "id": "0",
+  "name": "Mundus Lights",
+  "ambientLightEnabled": false,
+  "ambientLight": {
+    "color": {
+      "r": 1.0,
+      "g": 1.0,
+      "b": 1.0,
+      "a": 1.0
+    },
+    "intensity": 0.3
+  },
+  "fogEnabled": false,
+  "fog": {
+    "color": {
+      "r": 1.0,
+      "g": 1.0,
+      "b": 1.0,
+      "a": 1.0
+    },
+    "density": 0.001,
+    "gradient": 1.5
+  },
+  "skyboxEnabled": false,
+  "ecs": {
+    "0": {
+      "type": "HANDLE",
+      "components": {
+        "NameComponent": {
+          "name": "'Direction' handle"
+        },
+        "ParentComponent": {
+          "parentEntityId": 1
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0,
+            "y": -10,
+            "z": 0
+          }
+        },
+        "RenderComponent": {},
+        "PickableComponent": {
+          "pickerIdAttribute": {
+            "a": 255,
+            "b": 0,
+            "g": 0,
+            "r": 0
+          }
+        }
+      }
+    },
+    "1": {
+      "type": "LIGHT_DIRECTIONAL",
+      "components": {
+        "LightComponent": {
+          "light": {
+            "intensity": 1,
+            "range": 100,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 1
+            }
+          }
+        },
+        "NameComponent": {
+          "name": "Direction light 1"
+        },
+        "PositionComponent": {
+          "lookAtId": 0,
+          "localPosition": {
+            "x": 0,
+            "y": 10,
+            "z": 0
+          }
+        },
+        "RenderComponent": {
+          "shaderKey": "defaultShader"
+        },
+        "DependenciesComponent": {
+          "dependencies": [
+            2,
+            1
+          ]
+        },
+        "PickableComponent": {
+          "pickerIdAttribute": {
+            "a": 255,
+            "b": 0,
+            "g": 0,
+            "r": 1
+          }
+        }
+      }
+    },
+    "2": {
+      "components": {
+        "RenderComponent": {},
+        "Point2PointPositionComponent": {
+          "entity1Id": 1,
+          "entity2Id": 0
+        }
+      }
+    },
+    "3": {
+      "type": "HANDLE",
+      "components": {
+        "NameComponent": {
+          "name": "'Direction' handle"
+        },
+        "ParentComponent": {
+          "parentEntityId": 4
+        },
+        "PositionComponent": {
+          "localPosition": {
+            "x": 0,
+            "y": -5,
+            "z": 0
+          }
+        },
+        "RenderComponent": {},
+        "PickableComponent": {
+          "pickerIdAttribute": {
+            "a": 255,
+            "b": 0,
+            "g": 0,
+            "r": 3
+          }
+        }
+      }
+    },
+    "4": {
+      "type": "LIGHT_SPOT",
+      "components": {
+        "LightComponent": {
+          "light": {
+            "intensity": 1,
+            "range": 100,
+            "coneAngle": 45,
+            "edgeSoftness": 0.2,
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 1
+            }
+          }
+        },
+        "NameComponent": {
+          "name": "Spot light 4"
+        },
+        "PositionComponent": {
+          "lookAtId": 3,
+          "localPosition": {
+            "x": 0,
+            "y": 5,
+            "z": 0
+          }
+        },
+        "RenderComponent": {
+          "shaderKey": "defaultShader"
+        },
+        "DependenciesComponent": {
+          "dependencies": [
+            5,
+            4
+          ]
+        },
+        "PickableComponent": {
+          "pickerIdAttribute": {
+            "a": 255,
+            "b": 0,
+            "g": 0,
+            "r": 4
+          }
+        }
+      }
+    },
+    "5": {
+      "components": {
+        "RenderComponent": {},
+        "Point2PointPositionComponent": {
+          "entity1Id": 4,
+          "entity2Id": 3
+        }
+      }
+    }
+  }
+}

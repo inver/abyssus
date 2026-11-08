@@ -18,7 +18,8 @@ A model entity's render component MAY name a `meshId`. When it does, the view SH
 
 - **WHEN** an entity has a position, a rotation and a scale
 - **THEN** its model is drawn translated, rotated and scaled accordingly; missing transform fields mean origin, no
-  rotation and unit scale
+  rotation and unit scale; for a child entity these are local to its parent and the model is drawn at its world pose,
+  as the `scene-entity-hierarchy` capability describes
 
 #### Scenario: Same asset used twice
 

@@ -187,14 +187,20 @@ fun rowText(entry: DtoEntry, label: String? = null): RowText {
     }
 }
 
-/** An entity row: its name and `N components`, with `M copies` after it for a path arrangement. */
+/**
+ * An entity row: its name and `N components`, with `M copies` after it for a path arrangement and `M children` for an
+ * entity with child entities.
+ */
 private fun entityText(node: EntityNode): RowText {
     val entity = node.entity ?: return RowText(node.id.toString())
     val components = componentCountOf(entity)
     val copies = arrangementCopyCount(entity)
+    val children = treeChildren(node.scene, node.id).size
     return RowText(
         entityName(node),
-        if (copies > 0) {
+        if (children > 0) {
+            AbyssusBundle.message("treeComponentsChildren", components, children)
+        } else if (copies > 0) {
             AbyssusBundle.message(
                 "treeComponentsCopies",
                 components,

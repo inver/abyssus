@@ -32,10 +32,12 @@ clock and runs forces and rope measurements, and `PhysicsPoseWriter` reads nativ
 They borrow the world's resources; `PhysicsWorld.close()` retains responsibility for releasing them.
 
 - **Build:** one body per entity with a collider: dynamic, kinematic or static as its rigid body says, static without
-  one. A rigid body without a collider is left out with one warning. Each entity's pose comes from its
-  `PositionComponent`. Boxes, hulls and height fields scale non-uniformly; spheres and capsules take the largest axis
-  of the scale, with one warning. Parents are ignored, with one warning per entity that has one. Then one constraint
-  per `ConstraintComponent`.
+  one. A rigid body without a collider is left out with one warning. Each entity's pose is its world pose, resolved
+  through `ParentComponent` links (`lib-core`'s `WorldPoses`). Boxes, hulls and height fields scale non-uniformly; spheres and capsules take the largest axis
+  of the scale, with one warning. Only roots carry moving bodies: a child with a `RigidBodyComponent` is left out with
+  one warning; a child collider is a static body at its world pose when no ancestor is dynamic or kinematic, and is
+  left out with one warning under a moving ancestor (until compound colliders). Dummies and entities under a disabled
+  ancestor create nothing. Then one constraint per `ConstraintComponent`.
 - **Foliage:** a terrain entity's `FoliageComponent` adds static collision for the OBJECT layers of its foliage asset that
   declare a `collider` (`FoliageCollider` in `lib-core`): one compound body per nonempty chunk of the committed bake, one
   BOX, SPHERE or CAPSULE sub-shape per copy. The bake is read as written through `PhysicsAssets.foliage` (the shared
@@ -55,8 +57,8 @@ They borrow the world's resources; `PhysicsWorld.close()` retains responsibility
   the scene is simulated. This covers a value that is not finite, a size not greater than `0`, a hull from fewer than
   4 points not in one plane, a terrain without heights, and a maximum distance below the minimum.
 - **Step:** `advance(seconds)` runs fixed 1/120 s steps, at most 8 per call. It carries the fraction of a step that is
-  left and drops whole steps beyond the limit. Poses of dynamic and kinematic bodies go to
-  `PositionComponent.localPosition` / `localRotation` after each call; scale is never changed. `step()` runs exactly
+  left and drops whole steps beyond the limit. Poses of dynamic and kinematic bodies (all roots, so world values) go to
+  `PositionComponent.localPosition` / `localRotation` after each call, and their children follow without being written; scale is never changed. `step()` runs exactly
   one. Single-threaded jobs and a fixed temp allocator make a run deterministic on one machine.
 - **Game access:** `bodyOf(entity)` (`applyForce` / `applyTorque` act on every step of the next `advance`,
   `velocity`, `setVelocity`, `moveKinematic`, `setPose`: put a dynamic or kinematic body at a pose at once, at rest), `contacts()` (the pairs that touched during the last `advance`, with

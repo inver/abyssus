@@ -9,12 +9,15 @@ import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
 import net.nevinsky.abyssus.lib.core.dto.SceneDto
 import net.nevinsky.abyssus.lib.core.ecs.component.PathArrangementComponent
 import net.nevinsky.abyssus.lib.core.editor.EditorMessages
+import net.nevinsky.abyssus.lib.core.editor.hierarchy.SceneHierarchy
 
 /**
- * Removes one entity from a scene and nothing else: its assets stay, and another entity is never deleted, detached or
- * retargeted. Removal is refused, leaving the scene as it was, when a remaining entity still names the target (built-in
- * references, a path arrangement's slots, or an entity-reference field of one of [kinds]) or when the target is an
- * arrangement that still owns copies. Unknown components are opaque: no reference is guessed from their numbers.
+ * Removes one entity and its descendants (its children through `ParentComponent`, theirs, and so on) from a scene, in
+ * one edit, and nothing else: their assets stay, and another entity is never deleted, detached or retargeted. Removal
+ * is refused, leaving the scene as it was, when an entity outside that set still names one of them (built-in
+ * references, a path arrangement's slots, or an entity-reference field of one of [kinds]) or when one of them is an
+ * arrangement that still owns copies. References from inside the set (a child's link to its parent, a light's look-at
+ * at its own child handle) never block. Unknown components are opaque: no reference is guessed from their numbers.
  */
 class EntityRemoval(
     private val messages: EditorMessages,
@@ -27,33 +30,43 @@ class EntityRemoval(
         if (scene.entity(entityId) == null) {
             return reject("entityRemovalMissing", entityId)
         }
-        blocker(scene, entityId)?.let {
+        ownedCopies(scene, entityId)?.let {
+            return reject("entityRemovalOwnsCopies", entityId, it)
+        }
+        val removed = linkedSetOf(entityId).apply { addAll(SceneHierarchy().resolve(scene).descendantsOf(entityId)) }
+        blocker(scene, removed)?.let {
             return EditResult.Rejected(it)
         }
-        scene.ecs.remove(entityId)
+        removed.forEach { scene.ecs.remove(it) }
         return EditResult.Changed
     }
 
-    /** The reason [entityId] cannot go, or null. */
-    private fun blocker(scene: SceneDto, entityId: Long): String? {
-        ownedCopies(scene, entityId)?.let {
-            return messages.message("entityRemovalOwnsCopies", entityId, it)
+    /** The reason the entities of [removed] cannot go, or null. */
+    private fun blocker(scene: SceneDto, removed: Set<Long>): String? {
+        for (target in removed) {
+            if (target != removed.first()) {
+                ownedCopies(scene, target)?.let {
+                    return messages.message("entityRemovalOwnsCopies", target, it)
+                }
+            }
         }
         for ((id, entity) in scene.entities()) {
-            if (id == entityId) {
+            if (id in removed) {
                 continue
             }
             for (component in entity.components) {
-                if (component is PathArrangementComponent && component.slots.any { it.toLong() == entityId }) {
-                    return messages.message("entityRemovalInSlot", entityId, id.toString())
-                }
-                references.fieldNaming(component, entityId)?.let {
-                    return messages.message(
-                        "entityRemovalReferenced",
-                        entityId,
-                        id.toString(),
-                        "${component.javaClass.simpleName}.$it",
-                    )
+                for (target in removed) {
+                    if (component is PathArrangementComponent && component.slots.any { it.toLong() == target }) {
+                        return messages.message("entityRemovalInSlot", target, id.toString())
+                    }
+                    references.fieldNaming(component, target)?.let {
+                        return messages.message(
+                            "entityRemovalReferenced",
+                            target,
+                            id.toString(),
+                            "${component.javaClass.simpleName}.$it",
+                        )
+                    }
                 }
             }
         }

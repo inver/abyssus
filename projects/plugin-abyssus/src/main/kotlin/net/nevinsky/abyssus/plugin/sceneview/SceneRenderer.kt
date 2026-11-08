@@ -75,6 +75,8 @@ class SceneRenderer(
     internal val content: SceneContent
         get() = layers.apply(layers.posed(params.content))
 
+    private val dummies = DummyOverlay()
+
     /** Other plugins' overlays for this view; drawn after the markers, then again over everything. */
     internal var overlays: SceneOverlayHost? = null
 
@@ -461,6 +463,8 @@ class SceneRenderer(
         val aspect = aspectOf(width, height) ?: return
         lines.begin(displayCamera, depthTest = true)
         SceneMarkers().draw(lines, c, aspect, state.viewCamera)
+        dummies.draw(lines, c, state.showDummies, state.selectedId, displayCamera, displayCamera.fieldOfView, height,
+                onTop = false)
         drawPaths(lines, c)
         if (state.brushing) {
             brushCursor?.draw(lines)
@@ -477,6 +481,8 @@ class SceneRenderer(
                 drewGizmo = true
             }
         }
+        dummies.draw(lines, c, state.showDummies, state.selectedId, displayCamera, displayCamera.fieldOfView, height,
+                onTop = true)
         overlays?.draw(overlayView(c, displayCamera, height, onTop = true), lines)
         lines.end()
     }

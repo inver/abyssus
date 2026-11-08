@@ -136,6 +136,23 @@ class EntityPropertiesPanelTest : BasePlatformTestCase() {
         assertFalse("PositionComponent" in state.addable)
     }
 
+    fun testADummysPositionIsMarkedLocalToItsParent() {
+        copyProject()
+        net.nevinsky.abyssus.plugin.projectView.addDummy(project, sceneFile(), 9L)
+        val p = panel()
+        p.show(descend(entity("9"), "11"))
+        val notes = all(p, JBLabel::class.java).mapNotNull { it.text }.filter { "local to" in it }
+        assertEquals(notes.toString(), 1, notes.size)
+        assertTrue(notes.single(), notes.single().contains("local to Model 9"))
+    }
+
+    fun testARootsPositionHasNoLocalNote() {
+        copyProject()
+        val p = panel()
+        p.show(entity("0"))
+        assertTrue(all(p, JBLabel::class.java).none { "local to" in (it.text ?: "") })
+    }
+
     fun testComponentShowsOnlyItself() {
         copyProject()
         val p = panel()

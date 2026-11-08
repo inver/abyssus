@@ -6,6 +6,11 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 import com.intellij.openapi.vfs.VirtualFile
+import java.io.File
+import net.nevinsky.abyssus.lib.core.dto.SceneDto
+import net.nevinsky.abyssus.lib.core.editor.hierarchy.modelNodeTransforms
+import net.nevinsky.abyssus.lib.core.hierarchy.NodeTransforms
+import net.nevinsky.abyssus.lib.core.hierarchy.noNodeTransforms
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
 import net.nevinsky.abyssus.lib.core.editor.scene.CameraParams
 import net.nevinsky.abyssus.lib.core.editor.scene.MainCamera
@@ -40,7 +45,20 @@ fun interface SceneParamsSource {
                     MainCamera(documents.json).parse(text)
                 } ?: CameraParams.DEFAULT
             val parsed = SceneDocumentCache.parsedScene(reader, textOf(file))
-            renderParamsOf(parsed.scene, camera, ProjectLayout.projectDirFor(file))
+            val dir = ProjectLayout.projectDirFor(file)
+            renderParamsOf(parsed.scene, camera, dir, cachedNodeTransforms(parsed.scene, dir))
         }
     }
+}
+
+/**
+ * The node rest transforms of the models in [scene] that are already read (OpenSpec `scene-entity-hierarchy`, "A child
+ * can sit on a node of its parent's model"); a model not read yet answers `NotLoaded`, so its node-bound children sit
+ * on
+ * their parent until [SceneFileEditor] has the model read and re-reads the scene.
+ */
+internal fun cachedNodeTransforms(scene: SceneDto, projectDir: File?): NodeTransforms {
+    projectDir ?: return noNodeTransforms()
+    val loading = com.intellij.openapi.components.service<net.nevinsky.abyssus.plugin.AbyssusPluginCtx>().assets.loading
+    return modelNodeTransforms(scene) { asset -> loading.cachedModelNodes(projectDir, asset) }
 }

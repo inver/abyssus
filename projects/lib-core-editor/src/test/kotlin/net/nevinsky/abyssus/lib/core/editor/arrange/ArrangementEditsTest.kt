@@ -330,4 +330,64 @@ class ArrangementEditsTest {
         edits.setPoints(scene, 11L, listOf(Vector3(first.x, first.y, first.z), point(60f, 0f)), heights)
         assertEquals(first.y, arrangement(scene).points[0].y, 0f)
     }
+
+    // ---- an arrangement with a PositionComponent (OpenSpec scene-path-arrangements, local points and copies) ----
+
+    /** [drawn] with arrangement 11 given a `PositionComponent` at (100, 0, 0), regenerated on flat ground at 0. */
+    private fun placed(): SceneDto {
+        val scene = drawn()
+        scene.entity(11)!!.add(PositionComponent(100f, 0f, 0f))
+        assertEquals(ArrangementResult.Changed(), edits.regenerate(scene, 11L, null, GroundHeight { _, _, _ -> 0f }))
+        return scene
+    }
+
+    @Test
+    fun copiesOfAPlacedArrangementAreLocalToIt() {
+        val scene = placed()
+        // the points are local: the first copy stands at local x 0, which is world x 100
+        assertEquals(0f, x(scene, 12), 1e-4f)
+        val content = net.nevinsky.abyssus.lib.core.editor.scene.sceneContentOf(scene)
+        assertEquals(100f, content.model(12)!!.transform.position.x, 1e-4f)
+        // the view gets the line in world space
+        assertEquals(100f, content.arrangements.single().arrangement.points[0].x, 1e-4f)
+        // the file keeps it local
+        assertEquals(0f, arrangement(scene).points[0].x, 1e-4f)
+    }
+
+    @Test
+    fun theGroundIsSampledAtTheWorldPositionOfAPlacedArrangement() {
+        val scene = placed()
+        val sloped = GroundHeight { x, _, _ -> x / 10f }
+        edits.regenerate(scene, 11L, null, sloped)
+        // copy 12 is at local x 0, world x 100: the ground there is at 10
+        assertEquals(10f, y(scene, 12), 1e-4f)
+    }
+
+    @Test
+    fun setPointsOfAPlacedArrangementTakesWorldPoints() {
+        val scene = placed()
+        edits.setPoints(scene, 11L, listOf(Vector3(100f, 0f, 0f), Vector3(160f, 0f, 0f)), GroundHeight { _, _,
+                _ -> 0f })
+        assertEquals(60f, arrangement(scene).points[1].x, 1e-4f)
+        assertEquals(7, slots(scene).size)
+    }
+
+    @Test
+    fun detachingACopyOfAPlacedArrangementKeepsItsWorldPose() {
+        val scene = placed()
+        assertTrue(edits.detach(scene, 14L))
+        assertNull(scene.component(14, ParentComponent::class.java))
+        assertEquals(120f, x(scene, 14), 1e-4f)
+    }
+
+    @Test
+    fun detachingACopyOfAnUnplacedArrangementWritesNothingElse() {
+        val scene = drawn()
+        val before = scene.component(14, PositionComponent::class.java)!!.let { Pair(Vector3(it.localPosition),
+                it.localRotation.cpy()) }
+        assertTrue(edits.detach(scene, 14L))
+        val after = scene.component(14, PositionComponent::class.java)!!
+        assertEquals(before.first, after.localPosition)
+        assertEquals(before.second, after.localRotation)
+    }
 }

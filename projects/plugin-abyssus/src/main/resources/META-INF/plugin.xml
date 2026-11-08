@@ -132,6 +132,10 @@
                 class="net.nevinsky.abyssus.plugin.projectView.AddPathArrangementAction">
             <add-to-group group-id="Abyssus.Menu.Add" anchor="after" relative-to-action="Abyssus.AddAsset"/>
         </action>
+        <action id="Abyssus.AddDummy"
+                class="net.nevinsky.abyssus.plugin.projectView.AddDummyAction">
+            <add-to-group group-id="Abyssus.Menu.Add" anchor="last"/>
+        </action>
         <action id="Abyssus.RegenerateArrangement"
                 class="net.nevinsky.abyssus.plugin.projectView.RegenerateArrangementAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="after" relative-to-action="Abyssus.Menu.Add"/>

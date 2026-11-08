@@ -11,9 +11,8 @@ import com.github.stephengold.joltjni.*
 import com.github.stephengold.joltjni.enumerate.EActivation
 import com.github.stephengold.joltjni.enumerate.EMotionType
 import com.github.stephengold.joltjni.enumerate.EOverrideMassProperties
-import net.nevinsky.abyssus.lib.core.defaults.NO_ENTITY
-import net.nevinsky.abyssus.lib.core.ecs.component.ParentComponent
 import net.nevinsky.abyssus.lib.core.ecs.component.PositionComponent
+import net.nevinsky.abyssus.lib.core.hierarchy.LocalPose
 import net.nevinsky.abyssus.lib.physics.*
 
 /** Validates and creates ordinary bodies; the world retains ownership of native resources and body records. */
@@ -33,12 +32,22 @@ internal class PhysicsBodyFactory(
             Built
     }
 
-    /** Creates [entity]'s body; returns why it cannot instead. */
-    fun create(entity: Entity, body: RigidBodyComponent?, collider: ColliderComponent): Built {
+    /**
+     * Creates [entity]'s body; returns why it cannot instead. A root's body is placed at its `PositionComponent`; a
+     * static child collider at [world], its resolved world pose.
+     */
+    fun create(entity: Entity, body: RigidBodyComponent?, collider: ColliderComponent,
+            world: LocalPose? = null): Built {
         val motion = body?.motionType ?: MotionType.STATIC
         // a moving body's pose is written back, so it needs a position component
         val position =
-            entity.getComponent(PositionComponent::class.java)
+            world?.let {
+                PositionComponent(Vector3(it.position)).apply {
+                    localRotation.set(it.rotation)
+                    localScale = Vector3(it.scale)
+                }
+            }
+                ?: entity.getComponent(PositionComponent::class.java)
                 ?: PositionComponent().also {
                     if (motion != MotionType.STATIC) {
                         entity.add(it)
@@ -91,9 +100,6 @@ internal class PhysicsBodyFactory(
                     built.ref
                 }
             }
-        if (entity.getComponent(ParentComponent::class.java)?.parentEntityId?.let { it != NO_ENTITY } == true) {
-            warn(entity, "has a parent, which physics ignores: its body moves in world space")
-        }
         val p = position.localPosition
         val settings =
             own(

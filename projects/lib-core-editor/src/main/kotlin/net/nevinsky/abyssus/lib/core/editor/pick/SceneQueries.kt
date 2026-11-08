@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
+import net.nevinsky.abyssus.lib.core.editor.dummy.DummyMarkerGeometry
 import com.badlogic.gdx.graphics.PerspectiveCamera
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Quaternion
@@ -161,6 +162,7 @@ class SnapshotSceneQueries(
             return null
         }
         val frame = snapshot() ?: return null
+        dummyAt(frame, screenX, screenY, width, height)?.let { return it }
         val targets = targets() ?: return null
         val ray = ScenePicker().pickRay(frame.camera, screenX, screenY, width, height)
         return ScenePicker()
@@ -177,6 +179,7 @@ class SnapshotSceneQueries(
             return null
         }
         val frame = snapshot() ?: return null
+        dummyAt(frame, screenX, screenY, width, height)?.let { return SceneTarget.Entity(it) }
         val targets = targets() ?: return null
         val ray = ScenePicker().pickRay(frame.camera, screenX, screenY, width, height)
         val entity =
@@ -188,6 +191,19 @@ class SnapshotSceneQueries(
                     frame.camera.far,
                 )
         return entity?.let { SceneTarget.Entity(it.first) }
+    }
+
+    /**
+     * The dummy whose drawn marker is under the click (OpenSpec `scene-picking`, "Dummy markers are picked by screen
+     * distance"): it wins over models and terrain, as it is drawn on top. A hidden marker is never picked.
+     */
+    private fun dummyAt(frame: FrameSnapshot, x: Int, y: Int, width: Int, height: Int): Long? {
+        val geometry = DummyMarkerGeometry()
+        val shown = geometry.visible(content, state.showDummies, state.selectedId)
+        if (shown.isEmpty()) {
+            return null
+        }
+        return geometry.pick(shown, frame.camera, x, y, width, height)
     }
 
     override fun rayAt(screenX: Int, screenY: Int, width: Int, height: Int): Ray? {

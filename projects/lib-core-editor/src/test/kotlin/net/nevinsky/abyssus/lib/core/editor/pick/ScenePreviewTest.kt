@@ -40,7 +40,7 @@ class ScenePreviewTest {
     }
 
     @Test
-    fun movingALookAtLightReAimsItAtItsUnmovedTarget() {
+    fun movingALookAtLightCarriesItsChildHandle() {
         val moved =
             DragResult(
                 PlacementTransform(Vector3(0f, 20f, 0f), Quaternion(), Vector3(1f, 1f, 1f)),
@@ -50,8 +50,8 @@ class ScenePreviewTest {
         // The light is now above its handle and faces it, straight down.
         assertEquals(Vector3(0f, 20f, 0f), previewed.lights.first { it.entityId == 1L }.position)
         assertEquals(Vector3(0f, -1f, 0f), previewed.lights.first { it.entityId == 1L }.direction)
-        // The handle did not move with the light.
-        assertEquals(Vector3(0f, 0f, 0f), previewed.entityPositions[0L])
+        // The handle is the light's child: it moves with the light, so the light keeps its aim.
+        assertEquals(Vector3(0f, 10f, 0f), previewed.entityPositions[0L])
     }
 
     @Test

@@ -16,6 +16,8 @@ data class ViewDisplay(
     val fog: Boolean = true,
     val grid: Boolean = false,
     val shading: Shading = Shading.LIT,
+    /** "Show Dummies": every dummy's marker is drawn and pickable; off when a view opens. */
+    val dummies: Boolean = false,
 ) {
     /** Whether the shadow pass runs. */
     val drawsShadows: Boolean get() = shadows && shading == Shading.LIT
@@ -50,6 +52,7 @@ class SceneViewToolsModel {
     fun setShadows(on: Boolean) = update { it.copy(shadows = on) }
     fun setFog(on: Boolean) = update { it.copy(fog = on) }
     fun setGrid(on: Boolean) = update { it.copy(grid = on) }
+    fun setDummies(on: Boolean) = update { it.copy(dummies = on) }
     fun setShading(shading: Shading) = update { it.copy(shading = shading) }
 
     private fun update(f: (ViewDisplay) -> ViewDisplay) {

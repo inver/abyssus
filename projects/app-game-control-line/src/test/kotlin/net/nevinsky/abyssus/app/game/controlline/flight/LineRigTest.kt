@@ -53,7 +53,7 @@ class LineRigTest {
             assertTrue("pilot faces $facing, the plane is towards $toPlane", facing.dot(toPlane) > 0.999f)
 
             val transform = f.plane.getComponent(PositionComponent::class.java).getTransform()
-            val leadouts = listOf(f.settings.leadoutUp, f.settings.leadoutDown).map { Vector3(it).mul(transform) }
+            val leadouts = listOf(f.rig.leadouts.up, f.rig.leadouts.down).map { Vector3(it).mul(transform) }
             val handle = f.rig.handle
             val spacing = f.rig.pilotSettings.handleSpacing
             val handlePoints =
@@ -62,6 +62,15 @@ class LineRigTest {
                 assertEquals("line $i leaves the handle", 0f, a.dst(handlePoints[i]), 0.01f)
                 assertEquals("line $i ends at its leadout", 0f, b.dst(leadouts[i]), 0.01f)
             }
+        }
+
+    @Test
+    fun theTrainersLinesRunToItsLeadoutDummies() =
+        FieldFlight("Trainer").use { f ->
+            // OpenSpec control-line-flight, "Leadouts are the plane's dummies": the points of the plane's frame it
+            // flew with
+            assertTrue("${f.rig.leadouts.up}", Vector3(0.48f, 0f, 0.02f).epsilonEquals(f.rig.leadouts.up, 1e-6f))
+            assertTrue("${f.rig.leadouts.down}", Vector3(0.48f, 0f, -0.04f).epsilonEquals(f.rig.leadouts.down, 1e-6f))
         }
 
     @Test

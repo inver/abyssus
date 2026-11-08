@@ -392,7 +392,6 @@ Browse button.
 - **WHEN** the user selects a `.scene` file outside a project
 - **THEN** the skybox field is shown without a Browse button
 
-## ADDED Requirements
 
 ### Requirement: Breadcrumb and subtitle
 

@@ -4,6 +4,7 @@
  */
 package net.nevinsky.abyssus.app.game.controlline.flight
 
+import net.nevinsky.abyssus.lib.core.ecs.Dummies
 import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
@@ -33,7 +34,7 @@ class FieldFlight(planeName: String, judge: FlightJudge? = null, change: PlaneCo
     val world = PhysicsWorld(scene.engine, assets, failOnWarnings(), JoltNatives())
     val ground = groundOf(scene.engine, assets)
     val pilot: Entity = scene.engine.entities.single { it.getComponent(PilotComponent::class.java) != null }
-    val rig = LineRig(world, pilot, plane, ground)
+    val rig = LineRig(world, pilot, plane, ground, leadoutsOf(scene.engine.entities, plane, Dummies { }, { })!!)
     val flight = Flight(world, rig, ground).also { it.takeoff(0f, judge) }
 
     val position: Vector3
