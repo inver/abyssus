@@ -507,3 +507,32 @@ parent, and `SceneFileEditor` has it read off the EDT and re-reads the scene. A 
 its descendants (`ScenePreview.apply`); its release writes only the dragged entity, through `SceneTransformWriter`,
 which turns the world result into local values under the parent's frame (one log warning per entity when a rotated,
 non-uniformly scaled parent shears it). A disabled parent hides its subtree; the children's own flags are not written.
+
+## Model parts, Edit Pivot and the hinge preview
+
+*State:* `SceneViewState.selectedPart` (set by `selectPart`; any other selection clears it, with `editPivot`, `pivotSnap`,
+`pivotPreview` and `hingePreview`). All of it is view state, never written.
+
+*Parts data:* `ProjectAssets.modelParts` is a long-lived `ModelMeshLister` that reads unsaved `meta.json` text and is
+invalidated by `ViewAssets.invalidate` / the ray invalidation, the same signal that reloads a model. The renderer only
+reads its cache (`SceneRenderer.cachedParts`) and reads missing answers in the background (`prefetchParts`: the selected
+entity's model every frame, every model of the scene on Alt over the view), then calls `onPartsRead` on the EDT. A model
+not read yet is not hit by Alt+click.
+
+*Selecting and outlining:* Alt+click (`SceneInteraction.released(alt = true)`) asks `SceneQueries.pickPart`, which runs
+`PartPicker` over the cached triangles; a hit selects the entity and part and calls `onPickPart` (the editor then reveals
+the tree row). `SceneRenderer.drawPartOutline` draws the part's own bounds posed with the part in a separate color.
+
+*Edit Pivot:* the toolbar toggle (`SceneToolsToolbar.EditPivotAction`) is enabled when the selected part has no pivot
+refusal (`ModelPart.pivotRefusal`); its snap choice is None, Edge or Face. While on, `pivotFrameOf` gives the gizmo its
+frame (`entityWorld x rest`), a drag runs `GizmoDrag` on it (`Gesture.DraggingPivot`) and a snap click uses `PivotSnaps` on
+the `PartHit` of the selected part. A finished drag or snap calls `onPivotMove`; `SceneFileEditor.applyPivotMove` turns the
+world frame into a file-frame pivot (`PivotFrames`) and `ModelPartWriter.setPivot` writes the model's `meta.json` and the
+bound children (`CompensateBoundChildren`) as one undoable command (`editAssetMetaAndScene`). The dragged frame stays shown
+until the model reloads (`partsChanged`).
+
+*Hinge preview:* the Properties slider publishes a `HingePreview` through the `HingePreviews` project service; each view of
+that scene sets `hingePreview` if it is its selected part. `SceneModels.update` then calls `previewHinge` after the
+animation update (so it wins for that node; the model's rest pose is used, other nodes keep animating), and
+`ScenePreviewLayers.posed` moves the entities bound to the node and their descendants (`HingePreviewPoses`) and the part
+outline follows. Picking and the gizmo use the rest pose.

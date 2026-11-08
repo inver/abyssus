@@ -341,6 +341,18 @@ once and surface a reason with a Retry button; no scene file is written by any o
 toolchains, the opt-in device test commands (`-Dabyssus.metalTests=true`, `-Dabyssus.vulkanTests=true`), shading rules
 and bounds, and `projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/sceneview/README.md` for the view's states.
 
+## Model parts, pivots and hinges
+
+A MODEL asset's `meta.json` may carry `parts.<node>.pivot` / `.hinge` (`docs/ai/file-formats.md`). **Read side:** `lib-core`'s
+`ModelLoader.read` calls `applyPivots` on the parsed `ModelData` before `selectMesh`, so the Scene view, the game, ray
+snapshots (`ModelRaySnapshotLoader.load` calls it too) and node lookups all see the re-pivoted nodes; refusals are logged
+once. **Editor side:** `ModelMeshLister.parts` answers the node tree, rest and file-frame transforms and triangles
+(`ModelPartsInfo`); `PartPicker`, `PivotSnaps` and `PivotFrames` (`lib-core-editor.pick`) work on that; `ModelPartEdits`
+and `CompensateBoundChildren` write the meta and the scene. **Plugin side:** the tree lists parts (`projectView`), the Scene
+view selects and outlines one and offers Edit Pivot, Properties edits pivot and hinge, and a pivot edit is one undo step over
+both files (`editAssetMetaAndScene`). The hinge preview is view state: the Properties slider -> `HingePreviews` -> each view
+of the scene -> `previewHinge` after the animation update. See the `sceneview` and `projectView` READMEs.
+
 ## Native document validation
 
 The shared `AbyssusDocumentFormat` (`projects/lib-core/src/main/kotlin/net/nevinsky/abyssus/lib/core/format/AbyssusDocumentFormat.kt`)

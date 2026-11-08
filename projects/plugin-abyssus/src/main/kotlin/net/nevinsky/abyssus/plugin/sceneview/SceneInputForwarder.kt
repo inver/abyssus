@@ -194,6 +194,9 @@ internal class SceneInputForwarder(
                     }
                     updatePaintMode(e.isShiftDown)
                     cursor(e)
+                    if (e.isAltDown) {
+                        interaction.partsWanted()
+                    }
                     interaction.pressed(e.x, e.y, SwingUtilities.isLeftMouseButton(e))
                 }
 
@@ -210,7 +213,7 @@ internal class SceneInputForwarder(
                     if (e.isPopupTrigger && pointMenu(e)) {
                         return
                     }
-                    interaction.released(e.x, e.y, SwingUtilities.isLeftMouseButton(e), e.clickCount)
+                    interaction.released(e.x, e.y, SwingUtilities.isLeftMouseButton(e), e.clickCount, e.isAltDown)
                 }
 
                 override fun mouseDragged(e: MouseEvent) {
@@ -241,6 +244,9 @@ internal class SceneInputForwarder(
                     }
                     forwardMouse(SimulationInput.Kind.MOUSE_MOVE, e)
                     sync()
+                    if (e.isAltDown) {
+                        interaction.partsWanted()
+                    }
                     interaction.moved(e.x, e.y)
                     cursor(e)
                 }

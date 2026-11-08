@@ -69,7 +69,7 @@ class SceneRenderer(
     /**
      * The unwritten changes laid over the scene; the queries below read the same layers, so picking sees what is drawn.
      */
-    private val layers = ScenePreviewLayers(state)
+    private val layers = ScenePreviewLayers(state, parts = { name -> assets.current?.modelParts?.cachedParts(name) })
 
     /** The scene's content with simulated poses and then the previewed transforms and draft copies applied. */
     internal val content: SceneContent
@@ -209,11 +209,46 @@ class SceneRenderer(
     private var snapshot: FrameSnapshot? = null
 
     /** CPU-only questions about the scene as the last frame drew it: picking, ground below, gizmo handles. */
-    val queries: SceneQueries = SnapshotSceneQueries({ snapshot }, state, layers) { layers.posed(params.content) }
+    val queries: SceneQueries =
+        SnapshotSceneQueries({ snapshot }, state, layers, partsSource()) { layers.posed(params.content) }
+
+    /** Called on the EDT after the parts of a model were read in the background. */
+    var onPartsRead: (() -> Unit)? = null
+
+    private val partReads = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+    /** The parts of model [storageName] when already read for the view's project; never reads. */
+    fun cachedParts(storageName: String) = assets.current?.modelParts?.cachedParts(storageName)
+
+    private fun partsSource(): PartsSource = { name -> assets.current?.modelParts?.cachedParts(name) }
+
+    /**
+     * Reads, in the background, the parts (triangles, node frames) of the scene's models that Alt+click picking and
+     * Edit Pivot need, once each; [state]'s selected model first. A model that is not read yet is not hit.
+     */
+    fun prefetchParts(onlyEntity: Long? = null) {
+        val project = assets.current ?: return
+        val application = com.intellij.openapi.application.ApplicationManager.getApplication() ?: return
+        val models = params.content.models.filter { onlyEntity == null || it.entityId == onlyEntity }
+        for (name in models.map { it.storageName }.distinct()) {
+            if (project.modelParts.cachedParts(name) == null && partReads.add(name)) {
+                application.executeOnPooledThread {
+                    try {
+                        project.modelParts.parts(name)
+                    } finally {
+                        partReads.remove(name)
+                    }
+                    application.invokeLater { onPartsRead?.invoke() }
+                }
+            }
+        }
+    }
 
     /** Copies what was drawn so the queries need neither this renderer nor GL. */
     internal fun publishSnapshot() {
         snapshot = contentPass.snapshot(camera, drawnVersion)
+        // the selected model's parts are wanted for Alt+click, part selection and Edit Pivot
+        state.selectedId?.let { prefetchParts(it) }
     }
 
     /** Changes only when a model or terrain enters or leaves the drawn lists, including context replacement. */
@@ -309,7 +344,7 @@ class SceneRenderer(
         if (unlit) {
             NO_LIGHTS.applyTo(environment)
         }
-        models.update(c.models, p.projectDir, deltaSeconds)
+        models.update(c.models, p.projectDir, deltaSeconds, state.hingePreview)
         terrains.update(c.terrains, p.projectDir)
         sculptSync.apply(terrains.drawn.map { it.sculptTarget() })
         splatSync.apply(terrains.drawn.map { it.splatTarget(splatTexture) })
@@ -476,7 +511,8 @@ class SceneRenderer(
             boundsOf(c, id)?.let { SelectionBox.draw(lines, it) }
             // selecting a path arrangement selects all of it: every linked copy gets its box
             for (copy in c.copiesOf(id)) boundsOf(c, copy)?.let { SelectionBox.draw(lines, it) }
-            gizmoHandlesFor(c, displayCamera, state, height)?.let {
+            drawPartOutline(lines, c, id)
+            gizmoHandlesFor(c, displayCamera, state, height, partsSource())?.let {
                 GizmoDraw.draw(lines, it, state.hoveredAxis, state.hoveredPlane)
                 drewGizmo = true
             }
@@ -485,6 +521,20 @@ class SceneRenderer(
                 onTop = true)
         overlays?.draw(overlayView(c, displayCamera, height, onTop = true), lines)
         lines.end()
+    }
+
+    /** The selected part's outline: its own bounds posed with the part, in a color apart from the entity's. */
+    private fun drawPartOutline(lines: LineBatch, c: SceneContent, entityId: Long) {
+        val node = state.selectedPart ?: return
+        val placement = c.model(entityId) ?: return
+        val info = assets.current?.modelParts?.cachedParts(placement.storageName) ?: return
+        val bounds = info.find(node)?.bounds ?: return
+        val world = partWorldOf(c, entityId, node, partsSource()) ?: return
+        // the outline follows the hinge preview: the part turns about its own X axis
+        state.hingePreview?.takeIf { it.entityId == entityId && it.node == node }?.let {
+            world.mul(hingeRotation(it.degrees))
+        }
+        SelectionBox.drawPart(lines, bounds, world)
     }
 
     /**

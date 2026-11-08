@@ -5,8 +5,10 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
+import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 
 /**
@@ -27,6 +29,9 @@ internal interface GestureHost {
     val onTransform: ((Long, TransformEdit) -> Boolean)?
     val onArrangementEdit: ((Long, List<Vector3>) -> Boolean)?
 
+    /** Called when an Edit Pivot drag of part [String] of entity [Long] ends at a new world frame. */
+    val onPivotMove: ((Long, String, Matrix4) -> Boolean)?
+
     /** The selected entity, or null. */
     val selectedId: Long?
 
@@ -44,6 +49,11 @@ internal sealed interface Gesture {
     /** A gizmo handle of [entityId] is being dragged; [result] is where it is now. */
     class Dragging(val drag: GizmoDrag, val entityId: Long) : Gesture {
         var result: DragResult? = null
+    }
+
+    /** A handle of the pivot frame of part [node] of [entityId] is being dragged (Edit Pivot); [frame] is where it is. */
+    class DraggingPivot(val drag: GizmoDrag, val entityId: Long, val node: String) : Gesture {
+        var frame: Matrix4? = null
     }
 
     /**
@@ -86,7 +96,7 @@ internal class GestureDriver(
         get() = current == Gesture.Idle
 
     val isDragging: Boolean
-        get() = current is Gesture.Dragging
+        get() = current is Gesture.Dragging || current is Gesture.DraggingPivot
 
     val isBrushing: Boolean
         get() = current is Gesture.Brushing
@@ -128,7 +138,12 @@ internal class GestureDriver(
             return
         }
         val started = grab(at) ?: return
-        current = Gesture.Dragging(started, id)
+        val part = state.selectedPart
+        current = if (part != null && queries.pivotFrame() != null) {
+            Gesture.DraggingPivot(started, id, part)
+        } else {
+            Gesture.Dragging(started, id)
+        }
         host.stateChanged()
     }
 
@@ -214,6 +229,12 @@ internal class GestureDriver(
                 g.result = result
                 state.preview = mapOf(g.entityId to result)
             }
+            is Gesture.DraggingPivot -> {
+                val ray = queries.rayFrom(size, x, y) ?: return true
+                val frame = g.drag.update(ray).transform.toMatrix()
+                g.frame = frame
+                state.pivotPreview = frame
+            }
             is Gesture.DraggingPathPoint -> {
                 val ray = queries.rayFrom(size, x, y) ?: return true
                 val to = g.drag.update(ray).transform.position
@@ -255,6 +276,18 @@ internal class GestureDriver(
                 }
             }
             is Gesture.Brushing -> host.brushStroke(ended.kind)?.released()
+            is Gesture.DraggingPivot -> {
+                val frame = ended.frame
+                if (frame != null && ended.drag.start.toMatrix() != frame) {
+                    // the dragged frame stays shown until the model reloads with the new pivot (partsChanged)
+                    val written = host.onPivotMove?.invoke(ended.entityId, ended.node, frame) ?: false
+                    if (!written) {
+                        state.pivotPreview = null
+                    }
+                } else {
+                    state.pivotPreview = null
+                }
+            }
             is Gesture.Dragging -> {
                 val result = ended.result
                 if (result != null && result.transform != ended.drag.start) {
@@ -292,6 +325,12 @@ internal class GestureDriver(
                 state.hoveredAxis = null
                 state.hoveredPlane = null
             }
+            is Gesture.DraggingPivot -> {
+                current = Gesture.Cancelled
+                state.pivotPreview = null
+                state.hoveredAxis = null
+                state.hoveredPlane = null
+            }
             else -> return false
         }
         host.stateChanged()
@@ -309,6 +348,12 @@ internal class GestureDriver(
             if (!contains(it.entityId)) {
                 current = Gesture.Cancelled
                 state.pathEdit = null
+            }
+        }
+        (current as? Gesture.DraggingPivot)?.let {
+            if (!contains(it.entityId)) {
+                current = Gesture.Cancelled
+                state.pivotPreview = null
             }
         }
     }

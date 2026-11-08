@@ -206,7 +206,7 @@ implementation does not yet provide it.
 
 | `type` | `additional` |
 |---|---|
-| `MODEL` | `file`, `format`, `binary`, `materials` (material asset `uuid`s) |
+| `MODEL` | `file`, `format`, `binary`, `materials` (material asset `uuid`s), optional `parts` (see *Model parts* below) |
 | `TERRAIN` | `terrainFile`, `size`, `uv`, `splatMap`, `splatBase`, `splatR`, `splatG`, `splatB`, `splatA` (texture asset `uuid`s) |
 | `SKYBOX` | `top`, `bottom`, `left`, `right`, `front`, `back` (image files in the folder) |
 | `SKYBOX_PROCEDURAL` | `vertex`, `fragment` (GLSL files in the folder); optional atmosphere parameters `planetRadius`, `atmosphereRadius`, `betaRayleigh` (3 numbers), `betaMie`, `heightRayleigh`, `heightMie`, `mieG`, `sunIntensity` (Earth-like defaults); optional `clouds`: the `uuid` of a `CLOUDS` asset (see *Clouds* below); optional `lightsScene`: the boolean `true` to light the scene from the sky (see *Sky lighting* below) |
@@ -218,6 +218,29 @@ implementation does not yet provide it.
 | `UI` | `ui`: a collection of screens and overlays (see *UI assets* below) |
 
 `uuid` can be missing (the fixture's `skybox_default` and `tree` have none).
+
+### Model parts (`additional.parts`)
+
+A `MODEL` asset may give nodes of its model file a pivot and a hinge. `parts` is an object keyed by node name:
+
+```json
+"parts": { "LeftFlap": { "pivot": { "position": { "x": 0, "y": -0.002, "z": 0 }, "rotation": { "x": 0, "y": 0, "z": 0, "w": 1 } },
+                         "hinge": { "min": -35, "max": 35 } } }
+```
+
+- `pivot.position` / `pivot.rotation` (a unit quaternion) are relative to the node's **own frame in the model file**, never
+  to an earlier pivot; a missing member is the node's origin / no rotation. Re-snapping therefore replaces the value, and
+  removing `parts` restores the file exactly.
+- When the model is read, `ModelLoader` (before `selectMesh`) moves the node's origin and axes to the pivot and moves its
+  vertices, normals, tangents and child nodes back by the inverse, so the rest pose looks the same. The model file is
+  not rewritten. The editor, the game, picking, ray snapshots and `ParentComponent.node` lookups all see the result.
+- A pivot is refused with one warning (model and node), and the node stays as in the file, when the node does not exist,
+  its mesh is drawn by another node, a mesh part is shared with another node, it is skinned, its scale is not uniform or
+  an animation moves it.
+- `hinge.min` / `hinge.max` are degrees about the pivot's X axis (the node's X without a pivot), `min <= 0 <= max`,
+  within +-180; an invalid hinge is ignored with a warning.
+- `parts` is omitted when it has no entries and an entry is removed when it holds neither member. A model without `parts`
+  loads exactly as before.
 
 ### Terrain data and the generation recipe
 

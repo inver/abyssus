@@ -27,6 +27,15 @@ class ProjectSceneViewHost(
         })
     }
 
+    override fun listenPart(file: VirtualFile, parent: Disposable, selected: (Long, String) -> Unit) {
+        project.messageBus.connect(parent).subscribe(AbyssusSelectionListener.TOPIC, AbyssusSelectionListener { node ->
+            partTargetOf(node)?.takeIf { it.file == file }?.let { selected(it.entityId, it.node) }
+        })
+    }
+
+    override fun selectPart(file: VirtualFile, entityId: Long, node: String) =
+        selectPartInAbyssusView(project, file, entityId, node)
+
     override fun removeEntity(file: VirtualFile, entityId: Long): EditResult =
         SceneComponentEdits.removeEntity(project, file, entityId)
 

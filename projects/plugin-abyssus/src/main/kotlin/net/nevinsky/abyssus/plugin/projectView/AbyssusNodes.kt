@@ -167,6 +167,8 @@ private fun entryIcon(entry: DtoEntry): Icon {
         dto is Asset<*> -> AssetIcons.forType(dto.meta.type.name)
         isEntityEntry(entry) -> EntityIcons.forType(entry.entityType())
         isComponentEntry(entry) -> ComponentIcons.forComponent(entry.name)
+        dto is PartsNode -> AllIcons.Nodes.Package
+        dto is PartNode -> AllIcons.Nodes.Method
         dto is SceneEntry && dto.file.extension == ProjectLayout.SCENE_EXTENSION -> SceneIcons.FILE
         PropertyIcons.forProperty(entry.name) != null -> PropertyIcons.forProperty(entry.name)!!
         isScalar(dto) -> AllIcons.Nodes.Property
@@ -253,7 +255,9 @@ class DtoEntryNode(
             // Properties
             dto is EntityNode && dto.entity?.let(::isArrangementEntity) == true -> emptyList()
             // a camera, light or model lists only its child entities: its components are edited in Properties
-            dto is EntityNode && dto.entity?.let(::isLeafEntity) == true -> childEntityRows(dto)
+            // a model also lists its parts, after its child entities
+            dto is EntityNode && dto.entity?.let(::isLeafEntity) == true ->
+                childEntityRows(dto) + partsRows(project!!, dto, v.source)
             else -> childrenOf(dto)
         }.filterNot { sceneFileOf(v) != null && it.name in SCENE_HEADER }.foldToggles()
         return rows.mapIndexed { i, row ->

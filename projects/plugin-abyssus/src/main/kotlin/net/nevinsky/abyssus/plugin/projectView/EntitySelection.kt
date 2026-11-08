@@ -115,4 +115,28 @@ fun selectEntityInAbyssusView(project: Project, sceneFile: VirtualFile, entityId
     }
 }
 
+/**
+ * Shows the Abyssus view and selects the row of part [node] of model entity [entityId] of [sceneFile] in it, expanding
+ * the tree down to it. Does nothing when the parts are not read yet or have no such part; never throws. EDT.
+ */
+fun selectPartInAbyssusView(project: Project, sceneFile: VirtualFile, entityId: Long, node: String) {
+    try {
+        val scene = SceneDocumentCache.of(project).read(sceneFile)?.scene ?: return
+        val render = scene.entity(entityId)
+            ?.component(net.nevinsky.abyssus.lib.core.ecs.component.RenderComponent::class.java) ?: return
+        val dir = ProjectLayout.projectDirFor(sceneFile) ?: return
+        val key = net.nevinsky.abyssus.lib.core.assets.ModelKey(
+            render.assetName,
+            render.meshId?.takeIf(String::isNotEmpty),
+        ).encode()
+        val chain = TreeModelParts.of(project).cached(dir, key)?.info?.pathTo(node) ?: return
+        val ancestors = treeAncestors(scene, entityId)
+        val wanted = entityPath(entityId, ancestors) + PARTS_ROW + chain
+        val visitor = TreeVisitor { path -> rowVisitAction(sceneFile, wanted, path.path.map(TreeUtil::getUserObject)) }
+        selectInAbyssusView(project, visitor)
+    } catch (e: Throwable) {
+        LOG.warn("Could not select part $node of entity $entityId in the Abyssus view", e)
+    }
+}
+
 // G7: selectWaterInAbyssusView (selecting a water surface in the tree) is disabled.

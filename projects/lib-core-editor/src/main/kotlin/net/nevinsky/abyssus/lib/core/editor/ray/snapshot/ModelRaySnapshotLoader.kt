@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.g3d.model.data.ModelNode
 import net.nevinsky.abyssus.lib.core.assets.AssetMeta
 import net.nevinsky.abyssus.lib.core.assets.decodeModelKey
 import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
+import net.nevinsky.abyssus.lib.core.assets.model.applyPivots
 import net.nevinsky.abyssus.lib.core.assets.model.ModelPreparationTap
 import net.nevinsky.abyssus.lib.core.assets.model.selectMesh
 import net.nevinsky.abyssus.lib.core.io.FileLoader
@@ -27,8 +28,11 @@ class ModelRaySnapshotLoader(
 ) : RaySnapshotLoader<RayModelSnapshot, RayModelSource> {
     override fun load(meta: AssetMeta<Any>): RayModelSnapshot {
         val key = decodeModelKey(meta.name)
-        val file = FileHandle(fileLoader.loadAssetFile(key.name, meta.typedAdditional<ModelMeta>().file))
+        val modelMeta = meta.typedAdditional<ModelMeta>()
+        val file = FileHandle(fileLoader.loadAssetFile(key.name, modelMeta.file))
         val data = assimp.loadData(file)
+        // The same re-pivot as ModelLoader.read, so a model read here matches the raster one.
+        applyPivots(data, modelMeta.parts)
         key.meshId?.let { selectMesh(data, key.name, it) }
         val images = assimp.decodeTextures(data, file)
         return try {

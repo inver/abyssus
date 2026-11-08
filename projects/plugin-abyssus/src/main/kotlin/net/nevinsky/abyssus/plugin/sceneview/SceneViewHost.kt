@@ -11,6 +11,12 @@ import net.nevinsky.abyssus.lib.core.editor.components.EditResult
 interface SceneViewHost {
     fun listen(file: VirtualFile, parent: Disposable, selected: (Long) -> Unit)
     fun select(file: VirtualFile, entityId: Long)
+
+    /** Tells [selected] when a part row of [file]'s model entities is selected in the tree. */
+    fun listenPart(file: VirtualFile, parent: Disposable, selected: (entityId: Long, node: String) -> Unit) {}
+
+    /** Selects the row of part [node] of entity [entityId] in the tree, when the tree has it. */
+    fun selectPart(file: VirtualFile, entityId: Long, node: String) {}
     fun lightActions(file: VirtualFile, position: () -> Vector3): DefaultActionGroup
     fun assetActions(file: VirtualFile, position: () -> Vector3): DefaultActionGroup
     /** The project's models to arrange along a path; choosing one calls [start]. */

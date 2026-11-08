@@ -5,6 +5,7 @@
 
 package net.nevinsky.abyssus.lib.core.editor.pick
 
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.sky.clouds.CloudTechnique
 import net.nevinsky.abyssus.lib.core.editor.content.Pose
@@ -41,6 +42,9 @@ data class BrushMode(
     val options: BrushOptions? = null,
 )
 
+/** A hinge deflection of [degrees] previewed on part [node] of entity [entityId] in one view. */
+data class HingePreview(val entityId: Long, val node: String, val degrees: Float)
+
 /** What the view has selected: an entity of the scene. */
 sealed interface SceneTarget {
     data class Entity(val id: Long) : SceneTarget
@@ -68,13 +72,51 @@ sealed interface ViewMode {
 class SceneViewState {
     /** What the view highlights and shows a gizmo on, or null. */
     var selection: SceneTarget? = null
+        set(value) {
+            field = value
+            clearPart()
+        }
 
-    /** The entity id the view highlights and shows a gizmo on, or null. */
+    /**
+     * The entity id the view highlights and shows a gizmo on, or null. Setting it is a plain entity selection: it
+     * clears the part selection, Edit Pivot and the hinge preview (use [selectPart] to select a part).
+     */
     var selectedId: Long?
         get() = (selection as? SceneTarget.Entity)?.id
         set(value) {
             selection = value?.let(SceneTarget::Entity)
         }
+
+    /** The node of the selected entity's model that is selected as a part, or null (OpenSpec `model-parts`). */
+    var selectedPart: String? = null
+        private set
+
+    /** Whether the gizmo drags the selected part's pivot frame instead of the entity; off when a view opens. */
+    var editPivot: Boolean = false
+
+    /** How a click on the selected part sets its pivot while [editPivot] is on. */
+    var pivotSnap: PivotSnap = PivotSnap.NONE
+
+    /** The world frame of the pivot being dragged (shown instead of the file's), or null. */
+    var pivotPreview: Matrix4? = null
+
+    /** The hinge deflection previewed in this view only (never written), or null. */
+    var hingePreview: HingePreview? = null
+
+    /** Selects part [node] of model entity [entityId], which becomes the selected entity. */
+    fun selectPart(entityId: Long, node: String) {
+        selection = SceneTarget.Entity(entityId)
+        selectedPart = node
+    }
+
+    /** Drops the part selection and what depends on it. */
+    fun clearPart() {
+        selectedPart = null
+        editPivot = false
+        pivotSnap = PivotSnap.NONE
+        pivotPreview = null
+        hingePreview = null
+    }
 
     var gizmoMode: GizmoMode = GizmoMode.MOVE
 

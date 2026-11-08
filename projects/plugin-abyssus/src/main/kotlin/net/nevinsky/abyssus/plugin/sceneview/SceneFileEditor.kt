@@ -54,6 +54,11 @@ import net.nevinsky.abyssus.lib.core.editor.pick.TransformEdit
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout.Companion.META_FILE
 import net.nevinsky.abyssus.lib.core.io.JsonProcessor
+import com.badlogic.gdx.math.Matrix4
+import net.nevinsky.abyssus.lib.core.editor.content.storageName
+import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
+import net.nevinsky.abyssus.lib.core.editor.pick.PivotFrames
+import net.nevinsky.abyssus.plugin.modelparts.ModelPartWriter
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 import net.nevinsky.abyssus.plugin.AbyssusPluginCtx
 import net.nevinsky.abyssus.plugin.EditorBundle
@@ -213,6 +218,13 @@ class SceneFileEditor(
         host.listen(file, this) { entityId ->
             rayControls.selected(file, this, entityId)
             view?.selectEntity(entityId)
+        }
+        net.nevinsky.abyssus.plugin.modelparts.HingePreviews.of(project).listen(file, this) { preview ->
+            view?.setHingePreview(preview)
+        }
+        host.listenPart(file, this) { entityId, node ->
+            rayControls.selected(file, this, entityId)
+            view?.selectPart(entityId, node)
         }
         project.messageBus
             .connect(this)
@@ -398,7 +410,26 @@ class SceneFileEditor(
         }
     }
 
+    /** The scene as the view was last given it: where entities are and which models they draw. */
+    private var lastParams: SceneRenderParams? = null
+
+    /**
+     * Writes the pivot an Edit Pivot drag or snap ended at: the world [frame] of part [node] of model entity [entityId]
+     * becomes a pivot relative to the node's frame in the model file, written to the model's `meta.json` together with
+     * the children bound to the node, as one undoable command. False when nothing was written.
+     */
+    internal fun applyPivotMove(entityId: Long, node: String, frame: Matrix4): Boolean {
+        val params = lastParams ?: return false
+        val dir = params.projectDir ?: return false
+        val placement = params.content.model(entityId) ?: return false
+        val info = view?.cachedParts(placement.storageName) ?: return false
+        val fileFrame = info.fileFrames[node] ?: return false
+        val pivot = PivotFrames().toFilePivot(placement.transform.toMatrix(), fileFrame, frame)
+        return ModelPartWriter(project).setPivot(dir, placement.assetName, node, pivot, info, file)
+    }
+
     private fun showScene(params: SceneRenderParams) {
+        lastParams = params
         for (warning in hierarchyWarnings.fresh(params.content.hierarchy.warnings)) {
             thisLogger().warn("${file.name}: ${warning.message()}")
         }
@@ -424,6 +455,11 @@ class SceneFileEditor(
             rayControls.selected(file, this, entityId)
             host.select(file, entityId)
         }
+        created.onPickPart = { entityId, node ->
+            rayControls.selected(file, this, entityId)
+            host.selectPart(file, entityId, node)
+        }
+        created.onPivotMove = ::applyPivotMove
         created.onTransform = ::applyTransform
         created.onArrangementCreate = ::createArrangement
         created.onCopy = ::copyEntity

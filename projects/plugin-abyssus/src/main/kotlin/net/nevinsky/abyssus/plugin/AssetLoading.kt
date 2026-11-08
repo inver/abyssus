@@ -25,6 +25,8 @@ import net.nevinsky.abyssus.lib.core.assets.sky.hdr.HdrPreview
 import net.nevinsky.abyssus.lib.core.assets.sky.hdr.ToneCurve
 import net.nevinsky.abyssus.lib.core.assets.standard.StandardAssetLoaders
 import net.nevinsky.abyssus.lib.core.editor.modelmesh.ModelMeshInfo
+import net.nevinsky.abyssus.lib.core.editor.modelmesh.ModelPartsInfo
+import net.nevinsky.abyssus.lib.core.assets.baseAssetName
 import net.nevinsky.abyssus.lib.core.editor.modellights.MaterialGeometry
 import net.nevinsky.abyssus.lib.core.editor.modellights.ModelLampReader
 import net.nevinsky.abyssus.lib.core.editor.modelmesh.ModelMeshLister
@@ -94,6 +96,12 @@ class AssetLoading(
             .getOrNull()
     }
 
+    /** Changes when the model file or its `meta.json` (pivots live there) does. */
+    private fun modelStamp(projectDir: File, name: String, model: File): Long {
+        val meta = FileLoader(projectDir).folder(name)?.let { File(it, META_FILE) }
+        return model.lastModified() * 31 + (meta?.lastModified() ?: 0L) * 17 + (meta?.length() ?: 0L)
+    }
+
     private val nodeTables = ConcurrentHashMap<File, Pair<Long, Map<String, Matrix4>>>()
 
     /**
@@ -103,7 +111,7 @@ class AssetLoading(
      */
     fun cachedModelNodes(projectDir: File, name: String): Map<String, Matrix4>? {
         val model = modelFile(projectDir, name)?.canonicalFile ?: return emptyMap()
-        return nodeTables[model]?.takeIf { it.first == model.lastModified() }?.second
+        return nodeTables[model]?.takeIf { it.first == modelStamp(projectDir, name, model) }?.second
     }
 
     /**
@@ -112,12 +120,41 @@ class AssetLoading(
      */
     fun modelNodes(projectDir: File, name: String): Map<String, Matrix4> {
         val model = modelFile(projectDir, name)?.canonicalFile ?: return emptyMap()
-        val stamp = model.lastModified()
+        val stamp = modelStamp(projectDir, name, model)
         nodeTables[model]?.takeIf { it.first == stamp }?.let { return it.second }
         val files = FileLoader(projectDir)
         val nodes = ModelMeshLister(files, AssetMetaLoader(json, files, log), assimp).nodes(name).orEmpty()
         nodeTables[model] = stamp to nodes
         return nodes
+    }
+
+    private val partTables = ConcurrentHashMap<Pair<File, String>, Pair<Long, ModelPartsInfo?>>()
+
+    /**
+     * What reading the parts of model asset [name] (the key of a mesh variant is an encoded `ModelKey`) found for its
+     * current files: a [CachedParts] (whose `info` is null when the model cannot be read), or null while they still have
+     * to be read with [modelParts]. Never reads a model, so it may run on the UI thread.
+     */
+    fun cachedModelParts(projectDir: File, name: String): CachedParts? {
+        val base = baseAssetName(name)
+        val model = modelFile(projectDir, base)?.canonicalFile ?: return CachedParts(null)
+        return partTables[model to name]?.takeIf { it.first == modelStamp(projectDir, base, model) }
+            ?.let { CachedParts(it.second) }
+    }
+
+    /**
+     * The parts of model asset [name], read on the caller's thread without images or GL (so off the UI thread); null
+     * when it is not a readable model. Parsed once per modification of the model file or its `meta.json`.
+     */
+    fun modelParts(projectDir: File, name: String): ModelPartsInfo? {
+        val base = baseAssetName(name)
+        val model = modelFile(projectDir, base)?.canonicalFile ?: return null
+        val stamp = modelStamp(projectDir, base, model)
+        partTables[model to name]?.takeIf { it.first == stamp }?.let { return it.second }
+        val files = FileLoader(projectDir)
+        val parts = ModelMeshLister(files, AssetMetaLoader(json, files, log), assimp).parts(name)
+        partTables[model to name] = stamp to parts
+        return parts
     }
 
     private val meshTables = ConcurrentHashMap<File, Pair<Long, List<ModelMeshInfo>>>()
@@ -128,7 +165,7 @@ class AssetLoading(
      */
     fun modelMeshes(projectDir: File, name: String): List<ModelMeshInfo>? {
         val model = modelFile(projectDir, name)?.canonicalFile ?: return null
-        val stamp = model.lastModified()
+        val stamp = modelStamp(projectDir, name, model)
         meshTables[model]
             ?.takeIf { it.first == stamp }
             ?.let {
@@ -156,6 +193,9 @@ class AssetLoading(
     }
 }
 
+/** The answer of reading the parts of a model: [info] is null when the model is not readable. */
+class CachedParts(val info: ModelPartsInfo?)
+
 /**
  * The loading graph of one project folder: [storage] owns every built asset (models, terrains, textures and skies) and
  * the three [RaySnapshotStore]s hold the optional CPU snapshots ray mode reads. [unsaved] is what the editors hold for
@@ -177,6 +217,17 @@ internal constructor(
 
     val files = FileLoader(projectDir.absoluteFile)
     val metas = AssetMetaLoader(json, files, log)
+    private val unsavedMetas = UnsavedMetas(json, files, { this.unsaved }, metas, log)
+
+    /**
+     * The parts, node frames and triangles of the project's models, read with pivots applied and from unsaved
+     * `meta.json` text when an editor holds some. Dropped per asset by [invalidateModel] on the signal that reloads the
+     * model. Reads parse the model file: call off the UI thread.
+     */
+    val modelParts = ModelMeshLister(files, metas, assimp, unsavedMetas::load)
+
+    /** Forgets the cached parts of model asset [name] (and of its mesh variants). */
+    fun invalidateModel(name: String) = modelParts.invalidate(name)
 
     val rayModels: RaySnapshotStore<RayModelSnapshot, RayModelSource> =
         RaySnapshotStore(executor, metas, ModelRaySnapshotLoader(files, assimp), "model")
@@ -215,7 +266,7 @@ internal constructor(
         AssetStorage(
                 log,
                 executor,
-                UnsavedMetas(json, files, { unsaved }, metas, log)::load,
+                unsavedMetas::load,
             )
             .also { it.registerAll(loaders.byType) }
 

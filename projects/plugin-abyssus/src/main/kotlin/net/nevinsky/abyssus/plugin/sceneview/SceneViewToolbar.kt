@@ -232,6 +232,9 @@ internal class SceneViewToolbar(
                     null
                 },
             )
+        interaction.selectedPart?.takeIf { interaction.editPivot }?.let {
+            statusText += STATUS_SEPARATOR + AbyssusBundle.message("sceneViewEditingPivot", it)
+        }
         brushes.strips.forEach { it.beforeSync() }
         updatingControls = true
         try {

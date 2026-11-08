@@ -12,7 +12,13 @@ import com.badlogic.gdx.math.Quaternion
 import com.badlogic.gdx.math.Vector3
 import net.nevinsky.abyssus.lib.core.assets.AssetMetaLoader
 import net.nevinsky.abyssus.lib.core.assets.runCatchingKeepingCancellation
+import net.nevinsky.abyssus.lib.core.assets.AssetMeta
+import net.nevinsky.abyssus.lib.core.assets.baseAssetName
+import net.nevinsky.abyssus.lib.core.assets.forVariant
+import net.nevinsky.abyssus.lib.core.assets.isModelVariant
 import net.nevinsky.abyssus.lib.core.assets.model.ModelLoader
+import net.nevinsky.abyssus.lib.core.assets.model.ModelMeta
+import net.nevinsky.abyssus.lib.core.assets.model.pivotRefusals
 import net.nevinsky.abyssus.lib.core.io.FileLoader
 import net.nevinsky.abyssus.lib.gdx.loader.AssimpModelLoader
 import net.nevinsky.abyssus.lib.gdx.model.ModelData
@@ -29,16 +35,30 @@ data class ModelMaterialInfo(val id: String, val emissive: Color?)
  * run on any thread, but it parses the model file: call it off the UI thread. The answer for an asset is kept until
  * [invalidate] drops it.
  */
-class ModelMeshLister(files: FileLoader, metas: AssetMetaLoader, assimp: AssimpModelLoader = AssimpModelLoader()) {
+class ModelMeshLister(
+    files: FileLoader,
+    metas: AssetMetaLoader,
+    assimp: AssimpModelLoader = AssimpModelLoader(),
+    /** Where an asset's base meta comes from; an editor passes one that sees unsaved text. */
+    private val metaSource: (String) -> AssetMeta<Any>? = metas::loadBaseMeta,
+) {
     private val loader = ModelLoader(metas, assimp, files, decodeTextures = false)
     private val known = ConcurrentHashMap<String, List<ModelMeshInfo>>()
     private val knownMaterials = ConcurrentHashMap<String, List<ModelMaterialInfo>>()
     private val knownNodes = ConcurrentHashMap<String, Map<String, Matrix4>>()
+    private val knownParts = ConcurrentHashMap<String, ModelPartsInfo>()
+
+    /** Prepares model [assetName] (a variant name reads its base asset's meta); null when it is missing or unreadable. */
+    private fun prepare(assetName: String) = runCatchingKeepingCancellation {
+        metaSource(baseAssetName(assetName))?.let { base ->
+            loader.loadPrepared(if (isModelVariant(assetName)) base.forVariant(assetName) else base)
+        }
+    }.getOrNull()
 
     /** The meshes of the model asset [assetName], in the model's order; null when it is missing or cannot be read. */
     fun list(assetName: String): List<ModelMeshInfo>? {
         known[assetName]?.let { return it }
-        val prepared = runCatchingKeepingCancellation { loader.prepare(assetName) }.getOrNull() ?: return null
+        val prepared = prepare(assetName) ?: return null
         val infos = try {
             knownMaterials[assetName] = materialsOf(prepared.staged.data)
             knownNodes[assetName] = nodeRestTransforms(prepared.staged.data)
@@ -75,14 +95,45 @@ class ModelMeshLister(files: FileLoader, metas: AssetMetaLoader, assimp: AssimpM
         return knownNodes[assetName]
     }
 
+    /**
+     * The parts of the model asset [assetName] (an encoded variant name lists only that mesh's nodes and their
+     * ancestors): the pruned node tree with own bounds and pivot status, node frames and triangles. Reads the model when
+     * needed (off the UI thread); null when it cannot be read.
+     */
+    fun parts(assetName: String): ModelPartsInfo? {
+        knownParts[assetName]?.let { return it }
+        val prepared = prepare(assetName) ?: return null
+        val info = try {
+            val declared = runCatchingKeepingCancellation {
+                metaSource(baseAssetName(assetName))?.typedAdditional<ModelMeta>()?.parts
+            }.getOrNull()
+            val refusals = pivotRefusals(prepared.staged.data, declared).associate { it.node to it.reason }
+            buildParts(prepared.staged.data, declared, refusals)
+        } finally {
+            loader.discardStaged(prepared.staged)
+        }
+        return knownParts.putIfAbsent(assetName, info) ?: info
+    }
+
+    /** The parts already read for [assetName], without reading; null before [parts] or after [invalidate]. */
+    fun cachedParts(assetName: String): ModelPartsInfo? = knownParts[assetName]
+
+    /**
+     * The rest transform of [node] in the model of [assetName] as the model file has it, without the node's own pivot
+     * (`rest x pivot^-1`); null when the model or node is unknown. Reads when needed.
+     */
+    fun fileFrame(assetName: String, node: String): Matrix4? = parts(assetName)?.fileFrames?.get(node)
+
     /** The answer already read for [assetName], without reading; null before [list] or after [invalidate]. */
     fun cached(assetName: String): List<ModelMeshInfo>? = known[assetName]
 
     /** Forgets [assetName], whose files changed. */
     fun invalidate(assetName: String) {
-        known.remove(assetName)
-        knownMaterials.remove(assetName)
-        knownNodes.remove(assetName)
+        // Variants are stored under their encoded name; they go with the asset.
+        known.keys.removeIf { baseAssetName(it) == assetName }
+        knownMaterials.keys.removeIf { baseAssetName(it) == assetName }
+        knownNodes.keys.removeIf { baseAssetName(it) == assetName }
+        knownParts.keys.removeIf { baseAssetName(it) == assetName }
     }
 
     /** Forgets everything. */
@@ -90,6 +141,7 @@ class ModelMeshLister(files: FileLoader, metas: AssetMetaLoader, assimp: AssimpM
         known.clear()
         knownMaterials.clear()
         knownNodes.clear()
+        knownParts.clear()
     }
 
     private fun meshesOf(data: ModelData): List<ModelMeshInfo> {

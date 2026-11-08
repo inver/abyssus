@@ -153,6 +153,18 @@ parent, itself, a cycle) leaves the entity under `ecs`. The `ecs` row still coun
 Scene view walks the tree through its ancestors (`treeAncestors`, `entityVisitAction`), which expands them. Remove Entity
 on a parent removes its descendants in the same edit (`EntityRemoval`).
 
+## Model parts in the tree
+
+A model entity row (`isModelEntity`) lists a `Parts` row after its child entities (its components stay in Properties).
+`partsRows` (`ModelPartRows.kt`) builds it: the count and the nested `PartNode` rows come from `ModelPartsInfo`, which
+`TreeModelParts` (a project service) takes from `AssetLoading.cachedModelParts`. A miss starts one background read
+(`request`) and publishes `AbyssusModelPartsRead` when it is done, which `AbyssusTreeRefresh` treats like a plugin edit; until
+then the row shows no count and nothing below it, and the same when the model cannot be read. A part row reads its node
+name and, in gray, `pivot` and/or `hinge` for the entries the model asset gives it. Part rows have no eye and cannot be
+removed: `componentTargetOf` ignores them, `partTargetOf` stands for them (scene file, entity, node, asset). Selecting one
+selects that part in the Scene view (`SceneViewHost.listenPart`), and an Alt+click in the view selects the row
+(`selectPartInAbyssusView`, which walks `ecs` / entity / `parts` / the node names).
+
 ## Add Dummy
 
 `AddDummyAction` (`Abyssus.AddDummy`, last in `Abyssus.Menu.Add`) is offered on an entity row that is not a path

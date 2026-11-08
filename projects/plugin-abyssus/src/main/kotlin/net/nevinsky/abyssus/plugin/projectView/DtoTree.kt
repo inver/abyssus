@@ -48,7 +48,7 @@ fun scalarOf(value: Any?): Any? = value
 /** True for a value shown as `name: value`; everything else is a node with children. */
 fun isScalar(value: Any?): Boolean = when (value) {
     null, is String, is Number, is Boolean, is Enum<*> -> true
-    is EcsNode, is EntityNode, is ComponentNode -> false
+    is EcsNode, is EntityNode, is ComponentNode, is PartsNode, is PartNode -> false
     else -> false
 }
 
@@ -67,6 +67,8 @@ fun childrenOf(value: Any?): List<DtoRow> = when {
     value is EcsNode -> ecsRows(value.scene)
     value is EntityNode -> entityRows(value)
     value is ComponentNode -> emptyList()
+    value is PartsNode -> partRows(value)
+    value is PartNode -> partRows(value)
     isScalar(value) -> emptyList()
     value is List<*> -> value.mapIndexed { i, v -> DtoRow("$i", v) }
     else -> beanProperties(value!!)
@@ -183,6 +185,8 @@ fun rowText(entry: DtoEntry, label: String? = null): RowText {
         v is EcsNode -> RowText(ECS, AbyssusBundle.message("treeEntities", v.count))
         v is EntityNode -> entityText(v)
         v is ComponentNode -> RowText(entry.name.removeSuffix(COMPONENT_SUFFIX).ifEmpty { entry.name })
+        v is PartsNode -> RowText(AbyssusBundle.message("treeParts"), v.info?.count?.toString())
+        v is PartNode -> RowText(entry.name, partMarks(v.part))
         else -> RowText(label ?: displayName(entry.name))
     }
 }

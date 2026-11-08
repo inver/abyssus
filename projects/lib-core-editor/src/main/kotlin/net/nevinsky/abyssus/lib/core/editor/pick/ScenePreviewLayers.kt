@@ -19,6 +19,8 @@ import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 class ScenePreviewLayers(
     private val state: SceneViewState,
     private val heights: GroundHeight = LineHeights(),
+    /** The parts of the scene's models, for the entities that follow a hinge preview. */
+    private val parts: PartsSource = { null },
 ) {
     private var posedBase: SceneContent? = null
     private var posedPoses: Map<Long, *>? = null
@@ -26,6 +28,15 @@ class ScenePreviewLayers(
 
     /** [base] with the simulated poses applied: [base] itself while nothing plays. */
     fun posed(base: SceneContent): SceneContent {
+        val hinge = state.hingePreview
+        if (hinge != null) {
+            // entities bound to the previewed node follow it; simulated poses (Play) win over that
+            val followed = HingePreviewPoses().poses(base, hinge, parts)
+            val merged = followed + state.poses
+            if (merged.isNotEmpty()) {
+                return ScenePreview().withPoses(base, merged)
+            }
+        }
         val poses = state.poses
         if (poses.isEmpty()) {
             return base

@@ -39,8 +39,11 @@ class ModelLoader(
         val key = decodeModelKey(meta.name)
         val started = System.nanoTime()
         val capture = preparation?.begin(meta.name)
-        val handle = FileHandle(fileLoader.loadAssetFile(key.name, meta.typedAdditional<ModelMeta>().file))
+        val modelMeta = meta.typedAdditional<ModelMeta>()
+        val handle = FileHandle(fileLoader.loadAssetFile(key.name, modelMeta.file))
         val data = assimp.loadData(handle)
+        // Before selectMesh: a variant keeps the whole node tree, so every variant gets the same pivots.
+        warnAboutParts(key.name, data, modelMeta)
         // Before the images are decoded, so only the kept materials' textures are.
         key.meshId?.let { selectMesh(data, key.name, it) }
         val images =
@@ -61,6 +64,17 @@ class ModelLoader(
         } catch (cancelled: CancellationException) {
             prepared.dispose()
             throw cancelled
+        }
+    }
+
+    private fun warnAboutParts(asset: String, data: ModelData, meta: ModelMeta) {
+        val parts = meta.parts ?: return
+        for (refusal in applyPivots(data, parts).refused) {
+            log.warn("Pivot of node '{}' in model '{}' not applied: {}", refusal.node, asset, refusal.reason)
+        }
+        for ((node, part) in parts) {
+            val problem = part.hinge?.let(::hingeProblem) ?: continue
+            log.warn("Hinge of node '{}' in model '{}' ignored: {}", node, asset, problem)
         }
     }
 

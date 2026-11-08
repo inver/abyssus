@@ -6,6 +6,7 @@
 package net.nevinsky.abyssus.plugin.sceneview
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
@@ -14,10 +15,18 @@ import net.nevinsky.abyssus.lib.core.editor.pick.LineSink
 object SelectionBox {
     private val HIGHLIGHT = Color(1f, 0.72f, 0.15f, 1f)
 
-    fun draw(out: LineSink, box: BoundingBox) {
+    /** The color of the selected part's outline, apart from the entity's. */
+    private val PART = Color(0.2f, 0.85f, 1f, 1f)
+
+    fun draw(out: LineSink, box: BoundingBox) = draw(out, box, Matrix4(), HIGHLIGHT)
+
+    /** The outline of a selected part: its own [local] bounds posed with [world]. */
+    fun drawPart(out: LineSink, local: BoundingBox, world: Matrix4) = draw(out, local, world, PART)
+
+    private fun draw(out: LineSink, box: BoundingBox, world: Matrix4, color: Color) {
         val a = box.min
         val b = box.max
-        val p = { x: Float, y: Float, z: Float -> Vector3(x, y, z) }
+        val p = { x: Float, y: Float, z: Float -> Vector3(x, y, z).mul(world) }
         val corners =
             listOf(
                 p(a.x, a.y, a.z),
@@ -32,8 +41,8 @@ object SelectionBox {
         for (ring in 0..1) for (i in 0 until 4) out.line(
             corners[ring * 4 + i],
             corners[ring * 4 + (i + 1) % 4],
-            HIGHLIGHT,
+            color,
         )
-        for (i in 0 until 4) out.line(corners[i], corners[4 + i], HIGHLIGHT)
+        for (i in 0 until 4) out.line(corners[i], corners[4 + i], color)
     }
 }

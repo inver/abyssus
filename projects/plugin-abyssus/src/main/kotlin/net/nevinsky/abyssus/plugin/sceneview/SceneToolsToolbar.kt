@@ -23,6 +23,7 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoMode
 import net.nevinsky.abyssus.lib.core.editor.pick.GizmoSpace
+import net.nevinsky.abyssus.lib.core.editor.pick.PivotSnap
 import net.nevinsky.abyssus.lib.core.editor.pick.SceneInteraction
 import net.nevinsky.abyssus.plugin.AbyssusBundle
 
@@ -54,6 +55,8 @@ internal class SceneToolsToolbar(
             ),
             divider(),
             bar("AbyssusSceneSpace", DefaultActionGroup(SpaceAction(), SnapAction())),
+            divider(),
+            bar("AbyssusScenePivot", DefaultActionGroup(EditPivotAction(), PivotSnapAction())),
             divider(),
             bar(
                 "AbyssusSceneDisplay",
@@ -172,6 +175,48 @@ internal class SceneToolsToolbar(
             e.presentation.isEnabled = state().snapEnabled
         }
     }
+
+    /** Edit Pivot: the gizmo drags the selected part's pivot. Enabled only with a part whose pivot can be applied. */
+    private inner class EditPivotAction :
+        ToggleAction(AbyssusBundle.message("sceneViewEditPivot"), AbyssusBundle.message("sceneViewEditPivotTooltip"), null),
+        DumbAware {
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+
+        override fun isSelected(e: AnActionEvent) = interaction.editPivot
+
+        override fun setSelected(e: AnActionEvent, selected: Boolean) {
+            interaction.editPivot = selected
+        }
+
+        override fun update(e: AnActionEvent) {
+            super.update(e)
+            e.presentation.putClientProperty(ActionUtil.SHOW_TEXT_IN_TOOLBAR, true)
+            e.presentation.isEnabled = state().gizmoEnabled && interaction.canEditPivot
+        }
+    }
+
+    /** The snap Edit Pivot's click uses: None, Edge or Face. Usable while Edit Pivot is on. */
+    private inner class PivotSnapAction : ComboBoxAction(), DumbAware {
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+
+        override fun createPopupActionGroup(button: JComponent): DefaultActionGroup =
+            DefaultActionGroup(PivotSnap.entries.map { snap -> choice(pivotSnapLabel(snap)) { interaction.pivotSnap = snap } })
+
+        override fun update(e: AnActionEvent) {
+            e.presentation.text = pivotSnapLabel(interaction.pivotSnap)
+            e.presentation.description = AbyssusBundle.message("sceneViewPivotSnapTooltip")
+            e.presentation.isEnabled = interaction.editPivot
+        }
+    }
+
+    private fun pivotSnapLabel(snap: PivotSnap) =
+        AbyssusBundle.message(
+            when (snap) {
+                PivotSnap.NONE -> "sceneViewPivotSnapNone"
+                PivotSnap.EDGE -> "sceneViewPivotSnapEdge"
+                PivotSnap.FACE -> "sceneViewPivotSnapFace"
+            }
+        )
 
     private inner class SpaceAction : ComboBoxAction(), DumbAware {
         override fun getActionUpdateThread() = ActionUpdateThread.EDT

@@ -23,6 +23,12 @@ import net.nevinsky.abyssus.lib.core.editor.meta.EntityAssetChoices
 import net.nevinsky.abyssus.lib.core.editor.meta.EntitySections
 import net.nevinsky.abyssus.lib.core.editor.meta.SKYBOX_FACES
 import net.nevinsky.abyssus.lib.core.editor.meta.readEntitySections
+import net.nevinsky.abyssus.lib.core.assets.ModelKey
+import net.nevinsky.abyssus.lib.core.assets.model.PartHinge
+import net.nevinsky.abyssus.lib.core.assets.model.PartPivot
+import net.nevinsky.abyssus.lib.core.editor.modelmesh.ModelPart
+import net.nevinsky.abyssus.lib.core.editor.modelmesh.ModelPartsInfo
+import net.nevinsky.abyssus.plugin.modelparts.modelMetaFile
 import net.nevinsky.abyssus.lib.core.editor.panel.FolderKind as PanelFolderKind
 import net.nevinsky.abyssus.lib.core.editor.panel.PanelBuilders
 import net.nevinsky.abyssus.lib.core.editor.panel.PanelModel
@@ -101,6 +107,21 @@ sealed interface PanelState {
         val addable: List<String>,
         /** What the panel draws: the header and the sections of the entity or component. */
         val model: PanelModel? = null,
+    ) : PanelState
+
+    /**
+     * Part [PartDetails.target] of a model entity (OpenSpec `object-properties-panel`, "Part properties"): the
+     * [breadcrumb] names, the model's [info] (null when it cannot be read), the [part] itself (null when the model has
+     * no such node), and the [pivot] and [hinge] the model asset gives it as its `meta.json` holds them now.
+     */
+    data class PartDetails(
+        val target: PartTarget,
+        val projectDir: File?,
+        val breadcrumb: List<String>,
+        val info: ModelPartsInfo?,
+        val part: ModelPart?,
+        val pivot: PartPivot?,
+        val hinge: PartHinge?,
     ) : PanelState
 }
 
@@ -315,6 +336,45 @@ fun readSceneState(file: VirtualFile, name: String): PanelState = runCatchingKee
     .getOrElse {
         PanelState.Empty(AbyssusBundle.message("propertiesSceneUnreadable", it.documentDisplayMessage()), null)
     }
+
+/**
+ * Reads what the part section of [target] shows. Safe off the EDT (it may parse the model). The pivot and hinge come
+ * from the `meta.json` text as the editor holds it, so unsaved text and Undo show at once.
+ */
+internal fun readPartState(target: PartTarget): PanelState {
+    val root = runCatchingKeepingCancellation { readScene(target.file) }
+        .getOrElse {
+            return PanelState.Empty(
+                AbyssusBundle.message("propertiesSceneUnreadable", it.documentDisplayMessage()),
+                null,
+            )
+        }
+    val dir = ProjectLayout.projectDirFor(target.file)
+    val key = ModelKey(target.asset, target.meshId).encode()
+    val loading = service<AbyssusPluginCtx>().assets.loading
+    val info = dir?.let { runCatchingKeepingCancellation { loading.modelParts(it, key) }.getOrNull() }
+    val declared = dir?.let { declaredParts(it, target.asset, loading) }?.get(target.node)
+    val breadcrumb = listOf(
+        root.name?.takeIf(String::isNotBlank) ?: target.file.nameWithoutExtension,
+        root.nameOf(target.entityId) ?: target.entityId.toString(),
+        target.node,
+    )
+    return PanelState.PartDetails(
+        target, dir, breadcrumb, info, info?.find(target.node), declared?.pivot, declared?.hinge,
+    )
+}
+
+/** The `parts` of model asset [asset] as its `meta.json` text holds them now (the editor's, else the file's). */
+private fun declaredParts(dir: File, asset: String, loading: net.nevinsky.abyssus.plugin.AssetLoading) =
+    runCatchingKeepingCancellation {
+        val meta = modelMetaFile(dir, asset) ?: return@runCatchingKeepingCancellation null
+        val text = runReadAction {
+            com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getCachedDocument(meta)?.text
+                ?: textOf(meta)
+        }
+        net.nevinsky.abyssus.lib.core.assets.AssetMetaParser(loading.json).read(asset, text)
+            .typedAdditional<net.nevinsky.abyssus.lib.core.assets.model.ModelMeta>().parts
+    }.getOrNull()
 
 /** Project settings use the same admitted, stamp-aware document cache as scene availability. */
 fun readProjectState(file: VirtualFile, name: String, settings: AbyssusProjectSettings): PanelState.Project {

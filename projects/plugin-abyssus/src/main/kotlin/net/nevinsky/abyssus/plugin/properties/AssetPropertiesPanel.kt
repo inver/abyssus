@@ -113,6 +113,9 @@ class AssetPropertiesPanel(
     private var foliageFolder: VirtualFile? = null
     private var rendering = false
 
+    /** The `meta.json` of the model whose part is shown, so a change to it (Undo, typing, a drag) refreshes the part. */
+    private var partMetaFile: VirtualFile? = null
+
     /** The property whose edit was rejected as stale: its next row says so, because the refresh rebuilds the row. */
     private var conflictKey: String? = null
 
@@ -202,7 +205,7 @@ class AssetPropertiesPanel(
         if (file == null) {
             return false
         }
-        if (file == scene || file == projectFile) {
+        if (file == scene || file == projectFile || (partMetaFile != null && file == partMetaFile)) {
             return true
         }
         val shown = folder ?: return false
@@ -251,20 +254,25 @@ class AssetPropertiesPanel(
         if (assetFolder != foliageFolder) {
             useFoliage(null)
         }
+        val part = if (assetFolder == null) partTargetOf(node) else null
         val entity =
-            if (assetFolder == null) {
+            if (assetFolder == null && part == null) {
                 componentTargetOf(node)
             } else {
                 null
             }
+        partMetaFile = part?.let { target ->
+            ProjectLayout.projectDirFor(target.file)?.let { net.nevinsky.abyssus.plugin.modelparts.modelMetaFile(it, target.asset) }
+        }
         val structural =
-            if (assetFolder == null && entity == null) {
+            if (assetFolder == null && entity == null && part == null) {
                 structuralOf(node)
             } else {
                 null
             }
         scene =
             entity?.file
+                ?: part?.file
                 ?: when (structural) {
                     is Structural.Setting -> structural.file
                     is Structural.Ecs -> structural.file
@@ -274,6 +282,17 @@ class AssetPropertiesPanel(
         if (structural != null) {
             background {
                 val result = readStructuralState(structural)
+                ui {
+                    if (token == generation && !disposed) {
+                        apply(result)
+                    }
+                }
+            }
+            return
+        }
+        if (part != null) {
+            background {
+                val result = readPartState(part)
                 ui {
                     if (token == generation && !disposed) {
                         apply(result)
@@ -494,6 +513,18 @@ class AssetPropertiesPanel(
                     scrolled(EntityDetailsView(project, newState, services.metaFiles, collapsedSections)).apply {
                         border = BorderFactory.createEmptyBorder()
                     },
+                    BorderLayout.CENTER,
+                )
+                cards.show(this, DETAILS)
+            }
+
+            is PanelState.PartDetails -> {
+                useTerrain(null)
+                useFoliage(null)
+                useUndoEditor(newState.target.file)
+                content.removeAll()
+                content.add(
+                    scrolled(PartDetailsView(project, newState)).apply { border = BorderFactory.createEmptyBorder() },
                     BorderLayout.CENTER,
                 )
                 cards.show(this, DETAILS)

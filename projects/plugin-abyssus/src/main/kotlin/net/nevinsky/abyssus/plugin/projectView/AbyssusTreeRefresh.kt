@@ -26,6 +26,7 @@ import net.nevinsky.abyssus.lib.core.editor.refresh.restoreNavigation
 import net.nevinsky.abyssus.lib.core.io.AbyssusProjectLayout
 import net.nevinsky.abyssus.plugin.dto.NativeFileChanges
 import net.nevinsky.abyssus.plugin.dto.ProjectLayout
+import net.nevinsky.abyssus.plugin.filetype.AbyssusModelPartsRead
 import net.nevinsky.abyssus.plugin.filetype.AbyssusSceneEdited
 import javax.swing.JTree
 import javax.swing.tree.TreePath
@@ -88,6 +89,7 @@ internal class AbyssusTreeRefresh(
         Disposer.register(parent, this)
         val connection = project.messageBus.connect(this)
         connection.subscribe(AbyssusSceneEdited.TOPIC, AbyssusSceneEdited { file -> changed(file.path) })
+        connection.subscribe(AbyssusModelPartsRead.TOPIC, AbyssusModelPartsRead { file -> changed(file.path) })
         project.getService(NativeFileChanges::class.java).subscribe(this) { events ->
             for (event in events) {
                 if (isRelevant(event)) {

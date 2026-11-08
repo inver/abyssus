@@ -12,6 +12,9 @@
 | **Component class name** | The key of a component in a scene's `components`: the fully qualified class name or the short name of a built-in or registered component class. `EcsLoader` binds the value into that class with Jackson, `EcsWriter` writes it back. Any other key is carried raw. |
 | **Placement** | What the scene view draws for an entity (`AssetPlacement`, `FoliagePlacement`, `LightPlacement`, `CameraPlacement`, gathered in `SceneContent` in `lib-core-editor`), taken directly from the `ecs` JSON. `LightPlacement` and its reading rules live in `lib-core`'s `light` package, which games share. |
 | **Mesh id** | The optional `meshId` of a model `RenderComponent`: the `id` of one mesh of the model asset. The entity then draws only that mesh and its materials. |
+| **Part** | A node of a model file that draws geometry (or sits on the way to one), named by its node name. Listed under a model entity's `Parts` row and selected there or by Alt+click on its triangles. |
+| **Pivot** | A part's origin and axes, set in the model asset's `additional.parts.<node>.pivot` relative to the node's frame in the file. Applied when the model is read; the geometry does not move. |
+| **Hinge** | `additional.parts.<node>.hinge`: minimum and maximum deflection in degrees of a part about its pivot's X axis. The Scene view can preview it (never written). |
 | **Model variant** | One model asset built for one mesh id, named in the asset storage by an encoded `ModelKey` (`ModelKey(asset, meshId)`; the bare asset name for the whole model). Variants of an asset are cached, invalidated and retained with it. |
 | **Abyssus view** | The Abyssus pane of the Project tool window: the project / scene / asset tree. |
 | **Abyssus Properties** | The tool window for asset metadata and supported asset edits, entity/component fields, and a selected scene's Ray Tracing switch and saved settings. |

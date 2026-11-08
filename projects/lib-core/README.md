@@ -316,7 +316,10 @@ asset: `ModelKey(asset, meshId).encode()` is the storage name (the bare asset na
 join strings themselves) and `AssetStorage` reads the variant's `meta.json` from the base folder. `ModelLoader` cuts the
 parsed `ModelData` down with `selectMesh` before images are decoded: the other meshes, the materials only they use and
 the node parts that pointed at them go; the node tree, bones and animations stay, so the mesh sits where it does in the
-whole model. A mesh id the model lacks fails only that variant, with the model's mesh ids in the log. `invalidate`
+whole model. Before that cut, `applyPivots` (`ModelPivots.kt`) applies the asset's `parts.<node>.pivot` entries to the
+`ModelData`: a node's origin and axes move to the pivot frame and its vertices and child nodes move back by the inverse,
+so every variant and every host (editor, game, ray snapshots) sees the same nodes; refused pivots are returned and the
+loader logs one warning each (`docs/ai/file-formats.md`, *Model parts*). A mesh id the model lacks fails only that variant, with the model's mesh ids in the log. `invalidate`
 replaces every loaded variant of an asset, and `retain` keeps a variant whose encoded name is in its set. The hooks and
 `ModelPreparationTap` receive the encoded name. The ray-tracing CPU snapshots themselves live in `lib-core-editor`
 (`editor.ray.snapshot`), not here.

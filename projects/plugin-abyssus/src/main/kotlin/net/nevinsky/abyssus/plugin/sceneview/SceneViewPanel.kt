@@ -673,6 +673,45 @@ internal constructor(
         syncControls()
     }
 
+    init {
+        interaction.onPartsWanted = { renderer.prefetchParts() }
+        renderer.onPartsRead = {
+            // a pivot write reloaded the model: the dragged frame gives way to the stored one
+            interaction.partsChanged()
+            syncControls()
+        }
+    }
+
+    override fun selectPart(entityId: Long, node: String) {
+        if (renderer.state.selectedId != entityId) {
+            endBrushes()
+        }
+        renderer.state.selectPart(entityId, node)
+        interaction.selectionChanged()
+        syncControls()
+    }
+
+    override fun setHingePreview(preview: net.nevinsky.abyssus.lib.core.editor.pick.HingePreview?) {
+        // only the selected part can be previewed: the preview belongs to that selection and goes with it
+        renderer.state.hingePreview = preview?.takeIf {
+            renderer.state.selectedId == it.entityId && renderer.state.selectedPart == it.node
+        }
+    }
+
+    override fun cachedParts(storageName: String) = renderer.cachedParts(storageName)
+
+    override var onPivotMove: ((Long, String, com.badlogic.gdx.math.Matrix4) -> Boolean)?
+        get() = interaction.onPivotMove
+        set(value) {
+            interaction.onPivotMove = value
+        }
+
+    override var onPickPart: ((Long, String) -> Unit)?
+        get() = interaction.onPickPart
+        set(value) {
+            interaction.onPickPart = value
+        }
+
     override fun setParams(params: SceneRenderParams) {
         val selected = interaction.selectedId
         fun binding(content: net.nevinsky.abyssus.lib.core.editor.scene.SceneContent) =

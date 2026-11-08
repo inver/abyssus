@@ -6,10 +6,12 @@
 package net.nevinsky.abyssus.lib.core.editor.pick
 
 import java.util.EnumMap
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.Ray
 import net.nevinsky.abyssus.lib.core.assets.BaseMeta
 import net.nevinsky.abyssus.lib.core.editor.arrange.GroundHeight
+import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneRenderParams
 import kotlin.math.abs
 
@@ -45,6 +47,23 @@ class SceneInteraction(
 
     /** Called with the entity id of a click that selected something. */
     var onPick: ((Long) -> Unit)? = null
+
+    /** Called when the user holds Alt over the view: the host reads the parts of the scene's models if it has not. */
+    var onPartsWanted: (() -> Unit)? = null
+
+    /** Alt is held over the view (a press or a move): asks the host for the parts Alt+click picks. */
+    fun partsWanted() {
+        onPartsWanted?.invoke()
+    }
+
+    /** Called with the entity and node of an Alt+click that selected a part of a model entity. */
+    var onPickPart: ((Long, String) -> Unit)? = null
+
+    /**
+     * Called when an Edit Pivot drag or snap ends with the part's new pivot frame in world space; returns whether it was
+     * written. The frame stays shown until [partsChanged] when it was.
+     */
+    var onPivotMove: ((Long, String, Matrix4) -> Boolean)? = null
 
     /** Called when a drag ends with a changed transform; returns whether it was written to the scene. */
     var onTransform: ((Long, TransformEdit) -> Boolean)? = null
@@ -99,6 +118,37 @@ class SceneInteraction(
             state.selectedId = value
         }
 
+    /** The part selected in the selected model entity, or null. */
+    val selectedPart: String? get() = state.selectedPart
+
+    /** Whether Edit Pivot can be turned on: a part with an applicable pivot is selected. */
+    val canEditPivot: Boolean get() = queries.canEditPivot()
+
+    /** Whether the gizmo drags the selected part's pivot; only while [canEditPivot]. View-only, never written. */
+    var editPivot: Boolean
+        get() = state.editPivot
+        set(value) {
+            val allowed = value && canEditPivot
+            if (state.editPivot != allowed) {
+                state.editPivot = allowed
+                if (!allowed) {
+                    state.pivotSnap = PivotSnap.NONE
+                    state.pivotPreview = null
+                }
+                stateChanged()
+            }
+        }
+
+    /** How a click on the selected part sets its pivot while [editPivot] is on. */
+    var pivotSnap: PivotSnap
+        get() = state.pivotSnap
+        set(value) {
+            if (state.pivotSnap != value) {
+                state.pivotSnap = value
+                stateChanged()
+            }
+        }
+
     var mode: GizmoMode
         get() = state.gizmoMode
         set(value) {
@@ -122,6 +172,7 @@ class SceneInteraction(
         override fun brushStroke(kind: BrushKind): BrushStroke? = this@SceneInteraction.brushStroke(kind)
         override val onTransform: ((Long, TransformEdit) -> Boolean)? get() = this@SceneInteraction.onTransform
         override val onArrangementEdit: ((Long, List<Vector3>) -> Boolean)? get() = this@SceneInteraction.stagedEdit
+        override val onPivotMove: ((Long, String, Matrix4) -> Boolean)? get() = this@SceneInteraction.onPivotMove
         override val selectedId: Long? get() = this@SceneInteraction.selectedId
         override fun editOf(entityId: Long, result: DragResult) = this@SceneInteraction.editOf(entityId, result)
         override fun stateChanged() = this@SceneInteraction.stateChanged()
@@ -319,7 +370,7 @@ class SceneInteraction(
         }
     }
 
-    fun released(x: Int, y: Int, left: Boolean, clickCount: Int = 1) {
+    fun released(x: Int, y: Int, left: Boolean, clickCount: Int = 1, alt: Boolean = false) {
         val wasClick = click.released(x, y)
         if (gestures.release()) {
             return
@@ -327,6 +378,10 @@ class SceneInteraction(
         if (left && wasClick) {
             if (state.drawing != null) {
                 drawingSession.click(x, y, clickCount)
+            } else if (alt) {
+                pickPartAt(x, y)
+            } else if (state.editPivot && state.pivotSnap != PivotSnap.NONE && state.selectedPart != null) {
+                snapPivotAt(x, y)
             } else {
                 pickAt(x, y)
             }
@@ -457,6 +512,56 @@ class SceneInteraction(
             return
         }
         gestures.escape()
+    }
+
+    /** Alt+click: selects the part whose triangles are under the cursor (and its entity); nothing clears the part. */
+    private fun pickPartAt(x: Int, y: Int) {
+        if (size.isEmpty || state.pathEditing != null || state.brushing) {
+            return
+        }
+        val at = size.toFramebuffer(x, y)
+        val hit = queries.pickPart(at.x, at.y, size.framebufferWidth, size.framebufferHeight)
+        if (hit == null) {
+            if (state.selectedPart != null) {
+                state.clearPart()
+                stateChanged()
+            }
+            return
+        }
+        state.selectPart(hit.entityId, hit.node)
+        onPickPart?.invoke(hit.entityId, hit.node)
+        stateChanged()
+    }
+
+    /** A click with an Edge or Face snap chosen in Edit Pivot: sets the pivot from the part's geometry under it. */
+    private fun snapPivotAt(x: Int, y: Int) {
+        val id = selectedId ?: return
+        val node = state.selectedPart ?: return
+        val current = queries.pivotFrame()?.toMatrix() ?: return
+        if (size.isEmpty) {
+            return
+        }
+        val at = size.toFramebuffer(x, y)
+        // a click that misses the part (or hits another part first) changes nothing
+        val hit = queries.pickPart(at.x, at.y, size.framebufferWidth, size.framebufferHeight, id to node) ?: return
+        val frame = when (state.pivotSnap) {
+            PivotSnap.EDGE -> PivotSnaps().edge(hit, current)
+            PivotSnap.FACE -> PivotSnaps().face(hit, current)
+            PivotSnap.NONE -> return
+        }
+        state.pivotPreview = frame
+        if (onPivotMove?.invoke(id, node, frame) != true) {
+            state.pivotPreview = null
+        }
+        stateChanged()
+    }
+
+    /** The parts of the selected part's model were read again (after a pivot write): the dragged frame is dropped. */
+    fun partsChanged() {
+        if (state.pivotPreview != null) {
+            state.pivotPreview = null
+            stateChanged()
+        }
     }
 
     private fun pickAt(x: Int, y: Int) {

@@ -418,12 +418,14 @@ class SceneViewPanelTest : BasePlatformTestCase() {
                         else -> it.javaClass.simpleName
                     }
                 }
-            val firstRow = names.take(9)
+            val firstRow = names.take(11)
             assertEquals(
                 listOf(
                     "AbyssusSceneTools",
                     SceneToolsToolbar.DIVIDER_NAME,
                     "AbyssusSceneSpace",
+                    SceneToolsToolbar.DIVIDER_NAME,
+                    "AbyssusScenePivot",
                     SceneToolsToolbar.DIVIDER_NAME,
                     "AbyssusSceneDisplay",
                     SceneToolsToolbar.DIVIDER_NAME,
@@ -433,7 +435,7 @@ class SceneViewPanelTest : BasePlatformTestCase() {
                 ),
                 firstRow,
             )
-            assertTrue("existing actions follow", names.drop(9).containsAll(listOf("add-light")))
+            assertTrue("existing actions follow", names.drop(11).containsAll(listOf("add-light")))
         } finally {
             panel.dispose()
         }

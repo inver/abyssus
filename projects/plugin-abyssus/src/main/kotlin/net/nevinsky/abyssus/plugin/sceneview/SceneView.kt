@@ -122,6 +122,28 @@ interface SceneView : Disposable {
     /** Selects an entity after creation or a selection in the Abyssus tree. */
     fun selectEntity(entityId: Long) {}
 
+    /** Selects part [node] of model entity [entityId] (a selection in the Abyssus tree). */
+    fun selectPart(entityId: Long, node: String) {}
+
+    /** Shows (or, with null, ends) the hinge preview of a part in this view only; never written. */
+    fun setHingePreview(preview: net.nevinsky.abyssus.lib.core.editor.pick.HingePreview?) {}
+
+    /** The parts of the model placed under [storageName], when the view has read them; never reads. */
+    fun cachedParts(storageName: String): net.nevinsky.abyssus.lib.core.editor.modelmesh.ModelPartsInfo? = null
+
+    /**
+     * Called when an Edit Pivot drag or snap ends with the part's new pivot frame in world space; returns whether it was
+     * written.
+     */
+    var onPivotMove: ((Long, String, com.badlogic.gdx.math.Matrix4) -> Boolean)?
+        get() = null
+        set(_) {}
+
+    /** Called with the entity and node of an Alt+click that selected a part. */
+    var onPickPart: ((Long, String) -> Unit)?
+        get() = null
+        set(_) {}
+
     fun setParams(params: SceneRenderParams)
 
     /** Loads the assets of [revision] again once the view can safely draw; a hidden view keeps it until it is shown. */

@@ -83,7 +83,8 @@ class AddDummyActionTest : BasePlatformTestCase() {
         assertEquals("Dummy", dummy.component(NameComponent::class.java)!!.name)
         assertEquals(9, dummy.component(ParentComponent::class.java)!!.parentEntityId)
         // it is listed under Model 9
-        assertEquals(listOf("11"), children(entity("9")).map(::label))
+        // (a model also lists its parts row, after its child entities)
+        assertEquals(listOf("11"), children(entity("9")).filterNot { (it as? DtoEntryNode)?.value?.value is PartsNode }.map(::label))
         UndoManager.getInstance(project).undo(editor)
         assertEquals(before, document().text)
     }

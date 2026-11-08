@@ -50,6 +50,8 @@ class ViewAssets(private val loading: AssetLoading) : Disposable {
     /** Marks the assets [names] as changed on disk; the old ones stay in use until each replacement is built. */
     fun invalidate(names: Set<String>) {
         project?.storage?.invalidate(names)
+        // The parts a model lists (pivots, triangles) change with the same files that reload it.
+        project?.let { current -> names.forEach(current::invalidateModel) }
     }
 
     internal fun update(view: AssetView<*>, projectDir: File?, names: Set<String>) {
@@ -125,7 +127,10 @@ fun raySceneAssetsOf(assets: ViewAssets): RaySceneAssets = RaySceneAssets(
     } },
     { project, models, terrains ->
         assets.current?.takeIf { it.projectDir == project.absoluteFile }?.let {
-            models.forEach(it.rayModels::invalidate)
+            models.forEach { name ->
+                it.rayModels.invalidate(name)
+                it.invalidateModel(name)
+            }
             terrains.forEach(it.rayTerrains::invalidate)
         }
     },

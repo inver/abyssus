@@ -28,6 +28,17 @@ fun interface AbyssusSceneEdited {
     }
 }
 
+/** Told after the parts of a model used by [file]'s scene were read in the background, so the tree can show them. */
+fun interface AbyssusModelPartsRead {
+    fun partsRead(file: VirtualFile)
+
+    companion object {
+        @JvmField
+        val TOPIC: Topic<AbyssusModelPartsRead> =
+            Topic.create("Abyssus model parts read", AbyssusModelPartsRead::class.java)
+    }
+}
+
 /**
  * Parses [file]'s scene, lets [mutate] edit it (returning false to abort), and saves it as one undoable command named
  * [commandName]. Publishes [AbyssusSceneEdited.TOPIC] once the command is done. Returns whether anything was written.
@@ -109,6 +120,59 @@ fun editTextDocument(
     )
     if (!project.isDisposed) {
         project.messageBus.syncPublisher(AbyssusSceneEdited.TOPIC).sceneEdited(file)
+    }
+    return true
+}
+
+/**
+ * Changes an asset's `meta.json` and, with [scene] and [sceneEdit], the scene that goes with it as one undoable command
+ * named [commandName]: a pivot edit moves the children bound to the node together with the meta, and one Undo takes both
+ * back. Both new texts are made first; nothing is written when [metaTransform] or the scene edit refuses or a text
+ * changed meanwhile. A scene that [sceneEdit] leaves unchanged is not written. The command is global, so Undo reaches it
+ * from the view, the tree or Properties. Returns whether anything was written. The scene is still changed only through
+ * the text transform of the scene editor, as [editSceneDocument] does.
+ */
+fun editAssetMetaAndScene(
+    project: Project,
+    meta: VirtualFile,
+    scene: VirtualFile?,
+    commandName: String,
+    metaTransform: (String) -> TextEditOutcome,
+    sceneEdit: SceneEdit?,
+): Boolean {
+    val documents = FileDocumentManager.getInstance()
+    val metaDocument = documents.getDocument(meta) ?: return false
+    val sceneDocument = scene?.let { documents.getDocument(it) ?: return false }
+    val metaBefore = metaDocument.text
+    val sceneBefore = sceneDocument?.text
+    val metaText = (metaTransform(metaBefore) as? TextEditOutcome.Edited)?.text ?: return false
+    var sceneText: String? = null
+    if (sceneDocument != null && sceneEdit != null) {
+        when (val outcome = service<AbyssusPluginCtx>().documents.scenes.edit(sceneBefore.orEmpty(), sceneEdit)) {
+            is TextEditOutcome.Edited -> sceneText = outcome.text
+            TextEditOutcome.Unchanged -> Unit
+            is TextEditOutcome.Refused -> return false
+        }
+    }
+    if (metaDocument.text != metaBefore || (sceneDocument != null && sceneDocument.text != sceneBefore)) {
+        return false
+    }
+    WriteCommandAction.runWriteCommandAction(
+        project,
+        commandName,
+        null,
+        {
+            metaDocument.setText(metaText)
+            documents.saveDocument(metaDocument)
+            if (sceneDocument != null && sceneText != null) {
+                sceneDocument.setText(sceneText)
+                documents.saveDocument(sceneDocument)
+            }
+            CommandProcessor.getInstance().markCurrentCommandAsGlobal(project)
+        },
+    )
+    if (!project.isDisposed && scene != null && sceneText != null) {
+        project.messageBus.syncPublisher(AbyssusSceneEdited.TOPIC).sceneEdited(scene)
     }
     return true
 }

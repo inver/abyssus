@@ -144,7 +144,9 @@ Use `:plugin-abyssus:test`, not `test`, with `--tests`: plain `test` also runs i
 - **Write scene files only through `editSceneDocument`** (`projects/plugin-abyssus/src/main/kotlin/net/nevinsky/abyssus/plugin/filetype/SceneDocumentWriter.kt`).
   It edits the scene as one undoable command and always writes it pretty-printed; the text transform
   itself is `lib-core-editor`'s `SceneTextEditor`, which `HeadlessEditing` uses without the IDE. The only other
-  writer is `SceneFormatListener`, which pretty-prints a `.scene` / `.abss` opened in the text editor.
+  writers are `SceneFormatListener`, which pretty-prints a `.scene` / `.abss` opened in the text editor, and
+  `editAssetMetaAndScene` (same file), which changes a model's `meta.json` and the scene's bound children in one undo
+  step (a pivot edit) and still changes the scene only through `SceneTextEditor`.
 - **Edit scenes as `SceneDto`.** A `SceneEdit` changes the DTO in place and returns whether it changed; `SceneRoundTripTest` pins that a printed scene reads back.
 - **`Gdx.*` is process-global inside the IDE.** Run libGDX code only inside `GdxRuntime.withContext`, on the AWT
   thread that renders the canvas (a Swing timer drives frames). Only the `prepare` step of `AssetStorage` runs off that

@@ -13,6 +13,7 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.math.collision.BoundingBox
 import com.badlogic.gdx.math.collision.Ray
 import net.nevinsky.abyssus.lib.core.editor.content.PlacementTransform
+import net.nevinsky.abyssus.lib.core.editor.content.storageName
 import net.nevinsky.abyssus.lib.core.editor.content.toMatrix
 import net.nevinsky.abyssus.lib.core.editor.scene.SceneContent
 
@@ -37,6 +38,18 @@ interface SceneQueries {
     /** What is under the pixel: the entity [pick] finds, or null. */
     fun pickTarget(screenX: Int, screenY: Int, width: Int, height: Int): SceneTarget? =
         pick(screenX, screenY, width, height)?.let(SceneTarget::Entity)
+
+    /**
+     * The nearest triangle of a part of a model entity under the pixel, or null. With [only] (entity, node) the hit
+     * counts only when it is on that part. Reads part triangles that are already cached: a model not read yet is not hit.
+     */
+    fun pickPart(screenX: Int, screenY: Int, width: Int, height: Int, only: Pair<Long, String>? = null): PartHit? = null
+
+    /** Whether a part with an applicable pivot is selected, so Edit Pivot can be turned on. */
+    fun canEditPivot(): Boolean = false
+
+    /** The world frame of the selected part's pivot while Edit Pivot is on and applicable, else null. */
+    fun pivotFrame(): PlacementTransform? = null
 
     /** The ray through the pixel of a [width] x [height] view, or null for an empty view. */
     fun rayAt(screenX: Int, screenY: Int, width: Int, height: Int): Ray?
@@ -105,6 +118,8 @@ class SnapshotSceneQueries(
     private val state: SceneViewState,
     /** The layers that put the unwritten changes over the scene; share the view's own so both see the same content. */
     private val layers: ScenePreviewLayers = ScenePreviewLayers(state),
+    /** The parts of the models in the scene, for part picking and Edit Pivot; none by default. */
+    private val parts: PartsSource = { null },
     private val sceneContentOf: () -> SceneContent,
 ) : SceneQueries {
     override val sceneContent: SceneContent
@@ -206,6 +221,28 @@ class SnapshotSceneQueries(
         return geometry.pick(shown, frame.camera, x, y, width, height)
     }
 
+    override fun pickPart(screenX: Int, screenY: Int, width: Int, height: Int, only: Pair<Long, String>?): PartHit? {
+        if (width <= 0 || height <= 0) {
+            return null
+        }
+        val frame = snapshot() ?: return null
+        val ray = ScenePicker().pickRay(frame.camera, screenX, screenY, width, height)
+        val targets = content.models.mapNotNull { placement ->
+            parts(placement.storageName)?.let { PartTarget(placement.entityId, placement.transform.toMatrix(), it) }
+        }
+        val hit = PartPicker().pick(ray, targets, frame.camera.far) ?: return null
+        return hit.takeIf { only == null || (it.entityId == only.first && it.node == only.second) }
+    }
+
+    override fun pivotFrame(): PlacementTransform? = pivotFrameOf(content, state, parts)
+
+    override fun canEditPivot(): Boolean {
+        val id = state.selectedId ?: return false
+        val node = state.selectedPart ?: return false
+        val placement = content.model(id) ?: return false
+        return parts(placement.storageName)?.let { it.find(node) }?.let { it.pivotRefusal == null } == true
+    }
+
     override fun rayAt(screenX: Int, screenY: Int, width: Int, height: Int): Ray? {
         val frame = snapshot() ?: return null
         return if (width <= 0 || height <= 0) {
@@ -292,7 +329,7 @@ class SnapshotSceneQueries(
 
     override fun gizmoHandles(height: Int): GizmoHandles? {
         val frame = snapshot() ?: return null
-        return gizmoHandlesFor(content, frame.camera, state, height)
+        return gizmoHandlesFor(content, frame.camera, state, height, parts)
     }
 
     override fun gizmoHit(screenX: Int, screenY: Int, width: Int, height: Int): GizmoAxis? {
@@ -314,7 +351,8 @@ class SnapshotSceneQueries(
             when {
                 pathPointGizmoAt(content, state) != null ->
                     PlacementTransform(pathPointGizmoAt(content, state)!!, Quaternion(), Vector3(1f, 1f, 1f))
-                else -> ScenePreview().selected(content, state.selectedId ?: return null)?.transform ?: return null
+                else -> pivotFrameOf(content, state, parts)
+                    ?: ScenePreview().selected(content, state.selectedId ?: return null)?.transform ?: return null
             }
         return GizmoDrag(
                 GizmoMode.MOVE,
@@ -335,8 +373,13 @@ class SnapshotSceneQueries(
             val start = PlacementTransform(point, Quaternion(), Vector3(1f, 1f, 1f))
             return GizmoDrag(GizmoMode.MOVE, axis, start, ray, null, axis.direction, state.snap).takeIf { it.isUsable }
         }
+        val pivot = pivotFrameOf(content, state, parts)
         val id = state.selectedId ?: return null
-        val selected = ScenePreview().selected(content, id) ?: return null
+        val selected = if (pivot != null) {
+            Selected(pivot, null)
+        } else {
+            ScenePreview().selected(content, id)
+        } ?: return null
         val ray = rayAt(screenX, screenY, width, height) ?: return null
         val axes = gizmoAxes(state.gizmoSpace, selected.transform.rotation)
         return GizmoDrag(
@@ -356,7 +399,13 @@ class SnapshotSceneQueries(
  * The gizmo of the selected entity of [c], seen by [eyeCamera] in a view [height] pixels tall; shared with the
  * renderer's drawing.
  */
-fun gizmoHandlesFor(c: SceneContent, eyeCamera: PerspectiveCamera, state: SceneViewState, height: Int): GizmoHandles? {
+fun gizmoHandlesFor(
+    c: SceneContent,
+    eyeCamera: PerspectiveCamera,
+    state: SceneViewState,
+    height: Int,
+    parts: PartsSource = { null },
+): GizmoHandles? {
     if (!state.gizmosEnabled) {
         return null
     }
@@ -376,6 +425,12 @@ fun gizmoHandlesFor(c: SceneContent, eyeCamera: PerspectiveCamera, state: SceneV
         }
         val eye = Vector3(eyeCamera.position.x, eyeCamera.position.y, eyeCamera.position.z)
         return GizmoHandles(point, GizmoMode.MOVE, eye, eyeCamera.fieldOfView, height, WORLD_AXES)
+    }
+    // Edit Pivot: the handles sit on the selected part's pivot frame
+    pivotFrameOf(c, state, parts)?.let { frame ->
+        val eye = Vector3(eyeCamera.position.x, eyeCamera.position.y, eyeCamera.position.z)
+        val axes = gizmoAxes(state.gizmoSpace, frame.rotation)
+        return GizmoHandles(frame.position, state.gizmoMode, eye, eyeCamera.fieldOfView, height, axes)
     }
     val id = state.selectedId ?: return null
     if (state.gizmoMode == GizmoMode.ROTATE && !canRotate(c, id)) {
